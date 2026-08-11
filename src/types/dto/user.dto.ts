@@ -68,6 +68,9 @@ export interface StoreDto {
   payLaterEnabled: boolean;
   kitchenDisplayEnabled: boolean;
   productionEnabled: boolean;
+  customProductsEnabled: boolean;
+  customProductsLabel: string | null;
+  customProductsShowOnStorefront: boolean;
   standardWorkMinutesPerDay: number;
 }
 

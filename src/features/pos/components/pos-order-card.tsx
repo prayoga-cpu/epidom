@@ -58,16 +58,20 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
           <span className="font-semibold">{order.orderNumber}</span>
           <span className="text-muted-foreground text-xs">{timeAgo}</span>
         </div>
-        <div className="flex flex-col items-end gap-1.5">
-          <Badge variant={getOrderStatusBadgeVariant(order.status)} className="px-2 py-1">
+        <div className="flex flex-col gap-1.5">
+          <Badge variant={getOrderStatusBadgeVariant(order.status)} className="w-full px-2 py-1">
             {mapOrderStatusLabel(t, order.status)}
           </Badge>
-          <Badge variant={getOrderSourceBadgeVariant(order.source)}>
+          <Badge variant={getOrderSourceBadgeVariant(order.source)} className="w-full">
             {order.source === "POS" ? t("pos.source.walkIn") : t("pos.source.online")}
           </Badge>
-          <Badge variant="outline">{mapPaymentMethodLabel(t, order.paymentMethod)}</Badge>
+          <Badge variant="outline" className="w-full">
+            {mapPaymentMethodLabel(t, order.paymentMethod)}
+          </Badge>
           {isAwaitingPayment(order) && (
-            <Badge variant="destructive">{t("pos.orderCard.unpaid")}</Badge>
+            <Badge variant="destructive" className="w-full">
+              {t("pos.orderCard.unpaid")}
+            </Badge>
           )}
         </div>
       </div>

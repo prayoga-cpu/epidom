@@ -16,6 +16,7 @@ import { Download } from "lucide-react";
 import { ChartSkeleton } from "../components/chart-skeleton";
 import { DateRangeField } from "@/components/ui/date-range-field";
 import { todayLocalISO } from "@/lib/utils/date-range";
+import { useCustomProductsSettings } from "@/features/dashboard/data/custom-products/hooks/use-custom-products-settings";
 
 const RevenueTrendChart = dynamic(
   () => import("./revenue-trend-chart").then((mod) => ({ default: mod.RevenueTrendChart })),
@@ -34,7 +35,9 @@ interface TopItem {
 }
 
 interface DepartmentRow {
-  department: "KITCHEN" | "BAR" | null;
+  // "CUSTOM" is the optional second product line (Product.productLine),
+  // labeled client-side with the store's own customProductsLabel.
+  department: "KITCHEN" | "BAR" | "CUSTOM" | null;
   orderItemCount: number;
   totalQuantity: number;
   totalRevenue: number;
@@ -77,6 +80,18 @@ export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const { advancedReportsAccess } = useFeatureAccess();
+  const { data: customProductsSettings } = useCustomProductsSettings(storeId);
+  const customDepartmentLabel = customProductsSettings?.customProductsEnabled
+    ? customProductsSettings.customProductsLabel
+    : null;
+  const departmentLabel = (department: DepartmentRow["department"]) =>
+    department === "KITCHEN"
+      ? t("common.departmentKitchen")
+      : department === "BAR"
+        ? t("common.departmentBar")
+        : department === "CUSTOM"
+          ? (customDepartmentLabel ?? t("common.departmentUnassigned"))
+          : t("common.departmentUnassigned");
   // Defaults to today — the report an operator checks most: "how are we
   // doing right now." The date inputs below let them widen the range.
   const [from, setFrom] = useState(todayLocalISO());
@@ -296,11 +311,7 @@ export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
                   {(byDepartment.data?.departments ?? []).map((d) => (
                     <div key={d.department ?? "unassigned"} className="space-y-0.5">
                       <p className="text-muted-foreground text-xs">
-                        {d.department === "KITCHEN"
-                          ? t("common.departmentKitchen")
-                          : d.department === "BAR"
-                            ? t("common.departmentBar")
-                            : t("common.departmentUnassigned")}
+                        {departmentLabel(d.department)}
                       </p>
                       <p className="text-xl font-bold">{formatPrice(d.totalRevenue)}</p>
                     </div>

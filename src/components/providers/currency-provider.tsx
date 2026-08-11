@@ -55,11 +55,19 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   // (e.g. /profile, /billing) falls back to the business-level default.
   const params = useParams<{ storeId?: string }>();
   const storeId = params?.storeId;
-  const { data: storeSettings } = useFinanceSettings(storeId);
-  const { data: businessSettings } = useBusinessFinanceSettings({
+  const { data: storeSettings, isLoading: isStoreSettingsLoading } = useFinanceSettings(storeId);
+  const { data: businessSettings, isLoading: isBusinessSettingsLoading } = useBusinessFinanceSettings({
     enabled: !storeId && !!user?.id && !userLoading,
   });
   const currencyFromSettings = storeId ? storeSettings?.currency : businessSettings?.currency;
+
+  // `userCurrency` starts at BASE_CURRENCY as a placeholder, not a confirmed
+  // value — until the relevant finance-settings query resolves, we don't yet
+  // know whether the store/business actually uses IDR or something else.
+  // Consumers that check `isLoading` before formatting rely on it staying
+  // true through this window, so it can't flip to false just because the
+  // placeholder happens to equal BASE_CURRENCY.
+  const isCurrencySettingsLoading = storeId ? isStoreSettingsLoading : isBusinessSettingsLoading;
 
   useEffect(() => {
     if (!currencyFromSettings) return;
@@ -71,7 +79,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   // Fetch the BASE_CURRENCY -> userCurrency rate whenever the display
   // currency actually differs from the base — for any currency, not just USD.
   useEffect(() => {
-    if (userLoading) return;
+    if (userLoading || isCurrencySettingsLoading) return;
     if (userCurrency === BASE_CURRENCY) {
       setExchangeRate(1.0);
       setIsLoading(false);
@@ -79,7 +87,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     }
     fetchExchangeRate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userCurrency, userLoading]);
+  }, [userCurrency, userLoading, isCurrencySettingsLoading]);
 
   const fetchExchangeRate = async () => {
     try {

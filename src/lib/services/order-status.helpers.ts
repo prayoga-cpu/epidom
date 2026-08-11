@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma, OrderItemStatus } from "@prisma/client";
 
 /**
  * Shared by the KDS item-status route and ProductionBatch completion (for
@@ -20,4 +20,19 @@ export async function advanceOrderToReadyIfAllItemsReady(
   if (allReady) {
     await tx.order.update({ where: { id: orderId }, data: { status: "READY" } });
   }
+}
+
+/**
+ * CUSTOM product-line items (the optional second product line — see
+ * Product.productLine) have no kitchen/bar prep step — they're excluded from
+ * the KDS UI entirely (see kds-department.ts's itemDepartment), so nothing
+ * would ever move them off PENDING. They're created directly as SERVED
+ * instead, since a service/good with no prep step is, by this feature's own
+ * definition, already fulfilled the instant it's rung up — this also keeps
+ * advanceOrderToReadyIfAllItemsReady correct.
+ */
+export function resolveInitialOrderItemStatus(
+  productLine: "STANDARD" | "CUSTOM" | null | undefined
+): OrderItemStatus {
+  return productLine === "CUSTOM" ? "SERVED" : "PENDING";
 }

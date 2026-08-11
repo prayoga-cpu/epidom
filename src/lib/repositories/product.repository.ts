@@ -6,6 +6,7 @@ import {
   ProductOptionGroup,
   ProductOption,
   Department,
+  ProductLine,
 } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
 import type { ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
@@ -33,6 +34,7 @@ export interface ProductFilters {
   search?: string;
   category?: string;
   department?: Department;
+  productLine?: ProductLine;
   sortBy?:
     | "name"
     | "sku"
@@ -58,6 +60,7 @@ export class ProductRepository extends BaseRepository {
       search,
       category,
       department,
+      productLine,
       sortBy = "createdAt",
       sortOrder = "desc",
       skip = 0,
@@ -78,6 +81,7 @@ export class ProductRepository extends BaseRepository {
       }),
       ...(category && { category }),
       ...(department && { department }),
+      ...(productLine && { productLine }),
     };
 
     // Build orderBy clause

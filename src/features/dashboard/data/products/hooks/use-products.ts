@@ -19,6 +19,7 @@ export interface LinkedMenuItem {
   price: number;
   productId: string | null;
   isAvailable: boolean;
+  showOnCashier: boolean;
 }
 
 // Re-export for convenience
@@ -33,6 +34,7 @@ export interface ProductFilterInput {
   search?: string;
   category?: string;
   department?: "KITCHEN" | "BAR";
+  productLine?: "STANDARD" | "CUSTOM";
   sortBy?:
     | "name"
     | "sku"
@@ -66,6 +68,7 @@ async function fetchProducts(
   if (filters.search) params.append("search", filters.search);
   if (filters.category) params.append("category", filters.category);
   if (filters.department) params.append("department", filters.department);
+  if (filters.productLine) params.append("productLine", filters.productLine);
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
   if (filters.skip !== undefined) params.append("skip", filters.skip.toString());
@@ -193,6 +196,7 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
   if (filters.search) params.append("search", filters.search);
   if (filters.category) params.append("category", filters.category);
   if (filters.department) params.append("department", filters.department);
+  if (filters.productLine) params.append("productLine", filters.productLine);
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
 
@@ -650,6 +654,7 @@ export function useAddProductToMenu(storeId: string) {
           price: convertPrice(Number(product.sellingPrice)),
           productId: product.id,
           isAvailable: true,
+          showOnCashier: true,
         },
       ]);
       return { previous };

@@ -80,7 +80,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
             table: { select: { label: true } },
             items: {
               include: {
-                menuItem: { select: { name: true, department: true } },
+                menuItem: {
+                  select: {
+                    name: true,
+                    department: true,
+                    product: { select: { productLine: true } },
+                  },
+                },
                 product: { select: { name: true } },
               },
             },

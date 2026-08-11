@@ -41,6 +41,7 @@ export const FEATURE_MIN_PLAN = {
   supplierManagement: "OPERATIONS",
   advancedReports: "OPERATIONS",
   multiStore: "OPERATIONS",
+  customProducts: "OPERATIONS",
   finance: "ENTERPRISE",
 } satisfies Record<string, PlanTier>;
 

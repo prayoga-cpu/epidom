@@ -1,8 +1,7 @@
 import React from "react";
-import { CheckCircle2, Clock, XCircle, ChefHat, PackageCheck, PauseCircle } from "lucide-react";
+import { CheckCircle2, XCircle, ChefHat, PackageCheck, PauseCircle } from "lucide-react";
 
 export type OrderStatus =
-  | "PENDING"
   | "CONFIRMED"
   | "IN_PRODUCTION"
   | "READY"
@@ -15,10 +14,6 @@ export type OrderStatus =
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "REFUNDED";
 
 export const STATUS_CONFIG: Record<OrderStatus, { icon: React.ReactNode; color: string }> = {
-  PENDING: {
-    icon: <Clock className="size-8" />,
-    color: "text-amber-500",
-  },
   CONFIRMED: {
     icon: <CheckCircle2 className="size-8" />,
     color: "text-blue-500",

@@ -2,13 +2,16 @@ import type { PosOrderDisplay } from "../types/pos.types";
 
 export type QueueView = "grid" | "compact" | "board";
 
-export type QueueStatusFilter = "ALL" | "PENDING" | "CONFIRMED" | "IN_PRODUCTION" | "READY" | "HELD";
+export type QueueStatusFilter = "ALL" | "CONFIRMED" | "IN_PRODUCTION" | "READY" | "HELD";
 
 export type QueueSourceFilter = "ALL" | "POS" | "ONLINE";
 
 export type QueueTypeFilter = "ALL" | "DINE_IN" | "TAKEAWAY" | "DELIVERY";
 
-export type QueueDepartmentFilter = "ALL" | "KITCHEN" | "BAR";
+// "CUSTOM" is the optional second product line (Product.productLine) — not
+// a real stored department, matched via productLine instead of the
+// department field itself (see matchesQueueFilters below).
+export type QueueDepartmentFilter = "ALL" | "KITCHEN" | "BAR" | "CUSTOM";
 
 // Mirrors the Prisma PaymentMethod enum as plain strings — same reasoning as
 // QUEUE_STATUSES above: that enum type isn't safe to import into client bundles.
@@ -43,7 +46,6 @@ export type QueueSortBy = "newest" | "oldest" | "total-desc" | "total-asc";
 // plain strings because that file pulls in the Prisma-generated OrderStatus
 // type, which isn't safe to import into client bundles.
 export const QUEUE_STATUSES: Exclude<QueueStatusFilter, "ALL">[] = [
-  "PENDING",
   "CONFIRMED",
   "IN_PRODUCTION",
   "READY",
@@ -99,11 +101,14 @@ export function matchesQueueFilters(
   if (productFilter !== "ALL" && !order.items.some((i) => i.menuItemId === productFilter)) {
     return false;
   }
-  if (
-    departmentFilter !== "ALL" &&
-    !order.items.some((i) => i.menuItem?.department === departmentFilter)
-  ) {
-    return false;
+  if (departmentFilter !== "ALL") {
+    const matchesDepartment =
+      departmentFilter === "CUSTOM"
+        ? (i: (typeof order.items)[number]) => i.menuItem?.product?.productLine === "CUSTOM"
+        : (i: (typeof order.items)[number]) =>
+            i.menuItem?.product?.productLine !== "CUSTOM" &&
+            i.menuItem?.department === departmentFilter;
+    if (!order.items.some(matchesDepartment)) return false;
   }
   if (staffFilter !== "ALL" && order.shift?.staffMember.id !== staffFilter) return false;
   if (search.trim()) {

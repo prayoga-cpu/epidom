@@ -241,6 +241,14 @@ For multi-outlet brands and small manufacturers. Everything in OPERATIONS, plus:
 - Track planned vs actual yield
 - Cost per batch
 
+### Custom Products — optional second product line _(Phase 5+, optional)_
+
+- Off by default, per-store; the owner names it (e.g. "Hair Salon", "Spa Services") when enabling it from a new tab on the Data page
+- For a product or service unrelated to the store's Kitchen/Bar menu — e.g. a café that also runs a small hair-salon counter — without Epidom building anything vertical-specific
+- Skips the Kitchen/Bar KDS workflow and material stock/recipe deduction entirely
+- Each item has two independent visibility switches — "Show on Menu" (the public Storefront) and "Show on Cashier" (the POS Cashier sell grid) — instead of the single shared toggle regular menu items use
+- Revenue rolls into the same integrated Finance Reports as every other sale
+
 ### Stripe Connect 80/20 _(Phase 5+, optional)_
 
 - Accept payments through Epidom's Stripe Connect account

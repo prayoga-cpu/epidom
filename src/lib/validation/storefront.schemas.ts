@@ -121,6 +121,8 @@ export const createMenuItemSchema = z.object({
   currency: z.string().optional(),
   imageUrl: urlSchema,
   isAvailable: z.boolean().default(true),
+  // Independent of isAvailable — see MenuItem.showOnCashier in schema.prisma.
+  showOnCashier: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   displayOrder: z.number().int().optional().default(0),
   modifiers: z.array(modifierSchema).optional(),

@@ -23,6 +23,7 @@ import { Shield, TrendingUp, KeyRound, ShieldCheck, LogOut, RefreshCw, Store } f
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { apiClient } from "@/lib/api/client";
 import { VerifyOwnerPinDialog } from "./verify-owner-pin-dialog";
+import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE } from "@/lib/last-visited";
 import { SetOwnerPinDialog } from "./set-owner-pin-dialog";
 import { AccountAccessDialog } from "./account-access-dialog";
 
@@ -115,12 +116,22 @@ export function NavUser() {
     }
     // Otherwise the next signed-out (or different) visitor on this device
     // would get bounced from the marketing homepage straight into a
-    // login-required page — see LastVisitedTracker/ResumeLastVisited.
+    // login-required page — see LastVisitedTracker/middleware.ts.
     try {
-      localStorage.removeItem("epidom:lastVisitedUrl");
-      localStorage.removeItem("epidom:rememberLastVisited");
+      localStorage.removeItem(LAST_VISITED_COOKIE);
+      localStorage.removeItem(REMEMBER_PREF_COOKIE);
     } catch {
       // Ignore — worst case the stale value just gets overwritten on next sign-in.
+    }
+    try {
+      // Expire both cookies immediately (Max-Age=0) — middleware reads these
+      // Edge-side on every marketing-page request, so a stale cookie left
+      // behind would resume-redirect the next signed-out visitor on this
+      // device straight into a login-required page.
+      document.cookie = `${LAST_VISITED_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+      document.cookie = `${REMEMBER_PREF_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+    } catch {
+      // Ignore — same as above.
     }
     await signOut();
     window.location.href = "/login";

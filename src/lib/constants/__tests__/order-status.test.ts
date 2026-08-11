@@ -14,7 +14,7 @@ describe("ACTIVE_POS_STATUSES", () => {
 
   it("includes the normal in-flight statuses", () => {
     expect(ACTIVE_POS_STATUSES).toEqual(
-      expect.arrayContaining(["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY"])
+      expect.arrayContaining(["CONFIRMED", "IN_PRODUCTION", "READY"])
     );
   });
 

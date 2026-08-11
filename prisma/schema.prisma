@@ -184,6 +184,25 @@ model Store {
   // Production nav page shows a guide/explainer instead of the workflow
   // until the owner opts in.
   productionEnabled       Boolean                @default(false)
+  // Owner-only toggle, defaults off — mirrors productionEnabled exactly (off
+  // by default, the Data page's Custom Products tab shows a guide/explainer
+  // with a "name + enable" form until opted in). For a second, unrelated
+  // product line the store also sells (e.g. a restaurant's hair-salon
+  // add-on) that should NOT go through Kitchen/Bar KDS routing or
+  // recipe/stock deduction — see Product.productLine.
+  customProductsEnabled  Boolean                @default(false)
+  // Store-owner-authored label for the custom product line (e.g. "Hair
+  // Salon", "Barber", "Spa Services") — shown in the Data tab and Menu
+  // integration. Not run through i18n (free text, like Storefront.
+  // displayName). Null until the owner enables the feature and names it.
+  customProductsLabel    String?
+  // Independent of customProductsEnabled (which drives POS Cashier
+  // inclusion) — whether the custom product line's items should ALSO
+  // publish to the public customer-facing storefront menu (the "store
+  // link"). Off by default: enabling the feature only wires it into the
+  // cashier, not the storefront, until the owner opts into this separately
+  // from Storefront Settings.
+  customProductsShowOnStorefront Boolean          @default(false)
   // Daily overtime threshold, in minutes, used by the Attendance "Hours &
   // Overtime" report — worked minutes beyond this per calendar day count as
   // overtime. Flat per-store value (no per-role/per-shift threshold in v1).
@@ -324,9 +343,22 @@ model Product {
   description       String?
   category          String?
   department        Department           @default(KITCHEN)
+  // Orthogonal to `department` (Kitchen/Bar KDS routing) — STANDARD is every
+  // existing restaurant product (untouched behavior). CUSTOM marks an item
+  // belonging to the store's optional second product line (Store.
+  // customProductsEnabled) — a service/good with no kitchen ticket, no
+  // recipe, no material stock deduction. `department` stays at its schema
+  // default on these rows and is never shown/editable — it's inert data.
+  productLine       ProductLine          @default(STANDARD)
   costPrice         Decimal              @db.Decimal(10, 2)
   sellingPrice      Decimal              @db.Decimal(10, 2)
   currentStock      Decimal              @default(0) @db.Decimal(10, 3)
+  // When false, this product has no inventory at all — nothing is ever
+  // decremented on sale and it can never run out (a service, e.g. a haircut,
+  // or an always-available made-to-order item). When true (the default, so
+  // every existing product keeps today's behavior), `currentStock` is real
+  // and is deducted per order — see stock-deduction.service.ts.
+  trackStock        Boolean              @default(true)
   unit              String               @default("piece")
   productionTime    Int?
   shelfLife         Int?
@@ -348,6 +380,7 @@ model Product {
   @@index([storeId])
   @@index([category])
   @@index([department])
+  @@index([productLine])
   @@map("products")
 }
 
@@ -697,7 +730,7 @@ model Order {
   customerEmail      String?
   customerPhone      String?
   deliveryAddress    String?
-  status             OrderStatus     @default(PENDING)
+  status             OrderStatus     @default(CONFIRMED)
   orderDate          DateTime        @default(now())
   dueDate            DateTime?
   deliveredDate      DateTime?
@@ -1006,7 +1039,6 @@ enum SupplierOrderStatus {
 }
 
 enum OrderStatus {
-  PENDING
   CONFIRMED
   IN_PRODUCTION
   READY
@@ -1205,6 +1237,11 @@ enum Department {
   KITCHEN
   BAR
   BOTH
+}
+
+enum ProductLine {
+  STANDARD
+  CUSTOM
 }
 
 enum PayType {
@@ -1606,6 +1643,14 @@ model MenuItem {
   currency     String     @default("IDR")
   imageUrl     String?
   isAvailable  Boolean    @default(true)
+  // Independent of `isAvailable` (which gates the public Storefront menu and,
+  // for every existing item, also implicitly gates the POS Cashier grid via
+  // client-side disabling). Only meaningfully used for MenuItems linked to a
+  // CUSTOM-productLine Product, where "Show on Menu" (isAvailable) and "Show
+  // on Cashier" (this field) are independently toggleable in the Data tab.
+  // Defaults true and is never exposed in the UI for regular items, so their
+  // existing single-flag behavior is completely unchanged.
+  showOnCashier Boolean   @default(true)
   isFeatured   Boolean    @default(false)
   displayOrder Int        @default(0)
   modifiers    Json? // [{name, options: [{name, priceAdd}]}]

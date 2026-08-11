@@ -11,6 +11,7 @@ import {
   detectLocaleFromAcceptLanguage,
   isLikelyBot,
 } from "./lib/i18n-routing";
+import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE, isSafeRedirectTarget } from "./lib/last-visited";
 
 // Marketing base paths (unprefixed) eligible for /id and /en locale
 // rewriting — see src/lib/i18n-routing.ts. /compare/* is prefix-matched
@@ -74,6 +75,28 @@ export default async function proxy(req: NextRequest) {
     basePath.startsWith("/compare") ||
     basePath.startsWith("/blog/") ||
     basePath.startsWith("/docs");
+
+  // Resume a signed-in returning visitor straight to their last app page
+  // instead of showing marketing content — checked here, before any
+  // locale-routing logic below, so it fires on every marketing page (not
+  // just "/") and never renders a page only to redirect away from it a
+  // moment later (see LastVisitedTracker, which is what keeps these two
+  // cookies current; this proxy only ever reads them).
+  if (isLocalizedMarketingPath) {
+    const remember = req.cookies.get(REMEMBER_PREF_COOKIE)?.value;
+    const rawLastVisited = req.cookies.get(LAST_VISITED_COOKIE)?.value;
+    if (remember === "true" && rawLastVisited) {
+      let lastVisited: string | null = null;
+      try {
+        lastVisited = decodeURIComponent(rawLastVisited);
+      } catch {
+        lastVisited = null;
+      }
+      if (lastVisited && lastVisited !== "/" && isSafeRedirectTarget(lastVisited)) {
+        return NextResponse.redirect(new URL(lastVisited, req.url));
+      }
+    }
+  }
 
   // Create a response object to modify headers later if needed
   const response = NextResponse.next();

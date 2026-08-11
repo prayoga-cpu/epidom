@@ -68,7 +68,9 @@ interface CategoryRow {
 }
 
 interface DepartmentRow {
-  department: "KITCHEN" | "BAR" | null;
+  // "CUSTOM" is the optional second product line (Product.productLine),
+  // labeled via customDepartmentLabel below.
+  department: "KITCHEN" | "BAR" | "CUSTOM" | null;
   orderItemCount: number;
   totalQuantity: number;
   totalRevenue: number;
@@ -111,6 +113,10 @@ interface FinancePrintViewProps {
   topItems: TopItem[];
   categories: CategoryRow[];
   departments: DepartmentRow[];
+  // Store-owner-authored label for the optional second product line (e.g.
+  // "Hair Salon") — null when the feature isn't enabled, in which case a
+  // CUSTOM bucket can't occur anyway.
+  customDepartmentLabel?: string | null;
   shifts: ShiftRow[];
   scheduleShiftRows: ScheduleShiftBucketRow[];
   wasteReasons: WasteReasonRow[];
@@ -147,6 +153,7 @@ export function FinancePrintView({
   topItems,
   categories,
   departments,
+  customDepartmentLabel,
   shifts,
   scheduleShiftRows,
   wasteReasons,
@@ -230,7 +237,9 @@ export function FinancePrintView({
                       ? t("common.departmentKitchen")
                       : d.department === "BAR"
                         ? t("common.departmentBar")
-                        : t("common.departmentUnassigned")}
+                        : d.department === "CUSTOM"
+                          ? (customDepartmentLabel ?? t("common.departmentUnassigned"))
+                          : t("common.departmentUnassigned")}
                   </td>
                   <td className="py-1 pr-2 text-right">{d.totalQuantity}</td>
                   <td className="py-1 pl-2 text-right font-semibold">{formatPrice(d.totalRevenue)}</td>

@@ -19,12 +19,12 @@ export const GET = withApiHandler(
   async (_req, { storeId }) => {
     const notifications: NotificationItem[] = [];
 
-    // 1. Pending / new orders (last 48h)
+    // 1. New orders (last 48h)
     const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const pendingOrders = await prisma.order.findMany({
+    const newOrders = await prisma.order.findMany({
       where: {
         storeId,
-        status: { in: ["PENDING", "CONFIRMED"] },
+        status: "CONFIRMED",
         createdAt: { gte: since },
       },
       select: { id: true, orderNumber: true, status: true, createdAt: true, source: true },
@@ -32,11 +32,11 @@ export const GET = withApiHandler(
       take: 20,
     });
 
-    for (const o of pendingOrders) {
+    for (const o of newOrders) {
       notifications.push({
         id: `order-${o.id}`,
         type: "order",
-        title: o.status === "PENDING" ? "New Order" : "Order Confirmed",
+        title: "New Order",
         body: `${o.orderNumber} · ${o.source ?? "POS"}`,
         href: `/store/${storeId}/pos`,
         createdAt: o.createdAt.toISOString(),

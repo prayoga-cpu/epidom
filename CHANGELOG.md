@@ -9,6 +9,57 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.63.0] - 2026-08-11 · fix
+
+- **Custom Products now render as their own section in POS Cashier and on the storefront**, in a visually distinct block headed by the store's name for that product line, instead of appearing as just another menu category among the food and drink headings.
+- **Fixed the "Track stock" toggle not saving**: the product update endpoint dropped the field, so switching stock tracking on or off in the Custom Products edit dialog silently did nothing.
+- **Repaired menu categories that had drifted out of sync**: products edited before the category-sync fix kept their old category on the cashier and storefront. A one-off repair (`pnpm tsx scripts/repair-menu-item-categories.ts`, with `--dry-run` to preview) re-points every product-linked menu item at its product's current category.
+
+## [2.62.0] - 2026-08-11 · feat
+
+- **Products can now be marked as not stock-tracked** — a service (a haircut), or any always-available item. Turn "Track stock" off and nothing is ever deducted and it can never run out; turn it on and set a quantity, and it's deducted per order like any other product. Available on Custom Products items, where it defaults to off since services are the common case there; every existing product keeps tracking stock exactly as before.
+- **Fixed custom items showing as "SOLD OUT" on the storefront**: they were being created as unavailable back when custom items were unconditionally hidden from the public menu. Storefront visibility is now controlled by its own setting, so that flag no longer applies — existing items are corrected automatically.
+- **Fixed a product's category change not reaching the POS Cashier or storefront**: renaming or reassigning a product's category updated the product itself but left the linked menu item filed under its old heading, on both screens, indefinitely. The category now syncs across (creating the menu category if needed) and pushes live to the cashier like name/price changes already did. Applies to all products, not just custom ones.
+
+## [2.61.0] - 2026-08-11 · feat
+
+- **Order Queue can now mark an in-production order complete on its own**: an order that's had "Start Processing" clicked previously had no further manual action on the Order Queue at all — the only way to move it forward was switching to Kitchen & Bar and tapping every item. It now gets the same "Mark All Complete" action Kitchen & Bar has, right on the card, for stores that don't want a cashier bouncing between screens for a simple order.
+
+## [2.60.0] - 2026-08-11 · fix
+
+- **Fixed two Custom Products dataflow gaps found in operator testing**: turning off the feature's master toggle on the Data page now correctly pulls those items off the public storefront too — previously the storefront-visibility toggle in Storefront Settings was checked on its own, so a store that had opted into storefront publishing kept showing custom items there even after the master feature was switched off. Also, the "name this product line" field on the Data page's disabled/explainer view now pre-fills with whatever was last saved instead of appearing blank — turning the feature off never actually cleared the name, but the input didn't show it, making it look lost.
+
+## [2.59.0] - 2026-08-11 · fix
+
+- **Fixed notes (and modifiers) disappearing when a held order is resumed for the first time**: the very first time a cart was held (before it had ever been resumed once already), the order-item's note and selected modifiers were never actually written to the database — only quantity/price/name were. Resuming that order later showed the item with no note at all. A held order that had already been resumed and held again worked correctly, since that code path (a separate branch in the same route) already saved both fields — this just brings the first-hold branch in line with it.
+
+## [2.58.0] - 2026-08-11 · fix
+
+- **Order status now updates instantly on Kitchen & Bar and the Order Queue**: marking an item (or a whole station) "Ready" is pushed live everywhere else in the app, but the KDS item-status route was the one gap — it never fired that push, so both screens fell back to periodic polling (up to 10s, or 15s where live push isn't configured) to notice. Also fixed a same-device gap where the KDS card kept showing "Waiting other department" for a few seconds after that station had already finished, because the local optimistic update only flipped the item, not the order.
+- **Order Queue status badges (status/source/payment/unpaid) now stretch to the full width of their column** instead of shrinking to fit their own text, so the badge stack reads as one clean aligned block instead of a jagged one. The status filter tiles above the queue (All/Confirmed/In Production/Ready/Held) had the same problem for a different reason — the grid was hardcoded to 6 columns for 5 tiles, leaving a dead gap the width of a whole tile; now a 5-column grid.
+- **Checkout confirmation is significantly faster**: creating or finalizing an order now returns as soon as the order itself is committed. Stock deduction, shortfall-batch drafting, and the background order-placed notification (an outbound network call) used to all run before the response was sent — they're now deferred to run immediately after via Next's `after()`, off the critical path but still guaranteed to complete. The two independent lookups needed to build the order (menu item validation, finance settings) now also run concurrently instead of one after another.
+
+## [2.57.0] - 2026-08-11 · feat
+
+- **Custom Products, round two — separated the two on/off switches and made it a real POS department**: the master enable toggle (which drives POS Cashier inclusion) moved back to the Data page's Custom Products tab, where it's paired with the Operations-plan pricing wall; Storefront Settings now has its own, independent toggle purely for whether those items also publish to the public storefront link. Custom-line items now show up as a genuine third department filter — labeled with the store's own name for it — right beside Kitchen/Bar in POS Cashier, the Order Queue, and Finance Reports' revenue-by-department breakdown, instead of living in a separate section or an "Unassigned" bucket.
+- **POS cart: every line item can now carry a note**, not just ones with modifier options — the pencil icon on a cart line no longer waits for a menu item to have option groups before it appears.
+
+## [2.55.0] - 2026-08-11 · fix
+
+- **Custom Products redesign, based on live operator testing of 2.54.0**: fixed a real currency bug where editing a custom item showed the raw IDR-stored value instead of converting to the store's display currency (e.g. a €10 cost showed as "208333,33"). Removed the per-item "Show on Menu"/"Show on Cashier" switches entirely — custom items are now never shown on the public storefront and always auto-added to POS Cashier for as long as the feature is on, no manual toggling needed. The on/off toggle and naming moved out of the Data page tab into Storefront Settings' "Storefront Features" card (alongside Online Orders/Table Reservations), now gated behind an Operations-plan upgrade wall. POS Cashier gained a dedicated section for these items, structurally separate (below) the regular Kitchen/Bar item grid rather than mixed into it. The Data page tab itself is now leaner — just the product list, or a link to Storefront Settings when the feature is off — fixing an unrelated layout gap reported alongside the above.
+
+## [2.54.0] - 2026-08-11 · feat
+
+- **Optional "Custom Products" second product line**: a store can now sell something entirely unrelated to its Kitchen/Bar menu — the example that prompted this, a café that also runs a small hair-salon counter — without Epidom building anything salon-specific. Off by default; the store owner names it (e.g. "Hair Salon", "Spa Services") when turning it on from a new tab on the Data page. Items in this line skip the Kitchen/Bar KDS workflow and material stock/recipe deduction entirely (there's no such thing as inventory for a haircut), and each item has two independent visibility switches — "Show on Menu" (the customer-facing Storefront) and "Show on Cashier" (the POS Cashier sell grid) — instead of the one shared toggle regular menu items use. Revenue still flows into the same integrated Finance Reports as everything else.
+
+## [2.53.0] - 2026-08-11 · infra
+
+- **Local dev and PR preview deployments no longer share the production database.** Vercel's `DATABASE_URL`/`DIRECT_URL` were scoped to both `production` and `preview` — every preview build's own migration step, and any local work, ran directly against live data. Added a Neon `development` branch (instant copy-on-write, reset from production nightly via a new GitHub Actions workflow) and re-scoped Vercel so only `production` deploys touch the production branch; `preview`/local now point at `development`. No user-facing behavior change — this is entirely about protecting production from development activity.
+
+## [2.52.0] - 2026-08-10 · feat
+
+- **Admin can now set a custom price for an individual account's subscription**: from the Master Admin Panel's "Manage" menu, a new "Set Custom Price" action lets the operator override what a user is billed. For a real Stripe-paying customer, it actually changes what Stripe charges them starting the next billing cycle (a live price override); for an admin-granted/comped account, it's stored as a reference figure — shown on the admin panel and that user's own Billing page — for the operator's own manual invoicing arrangement. Mainly for negotiated Enterprise deals, previously handled entirely outside the app.
+
 ## [2.51.0] - 2026-08-10 · feat
 
 - **Marketing site now remembers your last chosen language**: picking a language from the switcher on epidom's marketing pages (`/`, `/pricing`, etc.) now sticks on every future visit to an unprefixed URL — a bookmark, the logo click, typing the bare domain — instead of only lasting for that page load. Previously the site only auto-guessed a language once from your browser settings on first visit; an explicit pick now always wins over that guess, on a real cookie so it's honored before the page even renders.

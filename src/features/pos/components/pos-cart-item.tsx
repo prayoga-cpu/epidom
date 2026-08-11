@@ -27,7 +27,7 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove, onEdit }: PosCar
         <div className="flex-1">
           <div className="flex items-center gap-1.5">
             <h4 className="leading-none font-medium">{item.name}</h4>
-            {onEdit && (item.modifiers.length > 0 || item.notes) && (
+            {onEdit && (
               <Button
                 type="button"
                 variant="ghost"

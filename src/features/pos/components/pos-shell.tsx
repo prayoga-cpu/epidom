@@ -44,7 +44,9 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<"KITCHEN" | "BAR" | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<
+    "KITCHEN" | "BAR" | "CUSTOM" | null
+  >(null);
   const [activeFilterKeys, setActiveFilterKeys] = useState<PosFilterKey[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
@@ -115,6 +117,9 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
                     <PosDepartmentBar
                       selectedDepartment={selectedDepartment}
                       onSelectDepartment={setSelectedDepartment}
+                      customDepartmentLabel={
+                        menuData?.customProductsEnabled ? menuData.customProductsLabel : null
+                      }
                     />
                   </RemovableFilter>
                 )}
@@ -150,6 +155,9 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
                 selectedDepartment={selectedDepartment}
                 searchQuery={searchQuery}
                 onItemClick={handleItemClick}
+                customDepartmentLabel={
+                  menuData?.customProductsEnabled ? menuData.customProductsLabel : null
+                }
               />
             )}
           </div>

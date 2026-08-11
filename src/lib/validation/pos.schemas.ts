@@ -108,11 +108,12 @@ export type CreateHoldOrderInput = z.infer<typeof createHoldOrderSchema>;
 export const updateOrderStatusSchema = z
   .object({
     status: z
-      .enum(["PENDING", "CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED", "CANCELLED"])
+      .enum(["CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED", "CANCELLED"])
       .optional(),
-    // Manual settle-up for orders stuck at PENDING (Pay Later, or a payment
-    // that was actually collected outside the online flow) — deliberately
-    // narrowed to "mark paid" only, not a general paymentStatus setter.
+    // Manual settle-up for orders whose paymentStatus is still PENDING (Pay
+    // Later, or a payment that was actually collected outside the online
+    // flow) — deliberately narrowed to "mark paid" only, not a general
+    // paymentStatus setter.
     paymentStatus: z.literal("PAID").optional(),
     // How the settle-up was actually paid, and an optional free-text note
     // (e.g. "client paid directly to the owner") — only meaningful alongside

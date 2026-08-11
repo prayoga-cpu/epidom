@@ -92,6 +92,9 @@ describe("deductStockForOrder — option-driven material consumption", () => {
             minStock: 0,
             currentStock: 50,
             costPrice: 15,
+            // Matches the schema default — every regular product carries
+            // real inventory unless the owner opts out (Product.trackStock).
+            trackStock: true,
             recipeProducts: [],
           },
           menuItem: null,
@@ -107,6 +110,7 @@ describe("deductStockForOrder — option-driven material consumption", () => {
             unit: "pcs",
             minStock: 0,
             currentStock: 20,
+            trackStock: true,
             recipeProducts: [],
           },
           menuItem: null,
@@ -133,6 +137,96 @@ describe("deductStockForOrder — option-driven material consumption", () => {
     const [snapshotCall] = capturedTx.orderItem.update.mock.calls;
     expect(snapshotCall[0].where).toEqual({ id: "item-active" });
     expect(Number(snapshotCall[0].data.unitCostSnapshot)).toBe(15);
+  });
+
+  it("skips stock/recipe deduction for a CUSTOM-productLine item but still records its cost snapshot", async () => {
+    prismaMock.stockMovement.findFirst.mockResolvedValue(null); // not already deducted
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: "order-3",
+      orderNumber: "POS-3",
+      storeId: "store-1",
+      store: { business: { userId: "user-1" } },
+      items: [
+        {
+          id: "item-custom",
+          quantity: 1,
+          status: "SERVED",
+          product: {
+            id: "prod-custom",
+            name: "Men's Haircut",
+            unit: "piece",
+            minStock: 0,
+            currentStock: 0,
+            costPrice: 20,
+            productLine: "CUSTOM",
+            // The actual gate is trackStock, not productLine — a service has
+            // no inventory to deduct. See Product.trackStock.
+            trackStock: false,
+            recipeProducts: [],
+          },
+          menuItem: null,
+          selectedOptions: null,
+        },
+      ],
+    });
+
+    const result = await deductStockForOrder("order-3", "store-1");
+
+    // Not counted as deducted (nothing was actually decremented) or skipped
+    // (that means "unresolvable product," a data problem — this exclusion is
+    // intentional and expected).
+    expect(result.deducted).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(capturedTx.product.update).not.toHaveBeenCalled();
+    expect(capturedTx.material.update).not.toHaveBeenCalled();
+    expect(capturedTx.stockMovement.create).not.toHaveBeenCalled();
+
+    // Cost snapshot is still recorded so Finance margin reporting works for
+    // custom items too.
+    expect(capturedTx.orderItem.update).toHaveBeenCalledTimes(1);
+    const [snapshotCall] = capturedTx.orderItem.update.mock.calls;
+    expect(snapshotCall[0].where).toEqual({ id: "item-custom" });
+    expect(Number(snapshotCall[0].data.unitCostSnapshot)).toBe(20);
+  });
+
+  it("still deducts stock for a CUSTOM-productLine item that opts into tracking (merchandise, not a service)", async () => {
+    prismaMock.stockMovement.findFirst.mockResolvedValue(null); // not already deducted
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: "order-4",
+      orderNumber: "POS-4",
+      storeId: "store-1",
+      store: { business: { userId: "user-1" } },
+      items: [
+        {
+          id: "item-merch",
+          quantity: 2,
+          status: "SERVED",
+          product: {
+            id: "prod-merch",
+            name: "Branded Shampoo",
+            unit: "piece",
+            minStock: 0,
+            currentStock: 10,
+            costPrice: 5,
+            productLine: "CUSTOM",
+            trackStock: true,
+            recipeProducts: [],
+          },
+          menuItem: null,
+          selectedOptions: null,
+        },
+      ],
+    });
+
+    const result = await deductStockForOrder("order-4", "store-1");
+
+    // productLine is irrelevant here — a countable good in the custom product
+    // line deducts exactly like any other tracked product.
+    expect(result.deducted).toBe(1);
+    expect(capturedTx.product.update).toHaveBeenCalledTimes(1);
+    const [updateCall] = capturedTx.product.update.mock.calls;
+    expect(updateCall[0].where).toEqual({ id: "prod-merch" });
+    expect(Number(updateCall[0].data.currentStock)).toBe(8);
   });
 
   it("is idempotent — a second call for the same order is a no-op", async () => {

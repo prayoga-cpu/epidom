@@ -4,14 +4,18 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import type { PosMenuItem, PosMenuCategory } from "../types/pos.types";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
+import { Sparkles } from "lucide-react";
 import Image from "next/image";
 
 interface PosItemGridProps {
   categories: PosMenuCategory[];
   selectedCategory: string | null;
-  selectedDepartment?: "KITCHEN" | "BAR" | null;
+  selectedDepartment?: "KITCHEN" | "BAR" | "CUSTOM" | null;
   onItemClick: (item: PosMenuItem) => void;
   searchQuery: string;
+  /** Heading for the optional second product line's own section (e.g. "Hair
+   * Salon"). Null/absent when the store doesn't run one. */
+  customDepartmentLabel?: string | null;
 }
 
 export function PosItemGrid({
@@ -20,6 +24,7 @@ export function PosItemGrid({
   selectedDepartment = null,
   onItemClick,
   searchQuery,
+  customDepartmentLabel,
 }: PosItemGridProps) {
   const { t } = useI18n();
   // Menu item prices are literal in the store's display currency, never
@@ -40,6 +45,20 @@ export function PosItemGrid({
     }))
     .filter((cat) => cat.items.length > 0);
 
+  // The optional second product line (Product.productLine, tagged
+  // department: "CUSTOM" server-side) gets its own visually distinct block
+  // below the regular menu rather than sitting among the food/drink
+  // categories — it's a different kind of offering, and reading as just
+  // another category is what the merchant flagged.
+  const standardCategories: typeof filteredCategories = [];
+  const customCategories: typeof filteredCategories = [];
+  for (const category of filteredCategories) {
+    const customItems = category.items.filter((i) => i.department === "CUSTOM");
+    const standardItems = category.items.filter((i) => i.department !== "CUSTOM");
+    if (standardItems.length > 0) standardCategories.push({ ...category, items: standardItems });
+    if (customItems.length > 0) customCategories.push({ ...category, items: customItems });
+  }
+
   if (filteredCategories.length === 0) {
     return (
       <div className="text-muted-foreground flex flex-1 items-center justify-center p-8 text-center">
@@ -48,14 +67,7 @@ export function PosItemGrid({
     );
   }
 
-  return (
-    // pt-2 (not p-2) on mobile: only top spacing below the search/category
-    // bar is needed — no left/right container padding, so tiles run to the
-    // actual screen edge. pb-24 stays regardless of breakpoint: that's
-    // functional clearance for the floating cart bar, not decorative
-    // padding.
-    <div className="min-h-0 flex-1 overflow-auto pt-2 pb-24 sm:p-4 lg:pb-4">
-      {filteredCategories.map((category) => (
+  const renderCategory = (category: (typeof filteredCategories)[number]) => (
         <div key={category.name} className="mb-6 last:mb-0 sm:mb-8">
           <h2 className="mb-3 text-lg font-semibold tracking-tight sm:mb-4">
             {category.name === UNCATEGORIZED_CATEGORY ? t("common.uncategorized") : category.name}
@@ -111,7 +123,27 @@ export function PosItemGrid({
             ))}
           </div>
         </div>
-      ))}
+  );
+
+  return (
+    // pt-2 (not p-2) on mobile: only top spacing below the search/category
+    // bar is needed — no left/right container padding, so tiles run to the
+    // actual screen edge. pb-24 stays regardless of breakpoint: that's
+    // functional clearance for the floating cart bar, not decorative
+    // padding.
+    <div className="min-h-0 flex-1 overflow-auto pt-2 pb-24 sm:p-4 lg:pb-4">
+      {standardCategories.map(renderCategory)}
+      {customCategories.length > 0 && (
+        <section className="border-primary/30 bg-primary/5 mt-2 rounded-xl border p-3 sm:p-4">
+          {customDepartmentLabel && (
+            <div className="mb-3 flex items-center gap-2 sm:mb-4">
+              <Sparkles className="text-primary size-4 shrink-0" />
+              <h2 className="text-base font-bold tracking-tight">{customDepartmentLabel}</h2>
+            </div>
+          )}
+          {customCategories.map(renderCategory)}
+        </section>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
@@ -88,8 +88,16 @@ export async function POST(
 
     let orderItems: BuiltOrderItem[];
     let subtotal: number;
+    let financeSettings: Awaited<ReturnType<typeof resolveFinanceSettingsForOrder>>;
     try {
-      ({ orderItems, subtotal } = await validateAndBuildOrderItems(storeId, input.items));
+      // Independent reads (both only need storeId) — run concurrently
+      // instead of two sequential round trips on the critical checkout path.
+      const [built, settings] = await Promise.all([
+        validateAndBuildOrderItems(storeId, input.items),
+        resolveFinanceSettingsForOrder(storeId),
+      ]);
+      ({ orderItems, subtotal } = built);
+      financeSettings = settings;
     } catch (err) {
       if (err instanceof OrderBuildError) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.INVALID_INPUT, err.message), {
@@ -99,7 +107,6 @@ export async function POST(
       throw err;
     }
 
-    const financeSettings = await resolveFinanceSettingsForOrder(storeId);
     const charges = computeOrderCharges({
       itemsTotal: subtotal,
       discountAmount: input.discountAmount,
@@ -169,7 +176,7 @@ export async function POST(
               total: new Prisma.Decimal(i.total),
               notes: i.notes,
               selectedOptions: i.selectedOptions as Prisma.InputJsonValue | undefined,
-              status: "PENDING",
+              status: i.initialStatus,
             })),
           },
         },
@@ -193,34 +200,39 @@ export async function POST(
       entityId: order.id,
     });
 
-    if (immediatelyDelivered) {
-      await deliverOrderImmediately(order.id, storeId);
-    } else if (settledStatus === "CONFIRMED") {
-      await draftShortfallBatchesForConfirmedOrder(order.id, storeId);
-    }
+    // The order itself is already recorded at this point — everything below
+    // is follow-up work, deferred via after() to keep it off the response's
+    // critical path (see pos/orders/route.ts POST for the same pattern).
+    after(async () => {
+      if (immediatelyDelivered) {
+        await deliverOrderImmediately(order.id, storeId);
+      } else if (settledStatus === "CONFIRMED") {
+        await draftShortfallBatchesForConfirmedOrder(order.id, storeId);
+      }
 
-    // Fire background notification via Inngest — the true, one-time
-    // placement moment for this order (never fired at hold time).
-    try {
-      await inngest.send({
-        name: "order/placed",
-        data: {
-          orderId: order.id,
-          storeId,
-          storefrontSlug: null,
-          orderNumber: order.orderNumber,
-          customerName: input.customerName ?? "Walk-in",
-          totalAmount: charges.total,
-          currency: "IDR",
-          paymentMethod: input.paymentMethod,
-          items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
-          merchantPhone: store.phone ?? null,
-          storeName: store.name,
-        },
-      });
-    } catch (err) {
-      console.error("[POS_ORDERS_FINALIZE] Inngest event failed:", err);
-    }
+      // Fire background notification via Inngest — the true, one-time
+      // placement moment for this order (never fired at hold time).
+      try {
+        await inngest.send({
+          name: "order/placed",
+          data: {
+            orderId: order.id,
+            storeId,
+            storefrontSlug: null,
+            orderNumber: order.orderNumber,
+            customerName: input.customerName ?? "Walk-in",
+            totalAmount: charges.total,
+            currency: "IDR",
+            paymentMethod: input.paymentMethod,
+            items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
+            merchantPhone: store.phone ?? null,
+            storeName: store.name,
+          },
+        });
+      } catch (err) {
+        console.error("[POS_ORDERS_FINALIZE] Inngest event failed:", err);
+      }
+    });
 
     // Calculate change for cash payments
     const change =

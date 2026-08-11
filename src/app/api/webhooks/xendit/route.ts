@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseXenditWebhook, type XenditWebhookPayload } from "@/lib/payments/providers/xendit";
 import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
-import { productionBatchService } from "@/lib/services/production-batch.service";
 import { inngest } from "@/lib/inngest/client";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
-// This webhook only ever fires for methods that skip straight to PENDING
-// pre-payment (skipsOnlinePayment() === false), so the CASH/PAY_LATER
-// immediate-delivery path in pos-order-builder.ts never applies here — but a
-// store with kitchenDisplayEnabled: false still wants ANY payment method,
-// online ones included, to land on DELIVERED once paid rather than CONFIRMED.
+// Order.status is decided once, at creation time (see resolveSettledOrderStatus
+// / /api/public/orders) — not here. This webhook only ever flips paymentStatus.
+// Stock deduction below is scoped to already-DELIVERED orders only
+// (kitchenDisplayEnabled: false stores) as a defensive retry of what
+// deliverOrderImmediately() already attempted at creation; CONFIRMED orders
+// defer deduction to the DELIVERED PATCH transition, same as every other
+// order in that store's Active Queue.
 
 function verifyXenditToken(request: Request): boolean {
   const callbackToken = process.env.XENDIT_WEBHOOK_TOKEN;
@@ -45,9 +46,6 @@ export async function POST(request: Request) {
       where: {
         id: orderId,
       },
-      include: {
-        store: { select: { kitchenDisplayEnabled: true } },
-      },
     });
 
     const providerRef = (payload as any).data?.id || (payload as any).id || "xendit";
@@ -56,28 +54,13 @@ export async function POST(request: Request) {
       return NextResponse.json(createSuccessResponse({ acknowledged: true }));
     }
 
-    const settledStatus = order.store.kitchenDisplayEnabled ? "CONFIRMED" : "DELIVERED";
-
     if (paid) {
       // Flip to PAID once. Guarded so a retry doesn't re-fire the Inngest event.
       if (order.paymentStatus !== "PAID") {
         await prisma.order.update({
           where: { id: orderId },
-          data: {
-            paymentStatus: "PAID",
-            status: settledStatus,
-            ...(settledStatus === "DELIVERED" && { deliveredDate: new Date() }),
-          },
+          data: { paymentStatus: "PAID" },
         });
-
-        // No kitchen/bar to route through — same table hand-back the manual
-        // "mark delivered" action does, since there's no service period left to track.
-        if (settledStatus === "DELIVERED" && order.tableId) {
-          await prisma.table.update({
-            where: { id: order.tableId },
-            data: { status: "AVAILABLE" },
-          });
-        }
 
         await inngest.send({
           name: "order/payment.confirmed",
@@ -87,36 +70,24 @@ export async function POST(request: Request) {
             providerRef,
           },
         });
-
-        // Going to the kitchen/bar queue — must run BEFORE deductStockForOrder
-        // below, which (unlike the cash-order flow) fires immediately here,
-        // or the shortfall would be computed against stock this same order
-        // already ate into. No-op when settledStatus is DELIVERED (no KDS
-        // board to show it on). Guarded by the same paymentStatus check as
-        // the update above so a retry never drafts a duplicate batch.
-        if (settledStatus === "CONFIRMED") {
-          try {
-            await productionBatchService.draftShortfallBatchesForOrder(orderId, order.storeId);
-          } catch (err) {
-            console.error("[XENDIT_WEBHOOK] Shortfall batch drafting failed:", err);
-          }
-        }
       }
 
-      // Payment confirmed — the purchase is complete, so sync stock now.
-      // deductStockForOrder is idempotent (guards on an existing SALE movement),
-      // so we attempt it even when the order is already PAID. This recovers the
-      // case where a previous webhook flipped the order to PAID but its deduction
-      // attempt threw before writing any movement: on Xendit's retry we re-run it.
-      try {
-        await deductStockForOrder(orderId, order.storeId);
-      } catch (err) {
-        console.error("[XENDIT_WEBHOOK] Stock deduction failed:", err);
-        // Signal failure so Xendit retries and the deduction can be re-attempted.
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Stock deduction failed"),
-          { status: 500 }
-        );
+      // Only the DELIVERED case ever deducts stock outside the normal KDS
+      // hand-off; retry it defensively in case the creation-time attempt in
+      // deliverOrderImmediately() silently failed. Idempotent either way
+      // (deductStockForOrder guards on an existing SALE movement) — safe to
+      // re-run on every Xendit retry.
+      if (order.status === "DELIVERED") {
+        try {
+          await deductStockForOrder(orderId, order.storeId);
+        } catch (err) {
+          console.error("[XENDIT_WEBHOOK] Stock deduction failed:", err);
+          // Signal failure so Xendit retries and the deduction can be re-attempted.
+          return NextResponse.json(
+            createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Stock deduction failed"),
+            { status: 500 }
+          );
+        }
       }
 
       return NextResponse.json(createSuccessResponse({ acknowledged: true }));

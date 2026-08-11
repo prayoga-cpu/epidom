@@ -51,7 +51,11 @@ export interface PosOrderItemDisplay {
   status: OrderItemStatus;
   notes?: string | null;
   selectedOptions?: CartModifier[] | null;
-  menuItem?: { name: string; department?: "KITCHEN" | "BAR" | null } | null;
+  menuItem?: {
+    name: string;
+    department?: "KITCHEN" | "BAR" | null;
+    product?: { productLine: "STANDARD" | "CUSTOM" } | null;
+  } | null;
   // Set when this line needed more of a recipe-linked product than was on
   // hand — an auto-drafted ProductionBatch (triggerType: ORDER_SHORTFALL) is
   // covering it. Completing that batch (or tapping this item to READY, which
@@ -91,7 +95,12 @@ export interface PosMenuItem {
   imageUrl?: string | null;
   isAvailable: boolean;
   category?: string | null;
-  department?: "KITCHEN" | "BAR" | null;
+  // "CUSTOM" is a client-facing sentinel for the optional second product
+  // line (see Product.productLine) — never the real stored DB value, which
+  // stays inert Kitchen. Overridden server-side in /api/stores/[id]/pos/menu
+  // so it can be filtered like a genuine third department alongside
+  // Kitchen/Bar in PosDepartmentBar/PosItemGrid.
+  department?: "KITCHEN" | "BAR" | "CUSTOM" | null;
   modifiers?: unknown;
   product?: {
     optionGroups?: Array<{

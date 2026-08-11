@@ -46,6 +46,7 @@ export class StorefrontService {
               include: {
                 product: {
                   select: {
+                    productLine: true,
                     optionGroups: {
                       orderBy: { displayOrder: "asc" },
                       include: { options: { orderBy: { displayOrder: "asc" } } },
@@ -57,11 +58,32 @@ export class StorefrontService {
           },
         },
         store: {
-          select: { id: true },
+          select: {
+            id: true,
+            customProductsEnabled: true,
+            customProductsShowOnStorefront: true,
+            customProductsLabel: true,
+          },
         },
       },
     });
     if (!storefront) return storefront;
+
+    // CUSTOM-productLine items (the optional second product line, e.g. a
+    // restaurant's hair-salon add-on) only appear on the public
+    // customer-facing storefront menu when BOTH the master feature is on
+    // (customProductsEnabled — turning this off must pull items from every
+    // surface, not just POS Cashier) AND the owner has separately opted into
+    // storefront publishing from Storefront Settings
+    // (customProductsShowOnStorefront). Either one alone is not enough.
+    const showCustomOnStorefront =
+      storefront.store.customProductsEnabled && storefront.store.customProductsShowOnStorefront;
+    const menuCategories = showCustomOnStorefront
+      ? storefront.menuCategories
+      : storefront.menuCategories.map((category) => ({
+          ...category,
+          items: category.items.filter((item) => item.product?.productLine !== "CUSTOM"),
+        }));
 
     // The store's resolved currency (store-or-business, per
     // syncFinanceWithBusiness) — moved off the old User.currency, which
@@ -69,6 +91,7 @@ export class StorefrontService {
     const { currency } = await getFinanceSettings(storefront.store.id);
     return {
       ...storefront,
+      menuCategories,
       store: { ...storefront.store, currency },
     };
   }
@@ -383,6 +406,7 @@ export class StorefrontService {
         currency,
         imageUrl: input.imageUrl,
         isAvailable: input.isAvailable,
+        showOnCashier: input.showOnCashier,
         isFeatured: input.isFeatured,
         displayOrder: input.displayOrder ?? nextOrder,
         modifiers:
@@ -490,6 +514,8 @@ export class StorefrontService {
         currency: input.currency !== undefined ? input.currency : item.currency,
         imageUrl: input.imageUrl !== undefined ? input.imageUrl : item.imageUrl,
         isAvailable: input.isAvailable !== undefined ? input.isAvailable : item.isAvailable,
+        showOnCashier:
+          input.showOnCashier !== undefined ? input.showOnCashier : item.showOnCashier,
         isFeatured: input.isFeatured !== undefined ? input.isFeatured : item.isFeatured,
         displayOrder: input.displayOrder !== undefined ? input.displayOrder : item.displayOrder,
         modifiers:
@@ -514,6 +540,38 @@ export class StorefrontService {
   }
 
   /**
+   * Resolve a free-text product category name to a MenuCategory id on this
+   * store's storefront, creating the category if it doesn't exist yet.
+   * Returns null for an empty/absent category (i.e. "Uncategorized").
+   *
+   * Shared by product creation (autoLinkProductToMenu) and product updates
+   * (ProductService.updateProduct's category sync) so a renamed/reassigned
+   * category lands the linked MenuItem in the same place either way.
+   */
+  async resolveMenuCategoryId(
+    storeId: string,
+    categoryName?: string | null
+  ): Promise<string | null> {
+    if (!categoryName) return null;
+
+    const storefront = await this.getStorefrontByStoreId(storeId);
+    const match = storefront.menuCategories.find(
+      (c) => c.name.toLowerCase() === categoryName.toLowerCase()
+    );
+    if (match) return match.id;
+
+    const maxCatOrder = await prisma.menuCategory.aggregate({
+      where: { storefrontId: storefront.id },
+      _max: { displayOrder: true },
+    });
+    const created = await this.createMenuCategory(storefront.id, {
+      name: categoryName,
+      displayOrder: (maxCatOrder._max.displayOrder ?? -1) + 1,
+    });
+    return created.id;
+  }
+
+  /**
    * Auto-link a product to the store's POS/storefront menu as a new MenuItem,
    * unless one is already linked. Mirrors the manual "Add to POS menu" action
    * (see useAddProductToMenu) so a product added via any path — the add-product
@@ -530,6 +588,7 @@ export class StorefrontService {
       sellingPrice: number | string;
       category?: string | null;
       department?: Department;
+      productLine?: "STANDARD" | "CUSTOM";
     }
   ): Promise<void> {
     try {
@@ -540,27 +599,7 @@ export class StorefrontService {
       if (alreadyLinked) return;
 
       const storefront = await this.getStorefrontByStoreId(storeId);
-
-      let categoryId: string | null = null;
-      if (product.category) {
-        const categoryName = product.category;
-        const match = storefront.menuCategories.find(
-          (c) => c.name.toLowerCase() === categoryName.toLowerCase()
-        );
-        if (match) {
-          categoryId = match.id;
-        } else {
-          const maxCatOrder = await prisma.menuCategory.aggregate({
-            where: { storefrontId: storefront.id },
-            _max: { displayOrder: true },
-          });
-          const created = await this.createMenuCategory(storefront.id, {
-            name: categoryName,
-            displayOrder: (maxCatOrder._max.displayOrder ?? -1) + 1,
-          });
-          categoryId = created.id;
-        }
-      }
+      const categoryId = await this.resolveMenuCategoryId(storeId, product.category);
 
       const maxItemOrder = await prisma.menuItem.aggregate({
         where: { storefrontId: storefront.id, categoryId },
@@ -583,7 +622,14 @@ export class StorefrontService {
           department: product.department ?? "KITCHEN",
           price: new Prisma.Decimal(price),
           currency,
+          // Always available on create, CUSTOM-productLine items included:
+          // whether a custom item reaches the public storefront at all is
+          // decided by Store.customProductsShowOnStorefront (filtered in
+          // getStorefrontBySlug), not by this flag. Setting it false here
+          // would instead render the item as "SOLD OUT" on a storefront the
+          // owner had deliberately published it to.
           isAvailable: true,
+          showOnCashier: true,
           displayOrder: (maxItemOrder._max.displayOrder ?? -1) + 1,
         },
       });

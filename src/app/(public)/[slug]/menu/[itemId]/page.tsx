@@ -55,6 +55,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
     include: {
       product: {
         select: {
+          productLine: true,
           optionGroups: {
             orderBy: { displayOrder: "asc" },
             include: { options: { orderBy: { displayOrder: "asc" } } },
@@ -79,6 +80,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
     isAvailable: item.isAvailable,
     isFeatured: item.isFeatured,
     modifiers: item.modifiers,
+    isCustom: item.product?.productLine === "CUSTOM",
     product: item.product
       ? { optionGroups: serializeProductOptionGroups(item.product.optionGroups) }
       : null,

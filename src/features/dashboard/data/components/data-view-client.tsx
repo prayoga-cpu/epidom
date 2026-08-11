@@ -27,6 +27,7 @@ import type { MaterialWithSuppliers } from "@/lib/repositories/material.reposito
 import type { RecipeWithIngredients } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import type { Product } from "@/features/dashboard/data/products/hooks/use-products";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
+import { useCustomProductsSettings } from "../custom-products/hooks/use-custom-products-settings";
 
 // ========================================
 // Lazy-Loaded Section Components
@@ -82,6 +83,17 @@ const SuppliersSection = dynamic(
   () =>
     import("../suppliers/components/suppliers-section").then((mod) => ({
       default: mod.SuppliersSection,
+    })),
+  {
+    loading: () => <TabContentSkeleton />,
+    ssr: false, // Prevent SSR to avoid hydration mismatch
+  }
+);
+
+const CustomProductsSection = dynamic(
+  () =>
+    import("../custom-products/components/custom-products-section").then((mod) => ({
+      default: mod.CustomProductsSection,
     })),
   {
     loading: () => <TabContentSkeleton />,
@@ -182,7 +194,7 @@ function TabContentSkeleton() {
   );
 }
 
-type DataTab = "materials" | "recipes" | "products" | "suppliers";
+type DataTab = "materials" | "recipes" | "products" | "suppliers" | "customProducts";
 
 interface TabState {
   tab: DataTab;
@@ -190,7 +202,7 @@ interface TabState {
 
 const TAB_DEFAULTS: TabState = { tab: "materials" };
 
-const DATA_TABS: DataTab[] = ["materials", "recipes", "products", "suppliers"];
+const DATA_TABS: DataTab[] = ["materials", "recipes", "products", "suppliers", "customProducts"];
 
 function sanitizeTabState(raw: unknown, defaults: TabState): TabState {
   if (!raw || typeof raw !== "object") return defaults;
@@ -232,6 +244,7 @@ export function DataViewClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { data: customProductsSettings } = useCustomProductsSettings(storeId);
 
   const [tabState, setTabState] = usePersistedState<TabState>(
     `epidom-data-tab-${storeId}`,
@@ -321,6 +334,13 @@ export function DataViewClient({
         >
           {t("pages.suppliersList")}
         </TabsTrigger>
+        <TabsTrigger
+          className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
+          value="customProducts"
+          onMouseEnter={() => handleTabHover("customProducts")}
+        >
+          {customProductsSettings?.customProductsLabel || t("pages.customProductsList")}
+        </TabsTrigger>
       </TabsList>
 
       {/* Conditional rendering: Only render TabsContent for active tab
@@ -349,6 +369,12 @@ export function DataViewClient({
       {activeTab === "suppliers" && (
         <TabsContent value="suppliers" className="mt-0">
           <SuppliersSection initialSuppliers={initialSuppliers} />
+        </TabsContent>
+      )}
+
+      {activeTab === "customProducts" && (
+        <TabsContent value="customProducts" className="mt-0">
+          <CustomProductsSection storeId={storeId} />
         </TabsContent>
       )}
     </Tabs>

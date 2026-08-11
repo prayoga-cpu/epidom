@@ -128,6 +128,9 @@ Table stores {
   payLaterEnabled Boolean [not null, default: false]
   kitchenDisplayEnabled Boolean [not null, default: true]
   productionEnabled Boolean [not null, default: false]
+  customProductsEnabled Boolean [not null, default: false]
+  customProductsLabel String
+  customProductsShowOnStorefront Boolean [not null, default: false]
   standardWorkMinutesPerDay Int [not null, default: 480]
   scheduleShifts schedule_shifts [not null]
   staffSchedules staff_schedules [not null]
@@ -221,9 +224,11 @@ Table products {
   description String
   category String
   department Department [not null, default: 'KITCHEN']
+  productLine ProductLine [not null, default: 'STANDARD']
   costPrice Decimal [not null]
   sellingPrice Decimal [not null]
   currentStock Decimal [not null, default: 0]
+  trackStock Boolean [not null, default: true]
   unit String [not null, default: 'piece']
   productionTime Int
   shelfLife Int
@@ -498,7 +503,7 @@ Table orders {
   customerEmail String
   customerPhone String
   deliveryAddress String
-  status OrderStatus [not null, default: 'PENDING']
+  status OrderStatus [not null, default: 'CONFIRMED']
   orderDate DateTime [default: `now()`, not null]
   dueDate DateTime
   deliveredDate DateTime
@@ -963,6 +968,7 @@ Table menu_items {
   currency String [not null, default: 'IDR']
   imageUrl String
   isAvailable Boolean [not null, default: true]
+  showOnCashier Boolean [not null, default: true]
   isFeatured Boolean [not null, default: false]
   displayOrder Int [not null, default: 0]
   modifiers Json
@@ -1044,7 +1050,6 @@ Enum SupplierOrderStatus {
 }
 
 Enum OrderStatus {
-  PENDING
   CONFIRMED
   IN_PRODUCTION
   READY
@@ -1179,6 +1184,11 @@ Enum Department {
   KITCHEN
   BAR
   BOTH
+}
+
+Enum ProductLine {
+  STANDARD
+  CUSTOM
 }
 
 Enum PayType {

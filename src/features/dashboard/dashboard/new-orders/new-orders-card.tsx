@@ -30,10 +30,13 @@ interface NewOrdersCardProps {
 }
 
 /**
- * Highlights orders awaiting confirmation — mainly the ones a customer just
- * placed through the storefront — so an operator sees them without having
- * to go check the Order Queue first. Reuses `usePosOrders`, which already
- * has SSE + polling wired up, so this card updates live as orders come in.
+ * Highlights orders that still need a payment follow-up (paymentStatus
+ * PENDING) — Pay Later tabs and online payments that never confirmed — so an
+ * operator sees them without having to go check the Order Queue first. Held
+ * carts are excluded: they're parked, unpaid because no payment method has
+ * been chosen yet, not because a payment is outstanding. Reuses
+ * `usePosOrders`, which already has SSE + polling wired up, so this card
+ * updates live as orders come in.
  *
  * Deliberately a plain `Card` (not the shared `h-full`/stretch-grid
  * `DashboardCard`) — this renders as a standalone full-width banner, not a
@@ -51,7 +54,7 @@ export function NewOrdersCard({ storeId }: NewOrdersCardProps) {
   const pendingOrders = useMemo(
     () =>
       (orders ?? [])
-        .filter((o) => o.status === "PENDING")
+        .filter((o) => o.paymentStatus === "PENDING" && o.status !== "HELD")
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [orders]
   );

@@ -172,6 +172,10 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     {
       ...filters,
       search: debouncedSearch || undefined,
+      // This tab only ever manages the store's regular Kitchen/Bar products —
+      // CUSTOM-productLine items (the optional second product line) live in
+      // their own Data tab, see custom-products-section.tsx.
+      productLine: "STANDARD",
     },
     initialProducts
       ? {
@@ -411,7 +415,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
 
   const handleExport = async () => {
     try {
-      await exportProducts.mutateAsync({ storeId, filters });
+      await exportProducts.mutateAsync({ storeId, filters: { ...filters, productLine: "STANDARD" } });
       toast.success(t("messages.exportSuccessful"));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("messages.errorLoadingProducts"));

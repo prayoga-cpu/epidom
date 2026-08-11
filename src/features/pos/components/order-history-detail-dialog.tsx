@@ -47,8 +47,6 @@ function getSourceBadgeVariant(source: string) {
 
 function getStatusBadgeVariant(status: string) {
   switch (status) {
-    case "PENDING":
-      return "secondary";
     case "CONFIRMED":
       return "default";
     case "IN_PRODUCTION":

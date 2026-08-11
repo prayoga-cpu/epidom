@@ -114,6 +114,7 @@ docs/                  # READ THIS for context before non-trivial work
 - Use Prisma `Decimal` for money and quantities, never `Float`.
 - New tables get `@@map("snake_case_table_name")`.
 - Every schema change goes through a migration. Never use `db push` against any branch other than your local.
+- Local `.env` and Vercel Preview point at a separate Neon `development` branch, not production — safe to experiment against, reset nightly from prod. Migrations you commit auto-apply to production via `prisma migrate deploy` in the build script; never run migrations by hand against prod. Details: `docs/DATABASE.md`.
 
 **Validation**
 

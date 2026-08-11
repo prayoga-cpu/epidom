@@ -60,6 +60,7 @@ export default async function MenuPage({ params }: PageProps) {
       isAvailable: item.isAvailable,
       isFeatured: item.isFeatured,
       modifiers: item.modifiers,
+      isCustom: item.product?.productLine === "CUSTOM",
       product: item.product
         ? { optionGroups: serializeProductOptionGroups(item.product.optionGroups) }
         : null,
@@ -75,6 +76,9 @@ export default async function MenuPage({ params }: PageProps) {
     themeColor: storefront.themeColor,
     fontFamily: storefront.fontFamily,
     acceptsReservations: storefront.acceptsReservations,
+    // Heading for the optional second product line's own section (e.g.
+    // "Hair Salon"). Null when the store doesn't run one.
+    customProductsLabel: storefront.store.customProductsLabel,
   };
 
   return (

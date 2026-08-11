@@ -336,6 +336,25 @@ NEON_PROJECT_ID=
 
 ---
 
+## Dev/prod database split (Neon branching)
+
+`DATABASE_URL`/`DIRECT_URL` point at different Neon branches depending on
+where the app is running — local dev and Vercel Preview deployments must
+never touch the production branch. See `docs/DATABASE.md` for the full
+rationale and setup.
+
+| Context                    | Neon branch   | Vercel env target      |
+| --------------------------- | ------------- | ----------------------- |
+| Local dev (`.env`)          | `development` | n/a                      |
+| Vercel Preview (PRs)        | `development` | `preview`                |
+| Vercel Production (`main`)  | `main`        | `production`             |
+
+`.env` already points at the `development` branch. Do not copy production's
+`DATABASE_URL`/`DIRECT_URL` into `.env` for local work — that defeats the
+whole point of the split.
+
+---
+
 ## Database backup (Cloudflare R2)
 
 Powers the nightly `nightly-database-backup` Inngest cron and the "Database

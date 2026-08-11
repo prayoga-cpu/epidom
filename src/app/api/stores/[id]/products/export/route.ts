@@ -10,6 +10,10 @@ import { z } from "zod";
 const productFilterSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
+  // Defaults to STANDARD so exporting the regular Products tab never leaks
+  // in CUSTOM-productLine items (the optional second product line) — see
+  // Product.productLine.
+  productLine: z.enum(["STANDARD", "CUSTOM"]).optional().default("STANDARD"),
   sortBy: z
     .enum(["name", "sku", "currentStock", "costPrice", "sellingPrice", "createdAt", "updatedAt"])
     .default("createdAt"),
@@ -40,6 +44,7 @@ export const GET = withApiHandler(
     const filterParams = {
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
+      productLine: searchParams.get("productLine") || undefined,
       sortBy: searchParams.get("sortBy") || "createdAt",
       sortOrder: searchParams.get("sortOrder") || "desc",
     };

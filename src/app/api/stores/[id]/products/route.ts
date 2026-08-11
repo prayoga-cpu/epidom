@@ -12,6 +12,7 @@ const productFilterSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
   department: z.enum(["KITCHEN", "BAR"]).optional(),
+  productLine: z.enum(["STANDARD", "CUSTOM"]).optional(),
   sortBy: z
     .enum(["name", "sku", "currentStock", "costPrice", "sellingPrice", "createdAt", "updatedAt"])
     .default("createdAt"),
@@ -32,6 +33,7 @@ export const GET = withApiHandler(
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
       department: searchParams.get("department") || undefined,
+      productLine: searchParams.get("productLine") || undefined,
       sortBy: searchParams.get("sortBy") || "createdAt",
       sortOrder: searchParams.get("sortOrder") || "desc",
       skip: searchParams.get("skip") || "0",
@@ -95,9 +97,11 @@ export const POST = withApiHandler(
       description: validatedData.description,
       category: validatedData.category,
       department: validatedData.department,
+      productLine: validatedData.productLine,
       costPrice: Number(validatedData.costPrice),
       sellingPrice: Number(validatedData.sellingPrice),
       currentStock: validatedData.currentStock ? Number(validatedData.currentStock) : 0,
+      trackStock: validatedData.trackStock,
       unit: validatedData.unit,
       minStock: validatedData.minStock ? Number(validatedData.minStock) : 0,
       maxStock: validatedData.maxStock ? Number(validatedData.maxStock) : undefined,

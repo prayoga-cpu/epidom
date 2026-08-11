@@ -104,6 +104,17 @@ model Subscription {
 
 A user with no subscription is implicitly on `FREE`. Don't require a `Subscription` row just to gate features.
 
+### Admin custom price override
+
+`Subscription.customPriceAmount` / `customPriceCurrency` / `customPriceInterval` (nullable) let an admin override what a specific account is billed, via the Master Admin Panel's "Manage" → "Set Custom Price" action (`SubscriptionService.setCustomPrice`/`clearCustomPrice`). Deliberately separate fields from `stripePriceId` — which every Stripe webhook handler rewrites on its own — so an override can never be silently clobbered back to catalog pricing.
+
+Behavior splits on how the account is actually billed:
+
+- **Real Stripe-paying account** (`stripeCustomerId` not `admin_`/`free_`-prefixed): a **live override** — an ad-hoc Stripe price (`price_data` on the subscription's line item) replaces the catalog price, applied with `proration_behavior: "none"` so it takes effect starting the next invoice rather than an immediate prorated charge/credit. Requires the account to already have a `stripeSubscriptionId`.
+- **Admin-granted/comped account** (`admin_`/`free_`-prefixed `stripeCustomerId`): **reference-only** — no Stripe call at all, since there's no real billing to override. Stored purely for display (admin panel + the account's own Billing page) so the operator has a record for a manual/negotiated invoicing arrangement outside the app.
+
+Clearing an override (`clearCustomPrice`) nulls the three fields and, for a real Stripe account on POS/OPERATIONS, restores the subscription item to that plan's catalog `MONTHLY` price (always monthly — the original interval isn't tracked once overridden). `handleSubscriptionDeleted` in the Stripe webhook also nulls these fields defensively, so a fully-canceled-then-resubscribed account doesn't carry a stale override into its fresh catalog-priced subscription.
+
 ---
 
 ## Xendit setup (customer payments)

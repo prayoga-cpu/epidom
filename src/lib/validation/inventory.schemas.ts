@@ -49,9 +49,17 @@ const baseProductSchema = z.object({
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
   department: departmentSchema.default("KITCHEN"),
+  // Orthogonal to `department` — see Product.productLine in schema.prisma.
+  // CUSTOM marks an item belonging to the store's optional second product
+  // line, managed via its own Data tab rather than the regular Products form.
+  productLine: z.enum(["STANDARD", "CUSTOM"]).default("STANDARD"),
   costPrice: priceSchema,
   sellingPrice: priceSchema,
   currentStock: decimalSchema.default(0),
+  // false = no inventory at all (a service, or an always-available item):
+  // nothing is deducted on sale and it can never run out. See
+  // Product.trackStock in schema.prisma.
+  trackStock: z.boolean().default(true),
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").default("piece"),
   minStock: decimalSchema.default(0),
   maxStock: decimalSchema.default(1000),

@@ -6,6 +6,8 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { updateOrderItemStatusSchema } from "@/lib/validation/pos.schemas";
 import { productionBatchService } from "@/lib/services/production-batch.service";
 import { advanceOrderToReadyIfAllItemsReady } from "@/lib/services/order-status.helpers";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 /**
  * PATCH /api/stores/[id]/pos/orders/[orderId]/items/[itemId]
@@ -60,6 +62,13 @@ export async function PATCH(
       storeId,
       Number(item.quantity)
     );
+    // Every other order-mutating route pushes this so the KDS and Order Queue
+    // screens update instantly instead of waiting on their 10s/15s poll
+    // fallback — this route was the one gap.
+    publishStoreEvent(storeId, REALTIME_EVENTS.ORDER_UPDATED, {
+      action: "updated",
+      entityId: orderId,
+    });
     return NextResponse.json(createSuccessResponse({ id: item.id, status: "READY" }));
   }
 
@@ -76,6 +85,11 @@ export async function PATCH(
   if (parsed.data.status === "READY") {
     await advanceOrderToReadyIfAllItemsReady(prisma, orderId);
   }
+
+  publishStoreEvent(storeId, REALTIME_EVENTS.ORDER_UPDATED, {
+    action: "updated",
+    entityId: orderId,
+  });
 
   return NextResponse.json(createSuccessResponse({ id: updated.id, status: updated.status }));
 }

@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { apiClient } from "@/lib/api/client";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { useCustomProductsSettings } from "@/features/dashboard/data/custom-products/hooks/use-custom-products-settings";
 import { Download, FileText, Sheet, Pencil, Trash2, AlertCircle, Store } from "lucide-react";
 import { useSortable, sortRows } from "@/features/dashboard/shared/hooks/use-sortable";
 import { SortIcon } from "@/features/dashboard/shared/components/sort-icon";
@@ -118,7 +119,9 @@ interface CategoryRow {
 }
 
 interface DepartmentRow {
-  department: "KITCHEN" | "BAR" | null;
+  // "CUSTOM" is the optional second product line (Product.productLine),
+  // labeled client-side with the store's own customProductsLabel.
+  department: "KITCHEN" | "BAR" | "CUSTOM" | null;
   orderItemCount: number;
   totalQuantity: number;
   totalRevenue: number;
@@ -332,6 +335,18 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { data: customProductsSettings } = useCustomProductsSettings(storeId);
+  const customDepartmentLabel = customProductsSettings?.customProductsEnabled
+    ? customProductsSettings.customProductsLabel
+    : null;
+  const departmentLabel = (department: DepartmentRow["department"]) =>
+    department === "KITCHEN"
+      ? t("common.departmentKitchen")
+      : department === "BAR"
+        ? t("common.departmentBar")
+        : department === "CUSTOM"
+          ? (customDepartmentLabel ?? t("common.departmentUnassigned"))
+          : t("common.departmentUnassigned");
 
   const [from, setFromState] = useState(searchParams.get("from") ?? startOfMonthLocalISO());
   const [to, setToState] = useState(searchParams.get("to") ?? todayLocalISO());
@@ -811,11 +826,7 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
         t("pages.financeRevenue"),
       ];
       const rows = byDepartment.data.departments.map((d) => [
-        d.department === "KITCHEN"
-          ? t("common.departmentKitchen")
-          : d.department === "BAR"
-            ? t("common.departmentBar")
-            : t("common.departmentUnassigned"),
+        departmentLabel(d.department),
         d.totalQuantity,
         d.totalRevenue,
       ]);
@@ -1255,13 +1266,7 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
             <div className="flex flex-wrap gap-6">
               {(byDepartment.data?.departments ?? []).map((d) => (
                 <div key={d.department ?? "unassigned"} className="space-y-0.5">
-                  <p className="text-muted-foreground text-xs">
-                    {d.department === "KITCHEN"
-                      ? t("common.departmentKitchen")
-                      : d.department === "BAR"
-                        ? t("common.departmentBar")
-                        : t("common.departmentUnassigned")}
-                  </p>
+                  <p className="text-muted-foreground text-xs">{departmentLabel(d.department)}</p>
                   <p className="text-xl font-bold">{formatOrderPrice(d.totalRevenue)}</p>
                 </div>
               ))}

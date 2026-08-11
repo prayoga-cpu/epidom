@@ -52,6 +52,9 @@ function makeOrder(overrides: any = {}) {
           unit: "piece",
           currentStock: 10,
           minStock: 0,
+          // Matches the schema default — every regular product carries real
+          // inventory unless the owner opts out (Product.trackStock).
+          trackStock: true,
           recipeProducts: [
             {
               isDefault: true,

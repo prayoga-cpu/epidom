@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createPublicOrderSchema } from "@/lib/validation/public-orders.schemas";
 import { initiatePayment } from "@/lib/payments";
-import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
+import {
+  resolveSettledOrderStatus,
+  deliverOrderImmediately,
+  draftShortfallBatchesForConfirmedOrder,
+} from "@/lib/services/pos-order-builder";
+import { resolveInitialOrderItemStatus } from "@/lib/services/order-status.helpers";
 import { inngest } from "@/lib/inngest/client";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
@@ -82,6 +87,9 @@ export async function POST(request: Request) {
         storefrontId: storefront.id,
         isAvailable: true,
       },
+      include: {
+        product: { select: { productLine: true } },
+      },
     });
 
     if (menuItems.length !== menuItemIds.length) {
@@ -112,6 +120,7 @@ export async function POST(request: Request) {
         total,
         notes: i.notes,
         selectedOptions: i.selectedOptions,
+        initialStatus: resolveInitialOrderItemStatus(menuItem.product?.productLine),
       };
     });
 
@@ -128,6 +137,16 @@ export async function POST(request: Request) {
       settings: financeSettings,
     });
 
+    // Mirrors the POS create route: production isn't gated on payment
+    // clearing, so every method (including online gateway methods still
+    // awaiting webhook confirmation) resolves to CONFIRMED/DELIVERED the
+    // same way. See resolveSettledOrderStatus.
+    const settledStatus = resolveSettledOrderStatus(
+      input.paymentMethod as PaymentMethod,
+      storefront.store.kitchenDisplayEnabled
+    );
+    const immediatelyDelivered = settledStatus === "DELIVERED";
+
     // Create the order in a transaction
     const order = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
@@ -140,7 +159,9 @@ export async function POST(request: Request) {
           orderType: input.orderType as OrderType,
           tableNumber: input.tableNumber,
           paymentMethod: input.paymentMethod as PaymentMethod,
-          paymentStatus: "PENDING",
+          paymentStatus: input.paymentMethod === "CASH" ? "PAID" : "PENDING",
+          status: settledStatus,
+          ...(immediatelyDelivered && { deliveredDate: new Date() }),
           source: "STOREFRONT",
           notes: input.notes,
           subtotal: new Prisma.Decimal(charges.subtotal),
@@ -162,6 +183,7 @@ export async function POST(request: Request) {
               total: new Prisma.Decimal(i.total),
               notes: i.notes,
               selectedOptions: i.selectedOptions as Prisma.InputJsonValue | undefined,
+              status: i.initialStatus,
             })),
           },
         },
@@ -181,8 +203,6 @@ export async function POST(request: Request) {
     // Initiate payment (gracefully falls back if provider not configured)
     let paymentUrl: string | null = null;
     let qrString: string | null = null;
-    let finalStatus = order.status;
-    let finalPaymentStatus = order.paymentStatus;
 
     if (input.paymentMethod !== "CASH") {
       try {
@@ -227,21 +247,18 @@ export async function POST(request: Request) {
         console.error("[public/orders] Payment initiation failed:", err);
         // Order is still created; merchant can handle payment manually
       }
-    } else {
-      // Cash: auto-confirm
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { paymentStatus: "PAID", status: "CONFIRMED" },
-      });
-      finalStatus = "CONFIRMED";
-      finalPaymentStatus = "PAID";
+    }
 
-      // Cash orders are purchased on the spot — deduct stock immediately.
-      try {
-        await deductStockForOrder(order.id, storefront.storeId);
-      } catch (err) {
-        console.error("[public/orders] Stock deduction failed:", err);
-      }
+    // Mirrors the POS create route exactly: DELIVERED (kitchen display off)
+    // runs stock deduction now; CONFIRMED (kitchen display on) only drafts
+    // shortfall batches and defers deduction to the DELIVERED transition in
+    // the shared /pos/orders/[orderId] PATCH route, same as every other
+    // order in that store's Active Queue / KDS — including CASH, which no
+    // longer deducts immediately at checkout.
+    if (immediatelyDelivered) {
+      await deliverOrderImmediately(order.id, storefront.storeId);
+    } else if (settledStatus === "CONFIRMED") {
+      await draftShortfallBatchesForConfirmedOrder(order.id, storefront.storeId);
     }
 
     // Fire background notification via Inngest
@@ -277,8 +294,8 @@ export async function POST(request: Request) {
         orderNumber,
         paymentUrl,
         qrString,
-        status: finalStatus,
-        paymentStatus: finalPaymentStatus,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
       }),
       { status: 201 }
     );

@@ -45,6 +45,7 @@ describe("validateAndBuildOrderItems", () => {
         unit: "pcs",
         unitPrice: 15000,
         total: 30000,
+        initialStatus: "PENDING",
       },
     ]);
     expect(subtotal).toBe(30000);
@@ -125,6 +126,21 @@ describe("validateAndBuildOrderItems", () => {
     expect(subtotal).toBe(40000);
   });
 
+  it("sets initialStatus to SERVED for a CUSTOM-productLine item, PENDING for STANDARD", async () => {
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      { id: "menu-1", name: "Haircut", price: 50000, product: { productLine: "CUSTOM" } },
+      { id: "menu-2", name: "Croissant", price: 15000, product: { productLine: "STANDARD" } },
+    ]);
+
+    const { orderItems } = await validateAndBuildOrderItems("store-1", [
+      { menuItemId: "menu-1", name: "Haircut", quantity: 1, unitPrice: 1 },
+      { menuItemId: "menu-2", name: "Croissant", quantity: 1, unitPrice: 1 },
+    ] as any);
+
+    expect(orderItems.find((i) => i.menuItemId === "menu-1")?.initialStatus).toBe("SERVED");
+    expect(orderItems.find((i) => i.menuItemId === "menu-2")?.initialStatus).toBe("PENDING");
+  });
+
   it("throws OrderBuildError when a menu item is missing or unavailable", async () => {
     prismaMock.menuItem.findMany.mockResolvedValue([]); // none matched (missing / unavailable)
 
@@ -139,28 +155,21 @@ describe("validateAndBuildOrderItems", () => {
 /**
  * The Active Queue toggle (kitchenDisplayEnabled) is the single shared
  * switch behind both the Kitchen & Bar display and the Order Queue's
- * "Active Queue" toggle — turning either off turns both off. When off,
- * every payment method must settle straight to DELIVERED, including
- * PAY_LATER: with no queue left to hold a tab in, it can't stay on PENDING
- * (see GET /pos/orders and the SSE stream, which report an empty active
- * feed whenever this is off — a lingering PENDING order would be invisible
- * and unmanageable).
+ * "Active Queue" toggle — turning either off turns both off. Every payment
+ * method resolves the same way regardless of the toggle: production isn't
+ * gated on payment clearing, so an unpaid order (PAY_LATER, or an online
+ * payment still awaiting confirmation) is tracked via paymentStatus and
+ * followed up on with Mark as Paid, not by holding it out of CONFIRMED.
  */
 describe("resolveSettledOrderStatus", () => {
-  it("goes to CONFIRMED for a cashier-attended payment when the Active Queue is on", () => {
+  it("goes to CONFIRMED for any payment method when the Active Queue is on", () => {
     expect(resolveSettledOrderStatus("CASH", true)).toBe("CONFIRMED");
     expect(resolveSettledOrderStatus("QRIS", true)).toBe("CONFIRMED");
+    expect(resolveSettledOrderStatus("PAY_LATER", true)).toBe("CONFIRMED");
   });
 
-  it("stays PENDING for PAY_LATER when the Active Queue is on", () => {
-    expect(resolveSettledOrderStatus("PAY_LATER", true)).toBe("PENDING");
-  });
-
-  it("goes straight to DELIVERED for a cashier-attended payment when the Active Queue is off", () => {
+  it("goes straight to DELIVERED for any payment method when the Active Queue is off", () => {
     expect(resolveSettledOrderStatus("CASH", false)).toBe("DELIVERED");
-  });
-
-  it("also goes straight to DELIVERED for PAY_LATER when the Active Queue is off — never left on PENDING", () => {
     expect(resolveSettledOrderStatus("PAY_LATER", false)).toBe("DELIVERED");
   });
 });

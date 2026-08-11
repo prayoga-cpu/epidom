@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
@@ -65,7 +65,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         table: { select: { label: true } },
         items: {
           include: {
-            menuItem: { select: { name: true, department: true } },
+            menuItem: {
+              select: {
+                name: true,
+                department: true,
+                product: { select: { productLine: true } },
+              },
+            },
           },
         },
         shift: {
@@ -133,8 +139,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     let orderItems: BuiltOrderItem[];
     let subtotal: number;
+    let financeSettings: Awaited<ReturnType<typeof resolveFinanceSettingsForOrder>>;
     try {
-      ({ orderItems, subtotal } = await validateAndBuildOrderItems(storeId, input.items));
+      // Independent reads (both only need storeId) — run concurrently
+      // instead of two sequential round trips on the critical checkout path.
+      const [built, settings] = await Promise.all([
+        validateAndBuildOrderItems(storeId, input.items),
+        resolveFinanceSettingsForOrder(storeId),
+      ]);
+      ({ orderItems, subtotal } = built);
+      financeSettings = settings;
     } catch (err) {
       if (err instanceof OrderBuildError) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.INVALID_INPUT, err.message), {
@@ -144,7 +158,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw err;
     }
 
-    const financeSettings = await resolveFinanceSettingsForOrder(storeId);
     const charges = computeOrderCharges({
       itemsTotal: subtotal,
       discountAmount: input.discountAmount,
@@ -215,7 +228,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
               total: new Prisma.Decimal(i.total),
               notes: i.notes,
               selectedOptions: i.selectedOptions as Prisma.InputJsonValue | undefined,
-              status: "PENDING",
+              status: i.initialStatus,
             })),
           },
         },
@@ -242,38 +255,46 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       entityId: order.id,
     });
 
-    // Kitchen display is off for this store — the order skipped straight to
-    // DELIVERED above, so run the side effects a normal KDS hand-off would
-    // otherwise trigger later (deductStockForOrder is idempotent).
-    if (immediatelyDelivered) {
-      await deliverOrderImmediately(order.id, storeId);
-    } else if (settledStatus === "CONFIRMED") {
-      // Going to the kitchen/bar queue — flag any recipe-linked product
-      // that's short on hand-made stock before deduction runs later.
-      await draftShortfallBatchesForConfirmedOrder(order.id, storeId);
-    }
+    // The order itself is already recorded at this point — everything below
+    // is follow-up work (stock deduction, shortfall batch drafting, the
+    // Inngest notification round trip), not part of recording the order, so
+    // it's deferred via after() to keep it off the response's critical path.
+    // after() keeps the function alive until this settles, so — unlike a bare
+    // fire-and-forget promise — it's guaranteed to still run to completion
+    // even though the response has already gone out.
+    after(async () => {
+      // Kitchen display is off for this store — the order skipped straight to
+      // DELIVERED above, so run the side effects a normal KDS hand-off would
+      // otherwise trigger later (deductStockForOrder is idempotent).
+      if (immediatelyDelivered) {
+        await deliverOrderImmediately(order.id, storeId);
+      } else if (settledStatus === "CONFIRMED") {
+        // Going to the kitchen/bar queue — flag any recipe-linked product
+        // that's short on hand-made stock before deduction runs later.
+        await draftShortfallBatchesForConfirmedOrder(order.id, storeId);
+      }
 
-    // Fire background notification via Inngest (non-blocking)
-    try {
-      await inngest.send({
-        name: "order/placed",
-        data: {
-          orderId: order.id,
-          storeId,
-          storefrontSlug: null,
-          orderNumber,
-          customerName: input.customerName ?? "Walk-in",
-          totalAmount: charges.total,
-          currency: "IDR",
-          paymentMethod: input.paymentMethod,
-          items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
-          merchantPhone: store.phone ?? null,
-          storeName: store.name,
-        },
-      });
-    } catch (err) {
-      console.error("[POS_ORDERS_POST] Inngest event failed:", err);
-    }
+      try {
+        await inngest.send({
+          name: "order/placed",
+          data: {
+            orderId: order.id,
+            storeId,
+            storefrontSlug: null,
+            orderNumber,
+            customerName: input.customerName ?? "Walk-in",
+            totalAmount: charges.total,
+            currency: "IDR",
+            paymentMethod: input.paymentMethod,
+            items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
+            merchantPhone: store.phone ?? null,
+            storeName: store.name,
+          },
+        });
+      } catch (err) {
+        console.error("[POS_ORDERS_POST] Inngest event failed:", err);
+      }
+    });
 
     // Calculate change for cash payments
     const change =

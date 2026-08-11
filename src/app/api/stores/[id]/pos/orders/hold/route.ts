@@ -74,8 +74,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const input = parsed.data;
 
     let orderItems, subtotal;
+    let financeSettings: Awaited<ReturnType<typeof resolveFinanceSettingsForOrder>>;
     try {
-      ({ orderItems, subtotal } = await validateAndBuildOrderItems(storeId, input.items));
+      // Independent reads (both only need storeId) — run concurrently
+      // instead of two sequential round trips.
+      const [built, settings] = await Promise.all([
+        validateAndBuildOrderItems(storeId, input.items),
+        resolveFinanceSettingsForOrder(storeId),
+      ]);
+      ({ orderItems, subtotal } = built);
+      financeSettings = settings;
     } catch (err) {
       if (err instanceof OrderBuildError) {
         return NextResponse.json(createErrorResponse(ApiErrorCode.INVALID_INPUT, err.message), {
@@ -89,7 +97,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // an inert placeholder), so the processing fee can't be determined —
     // force it off. Tax/service charge don't depend on payment method, so
     // they're still computed for an accurate held total.
-    const financeSettings = await resolveFinanceSettingsForOrder(storeId);
     const charges = computeOrderCharges({
       itemsTotal: subtotal,
       paymentMethod: "CASH",
@@ -142,7 +149,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 total: new Prisma.Decimal(i.total),
                 notes: i.notes,
                 selectedOptions: i.selectedOptions as Prisma.InputJsonValue | undefined,
-                status: "PENDING",
+                status: i.initialStatus,
               })),
             },
           },
@@ -192,7 +199,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
               unit: i.unit,
               unitPrice: new Prisma.Decimal(i.unitPrice),
               total: new Prisma.Decimal(i.total),
-              status: "PENDING",
+              notes: i.notes,
+              selectedOptions: i.selectedOptions as Prisma.InputJsonValue | undefined,
+              status: i.initialStatus,
             })),
           },
         },

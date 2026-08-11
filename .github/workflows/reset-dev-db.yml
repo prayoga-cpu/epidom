@@ -1,0 +1,27 @@
+name: Reset Dev DB Branch
+
+# Resets the Neon "development" branch back to production's current head
+# (copy-on-write, seconds not minutes). Keeps dev data fresh without ever
+# writing to production, and keeps prod isolated from whatever dev is doing.
+# Manual runs: Actions tab → "Reset Dev DB Branch" → Run workflow.
+
+on:
+  schedule:
+    - cron: "0 19 * * *" # 19:00 UTC = 02:00 WIB
+  workflow_dispatch: {}
+
+env:
+  NEON_PROJECT_ID: square-sound-94138774
+  NEON_DEV_BRANCH_ID: br-shy-truth-aol4cwxc
+
+jobs:
+  reset:
+    name: Reset development branch to production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Neon reset_to_parent API
+        run: |
+          curl -f -s -X POST \
+            "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches/${NEON_DEV_BRANCH_ID}/reset_to_parent" \
+            -H "Authorization: Bearer ${{ secrets.NEON_API_KEY }}" \
+            -H "Content-Type: application/json"

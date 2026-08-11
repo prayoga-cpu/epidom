@@ -1,4 +1,4 @@
-import { Product, Department } from "@prisma/client";
+import { Product, Department, ProductLine } from "@prisma/client";
 import {
   productRepository,
   ProductWithRelations,
@@ -54,10 +54,12 @@ export class ProductService {
     costPrice: number;
     sellingPrice: number;
     currentStock?: number;
+    trackStock?: boolean;
     unit?: string;
     minStock?: number;
     maxStock?: number;
     department?: Department;
+    productLine?: ProductLine;
     recipeIds?: string[]; // Changed from recipeId to recipeIds (array)
     productionTime?: number;
     shelfLife?: number;
@@ -88,9 +90,11 @@ export class ProductService {
       description: data.description,
       category: data.category,
       department: data.department ?? "KITCHEN",
+      productLine: data.productLine ?? "STANDARD",
       costPrice: data.costPrice,
       sellingPrice: data.sellingPrice,
       currentStock: data.currentStock ?? 0,
+      trackStock: data.trackStock ?? true,
       unit: data.unit ?? "piece",
       minStock: data.minStock ?? 0,
       maxStock: data.maxStock ?? 1000,
@@ -117,6 +121,7 @@ export class ProductService {
         sellingPrice: Number(product.sellingPrice),
         category: product.category,
         department: product.department,
+        productLine: product.productLine,
       });
     }
 
@@ -164,6 +169,7 @@ export class ProductService {
       costPrice?: number;
       sellingPrice?: number;
       currentStock?: number;
+      trackStock?: boolean;
       unit?: string;
       minStock?: number;
       maxStock?: number;
@@ -217,6 +223,7 @@ export class ProductService {
       ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
       ...(data.sellingPrice !== undefined && { sellingPrice: data.sellingPrice }),
       ...(data.currentStock !== undefined && { currentStock: data.currentStock }),
+      ...(data.trackStock !== undefined && { trackStock: data.trackStock }),
       ...(data.unit && { unit: data.unit }),
       ...(data.minStock !== undefined && { minStock: data.minStock }),
       ...(data.maxStock !== undefined && { maxStock: data.maxStock }),
@@ -226,12 +233,15 @@ export class ProductService {
 
     // Keep any storefront menu item(s) linked to this product (MenuItem.productId)
     // in sync automatically — a linked MenuItem is what customers/POS actually see,
-    // so its name/price/department should never drift from the Product it's backed by.
-    if (
+    // so its name/price/department/category should never drift from the Product
+    // it's backed by.
+    const menuFieldChanged =
       data.name !== undefined ||
       data.sellingPrice !== undefined ||
-      data.department !== undefined
-    ) {
+      data.department !== undefined ||
+      data.category !== undefined;
+
+    if (menuFieldChanged) {
       // updatedProduct.sellingPrice is stored in IDR (the platform base
       // currency); MenuItem.price must be a literal value in the owner's
       // own currency, so it needs converting before it overwrites the
@@ -245,12 +255,28 @@ export class ProductService {
             )
           : null;
 
+      // MenuItem groups by a relational MenuCategory, not the Product's own
+      // free-text `category` string — so a category change has to be resolved
+      // to (or create) a real MenuCategory row, otherwise the linked item
+      // stays filed under its old heading everywhere it's displayed (POS
+      // Cashier and the public storefront both group by this).
+      const categoryUpdate =
+        data.category !== undefined
+          ? {
+              categoryId: await storefrontService.resolveMenuCategoryId(
+                storeId,
+                updatedProduct.category
+              ),
+            }
+          : null;
+
       await prisma.menuItem.updateMany({
         where: { productId },
         data: {
           ...(data.name !== undefined && { name: updatedProduct.name }),
           ...(priceUpdate && { price: priceUpdate.price, currency: priceUpdate.currency }),
           ...(data.department !== undefined && { department: updatedProduct.department }),
+          ...(categoryUpdate ?? {}),
         },
       });
     }
@@ -275,7 +301,7 @@ export class ProductService {
       action: "updated",
       entityId: productId,
     });
-    if (data.name !== undefined || data.sellingPrice !== undefined || data.department !== undefined) {
+    if (menuFieldChanged) {
       publishStoreEvent(storeId, REALTIME_EVENTS.MENU_CHANGED, {
         action: "updated",
         entityId: productId,

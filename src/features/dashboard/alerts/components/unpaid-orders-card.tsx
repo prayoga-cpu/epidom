@@ -5,6 +5,7 @@ import { CircleDollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useUpdateOrderStatus } from "@/features/pos/hooks/use-update-order-status";
@@ -26,7 +27,7 @@ export function UnpaidOrdersCard({ alerts, storeId }: UnpaidOrdersCardProps) {
   // currency, not IDR. Passing it through bare formatPrice() (which
   // defaults to converting from IDR) would wrongly re-scale it by the
   // exchange rate for any non-IDR store.
-  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const { currency, formatPrice: formatPriceRaw, isLoading: isCurrencyLoading } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const updateStatus = useUpdateOrderStatus(storeId);
   const [markPaidAlert, setMarkPaidAlert] = useState<UnpaidOrderAlert | null>(null);
@@ -77,7 +78,13 @@ export function UnpaidOrdersCard({ alerts, storeId }: UnpaidOrdersCardProps) {
                 formatRelativeTime(alert.deliveredAt)
               )}
             </span>
-            <span className="font-semibold whitespace-nowrap">{formatPrice(Number(alert.total))}</span>
+            <span className="font-semibold whitespace-nowrap">
+              {isCurrencyLoading ? (
+                <Skeleton className="inline-block h-4 w-14 align-middle" />
+              ) : (
+                formatPrice(Number(alert.total))
+              )}
+            </span>
             <Button
               size="sm"
               variant="outline"

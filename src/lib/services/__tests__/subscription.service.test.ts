@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach, type MockedObject } from "vitest";
 import { SubscriptionService } from "../subscription.service";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
+import { stripe } from "@/lib/stripe";
 import type { SubscriptionRepository } from "@/lib/repositories/subscription.repository";
 import type { UserRepository } from "@/lib/repositories/user.repository";
 import type { StoreRepository } from "@/lib/repositories/store.repository";
@@ -39,6 +40,7 @@ vi.mock("@/lib/stripe", () => ({
       list: vi.fn().mockResolvedValue({ data: [] }),
       update: vi.fn().mockResolvedValue({}),
       cancel: vi.fn().mockResolvedValue({}),
+      retrieve: vi.fn(),
     },
   },
 }));
@@ -354,6 +356,140 @@ describe("SubscriptionService", () => {
       await expect(
         service.createPortalSession("user-1", "https://example.com/return")
       ).rejects.toThrow("No subscription found");
+    });
+  });
+
+  describe("setCustomPrice", () => {
+    it("stores a reference-only price for an admin-granted account without calling Stripe", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeCustomerId: "admin_user-1",
+      });
+      mocks.subscriptionRepo.update.mockResolvedValue({
+        ...mockSubscription,
+        stripeCustomerId: "admin_user-1",
+        customPriceAmount: 100,
+        customPriceCurrency: "EUR",
+        customPriceInterval: "MONTHLY",
+      } as any);
+
+      await service.setCustomPrice("user-1", {
+        amount: 100,
+        currency: "EUR",
+        interval: "MONTHLY",
+      });
+
+      expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+      expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+      const [, data] = mocks.subscriptionRepo.update.mock.calls[0];
+      expect(String(data.customPriceAmount)).toBe("100");
+      expect(data.customPriceCurrency).toBe("EUR");
+      expect(data.customPriceInterval).toBe("MONTHLY");
+    });
+
+    it("stores a reference-only price for a free-tier account without calling Stripe", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeCustomerId: "free_user-1",
+      });
+      mocks.subscriptionRepo.update.mockResolvedValue(mockSubscription);
+
+      await service.setCustomPrice("user-1", {
+        amount: 50,
+        currency: "USD",
+        interval: "YEARLY",
+      });
+
+      expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+      expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    });
+
+    it("applies a live Stripe price override for a real Stripe-billed account", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      mocks.subscriptionRepo.update.mockResolvedValue(mockSubscription);
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({
+        items: {
+          data: [{ id: "si_123", price: { product: "prod_123" } }],
+        },
+      });
+
+      await service.setCustomPrice("user-1", {
+        amount: 75,
+        currency: "EUR",
+        interval: "MONTHLY",
+      });
+
+      expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_stripe_123");
+      expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+        "sub_stripe_123",
+        expect.objectContaining({
+          items: [
+            expect.objectContaining({
+              id: "si_123",
+              price_data: expect.objectContaining({
+                currency: "eur",
+                unit_amount: 7500,
+                recurring: { interval: "month" },
+                product: "prod_123",
+              }),
+            }),
+          ],
+          proration_behavior: "none",
+        })
+      );
+    });
+
+    it("throws a 422 AppError when the account has no active Stripe subscription", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeSubscriptionId: null,
+      });
+
+      await expect(
+        service.setCustomPrice("user-1", { amount: 10, currency: "EUR", interval: "MONTHLY" })
+      ).rejects.toThrow(
+        "This account has no active Stripe subscription to apply a live price override to."
+      );
+      expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("clearCustomPrice", () => {
+    it("nulls the custom price fields for an admin-granted account without calling Stripe", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeCustomerId: "admin_user-1",
+        customPriceAmount: 100,
+      } as any);
+      mocks.subscriptionRepo.update.mockResolvedValue(mockSubscription);
+
+      await service.clearCustomPrice("user-1");
+
+      expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+      expect(mocks.subscriptionRepo.update).toHaveBeenCalledWith("user-1", {
+        customPriceAmount: null,
+        customPriceCurrency: null,
+        customPriceInterval: null,
+      });
+    });
+
+    it("restores the catalog price for a real Stripe-billed account on a paid plan", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        plan: SubscriptionPlan.POS,
+        customPriceAmount: 75,
+      } as any);
+      mocks.subscriptionRepo.update.mockResolvedValue(mockSubscription);
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({
+        items: { data: [{ id: "si_123", price: { product: "prod_123" } }] },
+      });
+
+      await service.clearCustomPrice("user-1");
+
+      expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+        "sub_stripe_123",
+        expect.objectContaining({ items: [{ id: "si_123", price: expect.any(String) }] })
+      );
     });
   });
 });

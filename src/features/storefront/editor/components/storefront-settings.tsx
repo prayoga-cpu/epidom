@@ -38,6 +38,10 @@ import { getPremiumTheme } from "@/lib/utils/color";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { useUpgradeGate } from "@/features/billing/upgrade/upgrade-modal";
 import { planHasFeature, type PlanTier } from "@/lib/plans/entitlements";
+import {
+  useCustomProductsSettings,
+  useUpdateCustomProductsSettings,
+} from "@/features/dashboard/data/custom-products/hooks/use-custom-products-settings";
 
 type SlugStatus = "idle" | "checking" | "available" | "taken" | "invalid_chars" | "too_short";
 
@@ -59,19 +63,71 @@ interface StorefrontSettingsProps {
   onSuccess: () => void;
 }
 
-function PosLockBadge() {
+function PosLockBadge({ label = "POS" }: { label?: string }) {
   return (
     <span className="bg-primary/10 text-primary ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 align-middle text-[10px] font-semibold tracking-wide uppercase">
-      <Lock className="h-2.5 w-2.5" /> POS
+      <Lock className="h-2.5 w-2.5" /> {label}
     </span>
   );
 }
 
-function PosUpgradeButton({ onClick }: { onClick: () => void }) {
+function PosUpgradeButton({
+  onClick,
+  label = "Upgrade to POS",
+}: {
+  onClick: () => void;
+  label?: string;
+}) {
   return (
     <Button type="button" size="sm" variant="outline" onClick={onClick} className="shrink-0">
-      Upgrade to POS
+      {label}
     </Button>
+  );
+}
+
+/**
+ * Self-contained (not part of the surrounding react-hook-form/Storefront
+ * schema — this is a Store-level field, PATCHed via its own endpoint) toggle
+ * row for the optional Custom Products second product line's storefront
+ * visibility. Independent of the master enable toggle (which lives on the
+ * Data page's Custom Products tab and drives POS Cashier inclusion) — this
+ * one only controls whether those items ALSO publish to the public
+ * storefront menu ("the store link"). Disabled until the master feature is
+ * on, since there's nothing to publish before then.
+ */
+function CustomProductsSettingsRow({ storeId }: { storeId: string }) {
+  const { data: settings } = useCustomProductsSettings(storeId);
+  const updateSettings = useUpdateCustomProductsSettings(storeId);
+  const masterEnabled = settings?.customProductsEnabled ?? false;
+  const showOnStorefront = settings?.customProductsShowOnStorefront ?? false;
+
+  const handleToggle = async (checked: boolean) => {
+    try {
+      await updateSettings.mutateAsync({ customProductsShowOnStorefront: checked });
+      toast.success(checked ? "Now shown on your storefront" : "Hidden from your storefront");
+    } catch {
+      toast.error("Failed to update settings. Try again.");
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-3 last:pb-0 sm:gap-4 sm:rounded-lg sm:border sm:p-4 sm:last:pb-4">
+      <div className="space-y-0.5">
+        <p className="text-base font-semibold">
+          {settings?.customProductsLabel || "Custom Products"} on Storefront
+        </p>
+        <p className="text-muted-foreground text-sm">
+          {masterEnabled
+            ? "Also show these items on your public storefront menu (the store link), not just POS Cashier."
+            : "Enable Custom Products from the Data page first — there's nothing to publish yet."}
+        </p>
+      </div>
+      <Switch
+        checked={showOnStorefront}
+        onCheckedChange={handleToggle}
+        disabled={!masterEnabled || updateSettings.isPending}
+      />
+    </div>
   );
 }
 
@@ -676,6 +732,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                   </FormItem>
                 )}
               />
+              <CustomProductsSettingsRow storeId={storeId} />
             </CardContent>
           </Card>
 

@@ -7,6 +7,7 @@ import { usePosOrders } from "../hooks/use-pos-orders";
 import { usePosStaffList } from "../hooks/use-pos-staff-list";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { useKdsSettings } from "../hooks/use-kds-settings";
+import { useCustomProductsSettings } from "@/features/dashboard/data/custom-products/hooks/use-custom-products-settings";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { PosOrderCard } from "./pos-order-card";
 import { PosOrderRow } from "./pos-order-row";
@@ -73,7 +74,7 @@ const STATUS_FILTERS: QueueStatusFilter[] = ["ALL", ...QUEUE_STATUSES];
 const SOURCE_FILTERS: QueueSourceFilter[] = ["ALL", "POS", "ONLINE"];
 const TYPE_FILTERS: QueueTypeFilter[] = ["ALL", "DINE_IN", "TAKEAWAY", "DELIVERY"];
 const SORT_BYS: QueueSortBy[] = ["newest", "oldest", "total-desc", "total-asc"];
-const DEPARTMENT_FILTERS: QueueDepartmentFilter[] = ["ALL", "KITCHEN", "BAR"];
+const DEPARTMENT_FILTERS: QueueDepartmentFilter[] = ["ALL", "KITCHEN", "BAR", "CUSTOM"];
 const PAYMENT_METHOD_FILTERS: QueuePaymentMethodFilter[] = ["ALL", ...QUEUE_PAYMENT_METHODS];
 
 // The reset applied to a filter's own value when it's removed from view —
@@ -122,6 +123,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   const { t } = useI18n();
   const { data: orders, isLoading } = usePosOrders(storeId);
   const { data: kdsSettings, isLoading: isLoadingSettings } = useKdsSettings(storeId);
+  const { data: customProductsSettings } = useCustomProductsSettings(storeId);
   const queryClient = useQueryClient();
   const updateStatus = useUpdateOrderStatus(storeId);
   const activeQueueEnabled = kdsSettings?.kitchenDisplayEnabled ?? true;
@@ -368,6 +370,11 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
         onTypeFilterChange={(v) => patchFilters({ typeFilter: v })}
         departmentFilter={departmentFilter}
         onDepartmentFilterChange={(v) => patchFilters({ departmentFilter: v })}
+        customDepartmentLabel={
+          customProductsSettings?.customProductsEnabled
+            ? customProductsSettings.customProductsLabel
+            : null
+        }
         productFilter={productFilter}
         onProductFilterChange={(v) => patchFilters({ productFilter: v })}
         productOptions={productOptions}

@@ -1,54 +1,38 @@
 import { prisma } from "@/lib/prisma";
-import type { OrderStatus, PaymentMethod } from "@prisma/client";
+import type { OrderStatus, OrderItemStatus, PaymentMethod } from "@prisma/client";
 import type { CreatePosOrderInput, SelectedOptionInput } from "@/lib/validation/pos.schemas";
 import { deductStockForOrder } from "./stock-deduction.service";
 import { productionBatchService } from "./production-batch.service";
+import { resolveInitialOrderItemStatus } from "./order-status.helpers";
 
 /**
- * Whether this order is settled the instant the cashier hits Confirm. The
- * POS is a cashier-attended counter, not a self-checkout: for every method
- * except PAY_LATER, payment has already changed hands in person (cash
- * counted, a card tapped on a separate terminal, a QRIS/e-wallet scan the
- * cashier watched happen) by the time Confirm is pressed — there's no online
- * payment gateway step to wait on for any of them. Only PAY_LATER is
- * deliberately deferred. (The storefront's self-checkout flow is different —
- * see /api/public/orders, which has its own initiatePayment() call since a
- * customer paying alone online genuinely does need to complete a real
- * payment step.) Shared by order creation and finalize so the two routes
- * can't drift.
- */
-export function skipsOnlinePayment(method: PaymentMethod): boolean {
-  return method !== "PAY_LATER";
-}
-
-/**
- * The order's status the moment payment is settled — CONFIRMED normally
- * (goes to the kitchen/bar queue, i.e. the Active Queue), but DELIVERED
- * outright when the store has turned the Active Queue off
- * (kitchenDisplayEnabled: false), since there's no production stage or
- * queue left to pass through. That includes PAY_LATER: with no queue to
- * hold it in, an unpaid tab is recorded straight to history as delivered
- * (paymentStatus stays PENDING for follow-up from there) rather than
- * sitting on PENDING with nowhere to be reviewed. Shared by order creation,
- * finalize, and the payment webhook so all three settlement paths agree on
- * what "paid" means for a given store.
+ * The order's status the moment it's placed — CONFIRMED normally (goes to
+ * the kitchen/bar queue, i.e. the Active Queue), but DELIVERED outright when
+ * the store has turned the Active Queue off (kitchenDisplayEnabled: false),
+ * since there's no production stage or queue left to pass through. Every
+ * payment method, including PAY_LATER and any online gateway method still
+ * awaiting confirmation, resolves the same way: production isn't gated on
+ * payment — an unpaid order is tracked via paymentStatus and followed up on
+ * with Mark as Paid, not by holding it out of the kitchen queue. Shared by
+ * order creation (POS + storefront) and finalize so all three settlement
+ * paths agree on what "placed" means for a given store.
  */
 export function resolveSettledOrderStatus(
   method: PaymentMethod,
   kitchenDisplayEnabled: boolean
 ): OrderStatus {
   if (!kitchenDisplayEnabled) return "DELIVERED";
-  if (!skipsOnlinePayment(method)) return "PENDING";
   return "CONFIRMED";
 }
 
 /**
  * Side effects of an order landing on DELIVERED outside the normal KDS
- * hand-off (i.e. resolveSettledOrderStatus returned DELIVERED directly, or
- * the payment webhook confirms a store with the kitchen display off) —
- * mirrors what the PATCH /pos/orders/[orderId] route does when a cashier
- * manually marks an order delivered. Stock deduction is idempotent, so this
- * is safe to call even if something upstream already ran it.
+ * hand-off — i.e. resolveSettledOrderStatus returned DELIVERED directly
+ * because the store has the kitchen display off — mirrors what the PATCH
+ * /pos/orders/[orderId] route does when a cashier manually marks an order
+ * delivered. Stock deduction is idempotent, so this is safe to call even if
+ * something upstream already ran it (e.g. a payment webhook's defensive
+ * retry).
  */
 export async function deliverOrderImmediately(orderId: string, storeId: string): Promise<void> {
   try {
@@ -90,6 +74,9 @@ export interface BuiltOrderItem {
   total: number;
   notes?: string;
   selectedOptions?: SelectedOptionInput[];
+  // SERVED for CUSTOM-productLine items (no prep step), PENDING otherwise —
+  // see resolveInitialOrderItemStatus.
+  initialStatus: OrderItemStatus;
 }
 
 /**
@@ -112,6 +99,9 @@ export async function validateAndBuildOrderItems(
       id: { in: uniqueMenuItemIds },
       storefront: { storeId },
       isAvailable: true,
+    },
+    include: {
+      product: { select: { productLine: true } },
     },
   });
 
@@ -140,6 +130,7 @@ export async function validateAndBuildOrderItems(
       total,
       notes: i.notes,
       selectedOptions: i.selectedOptions,
+      initialStatus: resolveInitialOrderItemStatus(menuItem.product?.productLine),
     };
   });
 

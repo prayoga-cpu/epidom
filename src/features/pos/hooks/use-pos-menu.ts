@@ -7,6 +7,12 @@ import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 interface PosMenuData {
   categories: PosMenuCategory[];
   total: number;
+  // The optional second product line (Product.productLine — e.g. a
+  // restaurant's hair-salon add-on) — items are folded into `categories`
+  // above (tagged department: "CUSTOM"), these two just drive the extra
+  // PosDepartmentBar pill's visibility/label.
+  customProductsEnabled: boolean;
+  customProductsLabel: string | null;
 }
 
 export function usePosMenu(storeId: string) {

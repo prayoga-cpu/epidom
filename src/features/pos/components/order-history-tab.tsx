@@ -53,7 +53,6 @@ import { FileText, Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 const ORDER_STATUSES = [
-  "PENDING",
   "CONFIRMED",
   "IN_PRODUCTION",
   "READY",
@@ -177,8 +176,6 @@ function getSourceBadgeVariant(source: string) {
 
 function getStatusBadgeVariant(status: string) {
   switch (status) {
-    case "PENDING":
-      return "secondary";
     case "CONFIRMED":
       return "default";
     case "IN_PRODUCTION":

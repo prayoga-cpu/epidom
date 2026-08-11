@@ -338,6 +338,7 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
   const lowStockIds = await prisma.$queryRaw<{ id: string }[]>`
     SELECT id FROM "ingredients"
     WHERE "storeId" = ${storeId}
+    AND "minStock" > 0
     AND "currentStock" <= "minStock"
     ORDER BY "currentStock" ASC
     LIMIT 100
@@ -413,10 +414,18 @@ export async function fetchAlertsForPage(storeId: string): Promise<AlertsRespons
     };
   });
 
-  // Pay Later orders delivered but never settled — small/rare enough that a
-  // plain findMany (unlike the raw-SQL low-stock query above) is plenty fast.
+  // Pay Later orders that are still unpaid — not scoped to DELIVERED only:
+  // production no longer gates on payment, so a Pay Later order can sit
+  // unpaid all the way from CONFIRMED through READY before ever reaching
+  // DELIVERED. Mirrors the status scope in the live alerts API route
+  // (api/stores/[id]/alerts/route.ts) so SSR and client agree on the count.
   const unpaidOrders = await prisma.order.findMany({
-    where: { storeId, paymentMethod: "PAY_LATER", paymentStatus: "PENDING", status: "DELIVERED" },
+    where: {
+      storeId,
+      paymentMethod: "PAY_LATER",
+      paymentStatus: "PENDING",
+      status: { in: ["CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED"] },
+    },
     orderBy: { deliveredDate: "asc" },
     select: {
       id: true,

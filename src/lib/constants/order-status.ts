@@ -6,7 +6,6 @@ import { OrderStatus, Prisma } from "@prisma/client";
  * HELD orders reach the feed but never appear in a KDS column.
  */
 export const ACTIVE_POS_STATUSES: OrderStatus[] = [
-  "PENDING",
   "CONFIRMED",
   "IN_PRODUCTION",
   "READY",

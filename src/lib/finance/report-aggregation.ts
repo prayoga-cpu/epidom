@@ -48,7 +48,10 @@ export function bucketItemsByCategory(items: CategoryBucketInput[]): CategoryBuc
     .sort((a, b) => b.totalRevenue - a.totalRevenue);
 }
 
-export type DepartmentValue = "KITCHEN" | "BAR";
+// "CUSTOM" is the optional second product line (Product.productLine) — not
+// a real stored department, routed here by the call site (see
+// by-department/route.ts) rather than the actual DB department field.
+export type DepartmentValue = "KITCHEN" | "BAR" | "CUSTOM";
 
 export interface DepartmentBucketInput {
   total: number | string;

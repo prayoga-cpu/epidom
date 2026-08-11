@@ -233,7 +233,13 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
     select: {
       total: true,
       quantity: true,
-      menuItem: { select: { category: { select: { id: true, name: true } }, department: true } },
+      menuItem: {
+        select: {
+          category: { select: { id: true, name: true } },
+          department: true,
+          product: { select: { productLine: true } },
+        },
+      },
     },
   });
   const categories = bucketItemsByCategory(
@@ -247,7 +253,16 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
     orderItems.map((item) => ({
       total: Number(item.total),
       quantity: Number(item.quantity),
-      menuItem: item.menuItem ? { department: item.menuItem.department as "KITCHEN" | "BAR" } : null,
+      // CUSTOM-productLine items (the optional second product line) get
+      // their own real "CUSTOM" bucket instead of their inert stored
+      // department — see FEATURES.md/Product.productLine.
+      menuItem: !item.menuItem
+        ? null
+        : {
+            department: (item.menuItem.product?.productLine === "CUSTOM"
+              ? "CUSTOM"
+              : item.menuItem.department) as "KITCHEN" | "BAR" | "CUSTOM",
+          },
     }))
   );
 
@@ -371,6 +386,7 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
       topItems={topItems}
       categories={categories}
       departments={departments}
+      customDepartmentLabel={store.customProductsEnabled ? store.customProductsLabel : null}
       shifts={shifts}
       scheduleShiftRows={scheduleShiftRows}
       wasteReasons={wasteReasons}

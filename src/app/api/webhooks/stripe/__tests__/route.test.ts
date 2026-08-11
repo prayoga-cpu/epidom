@@ -147,4 +147,34 @@ describe("Stripe Webhook Handler", () => {
       );
     });
   });
+
+  describe("customer.subscription.deleted", () => {
+    it("clears any admin custom-price override alongside the status update", async () => {
+      const mockEvent = {
+        type: "customer.subscription.deleted",
+        data: {
+          object: { id: "sub_123" },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+      });
+
+      const req = createRequest(mockEvent);
+      await POST(req);
+
+      expect(subscriptionRepository.updateByStripeSubscriptionId).toHaveBeenCalledWith(
+        "sub_123",
+        expect.objectContaining({
+          status: SubscriptionStatus.CANCELED,
+          cancelAtPeriodEnd: true,
+          customPriceAmount: null,
+          customPriceCurrency: null,
+          customPriceInterval: null,
+        })
+      );
+    });
+  });
 });

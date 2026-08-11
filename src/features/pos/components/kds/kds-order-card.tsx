@@ -29,6 +29,21 @@ const ITEM_STATUS_COLORS: Record<string, string> = {
   CANCELLED: "bg-destructive/10 text-destructive",
 };
 
+/** Optimistically flips `readyIds` to READY and, mirroring the server's
+ * advanceOrderToReadyIfAllItemsReady, advances order.status to READY too if
+ * that leaves nothing but READY/SERVED/CANCELLED items across every
+ * department — otherwise this device sits on "Waiting other department"
+ * until the next poll/push confirms what it just did itself. */
+function applyItemsReady(order: any, readyIds: string[]) {
+  const items = order.items.map((i: any) =>
+    readyIds.includes(i.id) ? { ...i, status: "READY" } : i
+  );
+  const allReady = items.every(
+    (i: any) => i.status === "READY" || i.status === "SERVED" || i.status === "CANCELLED"
+  );
+  return { ...order, items, status: allReady ? "READY" : order.status };
+}
+
 export function KdsOrderCard({ order, storeId, department }: KdsOrderCardProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -46,10 +61,13 @@ export function KdsOrderCard({ order, storeId, department }: KdsOrderCardProps) 
       if (!old) return [];
       return old.map((o) => {
         if (o.id !== order.id) return o;
-        return {
-          ...o,
-          items: o.items.map((i: any) => (i.id === itemId ? { ...i, status: next } : i)),
-        };
+        if (next !== "READY") {
+          return {
+            ...o,
+            items: o.items.map((i: any) => (i.id === itemId ? { ...i, status: next } : i)),
+          };
+        }
+        return applyItemsReady(o, [itemId]);
       });
     });
 
@@ -59,6 +77,11 @@ export function KdsOrderCard({ order, storeId, department }: KdsOrderCardProps) 
       });
     } catch {
       toast.error(t("pos.kds.updateFailed"));
+      // The optimistic update above already flipped this item (and possibly
+      // order.status, via applyItemsReady) in the cache — on failure that's
+      // now wrong, so force a refetch instead of leaving a stale "READY"
+      // sitting there until the next poll/push happens to correct it.
+      queryClient.invalidateQueries({ queryKey: ["pos", "orders", storeId] });
     }
   };
 
@@ -74,15 +97,7 @@ export function KdsOrderCard({ order, storeId, department }: KdsOrderCardProps) 
 
     queryClient.setQueryData(["pos", "orders", storeId], (old: any[]) => {
       if (!old) return [];
-      return old.map((o) => {
-        if (o.id !== order.id) return o;
-        return {
-          ...o,
-          items: o.items.map((i: any) =>
-            pendingIds.includes(i.id) ? { ...i, status: "READY" } : i
-          ),
-        };
-      });
+      return old.map((o) => (o.id === order.id ? applyItemsReady(o, pendingIds) : o));
     });
 
     try {
@@ -95,6 +110,11 @@ export function KdsOrderCard({ order, storeId, department }: KdsOrderCardProps) 
       );
     } catch {
       toast.error(t("pos.kds.updateFailed"));
+      // Promise.all rejects on the first failure, so some of pendingIds may
+      // have actually succeeded server-side while the cache optimistically
+      // marked ALL of them (and possibly order.status) READY — refetch to
+      // reconcile instead of leaving a false "ready to serve" showing.
+      queryClient.invalidateQueries({ queryKey: ["pos", "orders", storeId] });
     }
   };
 

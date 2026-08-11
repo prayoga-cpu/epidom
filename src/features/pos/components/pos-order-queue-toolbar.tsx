@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Clock,
   CheckCircle2,
   Flame,
   PackageCheck,
@@ -54,7 +53,6 @@ const STATUS_META: Record<
   Exclude<QueueStatusFilter, "ALL">,
   { icon: LucideIcon; color: string; ring: string }
 > = {
-  PENDING: { icon: Clock, color: "text-amber-500", ring: "ring-amber-500/50" },
   CONFIRMED: { icon: CheckCircle2, color: "text-blue-500", ring: "ring-blue-500/50" },
   IN_PRODUCTION: { icon: Flame, color: "text-orange-500", ring: "ring-orange-500/50" },
   READY: { icon: PackageCheck, color: "text-emerald-500", ring: "ring-emerald-500/50" },
@@ -77,6 +75,7 @@ interface PosOrderQueueToolbarProps {
   onTypeFilterChange: (value: QueueTypeFilter) => void;
   departmentFilter: QueueDepartmentFilter;
   onDepartmentFilterChange: (value: QueueDepartmentFilter) => void;
+  customDepartmentLabel?: string | null;
   productFilter: string;
   onProductFilterChange: (value: string) => void;
   productOptions: FilterOption[];
@@ -111,6 +110,7 @@ export function PosOrderQueueToolbar({
   onTypeFilterChange,
   departmentFilter,
   onDepartmentFilterChange,
+  customDepartmentLabel,
   productFilter,
   onProductFilterChange,
   productOptions,
@@ -144,7 +144,7 @@ export function PosOrderQueueToolbar({
   return (
     <div className="flex flex-col gap-3">
       {/* Status tiles — click to filter; click again to clear */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         <button
           type="button"
           onClick={() => onStatusFilterChange("ALL")}
@@ -249,6 +249,9 @@ export function PosOrderQueueToolbar({
                   <SelectItem value="ALL">{t("common.department")}</SelectItem>
                   <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
                   <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                  {customDepartmentLabel && (
+                    <SelectItem value="CUSTOM">{customDepartmentLabel}</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </RemovableFilter>

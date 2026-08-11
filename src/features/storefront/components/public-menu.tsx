@@ -19,6 +19,7 @@ import {
   Wallet,
   Banknote,
   Utensils,
+  Sparkles,
   ShoppingBag,
   Bike,
   ReceiptText,
@@ -84,6 +85,7 @@ interface PublicMenuProps {
     themeColor: string;
     fontFamily: string;
     acceptsReservations: boolean;
+    customProductsLabel?: string | null;
   };
   menuCategories: MenuCategory[];
 }
@@ -302,6 +304,25 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
       })
       .filter((category) => category.items.length > 0);
   }, [menuCategories, searchQuery]);
+
+  // The optional second product line (e.g. a café's hair-salon counter) gets
+  // its own visually distinct block below the food/drink menu instead of
+  // sitting among the regular categories — it's a different kind of offering,
+  // so mixing it into the same run of headings reads as a mistake.
+  const { standardCategories, customCategories } = useMemo(() => {
+    const standard: typeof filteredCategories = [];
+    const custom: typeof filteredCategories = [];
+    for (const category of filteredCategories) {
+      // A category is only ever entirely custom or entirely standard in
+      // practice (custom products carry their own categories), but split
+      // per-item so a mixed one can't silently drop items from either side.
+      const customItems = category.items.filter((i) => i.isCustom);
+      const standardItems = category.items.filter((i) => !i.isCustom);
+      if (standardItems.length > 0) standard.push({ ...category, items: standardItems });
+      if (customItems.length > 0) custom.push({ ...category, items: customItems });
+    }
+    return { standardCategories: standard, customCategories: custom };
+  }, [filteredCategories]);
 
   // Cart helper calculations
   const cartTotals = useMemo(() => {
@@ -665,9 +686,11 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                 <p className="text-sm font-medium">{t("publicOrder.menu.notFound")}</p>
               </div>
             ) : (
-              filteredCategories
-                .filter((cat) => selectedCategory === "all" || cat.id === selectedCategory)
-                .map((category) => (
+              (() => {
+                const visible = (cats: MenuCategory[]) =>
+                  cats.filter((cat) => selectedCategory === "all" || cat.id === selectedCategory);
+
+                const renderCategory = (category: MenuCategory) => (
                   <div key={category.id} className="space-y-3">
                     <h3 className="text-foreground border-l-4 border-[var(--store-theme)] pl-2 text-sm font-black tracking-widest uppercase">
                       {category.name}
@@ -738,7 +761,35 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                       ))}
                     </div>
                   </div>
-                ))
+                );
+
+                const visibleStandard = visible(standardCategories);
+                const visibleCustom = visible(customCategories);
+
+                return (
+                  <>
+                    {visibleStandard.map(renderCategory)}
+                    {visibleCustom.length > 0 && (
+                      // Distinct block, deliberately set apart from the
+                      // food/drink menu above: a store's second product line
+                      // (a salon counter, say) isn't just another menu
+                      // category, and reading as one is what the merchant
+                      // flagged.
+                      <section className="space-y-4 rounded-xl border border-[var(--store-theme)]/30 bg-[var(--store-theme-light-bg)]/40 p-4">
+                        {storefront.customProductsLabel && (
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="size-4 shrink-0 text-[var(--store-theme)]" />
+                            <h2 className="text-foreground text-base font-black tracking-wide">
+                              {storefront.customProductsLabel}
+                            </h2>
+                          </div>
+                        )}
+                        {visibleCustom.map(renderCategory)}
+                      </section>
+                    )}
+                  </>
+                );
+              })()
             )}
           </div>
         </div>

@@ -27,7 +27,14 @@ export const GET = withApiHandler(
 
     const items = await prisma.menuItem.findMany({
       where,
-      select: { id: true, name: true, price: true, productId: true, isAvailable: true },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        productId: true,
+        isAvailable: true,
+        showOnCashier: true,
+      },
       orderBy: { name: "asc" },
     });
     return NextResponse.json(createSuccessResponse(items));

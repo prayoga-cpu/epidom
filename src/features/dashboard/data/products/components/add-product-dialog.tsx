@@ -256,6 +256,10 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
         description: data.description,
         category: data.category,
         department: data.department,
+        productLine: "STANDARD" as const,
+        // Regular Kitchen/Bar products always carry real inventory — the
+        // untracked/service mode is exclusive to the Custom Products tab.
+        trackStock: true,
         costPrice: convertToBase(costPrice),
         sellingPrice: convertToBase(retailPrice),
         currentStock: currentStock,

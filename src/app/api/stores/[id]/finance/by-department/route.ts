@@ -1,10 +1,13 @@
 /**
  * GET /api/stores/[id]/finance/by-department
  *
- * Revenue split by Kitchen/Bar team for a date range — the "how much did
- * Kitchen sell vs. Bar today" report. Items whose menu item has no
+ * Revenue split by Kitchen/Bar(/Custom) team for a date range — the "how
+ * much did Kitchen sell vs. Bar today" report. Items whose menu item has no
  * department set — or aggregator-imported orders, which never carry a
  * menuItemId — are bucketed under "Unassigned" rather than dropped.
+ * CUSTOM-productLine items (the optional second product line — see
+ * Product.productLine) get their own real "CUSTOM" bucket, labeled
+ * client-side with the store's own Store.customProductsLabel.
  *
  * Query params: from, to, staffId, shiftId
  */
@@ -40,7 +43,9 @@ export const GET = withApiHandler(
       select: {
         total: true,
         quantity: true,
-        menuItem: { select: { department: true } },
+        menuItem: {
+          select: { department: true, product: { select: { productLine: true } } },
+        },
       },
     });
 
@@ -50,10 +55,18 @@ export const GET = withApiHandler(
         quantity: Number(item.quantity),
         // MenuItem.department is drawn from the shared Department enum but,
         // unlike Material, a MenuItem is never assigned "BOTH" — it always
-        // routes to exactly one KDS station.
-        menuItem: item.menuItem
-          ? { department: item.menuItem.department as DepartmentValue }
-          : null,
+        // routes to exactly one KDS station. CUSTOM-productLine items (the
+        // optional second product line — see Product.productLine) have no
+        // real Kitchen/Bar department of their own — their stored department
+        // stays at its inert schema default — so they're routed to the
+        // client-facing "CUSTOM" bucket instead of their real DB value.
+        menuItem: !item.menuItem
+          ? null
+          : {
+              department: (item.menuItem.product?.productLine === "CUSTOM"
+                ? "CUSTOM"
+                : item.menuItem.department) as DepartmentValue,
+            },
       }))
     );
 

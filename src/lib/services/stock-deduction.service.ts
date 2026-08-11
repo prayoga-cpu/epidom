@@ -157,6 +157,16 @@ export async function deductStockForOrder(
 
     itemCostSnapshots.set(item.id, Number(product.costPrice));
 
+    // Untracked products (Product.trackStock === false) have no inventory at
+    // all — a service like a haircut, or an always-available made-to-order
+    // item — so there's no finished-goods stock and no recipe to deduct.
+    // Defaults true for every product, so this only ever skips something an
+    // owner has explicitly marked untracked. Deliberately not counted in
+    // `skipped` (that counter means "unresolvable product," a data problem;
+    // this is an intentional, expected exclusion) — the cost snapshot above
+    // still applies so Finance margin reporting works for these too.
+    if (!product.trackStock) continue;
+
     const orderedQty = Number(item.quantity);
 
     // 1. Always decrement the product's own finished-goods stock.
@@ -285,7 +295,14 @@ export async function deductStockForOrder(
     })
   );
 
-  if (productDeductions.length === 0 && materialDeductions.length === 0) {
+  // An order made up entirely of CUSTOM-productLine items (no stock/recipe
+  // deduction) still has cost snapshots to write below, so only bail out
+  // here when there's truly nothing to do in the transaction at all.
+  if (
+    productDeductions.length === 0 &&
+    materialDeductions.length === 0 &&
+    itemCostSnapshots.size === 0
+  ) {
     return { deducted: 0, skipped };
   }
 

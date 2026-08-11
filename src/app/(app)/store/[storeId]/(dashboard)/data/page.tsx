@@ -26,7 +26,7 @@ export default async function DataPage({ params }: { params: Promise<{ storeId: 
   const [materialsResult, recipesResult, productsResult, suppliersResult] = await Promise.all([
     fetchMaterialsForPage(storeId),
     fetchRecipesForPage(storeId),
-    fetchProductsForPage(storeId),
+    fetchProductsForPage(storeId, { productLine: "STANDARD" }),
     fetchSuppliersForPage(storeId),
   ]);
 

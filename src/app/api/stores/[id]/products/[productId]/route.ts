@@ -60,6 +60,7 @@ export const PATCH = withApiHandler(
         validatedData.sellingPrice !== undefined ? Number(validatedData.sellingPrice) : undefined,
       currentStock:
         validatedData.currentStock !== undefined ? Number(validatedData.currentStock) : undefined,
+      trackStock: validatedData.trackStock,
       unit: validatedData.unit,
       minStock: validatedData.minStock !== undefined ? Number(validatedData.minStock) : undefined,
       maxStock: validatedData.maxStock !== undefined ? Number(validatedData.maxStock) : undefined,

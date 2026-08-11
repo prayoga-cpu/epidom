@@ -13,6 +13,10 @@ export interface PublicMenuItem {
   isAvailable: boolean;
   isFeatured: boolean;
   modifiers: unknown;
+  // Part of the store's optional second product line (Product.productLine) —
+  // rendered in its own visually distinct section rather than mixed in with
+  // the regular food/drink categories.
+  isCustom: boolean;
   product: { optionGroups: ReturnType<typeof serializeProductOptionGroups> } | null;
 }
 
@@ -59,6 +63,7 @@ export function usePublicStorefrontMenu(slug: string, initialCategories?: Public
           isAvailable: item.isAvailable,
           isFeatured: item.isFeatured,
           modifiers: item.modifiers,
+          isCustom: item.product?.productLine === "CUSTOM",
           product: item.product
             ? { optionGroups: serializeProductOptionGroups(item.product?.optionGroups) }
             : null,

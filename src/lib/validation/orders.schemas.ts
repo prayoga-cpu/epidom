@@ -7,7 +7,6 @@ import { cuidSchema, priceSchema, decimalSchema } from "./common.schemas";
 
 // Order status enum
 export const orderStatusSchema = z.enum([
-  "PENDING",
   "CONFIRMED",
   "IN_PRODUCTION",
   "READY",

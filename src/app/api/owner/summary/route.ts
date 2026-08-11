@@ -14,7 +14,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { OrderStatus, MovementType } from "@prisma/client";
+import { MovementType } from "@prisma/client";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { planHasFeature } from "@/lib/plans/entitlements";
 import { getExchangeRate } from "@/lib/services/exchange-rate.service";
@@ -76,7 +76,10 @@ export async function GET(request: Request) {
   const to = new Date(searchParams.get("to") ?? now.toISOString());
   const storeIds = business.stores.map((s) => s.id);
 
-  // Per-store revenue + pending count in parallel — unchanged from before.
+  // Per-store revenue + pending-payment count in parallel. "Pending" here
+  // means paymentStatus PENDING (orders needing a payment follow-up), not
+  // OrderStatus — production no longer gates on payment clearing, so there's
+  // no order-status value left that means "awaiting confirmation."
   const storeMetricsPromise = Promise.all(
     business.stores.map(async (store) => {
       const [agg, pendingCount] = await Promise.all([
@@ -89,7 +92,13 @@ export async function GET(request: Request) {
           _sum: { total: true },
           _count: { id: true },
         }),
-        prisma.order.count({ where: { storeId: store.id, status: OrderStatus.PENDING } }),
+        prisma.order.count({
+          where: {
+            storeId: store.id,
+            paymentStatus: "PENDING",
+            status: { notIn: NON_REVENUE_STATUSES },
+          },
+        }),
       ]);
       return {
         storeId: store.id,

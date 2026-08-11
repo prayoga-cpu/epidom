@@ -413,6 +413,36 @@ Migration: `prisma/migrations/<timestamp>_rename_subscription_plans/`. Handles t
 
 ---
 
+## Development vs production database (Neon branching)
+
+Local dev and Vercel Preview deployments used to share the same connection
+string as production — a bad local migration, a runaway seed script, or a
+preview build's `prisma migrate deploy` could take prod down. Fixed via Neon's
+branching (copy-on-write, so branching is instant and doesn't duplicate
+storage):
+
+- **`main`** — production branch. Only Vercel's `production`-scoped env vars
+  point here. Nothing else should ever hold this connection string.
+- **`development`** — branched off `main`. Local `.env` and Vercel's
+  `preview`-scoped env vars point here. Reset to `main`'s current head nightly
+  by `.github/workflows/reset-dev-db.yml` (`POST /branches/{id}/reset_to_parent`
+  via the Neon API), or on demand via that workflow's "Run workflow" button.
+  A reset discards whatever the dev branch accumulated and pulls a fresh
+  copy of prod data — don't rely on anything written to it surviving.
+
+Data only ever flows `main` → `development`. Schema changes flow the other
+way: run `prisma migrate dev` locally (against `development`), commit the
+migration file, merge to `main` — the Vercel production build already runs
+`prisma migrate deploy` (see `package.json`), which applies it to `main`.
+This is also why "test the migration against a snapshot of prod data before
+merging" (above) is now close to automatic — `development` already *is* a
+recent snapshot of prod.
+
+See `docs/ENVIRONMENT.md` for the full env-var-to-branch-to-Vercel-target
+table.
+
+---
+
 ## Indexing strategy
 
 Indexed by default (Prisma auto-indexes):
@@ -535,8 +565,27 @@ revalidateTag(`storefront:${updated.slug}`);
 
 ## Local development
 
+`.env` already points `DATABASE_URL`/`DIRECT_URL` at the Neon `development`
+branch (see "Development vs production database" above) — no local Postgres
+to install. That branch gets reset from production nightly, so it's safe to
+experiment against.
+
 ```bash
-# Spin up Postgres in Docker
+# Apply migrations
+pnpm prisma migrate dev
+
+# Open GUI
+pnpm prisma studio
+
+# Reset (DESTRUCTIVE — wipes the development branch's data; it'll get
+# fresh prod data back at the next nightly reset regardless)
+pnpm prisma migrate reset
+```
+
+A local Postgres via Docker is also an option if you'd rather not touch even
+the dev branch:
+
+```bash
 docker run --name epidom-db \
   -e POSTGRES_USER=epidom \
   -e POSTGRES_PASSWORD=epidom \
@@ -544,17 +593,9 @@ docker run --name epidom-db \
   -p 5432:5432 \
   -d postgres:16
 
-# Then in .env.local:
+# Then override in .env:
 DATABASE_URL="postgresql://epidom:epidom@localhost:5432/epidom"
-
-# Apply migrations
-pnpm prisma migrate dev
-
-# Open GUI
-pnpm prisma studio
-
-# Reset (DESTRUCTIVE)
-pnpm prisma migrate reset
+DIRECT_URL="postgresql://epidom:epidom@localhost:5432/epidom"
 ```
 
 ---

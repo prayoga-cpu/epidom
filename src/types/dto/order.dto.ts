@@ -16,7 +16,7 @@ export interface OrderDto {
   customerEmail: string | null;
   customerPhone: string | null;
   deliveryAddress: string | null;
-  status: "PENDING" | "CONFIRMED" | "IN_PRODUCTION" | "READY" | "DELIVERED" | "CANCELLED";
+  status: "CONFIRMED" | "IN_PRODUCTION" | "READY" | "DELIVERED" | "CANCELLED";
   orderDate: Date;
   dueDate: Date | null;
   deliveredDate: Date | null;

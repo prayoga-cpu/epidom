@@ -2,8 +2,6 @@ export function getOrderStatusBadgeVariant(
   status: string
 ): "default" | "secondary" | "outline" | "destructive" {
   switch (status) {
-    case "PENDING":
-      return "secondary";
     case "CONFIRMED":
       return "default";
     case "IN_PRODUCTION":
@@ -91,8 +89,6 @@ export function isAwaitingPayment(order: { paymentStatus: string }): boolean {
 // a glance — same color family as the status filter tiles in the toolbar.
 export function getOrderStatusAccentClass(status: string): string {
   switch (status) {
-    case "PENDING":
-      return "border-l-2 border-l-amber-500 bg-amber-500/[0.04]";
     case "CONFIRMED":
       return "border-l-2 border-l-blue-500 bg-blue-500/[0.04]";
     case "IN_PRODUCTION":
