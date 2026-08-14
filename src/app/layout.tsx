@@ -27,8 +27,25 @@ const bebasNeue = Bebas_Neue({
 });
 
 export const metadata: Metadata = {
+  applicationName: "Epidom",
   icons: {
     icon: "/favicon.ico",
+    // iOS ignores the manifest's icon list entirely when adding to the home
+    // screen — it reads apple-touch-icon and nothing else. Without this an
+    // iPad, the primary cashier device, installs a blurry screenshot of the
+    // page as its icon.
+    apple: "/images/icon-192.png",
+  },
+  // Safari also ignores `display: standalone` from the manifest; these meta
+  // tags are how an iOS home-screen launch gets a chromeless window and a
+  // status bar that matches the dark theme instead of a white strip.
+  // "black" is opaque and sits *above* the page, unlike "black-translucent"
+  // which would draw the page under the notch — the layout only reserves
+  // safe-area insets at the bottom (mobile nav), not the top.
+  appleWebApp: {
+    capable: true,
+    title: "Epidom",
+    statusBarStyle: "black",
   },
 };
 
@@ -40,6 +57,12 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  // Kept equal to the manifest's theme_color. A single value, not a
+  // prefers-color-scheme pair: the app picks its own theme (ThemeProvider
+  // defaults to dark) independently of the OS, so a light/dark media pair
+  // would tint the browser chrome to the opposite of what is on screen for
+  // anyone whose system preference disagrees with their app preference.
+  themeColor: "#18181b",
 };
 
 export default function RootLayout({

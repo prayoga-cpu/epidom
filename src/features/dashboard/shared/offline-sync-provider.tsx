@@ -1,11 +1,12 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
 import { useCurrentStore } from "./hooks/use-current-store";
 import { useOfflineSync } from "@/features/pos/hooks/use-offline-sync";
 import { useOfflineMode } from "@/features/pos/hooks/use-offline-mode";
 
 interface OfflineSyncContextValue {
+  storeId: string;
   lastSyncedAt: Date | null;
   isSyncing: boolean;
   pendingCount: number;
@@ -41,12 +42,25 @@ export function OfflineSyncProvider({ children }: { children: ReactNode }) {
   const sync = useOfflineSync(storeId ?? "");
   const mode = useOfflineMode(storeId ?? "");
 
+  // "Sync now" has to move both halves or it is lying about what it did:
+  // refreshing the data mirror while the page shells stay whatever they were
+  // is how you end up with a device holding a perfectly current menu and no
+  // POS screen to render it on. Skipped when Offline Mode is off — there is
+  // nothing to keep warm then, and the warm-up is a handful of full page
+  // fetches, which is not something to spend on a user who opted out.
+  const { enabled: offlineModeEnabled, warmPages } = mode;
+  const syncNow = useCallback(async () => {
+    await sync.syncNow();
+    if (offlineModeEnabled) await warmPages();
+  }, [sync, offlineModeEnabled, warmPages]);
+
   const value: OfflineSyncContextValue = {
+    storeId: storeId ?? "",
     lastSyncedAt: sync.lastSyncedAt,
     isSyncing: sync.isSyncing,
     pendingCount: sync.pendingCount,
     isOnline: sync.isOnline,
-    syncNow: sync.syncNow,
+    syncNow,
     offlineModeEnabled: mode.enabled,
     isPriming: mode.isPriming,
     isStandalone: mode.isStandalone,

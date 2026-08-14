@@ -19,7 +19,7 @@ import { useCurrentStore } from "./hooks/use-current-store";
 import { dashboardNavigation, type NavSection, type PlanTier } from "@/config/navigation.config";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { StoreSwitcher } from "./store-switcher";
-import { PwaInstallTrigger } from "./pwa-install-dialog";
+import { OfflineSyncTrigger, PwaInstallTrigger } from "./pwa-install-dialog";
 import { ThemeToggle } from "./theme-toggle";
 import { FeedbackButton } from "@/features/dashboard/feedback/components/feedback-button";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
@@ -242,6 +242,7 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
               </div>
             </div>
             <PwaInstallTrigger variant="full" />
+            <OfflineSyncTrigger variant="full" />
             <Link
               href={storeId ? `/store/${storeId}/changelog` : "/changelog"}
               className="text-muted-foreground hover:text-foreground flex items-center justify-between gap-2 text-xs transition-colors"

@@ -7,7 +7,7 @@ import { useCurrentStore } from "./hooks/use-current-store";
 import { APP_VERSION } from "@/lib/version";
 import { Sidebar } from "./sidebar";
 import { StoreSwitcher } from "./store-switcher";
-import { PwaInstallTrigger } from "./pwa-install-dialog";
+import { OfflineSyncTrigger, PwaInstallTrigger } from "./pwa-install-dialog";
 import { useI18n } from "../../../components/lang/i18n-provider";
 import LangSwitcher from "../../../components/lang/lang-switcher";
 import { NavUser } from "./nav-user";
@@ -253,6 +253,9 @@ export function Topbar() {
             </div>
             <div className="flex items-center">
               <PwaInstallTrigger variant="icon" />
+            </div>
+            <div className="flex items-center">
+              <OfflineSyncTrigger variant="icon" />
             </div>
             <div className="flex items-center">
               <ThemeToggle />

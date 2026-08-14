@@ -9,6 +9,27 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.69.0] - 2026-08-14 · fix
+
+- **The installed app now opens when you launch it with no connection.** Tapping the Epidom icon with the wifi down used to land on the "you're offline" card every single time, because the app asked our server which store to open before it could show you anything. It now works that out on the device and takes you straight back to the screen you were last on.
+- **Offline & Sync no longer vanishes once you install the app.** Installing Epidom used to hide the whole panel — on the one device where working without a connection matters most, there was no way to check whether anything was actually saved. It stays now, with the Offline Mode switch visible and locked on.
+- **You can see exactly what will work offline.** Offline & Sync now lists every page that opens without a connection (POS Cashier, Order Queue, Kitchen & Bar, Data, Staff, Schedule, Dashboard) and every kind of data saved on the device — menu and prices, live orders, cashier list, materials and stock, staff and schedules — each marked Ready or Not saved, with how many records and when they were last refreshed. No more guessing.
+- **Pages are now saved for offline, not just data.** Epidom used to save your figures but not the screens that display them, so a page you hadn't opened since launching the app simply couldn't load without a connection. Turning on Offline Mode, and every "Sync now", now saves the screens themselves too — there's also a "Save pages for offline" button to do it on demand.
+- **Testing offline on a development server now says so.** Offline storage is deliberately switched off on localhost so a development server can never hand you stale files. The panel now explains that outright instead of leaving you to conclude offline mode is broken.
+
+## [2.68.0] - 2026-08-13 · ux
+
+- **The Install button works again.** The install window was being hidden by the app itself, so pressing Install did nothing at all on any device. Fixed.
+- **Installing the app is now one tap.** The Install button used to open an Epidom window that mostly existed to hold a second Install button. It now opens the real installer straight away — a one-tap install on Android and desktop Chrome, and clear step-by-step instructions with pictures on iPhone and iPad, where Apple gives no other way in. It also opens reliably now even if you dismissed it once before.
+- **The install window and the home-screen entry are in English.** The app name, description and the two shortcuts ("Cashier", "Order Queue") were Indonesian-only.
+- **Offline & Sync moved to its own button, next to Install.** The Offline Mode switch, the last-synced time, "Sync now" and the storage readout all still live in one place — they're just no longer buried inside the install window. "Sync now" is also a proper size to hit on a tablet; it was previously a 24-pixel target.
+- **Adding Epidom to an iPad or iPhone home screen now looks like an app.** It picks up the real Epidom icon instead of a blurry snapshot of the page, opens without Safari's address bar, and shows a dark status bar that matches the app instead of a white strip.
+- **Marketing and public pages were sending browsers a conflicting, outdated set of app settings** — a different theme colour and a light status bar — which overrode the correct ones. Every page now sends one consistent set.
+- **Long-pressing the installed icon shows the Epidom mark next to "Kasir" and "Antrian Pesanan"** instead of a blank placeholder.
+- **The home-screen icon is no longer a half-megabyte download.** The manifest was offering a 580 KB icon file that some devices preferred over the 6 KB one meant for the job.
+- **Order and stock notifications now use the app icon** rather than a full-colour logo that was ten times the size and didn't fit the notification badge shape.
+- **Offline & Sync is fully translated into French.** Eleven labels in that panel had no French text and were printing their internal names on screen.
+
 ## [2.67.1] - 2026-08-11 · fix
 
 - **Stock figures now update everywhere the moment stock moves.** Running a recipe in Production correctly took the ingredients out of inventory, but Management and Data kept showing the old figure for up to half a minute, which read as "the deduction never happened". Recording waste and receiving a supplier delivery had the same lag. Every page showing that material now updates as soon as the change lands, on every open tab and device.

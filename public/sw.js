@@ -9,7 +9,8 @@
 // install re-precaches fresh copies. v4 = RSC bypass + redirect guards + offline
 // fallback; every v3 entry is suspect (it may hold RSC payloads from old builds)
 // so the bump is what actually evicts them from users already in the field.
-const CACHE_NAME = "epidom-v4";
+// v5 = shell/chunk warming + /go launcher fallback (see below).
+const CACHE_NAME = "epidom-v5";
 
 // Minimal precache: only assets that are stable across builds. /offline.html has
 // to live here — it is the last thing between a failed navigation and a dead tab,
@@ -94,6 +95,103 @@ const LAST_RESORT_HTML =
   '<body style="margin:0;display:grid;place-items:center;min-height:100dvh;background:#18181b;color:#fafafa;' +
   'font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-align:center;padding:24px">' +
   "<div><p>Vous êtes hors ligne.</p><p>Anda sedang offline.</p><p>You are offline.</p></div>";
+
+// ---------------------------------------------------------------------------
+// Offline launcher for /go/*.
+//
+// The manifest's start_url is /go/dashboard and its long-press shortcuts are
+// /go/pos and /go/pos/orders — a server-side launcher that resolves *which*
+// store this session belongs to and redirects to /store/{id}/… (a static
+// manifest cannot contain a store id). Server-side means it needs the network,
+// which means a cold launch of the installed app with no signal died on the
+// very first hop: the redirect never happens, navigationFallback finds nothing
+// cached under /go/dashboard (redirects are never cached, deliberately), and
+// the cashier gets the generic offline card instead of the POS screen. That is
+// the installed app being unusable offline no matter how much data is mirrored
+// on the device.
+//
+// This is the offline half of that launcher: a self-contained document that
+// resolves the destination client-side from the same last-visited value the
+// server launcher reads (LastVisitedTracker writes it to both localStorage and
+// a cookie — see src/components/providers/last-visited-tracker.tsx), then
+// replaces itself with that URL so the shell cache can serve the real page.
+// Only reachable from the network-failure path; while online the server
+// launcher always wins.
+// ---------------------------------------------------------------------------
+const LAST_VISITED_KEY = "epidom:lastVisitedUrl";
+
+/**
+ * `section` is what the user actually tapped (`/go/pos` → `/pos`), `saved` is
+ * every page currently in the shell cache. Handing both to the document lets
+ * it aim at a destination that will really render instead of one that merely
+ * sounds right: last-visited first, then the tapped shortcut, then anything
+ * saved at all, then the offline card.
+ *
+ * Split so the literal "</script>" never appears in this file — harmless in a
+ * .js response, but it would terminate the block early in any context that
+ * parses this text as HTML.
+ */
+function goLauncherHtml(section, saved) {
+  return `<!doctype html><html lang="fr"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Epidom</title><body style="margin:0;background:#18181b">
+<script>(function(){
+  var saved = ${JSON.stringify(saved)};
+  var section = ${JSON.stringify(section)};
+
+  function lastVisited(){
+    try{ var v = localStorage.getItem(${JSON.stringify(LAST_VISITED_KEY)}); if(v) return v; }catch(e){}
+    try{
+      var m = document.cookie.match(/(?:^|;\\s*)epidom:lastVisitedUrl=([^;]*)/);
+      if(m) return m[1];
+    }catch(e){}
+    return "";
+  }
+
+  // Same-origin store path only. A tampered cookie must never turn the offline
+  // launcher into an open redirect, and nothing outside /store/ has an offline
+  // shell behind it anyway.
+  function safe(path){
+    return typeof path === "string" && path.indexOf("/store/") === 0 &&
+      path.indexOf("//") !== 0 && !/[\\s\\\\]/.test(path);
+  }
+
+  var raw = lastVisited(), target = "";
+  try{ target = decodeURIComponent(raw); }catch(e){ target = raw; }
+  var bare = target.split("?")[0].split("#")[0];
+
+  var destination = "";
+  // Nothing saved at all (a device that has never synced) is the one case where
+  // trusting last-visited blindly is still right — there is no better guess,
+  // and the shell cache may simply be unreadable rather than empty.
+  if (safe(target) && (saved.length === 0 || saved.indexOf(bare) !== -1)) {
+    destination = target;
+  } else {
+    for (var i = 0; i < saved.length; i++) {
+      if (section && saved[i].slice(-section.length) === section) { destination = saved[i]; break; }
+    }
+    if (!destination && saved.length && safe(saved[0])) destination = saved[0];
+  }
+
+  location.replace(destination || "/offline.html");
+})();<` + `/script>`;
+}
+
+/**
+ * Chunk references inside a server-rendered document.
+ *
+ * Warming the shell without these is warming half a page: the HTML is on the
+ * device but every `_next/static` bundle it boots from is still a network
+ * request, so opening it offline gets a ChunkLoadError instead of an app. Next
+ * emits those paths in <script src>, <link href> and inside the inlined flight
+ * payload, so a scan of the raw text catches all three without parsing HTML.
+ */
+const NEXT_ASSET_PATTERN = /\/_next\/static\/[A-Za-z0-9._%\-/]+/g;
+
+/** Warm-up destinations we refuse outright, whatever the caller asked for. */
+function isWarmablePath(path) {
+  return path.startsWith("/store/") && !path.endsWith("/print");
+}
 
 function isCacheableAsset(url) {
   const path = url.pathname;
@@ -199,10 +297,32 @@ async function putInShellCache(request, response) {
   }
 }
 
+/** Pathnames currently held in the offline app-shell cache. */
+async function listShellPaths() {
+  try {
+    const cache = await caches.open(SHELL_CACHE);
+    const requests = await cache.keys();
+    return requests.map((request) => new URL(request.url).pathname);
+  } catch {
+    // An unreadable CacheStorage reads as "nothing saved", which is the honest
+    // answer for every caller here.
+    return [];
+  }
+}
+
 async function shellCacheMatch(request) {
   try {
     const cache = await caches.open(SHELL_CACHE);
-    const cached = await cache.match(request);
+    // `ignoreVary` because Next stamps every page with
+    // `Vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url`, and
+    // default matching then requires those headers to agree between the request
+    // that *wrote* the entry and the one reading it. A warmed entry (written by
+    // WARM_SHELL's own fetch) and a real navigation differ on exactly that
+    // axis, so without this every warmed page silently misses. Safe here
+    // because this cache only ever holds full HTML documents — the RSC variants
+    // those Vary headers exist to distinguish never enter it (see isRscRequest,
+    // which bypasses the worker entirely).
+    const cached = await cache.match(request, { ignoreVary: true });
     // A redirected response must never reach respondWith for a navigation; an
     // entry written by an older worker could still be one.
     return cached && !cached.redirected ? cached : null;
@@ -217,6 +337,19 @@ async function navigationFallback(request) {
   // reject respondWith, which is the very failure this function exists to
   // prevent, so degrade to the inline document instead.
   try {
+    // A failed /go/* hop is a cold launch of the installed app with no signal.
+    // Resolve it on-device instead of dead-ending — see goLauncherHtml.
+    const path = new URL(request.url).pathname;
+    if (path.startsWith("/go/")) {
+      return new Response(goLauncherHtml(path.slice(3), await listShellPaths()), {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
     // The offline app shell comes first: for a dashboard/POS route this is the
     // real page the cashier was on, which beats a generic "you're offline"
     // card by a wide margin — the JS chunks and the IndexedDB mirror are both
@@ -248,6 +381,146 @@ async function navigationFallback(request) {
       "Cache-Control": "no-store",
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Shell warming — the difference between "offline mode is on" and "this page
+// opens offline".
+//
+// Until now the shell cache filled only as a side effect of real navigations,
+// and in an App Router SPA a real navigation happens roughly once: the first
+// load. Every screen change after that is an RSC fetch, which this worker
+// deliberately ignores. So a cashier who opened the dashboard and then clicked
+// through to POS had exactly one page saved — the dashboard — and losing signal
+// on the POS screen dropped them onto the offline card anyway. Warming makes
+// the set explicit: the app names the pages it wants openable offline, and this
+// fetches each one plus the `_next/static` bundles it boots from.
+// ---------------------------------------------------------------------------
+
+/** Caches every `_next/static` bundle referenced by a warmed document. */
+async function warmChunks(html) {
+  const paths = new Set();
+  for (const raw of html.match(NEXT_ASSET_PATTERN) || []) {
+    if (raw.endsWith(".map")) continue;
+    paths.add(raw);
+  }
+  if (paths.size === 0) return 0;
+
+  let stored = 0;
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.all(
+      [...paths].map(async (path) => {
+        try {
+          // Content-hashed, so an entry that already exists is by definition
+          // the right one — re-fetching it would be pure waste on a connection
+          // we are explicitly treating as scarce.
+          if (await cache.match(path)) {
+            stored++;
+            return;
+          }
+          const response = await fetch(path, { credentials: "same-origin" });
+          if (!isCacheableResponse(response)) return;
+          await cache.put(path, response);
+          stored++;
+        } catch {
+          // One missing bundle shouldn't fail the whole warm-up.
+        }
+      })
+    );
+  } catch {
+    return stored;
+  }
+  return stored;
+}
+
+async function warmShellPath(path) {
+  let url;
+  try {
+    url = new URL(path, self.location.origin);
+  } catch {
+    return { path, ok: false, reason: "rejected" };
+  }
+  if (url.origin !== self.location.origin || url.search || !isWarmablePath(url.pathname)) {
+    return { path, ok: false, reason: "rejected" };
+  }
+
+  let response;
+  try {
+    response = await fetch(url.href, {
+      credentials: "same-origin",
+      headers: { Accept: "text/html,application/xhtml+xml" },
+      // Never warm from the HTTP cache: a body that predates the current deploy
+      // would pin chunk hashes that no longer exist, which is the exact
+      // ChunkLoadError this worker's allowlist exists to avoid manufacturing.
+      cache: "no-cache",
+    });
+  } catch {
+    return { path, ok: false, reason: "offline" };
+  }
+
+  if (!isShellCacheable(url, response)) {
+    // `redirected` here is almost always the session being gone (proxy.ts sends
+    // every protected route to /login), which is worth telling the UI apart
+    // from a genuine server error.
+    return {
+      path,
+      ok: false,
+      reason: response.redirected ? "auth" : `http-${response.status}`,
+    };
+  }
+
+  let html = "";
+  try {
+    html = await response.clone().text();
+    const cache = await caches.open(SHELL_CACHE);
+    await cache.put(new Request(url.href), response);
+  } catch {
+    return { path, ok: false, reason: "storage" };
+  }
+
+  return { path, ok: true, assets: await warmChunks(html) };
+}
+
+async function warmShell(paths) {
+  // Sequential on purpose. These are full server-rendered dashboard documents
+  // and the warm-up runs on whatever connection the device has left; firing
+  // eight of them at once is how you turn a weak signal into eight timeouts.
+  const results = [];
+  for (const path of paths) {
+    results.push(await warmShellPath(path));
+  }
+  return results;
+}
+
+/** Everything the Offline & Sync panel needs to describe this device honestly. */
+async function collectOfflineStatus() {
+  const status = {
+    cacheVersion: CACHE_NAME,
+    devPassthrough: IS_DEV,
+    shellPaths: await listShellPaths(),
+    assetCount: 0,
+    offlinePageReady: false,
+  };
+
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const requests = await cache.keys();
+    status.assetCount = requests.length;
+    status.offlinePageReady = requests.some(
+      (request) => new URL(request.url).pathname === OFFLINE_URL
+    );
+  } catch {
+    // Same.
+  }
+
+  return status;
+}
+
+/** Answers a `postMessage` sent with a MessageChannel port; no-op without one. */
+function replyToMessage(event, payload) {
+  const port = event.ports && event.ports[0];
+  if (port) port.postMessage(payload);
 }
 
 self.addEventListener("install", (event) => {
@@ -365,6 +638,28 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "CLEAR_APP_SHELL") {
     event.waitUntil(caches.delete(SHELL_CACHE));
   }
+
+  // Offline & Sync panel: "what is actually on this device right now".
+  if (event.data && event.data.type === "GET_OFFLINE_STATUS") {
+    event.waitUntil(collectOfflineStatus().then((status) => replyToMessage(event, status)));
+  }
+
+  // Offline & Sync panel / offline-mode priming: make these pages openable
+  // without a connection. Capped so a malformed caller can't queue an unbounded
+  // crawl of the app.
+  if (event.data && event.data.type === "WARM_SHELL") {
+    const paths = Array.isArray(event.data.paths) ? event.data.paths.slice(0, 24) : [];
+    event.waitUntil(
+      // On localhost the fetch handler serves nothing from cache (see IS_DEV),
+      // so warming there would fill storage with entries that can never be
+      // read and report a readiness the device does not have. Refuse, and say
+      // why — the panel surfaces this verbatim.
+      (IS_DEV
+        ? Promise.resolve(paths.map((path) => ({ path, ok: false, reason: "dev" })))
+        : warmShell(paths)
+      ).then((results) => replyToMessage(event, { devPassthrough: IS_DEV, results }))
+    );
+  }
 });
 
 // Web Push (OS-level notifications: new storefront orders, low/critical
@@ -390,10 +685,12 @@ self.addEventListener("push", (event) => {
 
   const options = {
     body: payload.body,
-    // manifest.ts's icon-192/512 paths don't currently exist on disk — use
-    // the real logo asset instead so the notification icon doesn't 404.
-    icon: "/logo.png",
-    badge: "/logo.png",
+    // The icon-192 assets referenced by manifest.ts do exist now, so the note
+    // that used to sit here (pointing both of these at /logo.png as a 404
+    // workaround) is stale. /logo.png is a 119 KB full-colour mark; the
+    // maskable 192 is 6 KB and already shaped for a circular badge mask.
+    icon: "/images/icon-192.png",
+    badge: "/images/icon-192-maskable.png",
     tag: payload.tag,
     data: { url: payload.url || "/" },
   };

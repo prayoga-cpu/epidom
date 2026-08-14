@@ -184,13 +184,21 @@ export function generateMetadata(config: Partial<SEOConfig> = {}): Metadata {
     },
     other: {
       ...seo.other,
-      "application-name": "EPIDOM",
-      "apple-mobile-web-app-title": "EPIDOM",
-      "apple-mobile-web-app-capable": "yes",
-      "apple-mobile-web-app-status-bar-style": "default",
-      "mobile-web-app-capable": "yes",
-      "msapplication-TileColor": "#444444",
-      "theme-color": "#444444",
+      // The PWA/Apple tags that used to live here are gone on purpose. They
+      // were written as raw `other` entries, which Next emits verbatim — it
+      // does NOT merge or dedupe them against `metadata.appleWebApp`,
+      // `metadata.applicationName` or the exported `viewport.themeColor` in
+      // src/app/layout.tsx. Every page built by this helper therefore shipped
+      // two of each tag, and because `other` renders first, the stale copies
+      // won: `apple-mobile-web-app-status-bar-style: default` beat "black",
+      // and `theme-color: #444444` beat the manifest's #18181b.
+      //
+      // The root layout is the single owner now — including
+      // `mobile-web-app-capable`, which Next 16 emits itself from
+      // `appleWebApp.capable` (it uses that modern spelling rather than the
+      // deprecated `apple-mobile-web-app-capable`), so repeating it here just
+      // produced the tag twice.
+      "msapplication-TileColor": "#18181b",
     },
   };
 }
