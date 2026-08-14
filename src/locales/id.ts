@@ -47,8 +47,6 @@ export const id = {
       offlineSettingsIntro:
         "Kelola data offline dan cek kapan perangkat ini terakhir disinkronkan.",
       offlineModeLabel: "Mode Offline",
-      offlineModeDescription:
-        "Simpan data menu, pesanan, bahan baku, dan staf di perangkat ini agar tetap tersedia tanpa koneksi internet.",
       offlineModeRequired: "Selalu aktif untuk aplikasi yang terpasang, agar tetap berfungsi tanpa koneksi.",
       offlineModeDownloading: "Mengunduh data untuk mode offline…",
       lastSynced: "Terakhir disinkronkan: {date}",
@@ -59,8 +57,6 @@ export const id = {
         "iOS dapat menghapus data offline jika aplikasi ini tidak dibuka selama sekitar seminggu — buka secara berkala agar data tetap tersimpan.",
       connectionOnline: "Online",
       connectionOffline: "Offline",
-      runningInstalled: "Aplikasi terpasang",
-      runningBrowser: "Tab browser",
       pendingOrders: "{count} menunggu dikirim",
       pagesTitle: "Halaman yang bisa dibuka offline",
       pagesIntro: "Tersimpan di perangkat ini, jadi tetap bisa dibuka tanpa koneksi.",

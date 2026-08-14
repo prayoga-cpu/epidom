@@ -32,13 +32,16 @@ type PwaTriggerVariant = "icon" | "full";
  * the manifest. The Offline & Sync controls that shared that dialog now live in
  * `OfflineSyncTrigger` below.
  *
- * Renders nothing once the app is already running installed.
+ * This and `OfflineSyncTrigger` are two states of one slot, never two buttons:
+ * install while there is something to install, offline settings once there is.
+ * Both are rendered side by side by Topbar and Sidebar, and exactly one of them
+ * returns an element.
  */
 export function PwaInstallTrigger({ variant }: { variant: PwaTriggerVariant }) {
   const { t } = useI18n();
-  const { isStandalone, showInstallDialog } = usePwaInstaller();
+  const { isStandalone, isInstallStateKnown, showInstallDialog } = usePwaInstaller();
 
-  if (isStandalone) return null;
+  if (!isInstallStateKnown || isStandalone) return null;
 
   if (variant === "icon") {
     return (
@@ -69,19 +72,22 @@ export function PwaInstallTrigger({ variant }: { variant: PwaTriggerVariant }) {
  * "Sync now", and a per-page/per-domain readiness report (see
  * `OfflineReadiness`).
  *
- * Deliberately NOT hidden while standalone, unlike the install button.
- * It used to be, on the reasoning that Offline Mode is mandatory for the
- * installed app so there was nothing left to configure — but that removed the
- * status *report* along with the switch, and the installed app is precisely
- * where offline is load-bearing. A cashier whose tablet drops off the wifi had
- * no way to find out whether their device was actually ready, and no way to
- * tell "everything is mirrored" apart from "the service worker never took
- * control". The switch is still locked on there; it is shown that way rather
- * than removed, so its state is legible instead of merely asserted.
+ * Shown only once installed — the exact inverse of `PwaInstallTrigger`, so the
+ * two never appear together (they did briefly, which read as a duplicated
+ * button). Offline is a property of the installed app: it is mandatory and
+ * always on there, and a browser tab that has not been installed has nothing
+ * to configure or report on yet. Install first, then this replaces it.
+ *
+ * It is the *report*, not the switch, that earns the slot. The switch is
+ * locked on (useOfflineMode refuses to turn it off while standalone) and is
+ * shown that way rather than removed, so its state is legible instead of
+ * merely asserted — but the reason to open this dialog is to find out whether
+ * the device is genuinely ready, and to tell "everything is mirrored" apart
+ * from "the service worker never took control".
  */
 export function OfflineSyncTrigger({ variant }: { variant: PwaTriggerVariant }) {
   const { t, formatDateTime } = useI18n();
-  const { isStandalone } = usePwaInstaller();
+  const { isStandalone, isInstallStateKnown } = usePwaInstaller();
   const {
     storeId,
     lastSyncedAt,
@@ -91,10 +97,10 @@ export function OfflineSyncTrigger({ variant }: { variant: PwaTriggerVariant }) 
     syncNow,
     offlineModeEnabled,
     isPriming,
-    enableOfflineMode,
-    disableOfflineMode,
   } = useOfflineSyncContext();
   const [open, setOpen] = useState(false);
+
+  if (!isInstallStateKnown || !isStandalone) return null;
 
   const trigger =
     variant === "icon" ? (
@@ -136,9 +142,8 @@ export function OfflineSyncTrigger({ variant }: { variant: PwaTriggerVariant }) 
               )}
               {isOnline ? t("common.pwa.connectionOnline") : t("common.pwa.connectionOffline")}
             </Badge>
-            <Badge variant="outline">
-              {isStandalone ? t("common.pwa.runningInstalled") : t("common.pwa.runningBrowser")}
-            </Badge>
+            {/* No "installed vs browser tab" chip: this dialog only exists in
+                the installed app now, so it could only ever say one thing. */}
             {pendingCount > 0 && (
               <Badge variant="secondary">
                 {t("common.pwa.pendingOrders").replace("{count}", String(pendingCount))}
@@ -150,19 +155,18 @@ export function OfflineSyncTrigger({ variant }: { variant: PwaTriggerVariant }) 
             <div className="space-y-0.5">
               <Label className="text-sm font-medium">{t("common.pwa.offlineModeLabel")}</Label>
               <p className="text-muted-foreground text-xs">
-                {isStandalone
-                  ? t("common.pwa.offlineModeRequired")
-                  : t("common.pwa.offlineModeDescription")}
+                {t("common.pwa.offlineModeRequired")}
               </p>
             </div>
-            {/* Locked on while installed. `disabled` rather than hidden: the
-                hook refuses to turn it off there anyway (see useOfflineMode),
-                so an interactive switch would be a control that silently does
-                nothing — worse than one that visibly can't move. */}
+            {/* Read-only by construction, not merely by policy: this dialog is
+                installed-only, and useOfflineMode refuses to turn Offline Mode
+                off while standalone. So there is no handler to wire — a switch
+                that silently does nothing is worse than one that visibly
+                can't move. Shown rather than dropped so the state is legible
+                instead of merely asserted. */}
             <Switch
               checked={offlineModeEnabled}
-              disabled={isPriming || isStandalone}
-              onCheckedChange={(checked) => (checked ? enableOfflineMode() : disableOfflineMode())}
+              disabled
               aria-label={t("common.pwa.offlineModeLabel")}
             />
           </div>

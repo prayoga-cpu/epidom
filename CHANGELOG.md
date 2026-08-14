@@ -9,6 +9,10 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.69.1] - 2026-08-14 · ux
+
+- **One button in the toolbar instead of two.** Install and Offline & Sync were both showing at once, which read as the same button twice. They are now two states of one slot: you get Install while there is something to install, and it becomes Offline & Sync once the app is installed. Neither one flashes on screen before the app has worked out which it should be.
+
 ## [2.69.0] - 2026-08-14 · fix
 
 - **The installed app now opens when you launch it with no connection.** Tapping the Epidom icon with the wifi down used to land on the "you're offline" card every single time, because the app asked our server which store to open before it could show you anything. It now works that out on the device and takes you straight back to the screen you were last on.

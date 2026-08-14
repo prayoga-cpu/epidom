@@ -23,11 +23,19 @@ import { useI18n } from "@/components/lang/i18n-provider";
 let installElement: PWAInstallElement | null = null;
 
 /**
- * Pessimistic default: assume standalone (i.e. hide install buttons) until the
- * element has upgraded and told us otherwise, so an already-installed launch
- * never flashes an "Install" button before hiding it again.
+ * `null` means "not determined yet", and that third state is load-bearing now
+ * that Install and Offline & Sync are mutually exclusive: exactly one of them
+ * belongs on screen, decided entirely by this value. A boolean default would
+ * have to guess, and either guess flashes the wrong icon for a frame on every
+ * page load — an Install button on an installed launch, or the Offline & Sync
+ * cloud in an ordinary browser tab.
+ *
+ * Consumers that only want a boolean still get the old pessimistic reading
+ * (`?? true`, i.e. hide Install); the ones that render either icon check
+ * `isInstallStateKnown` and render neither until it resolves. That window is a
+ * single commit — `subscribe` detects synchronously on first mount.
  */
-let isStandaloneSnapshot = true;
+let isStandaloneSnapshot: boolean | null = null;
 
 const subscribers = new Set<() => void>();
 
@@ -54,10 +62,15 @@ function detectStandalone() {
 function subscribe(onStoreChange: () => void) {
   subscribers.add(onStoreChange);
 
-  // The element is the source of truth when it exists; this only covers the
-  // window between first subscribe and the element upgrading, and the case
-  // where it never mounts at all.
-  if (!installElement) setStandalone(detectStandalone());
+  // The element is the source of truth when it exists; the media query only
+  // covers the window before it upgrades, and the case where it never mounts.
+  //
+  // The `=== null` arm matters as much as the `!installElement` one: a
+  // consumer mounting *after* PwaInstall's effect but *before* its dynamic
+  // import resolves would otherwise sit on the unknown state for as long as
+  // that chunk takes to load, showing neither Install nor Offline & Sync. This
+  // guarantees the state is known from the first subscribe onward.
+  if (!installElement || isStandaloneSnapshot === null) setStandalone(detectStandalone());
 
   return () => {
     subscribers.delete(onStoreChange);
@@ -68,9 +81,14 @@ function getSnapshot() {
   return isStandaloneSnapshot;
 }
 
-/** SSR has no `window.matchMedia`, so it takes the same pessimistic default. */
-function getServerSnapshot() {
-  return true;
+/**
+ * SSR cannot know the display mode — there is no `window.matchMedia` — so it
+ * reports the unknown state rather than guessing. Hydration then renders
+ * exactly what the server did (neither icon) and resolves on the next commit,
+ * instead of painting one icon and swapping it.
+ */
+function getServerSnapshot(): boolean | null {
+  return null;
 }
 
 function setStandalone(next: boolean) {
@@ -119,14 +137,22 @@ export function showPwaInstallDialog() {
 }
 
 /**
- * `isStandalone` — already running as an installed app, so install buttons
- * should not render at all. Sourced from the library's own
- * `isUnderStandaloneMode` so there is exactly one answer to that question in
- * the app.
+ * `isStandalone` — already running as an installed app. Sourced from the
+ * library's own `isUnderStandaloneMode` so there is exactly one answer to that
+ * question in the app.
+ *
+ * `isInstallStateKnown` distinguishes "definitely a browser tab" from "haven't
+ * found out yet". Anything that renders one UI for installed and a *different*
+ * one for not-installed must gate on it, or it will show the wrong one for a
+ * frame; anything that only hides itself when installed can ignore it.
  */
 export function usePwaInstaller() {
-  const isStandalone = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  return { isStandalone, showInstallDialog: showPwaInstallDialog };
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return {
+    isStandalone: snapshot ?? true,
+    isInstallStateKnown: snapshot !== null,
+    showInstallDialog: showPwaInstallDialog,
+  };
 }
 
 export function PwaInstall() {

@@ -6,6 +6,21 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-08-14 — Install and Offline & Sync Are One Slot, Not Two Buttons (2.69.1)
+
+Operator screenshot of the topbar showing the Install (download) and Offline & Sync (cloud) icons side by side: "it's doubled". Asked for Offline & Sync only once installed, and only the install button before that.
+
+- [x] **`OfflineSyncTrigger` is now installed-only** — the exact inverse of `PwaInstallTrigger`, so exactly one of the two ever returns an element. In 2.69.0 I had removed the standalone guard entirely to expose the readiness report; that was right about the report and wrong about the slot.
+- [x] **Tri-state standalone signal** (`src/components/pwa/pwa-install.tsx`): `isStandaloneSnapshot` is now `boolean | null`, and `usePwaInstaller()` returns `isInstallStateKnown` alongside `isStandalone`. Mutually exclusive UI makes the old pessimistic `true` default actively harmful — *any* boolean default renders the wrong icon for a frame on every load (Install on an installed launch, or the offline cloud in a browser tab). Both triggers now render nothing until the state resolves. `getServerSnapshot` returns `null` too, so hydration paints what the server did rather than swapping. `subscribe` gained an `|| isStandaloneSnapshot === null` arm: a consumer mounting after `PwaInstall`'s effect but before its dynamic import resolves would otherwise sit unknown for the length of that chunk load. Consumers wanting a plain boolean still get the old pessimistic reading via `?? true`.
+- [x] **Dead UI removed from the dialog now that it is installed-only**: the "Installed app / Browser tab" chip (could only ever say one thing), the `isStandalone` ternary on the Offline Mode description, and the Switch's `onCheckedChange` — `useOfflineMode` refuses to disable while standalone, so the handler was unreachable. The Switch stays, `disabled` and checked, per the operator's earlier request to keep the toggle visible.
+- [x] **Three now-unreferenced `common.pwa.*` keys dropped from `en`/`id`/`fr`**: `runningInstalled`, `runningBrowser` (added in 2.69.0, dead as of this change) and `offlineModeDescription` (pre-existing, unreachable now that the description is always `offlineModeRequired`). Verified unreferenced by grep across `src/` before removing.
+
+**Consequence worth knowing**: Offline & Sync — including the readiness report and the Offline Mode switch — is now unreachable from a browser tab. That is what was asked for and it is coherent (offline is a property of the installed app), but it does mean a non-installed user can no longer opt into Offline Mode at all. `enableOfflineMode`/`disableOfflineMode` remain on `OfflineSyncContext`; nothing consumes them outside `useOfflineMode` now, left in place rather than cascading a removal through the provider.
+
+Verified: `pnpm type-check`, `pnpm lint`, `pnpm test` all pass.
+
+---
+
 ## ✅ 2026-08-14 — Offline Actually Works Installed: /go Launcher Fallback, Shell Warming, Readiness Report (2.69.0)
 
 Operator, testing from an installed PWA: keep the Offline Mode toggle visible once installed, add detailed tracking of which pages/data are synchronised, "cause I tested the offline still doesn't work". Treated the last clause as the real task — the panel was hidden, but the reason offline failed was three separate defects underneath it.

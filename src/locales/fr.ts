@@ -43,8 +43,6 @@ export const fr = {
       offlineSettingsIntro:
         "Gérez les données hors ligne et vérifiez la dernière synchronisation de cet appareil.",
       offlineModeLabel: "Mode hors ligne",
-      offlineModeDescription:
-        "Gardez le menu, les commandes, les matières et les données du personnel disponibles sur cet appareil sans connexion.",
       offlineModeRequired:
         "Toujours actif pour l'application installée, afin qu'elle continue de fonctionner sans connexion.",
       offlineModeDownloading: "Téléchargement des données pour une utilisation hors ligne…",
@@ -56,8 +54,6 @@ export const fr = {
         "iOS peut effacer les données hors ligne si l'application n'est pas ouverte pendant environ une semaine — rouvrez-la régulièrement pour les conserver.",
       connectionOnline: "En ligne",
       connectionOffline: "Hors ligne",
-      runningInstalled: "Application installée",
-      runningBrowser: "Onglet du navigateur",
       pendingOrders: "{count} en attente d'envoi",
       pagesTitle: "Pages qui s'ouvrent hors ligne",
       pagesIntro: "Enregistrées sur cet appareil, elles s'ouvrent même sans connexion.",

@@ -45,8 +45,6 @@ export const en = {
       offlineSettingsTitle: "Offline & Sync",
       offlineSettingsIntro: "Manage offline data and check when this device last synced.",
       offlineModeLabel: "Offline Mode",
-      offlineModeDescription:
-        "Keep menu, orders, materials, and staff data available on this device without a connection.",
       offlineModeRequired: "Always on for the installed app, so it keeps working without a connection.",
       offlineModeDownloading: "Downloading data for offline use…",
       lastSynced: "Last synced: {date}",
@@ -57,8 +55,6 @@ export const en = {
         "iOS may clear offline data if this app isn't opened for about a week — reopen it regularly to keep it fresh.",
       connectionOnline: "Online",
       connectionOffline: "Offline",
-      runningInstalled: "Installed app",
-      runningBrowser: "Browser tab",
       pendingOrders: "{count} waiting to send",
       pagesTitle: "Pages that open offline",
       pagesIntro: "Saved on this device, so they still open with no connection.",
