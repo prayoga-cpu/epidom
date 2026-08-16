@@ -279,7 +279,7 @@ export function AdminCustomDevelopmentTable() {
       </div>
 
       <Dialog open={!!detailId} onOpenChange={(open) => !open && setDetailId(null)}>
-        <DialogContent className="max-h-[80dvh] overflow-y-auto sm:max-w-[600px]">
+        <DialogContent className="max-h-[calc(80dvh/var(--app-zoom,1))] overflow-y-auto sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Request details</DialogTitle>
           </DialogHeader>

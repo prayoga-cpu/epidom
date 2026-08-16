@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 
 function OnboardingSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white px-4 py-12">
+    <div className="min-h-[calc(100vh/var(--app-zoom,1))] bg-gradient-to-b from-gray-50 to-white px-4 py-12">
       <div className="mx-auto max-w-lg">
         <div className="mb-8 text-center">
           <Skeleton className="mx-auto mb-4 h-14 w-14 rounded-full" />

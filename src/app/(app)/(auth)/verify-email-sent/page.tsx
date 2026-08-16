@@ -41,7 +41,7 @@ function VerifyEmailContent() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -99,7 +99,7 @@ export default function VerifyEmailSentPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
       }

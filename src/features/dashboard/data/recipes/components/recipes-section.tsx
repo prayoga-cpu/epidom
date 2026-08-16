@@ -352,7 +352,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
 
   return (
     <>
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+      <Card className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] overflow-hidden shadow-md">
         <CardHeader className="border-b">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg font-bold">{t("data.recipes.pageTitle")}</CardTitle>
@@ -537,6 +537,9 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
           <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3 }}>
             {recipes.map((recipe) => {
               const costPerUnit = recipe.costPerBatch / recipe.yieldQuantity;
+              // A one-unit yield makes "per batch" and "per unit" the same
+              // number — two rows saying one thing. Show one row instead.
+              const yieldsSingleUnit = Number(recipe.yieldQuantity) === 1;
 
               return (
                 <BaseItemCard
@@ -607,18 +610,29 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                         {formatDuration(recipe.productionTimeMinutes)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>{t("data.recipes.cards.perBatch")}:</span>
-                      <span className="text-foreground font-medium">
-                        {formatPrice(recipe.costPerBatch)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>{t("data.recipes.cards.perUnit")}:</span>
-                      <span className="text-foreground font-medium">
-                        {formatPrice(costPerUnit)}
-                      </span>
-                    </div>
+                    {yieldsSingleUnit ? (
+                      <div className="flex justify-between">
+                        <span>{t("data.recipes.costPerUnit")}:</span>
+                        <span className="text-foreground font-medium">
+                          {formatPrice(costPerUnit)}
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span>{t("data.recipes.cards.perBatch")}:</span>
+                          <span className="text-foreground font-medium">
+                            {formatPrice(recipe.costPerBatch)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>{t("data.recipes.cards.perUnit")}:</span>
+                          <span className="text-foreground font-medium">
+                            {formatPrice(costPerUnit)}
+                          </span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between">
                       <span>
                         {recipe.ingredients.length === 1

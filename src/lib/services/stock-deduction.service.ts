@@ -1,41 +1,181 @@
 import { prisma } from "@/lib/prisma";
-import { MovementType, OrderItemStatus } from "@prisma/client";
+import { MovementType, OrderItemStatus, StockMode } from "@prisma/client";
+import type { Material, Prisma } from "@prisma/client";
 import { toDecimal } from "@/lib/utils/types.server";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 import { publishStockChanged } from "@/lib/realtime/publish";
 import { fireLowStockAlert } from "@/lib/services/stock-alerts.helpers";
+import { primaryRecipeInclude, type PrimaryRecipe } from "@/lib/services/primary-recipe.helpers";
+import { roundStock, roundsAwayToZero } from "@/lib/services/stock-precision";
+import { runSerializable } from "@/lib/db/serializable";
+
+/** Raw (unrounded) material requirement in the material's own unit, by materialId. */
+type MaterialNeed = Map<string, number>;
+
+export interface DeductResult {
+  deducted: number;
+  skipped: number;
+  alreadyDeducted?: boolean;
+  /**
+   * BATCH_PRODUCED units sold beyond the counted balance, per product. Feeds the
+   * ORDER_SHORTFALL settlement ledger so a later production log nets against it.
+   */
+  shortfalls?: { productId: string; quantity: number }[];
+  /** Materials whose requirement rounds to 0.000 at Decimal(10,3) — nothing written. */
+  belowPrecision?: string[];
+}
+
+function saleNote(orderNumber: string): string {
+  return `Auto-deducted for order ${orderNumber}`;
+}
+
+/** Ids of SALE movements on this order that a RETURN has already reversed. */
+async function reversedSaleIds(orderId: string): Promise<string[]> {
+  const returns = await prisma.stockMovement.findMany({
+    where: { orderId, type: MovementType.RETURN, reversesMovementId: { not: null } },
+    select: { reversesMovementId: true },
+  });
+  return returns
+    .map((r) => r.reversesMovementId)
+    .filter((id): id is string => id !== null);
+}
 
 /**
- * Deduct stock when an order is purchased/confirmed.
+ * Scale a recipe's ingredients to `units` finished units and fold them into the
+ * shared requirement map.
  *
- * For each order item:
- *   1. Resolve a Product (via direct productId or via menuItem.productId).
- *   2. Decrement the product's OWN finished-goods stock (Product.currentStock)
- *      by the ordered quantity, and record a product StockMovement.
- *   3. If the product has a default Recipe, additionally scale its ingredients by
- *      (orderedQty / recipe.yieldQuantity) and subtract from each material's stock,
- *      recording a material StockMovement per ingredient.
- *   4. Fire LOW_STOCK / CRITICAL_STOCK alerts for anything that drops below its
- *      minimum threshold.
+ * Ingredient quantity is expressed in the RECIPE's unit, but stock is tracked
+ * and recorded in the MATERIAL's unit — convert, or a "500 g" ingredient
+ * silently deducts 500 units of "kg" stock.
+ */
+function explodeRecipeInto(
+  need: MaterialNeed,
+  recipe: PrimaryRecipe,
+  units: number,
+  orderId: string
+): void {
+  const yieldQty = Number(recipe.yieldQuantity);
+  if (yieldQty <= 0) {
+    console.warn(
+      `[stock-deduction] orderId=${orderId} recipeId=${recipe.id}: yieldQuantity=${yieldQty} is zero or negative, skipping ingredient deduction`
+    );
+    return;
+  }
+
+  const scaleFactor = units / yieldQty;
+  for (const ing of recipe.ingredients) {
+    const raw = convertUnit(Number(ing.quantity) * scaleFactor, ing.unit, ing.material.unit);
+    need.set(ing.materialId, (need.get(ing.materialId) ?? 0) + raw);
+  }
+}
+
+type SelectedOption = { materialId?: string; materialQty?: number };
+
+/**
+ * Resolve the material impact of selected modifiers/options.
  *
- * Idempotent: if a SALE StockMovement already exists for this order, the call is a
- * no-op. This makes it safe to invoke from multiple lifecycle points (cash order
- * creation, payment webhook, POS delivery) and on webhook retries without
- * double-deducting.
+ * Unchanged in spirit from the original implementation: options carry their own
+ * stock impact independently of whether the line's product has a recipe at all,
+ * and `materialQty` is already stored in the linked Material's own unit, so no
+ * conversion is needed. Two additions: the per-unit cost is captured per LINE
+ * for OrderItem.optionCostSnapshot, and the requirement folds into the same
+ * `need` map as recipe explosion so everything sums into one deduction per
+ * material.
+ */
+async function resolveOptionMaterials(
+  activeItems: { id: string; quantity: Prisma.Decimal; selectedOptions: Prisma.JsonValue | null }[],
+  orderId: string
+): Promise<{
+  optionNeed: MaterialNeed;
+  itemOptionCost: Map<string, number>;
+  optionMaterials: Map<string, Material>;
+}> {
+  const optionNeed: MaterialNeed = new Map();
+  const itemOptionCost = new Map<string, number>();
+  const perItem: { itemId: string; materialId: string; qtyPerUnit: number }[] = [];
+
+  for (const item of activeItems) {
+    const orderedQty = Number(item.quantity);
+    const selected = (item.selectedOptions as SelectedOption[] | null) ?? [];
+    for (const opt of selected) {
+      if (!opt.materialId || !opt.materialQty) continue;
+      optionNeed.set(
+        opt.materialId,
+        (optionNeed.get(opt.materialId) ?? 0) + opt.materialQty * orderedQty
+      );
+      perItem.push({ itemId: item.id, materialId: opt.materialId, qtyPerUnit: opt.materialQty });
+    }
+  }
+
+  const optionMaterials = new Map<string, Material>();
+  if (optionNeed.size > 0) {
+    const materials = await prisma.material.findMany({
+      where: { id: { in: Array.from(optionNeed.keys()) } },
+    });
+    for (const material of materials) optionMaterials.set(material.id, material);
+  }
+
+  for (const { itemId, materialId, qtyPerUnit } of perItem) {
+    const material = optionMaterials.get(materialId);
+    if (!material) {
+      console.warn(
+        `[stock-deduction] orderId=${orderId}: option material=${materialId} not found, skipping`
+      );
+      continue;
+    }
+    itemOptionCost.set(
+      itemId,
+      (itemOptionCost.get(itemId) ?? 0) + qtyPerUnit * Number(material.unitCost)
+    );
+  }
+
+  // A material that no longer exists must not stay in the requirement map, or
+  // the transaction would try to decrement a row that isn't there.
+  for (const materialId of Array.from(optionNeed.keys())) {
+    if (!optionMaterials.has(materialId)) optionNeed.delete(materialId);
+  }
+
+  return { optionNeed, itemOptionCost, optionMaterials };
+}
+
+/**
+ * Deduct stock when an order is delivered/paid.
  *
- * All stock writes for an order run in a single serializable transaction to
- * prevent oversell from concurrent reads of stale stock.
+ * THE RULE: demand stops at a counted balance.
+ *
+ * A BATCH_PRODUCED product's ingredients were already consumed when its batch
+ * was produced, so a sale draws its finished-goods count and STOPS there —
+ * deducting the recipe again on top is the double-count. Whatever the count
+ * does NOT cover was physically cooked to order (or prepped and never logged),
+ * so that remainder falls through to the recipe, and the fall-through is
+ * recorded against an ORDER_SHORTFALL batch so a later production log nets
+ * against it instead of drawing the same flour twice.
+ *
+ * A MADE_TO_ORDER product has no counted balance at all, so every unit falls
+ * through to raw materials. An UNTRACKED product has neither.
+ *
+ * Idempotent per DELIVER cycle: a no-op while an UNREVERSED SALE movement
+ * exists, so DELIVERED → CANCELLED → DELIVERED deducts again (correctly)
+ * rather than being a permanent no-op.
+ *
+ * Serializable with bounded retry; all balance reads happen INSIDE the
+ * transaction, because a split computed from a pre-transaction read is a lost
+ * update under concurrent delivery.
  */
 export async function deductStockForOrder(
   orderId: string,
   storeId: string
-): Promise<{ deducted: number; skipped: number; alreadyDeducted?: boolean }> {
-  // Idempotency guard — if we already deducted for this order, do nothing.
-  const existingMovement = await prisma.stockMovement.findFirst({
-    where: { orderId, type: MovementType.SALE },
+): Promise<DeductResult> {
+  const alreadyReversed = await reversedSaleIds(orderId);
+  const openSale = await prisma.stockMovement.findFirst({
+    where: {
+      orderId,
+      type: MovementType.SALE,
+      ...(alreadyReversed.length > 0 ? { NOT: { id: { in: alreadyReversed } } } : {}),
+    },
     select: { id: true },
   });
-  if (existingMovement) {
+  if (openSale) {
     return { deducted: 0, skipped: 0, alreadyDeducted: true };
   }
 
@@ -44,42 +184,8 @@ export async function deductStockForOrder(
     include: {
       items: {
         include: {
-          product: {
-            include: {
-              recipeProducts: {
-                where: { isDefault: true },
-                include: {
-                  recipe: {
-                    include: {
-                      ingredients: {
-                        include: { material: true },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          menuItem: {
-            include: {
-              product: {
-                include: {
-                  recipeProducts: {
-                    where: { isDefault: true },
-                    include: {
-                      recipe: {
-                        include: {
-                          ingredients: {
-                            include: { material: true },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          product: { include: primaryRecipeInclude },
+          menuItem: { include: { product: { include: primaryRecipeInclude } } },
         },
       },
       store: { select: { business: { select: { userId: true } } } },
@@ -94,55 +200,14 @@ export async function deductStockForOrder(
   // consume stock even though the order as a whole still reaches DELIVERED.
   const activeItems = order.items.filter((item) => item.status !== OrderItemStatus.CANCELLED);
 
-  // Pre-compute deductions outside the transaction so we can log skips first.
-  type ProductDeduction = {
-    productId: string;
-    productName: string;
-    unit: string;
-    minStock: number;
-    orderedQty: number;
-    newStock: number;
-  };
-  type MaterialDeduction = {
-    materialId: string;
-    materialName: string;
-    materialUnit: string;
-    minStock: number;
-    needed: number;
-    newStock: number;
-    unit: string;
-  };
+  type ResolvedProduct = NonNullable<(typeof activeItems)[number]["product"]>;
 
-  // Aggregate per product / per material BEFORE computing new stock. Duplicate
-  // line items (e.g. the same product on two lines with different modifiers) and
-  // materials shared across recipes must be SUMMED into a single deduction.
-  // Computing each from the same stale currentStock and writing absolute values
-  // would otherwise let the last write win and under-deduct (oversell).
-  const productAgg = new Map<
-    string,
-    { productName: string; unit: string; minStock: number; currentStock: number; totalQty: number }
-  >();
-  const materialAgg = new Map<
-    string,
-    {
-      materialName: string;
-      materialUnit: string;
-      minStock: number;
-      currentStock: number;
-      totalNeeded: number;
-      unit: string;
-    }
-  >();
+  // Aggregate per product BEFORE the stock split. Duplicate line items (the same
+  // product on two lines with different modifiers) must be SUMMED, or each would
+  // see the full on-hand figure and both would claim it.
+  const productAgg = new Map<string, { product: ResolvedProduct; totalQty: number }>();
+  const itemUnitCost = new Map<string, number>();
   let skipped = 0;
-
-  // Frozen per-line COGS snapshot — Product.costPrice is already the
-  // authoritative per-unit cost (recipe-derived or manually overridden, see
-  // the Products page), so it's reused as-is rather than re-deriving cost
-  // from raw ingredient prices here. Keyed by OrderItem.id since one
-  // material/product StockMovement below is aggregated across items, but
-  // this snapshot is per-line. Items with no resolvable product (skipped
-  // above) simply have no entry, leaving OrderItem.unitCostSnapshot null.
-  const itemCostSnapshots = new Map<string, number>();
 
   for (const item of activeItems) {
     const product = item.product ?? item.menuItem?.product;
@@ -154,342 +219,462 @@ export async function deductStockForOrder(
       continue;
     }
 
-    itemCostSnapshots.set(item.id, Number(product.costPrice));
+    // Written for EVERY resolvable product, before any mode branch — Finance
+    // margin reads it for untracked and made-to-order lines too. Never move
+    // this below a `continue`.
+    itemUnitCost.set(item.id, Number(product.costPrice));
 
-    // Untracked products (Product.trackStock === false) have no inventory at
-    // all — a service like a haircut, or an always-available made-to-order
-    // item — so there's no finished-goods stock and no recipe to deduct.
-    // Defaults true for every product, so this only ever skips something an
-    // owner has explicitly marked untracked. Deliberately not counted in
-    // `skipped` (that counter means "unresolvable product," a data problem;
-    // this is an intentional, expected exclusion) — the cost snapshot above
-    // still applies so Finance margin reporting works for these too.
-    if (!product.trackStock) continue;
+    if (product.stockMode === StockMode.UNTRACKED) continue;
 
-    const orderedQty = Number(item.quantity);
-
-    // 1. Always decrement the product's own finished-goods stock.
-    const existingProduct = productAgg.get(product.id);
-    if (existingProduct) {
-      existingProduct.totalQty += orderedQty;
+    const existing = productAgg.get(product.id);
+    if (existing) {
+      existing.totalQty += Number(item.quantity);
     } else {
-      productAgg.set(product.id, {
-        productName: product.name,
-        unit: product.unit,
-        minStock: Number(product.minStock),
-        currentStock: Number(product.currentStock),
-        totalQty: orderedQty,
-      });
-    }
-
-    // 2. If the product is made from a recipe, also deduct the ingredients.
-    const defaultRecipeProduct = product.recipeProducts[0];
-    if (!defaultRecipeProduct) continue;
-
-    const recipe = defaultRecipeProduct.recipe;
-    const yieldQty = Number(recipe.yieldQuantity);
-    if (yieldQty <= 0) {
-      console.warn(
-        `[stock-deduction] orderId=${orderId} recipeId=${recipe.id}: yieldQuantity=${yieldQty} is zero or negative, skipping ingredient deduction`
-      );
-      continue;
-    }
-
-    const scaleFactor = orderedQty / yieldQty;
-    for (const ing of recipe.ingredients) {
-      // Ingredient quantity is scaled in the recipe's own unit, but stock is
-      // tracked (and must be deducted/recorded) in the material's stock unit —
-      // convert or a "500 g" ingredient silently deducts 500 units of "kg" stock.
-      const neededInIngredientUnit = Number(ing.quantity) * scaleFactor;
-      const needed = convertUnit(neededInIngredientUnit, ing.unit, ing.material.unit);
-      const existingMaterial = materialAgg.get(ing.materialId);
-      if (existingMaterial) {
-        existingMaterial.totalNeeded += needed;
-      } else {
-        materialAgg.set(ing.materialId, {
-          materialName: ing.material.name,
-          materialUnit: ing.material.unit,
-          minStock: Number(ing.material.minStock),
-          currentStock: Number(ing.material.currentStock),
-          totalNeeded: needed,
-          unit: ing.material.unit,
-        });
-      }
+      productAgg.set(product.id, { product, totalQty: Number(item.quantity) });
     }
   }
 
-  // Selected modifiers/options can optionally carry their own material stock
-  // impact (e.g. "Extra Sugar" == +5g), independent of whether the line's
-  // product has a recipe at all. Aggregate these into the same materialAgg
-  // map so they sum alongside recipe-driven consumption into one deduction
-  // per material, one StockMovement, one transaction. materialQty is stored
-  // in the linked Material's own unit (enforced when the option is created),
-  // so no unit conversion is needed here.
-  type SelectedOption = { materialId?: string; materialQty?: number };
-  const optionMaterialNeed = new Map<string, number>();
-  for (const item of activeItems) {
-    const orderedQty = Number(item.quantity);
-    const selected = (item.selectedOptions as SelectedOption[] | null) ?? [];
-    for (const opt of selected) {
-      if (!opt.materialId || !opt.materialQty) continue;
-      const needed = opt.materialQty * orderedQty;
-      optionMaterialNeed.set(opt.materialId, (optionMaterialNeed.get(opt.materialId) ?? 0) + needed);
-    }
-  }
-
-  if (optionMaterialNeed.size > 0) {
-    const missingMaterialIds = Array.from(optionMaterialNeed.keys()).filter(
-      (id) => !materialAgg.has(id)
-    );
-    const fetchedMaterials = missingMaterialIds.length
-      ? await prisma.material.findMany({ where: { id: { in: missingMaterialIds } } })
-      : [];
-    const fetchedMaterialMap = new Map(fetchedMaterials.map((m) => [m.id, m]));
-
-    for (const [materialId, needed] of optionMaterialNeed.entries()) {
-      const existingMaterial = materialAgg.get(materialId);
-      if (existingMaterial) {
-        existingMaterial.totalNeeded += needed;
-        continue;
-      }
-      const material = fetchedMaterialMap.get(materialId);
-      if (!material) {
-        console.warn(
-          `[stock-deduction] orderId=${orderId}: option material=${materialId} not found, skipping`
-        );
-        continue;
-      }
-      materialAgg.set(materialId, {
-        materialName: material.name,
-        materialUnit: material.unit,
-        minStock: Number(material.minStock),
-        currentStock: Number(material.currentStock),
-        totalNeeded: needed,
-        unit: material.unit,
-      });
-    }
-  }
-
-  // Collapse each aggregate to a single deduction with one final newStock.
-  const productDeductions: ProductDeduction[] = Array.from(productAgg.entries()).map(
-    ([productId, p]) => ({
-      productId,
-      productName: p.productName,
-      unit: p.unit,
-      minStock: p.minStock,
-      orderedQty: p.totalQty,
-      newStock: Math.max(0, p.currentStock - p.totalQty),
-    })
+  const { optionNeed, itemOptionCost, optionMaterials } = await resolveOptionMaterials(
+    activeItems,
+    orderId
   );
 
-  const materialDeductions: MaterialDeduction[] = Array.from(materialAgg.entries()).map(
-    ([materialId, m]) => ({
-      materialId,
-      materialName: m.materialName,
-      materialUnit: m.materialUnit,
-      minStock: m.minStock,
-      needed: m.totalNeeded,
-      newStock: Math.max(0, m.currentStock - m.totalNeeded),
-      unit: m.unit,
-    })
-  );
-
-  // An order made up entirely of CUSTOM-productLine items (no stock/recipe
-  // deduction) still has cost snapshots to write below, so only bail out
-  // here when there's truly nothing to do in the transaction at all.
-  if (
-    productDeductions.length === 0 &&
-    materialDeductions.length === 0 &&
-    itemCostSnapshots.size === 0
-  ) {
+  if (productAgg.size === 0 && optionNeed.size === 0 && itemUnitCost.size === 0) {
     return { deducted: 0, skipped };
   }
 
-  // Single serializable transaction — prevents concurrent reads of stale stock.
-  await prisma.$transaction(
-    async (tx) => {
-      for (const p of productDeductions) {
-        await tx.product.update({
-          where: { id: p.productId },
-          data: { currentStock: toDecimal(p.newStock) },
-        });
+  const productIds = Array.from(productAgg.keys());
 
+  type ProductMove = {
+    productId: string;
+    name: string;
+    unit: string;
+    minStock: number;
+    qty: number;
+    balanceAfter: number;
+  };
+  type MaterialMove = {
+    materialId: string;
+    name: string;
+    unit: string;
+    minStock: number;
+    qty: number;
+    balanceAfter: number;
+  };
+
+  const result = await runSerializable(async (tx) => {
+    const productMoves: ProductMove[] = [];
+    const materialMoves: MaterialMove[] = [];
+    const shortfalls: { productId: string; quantity: number }[] = [];
+    const belowPrecision: string[] = [];
+    const need: MaterialNeed = new Map(optionNeed);
+
+    const balances = productIds.length
+      ? await tx.product.findMany({
+          where: { id: { in: productIds } },
+          select: { id: true, currentStock: true },
+        })
+      : [];
+    const onHandById = new Map(balances.map((b) => [b.id, Number(b.currentStock)]));
+
+    for (const [productId, { product, totalQty }] of productAgg) {
+      const recipe = product.primaryRecipe;
+      let onHand = onHandById.get(productId) ?? 0;
+
+      if (product.stockMode === StockMode.MADE_TO_ORDER) {
+        // No counted balance exists — never write a product movement.
+        if (recipe) explodeRecipeInto(need, recipe, totalQty, orderId);
+        continue;
+      }
+
+      // ---- BATCH_PRODUCED ----
+      if (!recipe) {
+        // Nothing to fall back to. Book the whole quantity against the counted
+        // balance and LET IT GO NEGATIVE — the honest record of "we sold
+        // something the books said we didn't have", and it keeps the
+        // append-only ledger reconcilable with currentStock. Surfaced as
+        // "Oversold", never auto-corrected.
+        const qty = roundStock(totalQty);
+        const updated = await tx.product.update({
+          where: { id: productId },
+          data: { currentStock: { decrement: toDecimal(qty) } },
+          select: { currentStock: true },
+        });
+        productMoves.push({
+          productId,
+          name: product.name,
+          unit: product.unit,
+          minStock: Number(product.minStock),
+          qty,
+          balanceAfter: Number(updated.currentStock),
+        });
+        continue;
+      }
+
+      // A legacy negative balance would otherwise freeze this product out of the
+      // ledger forever: fromStock would be 0 on every future sale, no product
+      // movement would ever be written again, and Σ quantity would never
+      // reconcile. Self-heal it, ledgered and explained.
+      if (onHand < 0) {
+        const fix = roundStock(-onHand);
+        const healed = await tx.product.update({
+          where: { id: productId },
+          data: { currentStock: { increment: toDecimal(fix) } },
+          select: { currentStock: true },
+        });
         await tx.stockMovement.create({
           data: {
-            productId: p.productId,
-            orderId,
-            type: MovementType.SALE,
-            quantity: toDecimal(-p.orderedQty),
-            unit: p.unit,
-            balanceAfter: toDecimal(p.newStock),
-            notes: `Auto-deducted for order ${order.orderNumber}`,
+            productId,
+            type: MovementType.ADJUSTMENT,
+            quantity: toDecimal(fix),
+            unit: product.unit,
+            balanceAfter: healed.currentStock,
+            reason: "NEGATIVE_BALANCE_CLEARED",
+            notes: "Negative balance cleared — sales now draw ingredients for this product",
           },
         });
+        onHand = 0;
       }
 
-      for (const d of materialDeductions) {
-        await tx.material.update({
-          where: { id: d.materialId },
-          data: { currentStock: toDecimal(d.newStock) },
-        });
+      const fromStock = roundStock(Math.min(totalQty, onHand));
+      const shortfall = roundStock(totalQty - fromStock);
 
-        await tx.stockMovement.create({
-          data: {
-            materialId: d.materialId,
-            orderId,
-            type: MovementType.SALE,
-            quantity: toDecimal(-d.needed),
-            unit: d.unit,
-            balanceAfter: toDecimal(d.newStock),
-            notes: `Auto-deducted for order ${order.orderNumber}`,
-          },
+      if (fromStock > 0) {
+        const updated = await tx.product.update({
+          where: { id: productId },
+          data: { currentStock: { decrement: toDecimal(fromStock) } },
+          select: { currentStock: true },
         });
-      }
-
-      for (const [orderItemId, unitCost] of itemCostSnapshots) {
-        await tx.orderItem.update({
-          where: { id: orderItemId },
-          data: { unitCostSnapshot: toDecimal(unitCost) },
+        productMoves.push({
+          productId,
+          name: product.name,
+          unit: product.unit,
+          minStock: Number(product.minStock),
+          qty: fromStock,
+          balanceAfter: Number(updated.currentStock),
         });
       }
-    },
-    { isolationLevel: "Serializable" }
-  );
 
-  publishStockChanged(storeId, {
-    productIds: productDeductions.map((p) => p.productId),
-    materialIds: materialDeductions.map((d) => d.materialId),
+      if (shortfall > 0) {
+        explodeRecipeInto(need, recipe, shortfall, orderId);
+        shortfalls.push({ productId, quantity: shortfall });
+      }
+    }
+
+    // ---- Collapse materials. ONE rounding, written to both the balance delta
+    // and the movement quantity, so Σ quantity === currentStock exactly.
+    const materialIds = Array.from(need.keys());
+    const materials = materialIds.length
+      ? await tx.material.findMany({ where: { id: { in: materialIds } } })
+      : [];
+    const materialById = new Map(materials.map((m) => [m.id, m]));
+
+    for (const [materialId, raw] of need) {
+      const material = materialById.get(materialId) ?? optionMaterials.get(materialId);
+      if (!material) {
+        console.warn(
+          `[stock-deduction] orderId=${orderId}: material=${materialId} not found, skipping`
+        );
+        continue;
+      }
+      if (roundsAwayToZero(raw)) {
+        // e.g. 0.4 g of saffron against kg-tracked stock. Writing a 0.000
+        // movement would be a permanent silent no-op dressed as a deduction.
+        belowPrecision.push(materialId);
+        console.warn(
+          `[stock-deduction] orderId=${orderId} materialId=${materialId}: requirement ${raw} rounds to 0.000 at Decimal(10,3) — not written`
+        );
+        continue;
+      }
+
+      const qty = roundStock(raw);
+      const updated = await tx.material.update({
+        where: { id: materialId },
+        data: { currentStock: { decrement: toDecimal(qty) } },
+        select: { currentStock: true },
+      });
+      materialMoves.push({
+        materialId,
+        name: material.name,
+        unit: material.unit,
+        minStock: Number(material.minStock),
+        qty,
+        balanceAfter: Number(updated.currentStock),
+      });
+    }
+
+    // ---- Ledger rows.
+    for (const p of productMoves) {
+      await tx.stockMovement.create({
+        data: {
+          productId: p.productId,
+          orderId,
+          type: MovementType.SALE,
+          quantity: toDecimal(-p.qty),
+          unit: p.unit,
+          balanceAfter: toDecimal(p.balanceAfter),
+          notes: saleNote(order.orderNumber),
+        },
+      });
+    }
+    for (const m of materialMoves) {
+      await tx.stockMovement.create({
+        data: {
+          materialId: m.materialId,
+          orderId,
+          type: MovementType.SALE,
+          quantity: toDecimal(-m.qty),
+          unit: m.unit,
+          balanceAfter: toDecimal(m.balanceAfter),
+          notes: saleNote(order.orderNumber),
+        },
+      });
+    }
+
+    // ---- Frozen per-line cost. optionCostSnapshot is stored separately so that
+    // moving COGS onto snapshots does not delete modifier cost from the P&L.
+    for (const [orderItemId, unitCost] of itemUnitCost) {
+      await tx.orderItem.update({
+        where: { id: orderItemId },
+        data: {
+          unitCostSnapshot: toDecimal(unitCost),
+          optionCostSnapshot: toDecimal(itemOptionCost.get(orderItemId) ?? 0),
+        },
+      });
+    }
+
+    await tx.order.update({ where: { id: orderId }, data: { stockDeductedAt: new Date() } });
+
+    return { productMoves, materialMoves, shortfalls, belowPrecision };
   });
 
-  // Fire alerts outside the transaction — non-critical, OK to be eventually
-  // consistent. Shared with production/waste via stock-alerts.helpers so every
-  // stock writer raises the same alert; the numbers are passed in directly
-  // here since this flow already computed them.
-  for (const p of productDeductions) {
+  publishStockChanged(storeId, {
+    productIds: result.productMoves.map((p) => p.productId),
+    materialIds: result.materialMoves.map((m) => m.materialId),
+  });
+
+  // Alerts fire outside the transaction — non-critical, OK to be eventually
+  // consistent. Shared with production/waste via stock-alerts.helpers.
+  for (const p of result.productMoves) {
     await fireLowStockAlert({
       userId,
       storeId,
       entityId: p.productId,
       entityType: "product",
-      name: p.productName,
-      newStock: p.newStock,
+      name: p.name,
+      newStock: p.balanceAfter,
       minStock: p.minStock,
       unit: p.unit,
     });
   }
 
-  for (const d of materialDeductions) {
+  // A BATCH product that sold PAST zero writes no product movement for the
+  // shortfall portion, so without this the par-level alert would go permanently
+  // silent exactly when the owner most needs it — every day they sell out.
+  for (const s of result.shortfalls) {
+    const entry = productAgg.get(s.productId);
+    if (!entry) continue;
     await fireLowStockAlert({
       userId,
       storeId,
-      entityId: d.materialId,
-      entityType: "material",
-      name: d.materialName,
-      newStock: d.newStock,
-      minStock: d.minStock,
-      unit: d.materialUnit,
+      entityId: entry.product.id,
+      entityType: "product",
+      name: entry.product.name,
+      newStock: 0,
+      minStock: Number(entry.product.minStock),
+      unit: entry.product.unit,
     });
   }
 
-  return { deducted: productDeductions.length + materialDeductions.length, skipped };
+  for (const m of result.materialMoves) {
+    await fireLowStockAlert({
+      userId,
+      storeId,
+      entityId: m.materialId,
+      entityType: "material",
+      name: m.name,
+      newStock: m.balanceAfter,
+      minStock: m.minStock,
+      unit: m.unit,
+    });
+  }
+
+  // Record the fall-through against this order's ORDER_SHORTFALL batch (or
+  // create one) so a later manual production log nets against it rather than
+  // drawing the same materials a second time. Imported lazily to avoid an
+  // import cycle with production-batch.service.
+  if (result.shortfalls.length > 0) {
+    try {
+      const { productionBatchService } = await import("@/lib/services/production-batch.service");
+      await productionBatchService.recordDrawnShortfalls(orderId, storeId, result.shortfalls);
+    } catch (err) {
+      // The deduction itself is already committed, so throwing here would only
+      // lose the caller its result — both call sites swallow it anyway. Logged
+      // loudly instead, because the consequence is real: without the debt
+      // record, a later production run for this product draws these same
+      // materials a second time.
+      console.error(
+        `[stock-deduction] orderId=${orderId}: FAILED to record drawn shortfalls ` +
+          `${JSON.stringify(result.shortfalls)} — a later production run may double-draw these materials`,
+        err
+      );
+    }
+  }
+
+  return {
+    deducted: result.productMoves.length + result.materialMoves.length,
+    skipped,
+    shortfalls: result.shortfalls.length ? result.shortfalls : undefined,
+    belowPrecision: result.belowPrecision.length ? result.belowPrecision : undefined,
+  };
 }
 
 /**
- * Reverse stock deducted for an order when it's cancelled after having already
- * reached DELIVERED (i.e. deductStockForOrder already ran for it).
+ * Reverse stock deducted for an order cancelled after it already reached
+ * DELIVERED (i.e. deductStockForOrder already ran for it).
  *
- * Reuses the order's own SALE StockMovement rows as the source of truth for
- * what to restore, rather than recomputing from the order/recipe — robust
- * against the product or recipe having changed since the original sale.
+ * TWO changes from the original implementation, both load-bearing:
  *
- * Idempotent: if a RETURN StockMovement already exists for this order, the
- * call is a no-op, so retries (or double-clicking cancel) can't double-restock.
+ * 1. CYCLE-SCOPED. The old query replayed every SALE row for the order with no
+ *    cycle bound. Now that re-deduction after DELIVERED → CANCELLED → DELIVERED
+ *    is permitted, a second cancel would replay BOTH SALE sets and restore
+ *    double — reachable from ordinary bulk-cancel UI. Each RETURN now carries
+ *    `reversesMovementId`, and only unreversed SALEs are replayed.
+ *
+ * 2. ASYMMETRIC BY DEFAULT. Deduction fires at DELIVERED, which means the food
+ *    was made and handed over. Crediting raw flour back fabricates flour that is
+ *    physically inside food in a bin — and if that food is then binned through
+ *    the Waste flow, the same loss is booked twice. So finished goods are
+ *    restored (a batch item genuinely goes back on the shelf) and raw materials
+ *    are NOT, unless the operator states the food was never made.
+ *
+ * Historical rows written before the clamps were removed recorded a `quantity`
+ * larger than what was actually removed (the balance floored at 0 while the
+ * movement kept the full figure). Restoring `abs(quantity)` for those would
+ * credit back more than ever left, so the restore is capped at what the
+ * movement's own `balanceAfter` proves was removed.
  */
 export async function reverseStockForOrder(
   orderId: string,
-  storeId: string
+  storeId: string,
+  opts: { foodWasNeverMade?: boolean } = {}
 ): Promise<{ reversed: number }> {
-  const existingReturn = await prisma.stockMovement.findFirst({
-    where: { orderId, type: MovementType.RETURN },
-    select: { id: true },
-  });
-  if (existingReturn) {
-    return { reversed: 0 };
-  }
-
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     select: { id: true, storeId: true, orderNumber: true },
   });
   if (!order || order.storeId !== storeId) return { reversed: 0 };
 
+  const alreadyReversed = await reversedSaleIds(orderId);
   const saleMovements = await prisma.stockMovement.findMany({
-    where: { orderId, type: MovementType.SALE },
-    select: { productId: true, materialId: true, quantity: true, unit: true },
-  });
-  if (saleMovements.length === 0) return { reversed: 0 };
-
-  await prisma.$transaction(
-    async (tx) => {
-      for (const movement of saleMovements) {
-        const restoreQty = Math.abs(Number(movement.quantity));
-
-        if (movement.productId) {
-          const product = await tx.product.findUnique({
-            where: { id: movement.productId },
-            select: { currentStock: true },
-          });
-          if (!product) continue;
-          const newStock = Number(product.currentStock) + restoreQty;
-
-          await tx.product.update({
-            where: { id: movement.productId },
-            data: { currentStock: toDecimal(newStock) },
-          });
-          await tx.stockMovement.create({
-            data: {
-              productId: movement.productId,
-              orderId,
-              type: MovementType.RETURN,
-              quantity: toDecimal(restoreQty),
-              unit: movement.unit,
-              balanceAfter: toDecimal(newStock),
-              notes: `Restored — order ${order.orderNumber} cancelled`,
-            },
-          });
-        } else if (movement.materialId) {
-          const material = await tx.material.findUnique({
-            where: { id: movement.materialId },
-            select: { currentStock: true },
-          });
-          if (!material) continue;
-          const newStock = Number(material.currentStock) + restoreQty;
-
-          await tx.material.update({
-            where: { id: movement.materialId },
-            data: { currentStock: toDecimal(newStock) },
-          });
-          await tx.stockMovement.create({
-            data: {
-              materialId: movement.materialId,
-              orderId,
-              type: MovementType.RETURN,
-              quantity: toDecimal(restoreQty),
-              unit: movement.unit,
-              balanceAfter: toDecimal(newStock),
-              notes: `Restored — order ${order.orderNumber} cancelled`,
-            },
-          });
-        }
-      }
+    where: {
+      orderId,
+      type: MovementType.SALE,
+      ...(alreadyReversed.length > 0 ? { NOT: { id: { in: alreadyReversed } } } : {}),
     },
-    { isolationLevel: "Serializable" }
-  );
+    select: {
+      id: true,
+      productId: true,
+      materialId: true,
+      quantity: true,
+      unit: true,
+      balanceAfter: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const replayable = opts.foodWasNeverMade
+    ? saleMovements
+    : saleMovements.filter((m) => m.productId !== null);
+
+  if (replayable.length === 0) return { reversed: 0 };
+
+  // How much each movement ACTUALLY removed, which is not always what it
+  // recorded. Before the clamps were removed, a deduction that would have gone
+  // negative wrote a floored `balanceAfter: 0` while still recording the full
+  // `quantity` — so restoring abs(quantity) for one of those historical rows
+  // would credit back stock that never left. The immediately preceding movement
+  // for the same entity gives the balance it started from; the difference is
+  // what genuinely moved. Read outside the transaction: these historical rows
+  // are immutable.
+  const actuallyRemoved = new Map<string, number>();
+  for (const movement of replayable) {
+    const recorded = Math.abs(Number(movement.quantity));
+    const balanceAfter = Number(movement.balanceAfter);
+
+    // Only a floored row can be inflated; anything else recorded truthfully.
+    if (balanceAfter !== 0) {
+      actuallyRemoved.set(movement.id, recorded);
+      continue;
+    }
+
+    const previous = await prisma.stockMovement.findFirst({
+      where: {
+        createdAt: { lt: movement.createdAt },
+        ...(movement.productId
+          ? { productId: movement.productId }
+          : { materialId: movement.materialId }),
+      },
+      select: { balanceAfter: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // With no prior movement there is nothing to prove inflation against, so
+    // trust the recorded figure rather than silently restoring less.
+    const balanceBefore = previous ? Number(previous.balanceAfter) : balanceAfter + recorded;
+    actuallyRemoved.set(movement.id, Math.min(recorded, Math.max(0, balanceBefore - balanceAfter)));
+  }
+
+  await runSerializable(async (tx) => {
+    for (const movement of replayable) {
+      const restoreQty = roundStock(actuallyRemoved.get(movement.id) ?? 0);
+      if (restoreQty <= 0) continue;
+
+      if (movement.productId) {
+        const updated = await tx.product.update({
+          where: { id: movement.productId },
+          data: { currentStock: { increment: toDecimal(restoreQty) } },
+          select: { currentStock: true },
+        });
+        await tx.stockMovement.create({
+          data: {
+            productId: movement.productId,
+            orderId,
+            type: MovementType.RETURN,
+            quantity: toDecimal(restoreQty),
+            unit: movement.unit,
+            balanceAfter: updated.currentStock,
+            reversesMovementId: movement.id,
+            notes: `Restored — order ${order.orderNumber} cancelled`,
+          },
+        });
+      } else if (movement.materialId) {
+        const updated = await tx.material.update({
+          where: { id: movement.materialId },
+          data: { currentStock: { increment: toDecimal(restoreQty) } },
+          select: { currentStock: true },
+        });
+        await tx.stockMovement.create({
+          data: {
+            materialId: movement.materialId,
+            orderId,
+            type: MovementType.RETURN,
+            quantity: toDecimal(restoreQty),
+            unit: movement.unit,
+            balanceAfter: updated.currentStock,
+            reversesMovementId: movement.id,
+            notes: `Restored — order ${order.orderNumber} cancelled`,
+          },
+        });
+      }
+    }
+  });
 
   publishStockChanged(storeId, {
-    productIds: saleMovements.map((m) => m.productId).filter((id): id is string => Boolean(id)),
-    materialIds: saleMovements.map((m) => m.materialId).filter((id): id is string => Boolean(id)),
+    productIds: replayable.map((m) => m.productId).filter((id): id is string => Boolean(id)),
+    materialIds: replayable.map((m) => m.materialId).filter((id): id is string => Boolean(id)),
   });
 
-  return { reversed: saleMovements.length };
+  return { reversed: replayable.length };
 }

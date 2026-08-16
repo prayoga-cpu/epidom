@@ -1,4 +1,4 @@
-import { Product, Department, ProductLine } from "@prisma/client";
+import { Product, Department, ProductLine, StockMode } from "@prisma/client";
 import {
   productRepository,
   ProductWithRelations,
@@ -54,7 +54,9 @@ export class ProductService {
     costPrice: number;
     sellingPrice: number;
     currentStock?: number;
-    trackStock?: boolean;
+    stockMode?: StockMode;
+    primaryRecipeId?: string | null;
+    costPriceManual?: boolean;
     unit?: string;
     minStock?: number;
     maxStock?: number;
@@ -94,7 +96,7 @@ export class ProductService {
       costPrice: data.costPrice,
       sellingPrice: data.sellingPrice,
       currentStock: data.currentStock ?? 0,
-      trackStock: data.trackStock ?? true,
+      stockMode: data.stockMode ?? StockMode.BATCH_PRODUCED,
       unit: data.unit ?? "piece",
       minStock: data.minStock ?? 0,
       maxStock: data.maxStock ?? 1000,
@@ -127,7 +129,12 @@ export class ProductService {
 
     // Then link recipes if provided
     if (data.recipeIds && data.recipeIds.length > 0) {
-      await productRepository.updateRecipes(product.id, data.recipeIds);
+      await productRepository.updateRecipes(
+        product.id,
+        data.storeId,
+        data.recipeIds,
+        data.primaryRecipeId
+      );
     }
 
     // Then create option groups if provided
@@ -169,7 +176,9 @@ export class ProductService {
       costPrice?: number;
       sellingPrice?: number;
       currentStock?: number;
-      trackStock?: boolean;
+      stockMode?: StockMode;
+      primaryRecipeId?: string | null;
+      costPriceManual?: boolean;
       unit?: string;
       minStock?: number;
       maxStock?: number;
@@ -223,7 +232,8 @@ export class ProductService {
       ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
       ...(data.sellingPrice !== undefined && { sellingPrice: data.sellingPrice }),
       ...(data.currentStock !== undefined && { currentStock: data.currentStock }),
-      ...(data.trackStock !== undefined && { trackStock: data.trackStock }),
+      ...(data.stockMode !== undefined && { stockMode: data.stockMode }),
+      ...(data.costPriceManual !== undefined && { costPriceManual: data.costPriceManual }),
       ...(data.unit && { unit: data.unit }),
       ...(data.minStock !== undefined && { minStock: data.minStock }),
       ...(data.maxStock !== undefined && { maxStock: data.maxStock }),
@@ -283,7 +293,12 @@ export class ProductService {
 
     // Update recipes if provided
     if (data.recipeIds !== undefined) {
-      await productRepository.updateRecipes(productId, data.recipeIds);
+      await productRepository.updateRecipes(
+        productId,
+        storeId,
+        data.recipeIds,
+        data.primaryRecipeId
+      );
     }
 
     // Update option groups if provided

@@ -82,7 +82,7 @@ export function MaterialDetailsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[700px] [&>button]:hidden">
+        <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] overflow-y-auto sm:max-w-[700px] [&>button]:hidden">
           <DialogHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">

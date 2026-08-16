@@ -578,7 +578,7 @@ function FeedbackDetailDialog({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+      <DialogContent className="max-h-[calc(85vh/var(--app-zoom,1))] max-w-xl overflow-y-auto">
         {row && (
           <>
             <DialogHeader>
@@ -903,7 +903,7 @@ export function AdminFeedbackTable() {
   const emptyLabel = hasActiveFilters ? "No feedback matches your filters" : "No feedback yet";
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-[calc(100vh/var(--app-zoom,1))]">
       {/* Header */}
       <div className="border-border bg-card/50 sticky top-0 z-10 border-b backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
@@ -1348,7 +1348,7 @@ export function AdminFeedbackTable() {
               <img
                 src={selectedScreenshot}
                 alt="Feedback screenshot"
-                className="max-h-[80vh] w-full rounded-md object-contain"
+                className="max-h-[calc(80vh/var(--app-zoom,1))] w-full rounded-md object-contain"
               />
               <a
                 href={selectedScreenshot}

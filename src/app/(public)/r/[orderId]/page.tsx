@@ -30,7 +30,7 @@ export default async function ReceiptPage({ params }: PageProps) {
   if (!built) notFound();
 
   return (
-    <div className="bg-muted/30 flex min-h-screen flex-col items-center gap-4 px-4 py-8 print:bg-white print:p-0">
+    <div className="bg-muted/30 flex min-h-[calc(100vh/var(--app-zoom,1))] flex-col items-center gap-4 px-4 py-8 print:bg-white print:p-0">
       <div className="print:hidden">
         <ReceiptPrintButton />
       </div>

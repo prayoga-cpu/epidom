@@ -37,7 +37,7 @@ export function AccountAccessDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] max-w-sm overflow-y-auto">
+      <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] max-w-sm overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("nav.accountAccess")}</DialogTitle>
           <DialogDescription>{t("pages.accountAccessDesc")}</DialogDescription>

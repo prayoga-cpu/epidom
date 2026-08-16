@@ -572,7 +572,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
   };
 
   return (
-    <div className="flex min-h-screen flex-col" style={themeStyle}>
+    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] flex-col" style={themeStyle}>
       {/* Header */}
       <header className="bg-card/90 sticky top-0 z-30 flex items-center justify-between border-b px-4 py-3 shadow-sm backdrop-blur-md">
         <Link href={`/@${storefront.slug}`} className="hover:bg-muted rounded-full p-1 transition">
@@ -916,7 +916,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
       {/* Cart Drawer — mobile only (desktop uses sidebar) */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 md:hidden">
-          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
+          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[calc(85dvh/var(--app-zoom,1))] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
             {/* Header */}
             <div className="bg-muted flex items-center justify-between border-b p-4">
               <div className="flex items-center gap-2">
@@ -1012,7 +1012,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
       {/* Checkout Drawer */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
-          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
+          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[calc(90dvh/var(--app-zoom,1))] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
             {/* Header */}
             <div className="bg-muted flex items-center justify-between border-b p-4">
               <div className="flex items-center gap-2">
@@ -1297,7 +1297,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
       {/* Item Detail / Modifier Selection Drawer */}
       {activeItem && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
-          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
+          <div className="bg-card animate-in slide-in-from-bottom flex max-h-[calc(90dvh/var(--app-zoom,1))] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
             {/* Image (if exists) */}
             <div className="bg-muted relative h-44 w-full shrink-0">
               {activeItem.imageUrl ? (

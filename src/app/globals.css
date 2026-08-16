@@ -186,6 +186,65 @@ body.dialog-open {
   scrollbar-gutter: stable;
 }
 
+/* Radix's scroll lock (react-remove-scroll-bar) reserves the width the
+   scrollbar was occupying, as `body[data-scroll-locked] { margin-right: Npx }`,
+   computed from `window.innerWidth - documentElement.clientWidth`.
+
+   That subtraction is wrong under an in-app zoom, and only on Chromium:
+   `clientWidth` is divided by the effective zoom there while `innerWidth` is
+   not, so the difference is read as phantom scrollbar width — measured 153px
+   at 110%, 336px at 125%, 560px at 150%. The margin then shoves every bit of
+   body content into the left part of the window and leaves an empty band down
+   the RIGHT, for as long as any dialog, dropdown or sheet is open. WebKit
+   reports both as the window width, so it never fires there.
+
+   Zeroing it is safe in this app specifically: scrollbars are hidden outright
+   (`scrollbar-width: none` on html/body above) and `html` carries
+   `scrollbar-gutter: stable`, so locking scroll takes no width away and there
+   is nothing to compensate for. Radix writes its rule with `!important`, so
+   this has to match it. */
+body[data-scroll-locked] {
+  margin-right: 0 !important;
+}
+
+/* Anchored overlays (dropdown, popover, select, tooltip, context menu — every
+   Radix Popper) are positioned in the WRONG coordinate space under an in-app
+   zoom, and drift off screen because of it.
+
+   CSS Viewport L1 §4.1 splits the DOM geometry APIs: `getBoundingClientRect()`
+   returns SCALED (painted) coordinates while `offsetLeft` / `clientWidth` /
+   `getComputedStyle()` return UNSCALED (layout) ones. Floating UI reads the
+   trigger with `getBoundingClientRect()` — already painted px — and writes the
+   result as `transform: translate(x, y)` on the wrapper below, which itself
+   sits inside the zoomed root. So the offset is multiplied by the zoom a
+   second time, and the error grows with distance from the origin: a menu
+   anchored to the account avatar at the right of the topbar is the worst case
+   in the app.
+
+   Measured in WebKit (1680px window, right-anchored menu): painted right edge
+   1763 at 125% and 2028 at 150% against a 1680px window — 83px and 348px off
+   screen — and at 70% it detaches the other way, landing 395px left of its
+   trigger.
+
+   The correction: cancel the root zoom on the wrapper so its translate is read
+   at an effective zoom of 1 (position lands exactly where Floating UI meant),
+   then re-apply the zoom to the content inside so the menu still scales with
+   the rest of the app. Measured after: the painted right edge equals the
+   trigger's at every level from 0.7 to 1.5, and the painted width still tracks
+   the zoom (154px at 0.7 -> 330px at 1.5).
+
+   Scoped to `html[data-app-zoomed]`, set by applyZoom only for a non-default
+   zoom, so at 100% these rules do not exist — verified identical geometry with
+   and without them at zoom 1. Dialogs and sheets are not Popper-based (they
+   are centred, not anchored) and are deliberately untouched. */
+html[data-app-zoomed] [data-radix-popper-content-wrapper] {
+  zoom: calc(1 / var(--app-zoom, 1));
+}
+
+html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
+  zoom: var(--app-zoom, 1);
+}
+
 /* ========================================
    TYPOGRAPHY STANDARDS FOR SERVICES SECTIONS
    ======================================== */
@@ -373,7 +432,7 @@ body.dialog-open {
     radial-gradient(900px 500px at 10% 110%, rgba(217, 174, 59, 0.1), transparent 60%),
     var(--epi-navy-900);
   color: var(--epi-cream-50);
-  min-height: 100vh;
+  min-height: calc(100vh / var(--app-zoom, 1));
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
@@ -815,7 +874,7 @@ body.dialog-open {
     @apply text-foreground;
     background: linear-gradient(135deg, #f5f4dc 0%, #fbf9e4 40%, #fefdf6 100%);
     background-attachment: fixed;
-    min-height: 100vh;
+    min-height: calc(100vh / var(--app-zoom, 1));
   }
 
   .dark body {
@@ -827,7 +886,7 @@ body.dialog-open {
       var(--epi-navy-900) 100%
     );
     background-attachment: fixed;
-    min-height: 100vh;
+    min-height: calc(100vh / var(--app-zoom, 1));
     color: var(--epi-cream-50);
   }
 }

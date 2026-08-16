@@ -101,7 +101,10 @@ export const POST = withApiHandler(
       costPrice: Number(validatedData.costPrice),
       sellingPrice: Number(validatedData.sellingPrice),
       currentStock: validatedData.currentStock ? Number(validatedData.currentStock) : 0,
-      trackStock: validatedData.trackStock,
+      // Mapped explicitly like every other field — anything omitted here is
+      // silently dropped regardless of what the client sent.
+      stockMode: validatedData.stockMode,
+      primaryRecipeId: validatedData.primaryRecipeId,
       unit: validatedData.unit,
       minStock: validatedData.minStock ? Number(validatedData.minStock) : 0,
       maxStock: validatedData.maxStock ? Number(validatedData.maxStock) : undefined,

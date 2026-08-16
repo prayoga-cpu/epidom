@@ -8,8 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useProductionSettings, useUpdateProductionSettings } from "../hooks/use-production-settings";
+import {
+  useProductionSettings,
+  useUpdateProductionSettings,
+} from "../hooks/use-production-settings";
 import { RecipeProductionCard } from "../recipe-production/recipe-production";
+import { PrepListPanel } from "../prep-list/prep-list-panel";
 import { ProductionHistoryCard } from "../production-history/production-history";
 
 interface ProductionShellProps {
@@ -29,7 +33,9 @@ export function ProductionShell({ storeId, canManageSettings }: ProductionShellP
   const handleToggle = async (checked: boolean) => {
     try {
       await updateSettings.mutateAsync(checked);
-      toast.success(checked ? t("production.guide.enabledToast") : t("production.guide.disabledToast"));
+      toast.success(
+        checked ? t("production.guide.enabledToast") : t("production.guide.disabledToast")
+      );
     } catch {
       toast.error(t("production.guide.settingsUpdateFailed"));
     }
@@ -63,6 +69,12 @@ export function ProductionShell({ storeId, canManageSettings }: ProductionShellP
                 <p className="font-medium">{t("production.guide.whoSkipTitle")}</p>
                 <p className="text-muted-foreground">{t("production.guide.whoSkip")}</p>
               </div>
+              {/* The make-ahead / cook-to-order split is the single thing owners
+                  get wrong about this screen: cook-to-order dishes never need a
+                  production log because their ingredients come out at sale. */}
+              <div className="rounded-lg border p-3">
+                <p className="text-muted-foreground">{t("production.emptyState.batchOnly")}</p>
+              </div>
             </div>
             {canManageSettings ? (
               <Button
@@ -75,7 +87,9 @@ export function ProductionShell({ storeId, canManageSettings }: ProductionShellP
                   : t("production.guide.enableButton")}
               </Button>
             ) : (
-              <p className="text-muted-foreground text-xs">{t("production.guide.ownerOnlyNotice")}</p>
+              <p className="text-muted-foreground text-xs">
+                {t("production.guide.ownerOnlyNotice")}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -90,16 +104,23 @@ export function ProductionShell({ storeId, canManageSettings }: ProductionShellP
         {canManageSettings && (
           <div className="flex items-center gap-2">
             <Power className="text-muted-foreground h-4 w-4" />
-            <Switch checked={enabled} onCheckedChange={handleToggle} disabled={updateSettings.isPending} />
+            <Switch
+              checked={enabled}
+              onCheckedChange={handleToggle}
+              disabled={updateSettings.isPending}
+            />
           </div>
         )}
       </div>
       <Tabs defaultValue="produce" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-grid">
+        <TabsList className="grid w-full grid-cols-2 sm:inline-grid sm:w-auto">
           <TabsTrigger value="produce">{t("production.tabs.produce")}</TabsTrigger>
           <TabsTrigger value="history">{t("production.tabs.history")}</TabsTrigger>
         </TabsList>
-        <TabsContent value="produce" className="mt-4">
+        <TabsContent value="produce" className="mt-4 space-y-4">
+          {/* Above the recipe list on purpose: "what do I need to make right
+              now" is the question staff actually open this tab with. */}
+          <PrepListPanel storeId={storeId} />
           <RecipeProductionCard />
         </TabsContent>
         <TabsContent value="history" className="mt-4">

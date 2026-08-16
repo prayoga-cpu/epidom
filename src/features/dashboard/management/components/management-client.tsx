@@ -74,7 +74,7 @@ export function ManagementClient({ initialSupplierOrders, storeId }: ManagementC
   }, [pathname, router, searchParams]);
 
   return (
-    <div className="min-h-[calc(100vh-150px)] space-y-4">
+    <div className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] space-y-4">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="bg-muted/50 grid h-auto w-full max-w-full grid-cols-2 gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm md:inline-flex md:h-9 md:max-w-none md:grid-cols-none md:justify-start md:gap-0 md:p-1.5">
           <TabsTrigger

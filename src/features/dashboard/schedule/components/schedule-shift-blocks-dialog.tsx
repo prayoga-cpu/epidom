@@ -105,7 +105,7 @@ export function ScheduleShiftBlocksDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90dvh] max-w-md flex-col overflow-y-auto">
+      <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] max-w-md flex-col overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("pages.scheduleManageBlocks")}</DialogTitle>
         </DialogHeader>

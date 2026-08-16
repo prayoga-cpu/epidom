@@ -36,7 +36,7 @@ export async function PATCH(
       );
     }
 
-    const { status, paymentStatus, paymentMethod, paymentNote } = parsed.data;
+    const { status, paymentStatus, paymentMethod, paymentNote, foodWasNeverMade } = parsed.data;
 
     // Verify order belongs to this store
     const existing = await prisma.order.findFirst({
@@ -99,11 +99,24 @@ export async function PATCH(
       }
     }
 
-    // Cancelling an already-delivered order must restore the stock that was
-    // deducted for it, or inventory numbers go wrong.
-    if (status === "CANCELLED" && existing.status === "DELIVERED") {
+    // Cancelling an order that already had stock deducted must restore it.
+    //
+    // Deliberately NOT gated on `existing.status === "DELIVERED"`: the POS
+    // schema permits DELIVERED → READY, and after that transition a cancel
+    // would never reverse anything, silently stranding the deduction. The
+    // service's own ledger guard (an unreversed SALE movement) is the
+    // authority on whether there is anything to give back, so it is safe to
+    // call unconditionally on cancel — it no-ops when there is not.
+    //
+    // `foodWasNeverMade` is asymmetric on purpose: deduction fires at
+    // DELIVERED, i.e. after the food was made and handed over, so finished
+    // goods go back on the shelf but raw ingredients do NOT — they are
+    // physically inside food in a bin. Only the operator can say otherwise.
+    if (status === "CANCELLED") {
       try {
-        await reverseStockForOrder(updated.id, storeId);
+        await reverseStockForOrder(updated.id, storeId, {
+          foodWasNeverMade: foodWasNeverMade === true,
+        });
       } catch (err) {
         console.error("[STOCK_REVERSAL]", err);
       }

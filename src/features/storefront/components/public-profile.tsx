@@ -167,7 +167,7 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
   } as React.CSSProperties;
 
   return (
-    <div className="flex min-h-screen flex-col" style={themeStyle}>
+    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] flex-col" style={themeStyle}>
       {/* Hero banner */}
       <div className="bg-muted relative h-44 w-full overflow-hidden md:h-72">
         {storefront.heroImageUrl ? (
@@ -501,7 +501,7 @@ function ReservationModal({ slug, tables, onClose }: ReservationModalProps) {
       onClick={onClose}
     >
       <div
-        className="bg-card max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl shadow-2xl sm:max-w-md sm:rounded-2xl"
+        className="bg-card max-h-[calc(92dvh/var(--app-zoom,1))] w-full overflow-y-auto rounded-t-2xl shadow-2xl sm:max-w-md sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-card border-border sticky top-0 flex items-center justify-between rounded-t-2xl border-b px-5 py-4">

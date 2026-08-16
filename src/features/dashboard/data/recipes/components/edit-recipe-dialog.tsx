@@ -341,7 +341,9 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="KITCHEN">{t("common.departmentKitchenDetailed")}</SelectItem>
+                        <SelectItem value="KITCHEN">
+                          {t("common.departmentKitchenDetailed")}
+                        </SelectItem>
                         <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
                       </SelectContent>
                     </Select>

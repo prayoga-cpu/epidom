@@ -26,6 +26,18 @@ export interface ProductionBatchWithRelations {
   unit: string;
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   triggerType: "MANUAL" | "ORDER_SHORTFALL";
+  /**
+   * Set when this batch's raw materials were already drawn at SALE time (the
+   * item sold before it was logged as made). Its ingredients are therefore
+   * already out of inventory — there is nothing left to deduct for it.
+   */
+  materialsDrawnAt: string | Date | null;
+  /**
+   * How much of `plannedQuantity` a later manual production run has already
+   * absorbed. `plannedQuantity - settledQuantity` is the outstanding
+   * "already paid for in ingredients" debt.
+   */
+  settledQuantity: number;
   scheduledDate: Date;
   completedDate: Date | null;
   notes: string | null;
@@ -278,8 +290,53 @@ export function useProductionBatch(storeId: string, batchId: string | null) {
 }
 
 /**
- * Start production (create batch) mutation
+ * Outstanding "already paid for in ingredients" debt for one product.
+ *
+ * When a BATCH_PRODUCED item is sold beyond its counted balance, the sale draws
+ * that item's raw materials there and then and records it on an ORDER_SHORTFALL
+ * batch (`materialsDrawnAt`). If the owner LATER logs that production run by
+ * hand, those ingredients must not leave inventory a second time — the run is
+ * netted against this debt first.
+ *
+ * This mirrors `productionBatchService.getOutstandingDrawnShortfall(productId)`
+ * exactly:  Σ max(0, plannedQuantity − settledQuantity)  over ORDER_SHORTFALL
+ * batches with `materialsDrawnAt` set and status ≠ CANCELLED. It is recomputed
+ * here rather than fetched because no HTTP endpoint exposes the service
+ * function; the batches list already carries every field the sum needs.
+ *
+ * Caveat: bounded by the list endpoint's `take` cap of 100 batches per product.
  */
+export function useOutstandingDrawnShortfall(storeId: string, productId?: string) {
+  const filters = {
+    productId,
+    // Everything except CANCELLED — a cancelled shortfall carries no debt.
+    status: ["PLANNED", "IN_PROGRESS", "COMPLETED"],
+    sortBy: "createdAt",
+    sortOrder: "asc",
+    skip: 0,
+    take: 100,
+  } as unknown as ProductionBatchFilterInput;
+
+  const { data, isLoading } = useQuery({
+    queryKey: [...productionBatchKeys.lists(storeId), "drawn-shortfall", productId],
+    queryFn: () => fetchProductionBatches(storeId, filters),
+    enabled: !!storeId && !!productId,
+    staleTime: 20 * 1000,
+  });
+
+  // Decimal fields arrive from this route as strings (it isn't run through
+  // serialize.ts), so coerce before doing any arithmetic.
+  const outstanding = (data?.batches ?? [])
+    .filter((batch) => batch.triggerType === "ORDER_SHORTFALL" && batch.materialsDrawnAt != null)
+    .reduce(
+      (sum, batch) =>
+        sum + Math.max(0, Number(batch.plannedQuantity) - Number(batch.settledQuantity ?? 0)),
+      0
+    );
+
+  return { outstanding, isLoading };
+}
+
 /**
  * Start production (create batch) mutation with optimistic updates
  */

@@ -912,6 +912,35 @@ export const en = {
       settingsUpdateFailed: "Couldn't update the setting. Try again.",
       ownerOnlyNotice: "Ask the store owner to enable this feature.",
     },
+
+    // Part of a batch was already sold before it was logged
+    prepList: {
+      title: "Today's prep",
+      allStocked: "Nothing to prepare — everything is at or above its level.",
+      onHand: "{count} {unit} on hand · keep {par}",
+      alreadySold: "{count} already sold before being made — their ingredients are already out.",
+      madeIt: "Made it",
+      quantityLabel: "How many {name} did you make?",
+      logged: "Logged {count} × {name}",
+      loggedWithSettlement: "Logged {count} × {name} — {settled} were already sold, so only the rest went into stock.",
+      logFailed: "Could not log that production run",
+    },
+    settlement: {
+      preview:
+        "{settled} of these {total} were already sold before you logged them — we've already taken their ingredients out, so this batch will use ingredients for {remaining}.",
+      alreadyAccounted: "Already accounted for — no need to log these",
+    },
+
+    emptyState: {
+      batchOnly:
+        "Production is for things you make ahead. Dishes you cook to order don't need it — their ingredients come out automatically when they're sold.",
+    },
+  },
+  finance: {
+    summary: {
+      unknownCost:
+        "Cost is unknown for {count} items ({amount} of sales) — delivery-app orders aren't linked to your products.",
+    },
   },
   nav: {
     profile: "Profile",
@@ -1816,6 +1845,7 @@ export const en = {
       detailsDescription: "View complete information about this recipe",
       duplicateDescription:
         "Create a copy of this recipe with a new name. All ingredients and instructions will be copied.",
+      costPerUnit: "Cost per unit",
 
       // Form sections
       sections: {
@@ -2123,6 +2153,30 @@ export const en = {
         minStockHint: "Reorder point",
         maxStock: "Max Stock",
         maxStockHint: "Storage limit",
+        stockMode: {
+          label: "How do you make this?",
+          batch: "We count how many we have",
+          batchHint:
+            "Made ahead, or bought in ready to sell. Ingredients come out when you record a batch — and if you sell more than you counted, we'll take the ingredients out then instead.",
+          madeToOrder: "We make it fresh when it's ordered",
+          madeToOrderHint:
+            "Ingredients come out of stock as it sells. Nothing to count, nothing to prepare.",
+          untracked: "We don't track this",
+          untrackedHint: "A service, or something that never runs out.",
+          switchWarning: "You have {count} on hand. Switching means we stop counting them.",
+        },
+        parLevel: "Prepare more when we drop below",
+        reorderLevel: "Reorder when we drop below",
+        primaryRecipe: "Recipe used for stock & cost",
+        makePrimary: "Make primary",
+        usedForStockAndCost: "Used for stock & cost",
+        noRecipeWarning: "Nothing is set up to come out of stock when this sells",
+      },
+
+      // Stock status badges
+      stockStatus: {
+        notCounted: "Not counted",
+        oversold: "Oversold",
       },
 
       // Units
@@ -2558,6 +2612,12 @@ export const en = {
       markPaid: "Mark as Paid",
       markPaidSuccess: "Order marked as paid",
       markPaidFailed: "Failed to update order",
+    },
+
+    // Stock that dropped below zero — sold more than the books said existed
+    negativeStock: {
+      title: "Sold more than you had",
+      body: "{name} is showing {count} below zero. Count what's really there and correct it.",
     },
 
     // Table headers
@@ -4779,7 +4839,18 @@ lifetime: "Lifetime access",
   },
   pos: {
     title: "POS Cashier",
-    orders: "Order Queue",
+    orders: {
+      title: "Order Queue",
+      cancel: {
+        foodWasMade: {
+          question: "Cancel this order — was the food actually made?",
+          yes: "Yes, it was made",
+          yesHint: "We'll put counted items back on the shelf and leave the ingredients as used.",
+          no: "No, it was never made",
+          noHint: "We'll put the ingredients back too.",
+        },
+      },
+    },
     unpaidAlertSingular: "{count} order unpaid — tap to view",
     unpaidAlertPlural: "{count} orders unpaid — tap to view",
     source: {
@@ -5007,6 +5078,7 @@ lifetime: "Lifetime access",
       search: "Search menu...",
       noItems: "No items in this category",
       unavailable: "Unavailable",
+      counted: "{count} counted",
       customProducts: "Custom Products",
     },
     connection: {
@@ -5017,6 +5089,7 @@ lifetime: "Lifetime access",
     offline: {
       queued: "Offline — order saved locally",
       queuedDesc: "Will be submitted automatically when connection returns.",
+      synced: "{count} offline order(s) synced",
     },
     orderCard: {
       customer: "Customer",

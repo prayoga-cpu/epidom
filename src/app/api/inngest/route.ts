@@ -8,6 +8,10 @@ import { sendCustomDevelopmentNotification } from "@/lib/inngest/functions/custo
 import { purgeExpiredAccounts } from "@/lib/inngest/functions/purge-expired-accounts";
 import { nightlyDatabaseBackup } from "@/lib/inngest/functions/nightly-database-backup";
 import { checkBackupFreshness } from "@/lib/inngest/functions/check-backup-freshness";
+import {
+  negativeStockSweep,
+  catchUpStockDeduction,
+} from "@/lib/inngest/functions/stock-integrity-sweep";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -20,5 +24,7 @@ export const { GET, POST, PUT } = serve({
     purgeExpiredAccounts,
     nightlyDatabaseBackup,
     checkBackupFreshness,
+    negativeStockSweep,
+    catchUpStockDeduction,
   ],
 });

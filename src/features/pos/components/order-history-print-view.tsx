@@ -142,7 +142,7 @@ export function OrderHistoryPrintView({
   const storeLocation = [store.city, store.country].filter(Boolean).join(", ");
 
   return (
-    <div className="print-report min-h-screen bg-white text-black print:bg-white">
+    <div className="print-report min-h-[calc(100vh/var(--app-zoom,1))] bg-white text-black print:bg-white">
       {/* Diagonal watermark — repeats behind the content, very low opacity so it never
           interferes with reading the table. Fixed so it also appears on every printed page. */}
       <div

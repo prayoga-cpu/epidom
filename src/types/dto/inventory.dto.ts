@@ -110,7 +110,16 @@ export interface StockMovementDto {
   id: string;
   productId: string | null;
   materialId: string | null;
-  type: "PURCHASE" | "PRODUCTION_IN" | "PRODUCTION_OUT" | "SALE" | "ADJUSTMENT" | "WASTE";
+  type:
+    | "PURCHASE"
+    | "PRODUCTION_IN"
+    | "PRODUCTION_OUT"
+    | "SALE"
+    | "ADJUSTMENT"
+    | "WASTE"
+    // Was missing despite existing in the MovementType enum since reversals
+    // were introduced — a cancelled order's give-back had no DTO representation.
+    | "RETURN";
   quantity: Decimal;
   unit: string;
   balanceAfter: Decimal;

@@ -307,7 +307,7 @@ export function StaffClient({
   };
 
   return (
-    <div className="min-h-[calc(100vh-150px)] space-y-4">
+    <div className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="grid gap-1">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("pages.staffTitle")}</h1>

@@ -119,6 +119,29 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const input = parsed.data;
 
+    // Offline replay idempotency. Checked BEFORE any work: returning the
+    // already-created order is the whole point, so a lost response or a second
+    // tab flushing the same IndexedDB queue can't create a duplicate order —
+    // and can't double-deduct the stock behind it. The unique index on
+    // Order.clientRequestId is the real guarantee; this is the fast path that
+    // turns the retry into a success instead of a 500.
+    if (input.clientRequestId) {
+      const existing = await prisma.order.findUnique({
+        where: { clientRequestId: input.clientRequestId },
+        select: { id: true, orderNumber: true, status: true, storeId: true },
+      });
+      if (existing && existing.storeId === storeId) {
+        return NextResponse.json(
+          createSuccessResponse({
+            id: existing.id,
+            orderNumber: existing.orderNumber,
+            status: existing.status,
+            deduplicated: true,
+          })
+        );
+      }
+    }
+
     // Defense in depth — the client only shows "Pay Later" as a checkout
     // option when the store has enabled it, but never trust that a request
     // actually came from a client that enforced it.
@@ -186,6 +209,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         data: {
           orderNumber,
           storeId,
+          // Null for ordinary online checkouts; only offline replay sets it.
+          // The unique index makes a concurrent double-flush fail loudly here
+          // rather than silently creating a second order.
+          clientRequestId: input.clientRequestId ?? null,
           customerName: input.customerName ?? "Walk-in",
           customerPhone: input.customerPhone,
           orderType: input.orderType as OrderType,

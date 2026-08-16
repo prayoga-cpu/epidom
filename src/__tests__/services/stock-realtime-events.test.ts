@@ -38,6 +38,10 @@ function makeTx() {
     productionBatch: {
       create: vi.fn().mockImplementation(({ data }: any) => ({ id: "batch-1", ...data })),
       update: vi.fn().mockImplementation(({ data }: any) => ({ id: "batch-1", ...data })),
+      // settleDrawnShortfall reads/writes the ORDER_SHORTFALL debt ledger from
+      // inside startProduction's transaction. Empty = nothing owed, so these
+      // runs draw their full material requirement.
+      findMany: vi.fn().mockResolvedValue([]),
     },
     material: {
       findMany: vi.fn().mockResolvedValue([{ id: "mat-1", name: "FARINE T55", currentStock: 20 }]),
@@ -63,6 +67,9 @@ function makeTx() {
 vi.mock("@/lib/prisma", () => {
   prismaMock = {
     recipeProduct: { findFirst: vi.fn().mockResolvedValue({ id: "rp-1" }) },
+    // getOutstandingDrawnShortfall runs BEFORE startProduction's transaction,
+    // so it reads the outer client, not the tx one.
+    productionBatch: { findMany: vi.fn().mockResolvedValue([]) },
     wasteEntry: { findFirst: vi.fn() },
     store: { findUnique: vi.fn() },
     material: { findMany: vi.fn() },
@@ -153,6 +160,7 @@ beforeEach(() => {
   prismaMock.alert.create.mockResolvedValue({});
   prismaMock.user.findUnique.mockResolvedValue({ email: "owner@example.com" });
   prismaMock.recipeProduct.findFirst.mockResolvedValue({ id: "rp-1" });
+  prismaMock.productionBatch.findMany.mockResolvedValue([]);
 });
 
 describe("publishStockChanged", () => {

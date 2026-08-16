@@ -928,6 +928,35 @@ export const id = {
       settingsUpdateFailed: "Gagal memperbarui pengaturan. Coba lagi.",
       ownerOnlyNotice: "Minta pemilik toko untuk mengaktifkan fitur ini.",
     },
+
+    // Sebagian batch sudah terjual sebelum sempat dicatat
+    prepList: {
+      title: "Persiapan hari ini",
+      allStocked: "Tidak ada yang perlu disiapkan — semua stok sudah cukup.",
+      onHand: "{count} {unit} tersedia · target {par}",
+      alreadySold: "{count} sudah terjual sebelum dibuat — bahannya sudah keluar.",
+      madeIt: "Sudah dibuat",
+      quantityLabel: "Berapa banyak {name} yang dibuat?",
+      logged: "{count} × {name} dicatat",
+      loggedWithSettlement: "{count} × {name} dicatat — {settled} sudah terjual, jadi hanya sisanya yang masuk stok.",
+      logFailed: "Gagal mencatat produksi",
+    },
+    settlement: {
+      preview:
+        "{settled} dari {total} ini sudah terjual sebelum Anda mencatatnya — bahannya sudah kami keluarkan dari stok, jadi batch ini hanya memakai bahan untuk {remaining}.",
+      alreadyAccounted: "Sudah diperhitungkan — tidak perlu dicatat lagi",
+    },
+
+    emptyState: {
+      batchOnly:
+        "Produksi untuk barang yang Anda siapkan lebih dulu. Masakan yang dibuat saat dipesan tidak memerlukannya — bahannya keluar dari stok otomatis saat terjual.",
+    },
+  },
+  finance: {
+    summary: {
+      unknownCost:
+        "Biaya tidak diketahui untuk {count} item ({amount} dari penjualan) — pesanan dari aplikasi pengantaran tidak terhubung ke produk Anda.",
+    },
   },
   nav: {
     profile: "Profil",
@@ -1838,6 +1867,7 @@ export const id = {
       detailsDescription: "Lihat informasi lengkap tentang resep ini",
       duplicateDescription:
         "Buat salinan resep ini dengan nama baru. Semua bahan dan instruksi akan disalin.",
+      costPerUnit: "Biaya per unit",
 
       // Form sections
       sections: {
@@ -2159,6 +2189,30 @@ export const id = {
         minStockHint: "Titik pemesanan ulang",
         maxStock: "Stok Maks",
         maxStockHint: "Batas penyimpanan",
+        stockMode: {
+          label: "Bagaimana Anda membuatnya?",
+          batch: "Kami menghitung jumlah yang ada",
+          batchHint:
+            "Dibuat lebih dulu, atau dibeli sudah siap jual. Bahan keluar dari stok saat Anda mencatat satu batch — dan kalau terjual lebih banyak dari yang dihitung, bahannya kami keluarkan saat itu juga.",
+          madeToOrder: "Kami membuatnya segar saat dipesan",
+          madeToOrderHint:
+            "Bahan keluar dari stok seiring penjualan. Tidak perlu dihitung, tidak perlu disiapkan lebih dulu.",
+          untracked: "Kami tidak melacak ini",
+          untrackedHint: "Layanan, atau sesuatu yang tidak pernah habis.",
+          switchWarning: "Anda punya {count} di stok. Kalau diganti, kami berhenti menghitungnya.",
+        },
+        parLevel: "Siapkan lagi saat sisa kurang dari",
+        reorderLevel: "Pesan ulang saat sisa kurang dari",
+        primaryRecipe: "Resep yang dipakai untuk stok & biaya",
+        makePrimary: "Jadikan utama",
+        usedForStockAndCost: "Dipakai untuk stok & biaya",
+        noRecipeWarning: "Belum ada yang diatur untuk keluar dari stok saat produk ini terjual",
+      },
+
+      // Stock status badges
+      stockStatus: {
+        notCounted: "Tidak dihitung",
+        oversold: "Terjual melebihi stok",
       },
 
       // Units
@@ -2590,6 +2644,12 @@ export const id = {
       markPaid: "Tandai Lunas",
       markPaidSuccess: "Pesanan ditandai lunas",
       markPaidFailed: "Gagal memperbarui pesanan",
+    },
+
+    // Stok yang turun di bawah nol — terjual lebih banyak dari catatan
+    negativeStock: {
+      title: "Terjual lebih banyak dari stok",
+      body: "{name} tercatat {count} di bawah nol. Hitung yang benar-benar ada lalu perbaiki.",
     },
 
     // Table headers
@@ -4809,7 +4869,19 @@ lifetime: "Akses seumur hidup",
   },
   pos: {
     title: "Kasir",
-    orders: "Antrian Pesanan",
+    orders: {
+      title: "Antrian Pesanan",
+      cancel: {
+        foodWasMade: {
+          question: "Batalkan pesanan ini — makanannya sudah dibuat?",
+          yes: "Ya, sudah dibuat",
+          yesHint:
+            "Barang yang dihitung kami kembalikan ke stok, dan bahannya tetap tercatat terpakai.",
+          no: "Tidak, belum pernah dibuat",
+          noHint: "Bahannya kami kembalikan juga.",
+        },
+      },
+    },
     unpaidAlertSingular: "{count} pesanan belum dibayar — ketuk untuk lihat",
     unpaidAlertPlural: "{count} pesanan belum dibayar — ketuk untuk lihat",
     source: {
@@ -5036,6 +5108,7 @@ lifetime: "Akses seumur hidup",
       search: "Cari menu...",
       noItems: "Tidak ada item di kategori ini",
       unavailable: "Tidak tersedia",
+      counted: "{count} terhitung",
       customProducts: "Produk Kustom",
     },
     connection: {
@@ -5046,6 +5119,7 @@ lifetime: "Akses seumur hidup",
     offline: {
       queued: "Offline — pesanan disimpan lokal",
       queuedDesc: "Akan dikirim otomatis saat koneksi kembali.",
+      synced: "{count} pesanan offline berhasil disinkronkan",
     },
     orderCard: {
       customer: "Pelanggan",

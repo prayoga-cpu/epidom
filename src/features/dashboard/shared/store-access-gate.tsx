@@ -171,7 +171,7 @@ export function StoreAccessGate({ storeId, bypassGate, children }: StoreAccessGa
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-120px)] w-full flex-col items-center justify-center p-4">
+    <div className="flex min-h-[calc((100dvh-120px)/var(--app-zoom,1))] w-full flex-col items-center justify-center p-4">
       <div
         className={cn(
           "bg-background relative w-full rounded-2xl border shadow-2xl",

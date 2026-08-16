@@ -56,10 +56,25 @@ const baseProductSchema = z.object({
   costPrice: priceSchema,
   sellingPrice: priceSchema,
   currentStock: decimalSchema.default(0),
-  // false = no inventory at all (a service, or an always-available item):
-  // nothing is deducted on sale and it can never run out. See
-  // Product.trackStock in schema.prisma.
-  trackStock: z.boolean().default(true),
+  // How a sale consumes inventory — the authoritative two-tier discriminator.
+  // See Product.stockMode in schema.prisma and stock-deduction.service.ts.
+  //
+  // Deliberately NO cross-field rule here (e.g. "MADE_TO_ORDER requires a
+  // primary recipe"): a `.superRefine()` returns a ZodEffects, which has
+  // neither `.partial()` nor `.omit()`, so it would break updateProductSchema
+  // below at compile time. Mode/recipe consistency is enforced in
+  // productService.updateProduct, which can merge the incoming partial with the
+  // stored row — a partial PATCH cannot evaluate it on its own.
+  stockMode: z.enum(["BATCH_PRODUCED", "MADE_TO_ORDER", "UNTRACKED"]).default("BATCH_PRODUCED"),
+  // Which of `recipeIds` defines ONE unit, for sale-time deduction and cost.
+  // Must be one of recipeIds; validated store-side in productRepository
+  // .updateRecipes, where the store scoping lives.
+  primaryRecipeId: cuidSchema.nullish(),
+  // true = the owner typed this cost themselves; the primary recipe must never
+  // overwrite it. See Product.costPriceManual — the cascade matters because
+  // OrderItem.unitCostSnapshot is frozen from Product.costPrice, so a stale
+  // cost quietly corrupts every future COGS figure.
+  costPriceManual: z.boolean().optional(),
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").default("piece"),
   minStock: decimalSchema.default(0),
   maxStock: decimalSchema.default(1000),
@@ -326,6 +341,11 @@ export const recipeFilterSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
   department: departmentSchema.optional(),
+  // Restrict to recipes that can actually be produced in a batch, i.e. that
+  // have at least one linked BATCH_PRODUCED product. Applied SERVER-side on
+  // purpose: the Produce tab pages at `take: 100`, so filtering in the client
+  // would silently truncate a different set than the server counted.
+  producibleOnly: z.coerce.boolean().optional(),
   sortBy: z
     .enum(["name", "category", "productionTimeMinutes", "costPerBatch", "createdAt", "updatedAt"])
     .default("createdAt"),

@@ -92,7 +92,7 @@ export function ManageCategoriesDialog({
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
 
-          <div className="max-h-[50vh] space-y-1 overflow-y-auto">
+          <div className="max-h-[calc(50vh/var(--app-zoom,1))] space-y-1 overflow-y-auto">
             {categories.length === 0 ? (
               <p className="text-muted-foreground py-6 text-center text-sm">{emptyText}</p>
             ) : (

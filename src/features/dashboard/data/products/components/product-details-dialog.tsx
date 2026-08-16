@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   Package,
   DollarSign,
@@ -31,6 +32,33 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { getTranslatedCategory } from "../../recipes/utils/category-helpers";
 import { useMaterials } from "../../materials/hooks/use-materials";
+
+/**
+ * Stock states this dialog can report. `not_counted` and `oversold` come
+ * first because they short-circuit the threshold arithmetic entirely — see
+ * `getStockStatusKey` below.
+ */
+type ProductStockStatus =
+  | "not_counted"
+  | "oversold"
+  | "out_of_stock"
+  | "critical"
+  | "low_stock"
+  | "overstocked"
+  | "in_stock";
+
+const STOCK_STATUS_VARIANT: Record<
+  ProductStockStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  not_counted: "secondary",
+  oversold: "destructive",
+  out_of_stock: "destructive",
+  critical: "destructive",
+  low_stock: "default",
+  overstocked: "default",
+  in_stock: "default",
+};
 
 interface ProductDetailsDialogProps {
   storeId: string;
@@ -57,6 +85,24 @@ export function ProductDetailsDialog({
   const { data: materialsData } = useMaterials(storeId);
   const materials = materialsData?.materials ?? [];
 
+  // New keys ship in a separate locale change; `t()` echoes the key back when
+  // it is missing, so fall back to English rather than render a raw key path.
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
+
+  const currentStock = Number(product.currentStock) || 0;
+  // Only BATCH_PRODUCED products carry a counted finished-goods balance.
+  // MADE_TO_ORDER draws raw materials per sale and UNTRACKED never moves, so
+  // `currentStock` on those rows is not a quantity anyone maintains — every
+  // number derived from it (status, valuation, revenue) is suppressed below
+  // rather than presented as fact.
+  const isCounted = product.stockMode === "BATCH_PRODUCED";
+  // A negative balance means the store sold stock it did not have. Sale-path
+  // clamps were removed on purpose, so this is the honest record.
+  const isOversold = isCounted && currentStock < 0;
+
   // Calculate profit margins
   const calculateMargins = () => {
     const sellingPrice = Number(product.sellingPrice) || 0;
@@ -69,69 +115,61 @@ export function ProductDetailsDialog({
     return { retailMargin };
   };
 
-  // Calculate stock value
-  const calculateStockValue = () => {
-    const currentStock = Number(product.currentStock) || 0;
-    const costPrice = Number(product.costPrice) || 0;
-    if (!currentStock) return 0;
-    return currentStock * costPrice;
+  // Stock value at cost — `null` when no balance is counted, so the UI can
+  // omit the figure instead of printing a confident "0".
+  const calculateStockValue = (): number | null => {
+    if (!isCounted) return null;
+    return currentStock * (Number(product.costPrice) || 0);
   };
 
-  // Calculate potential revenue
-  const calculatePotentialRevenue = () => {
-    const currentStock = Number(product.currentStock) || 0;
-    const sellingPrice = Number(product.sellingPrice) || 0;
-    if (!currentStock || !sellingPrice) return 0;
-    return currentStock * sellingPrice;
+  // Potential revenue — same suppression rule as the valuation.
+  const calculatePotentialRevenue = (): number | null => {
+    if (!isCounted) return null;
+    return currentStock * (Number(product.sellingPrice) || 0);
   };
 
   // Get stock status
-  const getStockStatus = () => {
-    const currentStock = Number(product.currentStock) || 0;
+  const getStockStatusKey = (): ProductStockStatus => {
+    if (!isCounted) return "not_counted";
+
     const minStock = Number(product.minStock) || 0;
     const maxStock = Number(product.maxStock) || 0;
 
-    if (!currentStock && currentStock !== 0) return t("common.stockStatus.unknown") || "Unknown";
-    if (currentStock === 0) return t("common.stockStatus.outOfStock");
-    if (minStock && currentStock < minStock * 0.5)
-      return t("common.stockStatus.critical") || "Critical";
-    if (minStock && currentStock <= minStock) return t("common.stockStatus.lowStock");
-    if (maxStock && currentStock >= maxStock) return t("common.stockStatus.overstocked");
-    return t("common.stockStatus.inStock");
+    if (currentStock < 0) return "oversold";
+    if (currentStock === 0) return "out_of_stock";
+    if (minStock && currentStock < minStock * 0.5) return "critical";
+    if (minStock && currentStock <= minStock) return "low_stock";
+    if (maxStock && currentStock >= maxStock) return "overstocked";
+    return "in_stock";
   };
 
-  // Get stock status color
-  const getStockStatusColor = (): "default" | "secondary" | "destructive" | "outline" => {
-    const status = getStockStatus();
-    const outOfStock = t("common.stockStatus.outOfStock");
-    const critical = t("common.stockStatus.critical") || "Critical";
-    const lowStock = t("common.stockStatus.lowStock");
-    const overstocked = t("common.stockStatus.overstocked");
-    const inStock = t("common.stockStatus.inStock");
-
-    switch (status) {
-      case outOfStock:
-      case critical:
-        return "destructive";
-      case lowStock:
-        return "default";
-      case overstocked:
-        return "default";
-      case inStock:
-        return "default";
-      default:
-        return "secondary";
-    }
+  const getStockStatusLabel = (status: ProductStockStatus): string => {
+    const labels: Record<ProductStockStatus, string> = {
+      not_counted: tr("data.products.stockStatus.notCounted", "Not counted"),
+      oversold: tr("data.products.stockStatus.oversold", "Oversold"),
+      out_of_stock: t("common.stockStatus.outOfStock"),
+      critical: t("common.stockStatus.critical"),
+      low_stock: t("common.stockStatus.lowStock"),
+      overstocked: t("common.stockStatus.overstocked"),
+      in_stock: t("common.stockStatus.inStock"),
+    };
+    return labels[status];
   };
 
   const { retailMargin } = calculateMargins();
   const stockValue = calculateStockValue();
   const potentialRevenue = calculatePotentialRevenue();
-  const stockStatus = getStockStatus();
+  const stockStatus = getStockStatusKey();
+  const stockStatusLabel = getStockStatusLabel(stockStatus);
+  // Potential profit only exists when both sides of it exist.
+  const potentialProfit =
+    stockValue === null || potentialRevenue === null ? null : potentialRevenue - stockValue;
+  const maxStockNum = Number(product.maxStock) || 0;
+  const stockLevelPercent = maxStockNum > 0 ? (currentStock / maxStockNum) * 100 : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-x-hidden overflow-y-auto sm:max-w-3xl [&>button]:hidden">
+      <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] overflow-x-hidden overflow-y-auto sm:max-w-3xl [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -176,12 +214,28 @@ export function ProductDetailsDialog({
                 <Package className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatNumber(Number(product.currentStock) || 0)}
-                </div>
-                <p className="text-muted-foreground text-xs">{product.unit}</p>
-                <Badge variant={getStockStatusColor()} className="mt-2 text-xs">
-                  {stockStatus}
+                {isCounted ? (
+                  <>
+                    <div
+                      className={`text-2xl font-bold ${isOversold ? "text-destructive" : ""}`}
+                    >
+                      {formatNumber(currentStock)}
+                    </div>
+                    <p className="text-muted-foreground text-xs">{product.unit}</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-muted-foreground text-2xl font-bold">&mdash;</div>
+                    <p className="text-muted-foreground text-xs">
+                      {tr(
+                        "data.products.stockStatus.notCounted",
+                        "No counted balance for this product"
+                      )}
+                    </p>
+                  </>
+                )}
+                <Badge variant={STOCK_STATUS_VARIANT[stockStatus]} className="mt-2 text-xs">
+                  {stockStatusLabel}
                 </Badge>
               </CardContent>
             </Card>
@@ -236,10 +290,33 @@ export function ProductDetailsDialog({
                 <BarChart3 className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatPrice(stockValue)}</div>
-                <p className="text-muted-foreground text-xs">
-                  {t("data.products.details.atCostPrice") || "at cost price"}
-                </p>
+                {stockValue === null ? (
+                  /* Nothing is counted, so there is no inventory to value. */
+                  <>
+                    <div className="text-muted-foreground text-2xl font-bold">&mdash;</div>
+                    <p className="text-muted-foreground text-xs">
+                      {tr("data.products.stockStatus.notCounted", "Not counted")}
+                    </p>
+                  </>
+                ) : stockValue < 0 ? (
+                  /* An oversold balance is not a negative asset — it is money
+                     already lost against stock that was never there. */
+                  <>
+                    <div className="text-destructive text-2xl font-bold">
+                      −{formatPrice(Math.abs(stockValue))}
+                    </div>
+                    <p className="text-destructive text-xs">
+                      {tr("data.products.stockStatus.oversold", "Oversold")}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{formatPrice(stockValue)}</div>
+                    <p className="text-muted-foreground text-xs">
+                      {t("data.products.details.atCostPrice") || "at cost price"}
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -449,9 +526,15 @@ export function ProductDetailsDialog({
                   <label className="text-muted-foreground text-sm font-medium">
                     {t("data.products.form.currentStock")}
                   </label>
-                  <p className="text-lg font-semibold">
-                    {formatNumber(Number(product.currentStock) || 0)} {product.unit}
-                  </p>
+                  {isCounted ? (
+                    <p
+                      className={`text-lg font-semibold ${isOversold ? "text-destructive" : ""}`}
+                    >
+                      {formatNumber(currentStock)} {product.unit}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground text-lg font-semibold">&mdash;</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-muted-foreground text-sm font-medium">
@@ -475,55 +558,72 @@ export function ProductDetailsDialog({
                 </div>
               </div>
 
-              {/* Stock Level Progress Bar */}
-              {product.minStock !== undefined && product.maxStock !== undefined && (
+              {/* Stock Level Progress Bar — only meaningful for a counted balance */}
+              {isCounted && Number(product.maxStock) > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
                       {t("alerts.detailsDialog.stockLevel") || "Stock Level"}
                     </span>
-                    <span className="font-medium">
-                      {(
-                        ((Number(product.currentStock) || 0) / Number(product.maxStock)) *
-                        100
-                      ).toFixed(1)}
-                      %
+                    {/* The number stays honest (it can be negative); only the
+                        bar below is clamped, because a bar cannot draw one. */}
+                    <span className={`font-medium ${isOversold ? "text-destructive" : ""}`}>
+                      {stockLevelPercent.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="bg-muted h-2 overflow-hidden rounded-full">
-                    <div
-                      className={`h-full transition-all ${
-                        stockStatus === t("common.stockStatus.critical") ||
-                        stockStatus === t("common.stockStatus.outOfStock")
-                          ? "bg-destructive"
-                          : stockStatus === t("common.stockStatus.lowStock")
-                            ? "bg-orange-500"
-                            : stockStatus === t("common.stockStatus.overstocked")
-                              ? "bg-blue-500"
-                              : "bg-primary"
-                      }`}
-                      style={{
-                        width: `${Math.min(100, ((Number(product.currentStock) || 0) / Number(product.maxStock)) * 100)}%`,
-                      }}
-                    />
-                  </div>
+                  <Progress
+                    value={Math.max(0, Math.min(100, stockLevelPercent))}
+                    className={`h-2 ${
+                      stockStatus === "oversold" ||
+                      stockStatus === "critical" ||
+                      stockStatus === "out_of_stock"
+                        ? "[&>div]:bg-destructive"
+                        : stockStatus === "low_stock"
+                          ? "[&>div]:bg-orange-500"
+                          : stockStatus === "overstocked"
+                            ? "[&>div]:bg-blue-500"
+                            : "[&>div]:bg-primary"
+                    }`}
+                  />
                 </div>
               )}
 
+              {/* Oversold Alert — a sale drew stock that was never there */}
+              {stockStatus === "oversold" && (
+                <Card className="border-destructive/40 bg-destructive/10">
+                  <CardContent className="pt-4">
+                    <p className="text-destructive text-sm font-semibold">
+                      {tr("alerts.negativeStock.title", "Negative stock")}
+                    </p>
+                    <p className="text-destructive mt-1 text-sm">
+                      {tr(
+                        "alerts.negativeStock.body",
+                        "{name} is showing {count} below zero. Count what's really there and correct it."
+                      )
+                        .replace("{name}", product.name)
+                        .replace(
+                          "{count}",
+                          `${formatNumber(Math.abs(currentStock))} ${product.unit}`
+                        )}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Stock Alerts */}
-              {(stockStatus === t("common.stockStatus.critical") ||
-                stockStatus === t("common.stockStatus.lowStock") ||
-                stockStatus === t("common.stockStatus.overstocked")) && (
+              {(stockStatus === "critical" ||
+                stockStatus === "low_stock" ||
+                stockStatus === "overstocked") && (
                 <Card className="border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950">
                   <CardContent className="pt-4">
                     <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                      {stockStatus === t("common.stockStatus.critical") &&
+                      {stockStatus === "critical" &&
                         (t("data.products.details.criticalStockAlert") ||
                           "⚠️ Critical stock level! Immediate restocking required.")}
-                      {stockStatus === t("common.stockStatus.lowStock") &&
+                      {stockStatus === "low_stock" &&
                         (t("data.products.details.lowStockAlert") ||
                           "⚠️ Stock is running low. Consider restocking soon.")}
-                      {stockStatus === t("common.stockStatus.overstocked") &&
+                      {stockStatus === "overstocked" &&
                         (t("data.products.details.overstockedAlert") ||
                           "ℹ️ Stock level exceeds maximum. Consider promotions or adjusting production.")}
                     </p>
@@ -587,25 +687,58 @@ export function ProductDetailsDialog({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  {/* Every figure here is `currentStock × price`. With no
+                      counted balance there is no figure to state, and with a
+                      negative one it is a loss, not an asset. */}
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">
                       {t("data.products.details.stockValueAtCost") || "Stock Value (at cost):"}
                     </span>
-                    <span className="font-semibold">{formatPrice(stockValue)}</span>
+                    {stockValue === null ? (
+                      <span className="text-muted-foreground font-semibold">&mdash;</span>
+                    ) : (
+                      <span
+                        className={`font-semibold ${stockValue < 0 ? "text-destructive" : ""}`}
+                      >
+                        {stockValue < 0
+                          ? `−${formatPrice(Math.abs(stockValue))}`
+                          : formatPrice(stockValue)}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">
                       {t("data.products.details.potentialRevenue") || "Potential Revenue (retail):"}
                     </span>
-                    <span className="font-semibold">{formatPrice(potentialRevenue)}</span>
+                    {potentialRevenue === null ? (
+                      <span className="text-muted-foreground font-semibold">&mdash;</span>
+                    ) : (
+                      <span
+                        className={`font-semibold ${potentialRevenue < 0 ? "text-destructive" : ""}`}
+                      >
+                        {potentialRevenue < 0
+                          ? `−${formatPrice(Math.abs(potentialRevenue))}`
+                          : formatPrice(potentialRevenue)}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm">
                       {t("data.products.details.potentialProfit") || "Potential Profit:"}
                     </span>
-                    <span className="font-semibold text-green-600">
-                      {formatPrice(potentialRevenue - stockValue)}
-                    </span>
+                    {potentialProfit === null ? (
+                      <span className="text-muted-foreground font-semibold">&mdash;</span>
+                    ) : (
+                      <span
+                        className={`font-semibold ${
+                          potentialProfit < 0 ? "text-destructive" : "text-green-600"
+                        }`}
+                      >
+                        {potentialProfit < 0
+                          ? `−${formatPrice(Math.abs(potentialProfit))}`
+                          : formatPrice(potentialProfit)}
+                      </span>
+                    )}
                   </div>
                   {product.sellingPrice && product.costPrice && (
                     <div className="flex items-center justify-between border-t pt-2">

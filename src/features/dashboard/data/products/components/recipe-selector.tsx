@@ -9,7 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Star, X } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useRecipesForSelector } from "../../recipes/hooks/use-recipes";
 import { getTranslatedCategory } from "../../recipes/utils/category-helpers";
@@ -18,6 +19,14 @@ interface RecipeSelectorProps {
   storeId: string;
   selectedRecipeIds: string[];
   onSelectionChange: (recipeIds: string[]) => void;
+  /**
+   * Which linked recipe defines ONE sellable unit (Product.primaryRecipeId).
+   * It is the only recipe used for sale-time stock deduction and for the cost
+   * preview — summing every linked recipe double-counts the same product when
+   * a 10-loaf and a 50-loaf variant of one bread are both linked.
+   */
+  primaryRecipeId?: string | null;
+  onPrimaryRecipeChange?: (recipeId: string | null) => void;
   className?: string;
 }
 
@@ -25,6 +34,8 @@ export function RecipeSelector({
   storeId,
   selectedRecipeIds,
   onSelectionChange,
+  primaryRecipeId,
+  onPrimaryRecipeChange,
   className,
 }: RecipeSelectorProps) {
   const { t } = useI18n();
@@ -64,6 +75,24 @@ export function RecipeSelector({
     setPreviousRecipeCount(currentCount);
   }, [allRecipes.length, previousRecipeCount, allRecipes, selectedRecipeIds, onSelectionChange]);
 
+  // Keep the primary recipe pointing at something real. The old `isDefault`
+  // flag rotted precisely because nothing ever surfaced or repaired it: unlink
+  // the primary and the product silently lost its stock/cost source. Falling
+  // back to the first remaining recipe keeps that from happening again.
+  // Keyed on the joined ids so a fresh `[]` array identity can't loop.
+  const selectedKey = selectedRecipeIds.join(",");
+  useEffect(() => {
+    if (!onPrimaryRecipeChange) return;
+    if (selectedRecipeIds.length === 0) {
+      if (primaryRecipeId) onPrimaryRecipeChange(null);
+      return;
+    }
+    if (!primaryRecipeId || !selectedRecipeIds.includes(primaryRecipeId)) {
+      onPrimaryRecipeChange(selectedRecipeIds[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedKey, primaryRecipeId, onPrimaryRecipeChange]);
+
   const handleSelectRecipe = (recipeId: string) => {
     if (!selectedRecipeIds.includes(recipeId)) {
       onSelectionChange([...selectedRecipeIds, recipeId]);
@@ -73,6 +102,13 @@ export function RecipeSelector({
   const handleRemoveRecipe = (recipeId: string) => {
     onSelectionChange(selectedRecipeIds.filter((id) => id !== recipeId));
   };
+
+  // Mirrors the effect above so the badge is right on the very first render,
+  // before the parent has echoed the fallback back down as a prop.
+  const effectivePrimaryRecipeId =
+    primaryRecipeId && selectedRecipeIds.includes(primaryRecipeId)
+      ? primaryRecipeId
+      : selectedRecipeIds[0];
 
   return (
     <div className={className}>
@@ -122,36 +158,65 @@ export function RecipeSelector({
         {/* List of selected recipes */}
         {selectedRecipes.length > 0 && (
           <div>
-            <label className="mb-2 block text-sm font-medium">
+            <label className="block text-sm font-medium">
               {t("data.products.form.selectedRecipes") || "Selected Recipes"} (
               {selectedRecipes.length})
             </label>
-            <div className="flex flex-wrap gap-2">
-              {selectedRecipes.map((recipe) => (
-                <Badge
-                  key={recipe.id}
-                  variant="secondary"
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm"
-                >
-                  <span className="font-medium">{recipe.name}</span>
-                  <span className="text-muted-foreground">
-                    ({recipe.yieldQuantity} {recipe.yieldUnit})
-                  </span>
-                  {recipe.category && (
-                    <Badge variant="outline" className="ml-1 text-xs">
-                      {getTranslatedCategory(recipe.category, t)}
-                    </Badge>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveRecipe(recipe.id)}
-                    className="hover:bg-muted ml-1 rounded-full p-0.5 transition-colors"
-                    aria-label={t("data.products.form.removeRecipe") || "Remove recipe"}
+            <p className="text-muted-foreground mt-0.5 mb-2 text-xs">
+              {t("data.products.form.primaryRecipe")}
+            </p>
+            <div className="flex flex-col gap-2">
+              {selectedRecipes.map((recipe) => {
+                const isPrimary = recipe.id === effectivePrimaryRecipeId;
+                return (
+                  <div
+                    key={recipe.id}
+                    className="bg-muted/40 flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg border px-2 py-1.5 sm:px-3 sm:py-2"
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
+                    <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-x-2 gap-y-1 sm:basis-auto">
+                      <span className="text-sm font-medium break-words">{recipe.name}</span>
+                      <span className="text-muted-foreground text-xs">
+                        ({recipe.yieldQuantity} {recipe.yieldUnit})
+                      </span>
+                      {recipe.category && (
+                        <Badge variant="outline" className="text-xs">
+                          {getTranslatedCategory(recipe.category, t)}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Always visible — never `group-hover:` gated, or the only
+                        control that surfaces the primary recipe becomes
+                        permanently unreachable on a touch device. */}
+                    {isPrimary ? (
+                      <Badge className="ml-auto flex shrink-0 items-center gap-1 px-2 py-1 text-xs">
+                        <Star className="size-3 shrink-0 fill-current" aria-hidden="true" />
+                        {t("data.products.form.usedForStockAndCost")}
+                      </Badge>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="ml-auto h-10 shrink-0 gap-1 px-2 text-xs sm:px-3"
+                        onClick={() => onPrimaryRecipeChange?.(recipe.id)}
+                      >
+                        <Star className="size-3.5 shrink-0" aria-hidden="true" />
+                        {t("data.products.form.makePrimary")}
+                      </Button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveRecipe(recipe.id)}
+                      className="hover:bg-muted focus-visible:ring-ring flex size-10 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                      aria-label={t("data.products.form.removeRecipe") || "Remove recipe"}
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

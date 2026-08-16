@@ -18,6 +18,11 @@ describe("app zoom", () => {
   beforeEach(() => {
     window.localStorage.clear();
     document.documentElement.style.zoom = "";
+    // Reset alongside `zoom` — a value left behind by one case would otherwise
+    // read as "already applied" in the next and hide a writer that stopped
+    // setting it.
+    document.documentElement.style.removeProperty("--app-zoom");
+    document.documentElement.removeAttribute("data-app-zoomed");
   });
 
   afterEach(() => {
@@ -84,6 +89,33 @@ describe("app zoom", () => {
       applyZoom(80);
       applyZoom(100);
       expect(document.documentElement.style.zoom).toBe("");
+    });
+
+    // Every `calc(<viewport unit> / var(--app-zoom, 1))` in the app depends on
+    // this property being published — and, just as much, on it being *absent*
+    // at 100%, which is what makes the divisor fall back to 1 and every such
+    // declaration compile to exactly what it was before the zoom feature.
+    it("publishes the scale as --app-zoom for the layout to divide by", () => {
+      applyZoom(150);
+      expect(document.documentElement.style.getPropertyValue("--app-zoom")).toBe("1.5");
+      applyZoom(70);
+      expect(document.documentElement.style.getPropertyValue("--app-zoom")).toBe("0.7");
+    });
+
+    it("removes --app-zoom at 100% so the fallback of 1 takes over", () => {
+      applyZoom(70);
+      applyZoom(100);
+      expect(document.documentElement.style.getPropertyValue("--app-zoom")).toBe("");
+    });
+
+    // globals.css scopes the Radix popper correction to html[data-app-zoomed],
+    // so that at 100% those rules do not exist at all rather than merely
+    // evaluating to an identity transform.
+    it("marks the document while zoomed and unmarks it at 100%", () => {
+      applyZoom(125);
+      expect(document.documentElement.hasAttribute("data-app-zoomed")).toBe(true);
+      applyZoom(100);
+      expect(document.documentElement.hasAttribute("data-app-zoomed")).toBe(false);
     });
   });
 
@@ -157,6 +189,30 @@ describe("app zoom", () => {
       window.localStorage.setItem(ZOOM_STORAGE_KEY, "80");
       run();
       expect(document.documentElement.style.zoom).toBe("0.8");
+    });
+
+    // Two writers, one contract. If the boot script sets `zoom` but not
+    // `--app-zoom`, the first paint scales every box while leaving every
+    // viewport-unit length undivided — the layout is wrong until React
+    // hydrates and applyZoom catches up, which is the exact flash this script
+    // exists to prevent, just moved from the scale onto the geometry.
+    it("publishes --app-zoom identically to applyZoom", () => {
+      window.localStorage.setItem(ZOOM_STORAGE_KEY, "80");
+      run();
+      const snapshot = () => ({
+        zoom: document.documentElement.style.zoom,
+        appZoom: document.documentElement.style.getPropertyValue("--app-zoom"),
+        marked: document.documentElement.hasAttribute("data-app-zoomed"),
+      });
+      const booted = snapshot();
+
+      document.documentElement.style.zoom = "";
+      document.documentElement.style.removeProperty("--app-zoom");
+      document.documentElement.removeAttribute("data-app-zoomed");
+      applyZoom(80);
+
+      expect(booted).toEqual(snapshot());
+      expect(booted).toEqual({ zoom: "0.8", appZoom: "0.8", marked: true });
     });
 
     it("leaves the document alone at the default, when unset, or on junk", () => {

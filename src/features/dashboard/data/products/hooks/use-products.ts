@@ -22,7 +22,18 @@ export interface LinkedMenuItem {
   showOnCashier: boolean;
 }
 
-// Re-export for convenience
+/**
+ * How a sale consumes inventory — mirrors Prisma's `StockMode` enum.
+ *
+ * This is the authoritative discriminator. `Product.trackStock` is DERIVED
+ * from it server-side (productService.resolveStockMode) and deprecated —
+ * never branch on `trackStock`.
+ */
+export type ProductStockMode = "BATCH_PRODUCED" | "MADE_TO_ORDER" | "UNTRACKED";
+
+// Re-export for convenience. The generated Prisma `Product` already carries
+// `stockMode: StockMode` and `primaryRecipeId: string | null`; both survive
+// serialization (they are not Decimal fields) so the client sees them as-is.
 export type { Product };
 
 export interface ProductsResponse {
@@ -35,6 +46,10 @@ export interface ProductFilterInput {
   category?: string;
   department?: "KITCHEN" | "BAR";
   productLine?: "STANDARD" | "CUSTOM";
+  /** Filter by how the product consumes stock (batch / made-to-order / untracked). */
+  stockMode?: ProductStockMode;
+  /** Filter to products whose primary (stock & cost) recipe is this one. */
+  primaryRecipeId?: string;
   sortBy?:
     | "name"
     | "sku"
@@ -69,6 +84,8 @@ async function fetchProducts(
   if (filters.category) params.append("category", filters.category);
   if (filters.department) params.append("department", filters.department);
   if (filters.productLine) params.append("productLine", filters.productLine);
+  if (filters.stockMode) params.append("stockMode", filters.stockMode);
+  if (filters.primaryRecipeId) params.append("primaryRecipeId", filters.primaryRecipeId);
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
   if (filters.skip !== undefined) params.append("skip", filters.skip.toString());
@@ -197,6 +214,8 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
   if (filters.category) params.append("category", filters.category);
   if (filters.department) params.append("department", filters.department);
   if (filters.productLine) params.append("productLine", filters.productLine);
+  if (filters.stockMode) params.append("stockMode", filters.stockMode);
+  if (filters.primaryRecipeId) params.append("primaryRecipeId", filters.primaryRecipeId);
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
 
@@ -799,9 +818,7 @@ export function useBulkRemoveProductsFromMenu(storeId: string) {
   const linkedKey = ["storefront-items-linked", storeId];
 
   return useMutation({
-    mutationFn: async (
-      products: Pick<Product, "id" | "name">[]
-    ): Promise<BulkAddToMenuResult> => {
+    mutationFn: async (products: Pick<Product, "id" | "name">[]): Promise<BulkAddToMenuResult> => {
       const results = await Promise.allSettled(
         products.map(async (product) => {
           const items: LinkedMenuItem[] = await fetch(
@@ -821,7 +838,10 @@ export function useBulkRemoveProductsFromMenu(storeId: string) {
                   ? error
                   : {
                       success: false,
-                      error: { code: "INTERNAL_ERROR", message: "Failed to remove product from menu" },
+                      error: {
+                        code: "INTERNAL_ERROR",
+                        message: "Failed to remove product from menu",
+                      },
                     },
                 res.status
               );

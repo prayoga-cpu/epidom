@@ -215,7 +215,7 @@ export function EditReceiptSettingsDialog({
             <p className="text-muted-foreground text-xs font-medium uppercase">
               {t("profile.receiptSettings.preview")}
             </p>
-            <div className="bg-muted/30 max-h-[70dvh] overflow-y-auto rounded-lg border p-3">
+            <div className="bg-muted/30 max-h-[calc(70dvh/var(--app-zoom,1))] overflow-y-auto rounded-lg border p-3">
               <ReceiptDocument data={previewData} />
             </div>
           </div>

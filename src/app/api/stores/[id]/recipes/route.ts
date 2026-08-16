@@ -53,6 +53,7 @@ export const GET = withApiHandler(
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
       department: searchParams.get("department") || undefined,
+      producibleOnly: searchParams.get("producibleOnly") || undefined,
       sortBy: searchParams.get("sortBy") || "createdAt",
       sortOrder: searchParams.get("sortOrder") || "desc",
       skip: searchParams.get("skip") || "0",

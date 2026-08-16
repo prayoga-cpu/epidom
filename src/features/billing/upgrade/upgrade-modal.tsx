@@ -81,7 +81,7 @@ export function UpgradeGateProvider({ children }: { children: React.ReactNode })
     <UpgradeGateContext.Provider value={value}>
       {children}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-md">
+        <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden sm:max-w-md">
           <DialogHeader className="shrink-0">
             <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-full">
               <Sparkles className="text-primary h-6 w-6" />

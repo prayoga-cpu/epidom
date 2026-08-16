@@ -60,7 +60,12 @@ export const PATCH = withApiHandler(
         validatedData.sellingPrice !== undefined ? Number(validatedData.sellingPrice) : undefined,
       currentStock:
         validatedData.currentStock !== undefined ? Number(validatedData.currentStock) : undefined,
-      trackStock: validatedData.trackStock,
+      // Mapped explicitly, like every other field here. Anything omitted from
+      // this object is silently dropped no matter what the client sent —
+      // `productLine` has been lost this way. See productService.resolveStockMode.
+      stockMode: validatedData.stockMode,
+      primaryRecipeId: validatedData.primaryRecipeId,
+      costPriceManual: validatedData.costPriceManual,
       unit: validatedData.unit,
       minStock: validatedData.minStock !== undefined ? Number(validatedData.minStock) : undefined,
       maxStock: validatedData.maxStock !== undefined ? Number(validatedData.maxStock) : undefined,

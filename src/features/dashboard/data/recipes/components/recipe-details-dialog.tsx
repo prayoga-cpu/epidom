@@ -39,7 +39,7 @@ import {
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useMaterials } from "../../materials/hooks/use-materials";
-import type { RecipeWithIngredients } from "../hooks/use-recipes";
+import { isBatchProduced, type RecipeWithIngredients } from "../hooks/use-recipes";
 import { getTranslatedCategory } from "../utils/category-helpers";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 
@@ -110,11 +110,14 @@ export function RecipeDetailsDialog({
   const totalCost = calculateTotalCost();
   const costPerUnit = calculateCostPerUnit();
   const { suggestedPrice, profit, margin } = calculateProfitMargin();
+  // With a one-unit yield, "cost per batch" and "cost per unit" are the same
+  // number. Print it once, as the per-unit figure.
+  const yieldsSingleUnit = Number(recipe.yieldQuantity) === 1;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[800px] [&>button]:hidden">
+        <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] overflow-y-auto sm:max-w-[800px] [&>button]:hidden">
           <DialogHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -176,7 +179,9 @@ export function RecipeDetailsDialog({
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">
-                      {t("data.recipes.details.costPerBatch") || "Cost per Batch"}
+                      {yieldsSingleUnit
+                        ? t("data.recipes.costPerUnit")
+                        : t("data.recipes.details.costPerBatch") || "Cost per Batch"}
                     </p>
                     <p className="font-semibold">{formatPrice(totalCost)}</p>
                   </div>
@@ -321,6 +326,11 @@ export function RecipeDetailsDialog({
                   <div className="space-y-3">
                     {recipe.recipeProducts.map((recipeProduct, index) => {
                       const product = recipeProduct.product;
+                      // Only a batch-produced product has a counted balance.
+                      // A cook-to-order dish never holds stock — its
+                      // ingredients leave inventory when it's sold — so an
+                      // "In stock / Low stock" verdict on it is meaningless.
+                      const showsStock = isBatchProduced(product);
                       return (
                         <div key={recipeProduct.id}>
                           <div className="flex items-start justify-between">
@@ -336,29 +346,33 @@ export function RecipeDetailsDialog({
                                 )}
                                 {product.sku && <span className="text-xs">SKU: {product.sku}</span>}
                               </p>
-                              <div className="mt-1 flex items-center gap-4 text-xs">
-                                <span className="text-muted-foreground">
-                                  {t("common.stock")}: {formatNumber(Number(product.currentStock))}{" "}
-                                  {product.unit}
-                                </span>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                                {showsStock && (
+                                  <span className="text-muted-foreground">
+                                    {t("common.stock")}:{" "}
+                                    {formatNumber(Number(product.currentStock))} {product.unit}
+                                  </span>
+                                )}
                                 <span className="text-muted-foreground">
                                   {t("alerts.price")}: {formatPrice(Number(product.sellingPrice))}
                                 </span>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <Badge
-                                variant={
-                                  Number(product.currentStock) > Number(product.minStock)
-                                    ? "default"
-                                    : "destructive"
-                                }
-                              >
-                                {Number(product.currentStock) > Number(product.minStock)
-                                  ? t("common.stockStatus.inStock")
-                                  : t("common.stockStatus.lowStock")}
-                              </Badge>
-                            </div>
+                            {showsStock && (
+                              <div className="text-right">
+                                <Badge
+                                  variant={
+                                    Number(product.currentStock) > Number(product.minStock)
+                                      ? "default"
+                                      : "destructive"
+                                  }
+                                >
+                                  {Number(product.currentStock) > Number(product.minStock)
+                                    ? t("common.stockStatus.inStock")
+                                    : t("common.stockStatus.lowStock")}
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                           {index < (recipe.recipeProducts?.length ?? 0) - 1 && (
                             <Separator className="mt-3" />
@@ -387,13 +401,19 @@ export function RecipeDetailsDialog({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-muted-foreground text-sm">
-                      {t("data.recipes.details.costPerUnit")?.replace("{unit}", recipe.yieldUnit) ||
-                        `Cost per ${recipe.yieldUnit}`}
-                    </p>
-                    <p className="text-2xl font-bold">{formatPrice(costPerUnit)}</p>
-                  </div>
+                  {/* Already shown verbatim in the quick stats above when the
+                      recipe yields a single unit — don't print it twice. */}
+                  {!yieldsSingleUnit && (
+                    <div>
+                      <p className="text-muted-foreground text-sm">
+                        {t("data.recipes.details.costPerUnit")?.replace(
+                          "{unit}",
+                          recipe.yieldUnit
+                        ) || `Cost per ${recipe.yieldUnit}`}
+                      </p>
+                      <p className="text-2xl font-bold">{formatPrice(costPerUnit)}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-muted-foreground text-sm">
                       {t("data.recipes.details.suggestedPrice") || "Suggested Price (2.5x markup)"}

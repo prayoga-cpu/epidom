@@ -6,6 +6,140 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-08-16 — R4 Cleanup + End-to-End Flow Harness (2.72.0)
+
+- [x] **Dropped `Product.trackStock` and `RecipeProduct.isDefault`** (`20260816090000`). The gate was satisfied: `report-stock-mode-integrity.ts` clean, and **neither drop loses information** — `trackStock == (stockMode <> 'UNTRACKED')` and `isDefault` was `false` on every row. The migration opens with a `DO $$` guard that RAISEs rather than dropping if any row is desynced, and the down-SQL reconstructs both columns *exactly*, not approximately.
+- [x] **Custom Products migrated off `trackStock`.** Its form field is now `counted`, writing `stockMode` directly. The visible toggle and its copy are unchanged.
+- [x] `resolveStockMode` deleted — with the derived column gone there is nothing left to reconcile, so it collapsed to a pass-through.
+- [x] Products POST route was silently dropping `stockMode`/`primaryRecipeId` (same explicit-field-map trap that lost `productLine`). Fixed.
+
+**`scripts/verify-stock-flow.ts` — the runnable end-to-end proof.** Exercises the real services against a real database, creates its own store, tears it down (`--keep` to inspect in the UI). **20/20 passing.** It covers: batch sale draws the shelf and NOT the ingredients; selling past the shelf falls through to materials for the uncovered part only and records the debt; made-to-order draws for every unit with no product movement; untracked moves nothing but still freezes a cost snapshot; **Finance COGS returns 14.00 where the old code returned 0.00**; logging prep afterwards draws for 7 not 10; cancelling restores the shelf but not the ingredients; and the ledger reconciles.
+
+**Pre-existing inconsistency found and documented, deliberately NOT changed:** the `StockMovement.quantity` sign convention is not uniform. `SALE` and `WASTE` store negative values; `PRODUCTION_OUT` stores a **positive magnitude** despite being an outflow. Summing the column naively never reconciles for any material used in production. The harness normalises on read and says so. Flipping the stored sign would leave a half-migrated ledger — worse than a consistent but odd one — so it stays, now with the convention written down.
+
+---
+
+## ✅ 2026-08-16 — Prep List, One-Tap Production Logging, Count Sheet (2.71.0)
+
+The operational half of the two-tier model. A batch-produced product only stays in stock if somebody actually prepares it, and the existing four-field start/complete flow is exactly the friction that stopped people logging prep at all.
+
+- [x] **Today's prep** (`production/prep-list/`, new `GET /api/stores/[id]/production/prep-list`). For every BATCH_PRODUCED product with a primary recipe: `suggested = max(0, minStock − currentStock)`, **netted against outstanding drawn-shortfall debt** — that debt is food already sold whose ingredients already left, not stock the kitchen must rebuild, and counting it twice would inflate every suggestion. Sits above the recipe list in the Produce tab, because "what do I need to make right now" is the question staff open that tab with.
+- [x] **One-tap "Made it"** (`quickLogProduction`). The whole start/complete cycle — PRODUCTION_OUT, PRODUCTION_IN, batch row — in ONE transaction. Settlement-aware on **both** sides, and this is the subtle part: bake 10 against a debt of 3 and only 7 units of ingredients leave (the other 3 left at the till) AND only 7 land on the shelf (the other 3 go straight to the customers who already bought them). One figure, two independent reasons it is right.
+- [x] **End-of-day count sheet** (`applyStockCount`, new `POST …/production/stock-count`). One ADJUSTMENT per discrepancy, reason `STOCK_COUNT`. **This is the only mechanism that expenses finished-goods shrinkage** under a sale-recognised COGS model — without it, 40 croissants produced, 60 of 100 sold and 40 binned are never costed at all. A count of zero is meaningful and accepted; a count that already matches is skipped rather than writing a no-op ledger row.
+- [x] **Offline replay idempotency** — `Order.clientRequestId`, nullable + unique. The POS queues orders to IndexedDB and POSTs on reconnect; a lost response, or a second tab flushing the same queue, previously created a duplicate order **and double-deducted the stock behind it**. The queue entry's own id is the key; the route returns the existing order instead of creating another. NULL for every online order, and Postgres permits unlimited NULLs in a unique index, so the 99% case is untouched.
+- [x] **Recipe cost cascade** — `Product.costPriceManual` + `costPriceOriginal`. `OrderItem.unitCostSnapshot` is frozen FROM `Product.costPrice`, so a supplier price rise that updated only the recipe left every future COGS figure quietly wrong. Primary recipe only (summing across a product's 10-unit and 50-unit variants is what used to double its cost); `costPriceManual` opts out; `costPriceOriginal` captures the pre-cascade value **once** so enabling this is reversible per product instead of destroying merchant-typed figures. The "Customize manually" checkbox in the edit dialog was client-local only — it now persists and seeds from the stored value.
+- [x] **POS "counted" chip** on batch-produced tiles. Labelled *counted*, never *available*: at 0 the item is still perfectly sellable. Suppressed offline — the menu IS mirrored to IndexedDB but `currentStock` is not, so a disconnected tablet would render an hours-old number as authoritative. Nothing gates a sale on it.
+- [x] **Finance annotates uncosted lines** rather than blanking the report. Aggregator orders carry neither a menu item nor a product for 4 of 8 `OrderSource` values, so they can never acquire a snapshot — a blanket "—" would hide the P&L forever for any store on Grab or Gojek.
+- [x] Fixed a hardcoded Indonesian toast in the offline sync path (AGENTS.md §6) — France is the primary market now.
+
+**Deliberately NOT done: the `Decimal(14,6)` widening.** `scripts/report-below-precision-ingredients.ts` comes back clean on live-shaped data — no ingredient currently rounds away at `Decimal(10,3)`. A full table rewrite of `stock_movements` that auto-applies during a live Vercel build, for a problem this dataset does not have, is the wrong trade. Procedure if it ever becomes real: run it as a standalone migration **outside** the build path, against a maintenance window.
+
+Verified: `pnpm type-check` 0 errors, `pnpm lint` 0 issues, `pnpm test` **1018 passed / 94 files** (13 new, covering both-sides settlement netting, prep-list debt netting, cross-store rejection, and count-sheet shrinkage/zero/no-op cases).
+
+---
+
+## ✅ 2026-08-16 — Two-Tier Stock: Batch-Produced vs Made-to-Order (2.70.0)
+
+Client spec ("Epidom — Two-Tier Stock Model Spec") reported that selling a nasi goreng through the Caisse deducted nothing. Investigation found the cause is worse and more general than the spec described, and that it had also been silently zeroing cost-of-goods.
+
+**Root cause — a sale never removed raw materials from inventory.** Two independent mechanisms produced that same outcome:
+
+- [x] **The dead flag.** `stock-deduction.service.ts` and `production-batch.service.ts` both gated recipe-ingredient deduction on `recipeProducts: { where: { isDefault: true } }`. The ONLY writer of that table, `productRepository.updateRecipes`, hardcoded `isDefault: false, // No default recipes anymore` inside a `deleteMany` + `createMany` — so any surviving legacy `true` row was destroyed on the first recipe edit. Four read sites, one writer, and it always wrote `false`. Confirmed against live-shaped data: **0 rows with `isDefault = true`** across 40 recipe links.
+- [x] **The over-broad early return.** `if (!product.trackStock) continue;` sat BEFORE the recipe block, so a product marked untracked — the natural setting for a made-to-order dish, per the field's own schema comment — consumed no raw materials either.
+- [x] **The existing unit tests were green over the dead code**, because their fixtures hand-built `isDefault: true` and bypassed the Prisma `where` the service actually used.
+
+**Consequence in Finance.** `finance/summary` computed COGS exclusively from `SALE` movements with `materialId != null`. No material SALE rows means no COGS, so most stores have been reporting near-100% gross margin, with modifier materials the only cost booked at all.
+
+- [x] **`Product.stockMode`** (`BATCH_PRODUCED | MADE_TO_ORDER | UNTRACKED`) is the new authoritative discriminator. Deliberately on Product, not Recipe as the spec asked: most products have no recipe, a product can have several recipes (alternative batch sizes) with no rule for which one the register uses, and `serializeRecipe` whitelists fields behind an `as` cast — a new `Recipe.type` would have vanished there with zero type errors, exactly as `department` already does.
+- [x] **`Product.primaryRecipeId`** replaces `RecipeProduct.isDefault`. A nullable FK has a DB-enforceable invariant; a junction boolean can have zero winners or two, which is how it rotted. `isDefault` is left in place and unwritten so a code-only revert restores the previous behavior exactly.
+- [x] **Deduction rewritten.** Demand stops at a counted balance: BATCH_PRODUCED draws finished goods and stops (the double-count fix); the uncovered remainder falls through to raw materials and is recorded on an ORDER_SHORTFALL batch via `materialsDrawnAt`; MADE_TO_ORDER explodes the recipe for every unit (the zero-deduction fix); UNTRACKED moves nothing but still writes a cost snapshot.
+- [x] **Settlement.** `settleDrawnShortfall` nets a later production run against outstanding drawn-shortfall debt. Without it, the prep list makes double-drawing the NORMAL sequence: sell 20 at stock 0 (materials leave), then log the batch of 20 (materials leave again + 20 phantom finished units).
+- [x] **Clamps removed truthfully.** `Math.max(0, …)` wrote a floored balance while the movement recorded the unclamped quantity, so `Σ quantity` diverged from `currentStock` permanently and reversal credited back more than ever left. Stock now goes negative honestly; one rounding at 3dp is written to both the balance delta and the movement quantity so the ledger closes by construction; a legacy negative balance self-heals once with a ledgered `ADJUSTMENT`.
+- [x] **Reversal is cycle-scoped and asymmetric.** New `StockMovement.reversesMovementId` — without it, permitting re-deduction after DELIVERED → CANCELLED → DELIVERED means a second cancel replays both SALE sets and restores double. Cancel restores finished goods only by default; raw materials come back only when the operator states the food was never made, because deduction fires at DELIVERED, i.e. after the food was cooked.
+- [x] **Serializable transaction gains bounded retry** and reads balances INSIDE the transaction. The split was previously computed from a read taken outside it and written as an absolute `set`, so two concurrent deliveries against stock 5 both saw 5 and the fallback never fired. Both callers swallow the exception and return 200 after the receipt prints, so an un-retried conflict meant no stock movement AND no cost snapshot.
+- [x] **COGS consolidated** into `src/lib/finance/cogs.ts` — three drifted production copies plus a fourth reimplementation inlined in a test that tested nothing about the route. Dual-source by order: frozen snapshots where they exist, the legacy material ledger for orders that predate them (`unitCostSnapshot` was added nullable and never backfilled, so a naive `?? 0` would have restated all history to 100% margin). New `OrderItem.optionCostSnapshot` keeps modifier cost in the P&L. Uncosted lines are counted and reported, never silently zeroed.
+- [x] **Store scoping added to `updateRecipes`.** Recipe ids arrive as raw client input and the FK is global; the link was inert before, but now drives material deduction, alerts and realtime fan-out, so an unvalidated id would let one store drain another's inventory.
+- [x] **Fixed in passing:** the product PATCH route silently dropped `productLine` (same explicit field map now carries `stockMode`); `serializeRecipe` silently dropped `department`; `getStockStatus` returned `"in_stock"` (green) for NEGATIVE stock whenever `minStock` was 0, the schema default; `RETURN` was missing from the movement DTO and badge map.
+
+**Migration** `20260814105502_add_product_stock_mode` — additive, one combined `CASE` backfill pass (not one per value: `products` is rewritten per pass and this runs inside `migrate deploy` during a live build). `trackStock = false → UNTRACKED`, `true → BATCH_PRODUCED`; `primaryRecipeId` elected per product as any surviving legacy default, else the oldest link. Manual down-SQL documented in a comment block at the bottom of the file.
+
+**Two bugs found by the new tests and fixed** — both introduced by wiring settlement into `startProduction` without threading it through the rest of the batch lifecycle:
+
+- [x] `completeProduction` credited the FULL `actualQuantity` to finished goods, ignoring `settledQuantity`. Bake 10 against a debt of 3 and the shelf holds 7, not 10 — it was inventing 3 units nobody could serve. Now credits `actualQuantity − settledQuantity`.
+- [x] `cancelProduction` restored materials for the full `plannedQuantity` though `startProduction` had only drawn `plannedQuantity − settled`, crediting back material that never left AND silently writing the debt off at the same time — leaving the store permanently up on phantom stock. Now restores only what was drawn, and `releaseDrawnShortfall` hands the debt back so the next run nets against it again.
+- [x] `startProduction` now computes its draw from what settlement ACTUALLY absorbed inside the transaction, not a stale pre-transaction estimate (the estimate is still used for the availability check, where being conservative is fine).
+- [x] `recordDrawnShortfalls` is wrapped — it runs after the deduction commits, and both callers swallow throws, so a failure there would silently lose the debt and let a later run double-draw.
+
+**Verified on the dev branch:** migration applied; `scripts/report-stock-mode-integrity.ts` PASSES across 65 products / 54 recipes / 40 links, all 40 backfilled with a primary, 0 cross-store links, 0 desynced `trackStock`. `pnpm type-check` 0 errors, `pnpm lint` 0 issues, `pnpm test` **1002 passed / 93 files** (was 954 — 48 new tests covering the batch/made-to-order split, cycle-scoped idempotency, asymmetric reversal, rounding, and settlement).
+
+**Also shipped alongside R1:** nightly negative-stock sweep and a bounded catch-up deduction sweep (`stock-integrity-sweep.ts`) — the catch-up is triple-bounded on `stockDeductedAt IS NULL`, a release-date floor and a 500-order cap, because "DELIVERED with no SALE movement" would legitimately match every aggregator and all-untracked order and re-deduct the entire history. POS tiles show a "counted" chip for batch-produced items, suppressed offline (the menu is mirrored to IndexedDB but `currentStock` is not, so it would render an hours-old number as authoritative). Nothing gates a sale on it.
+
+### Developer / Operator To-Do
+
+- [ ] **Merchant communication is required, not optional.** COGS appears for the first time for most stores and gross margin will drop to its true level. History is preserved exactly by the dual-source design, but any Finance comparison window straddling this release will show an artefactual triple-digit swing.
+- [ ] **2 real unit mismatches found** by `scripts/report-unit-mismatches.ts` and needing a merchant decision: a Madeleine Vanille ingredient stating `1 unit` against a material stocked in `kg` (that material's NAME is also a corrupted serialized ingredient list — likely a bad AI import), and product `Sesaltora` sold in `pcs` while its recipe yields `mL`. `convertUnit` passes incompatible units through unchanged, so both silently subtract the wrong dimension.
+- [ ] **`areUnitsCompatible` is still called from nowhere in `src/`** — the hard block on new mismatched links should ship only once the report is clean.
+- [ ] **Multi-recipe products** get the oldest link as primary; owners should confirm the choice in the product form.
+- [ ] Consider deleting AGENTS.md §6's stale "Do not add to `fr.ts`" line and §5's directory map, both contradicted by §7 rule 2 and §2. Also §3 says Prisma v6; `package.json` pins 7.8.
+
+---
+
+## ✅ 2026-08-16 — In-App Zoom Made Responsive: Divide Every Viewport Unit by the Zoom (2.70.1)
+
+Operator: the zoom control is "static zoom, not the responsive zoom" — the container does not follow the screen. Diagnosed with an 8-agent workflow (4 mappers → 1 diagnosis → 3 adversarial refuters, 728k subagent tokens); the refuters rejected the first fix twice and the shipped version is the amended one.
+
+**Two corrections to earlier assumptions, both from measurement rather than argument** (a WKWebView probe against system WebKit, 1680×913 CSS viewport, DOM replica of PageShell):
+
+- [x] **A width "compensation" on `<html>` is actively wrong.** I had briefly shipped `width: calc(100% / scale)` + `minHeight` on the root. WebKit already sizes the root's `auto` width to viewport ÷ effective zoom — `<html>`, `<body>`, `.page-transition-container` and the fixed `<header>` all paint x=0 w=1680 at 0.7/0.8/0.9/1.0/1.1/1.25/1.5 with plain `zoom` and nothing else. The compensation divided an already-correct value a second time and *created* the gap it was meant to cure. Reverted before this work started.
+- [x] **The horizontal gap is symmetric, not right-only.** Measured at 0.8: container x=200, right=1480. The report of a right-only band is explained separately (see the Chromium item below); the visible "container too narrow" is the symmetric one.
+
+**Root cause — root percentages are divided by zoom, viewport units are not.** That single asymmetry produces both symptoms:
+
+- [x] **`max-w-[1600px]` (page-shell.tsx:36) is a raw-px cap, so `zoom` scales it.** Painted width = 1600 × scale, so the container refuses the extra room zooming out creates. Measured 1600/1680 = **95.2% at zoom 1.0** and 1280/1680 = **76.2% at 0.8** — the operator's reported "~96%" and "~76%" land exactly. Now `max-w-[calc(1600px/var(--app-zoom,1))]`.
+- [x] **`h-screen` (page-shell.tsx:30) resolves against the undivided 913px and paints at 913 × scale.** Measured 639px at 0.7 (274px dead below), 1141px at 1.25 (228px clipped past the fold). `body`'s fixed-attachment gradient paints the canvas underneath, which is why the shortfall read as an "empty dark region" rather than an obviously unpainted band.
+
+**The fix is one uniform rule, and a no-op at 100%:** every viewport-unit length becomes `calc(<length> / var(--app-zoom,1))`. `applyZoom` publishes `--app-zoom` alongside `zoom` and *removes* it at 100%, so the divisor falls back to 1 and every converted declaration compiles byte-identically to what it was.
+
+- [x] **118 sites converted across 91 `.tsx` files** plus `src/lib/utils/responsive.ts` (`cardWrapper`) and 3 rules in `globals.css`: 37 `h-screen`, 32 `min-h-screen`, 1 `w-screen`, 29 `min-h-[calc(100vh-Npx)]`, 8 `h-[100dvh]`, 44 `max-h-[NNdvh|NNvh]`, 6 `min-h-[100dvh]`, 1 `max-h-screen`. Verified zero leftovers by pattern.
+- [x] **Both width caps landed together, per a refuter's measurement.** Correcting `page-shell.tsx:36` alone while `topbar.tsx:133` kept a zoom-scaled `max-w-7xl` tripled the header/content misalignment at 0.7 (112px → 352px of inset per side) and flipped its sign at 1.5. Topbar is now `max-w-[calc(80rem/var(--app-zoom,1))]` — 80rem *is* `max-w-7xl`, so no design change, only a constant ratio across the ladder.
+- [x] **The interior card heights converted in the same pass**, per a second refuter: leaving ~20 pages' own `min-h-[calc(100vh-Npx)]` undivided while the shell was corrected would have *relocated* the dead space inside the content card (measured +437 layout px at 0.7 against a constant 46 today) — same complaint, different colour.
+- [x] **Chromium-only right-side band fixed** (`globals.css`). `react-remove-scroll-bar` computes `innerWidth - documentElement.clientWidth`; on Chromium `clientWidth` is zoom-divided while `innerWidth` is not, so it reads phantom scrollbar width — 153px at 110%, 336px at 125%, 560px at 150% — and injects `body[data-scroll-locked]{margin-right:Npx !important}`, shoving all content left with an empty band on the RIGHT while any dialog/dropdown/sheet is open. WebKit reports both as the window width, so it never fires in Safari. Neutralized with a matching `!important` rule; safe here because scrollbars are hidden globally and `html` carries `scrollbar-gutter: stable`.
+- [x] **POS contract restored as a side effect.** A refuter measured `h-screen` currently paints 660/826px at 0.8 and clips 206px at 1.25 — the "fills the viewport exactly, edge to edge" contract in page-shell.tsx's comment is broken today at every non-100% zoom, and the height fix restores it to 826px at every level.
+
+- [x] **Anchored overlays repositioned — a genuinely separate bug class, fixed after the operator reported the profile dropdown still broken.** CSS Viewport L1 §4.1 splits the geometry APIs: `getBoundingClientRect()` returns SCALED coordinates while `offsetLeft`/`clientWidth`/`getComputedStyle()` return UNSCALED. Floating UI reads the trigger via `getBoundingClientRect()` (painted px) then writes `transform: translate(x,y)` on a wrapper that itself sits inside the zoomed root, so the offset is multiplied by the zoom **a second time**, with error growing by distance from the origin — worst case being a menu anchored to the topbar's right edge. Corrected in `globals.css` by cancelling the root zoom on `[data-radix-popper-content-wrapper]` (so its translate is read at effective zoom 1) and re-applying it to the content inside (so the menu still scales with the app). Scoped to `html[data-app-zoomed]`, a new attribute `applyZoom` sets only for a non-default zoom, so the rules do not exist at 100%.
+
+  **Measured in real WebKit before shipping** (WKWebView, 1680×913, replica of Radix's popper DOM and Floating UI's bottom-end math — `scratchpad/popperprobe.swift`). Painted right edge of the menu vs its trigger's right edge at 1468:
+
+  | zoom | no fix | with fix | trigger |
+  |---|---|---|---|
+  | 0.7 | 1077 (detached 395px left) | **1472** | 1472 |
+  | 1.0 | 1468 ✓ | 1468 (byte-identical) | 1468 |
+  | 1.25 | **1763 — 83px off-screen** | **1465** | 1465 |
+  | 1.5 | **2028 — 348px off-screen** | **1462** | 1462 |
+
+  Painted width still tracks the zoom (154px at 0.7 → 330px at 1.5), so the menu scales with the app rather than rendering at 100% inside a zoomed page. Dialogs and sheets are not Popper-based (centred, not anchored) and are deliberately untouched — their `dvh` caps were already handled by the sweep above.
+
+Verified: `pnpm type-check` clean, `pnpm lint` clean, `pnpm test` 1019/1019 across 94 files (23 in `app-zoom.test.ts`, including new assertions that `applyZoom` and `ZOOM_BOOT_SCRIPT` publish `--app-zoom` identically). Tailwind compilation confirmed directly via `@tailwindcss/cli` against the real `globals.css` — v4.3.3 emits all 53 declarations correctly, including responsive variants (`sm:max-h-[calc(90dvh/var(--app-zoom,1))]`) and both width caps; the `/` inside arbitrary brackets is not treated as a modifier separator.
+
+**Not verified in a browser**: there is no Playwright/Puppeteer in this repo. `npx next build` currently fails on `src/features/dashboard/production/prep-list/hooks/use-prep-list.ts` (untracked, created by a concurrent session mid-run, `stockMovementKeys.all` typing) — unrelated to this change and not fixable from here without touching their work.
+
+---
+
+## ✅ 2026-08-14 — Mobile Nav Drawer Moved to the Right Edge (2.69.2)
+
+Operator: "on mobile move the sidebar, and the 3 strips/burger toggle is from the right side (due to the user most habit)" — phones are held right-handed, and the top-left corner is the hardest point on the screen to reach one-handed.
+
+- [x] **Hamburger moved to the far right of the mobile top bar**, after `NavUser`; the logo now sits alone on the left. Drawer is `side="right"`, so the button, the panel and the gesture are all on the same side.
+- [x] **Both swipe gestures inverted** (`topbar.tsx`): open is now a right-edge swipe-left (`clientX < innerWidth - EDGE_PX`, `dx < -OPEN_THRESHOLD_PX`), close is a swipe-right inside the drawer (`dx > CLOSE_THRESHOLD_PX`), matching the slide-out-to-right animation. Still gated to `< 1280px`.
+- [x] **Found and removed a duplicated drawer.** A second `<Sheet open={menuOpen}>` lived in the desktop layout block with an `md:hidden` trigger inside an `xl:grid`-only container — unclickable, so it read as dead code, but Radix portals sheet content to `document.body` where an ancestor's `display: none` does not reach it. Every mobile menu open therefore mounted **two** identical drawers and stacked **two** `bg-black/50` overlays (a visibly darker scrim, plus two competing focus traps). One `<Sheet>` now, in the mobile row.
+- [x] **`sheet.tsx`'s nav special-casing is now an explicit `navigation` prop** rather than `side === "left"`. That condition was really "the dashboard drawer is the only left-sided sheet in the app" expressed as a rule about geometry, so moving the drawer would have silently demoted it to a generic sheet — losing its "Navigation Menu" screen-reader labels and its chevron in favour of an X. The close chevron now points the way the drawer travels (`ChevronLeft` left, `ChevronRight` right). The two other sheets in the app (`tables-manager`, marketing `site-header`) use the default right side and do not opt in, so their X and generic labelling are unchanged.
+
+**iOS caveat, unresolved by design**: a right-edge swipe is also Safari's forward-navigation gesture, so on iOS Safari the open-swipe may compete with it where forward history exists. The hamburger is the primary affordance and is unaffected; the installed PWA has no browser edge gestures. Flagged rather than worked around — the operator asked for the right edge explicitly.
+
+Verified: `pnpm type-check`, `pnpm lint`, `pnpm test` (954 tests, 93 files) all pass. One earlier run showed 4 timeout failures across unrelated files (pricing-cards, sidebar, decimal-input, server-image-compression) — all `Test timed out in Nms`, caused by a stray busy-wait loop of mine pegging a core, not by this change; clean on re-run.
+
+---
+
 ## ✅ 2026-08-14 — Install and Offline & Sync Are One Slot, Not Two Buttons (2.69.1)
 
 Operator screenshot of the topbar showing the Install (download) and Offline & Sync (cloud) icons side by side: "it's doubled". Asked for Offline & Sync only once installed, and only the install button before that.

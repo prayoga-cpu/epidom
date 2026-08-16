@@ -42,7 +42,7 @@ export const responsive = {
   itemGrid3Col: "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3",
 
   // Card wrapper: consistent styling
-  cardWrapper: "min-h-[calc(100vh-150px)] overflow-hidden shadow-md",
+  cardWrapper: "min-h-[calc((100vh-150px)/var(--app-zoom,1))] overflow-hidden shadow-md",
   cardHeader: "border-b",
 
   // Section spacing

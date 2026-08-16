@@ -67,6 +67,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         product: {
           select: {
             productLine: true,
+            // Drives the POS "counted" chip. Deliberately labelled "counted",
+            // never "available": it is the finished-goods balance, and a
+            // BATCH_PRODUCED item at 0 counted is still perfectly sellable —
+            // the kitchen just makes it fresh and the ingredients come out
+            // then. Nothing here gates the tile.
+            stockMode: true,
+            currentStock: true,
+            unit: true,
             optionGroups: {
               orderBy: { displayOrder: "asc" },
               include: { options: { orderBy: { displayOrder: "asc" } } },
@@ -96,9 +104,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       name,
       items: items.map((i) => {
         const isCustom = i.product?.productLine === "CUSTOM";
+        // Only a counted product has a meaningful number to show. Made-to-order
+        // and untracked items keep no finished-goods balance, so they get no
+        // chip rather than a misleading "0".
+        const counted =
+          i.product?.stockMode === "BATCH_PRODUCED"
+            ? { countedStock: Number(i.product.currentStock), countedUnit: i.product.unit }
+            : {};
         return {
           ...i,
           price: Number(i.price),
+          ...counted,
           ...(isCustom && { department: "CUSTOM" as const, isAvailable: true }),
         };
       }),

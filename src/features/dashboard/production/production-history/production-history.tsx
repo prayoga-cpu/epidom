@@ -427,16 +427,33 @@ export function ProductionHistoryCard() {
                               {batch.product?.name || getRecipeName(batch.recipeId)}
                             </TableCell>
                             <TableCell>
-                              {batch.triggerType === "ORDER_SHORTFALL" && batch.orderItems?.[0] ? (
-                                <Badge variant="outline" className="text-xs whitespace-nowrap">
-                                  {t("management.productionHistory.fromOrder")}{" "}
-                                  {batch.orderItems[0].order.orderNumber}
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">
-                                  {t("management.productionHistory.triggerManual")}
-                                </Badge>
-                              )}
+                              <div className="flex flex-col items-start gap-1">
+                                {batch.triggerType === "ORDER_SHORTFALL" &&
+                                batch.orderItems?.[0] ? (
+                                  <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                    {t("management.productionHistory.fromOrder")}{" "}
+                                    {batch.orderItems[0].order.orderNumber}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {t("management.productionHistory.triggerManual")}
+                                  </Badge>
+                                )}
+                                {/* This batch's ingredients already left
+                                    inventory at the sale — logging the run
+                                    again is harmless (settlement nets it) but
+                                    redundant, so say so up front. */}
+                                {batch.triggerType === "ORDER_SHORTFALL" &&
+                                  batch.materialsDrawnAt && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-muted-foreground max-w-[220px] text-left text-xs whitespace-normal"
+                                    >
+                                      <CheckCircle className="h-3 w-3 shrink-0" />
+                                      {t("production.settlement.alreadyAccounted")}
+                                    </Badge>
+                                  )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <Badge className={statusConfig.color}>

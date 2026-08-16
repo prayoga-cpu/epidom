@@ -92,8 +92,8 @@ export function CheckoutSuccessContent() {
   };
 
   return (
-    <div className="bg-background min-h-screen">
-      <div className="flex min-h-screen items-center justify-center px-4 py-12">
+    <div className="bg-background min-h-[calc(100vh/var(--app-zoom,1))]">
+      <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center px-4 py-12">
         <div className="w-full max-w-md space-y-8 text-center">
           {/* Success Icon */}
           <div className="flex justify-center">

@@ -41,8 +41,8 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
   const selectedPlan: PlanType = getValidPlan(resolvedSearchParams.plan);
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
-      <main className="min-h-screen pt-20 md:pt-24">
+    <div className="min-h-[calc(100vh/var(--app-zoom,1))] bg-[#F9FAFB]">
+      <main className="min-h-[calc(100vh/var(--app-zoom,1))] pt-20 md:pt-24">
         <div className="animate-slide-up">
           <PaymentHero plan={selectedPlan} />
         </div>

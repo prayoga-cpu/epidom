@@ -68,7 +68,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
       // Default error UI
       return (
-        <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
               <div className="bg-destructive/10 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">

@@ -10,7 +10,7 @@ import { ItemCardGrid } from "../../components/base-item-card";
  */
 export function ProductsCardGridSkeleton({ cards = 6 }: { cards?: number }) {
   return (
-    <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+    <Card className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] overflow-hidden shadow-md">
       {/* Header Skeleton - matches CardHeader structure */}
       <CardHeader className="border-b">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

@@ -353,7 +353,7 @@ export function ReservationList({ storeId }: Props) {
 
       {/* Delete dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent className="max-h-[85dvh] overflow-y-auto">
+        <AlertDialogContent className="max-h-[calc(85dvh/var(--app-zoom,1))] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>{t("pages.reservationsDeleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>{t("pages.reservationsDeleteDesc")}</AlertDialogDescription>

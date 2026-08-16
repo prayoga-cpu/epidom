@@ -257,7 +257,7 @@ export function OrderHistoryDetailDialog({
   return (
     <>
       <Dialog open={swap.baseOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+        <DialogContent className="max-h-[calc(85dvh/var(--app-zoom,1))] overflow-y-auto">
           {order && (
             <>
               <DialogHeader>

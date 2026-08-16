@@ -79,6 +79,12 @@ const posOrderObjectSchema = z.object({
   // The cashier-typed label for paymentMethod: "OTHER" (e.g. "Crypto",
   // "Company account") — required in that case, see the refine below.
   paymentNote: z.string().max(200, "Note is too long").optional(),
+  // Idempotency key for offline replay. The POS queues orders to IndexedDB
+  // while disconnected and POSTs them on reconnect; if the response is lost, or
+  // a second tab flushes the same queue, the retry previously created a
+  // DUPLICATE order with duplicate stock deduction behind it. The queue entry's
+  // own id is the key. Absent for ordinary online checkouts.
+  clientRequestId: z.string().min(1).max(128).optional(),
 });
 
 export const createPosOrderSchema = posOrderObjectSchema.refine(
@@ -121,6 +127,15 @@ export const updateOrderStatusSchema = z
     // flow) — deliberately narrowed to "mark paid" only, not a general
     // paymentStatus setter.
     paymentStatus: z.literal("PAID").optional(),
+    // Only meaningful alongside status: "CANCELLED". Stock deduction fires at
+    // DELIVERED — i.e. after the food was made and handed over — so cancelling
+    // puts counted finished goods back on the shelf but deliberately does NOT
+    // credit raw ingredients back: they are physically inside food in a bin,
+    // and crediting them would fabricate stock (and double-count the loss if
+    // that food is then binned through the Waste flow). Setting this to true is
+    // the operator stating the food was never actually made, which is the one
+    // case where the ingredients really are still on the shelf.
+    foodWasNeverMade: z.boolean().optional(),
     // How the settle-up was actually paid, and an optional free-text note
     // (e.g. "client paid directly to the owner") — only meaningful alongside
     // paymentStatus: "PAID", enforced by the refine below.

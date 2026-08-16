@@ -17,7 +17,7 @@ export default async function StoresLayout({ children }: { children: React.React
 
   return (
     <I18nProvider>
-      <div className="bg-background flex h-screen flex-col overflow-hidden">
+      <div className="bg-background flex h-[calc(100vh/var(--app-zoom,1))] flex-col overflow-hidden">
         <SiteHeader variant="authenticated" showNav={true} showLogout={true} />
         <main className="flex flex-1 flex-col overflow-hidden pt-20 sm:pt-24 md:pt-20">
           {children}

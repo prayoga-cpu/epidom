@@ -228,7 +228,10 @@ Table products {
   costPrice Decimal [not null]
   sellingPrice Decimal [not null]
   currentStock Decimal [not null, default: 0]
-  trackStock Boolean [not null, default: true]
+  stockMode StockMode [not null, default: 'BATCH_PRODUCED']
+  primaryRecipeId String
+  costPriceManual Boolean [not null, default: false]
+  costPriceOriginal Decimal
   unit String [not null, default: 'piece']
   productionTime Int
   shelfLife Int
@@ -241,6 +244,7 @@ Table products {
   productionBatches production_batches [not null]
   store stores [not null]
   recipeProducts recipe_products [not null]
+  primaryRecipe recipes
   stockMovements stock_movements [not null]
   menuItems menu_items [not null]
   optionGroups product_option_groups [not null]
@@ -342,6 +346,7 @@ Table recipes {
   productionBatches production_batches [not null]
   ingredients recipe_ingredients [not null]
   recipeProducts recipe_products [not null]
+  primaryForProducts products [not null]
   store stores [not null]
 }
 
@@ -366,7 +371,6 @@ Table recipe_products {
   id String [pk]
   recipeId String [not null]
   productId String [not null]
-  isDefault Boolean [not null, default: false]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   product products [not null]
@@ -390,6 +394,8 @@ Table production_batches {
   scheduledDate DateTime [not null]
   completedDate DateTime
   notes String
+  materialsDrawnAt DateTime
+  settledQuantity Decimal [not null, default: 0]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   storeId String [not null]
@@ -415,6 +421,7 @@ Table stock_movements {
   reason String
   referenceId String
   wasteEntryId String
+  reversesMovementId String
   material ingredients
   order orders
   product products
@@ -521,6 +528,8 @@ Table orders {
   refundAmount Decimal [not null, default: 0]
   refundedAt DateTime
   refundReason String
+  stockDeductedAt DateTime
+  clientRequestId String [unique]
   notes String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -559,6 +568,7 @@ Table order_items {
   notes String
   selectedOptions Json
   unitCostSnapshot Decimal
+  optionCostSnapshot Decimal
   status OrderItemStatus [not null, default: 'PENDING']
   preparedAt DateTime
   servedAt DateTime
@@ -1192,6 +1202,12 @@ Enum ProductLine {
   CUSTOM
 }
 
+Enum StockMode {
+  BATCH_PRODUCED
+  MADE_TO_ORDER
+  UNTRACKED
+}
+
 Enum PayType {
   HOURLY
   MONTHLY
@@ -1251,6 +1267,8 @@ Ref: business_finance_settings.businessId - businesses.id [delete: Cascade]
 Ref: subscriptions.userId - user.id [delete: Cascade]
 
 Ref: products.storeId > stores.id [delete: Cascade]
+
+Ref: products.primaryRecipeId > recipes.id [delete: Set Null]
 
 Ref: product_option_groups.productId > products.id [delete: Cascade]
 

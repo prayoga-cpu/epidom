@@ -55,7 +55,7 @@ export function AuthPage({ initialMode }: { initialMode: AuthMode }) {
 
   return (
     <div
-      className="grid h-screen w-full grid-cols-1 overflow-hidden md:grid-cols-2"
+      className="grid h-[calc(100vh/var(--app-zoom,1))] w-full grid-cols-1 overflow-hidden md:grid-cols-2"
       style={{ background: "var(--epi-navy-900)" }}
     >
       {/* Left: Form Area */}

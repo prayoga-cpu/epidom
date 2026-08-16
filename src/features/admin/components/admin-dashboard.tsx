@@ -529,7 +529,7 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-[calc(100vh/var(--app-zoom,1))]">
       {/* Header */}
       <div className="border-border bg-card/50 sticky top-0 z-10 border-b backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
@@ -923,7 +923,7 @@ export function AdminDashboard() {
           }
         }}
       >
-        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+        <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <LogIn className="h-4 w-4 text-emerald-400" />
@@ -1015,7 +1015,7 @@ export function AdminDashboard() {
           if (!open) setPwTarget(null);
         }}
       >
-        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+        <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-blue-400" />
@@ -1081,7 +1081,7 @@ export function AdminDashboard() {
           if (!open) setPriceTarget(null);
         }}
       >
-        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+        <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <CircleDollarSign className="h-4 w-4 text-emerald-400" />
@@ -1179,7 +1179,7 @@ export function AdminDashboard() {
           }
         }}
       >
-        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+        <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle className="text-red-500">Delete Account</DialogTitle>
             <DialogDescription>
@@ -1231,7 +1231,7 @@ export function AdminDashboard() {
           }
         }}
       >
-        <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+        <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle className="text-amber-500">Reset Account Data</DialogTitle>
             <DialogDescription>

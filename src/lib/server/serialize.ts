@@ -168,12 +168,20 @@ export function serializeProducts(products: ProductWithRelations[]): ProductWith
  * Uses type assertion because serialized version has numbers instead of Decimals
  */
 export function serializeRecipe(recipe: RecipeWithIngredientsRepo): RecipeWithIngredients {
-  // Explicitly serialize all fields to ensure Decimal objects are converted
+  // Explicitly serialize all fields to ensure Decimal objects are converted.
+  //
+  // WARNING: this is a whitelist that ends in an `as RecipeWithIngredients`
+  // cast, so any field omitted here is silently dropped with zero type errors —
+  // the client just sees `undefined` and the feature reading it quietly dies.
+  // `department` was missing for exactly this reason (the Kitchen/Bar badge was
+  // dead on every surface this serializer feeds). When you add a field to the
+  // Recipe / Product schema that the dashboard reads, add it here too.
   return {
     id: recipe.id,
     name: recipe.name,
     description: recipe.description,
     category: recipe.category,
+    department: recipe.department,
     yieldQuantity: decimalToNumber(recipe.yieldQuantity),
     yieldUnit: recipe.yieldUnit,
     productionTimeMinutes: recipe.productionTimeMinutes,
@@ -201,7 +209,6 @@ export function serializeRecipe(recipe: RecipeWithIngredientsRepo): RecipeWithIn
       id: rp.id,
       recipeId: rp.recipeId,
       productId: rp.productId,
-      isDefault: rp.isDefault,
       createdAt: rp.createdAt,
       updatedAt: rp.updatedAt,
       product: {
@@ -210,6 +217,11 @@ export function serializeRecipe(recipe: RecipeWithIngredientsRepo): RecipeWithIn
         name: rp.product.name,
         description: rp.product.description,
         category: rp.product.category,
+        // Every "is this thing produced ahead or cooked to order?" branch in the
+        // dashboard keys off these two. Dropping them here is what makes a
+        // Produce screen offer to batch a made-to-order dish.
+        stockMode: rp.product.stockMode,
+        primaryRecipeId: rp.product.primaryRecipeId,
         costPrice: decimalToNumber(rp.product.costPrice),
         sellingPrice: decimalToNumber(rp.product.sellingPrice),
         currentStock: decimalToNumber(rp.product.currentStock),

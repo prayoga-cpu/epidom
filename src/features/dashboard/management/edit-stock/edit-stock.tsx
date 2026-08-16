@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useMaterials, useUpdateMaterial } from "@/features/dashboard/data/materials/hooks/use-materials";
+import { useProducts } from "@/features/dashboard/data/products/hooks/use-products";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { FilterBar } from "@/features/dashboard/shared/components/filter-bar";
 import { sortRows, type SortDir } from "@/features/dashboard/shared/hooks/use-sortable";
@@ -31,6 +32,7 @@ import {
   CalendarIcon,
   ShoppingCart,
   ArrowUpDown,
+  AlertTriangle,
 } from "lucide-react";
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
 import { BulkAdjustmentDialog } from "./bulk-adjustment-dialog";
@@ -44,7 +46,7 @@ import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ItemType = "material" | "product";
-type StatusFilter = "all" | "low" | "overstock" | "in-stock";
+type StatusFilter = "all" | "oversold" | "low" | "overstock" | "in-stock";
 type ExpirationFilter = "any" | "expired" | "soon" | "month";
 type SortField = "name" | "stock" | "expiration";
 
@@ -85,7 +87,9 @@ function sanitizeStockFilters(raw: unknown, defaults: StockFilters): StockFilter
   const r = raw as Partial<StockFilters>;
   return {
     innerTab: r.innerTab === "reorder" ? "reorder" : "items",
-    status: (["all", "low", "overstock", "in-stock"] as const).includes(r.status as StatusFilter)
+    status: (["all", "oversold", "low", "overstock", "in-stock"] as const).includes(
+      r.status as StatusFilter
+    )
       ? (r.status as StatusFilter)
       : "all",
     category: typeof r.category === "string" ? r.category : "all",
@@ -144,12 +148,27 @@ export function EditStockCard({
   const [wasteItemType, setWasteItemType] = useState<ItemType>("material");
   const [expirationPopoverOpen, setExpirationPopoverOpen] = useState(false);
 
-  const { data: materialsData, isLoading } = useMaterials(storeId);
+  // New keys ship in a separate locale change; `t()` echoes the key back when
+  // it is missing, so fall back to English rather than render a raw key path.
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
+
+  const { data: materialsData, isLoading: isLoadingMaterials } = useMaterials(storeId);
+  // Finished goods live here too — this is the only surface where product
+  // shrinkage (and oversell) becomes visible.
+  const { data: productsData, isLoading: isLoadingProducts } = useProducts(storeId, {
+    productLine: "STANDARD",
+    sortBy: "name",
+    sortOrder: "asc",
+    take: 100,
+  });
+  const isLoading = isLoadingMaterials || isLoadingProducts;
   const updateMaterial = useUpdateMaterial(storeId, selectedItemId ?? "");
 
   const allStockItems: StockItem[] = useMemo(() => {
-    if (!materialsData?.materials) return [];
-    return materialsData.materials.map((m) => ({
+    const materialItems: StockItem[] = (materialsData?.materials ?? []).map((m) => ({
       id: m.id,
       name: m.name,
       sku: m.sku || "",
@@ -162,7 +181,30 @@ export function EditStockCard({
       type: "material" as ItemType,
       expirationDate: m.expirationDate ? new Date(m.expirationDate).toISOString() : null,
     }));
-  }, [materialsData]);
+
+    // Only BATCH_PRODUCED products hold a counted finished-goods balance.
+    // MADE_TO_ORDER consumes raw materials per sale and UNTRACKED never moves,
+    // so neither has a quantity this screen could adjust or value.
+    const productItems: StockItem[] = (productsData?.products ?? [])
+      .filter((p) => p.stockMode === "BATCH_PRODUCED")
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        sku: p.sku || "",
+        category: p.category ?? null,
+        currentStock: Number(p.currentStock),
+        minStock: Number(p.minStock),
+        maxStock: Number(p.maxStock),
+        unit: p.unit,
+        costPerUnit: Number(p.costPrice),
+        type: "product" as ItemType,
+        // Products track `shelfLife` (days from production), not a single
+        // expiry date, so there is nothing to show or edit here.
+        expirationDate: null,
+      }));
+
+    return [...materialItems, ...productItems];
+  }, [materialsData, productsData]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -171,6 +213,17 @@ export function EditStockCard({
   }, [allStockItems]);
 
   const getStockStatus = (item: StockItem) => {
+    // A negative balance means more was sold/consumed than was ever counted.
+    // Stock clamps were removed from the sale path on purpose, so this is the
+    // honest record — and it outranks every threshold below it.
+    if (item.currentStock < 0) {
+      return {
+        label: tr("data.products.stockStatus.oversold", "Oversold"),
+        variant: "destructive" as const,
+        icon: AlertTriangle,
+        key: "oversold" as StatusFilter,
+      };
+    }
     if (item.currentStock <= item.minStock) {
       return { label: t("management.editStock.lowStock"), variant: "outline" as const, icon: AlertCircle, key: "low" as StatusFilter };
     } else if (item.currentStock > item.maxStock) {
@@ -179,10 +232,19 @@ export function EditStockCard({
     return { label: t("management.editStock.inStock"), variant: "outline" as const, icon: CheckCircle, key: "in-stock" as StatusFilter };
   };
 
+  /** Real fill level — negative when oversold. Never feed this to a bar. */
   const getStockPercentage = (item: StockItem) => {
     if (item.maxStock === 0) return 0;
     return (item.currentStock / item.maxStock) * 100;
   };
+
+  /**
+   * Bar-safe fill. A progress bar cannot draw a negative width (Radix would
+   * translate the indicator past its own track), so the bar clamps to 0–100
+   * while the printed percentage keeps the real, possibly negative number.
+   */
+  const getStockBarValue = (item: StockItem) =>
+    Math.max(0, Math.min(getStockPercentage(item), 100));
 
   const getExpirationState = (item: StockItem): "expired" | "soon" | "month" | null => {
     if (!item.expirationDate) return null;
@@ -280,6 +342,9 @@ export function EditStockCard({
     setCsvImportDialogOpen(true);
   };
 
+  // Negative balances are exported as-is: rounding an oversell up to 0 would
+  // hand the operator a spreadsheet that disagrees with the app (and with the
+  // shelf). The status column names the condition so the number reads right.
   const exportData = filteredItems.map((item) => ({
     [t("common.sku")]: item.sku,
     [t("common.name")]: item.name,
@@ -361,6 +426,9 @@ export function EditStockCard({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("management.editStock.filterAllStatuses")}</SelectItem>
+                  <SelectItem value="oversold">
+                    {tr("data.products.stockStatus.oversold", "Oversold")}
+                  </SelectItem>
                   <SelectItem value="low">{t("management.editStock.lowStock")}</SelectItem>
                   <SelectItem value="in-stock">{t("management.editStock.inStock")}</SelectItem>
                   <SelectItem value="overstock">Overstock</SelectItem>
@@ -522,6 +590,7 @@ export function EditStockCard({
                     const status = getStockStatus(item);
                     const StatusIcon = status.icon;
                     const isSelected = selectedItems.includes(item.id);
+                    const isOversold = status.key === "oversold";
                     const isLow = item.currentStock <= item.minStock;
                     const expirationState = getExpirationState(item);
 
@@ -550,6 +619,16 @@ export function EditStockCard({
                               <p className="truncate font-medium">{item.name}</p>
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <p className="text-muted-foreground text-xs">{item.sku}</p>
+                                <Badge variant="secondary" className="text-xs">
+                                  {item.type === "material"
+                                    ? t("management.editStock.material")
+                                    : t("management.editStock.product")}
+                                </Badge>
+                                {isOversold && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    {status.label}
+                                  </Badge>
+                                )}
                                 {expirationState && (
                                   <Badge
                                     variant={expirationState === "expired" ? "destructive" : "outline"}
@@ -562,18 +641,26 @@ export function EditStockCard({
                                 )}
                               </div>
                             </div>
-                            <StatusIcon className="h-4 w-4 shrink-0" />
+                            <StatusIcon
+                              className={`h-4 w-4 shrink-0 ${isOversold ? "text-destructive" : ""}`}
+                            />
                           </div>
                           <div className="mt-2">
                             <div className="flex justify-between text-xs">
-                              <span className="text-muted-foreground">
+                              <span
+                                className={isOversold ? "text-destructive" : "text-muted-foreground"}
+                              >
                                 {item.currentStock} / {item.maxStock} {item.unit}
                               </span>
-                              <span className="text-muted-foreground">{Math.round(getStockPercentage(item))}%</span>
+                              <span
+                                className={isOversold ? "text-destructive" : "text-muted-foreground"}
+                              >
+                                {Math.round(getStockPercentage(item))}%
+                              </span>
                             </div>
                             <Progress
-                              value={Math.min(getStockPercentage(item), 100)}
-                              className={`mt-1 h-1.5 ${isLow ? "bg-muted [&>div]:bg-red-600" : "bg-muted [&>div]:bg-emerald-600"}`}
+                              value={getStockBarValue(item)}
+                              className={`mt-1 h-1.5 ${isLow || isOversold ? "bg-muted [&>div]:bg-red-600" : "bg-muted [&>div]:bg-emerald-600"}`}
                             />
                           </div>
                         </button>
@@ -618,26 +705,59 @@ export function EditStockCard({
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t("management.editStock.currentStock")}</span>
-                        <span className="font-medium">
+                        <span
+                          className={`font-medium ${selectedItem.currentStock < 0 ? "text-destructive" : ""}`}
+                        >
                           {selectedItem.currentStock} / {selectedItem.maxStock} {selectedItem.unit}
+                          {" · "}
+                          {Math.round(getStockPercentage(selectedItem))}%
                         </span>
                       </div>
                       <Progress
-                        value={Math.min(getStockPercentage(selectedItem), 100)}
+                        value={getStockBarValue(selectedItem)}
                         className={`h-2 ${
                           selectedItem.currentStock <= selectedItem.minStock
                             ? "bg-muted [&>div]:bg-red-600"
                             : "bg-muted [&>div]:bg-emerald-600"
                         }`}
                       />
+                      {selectedItem.currentStock < 0 && (
+                        <p className="text-destructive text-xs">
+                          {tr(
+                            "alerts.negativeStock.body",
+                            "{name} is showing {count} below zero. Count what's really there and correct it."
+                          )
+                            .replace("{name}", selectedItem.name)
+                            .replace(
+                              "{count}",
+                              `${Math.abs(selectedItem.currentStock)} ${selectedItem.unit}`
+                            )}
+                        </p>
+                      )}
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="rounded-lg border p-4">
                         <p className="text-muted-foreground text-sm">{t("management.editStock.stockValue")}</p>
-                        <p className="text-2xl font-bold">
-                          {formatPrice(selectedItem.currentStock * selectedItem.costPerUnit)}
-                        </p>
+                        {/* Below zero this is not an asset — it is the cost of
+                            stock that was sold but never existed. */}
+                        {selectedItem.currentStock * selectedItem.costPerUnit < 0 ? (
+                          <>
+                            <p className="text-destructive text-2xl font-bold">
+                              −
+                              {formatPrice(
+                                Math.abs(selectedItem.currentStock * selectedItem.costPerUnit)
+                              )}
+                            </p>
+                            <p className="text-destructive text-xs">
+                              {tr("data.products.stockStatus.oversold", "Oversold")}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-2xl font-bold">
+                            {formatPrice(selectedItem.currentStock * selectedItem.costPerUnit)}
+                          </p>
+                        )}
                       </div>
 
                       <div className="rounded-lg border p-4">
@@ -656,6 +776,12 @@ export function EditStockCard({
 
                       <div className="rounded-lg border p-4">
                         <p className="text-muted-foreground text-sm">{t("management.editStock.expirationDate")}</p>
+                        {/* Editable for raw materials only — the mutation
+                            behind it is the material endpoint, and products
+                            carry `shelfLife` rather than an expiry date. */}
+                        {selectedItem.type !== "material" ? (
+                          <p className="text-muted-foreground text-lg font-semibold">&mdash;</p>
+                        ) : (
                         <Popover open={expirationPopoverOpen} onOpenChange={setExpirationPopoverOpen}>
                           <PopoverTrigger asChild>
                             <Button variant="ghost" className="h-auto p-0 text-lg font-semibold">
@@ -688,6 +814,7 @@ export function EditStockCard({
                             )}
                           </PopoverContent>
                         </Popover>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -698,16 +825,34 @@ export function EditStockCard({
                     <h4 className="font-semibold">{t("management.editStock.quickActions")}</h4>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <StockAdjustmentDialog
-                        itemId={selectedItem.id}
-                        itemType={selectedItem.type}
-                        trigger={
-                          <Button variant="outline" className="w-full">
-                            <Edit3 className="mr-1 hidden h-4 w-4 sm:inline" />
-                            {t("management.editStock.adjustStock")}
-                          </Button>
-                        }
-                      />
+                      {selectedItem.type === "material" ? (
+                        <StockAdjustmentDialog
+                          itemId={selectedItem.id}
+                          itemType={selectedItem.type}
+                          trigger={
+                            <Button variant="outline" className="w-full">
+                              <Edit3 className="mr-1 hidden h-4 w-4 sm:inline" />
+                              {t("management.editStock.adjustStock")}
+                            </Button>
+                          }
+                        />
+                      ) : (
+                        /* StockAdjustmentDialog posts the selected id as
+                           `materialId` unconditionally, so a product must go
+                           through the bulk dialog, which routes it as
+                           `productId`. Seeded with just this one item. */
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => {
+                            setSelectedItems([selectedItem.id]);
+                            setBulkAdjustmentOpen(true);
+                          }}
+                        >
+                          <Edit3 className="mr-1 hidden h-4 w-4 sm:inline" />
+                          {t("management.editStock.adjustStock")}
+                        </Button>
+                      )}
 
                       <Button
                         variant="outline"

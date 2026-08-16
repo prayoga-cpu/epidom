@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,14 +24,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useConfirm } from "@/components/ui/use-confirm";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, Link2, Link2Off } from "lucide-react";
+import { AlertCircle, Loader2, Check, X, Link2, Link2Off } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import type {
   Product,
   RecipeProduct,
@@ -61,6 +65,33 @@ import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 import { OptionGroupsEditor } from "@/components/shared/option-groups-editor";
 import type { ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
 
+type StockModeValue = "BATCH_PRODUCED" | "MADE_TO_ORDER" | "UNTRACKED";
+
+/**
+ * The three ways a sale can consume inventory (Product.stockMode).
+ *
+ * BATCH_PRODUCED deliberately covers BOTH made-ahead goods AND stock bought in
+ * ready to sell — the migration maps every previously-tracked product onto it,
+ * retail included, so the copy must not read as "prepped in-house only".
+ */
+const STOCK_MODE_OPTIONS = [
+  {
+    value: "BATCH_PRODUCED",
+    label: "data.products.form.stockMode.batch",
+    hint: "data.products.form.stockMode.batchHint",
+  },
+  {
+    value: "MADE_TO_ORDER",
+    label: "data.products.form.stockMode.madeToOrder",
+    hint: "data.products.form.stockMode.madeToOrderHint",
+  },
+  {
+    value: "UNTRACKED",
+    label: "data.products.form.stockMode.untracked",
+    hint: "data.products.form.stockMode.untrackedHint",
+  },
+] as const;
+
 // Helper function to create product schema with translated messages
 // Note: Number fields allow undefined in form state (for better UX - can clear field),
 // validation happens in onSubmit after converting undefined to defaults
@@ -71,6 +102,16 @@ function createProductSchema(t: (key: string) => string) {
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
     department: z.enum(["KITCHEN", "BAR"]),
+    // BARE enum, deliberately no `.default()`: zodResolver infers useForm's
+    // field type from the schema's INPUT type, and a default makes the input
+    // optional while the output stays required — the two desync and every
+    // `form.watch("stockMode")` widens to `| undefined`. Follow `department`
+    // above (bare enum + a value in `defaultValues`), never the old
+    // `trackStock` pattern.
+    stockMode: z.enum(["BATCH_PRODUCED", "MADE_TO_ORDER", "UNTRACKED"]),
+    // Which linked recipe defines ONE unit — drives sale-time deduction and
+    // the cost preview. Maintained by RecipeSelector.
+    primaryRecipeId: z.string().optional(),
     retailPrice: z.union([
       z.number().positive(t("common.validation.pricePositive")),
       z.undefined(),
@@ -112,6 +153,7 @@ export function EditProductDialog({
   const { t } = useI18n();
   const { currency, convertPrice, convertToBase } = useCurrency();
   const updateProduct = useUpdateProduct(storeId, product.id);
+  const { confirm, confirmDialog } = useConfirm();
 
   const isSubmittingRef = useRef(false);
   const savedFormDataRef = useRef<ProductFormValues | null>(null);
@@ -119,6 +161,10 @@ export function EditProductDialog({
   // value auto-calculated from linked recipes. Off by default: as long as a
   // recipe with a calculable cost is linked, the field is locked to that
   // value so it can't silently drift out of sync with the recipe.
+  // Seeded from the stored Product.costPriceManual when the dialog opens (see
+  // the reset effect), so a product the owner previously opted out of does not
+  // silently opt back in — and so the server cascade and this checkbox always
+  // agree about who owns the number.
   const [manualCostPrice, setManualCostPrice] = useState(false);
   // "keep" = keep current | "none" = unlink | "<itemId>" = link to that item
   const [menuItemReassign, setMenuItemReassign] = useState<string>("keep");
@@ -165,6 +211,8 @@ export function EditProductDialog({
       description: "",
       category: "",
       department: "KITCHEN",
+      stockMode: "BATCH_PRODUCED",
+      primaryRecipeId: undefined,
       retailPrice: undefined,
       costPrice: undefined,
       unit: "piece",
@@ -196,7 +244,10 @@ export function EditProductDialog({
 
       // Extract recipe IDs from recipeProducts
       const recipeIds = product.recipeProducts?.map((rp) => rp.recipeId) || [];
-      setManualCostPrice(false);
+      // Seed from what is stored, not a blanket false: resetting to false on
+      // every open would silently re-enrol a product the owner had opted out
+      // of, and the next recipe cost change would overwrite their typed figure.
+      setManualCostPrice(product.costPriceManual === true);
 
       setOptionGroups(
         (product.optionGroups ?? []).map((group) => ({
@@ -221,6 +272,10 @@ export function EditProductDialog({
         // unlike Material, a product is never assigned "BOTH" — it always
         // routes to exactly one KDS station (enforced by createProductSchema).
         department: (product.department as "KITCHEN" | "BAR" | undefined) ?? "KITCHEN",
+        // Never derive this from the deprecated `trackStock` flag — stockMode
+        // is the authoritative field and trackStock is derived FROM it.
+        stockMode: (product.stockMode as StockModeValue | undefined) ?? "BATCH_PRODUCED",
+        primaryRecipeId: product.primaryRecipeId ?? undefined,
         retailPrice: sellingPrice > 0 ? convertPrice(sellingPrice) : undefined, // Convert to user's currency, undefined if 0
         costPrice: costPrice > 0 ? convertPrice(costPrice) : undefined, // Convert to user's currency, undefined if 0
         unit: product.unit || "piece",
@@ -235,27 +290,80 @@ export function EditProductDialog({
   // Watch cost price for pricing suggestions
   const costPrice = form.watch("costPrice");
   const recipeIds = form.watch("recipeIds") || [];
+  const stockMode = form.watch("stockMode");
+  const primaryRecipeId = form.watch("primaryRecipeId");
+
+  // Only BATCH_PRODUCED products are counted, so only they get stock levels.
+  const showStockFields = stockMode === "BATCH_PRODUCED";
+
+  // Resolved here rather than trusting the field alone, so the cost preview is
+  // correct on the very render where RecipeSelector is still repairing a stale
+  // primary (e.g. right after the current primary was unlinked).
+  const effectivePrimaryRecipeId =
+    primaryRecipeId && recipeIds.includes(primaryRecipeId) ? primaryRecipeId : recipeIds[0];
+  const hasPrimaryRecipe = !!effectivePrimaryRecipeId;
+
+  const handlePrimaryRecipeChange = useCallback(
+    (id: string | null) => {
+      form.setValue("primaryRecipeId", id ?? undefined, { shouldDirty: true });
+    },
+    [form]
+  );
+
+  // Moving a counted product to made-to-order abandons whatever is on the
+  // shelf — that's a real, surprising consequence, so it gets an explicit
+  // confirmation instead of quietly flipping when the card is tapped.
+  const handleStockModeChange = useCallback(
+    async (nextValue: string, applyChange: (value: StockModeValue) => void) => {
+      const next = nextValue as StockModeValue;
+      // Re-selecting the card that's already active must never re-prompt.
+      if (next === form.getValues("stockMode")) return;
+      const wasMadeToOrder = product.stockMode === "MADE_TO_ORDER";
+      if (next === "MADE_TO_ORDER" && !wasMadeToOrder) {
+        // Prefer whatever is in the field over the stored row — the user may
+        // have just corrected the count in this same session.
+        const onHand = form.getValues("currentStock") ?? (Number(product.currentStock) || 0);
+        if (onHand > 0) {
+          const confirmed = await confirm({
+            title: t("data.products.form.stockMode.madeToOrder"),
+            description: t("data.products.form.stockMode.switchWarning").replace(
+              "{n}",
+              String(onHand)
+            ),
+            confirmText: t("common.actions.apply"),
+            cancelText: t("common.actions.cancel"),
+          });
+          if (!confirmed) return;
+        }
+      }
+      applyChange(next);
+    },
+    [confirm, form, product.currentStock, product.stockMode, t]
+  );
 
   // Cost Price is locked to the auto-calculated value as long as a recipe is
   // linked and the user hasn't opted into a manual override (see the
   // "Customize manually" checkbox below the field).
   const costPriceLocked = recipeIds.length > 0 && !manualCostPrice;
 
-  // Auto-calculate cost price from linked recipes' cost-per-unit (costPerBatch /
-  // yieldQuantity, summed across every linked recipe). Keeps the field synced
-  // to the recipe cost whenever it's locked — including right when the dialog
-  // opens with recipes already attached, not just when the selection changes.
-  const recipeIdsKey = recipeIds.slice().sort().join(",");
+  // Auto-calculate cost price from the PRIMARY recipe's cost-per-unit
+  // (costPerBatch / yieldQuantity). Keeps the field synced to the recipe cost
+  // whenever it's locked — including right when the dialog opens with recipes
+  // already attached, not just when the selection changes.
+  //
+  // This used to SUM the cost-per-unit of every linked recipe, which
+  // double-counted: linking both the 10-loaf and the 50-loaf variant of one
+  // bread made a single loaf look twice as expensive as it is. Multiple linked
+  // recipes are alternative ways to produce the SAME unit, not additive
+  // components — so exactly one of them, the primary, defines the unit cost.
   useEffect(() => {
     if (!open || manualCostPrice) return;
-    if (recipeIds.length === 0 || allRecipes.length === 0) return;
-    const linked = allRecipes.filter((r) => recipeIds.includes(r.id));
-    if (linked.length === 0) return;
+    if (!effectivePrimaryRecipeId || allRecipes.length === 0) return;
+    const primary = allRecipes.find((r) => r.id === effectivePrimaryRecipeId);
+    if (!primary) return;
 
-    const totalBaseCost = linked.reduce((sum, r) => {
-      const yieldQty = Number(r.yieldQuantity);
-      return sum + (yieldQty > 0 ? Number(r.costPerBatch) / yieldQty : 0);
-    }, 0);
+    const yieldQty = Number(primary.yieldQuantity);
+    const baseCostPerUnit = yieldQty > 0 ? Number(primary.costPerBatch) / yieldQty : 0;
 
     // Round-trip through the display currency before checking positivity: a
     // real, non-zero base-currency cost (e.g. a few hundred IDR per unit) can
@@ -263,7 +371,7 @@ export function EditProductDialog({
     // overwrite the field when the suggestion is still meaningfully positive
     // after rounding — otherwise we'd silently zero out a field the user may
     // already have set, rather than leaving it alone as intended.
-    const suggestedCostPrice = Number(convertPrice(totalBaseCost).toFixed(2));
+    const suggestedCostPrice = Number(convertPrice(baseCostPerUnit).toFixed(2));
     if (suggestedCostPrice > 0) {
       form.setValue("costPrice", suggestedCostPrice, {
         shouldValidate: true,
@@ -271,7 +379,7 @@ export function EditProductDialog({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipeIdsKey, allRecipes, open, manualCostPrice]);
+  }, [effectivePrimaryRecipeId, allRecipes, open, manualCostPrice]);
   const suggestedRetailPrice =
     costPrice !== undefined && costPrice > 0 ? (costPrice * 2.5).toFixed(2) : "0.00";
 
@@ -305,6 +413,10 @@ export function EditProductDialog({
       // Validate required number fields (convert undefined to defaults and validate)
       const costPrice = data.costPrice ?? (Number(product.costPrice) || 0);
       const retailPrice = data.retailPrice ?? (Number(product.sellingPrice) || 0);
+      // Only BATCH_PRODUCED products carry stock levels; for the other two
+      // modes the inputs are off-screen, so the stored values are left exactly
+      // as they are rather than zeroed out behind the user's back.
+      const isBatchProduced = data.stockMode === "BATCH_PRODUCED";
       const currentStock = data.currentStock ?? (Number(product.currentStock) || 0);
       const minStock = data.minStock ?? (Number(product.minStock) || 0);
       const maxStock = data.maxStock ?? (Number(product.maxStock) || 1000);
@@ -326,13 +438,23 @@ export function EditProductDialog({
         return;
       }
 
-      if (maxStock <= 0) {
+      // Only enforceable while the field is on screen — never block a save on a
+      // hidden input the user has no way to correct.
+      if (isBatchProduced && maxStock <= 0) {
         form.setError("maxStock", {
           type: "manual",
           message: t("common.validation.maxStockPositive"),
         });
         return;
       }
+
+      // The primary must be one of the linked recipes — fall back to the first
+      // rather than sending a dangling id the server would have to reject.
+      const submittedRecipeIds = data.recipeIds ?? [];
+      const resolvedPrimaryRecipeId =
+        data.primaryRecipeId && submittedRecipeIds.includes(data.primaryRecipeId)
+          ? data.primaryRecipeId
+          : (submittedRecipeIds[0] ?? null);
 
       // Map form fields to API schema
       const apiData = {
@@ -341,12 +463,27 @@ export function EditProductDialog({
         description: data.description,
         category: data.category,
         department: data.department,
+        // How a sale consumes inventory. Previously omitted entirely, so the
+        // field silently never saved. `trackStock` is DERIVED from this
+        // server-side (productService.resolveStockMode) — never send the two
+        // independently, or they desync.
+        stockMode: data.stockMode,
+        trackStock: data.stockMode !== "UNTRACKED",
+        primaryRecipeId: resolvedPrimaryRecipeId,
+        // Persisted so the SERVER cascade honours it. Until now this checkbox
+        // was client-local only, so a recipe cost change would still overwrite
+        // a cost the owner had deliberately typed.
+        costPriceManual: manualCostPrice,
         costPrice: convertToBase(costPrice), // Convert back to EUR
         sellingPrice: convertToBase(retailPrice), // Convert back to EUR
-        currentStock: currentStock,
         unit: data.unit,
-        minStock: minStock,
-        maxStock: maxStock,
+        // Omitted (not zeroed) for the uncounted modes — updateProductSchema is
+        // partial, so leaving them out preserves whatever is stored.
+        ...(isBatchProduced && {
+          currentStock: currentStock,
+          minStock: minStock,
+          maxStock: maxStock,
+        }),
         recipeIds: data.recipeIds && data.recipeIds.length > 0 ? data.recipeIds : undefined,
         optionGroups,
       };
@@ -547,6 +684,73 @@ export function EditProductDialog({
                 )}
               />
 
+              {/* Stock mode — the single most consequential choice on this
+                  form, so it gets three tappable cards rather than a Select
+                  the user can skim past. */}
+              <FormField
+                control={form.control}
+                name="stockMode"
+                render={({ field }) => (
+                  <FormItem className="space-y-1 pt-1">
+                    <FormLabel className="text-sm">
+                      {t("data.products.form.stockMode.label")}
+                    </FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        value={field.value}
+                        onValueChange={(value) => handleStockModeChange(value, field.onChange)}
+                        className="grid gap-2"
+                      >
+                        {STOCK_MODE_OPTIONS.map((option) => {
+                          const inputId = `edit-product-stock-mode-${option.value}`;
+                          const selected = field.value === option.value;
+                          return (
+                            <label
+                              key={option.value}
+                              htmlFor={inputId}
+                              className={cn(
+                                // Whole card is the tap target, comfortably
+                                // past the 44px minimum on every breakpoint.
+                                "flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+                                // Selection is shown by border + tint, never by
+                                // hover alone — touch devices have no hover.
+                                selected
+                                  ? "border-primary bg-primary/5"
+                                  : "border-input bg-background hover:bg-muted/50"
+                              )}
+                            >
+                              <RadioGroupItem
+                                id={inputId}
+                                value={option.value}
+                                className="mt-0.5 shrink-0"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-medium">{t(option.label)}</span>
+                                <span className="text-muted-foreground mt-0.5 block text-xs">
+                                  {t(option.hint)}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Made-to-order with nothing to deduct is legal but almost
+                  always a mistake — flag it loudly, never block the save. */}
+              {stockMode === "MADE_TO_ORDER" && !hasPrimaryRecipe && (
+                <Alert className="border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-amber-700 dark:text-amber-400">
+                    {t("data.products.form.noRecipeWarning")}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <FormField
                 control={form.control}
                 name="recipeIds"
@@ -557,6 +761,8 @@ export function EditProductDialog({
                         storeId={storeId}
                         selectedRecipeIds={field.value || []}
                         onSelectionChange={field.onChange}
+                        primaryRecipeId={primaryRecipeId ?? null}
+                        onPrimaryRecipeChange={handlePrimaryRecipeChange}
                       />
                     </FormControl>
                     <FormMessage />
@@ -565,12 +771,12 @@ export function EditProductDialog({
               />
 
               {/* Menu association panel */}
-              <div className="rounded-lg border p-3 space-y-2">
+              <div className="space-y-2 rounded-lg border p-3">
                 <div className="flex items-center gap-2">
                   {currentLinked ? (
-                    <Link2 className="size-4 text-emerald-500 shrink-0" />
+                    <Link2 className="size-4 shrink-0 text-emerald-500" />
                   ) : (
-                    <Link2Off className="size-4 text-muted-foreground shrink-0" />
+                    <Link2Off className="text-muted-foreground size-4 shrink-0" />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">
@@ -583,7 +789,7 @@ export function EditProductDialog({
                         "Not linked to any menu item"
                       )}
                     </p>
-                    <p className="text-muted-foreground text-xs mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       {currentLinked
                         ? "Price/stock syncs automatically. You can re-associate or remove the link below."
                         : "This product has no POS/storefront entry. You can link to an existing menu item below."}
@@ -593,10 +799,7 @@ export function EditProductDialog({
 
                 {/* Re-association selector */}
                 {(unlinkedMenuItems.length > 0 || currentLinked) && (
-                  <Select
-                    value={menuItemReassign}
-                    onValueChange={setMenuItemReassign}
-                  >
+                  <Select value={menuItemReassign} onValueChange={setMenuItemReassign}>
                     <SelectTrigger className="text-sm">
                       <SelectValue placeholder={t("data.products.form.keepCurrentAssociation")} />
                     </SelectTrigger>
@@ -716,7 +919,15 @@ export function EditProductDialog({
               <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
                 {t("data.products.sections.stockManagement")}
               </h3>
-              <div className="grid items-start gap-1.5 sm:grid-cols-4">
+              {/* Stock levels only exist for BATCH_PRODUCED. Made-to-order and
+                  untracked products are never counted, so the fields are
+                  removed outright rather than disabled. */}
+              <div
+                className={cn(
+                  "grid items-start gap-1.5",
+                  showStockFields ? "sm:grid-cols-4" : "sm:grid-cols-2"
+                )}
+              >
                 <FormField
                   control={form.control}
                   name="unit"
@@ -744,86 +955,96 @@ export function EditProductDialog({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="currentStock"
-                  render={({ field }) => (
-                    <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">
-                        {t("data.products.form.currentStock")} *
-                      </FormLabel>
-                      <FormControl>
-                        <DecimalInput
-                          decimals={3}
-                          min={0}
-                          placeholder="0"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {showStockFields && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="currentStock"
+                      render={({ field }) => (
+                        <FormItem className="space-y-0.5">
+                          <FormLabel className="text-sm">
+                            {t("data.products.form.currentStock")} *
+                          </FormLabel>
+                          <FormControl>
+                            <DecimalInput
+                              decimals={3}
+                              min={0}
+                              placeholder="0"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="minStock"
-                  render={({ field }) => (
-                    <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">
-                        {t("data.products.form.minStock")} *
-                      </FormLabel>
-                      <FormControl>
-                        <DecimalInput
-                          decimals={3}
-                          min={0}
-                          placeholder="0"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormDescription className="text-xs">
-                        {t("data.products.form.minStockHint")}
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="minStock"
+                      render={({ field }) => (
+                        <FormItem className="space-y-0.5">
+                          {/* A product with a recipe gets prepped again; one
+                              without gets bought again. Same number, different
+                              action — so the label has to say which. */}
+                          <FormLabel className="text-sm">
+                            {hasPrimaryRecipe
+                              ? t("data.products.form.parLevel")
+                              : t("data.products.form.reorderLevel")}{" "}
+                            *
+                          </FormLabel>
+                          <FormControl>
+                            <DecimalInput
+                              decimals={3}
+                              min={0}
+                              placeholder="0"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            {t("data.products.form.minStockHint")}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="maxStock"
-                  render={({ field }) => (
-                    <FormItem className="space-y-0.5">
-                      <FormLabel className="text-sm">
-                        {t("data.products.form.maxStock")} *
-                      </FormLabel>
-                      <FormControl>
-                        <DecimalInput
-                          decimals={3}
-                          min={0}
-                          placeholder="1000"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormDescription className="text-xs">
-                        {t("data.products.form.maxStockHint")}
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={form.control}
+                      name="maxStock"
+                      render={({ field }) => (
+                        <FormItem className="space-y-0.5">
+                          <FormLabel className="text-sm">
+                            {t("data.products.form.maxStock")} *
+                          </FormLabel>
+                          <FormControl>
+                            <DecimalInput
+                              decimals={3}
+                              min={0}
+                              placeholder="1000"
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs">
+                            {t("data.products.form.maxStockHint")}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
               </div>
             </div>
 
@@ -845,6 +1066,9 @@ export function EditProductDialog({
           </form>
         </Form>
       </FormDialogLayout>
+      {/* Rendered inside <Dialog> so it stays mounted with the form it guards;
+          AlertDialog portals itself, so it still stacks above the dialog. */}
+      {confirmDialog}
     </Dialog>
   );
 }

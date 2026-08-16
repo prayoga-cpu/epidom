@@ -80,7 +80,7 @@ export function OwnerDashboardClient() {
   const isEnterpriseLocked = (error as any)?.status === 403;
 
   return (
-    <div className="min-h-[calc(100vh-64px)] space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-[calc((100vh-64px)/var(--app-zoom,1))] space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("pages.ownerTitle")}</h1>
         <p className="text-muted-foreground text-sm">{t("pages.ownerDesc")}</p>

@@ -58,7 +58,7 @@ export function DeleteStoreDialog({ store, trigger }: DeleteStoreDialogProps) {
           </Button>
         )}
       </AlertDialogTrigger>
-      <AlertDialogContent className="max-h-[85dvh] overflow-y-auto">
+      <AlertDialogContent className="max-h-[calc(85dvh/var(--app-zoom,1))] overflow-y-auto">
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>

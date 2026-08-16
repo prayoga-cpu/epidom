@@ -137,7 +137,7 @@ export function StaffScheduleCellDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90dvh] max-w-sm flex-col overflow-y-auto">
+      <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] max-w-sm flex-col overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{dateKey}</DialogTitle>
         </DialogHeader>

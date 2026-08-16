@@ -90,6 +90,14 @@ interface ProductionBatchDetails {
   actualQuantity: number | null;
   unit: string;
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  triggerType: "MANUAL" | "ORDER_SHORTFALL";
+  /**
+   * Set when this batch's raw materials were drawn at SALE time — the item was
+   * sold before it was logged as made. Its ingredients are already out of
+   * inventory; logging the run nets against that debt rather than deducting
+   * again.
+   */
+  materialsDrawnAt: string | Date | null;
   scheduledDate: Date | string;
   completedDate: Date | string | null;
   notes: string | null;
@@ -185,6 +193,21 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
   // Use recipe from batch relations
   const recipe = batch.recipe;
   const product = batch.product;
+
+  /**
+   * This batch's ingredients already left inventory when the item was sold,
+   * ahead of anyone logging that it was made. Re-logging the run is harmless
+   * — settlement nets it against the outstanding amount — but redundant, and
+   * the ingredient table below is a record of what already happened, not a
+   * list of what still has to come out.
+   */
+  const materialsAlreadyDrawn =
+    batch.triggerType === "ORDER_SHORTFALL" && batch.materialsDrawnAt != null;
+
+  // The quantity the per-unit cost is divided by. When it's 1, "cost per unit"
+  // and "batch total cost" print the identical number — one figure, not two.
+  const costedQuantity = Number(batch.actualQuantity) || Number(batch.plannedQuantity) || 0;
+  const isSingleUnitBatch = costedQuantity === 1;
 
   // Get ingredient consumption from recipe
   const ingredientConsumption = useMemo(() => {
@@ -328,7 +351,7 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-full max-h-[100dvh] w-full flex-col gap-0 p-0 sm:h-auto sm:max-h-[90dvh] sm:max-w-5xl sm:rounded-lg [&>button]:hidden">
+      <DialogContent className="flex h-full max-h-[calc(100dvh/var(--app-zoom,1))] w-full flex-col gap-0 p-0 sm:h-auto sm:max-h-[calc(90dvh/var(--app-zoom,1))] sm:max-w-5xl sm:rounded-lg [&>button]:hidden">
         <DialogHeader className="border-b p-4 pb-2 sm:p-6 sm:pb-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
@@ -461,6 +484,16 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                 <Package className="text-muted-foreground h-5 w-5" />
                 {t("management.productionHistory.ingredientConsumption")}
               </h3>
+              {materialsAlreadyDrawn && (
+                <div className="border-primary/40 bg-primary/5 rounded-lg border p-3 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="text-primary mt-0.5 h-5 w-5 shrink-0" />
+                    <p className="text-foreground text-sm">
+                      {t("production.settlement.alreadyAccounted")}
+                    </p>
+                  </div>
+                </div>
+              )}
               <Card className="overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                   <div className="min-w-full">
@@ -594,28 +627,34 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
               </h3>
               <Card className="shadow-sm">
                 <CardContent className="p-4 sm:p-6">
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div
+                    className={`grid grid-cols-1 gap-6 ${isSingleUnitBatch ? "" : "sm:grid-cols-2"}`}
+                  >
                     <div className="space-y-1">
                       <p className="text-muted-foreground text-sm">
-                        {t("management.productionHistory.unitCost") || "Cost per Unit"}
+                        {isSingleUnitBatch
+                          ? t("data.recipes.costPerUnit")
+                          : t("management.productionHistory.unitCost") || "Cost per Unit"}
                       </p>
                       <p className="text-2xl font-bold">{formatPrice(costAnalysis.unitCost)}</p>
                       <p className="text-muted-foreground text-xs">
                         {t("management.productionHistory.perUnit") || "Per"} {batch.unit}
                       </p>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-muted-foreground text-sm">
-                        {t("management.productionHistory.batchTotalCost") || "Batch Total Cost"}
-                      </p>
-                      <p className="text-2xl font-bold">
-                        {formatPrice(costAnalysis.batchTotalCost)}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {t("management.productionHistory.forQuantity") || "For"}{" "}
-                        {batch.actualQuantity || batch.plannedQuantity} {batch.unit}
-                      </p>
-                    </div>
+                    {!isSingleUnitBatch && (
+                      <div className="space-y-1">
+                        <p className="text-muted-foreground text-sm">
+                          {t("management.productionHistory.batchTotalCost") || "Batch Total Cost"}
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {formatPrice(costAnalysis.batchTotalCost)}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {t("management.productionHistory.forQuantity") || "For"}{" "}
+                          {batch.actualQuantity || batch.plannedQuantity} {batch.unit}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -18,9 +18,9 @@ import { withApiHandler } from "@/lib/api-handler";
  * Logic:
  * 1. Verifies store ownership (via withApiHandler).
  * 2. Fetches all active materials.
- * 3. Filters materials where currentStock <= minStock.
- * 4. Calculates severity (Critical if <= 25% of minStock).
- * 5. Returns sorted list (most critical first).
+ * 3. Filters materials where currentStock < 0 (oversold) or currentStock <= minStock.
+ * 4. Calculates severity (Critical if oversold, or <= 25% of minStock).
+ * 5. Returns sorted list (oversold first, then most critical).
  *
  * @param {string} storeId - ID of the store (from route params)
  */
@@ -41,19 +41,38 @@ export const GET = withApiHandler(
       },
     });
 
-    // Filter materials where currentStock <= minStock
+    // Filter materials that are oversold or below their reorder threshold
     const lowStockMaterials = allMaterials
       .filter((material) => {
         const currentStock = Number(material.currentStock);
         const minStock = Number(material.minStock);
-        // Only alert if minStock is set (> 0) and threshold is breached
+        // A negative balance means the store consumed material it did not
+        // have. It must alert regardless of minStock: that column defaults to
+        // 0, and MADE_TO_ORDER products only started draining raw materials
+        // recently, so most stores have never maintained it — gating on it
+        // would hide every oversold material behind a threshold nobody set.
+        if (currentStock < 0) return true;
+        // Otherwise only alert if minStock is set (> 0) and threshold is breached
         return minStock > 0 && currentStock <= minStock;
       })
       .sort((a, b) => {
+        const aStock = Number(a.currentStock);
+        const bStock = Number(b.currentStock);
+        const aOversold = aStock < 0;
+        const bOversold = bStock < 0;
+
+        // Oversold outranks everything — you cannot be more out of stock than
+        // owing stock. Deepest hole first.
+        if (aOversold !== bOversold) return aOversold ? -1 : 1;
+        if (aOversold && bOversold) {
+          if (aStock !== bStock) return aStock - bStock;
+          return a.name.localeCompare(b.name);
+        }
+
         // Sort by stock percentage (most critical first)
         // Avoid division by zero by checking minStock > 0
-        const aPercent = Number(a.minStock) > 0 ? Number(a.currentStock) / Number(a.minStock) : 1;
-        const bPercent = Number(b.minStock) > 0 ? Number(b.currentStock) / Number(b.minStock) : 1;
+        const aPercent = Number(a.minStock) > 0 ? aStock / Number(a.minStock) : 1;
+        const bPercent = Number(b.minStock) > 0 ? bStock / Number(b.minStock) : 1;
 
         if (aPercent !== bPercent) return aPercent - bPercent;
         return a.name.localeCompare(b.name);
@@ -63,10 +82,20 @@ export const GET = withApiHandler(
     const alerts = lowStockMaterials.map((material) => {
       const currentStockNum = Number(material.currentStock);
       const minStockNum = Number(material.minStock);
-      const stockPercentage = minStockNum > 0 ? (currentStockNum / minStockNum) * 100 : 0;
+      const isNegativeStock = currentStockNum < 0;
+      // A negative balance has no meaningful ratio to the reorder threshold —
+      // it is below empty, not a fraction of it. Report 0 so the progress bars
+      // downstream read "nothing left" instead of a negative width; the real
+      // figure travels in `currentStock`, and `isNegativeStock` tells the UI to
+      // render the negativeStock copy instead of a percentage.
+      const stockPercentage = isNegativeStock
+        ? 0
+        : minStockNum > 0
+          ? (currentStockNum / minStockNum) * 100
+          : 0;
 
       let severity: "critical" | "warning" = "warning";
-      if (stockPercentage <= 25) {
+      if (isNegativeStock || stockPercentage <= 25) {
         severity = "critical";
       }
 
@@ -81,6 +110,12 @@ export const GET = withApiHandler(
         minStock: material.minStock,
         unit: material.unit,
         stockPercentage,
+        isNegativeStock,
+        // i18n keys rather than text: this is a server route with no locale
+        // context. Null when the balance is merely low, so the existing low
+        // stock copy keeps rendering.
+        titleKey: isNegativeStock ? ("alerts.negativeStock.title" as const) : null,
+        bodyKey: isNegativeStock ? ("alerts.negativeStock.body" as const) : null,
         suppliers: material.materialSuppliers.map((ms) => ({
           id: ms.supplier.id,
           name: ms.supplier.name,

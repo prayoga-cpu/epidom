@@ -60,7 +60,7 @@ export function FormDialogLayout({
         // viewport as if the address bar/toolbar were hidden, so a dialog
         // sized with vh can render taller than what's actually visible,
         // pushing the footer's action buttons out of reach.
-        autoHeight ? "max-h-[90dvh]" : "h-[90dvh] max-h-[90dvh]",
+        autoHeight ? "max-h-[calc(90dvh/var(--app-zoom,1))]" : "h-[90dvh] max-h-[calc(90dvh/var(--app-zoom,1))]",
         maxWidthClasses[maxWidth],
         className
       )}

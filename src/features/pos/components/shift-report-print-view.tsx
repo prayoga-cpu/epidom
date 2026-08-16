@@ -146,7 +146,7 @@ export function ShiftReportPrintView({
         : labels.deliveryType;
 
   return (
-    <div className="flex min-h-screen flex-col items-center gap-4 bg-gray-100 px-4 py-6 print:bg-white print:p-0">
+    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] flex-col items-center gap-4 bg-gray-100 px-4 py-6 print:bg-white print:p-0">
       {/* Non-printing toolbar */}
       <div className="flex w-full max-w-sm flex-wrap items-center justify-between gap-2 print:hidden">
         <p className="text-muted-foreground text-xs">{t("pos.printReport.toolbarHint")}</p>

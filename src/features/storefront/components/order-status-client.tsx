@@ -131,7 +131,7 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
     : null;
 
   return (
-    <div className="bg-muted flex min-h-screen flex-col" style={themeStyle}>
+    <div className="bg-muted flex min-h-[calc(100vh/var(--app-zoom,1))] flex-col" style={themeStyle}>
       {/* Header */}
       <header className="bg-card sticky top-0 z-30 flex items-center gap-3 border-b px-4 py-3 shadow-sm">
         <Link href={`/@${storefront.slug}`} className="hover:bg-muted rounded-full p-1 transition">

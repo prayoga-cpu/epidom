@@ -75,6 +75,12 @@ interface SummaryData {
   cogs: number;
   grossProfit: number;
   grossMarginPct: number;
+  // Order lines with no cost source at all. Delivery-app orders arrive with
+  // neither a menu item nor a product attached, so they can never acquire a
+  // cost snapshot — their cost is genuinely unknown. Surfaced rather than
+  // rendered as zero, which would imply they sold at 100% margin.
+  unknownCostLines?: number;
+  unknownCostRevenue?: number;
   wasteLoss: number;
   taxCollected: number;
   serviceCharge: number;
@@ -1019,7 +1025,7 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
   };
 
   return (
-    <div className="min-h-[calc(100vh-150px)] space-y-4">
+    <div className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] space-y-4">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="grid gap-1">
@@ -1248,6 +1254,16 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatOrderPrice(s.cogs)}</p>
+              {/* Annotates rather than blanks the figure: aggregator orders are
+                  permanently uncosted, so hiding the whole P&L would hide it
+                  forever for any store on Grab or Gojek. */}
+              {(s.unknownCostLines ?? 0) > 0 && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {t("finance.summary.unknownCost")
+                    .replace("{count}", String(s.unknownCostLines))
+                    .replace("{amount}", formatOrderPrice(s.unknownCostRevenue ?? 0))}
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>

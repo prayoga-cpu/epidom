@@ -76,7 +76,71 @@ import { ProductsCardGridSkeleton } from "./products-skeleton";
 import { useBulkSelection } from "../../hooks/use-bulk-selection";
 import { useDialogState } from "../../hooks/use-dialog-state";
 
-type StockFilter = "all" | "in_stock" | "low_stock" | "critical" | "overstocked";
+type StockFilter =
+  | "all"
+  | "in_stock"
+  | "low_stock"
+  | "critical"
+  | "overstocked"
+  | "not_counted"
+  | "oversold";
+
+/** Every value `getStockStatus` can actually return (i.e. not the "all" pseudo-filter). */
+type StockStatus = Exclude<StockFilter, "all">;
+
+/**
+ * Mode-aware stock status for a product card.
+ *
+ * Two rules come before the threshold arithmetic:
+ *  1. Only BATCH_PRODUCED products keep a counted finished-goods balance.
+ *     MADE_TO_ORDER draws raw materials per sale and UNTRACKED never moves,
+ *     so `currentStock` on those rows is meaningless — reporting it as
+ *     "critical" (which is what the old `currentStock === 0` test did to
+ *     every one of them) is noise, not a signal.
+ *  2. A negative balance is an oversell: the store sold stock it did not
+ *     have. Stock clamps were removed from the sale path on purpose, so this
+ *     is the honest record and must read as the worst state there is. The old
+ *     code returned "in_stock" for it whenever minStock was 0 (the schema
+ *     default), because `=== 0` missed and both `minStockLevel &&` guards
+ *     short-circuited — an oversold product rendered green.
+ */
+function getStockStatus(product: Product): StockStatus {
+  if (product.stockMode !== "BATCH_PRODUCED") return "not_counted";
+
+  const currentStock = Number(product.currentStock) || 0;
+  const minStockLevel = Number(product.minStock) || 0;
+
+  if (currentStock < 0) return "oversold";
+  if (currentStock === 0) return "critical";
+  if (minStockLevel && currentStock < minStockLevel * 0.5) return "critical";
+  if (minStockLevel && currentStock <= minStockLevel) return "low_stock";
+  return "in_stock";
+}
+
+/** Badge colour per status — all from theme variants, never raw hex. */
+const STOCK_STATUS_VARIANT: Record<
+  StockStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  in_stock: "outline",
+  low_stock: "default",
+  critical: "destructive",
+  overstocked: "secondary",
+  // An oversell is a real, money-losing condition — same weight as critical.
+  oversold: "destructive",
+  // Nothing is wrong with an uncounted product, so it must not shout.
+  not_counted: "outline",
+};
+
+/** Statuses offered in the filter dropdown, in severity order. */
+const STOCK_FILTER_OPTIONS: StockFilter[] = [
+  "all",
+  "oversold",
+  "critical",
+  "low_stock",
+  "in_stock",
+  "not_counted",
+];
 
 type ProductSortBy =
   | "name"
@@ -92,6 +156,10 @@ interface ProductFiltersState {
   search: string;
   category: string;
   department: "KITCHEN" | "BAR" | undefined;
+  // Stock status is derived client-side from stockMode/currentStock, so it
+  // filters the loaded page rather than the query — it is deliberately kept
+  // out of the object handed to `useProducts`.
+  stock: StockFilter;
   sortBy: ProductSortBy;
   sortOrder: ProductSortOrder;
   skip: number;
@@ -102,6 +170,7 @@ const PRODUCT_FILTER_DEFAULTS: ProductFiltersState = {
   search: "",
   category: "",
   department: undefined,
+  stock: "all",
   sortBy: "createdAt",
   sortOrder: "desc",
   skip: 0,
@@ -127,6 +196,9 @@ function sanitizeProductFilters(raw: unknown, defaults: ProductFiltersState): Pr
     search: "",
     category: typeof r.category === "string" ? r.category : defaults.category,
     department: r.department === "KITCHEN" || r.department === "BAR" ? r.department : undefined,
+    stock: STOCK_FILTER_OPTIONS.includes(r.stock as StockFilter)
+      ? (r.stock as StockFilter)
+      : defaults.stock,
     sortBy: PRODUCT_SORT_OPTIONS.includes(r.sortBy as ProductSortBy)
       ? (r.sortBy as ProductSortBy)
       : defaults.sortBy,
@@ -164,13 +236,24 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   // Debounce search input to reduce API calls (300ms delay)
   const debouncedSearch = useDebounce(filters.search, 300);
 
+  // `stock` is evaluated client-side (it depends on stockMode, which the list
+  // endpoint doesn't filter on), so it never reaches the API or the export.
+  const { stock: stockFilter, ...queryFilters } = filters;
+
+  // New keys ship in a separate locale change; `t()` echoes the key back when
+  // it is missing, so fall back to English rather than render a raw key path.
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
+
   // API hooks
   // Use debouncedSearch instead of filters.search for API calls
   // Use initial data from Server Component with real-time updates
   const { data, isLoading, error, refetch } = useProducts(
     storeId,
     {
-      ...filters,
+      ...queryFilters,
       search: debouncedSearch || undefined,
       // This tab only ever manages the store's regular Kitchen/Bar products —
       // CUSTOM-productLine items (the optional second product line) live in
@@ -196,8 +279,18 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
   const { data: productUsage, isLoading: isLoadingUsage } = useProductUsage(storeId);
   const deleteProductCategory = useDeleteProductCategory(storeId);
 
-  const products = data?.products || [];
+  const products = useMemo(() => data?.products || [], [data]);
   const totalProducts = data?.total || 0;
+
+  // Stock-status filtering happens over the loaded page only — see the note on
+  // ProductFiltersState.stock.
+  const visibleProducts = useMemo(
+    () =>
+      stockFilter === "all"
+        ? products
+        : products.filter((product) => getStockStatus(product) === stockFilter),
+    [products, stockFilter]
+  );
 
   // Get unique categories from products, with item counts (for category management)
   const categoryUsage = useMemo<CategoryUsage[]>(() => {
@@ -245,7 +338,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     toggleSelectItem,
     clearSelection,
     isSelected,
-  } = useBulkSelection(products);
+  } = useBulkSelection(visibleProducts);
 
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
@@ -273,16 +366,6 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editProductId, products, editProductFromParam]);
 
-  // Helper function to determine stock status
-  const getStockStatus = (product: Product): StockFilter => {
-    const currentStock = Number(product.currentStock) || 0;
-    const minStockLevel = Number(product.minStock) || 0;
-    if (currentStock === 0) return "critical";
-    if (minStockLevel && currentStock < minStockLevel * 0.5) return "critical";
-    if (minStockLevel && currentStock <= minStockLevel) return "low_stock";
-    return "in_stock";
-  };
-
   // Helper function to get stock status label
   const getStockStatusLabel = (status: StockFilter): string => {
     const labels: Record<StockFilter, string> = {
@@ -291,6 +374,8 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
       low_stock: t("filters.lowStock"),
       critical: t("filters.critical"),
       overstocked: t("filters.overstocked"),
+      not_counted: tr("data.products.stockStatus.notCounted", "Not counted"),
+      oversold: tr("data.products.stockStatus.oversold", "Oversold"),
     };
     return labels[status];
   };
@@ -415,7 +500,10 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
 
   const handleExport = async () => {
     try {
-      await exportProducts.mutateAsync({ storeId, filters: { ...filters, productLine: "STANDARD" } });
+      await exportProducts.mutateAsync({
+        storeId,
+        filters: { ...queryFilters, productLine: "STANDARD" },
+      });
       toast.success(t("messages.exportSuccessful"));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("messages.errorLoadingProducts"));
@@ -454,7 +542,8 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     setFilters(PRODUCT_FILTER_DEFAULTS);
   };
 
-  const hasActiveFilters = filters.search || filters.category || filters.department;
+  const hasActiveFilters =
+    filters.search || filters.category || filters.department || filters.stock !== "all";
 
   // Loading state - wait for both products and usage data to sync loading
   // But if we have products (e.g. from initialData), show them immediately
@@ -476,7 +565,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
 
   return (
     <>
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+      <Card className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] overflow-hidden shadow-md">
         <CardHeader className="border-b">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
@@ -652,7 +741,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                   setFilters((prev) => ({ ...prev, sortBy, sortOrder }));
                 }}
               >
-                <SelectTrigger className="w-full md:w-[180px]">
+                <SelectTrigger className="min-h-10 w-full md:w-[180px]">
                   <ArrowUpDown className="mr-1 hidden h-4 w-4 sm:inline" />
                   <SelectValue placeholder={t("filters.placeholderSortBy")} />
                 </SelectTrigger>
@@ -679,13 +768,32 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                   }))
                 }
               >
-                <SelectTrigger className="w-full md:w-[160px]">
+                <SelectTrigger className="min-h-10 w-full md:w-[160px]">
                   <SelectValue placeholder={t("filters.allDepartments")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("filters.allDepartments")}</SelectItem>
                   <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
                   <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Stock status filter */}
+              <Select
+                value={filters.stock}
+                onValueChange={(v) =>
+                  setFilters((prev) => ({ ...prev, stock: v as StockFilter, skip: 0 }))
+                }
+              >
+                <SelectTrigger className="min-h-10 w-full md:w-[170px]">
+                  <SelectValue placeholder={t("filters.allStock")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {STOCK_FILTER_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {getStockStatusLabel(option)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -707,12 +815,12 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
             {bulkSelectMode && (
               <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-3">
                 <Checkbox
-                  checked={selectedCount === products.length && products.length > 0}
+                  checked={selectedCount === visibleProducts.length && visibleProducts.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
                 <span className="text-sm font-medium">
-                  {t("common.selectAll")} ({selectedCount} {t("common.of")} {products.length}{" "}
-                  {t("common.selected")})
+                  {t("common.selectAll")} ({selectedCount} {t("common.of")}{" "}
+                  {visibleProducts.length} {t("common.selected")})
                 </span>
               </div>
             )}
@@ -721,14 +829,14 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
           {/* Results Count */}
           <div className="mt-4 flex items-center border-b pb-2">
             <p className="text-muted-foreground text-sm">
-              {t("common.showing")} {products.length} {t("common.of")} {totalProducts}{" "}
+              {t("common.showing")} {visibleProducts.length} {t("common.of")} {totalProducts}{" "}
               {t("data.products.pageTitle")}
             </p>
           </div>
 
           {/* Products Grid */}
           <ItemCardGrid columns={{ mobile: 1, tablet: 2, desktop: 3, large: 4 }} className="mt-4">
-            {products.map((product) => {
+            {visibleProducts.map((product) => {
               const stockStatus = getStockStatus(product);
               const profitMargin = getProfitMargin(product);
 
@@ -748,16 +856,12 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
 
                     {/* Stock Status Badge */}
                     <Badge
-                      variant={
-                        stockStatus === "critical"
-                          ? "destructive"
-                          : stockStatus === "low_stock"
-                            ? "default"
-                            : stockStatus === "overstocked"
-                              ? "secondary"
-                              : "outline"
-                      }
-                      className="ml-auto text-xs"
+                      variant={STOCK_STATUS_VARIANT[stockStatus]}
+                      className={`ml-auto text-xs ${
+                        stockStatus === "not_counted"
+                          ? "text-muted-foreground border-dashed"
+                          : ""
+                      }`}
                     >
                       {getStockStatusLabel(stockStatus)}
                     </Badge>
@@ -792,9 +896,19 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                     )}
                     <div className="flex justify-between">
                       <span>{t("common.stock")}:</span>
-                      <span className="text-foreground font-medium">
-                        {formatNumber(Number(product.currentStock) || 0)} {product.unit}
-                      </span>
+                      {stockStatus === "not_counted" ? (
+                        /* No counted balance exists for this mode — showing a
+                           number here would be inventing one. */
+                        <span className="text-muted-foreground font-medium">&mdash;</span>
+                      ) : (
+                        <span
+                          className={`font-medium ${
+                            stockStatus === "oversold" ? "text-destructive" : "text-foreground"
+                          }`}
+                        >
+                          {formatNumber(Number(product.currentStock) || 0)} {product.unit}
+                        </span>
+                      )}
                     </div>
                     <div className="flex justify-between">
                       <span>{t("common.price")}:</span>
@@ -952,7 +1066,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
           </ItemCardGrid>
 
           {/* Empty State */}
-          {products.length === 0 && (
+          {visibleProducts.length === 0 && (
             <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
               <PackageOpen className="text-muted-foreground/50 mb-4 h-12 w-12" />
               <h3 className="mb-2 text-lg font-semibold">{t("messages.noProductsFound")}</h3>

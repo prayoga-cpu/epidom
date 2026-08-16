@@ -41,9 +41,11 @@ export function Topbar() {
     router.push("/");
   };
 
-  // Edge-swipe-right anywhere on screen opens the nav drawer (below the xl
-  // breakpoint, where the fixed desktop rail isn't shown and the hamburger
-  // is the only other way in).
+  // Swipe in from the RIGHT edge to open the nav drawer (below the xl
+  // breakpoint, where the fixed desktop rail isn't shown and the hamburger is
+  // the only other way in). Right-hand side throughout: the drawer, the
+  // hamburger and this gesture all sit under a right thumb, which is where
+  // most people hold a phone.
   useEffect(() => {
     if (menuOpen) return;
     const EDGE_PX = 24;
@@ -53,7 +55,7 @@ export function Topbar() {
     function onTouchStart(e: TouchEvent) {
       if (window.innerWidth >= 1280) return;
       const touch = e.touches[0];
-      if (touch.clientX > EDGE_PX) return;
+      if (touch.clientX < window.innerWidth - EDGE_PX) return;
       start = { x: touch.clientX, y: touch.clientY };
     }
 
@@ -66,7 +68,7 @@ export function Topbar() {
         start = null;
         return;
       }
-      if (dx > OPEN_THRESHOLD_PX) {
+      if (dx < -OPEN_THRESHOLD_PX) {
         start = null;
         setMenuOpen(true);
       }
@@ -86,7 +88,8 @@ export function Topbar() {
     };
   }, [menuOpen]);
 
-  // Swipe-left inside the open drawer closes it, matching the slide-in-from-left animation.
+  // Swipe-right inside the open drawer closes it, matching the
+  // slide-in-from-right animation — the gesture pushes it back the way it came.
   const closeSwipe = useRef<{ x: number; y: number } | null>(null);
   const CLOSE_THRESHOLD_PX = 60;
 
@@ -104,7 +107,7 @@ export function Topbar() {
       closeSwipe.current = null;
       return;
     }
-    if (dx < -CLOSE_THRESHOLD_PX) {
+    if (dx > CLOSE_THRESHOLD_PX) {
       closeSwipe.current = null;
       setMenuOpen(false);
     }
@@ -127,42 +130,28 @@ export function Topbar() {
         opacity: "1 !important",
       }}
     >
-      <div className="mx-auto max-w-7xl px-2 sm:px-3 lg:px-3">
+      {/* Divided for the same reason as the content cap in page-shell.tsx, and
+          it has to land in the same change as that one: correcting the content
+          cap alone while this stayed a zoom-scaled 80rem tripled the visible
+          header/content misalignment at 70% (measured 112px -> 352px of inset
+          per side). 80rem is exactly max-w-7xl, so this is byte-identical at
+          100% — the only thing that changes is that the two caps now keep the
+          same ratio to each other across the whole zoom ladder. */}
+      <div className="mx-auto max-w-[calc(80rem/var(--app-zoom,1))] px-2 sm:px-3 lg:px-3">
         {/* Mobile/Tablet Layout — covers phones through every iPad size
             (including 1024px landscape), matching Sidebar's xl: breakpoint
             for the fixed desktop rail */}
         <div className="flex h-14 items-center justify-between gap-1 sm:gap-2 xl:hidden">
-          {/* Left: Mobile menu + Logo */}
-          <div className="flex min-w-0 items-center gap-1 sm:gap-2">
-            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 shrink-0 hover:bg-white/10"
-                  style={{ color: "var(--epi-cream-50)" }}
-                >
-                  <Menu className="size-5" />
-                  <span className="sr-only">{t("common.nav.openMenu")}</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="h-[100dvh] w-[min(280px,85vw)] p-0"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-                onTouchStart={handleDrawerTouchStart}
-                onTouchMove={handleDrawerTouchMove}
-                onTouchEnd={handleDrawerTouchEnd}
-              >
-                <Sidebar mode="mobile" />
-              </SheetContent>
-            </Sheet>
-            <div className="flex min-w-0 items-center justify-center">
-              <EpidomLogo size={22} onClick={handleLogoClick} />
-            </div>
+          {/* Left: Logo */}
+          <div className="flex min-w-0 items-center justify-center">
+            <EpidomLogo size={22} onClick={handleLogoClick} />
           </div>
 
-          {/* Right: search, profile (logout now lives in the profile dropdown) */}
+          {/* Right: search, profile (logout now lives in the profile dropdown),
+              then the menu. The hamburger sits at the far right, on the same
+              side as the drawer it opens and the edge-swipe that opens it —
+              phones are held in the right hand, and the top-left corner is the
+              hardest place on the screen to reach one-handed. */}
           <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-1.5">
             {/* Mobile search button */}
             <Button
@@ -191,27 +180,31 @@ export function Topbar() {
 
             {/* Profile */}
             <NavUser />
-          </div>
-        </div>
 
-        {/* Desktop Layout */}
-        <div className="hidden h-14 grid-cols-[1fr_minmax(220px,720px)_1fr] items-center gap-3 xl:grid">
-          {/* Left: Mobile menu + Logo */}
-          <div className="flex items-center gap-2">
+            {/* The app's only nav drawer. There used to be a second <Sheet>
+                bound to this same `menuOpen` state in the desktop layout
+                below — its trigger was `md:hidden` inside an `xl:grid`-only
+                container, so it could never be clicked, but Radix portals
+                sheet content to document.body, where an ancestor's
+                `display: none` does not reach it. Opening the menu therefore
+                mounted two identical drawers and stacked two overlays (a
+                visibly darker scrim, two competing focus traps). Removed. */}
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-primary-foreground hover:bg-white/10 md:hidden"
+                  className="h-9 w-9 shrink-0 hover:bg-white/10"
+                  style={{ color: "var(--epi-cream-50)" }}
                 >
                   <Menu className="size-5" />
                   <span className="sr-only">{t("common.nav.openMenu")}</span>
                 </Button>
               </SheetTrigger>
               <SheetContent
-                side="left"
-                className="h-[100dvh] w-[min(280px,85vw)] p-0"
+                side="right"
+                navigation
+                className="h-[calc(100dvh/var(--app-zoom,1))] w-[min(280px,85vw)] p-0"
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 onTouchStart={handleDrawerTouchStart}
                 onTouchMove={handleDrawerTouchMove}
@@ -220,9 +213,15 @@ export function Topbar() {
                 <Sidebar mode="mobile" />
               </SheetContent>
             </Sheet>
-            <div className="flex items-center">
-              <EpidomLogo size={26} onClick={handleLogoClick} />
-            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden h-14 grid-cols-[1fr_minmax(220px,720px)_1fr] items-center gap-3 xl:grid">
+          {/* Left: Logo. No hamburger here — this layout only renders at xl,
+              where the fixed sidebar rail is always on screen. */}
+          <div className="flex items-center">
+            <EpidomLogo size={26} onClick={handleLogoClick} />
           </div>
 
           {/* Center: Search */}

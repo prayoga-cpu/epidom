@@ -9,6 +9,41 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.72.0] - 2026-08-16 · infra
+
+- **Retired two leftover fields from the old stock model.** Nothing you can see changes — the "track stock" switch on custom items works exactly as before. Under the hood it now reads from the single field that decides how each product is made, instead of a second copy that could drift out of step with it.
+- **Added a self-check you can run against a real database.** It places orders, watches the stock come out, checks the finance report picks it up, logs a prep run and cancels an order — then confirms every number lines up. Run `pnpm tsx --env-file=.env scripts/verify-stock-flow.ts`.
+
+## [2.71.0] - 2026-08-16 · feat
+
+- **Today's prep, with one tap to log it.** The Production tab now opens with a list of what to make: everything you count that has dropped below the level you set, with the number already filled in. Tap "Made it" and the ingredients come out and the stock goes up in one go — no more four-field form, which is why prep went unlogged in the first place.
+- **We won't take the same ingredients twice.** If something sold before you got round to making it, its ingredients already came out at the till. Log that batch afterwards and we only take what's left to take, and only add to your shelf what's actually still on it. The prep list tells you when this applies instead of quietly doing different sums.
+- **End-of-day count sheet.** Enter what's really on the shelf and we record the difference. This is what finally puts the cost of food you made but binned into your figures — until now it simply vanished from the books.
+- **Offline orders can no longer be sent twice.** If the connection dropped at the wrong moment while an offline order was syncing, you could end up with the same order — and the same stock coming out — recorded twice. Each queued order now carries its own tag and the second attempt is recognised instead of duplicated.
+- **Recipe cost changes now reach the product.** When an ingredient price changes, the products made from that recipe update their cost too, so your profit figures stay honest. Tick "Customize manually" on any product to keep a price you typed yourself.
+- **The offline sync message now speaks your language.** It was hardcoded in Indonesian.
+
+## [2.70.1] - 2026-08-16 · fix
+
+- **Zoom now fills the screen instead of shrinking away from it.** Zooming out left the page stranded in a box that stopped short of the window — about three quarters of the width at 70% — with dead space down the right and along the bottom. Every part of the layout that was sized against the screen now takes the zoom into account, so the page occupies the whole window at every level and zooming out genuinely fits more on screen. Nothing changes at 100%.
+- **Dialogs stay reachable when zoomed in.** At 125% and 150% pop-up windows were being drawn taller than the screen, pushing their buttons off the bottom with no way to scroll to them. They now size to what you can actually see.
+- **Menus now open where you clicked, at any zoom.** The account menu and every other drop-down was drifting away from the button that opened it once you zoomed — far enough at 125% and 150% to slide off the right of the screen and be cut in half. They now sit against their button at every level, and scale with the rest of the page.
+- **The menu bar and the page below it stay lined up at every zoom level.**
+
+## [2.70.0] - 2026-08-16 · fix
+
+- **Ingredients now actually come out of stock when you sell something.** They were not. A dish could be sold all day without a gram of flour leaving your inventory, because of a broken link between a product and its recipe. Every product now says plainly how it is made — you count how many you have, you make it fresh when it's ordered, or you don't track it — and stock comes out to match.
+- **Your cost and profit figures will change, and the new ones are the real ones.** Because ingredients were never leaving stock, cost of goods was reading close to zero for most shops and gross profit was reading far too high. Now that ingredients are counted properly, expect your margin to drop to its true level. Past months are left exactly as they were reported, so only new sales reflect the corrected figures.
+- **Selling more than you prepared no longer loses the ingredients.** If you sell ten croissants when you counted six, the last four are treated as made to order and their ingredients come out then. If you log that batch afterwards, we know it was already accounted for and will not take the ingredients twice.
+- **Products can now show as "oversold".** Selling past zero used to quietly show as healthy stock. It now shows the real, below-zero number so you can count what is actually there and correct it.
+- **Extras and add-ons now count towards your costs.** The ingredients used by a modifier were already coming out of stock, but their cost was missing from your profit figures.
+- **Delivery-app orders are marked as uncosted rather than counted as pure profit.** Orders coming in from delivery apps are not linked to your products, so their cost cannot be known. The finance page now says how many there were instead of treating them as 100% margin.
+
+## [2.69.2] - 2026-08-14 · ux
+
+- **The mobile menu is now on the right.** The menu button has moved to the right end of the top bar and the menu itself slides in from the right, so it falls under your thumb instead of asking you to stretch across the screen. Swiping in from the right edge opens it, and swiping back to the right closes it.
+- **Opening the mobile menu no longer built it twice.** A second, invisible copy of the menu was opening at the same time as the real one, which is why the background behind it looked darker than it should. Fixed.
+
 ## [2.69.1] - 2026-08-14 · ux
 
 - **One button in the toolbar instead of two.** Install and Offline & Sync were both showing at once, which read as the same button twice. They are now two states of one slot: you get Install while there is something to install, and it becomes Offline & Sync once the app is installed. Neither one flashes on screen before the app has worked out which it should be.

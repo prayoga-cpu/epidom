@@ -15,6 +15,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { MovementType } from "@prisma/client";
+import { sumCogsBaseByStore } from "@/lib/finance/cogs";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { planHasFeature } from "@/lib/plans/entitlements";
 import { getExchangeRate } from "@/lib/services/exchange-rate.service";
@@ -111,23 +112,13 @@ export async function GET(request: Request) {
     })
   );
 
-  // COGS across every store in one query, bucketed client-side by storeId —
-  // the whole point of batching instead of one query per store.
-  const cogsMovementsPromise = prisma.stockMovement.findMany({
-    where: {
-      type: MovementType.SALE,
-      materialId: { not: null },
-      order: {
-        storeId: { in: storeIds },
-        orderDate: { gte: from, lte: to },
-        status: { notIn: NON_REVENUE_STATUSES },
-      },
-    },
-    select: {
-      quantity: true,
-      order: { select: { storeId: true } },
-      material: { select: { unitCost: true } },
-    },
+  // COGS across every store in one batched pass — see src/lib/finance/cogs.ts.
+  // Frozen per-line snapshots where they exist, the legacy material-SALE ledger
+  // for orders that predate them.
+  const cogsByStorePromise = sumCogsBaseByStore({
+    storeId: { in: storeIds },
+    orderDate: { gte: from, lte: to },
+    status: { notIn: NON_REVENUE_STATUSES },
   });
 
   // Waste loss across every store in one query, same batching principle.
@@ -136,19 +127,15 @@ export async function GET(request: Request) {
     select: { storeId: true, totalValue: true },
   });
 
-  const [storeMetrics, cogsMovements, wasteEntries] = await Promise.all([
+  const [storeMetrics, cogsResults, wasteEntries] = await Promise.all([
     storeMetricsPromise,
-    cogsMovementsPromise,
+    cogsByStorePromise,
     wasteEntriesPromise,
   ]);
 
   const cogsByStore = new Map<string, number>();
-  for (const m of cogsMovements) {
-    if (!m.order) continue;
-    const qty = Math.abs(Number(m.quantity));
-    const cost = Number(m.material?.unitCost ?? 0);
-    const storeId = m.order.storeId;
-    cogsByStore.set(storeId, (cogsByStore.get(storeId) ?? 0) + qty * cost);
+  for (const [storeId, result] of cogsResults) {
+    cogsByStore.set(storeId, result.cogsBase);
   }
 
   const wasteByStore = new Map<string, number>();

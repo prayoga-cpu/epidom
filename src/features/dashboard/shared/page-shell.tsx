@@ -27,13 +27,22 @@ export function PageShell({ children }: { children: React.ReactNode }) {
 
   return (
     <OfflineSyncProvider>
-      <div className="page-transition-container flex h-screen w-full flex-col overflow-hidden">
+      <div className="page-transition-container flex h-[calc(100vh/var(--app-zoom,1))] w-full flex-col overflow-hidden">
         {/* Topbar - Fixed at top */}
         <Topbar />
 
         {/* Main content area - Fixed height container with padding for topbar */}
         <div className="flex min-h-0 flex-1 overflow-hidden pt-14">
-          <div className="mx-auto flex w-full max-w-[1600px] gap-4 pt-2 md:gap-6 md:p-6 lg:px-8">
+          {/* The cap is divided by the zoom so it stays a *window*-relative
+              1600px rather than a layout-relative one. `zoom` scales a raw px
+              cap along with everything else, so an undivided 1600px paints at
+              1600 x scale and the container refuses the extra room zooming out
+              gives it — measured 95.2% of a 1680px window at 100%, but only
+              76.2% at 70%, which is the "container doesn't fill the screen"
+              report. Dividing pins it to the same share of the window at every
+              level. No-op at 100%, where --app-zoom is unset and the divisor
+              falls back to 1. */}
+          <div className="mx-auto flex w-full max-w-[calc(1600px/var(--app-zoom,1))] gap-4 pt-2 md:gap-6 md:p-6 lg:px-8">
             {/* Sidebar column (desktop only) */}
             <Sidebar mode="desktop" />
 

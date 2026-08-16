@@ -155,7 +155,7 @@ export function CustomDevelopmentClient({ storeId }: CustomDevelopmentClientProp
   };
 
   return (
-    <div className="min-h-[calc(100vh-150px)] space-y-4">
+    <div className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] space-y-4">
       <div className="grid gap-1">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
           {t("pages.customDevelopmentTitle")}
@@ -271,7 +271,7 @@ export function CustomDevelopmentClient({ storeId }: CustomDevelopmentClientProp
 
       {/* Edit dialog */}
       <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
-        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-[560px]">
+        <DialogContent className="max-h-[calc(85dvh/var(--app-zoom,1))] overflow-y-auto sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle>{t("customDevelopment.history.editTitle")}</DialogTitle>
           </DialogHeader>

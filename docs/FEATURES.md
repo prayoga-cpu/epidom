@@ -341,6 +341,29 @@ Decisions about what to ship, when, and why. Append-only.
 - Archived cookie-bar copy
 - Hidden production / inventory / alerts behind feature flag, to be re-exposed in Phase 4
 
+### 2026-08-14, two-tier stock (2.70.0)
+
+**Shipped.** `Product.stockMode` (`BATCH_PRODUCED | MADE_TO_ORDER | UNTRACKED`) decides what a sale consumes. Batch-produced items draw a counted finished-goods balance and stop there; made-to-order items explode their primary recipe into raw materials on every sale. See STATUS.md for the defect this fixed.
+
+**Hybrid IS supported**, via `ProductOption.materialId` / `materialQty`: a batch-prepped base plus per-order finishing ingredients is a `BATCH_PRODUCED` product whose finishing ingredients are an option group. Zero new tables, and it already worked — it just never fired, because sale-time material deduction was dead.
+
+**Explicit non-goals** — recorded so they are not re-litigated:
+
+- **Multi-level BOM / semi-finished goods** (a recipe consuming another recipe's output, e.g. a sauce base). Refused on four hard grounds: `RecipeIngredient.materialId` is a required FK to `Material` with a `@@unique([recipeId, materialId])`, so a polymorphic version needs a nullable pair, a CHECK, two partial unique indexes and branching in every consumer that assumes `ing.material`; a `Material` can never be *produced* (`completeProduction` only ever writes `Product`); a `Product` force-publishes itself to the POS grid and public menu via `autoLinkProductToMenu`, so an internal sauce base needs a new "not for sale" concept; and it closes a cost cycle needing a topological rollup with link-time cycle detection, on top of a unit-conversion layer that is currently a silent no-op across dimensions. If it is ever picked up, the shape is `componentProductId` + `Product.isInternal` + "explosion terminates at a counted balance" — the deduction algorithm is already written to accommodate that.
+- **A separate `finished_goods_stock` table** (as the client spec proposed). `Product.currentStock` already is it, `StockMovement` is already polymorphic across material and product, and `stock-item.helpers.ts` is already the shared abstraction. What the spec actually wanted was *visibility*, which is delivered as a view.
+- **Blocking a sale on stock.** A blocking modal on an iPad with six people queueing is a lie — the croissant is physically on the counter. It would be worked around by the end of the first shift, and the number being checked is stale by construction because deduction is deferred to DELIVERED.
+- **Coupling the public storefront to inventory** — AGENTS.md §7.4 is a hard rule.
+- Per-lot / expiry tracking, offline stock validation, demand-forecast par levels, aggregator-order product linkage, refund-driven COGS reversal.
+- **Widening stock quantities to `Decimal(14,6)`.** Deferred, not refused. `scripts/report-below-precision-ingredients.ts` returns clean on live-shaped data — no ingredient's per-unit requirement currently rounds away at `Decimal(10,3)`. It becomes real when a merchant stocks something in a unit far coarser than a recipe uses it (0.4 g of saffron against kg-tracked stock). When it does: run it as a **standalone migration outside the build path**, because `prisma migrate deploy` executes as the first step of `pnpm build` while the previous deployment still serves traffic, and retyping `stock_movements` is a full table rewrite.
+
+### 2026-08-16, prep list and count sheet (2.71.0)
+
+The operational half of two-tier stock. Batch-produced items only stay in stock if somebody prepares them, so the model needs a low-friction way to log prep and a way to reconcile the count.
+
+- **Today's prep** suggests `minStock − currentStock`, netted against outstanding drawn-shortfall debt.
+- **One-tap logging** runs the whole start/complete cycle in one transaction, settlement-aware on both the materials and the finished-goods side.
+- **The count sheet** is the only mechanism that expenses finished-goods shrinkage under a sale-recognised COGS model. Anything produced and then binned is otherwise never costed.
+
 ### Future decisions to log here
 
 - When AI menu suggestions launches (target: Phase 1)

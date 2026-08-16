@@ -4,6 +4,8 @@ import {
   ProductionTriggerType,
   MovementType,
   OrderItemStatus,
+  StockMode,
+  Department,
   Prisma,
 } from "@prisma/client";
 import { advanceOrderToReadyIfAllItemsReady } from "./order-status.helpers";
@@ -20,6 +22,16 @@ import { convertUnit } from "../utils/unit-conversion";
 import { publishStoreEvent, publishStockChanged } from "../realtime/publish";
 import { REALTIME_EVENTS } from "../realtime/channels";
 import { fireLowStockAlertsForEntities } from "./stock-alerts.helpers";
+import { roundStock } from "./stock-precision";
+import { ValidationError, NotFoundError } from "@/lib/errors";
+
+/**
+ * The primary recipe, for shortfall drafting. `storeId` is selected because the
+ * FK is global and a cross-store primary must never drive production.
+ */
+const shortfallRecipeInclude = {
+  primaryRecipe: { select: { id: true, yieldUnit: true, storeId: true } },
+} satisfies Prisma.ProductInclude;
 
 /**
  * Production Batch Service
@@ -36,6 +48,514 @@ export class ProductionBatchService {
    */
   private calculateBatchMultiplier(plannedQuantity: number, yieldQuantity: number): number {
     return plannedQuantity / Number(yieldQuantity);
+  }
+
+  /**
+   * Record that a sale drew raw materials for BATCH_PRODUCED quantity sold
+   * beyond the counted balance (the made-to-order fallback in
+   * stock-deduction.service.ts).
+   *
+   * Attaches to the order's existing IN_PROGRESS ORDER_SHORTFALL batch for that
+   * product where one exists — drafted at CONFIRMED by
+   * draftShortfallBatchesForOrder — so one physical bake is never recorded
+   * twice. Creates one otherwise, but ONLY when the store has Production
+   * enabled: a store with it switched off must not accrue records it can never
+   * see or act on.
+   *
+   * Setting `materialsDrawnAt` is the marker that this batch's raw materials
+   * have ALREADY left inventory. It is null on every pre-release row, which is
+   * exactly why settlement can key off it with no backfill.
+   */
+  async recordDrawnShortfalls(
+    orderId: string,
+    storeId: string,
+    shortfalls: { productId: string; quantity: number }[]
+  ): Promise<void> {
+    if (shortfalls.length === 0) return;
+
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: { productionEnabled: true },
+    });
+    if (!store?.productionEnabled) return;
+
+    for (const shortfall of shortfalls) {
+      const existing = await prisma.productionBatch.findFirst({
+        where: {
+          storeId,
+          productId: shortfall.productId,
+          triggerType: ProductionTriggerType.ORDER_SHORTFALL,
+          status: ProductionStatus.IN_PROGRESS,
+          orderItems: { some: { orderId } },
+        },
+        select: { id: true, materialsDrawnAt: true },
+      });
+
+      if (existing) {
+        if (existing.materialsDrawnAt === null) {
+          await prisma.productionBatch.update({
+            where: { id: existing.id },
+            data: { materialsDrawnAt: new Date() },
+          });
+        }
+        continue;
+      }
+
+      const product = await prisma.product.findFirst({
+        where: { id: shortfall.productId, storeId },
+        select: { unit: true, primaryRecipeId: true },
+      });
+      if (!product) continue;
+
+      const batchNumber = await productionBatchRepository.generateBatchNumber(storeId, "ORD");
+      await prisma.productionBatch.create({
+        data: {
+          storeId,
+          batchNumber,
+          productId: shortfall.productId,
+          recipeId: product.primaryRecipeId,
+          plannedQuantity: shortfall.quantity,
+          unit: product.unit,
+          status: ProductionStatus.IN_PROGRESS,
+          triggerType: ProductionTriggerType.ORDER_SHORTFALL,
+          scheduledDate: new Date(),
+          materialsDrawnAt: new Date(),
+          notes: "Sold before it was prepped — ingredients already taken out at the sale",
+        },
+      });
+    }
+  }
+
+  /**
+   * Outstanding "already paid for in ingredients" debt for a product:
+   *   Σ (plannedQuantity − settledQuantity) over ORDER_SHORTFALL batches with
+   *   materialsDrawnAt != null and status != CANCELLED.
+   */
+  async getOutstandingDrawnShortfall(productId: string): Promise<number> {
+    const batches = await prisma.productionBatch.findMany({
+      where: {
+        productId,
+        triggerType: ProductionTriggerType.ORDER_SHORTFALL,
+        materialsDrawnAt: { not: null },
+        status: { not: ProductionStatus.CANCELLED },
+      },
+      select: { plannedQuantity: true, settledQuantity: true },
+    });
+    return batches.reduce(
+      (sum, b) => sum + Math.max(0, Number(b.plannedQuantity) - Number(b.settledQuantity)),
+      0
+    );
+  }
+
+  /**
+   * Net a new production run against outstanding drawn-shortfall debt, oldest
+   * batch first, and return how much of `quantity` was absorbed.
+   *
+   * Callers deduct materials for (quantity − settled) only, because the settled
+   * portion's ingredients already left inventory when the item was sold ahead of
+   * being prepped. Without this, logging prep that the fallback already
+   * accounted for draws the same flour twice AND creates phantom finished goods.
+   */
+  async settleDrawnShortfall(
+    tx: Prisma.TransactionClient,
+    productId: string,
+    quantity: number
+  ): Promise<number> {
+    if (quantity <= 0) return 0;
+
+    const batches = await tx.productionBatch.findMany({
+      where: {
+        productId,
+        triggerType: ProductionTriggerType.ORDER_SHORTFALL,
+        materialsDrawnAt: { not: null },
+        status: { not: ProductionStatus.CANCELLED },
+      },
+      select: { id: true, plannedQuantity: true, settledQuantity: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    let remaining = quantity;
+    let settled = 0;
+
+    for (const batch of batches) {
+      if (remaining <= 0) break;
+      const outstanding = Number(batch.plannedQuantity) - Number(batch.settledQuantity);
+      if (outstanding <= 0) continue;
+
+      const take = Math.min(outstanding, remaining);
+      await tx.productionBatch.update({
+        where: { id: batch.id },
+        data: { settledQuantity: { increment: take } },
+      });
+      remaining -= take;
+      settled += take;
+    }
+
+    return settled;
+  }
+
+  /**
+   * Today's prep list: for every BATCH_PRODUCED product with a primary recipe,
+   * how many units are needed to reach its par level (`minStock`).
+   *
+   * Netted against outstanding drawn-shortfall debt, because that debt
+   * represents food already SOLD whose ingredients already left — it is not
+   * stock the kitchen still needs to build back up, and counting it twice would
+   * inflate every suggestion.
+   */
+  async getPrepList(storeId: string): Promise<
+    Array<{
+      productId: string;
+      name: string;
+      department: Department;
+      unit: string;
+      currentStock: number;
+      parLevel: number;
+      suggested: number;
+      outstandingShortfall: number;
+      recipeId: string;
+      recipeName: string;
+    }>
+  > {
+    const products = await prisma.product.findMany({
+      where: {
+        storeId,
+        stockMode: StockMode.BATCH_PRODUCED,
+        primaryRecipeId: { not: null },
+      },
+      select: {
+        id: true,
+        name: true,
+        department: true,
+        unit: true,
+        currentStock: true,
+        minStock: true,
+        primaryRecipe: { select: { id: true, name: true, storeId: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    const rows = [];
+    for (const product of products) {
+      // The FK is global; never surface another store's recipe as prep work.
+      if (!product.primaryRecipe || product.primaryRecipe.storeId !== storeId) continue;
+
+      const currentStock = Number(product.currentStock);
+      const parLevel = Number(product.minStock);
+      const outstandingShortfall = await this.getOutstandingDrawnShortfall(product.id);
+
+      // Below par by this much, minus what has already been paid for in
+      // ingredients but not yet logged.
+      const gap = parLevel - currentStock;
+      const suggested = Math.max(0, gap - outstandingShortfall);
+      if (suggested <= 0 && outstandingShortfall <= 0) continue;
+
+      rows.push({
+        productId: product.id,
+        name: product.name,
+        department: product.department,
+        unit: product.unit,
+        currentStock,
+        parLevel,
+        suggested,
+        outstandingShortfall,
+        recipeId: product.primaryRecipe.id,
+        recipeName: product.primaryRecipe.name,
+      });
+    }
+
+    return rows;
+  }
+
+  /**
+   * End-of-day count sheet: reconcile what the books say against what is
+   * physically on the shelf, one ADJUSTMENT per discrepancy.
+   *
+   * This is the ONLY mechanism that expenses finished-goods shrinkage under a
+   * sale-recognised COGS model. Without it, 40 croissants produced, 60 of 100
+   * sold and 40 quietly binned are never costed at all — the ingredients left
+   * at production, the sales booked their own cost, and the gap just evaporates
+   * from the books.
+   *
+   * Counts are applied verbatim, including a count of zero and a count that
+   * moves stock DOWN — that is the whole point. Rows whose counted figure
+   * already matches are skipped so the ledger does not fill with no-ops.
+   */
+  async applyStockCount(
+    storeId: string,
+    counts: Array<{ productId: string; countedQuantity: number }>
+  ): Promise<{ adjusted: number; skipped: number }> {
+    if (counts.length === 0) return { adjusted: 0, skipped: 0 };
+
+    const products = await prisma.product.findMany({
+      where: {
+        id: { in: counts.map((c) => c.productId) },
+        storeId,
+        stockMode: StockMode.BATCH_PRODUCED,
+      },
+      select: { id: true, name: true, unit: true, currentStock: true },
+    });
+    const byId = new Map(products.map((p) => [p.id, p]));
+
+    let adjusted = 0;
+    let skipped = 0;
+
+    await prisma.$transaction(
+      async (tx) => {
+        for (const count of counts) {
+          const product = byId.get(count.productId);
+          // Silently ignoring an unknown id would let a stale tab zero a
+          // product it should not touch; skipping is the safe read.
+          if (!product) {
+            skipped++;
+            continue;
+          }
+
+          const counted = roundStock(count.countedQuantity);
+          const onBooks = Number(product.currentStock);
+          const delta = roundStock(counted - onBooks);
+          if (delta === 0) {
+            skipped++;
+            continue;
+          }
+
+          const updated = await tx.product.update({
+            where: { id: product.id },
+            data: { currentStock: counted },
+            select: { currentStock: true },
+          });
+          await tx.stockMovement.create({
+            data: {
+              productId: product.id,
+              type: MovementType.ADJUSTMENT,
+              quantity: delta,
+              unit: product.unit,
+              balanceAfter: updated.currentStock,
+              reason: "STOCK_COUNT",
+              notes: `Counted ${counted}, books said ${onBooks}`,
+            },
+          });
+          adjusted++;
+        }
+      },
+      { maxWait: 10000, timeout: 20000 }
+    );
+
+    if (adjusted > 0) {
+      publishStockChanged(storeId, { productIds: counts.map((c) => c.productId) });
+    }
+
+    return { adjusted, skipped };
+  }
+
+  /**
+   * One-tap "we made N of these" — the whole start/complete cycle in a single
+   * transaction.
+   *
+   * The existing flow is a four-field StartProductionDialog plus a separate
+   * Complete step, and that friction is precisely why prep goes unlogged, which
+   * is what makes finished-goods counts drift in the first place.
+   *
+   * Settlement-aware in BOTH directions: materials are drawn only for the part
+   * that was not already paid for at the till, and finished goods are credited
+   * only for the part still physically on the shelf.
+   */
+  async quickLogProduction(data: {
+    storeId: string;
+    productId: string;
+    quantity: number;
+  }): Promise<ProductionBatch> {
+    if (!(data.quantity > 0)) {
+      throw new ValidationError("Quantity must be greater than zero");
+    }
+
+    const product = await prisma.product.findFirst({
+      where: { id: data.productId, storeId: data.storeId },
+      select: {
+        id: true,
+        name: true,
+        unit: true,
+        stockMode: true,
+        primaryRecipeId: true,
+        primaryRecipe: {
+          select: {
+            id: true,
+            storeId: true,
+            yieldQuantity: true,
+            yieldUnit: true,
+            ingredients: { include: { material: true } },
+          },
+        },
+      },
+    });
+
+    if (!product) throw new NotFoundError("Product not found in this store");
+    if (product.stockMode !== StockMode.BATCH_PRODUCED) {
+      throw new ValidationError(
+        "Only products you count on a shelf can be logged as a production run"
+      );
+    }
+    const recipe = product.primaryRecipe;
+    if (!recipe || recipe.storeId !== data.storeId) {
+      throw new ValidationError("This product has no primary recipe to produce from");
+    }
+    if (!(Number(recipe.yieldQuantity) > 0)) {
+      throw new ValidationError("This recipe has no usable yield quantity");
+    }
+
+    const batchNumber = await productionBatchRepository.generateBatchNumber(data.storeId, "QUICK");
+
+    const batch = await prisma.$transaction(
+      async (tx) => {
+        const settled = await this.settleDrawnShortfall(tx, data.productId, data.quantity);
+
+        // One figure, two distinct reasons it is the right one — bake 10
+        // against a debt of 3 and `unsettled` is 7 for both:
+        //   MATERIALS: the 3 already had their ingredients drawn at the till,
+        //   so only 7 more leave now.
+        //   FINISHED GOODS: the 3 go straight to the customers who already
+        //   bought them, so only 7 land on the shelf.
+        const unsettled = Math.max(0, data.quantity - settled);
+
+        const created = await tx.productionBatch.create({
+          data: {
+            storeId: data.storeId,
+            batchNumber,
+            productId: data.productId,
+            recipeId: recipe.id,
+            plannedQuantity: data.quantity,
+            actualQuantity: data.quantity,
+            settledQuantity: settled,
+            unit: product.unit,
+            status: ProductionStatus.COMPLETED,
+            triggerType: ProductionTriggerType.MANUAL,
+            scheduledDate: new Date(),
+            completedDate: new Date(),
+            notes: "Logged from the prep list",
+          },
+        });
+
+        // ---- Materials out, for the unsettled portion only.
+        const multiplier = unsettled / Number(recipe.yieldQuantity);
+        if (multiplier > 0) {
+          for (const ing of recipe.ingredients) {
+            const raw = convertUnit(
+              Number(ing.quantity) * multiplier,
+              ing.unit,
+              ing.material.unit
+            );
+            const qty = roundStock(raw);
+            if (qty <= 0) continue;
+
+            const updated = await tx.material.update({
+              where: { id: ing.materialId },
+              data: { currentStock: { decrement: qty } },
+              select: { currentStock: true },
+            });
+            await tx.stockMovement.create({
+              data: {
+                materialId: ing.materialId,
+                productionBatchId: created.id,
+                type: MovementType.PRODUCTION_OUT,
+                quantity: qty,
+                unit: ing.material.unit,
+                balanceAfter: updated.currentStock,
+                notes: `Quick log ${batchNumber} — ${product.name}`,
+              },
+            });
+          }
+        }
+
+        // ---- Finished goods in, for what is actually left on the shelf.
+        if (unsettled > 0) {
+          const updated = await tx.product.update({
+            where: { id: data.productId },
+            data: { currentStock: { increment: roundStock(unsettled) } },
+            select: { currentStock: true },
+          });
+          await tx.stockMovement.create({
+            data: {
+              productId: data.productId,
+              productionBatchId: created.id,
+              type: MovementType.PRODUCTION_IN,
+              quantity: roundStock(unsettled),
+              unit: product.unit,
+              balanceAfter: updated.currentStock,
+              notes: `Quick log ${batchNumber} — ${product.name}`,
+            },
+          });
+        }
+
+        return created;
+      },
+      { maxWait: 10000, timeout: 20000 }
+    );
+
+    publishStockChanged(data.storeId, {
+      productIds: [data.productId],
+      materialIds: recipe.ingredients.map((i) => i.materialId),
+    });
+    publishStoreEvent(data.storeId, REALTIME_EVENTS.PRODUCT_CHANGED, {
+      action: "updated",
+      entityId: data.productId,
+    });
+
+    await fireLowStockAlertsForEntities(
+      data.storeId,
+      recipe.ingredients.map((i) => ({
+        entityId: i.materialId,
+        entityType: "material" as const,
+      }))
+    );
+
+    return batch;
+  }
+
+  /**
+   * Inverse of `settleDrawnShortfall` — hand absorbed debt back when the run
+   * that absorbed it is cancelled.
+   *
+   * Newest-settled first, so repeatedly starting and cancelling a run leaves the
+   * ledger where it began instead of drifting. Without this, cancelling a run
+   * that netted against a debt silently writes that debt off, and the store ends
+   * up permanently ahead on material it never had.
+   */
+  async releaseDrawnShortfall(
+    tx: Prisma.TransactionClient,
+    productId: string,
+    quantity: number
+  ): Promise<number> {
+    if (quantity <= 0) return 0;
+
+    const batches = await tx.productionBatch.findMany({
+      where: {
+        productId,
+        triggerType: ProductionTriggerType.ORDER_SHORTFALL,
+        materialsDrawnAt: { not: null },
+        status: { not: ProductionStatus.CANCELLED },
+        settledQuantity: { gt: 0 },
+      },
+      select: { id: true, settledQuantity: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    let remaining = quantity;
+    let released = 0;
+
+    for (const batch of batches) {
+      if (remaining <= 0) break;
+      const give = Math.min(Number(batch.settledQuantity), remaining);
+      if (give <= 0) continue;
+
+      await tx.productionBatch.update({
+        where: { id: batch.id },
+        data: { settledQuantity: { decrement: give } },
+      });
+      remaining -= give;
+      released += give;
+    }
+
+    return released;
   }
 
   /**
@@ -162,15 +682,28 @@ export class ProductionBatchService {
     }
 
     // Calculate batch multiplier
-    const batchMultiplier = this.calculateBatchMultiplier(
-      Number(data.plannedQuantity),
+    // Net this run against any "already paid for in ingredients" debt before
+    // sizing the material draw. When an item sold past its counted balance, the
+    // sale ALREADY took that portion's ingredients out (see
+    // stock-deduction.service.ts and recordDrawnShortfalls). Logging the prep
+    // run afterwards must not take them out a second time — which, once the
+    // prep list makes logging easy, becomes the NORMAL sequence rather than an
+    // edge case.
+    const outstandingShortfall = await this.getOutstandingDrawnShortfall(data.productId);
+    const settledQty = Math.min(Number(data.plannedQuantity), outstandingShortfall);
+
+    // Conservative estimate, used only for the availability check below. The
+    // authoritative multiplier is recomputed inside the transaction from what
+    // settlement actually absorbed.
+    const estimatedMultiplier = this.calculateBatchMultiplier(
+      Number(data.plannedQuantity) - settledQty,
       Number(recipe.yieldQuantity)
     );
 
     // Check material availability
     const { isAvailable, ingredients } = await this.checkMaterialAvailability(
       data.recipeId,
-      batchMultiplier
+      estimatedMultiplier
     );
 
     if (!isAvailable) {
@@ -189,6 +722,23 @@ export class ProductionBatchService {
     try {
       startedBatch = await prisma.$transaction(
         async (tx) => {
+          // 0. Consume the drawn-shortfall debt this run is covering, inside the
+          // same transaction as the material deduction so the two can never
+          // diverge.
+          //
+          // The draw is sized from what settlement ACTUALLY absorbed, not from
+          // the pre-transaction estimate: another run committing in between
+          // could have taken part of the same debt, and trusting the stale
+          // figure would under-deduct materials for the difference. The
+          // estimate is still fine for the availability check above, which only
+          // needs to be conservative.
+          const actualSettled =
+            settledQty > 0 ? await this.settleDrawnShortfall(tx, data.productId, settledQty) : 0;
+          const batchMultiplier = this.calculateBatchMultiplier(
+            Number(data.plannedQuantity) - actualSettled,
+            Number(recipe.yieldQuantity)
+          );
+
           // 1. Create production batch
           const batch = await tx.productionBatch.create({
             data: {
@@ -197,6 +747,12 @@ export class ProductionBatchService {
               productId: data.productId,
               recipeId: data.recipeId,
               plannedQuantity: data.plannedQuantity,
+              // How much of THIS run was already sold (and already had its
+              // ingredients taken) before it was logged. completeProduction
+              // subtracts it before crediting finished goods, and
+              // cancelProduction subtracts it before restoring materials —
+              // without that, the settled portion becomes phantom stock.
+              settledQuantity: actualSettled,
               unit: recipe.yieldUnit,
               status: ProductionStatus.IN_PROGRESS,
               scheduledDate: data.scheduledDate,
@@ -473,7 +1029,15 @@ export class ProductionBatchService {
           throw new Error("Product not found");
         }
 
-        const newBalance = Number(product.currentStock) + actualQuantity;
+        // Credit only what is physically left on the shelf. `settledQuantity`
+        // is the part of this run that had already been SOLD before it was
+        // logged — its ingredients came out at the sale, and the food went
+        // straight to the customer. Adding the full `actualQuantity` would
+        // invent that many units of stock that nobody can serve: bake 10
+        // against a debt of 3 and the shelf holds 7, not 10.
+        const settled = Number(batch.settledQuantity ?? 0);
+        const creditedQuantity = Math.max(0, actualQuantity - settled);
+        const newBalance = Number(product.currentStock) + creditedQuantity;
 
         // 2. Update product stock
         await tx.product.update({
@@ -576,8 +1140,27 @@ export class ProductionBatchService {
       async (tx) => {
         // 1. If restoring materials, add them back to stock (optimized)
         if (restoreMaterials && batch.recipe) {
+          // Restore only what this run actually DREW. `settledQuantity` was
+          // netted out at startProduction because those ingredients had already
+          // left at the sale, so restoring against the full `plannedQuantity`
+          // would credit back materials that never left — and, because the
+          // absorbed debt is released separately below, would otherwise write
+          // that debt off at the same time, leaving the store permanently up on
+          // phantom material.
+          const settled = Number(batch.settledQuantity ?? 0);
+          const drawnQuantity = Math.max(0, Number(batch.plannedQuantity) - settled);
+
+          // Hand the debt back so the next production run nets against it again.
+          if (settled > 0) {
+            await this.releaseDrawnShortfall(tx, batch.productId, settled);
+            await tx.productionBatch.update({
+              where: { id: batchId },
+              data: { settledQuantity: 0 },
+            });
+          }
+
           const batchMultiplier = this.calculateBatchMultiplier(
-            Number(batch.plannedQuantity),
+            drawnQuantity,
             Number(batch.recipe.yieldQuantity)
           );
 
@@ -774,26 +1357,8 @@ export class ProductionBatchService {
         items: {
           where: { status: { not: OrderItemStatus.CANCELLED } },
           include: {
-            product: {
-              include: {
-                recipeProducts: {
-                  where: { isDefault: true },
-                  include: { recipe: { select: { id: true, yieldUnit: true } } },
-                },
-              },
-            },
-            menuItem: {
-              include: {
-                product: {
-                  include: {
-                    recipeProducts: {
-                      where: { isDefault: true },
-                      include: { recipe: { select: { id: true, yieldUnit: true } } },
-                    },
-                  },
-                },
-              },
-            },
+            product: { include: shortfallRecipeInclude },
+            menuItem: { include: { product: { include: shortfallRecipeInclude } } },
           },
         },
       },
@@ -814,8 +1379,16 @@ export class ProductionBatchService {
     for (const item of order.items) {
       const product = item.product ?? item.menuItem?.product;
       if (!product) continue;
-      const defaultRecipeProduct = product.recipeProducts[0];
-      if (!defaultRecipeProduct?.recipe) continue; // no recipe = no way to auto-produce more
+
+      // Only a counted product can run short. A MADE_TO_ORDER product has no
+      // balance to fall below, and an UNTRACKED one at stock 0 would otherwise
+      // draft a phantom batch on every single order, forever.
+      if (product.stockMode !== StockMode.BATCH_PRODUCED) continue;
+
+      const recipe = product.primaryRecipe;
+      if (!recipe) continue; // no recipe = no way to auto-produce more
+      // The FK is global; a cross-store primary must never drive production here.
+      if (recipe.storeId !== storeId) continue;
 
       const existing = byProduct.get(product.id);
       if (existing) {
@@ -825,8 +1398,8 @@ export class ProductionBatchService {
         byProduct.set(product.id, {
           productId: product.id,
           currentStock: Number(product.currentStock),
-          recipeId: defaultRecipeProduct.recipe.id,
-          yieldUnit: defaultRecipeProduct.recipe.yieldUnit,
+          recipeId: recipe.id,
+          yieldUnit: recipe.yieldUnit,
           orderedQty: Number(item.quantity),
           itemIds: [item.id],
         });

@@ -14,6 +14,7 @@ import { MaterialAvailabilityCheck } from "./material-availability-check";
 import { formatCurrency } from "@/lib/utils/formatting";
 import {
   useRecipes,
+  hasBatchProducedProduct,
   RecipeWithIngredients,
 } from "@/features/dashboard/data/recipes/hooks/use-recipes";
 import { useProductionBatches } from "./hooks/use-production-batches";
@@ -33,12 +34,19 @@ export function RecipeProductionCard() {
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeWithIngredients | null>(null);
   const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
 
-  // Fetch recipes from API
+  // Fetch recipes from API.
+  //
+  // `producibleOnly` narrows to recipes linked to at least one BATCH_PRODUCED
+  // product. It MUST be applied server-side: this query pages with `take`, so
+  // filtering the page after it arrives would return a shorter, differently
+  // truncated list every time — silently hiding producible recipes that fell
+  // past the cut.
   const { data: recipesData, isLoading: recipesLoading } = useRecipes(storeId, {
     sortBy: "name",
     sortOrder: "asc",
     skip: 0,
     take: 100,
+    producibleOnly: true,
   });
 
   // Memoize the updated recipe to avoid unnecessary recalculations
@@ -77,15 +85,21 @@ export function RecipeProductionCard() {
     batchFilters
   );
 
-  // Filter recipes based on search
+  // Filter recipes based on search.
+  //
+  // The `hasBatchProducedProduct` guard is a safety net, NOT the filter: the
+  // `producibleOnly` query param above is what actually keeps the list correct
+  // across pagination. This only stops a cook-to-order recipe from being
+  // selectable if the server hasn't applied the param (see fetchRecipes).
   const filteredRecipes = useMemo(() => {
     if (!recipesData?.recipes) return [];
     const query = searchQuery.toLowerCase();
     return recipesData.recipes.filter(
       (recipe) =>
-        recipe.name.toLowerCase().includes(query) ||
-        (recipe.description && recipe.description.toLowerCase().includes(query)) ||
-        (recipe.category && recipe.category.toLowerCase().includes(query))
+        hasBatchProducedProduct(recipe) &&
+        (recipe.name.toLowerCase().includes(query) ||
+          (recipe.description && recipe.description.toLowerCase().includes(query)) ||
+          (recipe.category && recipe.category.toLowerCase().includes(query)))
     );
   }, [recipesData?.recipes, searchQuery]);
 
@@ -228,9 +242,16 @@ export function RecipeProductionCard() {
             {/* Recipe List */}
             <div className="max-h-[600px] space-y-2 overflow-y-auto pr-2">
               {filteredRecipes.length === 0 ? (
-                <p className="text-muted-foreground py-8 text-center text-sm">
-                  {t("management.recipeProduction.noRecipesFound")}
-                </p>
+                <div className="space-y-2 py-8 text-center">
+                  <p className="text-muted-foreground text-sm">
+                    {t("management.recipeProduction.noRecipesFound")}
+                  </p>
+                  {/* Explain the absence: an empty list here usually means the
+                      store cooks to order, not that recipes are missing. */}
+                  <p className="text-muted-foreground text-xs">
+                    {t("production.emptyState.batchOnly")}
+                  </p>
+                </div>
               ) : (
                 filteredRecipes.map((recipe) => (
                   <button
@@ -290,7 +311,11 @@ export function RecipeProductionCard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div
+                  className={`grid grid-cols-2 gap-4 ${
+                    Number(selectedRecipe.yieldQuantity) === 1 ? "sm:grid-cols-3" : "sm:grid-cols-4"
+                  }`}
+                >
                   <div>
                     <p className="text-muted-foreground text-sm">
                       {t("management.recipeProduction.yield")}
@@ -307,22 +332,41 @@ export function RecipeProductionCard() {
                       {t("management.recipeProduction.minutes")}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground text-sm">
-                      {t("management.recipeProduction.costPerBatch")}
-                    </p>
-                    <p className="text-2xl font-bold">{formatPrice(selectedRecipe.costPerBatch)}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-sm">
-                      {t("management.recipeProduction.costPerUnit")}
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {formatPrice(
-                        Number(selectedRecipe.costPerBatch) / Number(selectedRecipe.yieldQuantity)
-                      )}
-                    </p>
-                  </div>
+                  {/* A recipe that yields one unit has no separate "per batch"
+                      figure — both columns print the identical number, which
+                      reads as two facts when there is only one. */}
+                  {Number(selectedRecipe.yieldQuantity) === 1 ? (
+                    <div>
+                      <p className="text-muted-foreground text-sm">
+                        {t("data.recipes.costPerUnit")}
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {formatPrice(selectedRecipe.costPerBatch)}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-muted-foreground text-sm">
+                          {t("management.recipeProduction.costPerBatch")}
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {formatPrice(selectedRecipe.costPerBatch)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-sm">
+                          {t("management.recipeProduction.costPerUnit")}
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {formatPrice(
+                            Number(selectedRecipe.costPerBatch) /
+                              Number(selectedRecipe.yieldQuantity)
+                          )}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Start Production Button */}

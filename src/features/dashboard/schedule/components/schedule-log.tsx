@@ -460,7 +460,7 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
       </Tabs>
 
       <Dialog open={!!closingId} onOpenChange={(open) => !open && setClosingId(null)}>
-        <DialogContent className="max-h-[90dvh] max-w-sm overflow-y-auto">
+        <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] max-w-sm overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("pages.attendanceManuallyClose")}</DialogTitle>
             <DialogDescription>{t("pages.attendanceCorrectionReasonRequired")}</DialogDescription>

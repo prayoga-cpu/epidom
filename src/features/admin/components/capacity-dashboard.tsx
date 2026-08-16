@@ -239,7 +239,7 @@ export function CapacityDashboard() {
   }
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-[calc(100vh/var(--app-zoom,1))]">
       {/* Header */}
       <div className="border-border bg-card/50 sticky top-0 z-10 border-b backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">

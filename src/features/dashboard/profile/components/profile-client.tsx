@@ -57,14 +57,14 @@ export function ProfileClient({
 
   if (isError || !profileData) {
     return (
-      <div className="flex min-h-[calc(100vh-150px)] w-full items-center justify-center py-12">
+      <div className="flex min-h-[calc((100vh-150px)/var(--app-zoom,1))] w-full items-center justify-center py-12">
         <p className="text-muted-foreground">{t("profile.failedToLoad")}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-150px)] w-full space-y-4 md:space-y-6">
+    <div className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] w-full space-y-4 md:space-y-6">
       <div className="animate-slide-up">
         <ProfileHeader
           user={profileData}

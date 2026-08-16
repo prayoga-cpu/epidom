@@ -15,6 +15,7 @@ import { withApiHandler } from "@/lib/api-handler";
 import { MovementType } from "@prisma/client";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { shiftFilter, channelFilter, paymentMethodFilter } from "@/lib/finance/report-filters";
+import { sumCogsBase } from "@/lib/finance/cogs";
 import { storefrontService } from "@/lib/services/storefront.service";
 
 export const dynamic = "force-dynamic";
@@ -87,29 +88,21 @@ export const GET = withApiHandler(
     });
     const processingFee = Number(processingFeeResult._sum.processingFee ?? 0);
 
-    // COGS: sum of SALE stock movements (negative qty = cost)
-    // balanceAfter is not cost; use qty * material.unitCost via joining
-    const cogsMovements = await prisma.stockMovement.findMany({
-      where: {
-        type: MovementType.SALE,
-        order: {
-          storeId,
-          orderDate: { gte: from, lte: to },
-          status: { notIn: NON_REVENUE_STATUSES },
-          ...shiftWhere,
-          ...channelWhere,
-          ...paymentWhere,
-        },
-        materialId: { not: null },
-      },
-      include: { material: { select: { unitCost: true } } },
+    // COGS — see src/lib/finance/cogs.ts. Frozen per-line snapshots where they
+    // exist, the legacy material-SALE ledger for orders that predate them, and
+    // uncosted lines counted rather than silently zeroed.
+    const {
+      cogsBase: cogsRaw,
+      unknownCostLines,
+      unknownCostRevenue,
+    } = await sumCogsBase({
+      storeId,
+      orderDate: { gte: from, lte: to },
+      status: { notIn: NON_REVENUE_STATUSES },
+      ...shiftWhere,
+      ...channelWhere,
+      ...paymentWhere,
     });
-
-    const cogsRaw = cogsMovements.reduce((sum, m) => {
-      const qty = Math.abs(Number(m.quantity));
-      const cost = Number(m.material?.unitCost ?? 0);
-      return sum + qty * cost;
-    }, 0);
 
     // revenue (and everything derived from Order.total) is already a
     // literal value in the owner's own currency; cogs comes from
@@ -185,6 +178,14 @@ export const GET = withApiHandler(
         cogs: Math.round(cogs * 100) / 100,
         grossProfit: Math.round(grossProfit * 100) / 100,
         grossMarginPct: Math.round(grossMargin * 100) / 100,
+        // Lines with no cost source at all (aggregator orders can never acquire
+        // one). Surfaced so the UI can annotate the figure instead of implying
+        // these sold at 100% margin. NOT currency-converted: this is derived
+        // from OrderItem.total, which — like revenue — is already a literal
+        // value in the owner's own currency. Only cogs comes from
+        // Material.unitCost and needs converting.
+        unknownCostLines,
+        unknownCostRevenue: Math.round(unknownCostRevenue * 100) / 100,
         wasteLoss: Math.round(wasteLoss * 100) / 100,
         taxCollected: Math.round(taxCollected * 100) / 100,
         serviceCharge: Math.round(serviceCharge * 100) / 100,

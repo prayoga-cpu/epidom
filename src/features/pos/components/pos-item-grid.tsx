@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useOnlineStatus } from "@/hooks/use-network-status";
 import type { PosMenuItem, PosMenuCategory } from "../types/pos.types";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
@@ -27,6 +28,10 @@ export function PosItemGrid({
   customDepartmentLabel,
 }: PosItemGridProps) {
   const { t } = useI18n();
+  // The counted-stock chip is suppressed offline: the POS menu IS mirrored to
+  // IndexedDB, but Product.currentStock is not, so a disconnected tablet would
+  // render an hours-old count as if it were authoritative.
+  const isOnline = useOnlineStatus();
   // Menu item prices are literal in the store's display currency, never
   // IDR — passing `currency` skips formatPrice's default base-currency
   // conversion.
@@ -112,6 +117,24 @@ export function PosItemGrid({
                     {formatPrice(item.price)}
                   </div>
                 </div>
+                {/* Counted finished goods, for batch-produced items only.
+                    Deliberately labelled "counted", never "available": at 0 the
+                    item is still perfectly sellable — the kitchen makes it fresh
+                    and the ingredients come out at that point. The tile stays
+                    fully tappable; this is a hint, never a gate. Suppressed
+                    while offline, where the number would be an hours-old figure
+                    rendered as if it were authoritative. */}
+                {item.countedStock !== undefined && isOnline && (
+                  <span
+                    className={`absolute top-1.5 right-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+                      item.countedStock <= 0
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-primary/10 text-primary"
+                    }`}
+                  >
+                    {t("pos.menu.counted").replace("{count}", String(item.countedStock))}
+                  </span>
+                )}
                 {!item.isAvailable && (
                   <div className="bg-background/50 absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
                     <span className="bg-destructive text-destructive-foreground rounded-md px-2 py-1 text-xs font-bold">

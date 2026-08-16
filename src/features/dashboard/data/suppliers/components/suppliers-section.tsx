@@ -265,7 +265,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
 
   if (isSubscriptionLocked) {
     return (
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+      <Card className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] overflow-hidden shadow-md">
         <CardHeader className="border-b">
           <CardTitle className="text-lg font-bold">{t("data.suppliers.pageTitle")}</CardTitle>
         </CardHeader>
@@ -288,7 +288,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
 
   return (
     <>
-      <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+      <Card className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] overflow-hidden shadow-md">
         <CardHeader className="border-b">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-lg font-bold">{t("data.suppliers.pageTitle")}</CardTitle>

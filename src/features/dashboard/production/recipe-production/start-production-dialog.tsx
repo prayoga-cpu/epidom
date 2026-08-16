@@ -37,13 +37,17 @@ import {
   DollarSign,
   Clock,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useStartProduction } from "./hooks/use-production-batches";
-import { RecipeWithIngredients } from "@/features/dashboard/data/recipes/hooks/use-recipes";
+import { useStartProduction, useOutstandingDrawnShortfall } from "./hooks/use-production-batches";
+import {
+  isBatchProduced,
+  RecipeWithIngredients,
+} from "@/features/dashboard/data/recipes/hooks/use-recipes";
 
 interface IngredientAvailability {
   materialId: string;
@@ -88,12 +92,19 @@ export function StartProductionDialog({
   const storeId = params?.storeId as string;
   const startProduction = useStartProduction(storeId);
 
-  // Get products linked to this recipe (from Many-to-Many relationship)
-  const linkedProducts =
-    recipe?.recipeProducts?.map(
-      (rp: { product: { id: string; name: string; sku: string } }) => rp.product
-    ) || [];
+  // Products linked to this recipe, narrowed to the ones a production batch can
+  // actually be logged against. You cannot "produce a batch" of a cook-to-order
+  // dish: its ingredients already come out at the moment it is sold, so
+  // offering it here would double-deduct them. UNTRACKED items have no stock
+  // maths at all. Only BATCH_PRODUCED belongs in this select.
+  const linkedProducts = useMemo(
+    () => (recipe?.recipeProducts ?? []).map((rp) => rp.product).filter(isBatchProduced),
+    [recipe?.recipeProducts]
+  );
   const defaultProductId = linkedProducts[0]?.id || "";
+  /** The recipe has linked products, but every one of them is cooked to order. */
+  const hasOnlyNonBatchProducts =
+    (recipe?.recipeProducts?.length ?? 0) > 0 && linkedProducts.length === 0;
 
   // Initialize form
   const form = useForm<StartProductionFormData>({
@@ -160,6 +171,28 @@ export function StartProductionDialog({
 
   const totalCost = safeNumberOfBatches * costPerBatch;
   const totalTime = safeNumberOfBatches * productionTime;
+
+  // A recipe that yields exactly one unit has no meaningful "per batch" figure —
+  // batch cost and unit cost are literally the same number, so showing both
+  // reads as two different facts when it is one.
+  const yieldsSingleUnit = yieldQuantity === 1;
+
+  /**
+   * Settlement preview.
+   *
+   * Some of what is about to be logged may already have been sold before it was
+   * logged. Those units' ingredients left inventory at the sale, so this run
+   * only draws ingredients for the remainder. Show the arithmetic rather than
+   * letting the owner discover it in the stock ledger.
+   */
+  const selectedProductId = form.watch("productId");
+  const { outstanding: outstandingShortfall } = useOutstandingDrawnShortfall(
+    storeId,
+    selectedProductId || undefined
+  );
+  const plannedQuantity = Math.round(safeNumberOfBatches * yieldQuantity);
+  const alreadyAccountedUnits = Math.min(outstandingShortfall, plannedQuantity);
+  const unitsDrawingIngredients = Math.max(0, plannedQuantity - alreadyAccountedUnits);
 
   // Handle form submission
   const onSubmit = async (data: StartProductionFormData) => {
@@ -281,7 +314,9 @@ export function StartProductionDialog({
                     </div>
                     <div>
                       <p className="text-muted-foreground">
-                        {t("management.recipeProduction.costPerBatch")}
+                        {yieldsSingleUnit
+                          ? t("data.recipes.costPerUnit")
+                          : t("management.recipeProduction.costPerBatch")}
                       </p>
                       <p className="font-medium">{formatPrice(recipe.costPerBatch)}</p>
                     </div>
@@ -353,8 +388,13 @@ export function StartProductionDialog({
                         "No products linked to this recipe"}
                     </p>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      {t("management.recipeProduction.noLinkedProductsHint") ||
-                        "Please link a product to this recipe before starting production."}
+                      {/* "Nothing is linked" and "everything linked is cooked to
+                          order" are different problems needing different advice
+                          — the second one isn't a setup mistake to fix. */}
+                      {hasOnlyNonBatchProducts
+                        ? t("production.emptyState.batchOnly")
+                        : t("management.recipeProduction.noLinkedProductsHint") ||
+                          "Please link a product to this recipe before starting production."}
                     </p>
                   </div>
                 </div>
@@ -397,6 +437,23 @@ export function StartProductionDialog({
                 </FormItem>
               )}
             />
+
+            {/* Settlement Preview — show the netting before it happens, so no
+                arithmetic is silent. */}
+            {alreadyAccountedUnits > 0 && (
+              <div className="border-primary/40 bg-primary/5 rounded-lg border p-4">
+                <div className="flex items-start gap-3">
+                  <Info className="text-primary mt-0.5 h-5 w-5 shrink-0" />
+                  <p className="text-foreground text-sm">
+                    {t("production.settlement.preview")
+                      .replace("{sold}", String(alreadyAccountedUnits))
+                      .replace("{total}", String(plannedQuantity))
+                      .replace("{remaining}", String(unitsDrawingIngredients))
+                      .replace("{unit}", recipe.yieldUnit)}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Calculated Summary */}
             <Card className="bg-muted/50">

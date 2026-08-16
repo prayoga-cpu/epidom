@@ -9,6 +9,7 @@ import {
   ProductLine,
 } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
+import { ValidationError } from "@/lib/errors";
 import type { ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
 
 /**
@@ -233,24 +234,63 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
-   * Update product recipes (Many-to-Many relationship)
+   * Replace a product's recipe links, and elect its primary recipe.
+   *
+   * The links themselves are alternative batch sizes, used by the Production
+   * screen. Which recipe defines ONE UNIT of this product — for sale-time
+   * deduction and for cost — lives in `Product.primaryRecipeId`.
+   * `RecipeProduct.isDefault` is deprecated and deliberately left `false`;
+   * nothing reads it any more.
+   *
+   * STORE SCOPING IS LOAD-BEARING. Recipe ids arrive as raw client input
+   * (product.service.ts passes `validatedData.recipeIds` straight through; the
+   * route only verifies that the PRODUCT belongs to the store), the FK targets
+   * `recipes(id)` globally, and `@@unique([recipeId, productId])` does not
+   * constrain store. Until now the link was inert, so this was harmless. From
+   * this release it drives material deduction, low-stock alerts and realtime
+   * fan-out — an unvalidated id would let store A drain store B's inventory
+   * and would broadcast B's material ids on A's private channel.
+   *
+   * `primaryRecipeId` omitted (undefined) means "elect the first link", which
+   * is what create/update flows want. Passing `null` explicitly clears it.
    */
-  async updateRecipes(productId: string, recipeIds: string[]): Promise<ProductWithRelations> {
-    // First, delete all existing recipe-product relationships
+  async updateRecipes(
+    productId: string,
+    storeId: string,
+    recipeIds: string[],
+    primaryRecipeId?: string | null
+  ): Promise<ProductWithRelations> {
+    const ids = Array.from(new Set(recipeIds));
+
+    if (ids.length > 0) {
+      const owned = await this.db.recipe.findMany({
+        where: { id: { in: ids }, storeId },
+        select: { id: true },
+      });
+      if (owned.length !== ids.length) {
+        throw new ValidationError("One or more recipes do not belong to this store");
+      }
+    }
+
+    const primary = primaryRecipeId === undefined ? (ids[0] ?? null) : primaryRecipeId;
+    if (primary && !ids.includes(primary)) {
+      throw new ValidationError("Primary recipe must be one of the linked recipes");
+    }
+
     await this.db.recipeProduct.deleteMany({
       where: { productId },
     });
 
-    // Then, create new relationships
-    if (recipeIds.length > 0) {
+    if (ids.length > 0) {
       await this.db.recipeProduct.createMany({
-        data: recipeIds.map((recipeId) => ({
-          productId,
-          recipeId,
-          isDefault: false, // No default recipes anymore
-        })),
+        data: ids.map((recipeId) => ({ productId, recipeId })),
       });
     }
+
+    await this.db.product.update({
+      where: { id: productId },
+      data: { primaryRecipeId: primary },
+    });
 
     // Return updated product with recipes
     return this.findById(productId) as Promise<ProductWithRelations>;

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import { MovementType, type OrderSource } from "@prisma/client";
+import { sumCogsBase } from "@/lib/finance/cogs";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { shiftFilter, categoryFilter, departmentFilter, UNCATEGORIZED } from "@/lib/finance/report-filters";
 import {
@@ -114,24 +115,15 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   });
   const processingFee = Number(processingFeeResult._sum.processingFee ?? 0);
 
-  const cogsMovements = await prisma.stockMovement.findMany({
-    where: {
-      type: MovementType.SALE,
-      order: {
-        storeId,
-        orderDate: { gte: from, lte: to },
-        status: { notIn: NON_REVENUE_STATUSES },
-        ...shiftWhere,
-      },
-      materialId: { not: null },
-    },
-    include: { material: { select: { unitCost: true } } },
+  // Shared with /api/stores/[id]/finance/summary — see src/lib/finance/cogs.ts.
+  // This page used to carry its own hand-copy of the formula, which is how the
+  // printed P&L and the on-screen one could disagree.
+  const { cogsBase: cogsRaw } = await sumCogsBase({
+    storeId,
+    orderDate: { gte: from, lte: to },
+    status: { notIn: NON_REVENUE_STATUSES },
+    ...shiftWhere,
   });
-  const cogsRaw = cogsMovements.reduce((sum, m) => {
-    const qty = Math.abs(Number(m.quantity));
-    const cost = Number(m.material?.unitCost ?? 0);
-    return sum + qty * cost;
-  }, 0);
   // revenue is already literal in the owner's own currency; cogs comes
   // from Material.unitCost, stored in IDR (the platform base currency).
   // Convert before combining, or the result mixes units for any non-IDR

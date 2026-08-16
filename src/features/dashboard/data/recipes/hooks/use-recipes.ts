@@ -13,6 +13,18 @@ import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 // Types
+
+/**
+ * Mirrors the Prisma `StockMode` enum. Declared locally rather than imported
+ * from `@prisma/client` so client bundles don't pull the Prisma runtime in.
+ *
+ * - BATCH_PRODUCED — made ahead, counted on the shelf. The only mode the
+ *   Production screen can act on.
+ * - MADE_TO_ORDER  — cooked when sold; ingredients come out at sale time.
+ * - UNTRACKED      — no stock maths at all.
+ */
+export type StockMode = "BATCH_PRODUCED" | "MADE_TO_ORDER" | "UNTRACKED";
+
 export interface RecipeWithIngredients {
   id: string;
   name: string;
@@ -46,13 +58,16 @@ export interface RecipeWithIngredients {
     id: string;
     recipeId: string;
     productId: string;
-    isDefault: boolean;
     product: {
       id: string;
       name: string;
       sku: string;
       category: string | null;
       unit: string;
+      /** Branch on this, never on the deprecated `trackStock`. */
+      stockMode: StockMode;
+      /** Replaces the dead `RecipeProduct.isDefault` flag. */
+      primaryRecipeId: string | null;
       currentStock: number;
       minStock: number;
       maxStock: number;
@@ -61,6 +76,35 @@ export interface RecipeWithIngredients {
     };
   }>;
 }
+
+/**
+ * Only a BATCH_PRODUCED product can be "produced": you make it ahead and count
+ * it onto the shelf. A MADE_TO_ORDER dish has no counted balance — its
+ * ingredients leave inventory at the moment it is sold — and an UNTRACKED one
+ * has no stock maths at all, so neither belongs on the Production screen.
+ */
+export function isBatchProduced(product: { stockMode: StockMode }): boolean {
+  return product.stockMode === "BATCH_PRODUCED";
+}
+
+/** True when at least one linked product is actually batch-produced. */
+export function hasBatchProducedProduct(recipe: RecipeWithIngredients): boolean {
+  return (recipe.recipeProducts ?? []).some((rp) => isBatchProduced(rp.product));
+}
+
+/**
+ * Recipe list filters. `RecipeFilterInput` is the shared Zod-derived shape;
+ * `producibleOnly` is an extra narrowing the Production screen needs (see the
+ * note on `fetchRecipes`).
+ */
+export type RecipeListFilters = RecipeFilterInput & {
+  /**
+   * Restrict to recipes linked to at least one BATCH_PRODUCED product.
+   * Applied SERVER-SIDE on purpose: the Produce tab pages with `take`, so a
+   * client-only filter would silently return a differently-truncated list.
+   */
+  producibleOnly?: boolean;
+};
 
 export interface RecipesResponse {
   recipes: RecipeWithIngredients[];
@@ -80,13 +124,18 @@ export const recipeKeys = {
 // API Functions
 async function fetchRecipes(
   storeId: string,
-  filters: Partial<RecipeFilterInput>
+  filters: Partial<RecipeListFilters>
 ): Promise<RecipesResponse> {
   const params = new URLSearchParams();
 
   if (filters.search) params.append("search", filters.search);
   if (filters.category) params.append("category", filters.category);
   if (filters.department) params.append("department", filters.department);
+  // NOTE: GET /api/stores/[id]/recipes must accept this and translate it to
+  // `recipeProducts: { some: { product: { stockMode: BATCH_PRODUCED } } }`.
+  // Until it does, the server ignores the param and the Produce tab falls back
+  // to its defensive client-side guard (see recipe-production.tsx).
+  if (filters.producibleOnly) params.append("producibleOnly", "true");
   if (filters.sortBy) params.append("sortBy", filters.sortBy);
   if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
   if (filters.skip !== undefined) params.append("skip", filters.skip.toString());
@@ -253,7 +302,7 @@ async function exportRecipes(storeId: string, filters: RecipeFilterInput): Promi
  */
 export function useRecipes(
   storeId: string,
-  filters: RecipeFilterInput,
+  filters: RecipeListFilters,
   initialData?: RecipesResponse
 ) {
   // Normalize filters untuk consistent query keys (prevent cache fragmentation)

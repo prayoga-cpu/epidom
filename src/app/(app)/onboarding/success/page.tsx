@@ -4,7 +4,7 @@ import { OnboardingSuccessContent } from "@/features/onboarding/components/onboa
 
 function OnboardingSuccessSkeleton() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-green-50 to-white px-4 py-12">
+    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center bg-gradient-to-b from-green-50 to-white px-4 py-12">
       <div className="mx-auto max-w-lg text-center">
         <Skeleton className="mx-auto mb-6 h-20 w-20 rounded-full" />
         <Skeleton className="mx-auto mb-3 h-10 w-64" />

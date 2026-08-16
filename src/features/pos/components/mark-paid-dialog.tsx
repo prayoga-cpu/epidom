@@ -72,7 +72,7 @@ export function MarkPaidDialog({
           grows with the store's enabled markets (worldwide + Indonesia +
           France + Other), which overflows short viewports. dvh (not vh) so
           iOS Safari's toolbar doesn't push the footer out of reach. */}
-      <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-md">
+      <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden sm:max-w-md">
         <DialogHeader className="shrink-0">
           <DialogTitle>{t("pos.markPaid.title")}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

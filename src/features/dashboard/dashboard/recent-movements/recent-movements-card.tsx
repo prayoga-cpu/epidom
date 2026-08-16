@@ -28,6 +28,10 @@ const TYPE_COLORS: Partial<Record<MovementType, string>> = {
   ADJUSTMENT: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
   PURCHASE: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
   WASTE: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  // Stock given back by a cancelled order. Reversals became reachable far more
+  // often once cancel stopped being gated on the order still being DELIVERED,
+  // so an unlabelled badge here is now a visible gap rather than a rarity.
+  RETURN: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
 };
 
 function sourceLabel(m: Movement): string {

@@ -193,7 +193,7 @@ export function StoresContainer() {
 
           {/* Error State */}
           {error && !isLoading && (
-            <div className="animate-slide-up-delayed flex min-h-[calc(100vh-250px)] items-center justify-center px-4 py-8 text-center sm:min-h-[calc(100vh-300px)] sm:py-12 md:py-16">
+            <div className="animate-slide-up-delayed flex min-h-[calc((100vh-250px)/var(--app-zoom,1))] items-center justify-center px-4 py-8 text-center sm:min-h-[calc((100vh-300px)/var(--app-zoom,1))] sm:py-12 md:py-16">
               <div className="w-full max-w-md">
                 <AlertCircle className="text-destructive mx-auto mb-4 h-10 w-10 sm:h-12 sm:w-12" />
                 <p className="text-foreground mb-2 text-base font-semibold sm:text-lg">
@@ -211,7 +211,7 @@ export function StoresContainer() {
 
           {/* Empty State - Enhanced with visual and CTA */}
           {!isLoading && !error && stores?.length === 0 && (
-            <div className="animate-slide-up-delayed flex min-h-[calc(100vh-250px)] items-center justify-center px-4 py-8 text-center sm:min-h-[calc(100vh-300px)] sm:py-12 md:py-16">
+            <div className="animate-slide-up-delayed flex min-h-[calc((100vh-250px)/var(--app-zoom,1))] items-center justify-center px-4 py-8 text-center sm:min-h-[calc((100vh-300px)/var(--app-zoom,1))] sm:py-12 md:py-16">
               <div className="mx-auto w-full max-w-md">
                 {/* Visual Icon */}
                 <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full sm:mb-6 sm:h-20 sm:w-20 md:h-24 md:w-24">

@@ -286,7 +286,7 @@ export function ClockInOutDialog({ open, onOpenChange, storeId }: ClockInOutDial
         if (!next) reset();
       }}
     >
-      <DialogContent className="flex max-h-[90dvh] max-w-sm flex-col overflow-y-auto">
+      <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] max-w-sm flex-col overflow-y-auto">
         {step === "select-staff" &&
           (actingAsStaff ? (
             <div className="flex justify-center py-10">

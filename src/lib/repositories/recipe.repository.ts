@@ -1,4 +1,4 @@
-import { Recipe, Prisma, RecipeProduct, Product, Department } from "@prisma/client";
+import { Recipe, Prisma, RecipeProduct, Product, Department, StockMode } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 
@@ -32,6 +32,8 @@ export interface RecipeFilters {
   search?: string;
   category?: string;
   department?: Department;
+  /** Only recipes with at least one linked BATCH_PRODUCED product. */
+  producibleOnly?: boolean;
   sortBy?:
     | "name"
     | "category"
@@ -56,6 +58,7 @@ export class RecipeRepository extends BaseRepository {
       search,
       category,
       department,
+      producibleOnly,
       sortBy = "createdAt",
       sortOrder = "desc",
       skip = 0,
@@ -74,6 +77,13 @@ export class RecipeRepository extends BaseRepository {
       }),
       ...(category && { category }),
       ...(department && { department }),
+      // A recipe is "producible" only if something it makes is counted on a
+      // shelf. A cook-to-order dish has no batch to run — its ingredients come
+      // out at the sale — so offering it on the Produce tab would invite a
+      // double-draw.
+      ...(producibleOnly && {
+        recipeProducts: { some: { product: { stockMode: StockMode.BATCH_PRODUCED } } },
+      }),
     };
 
     // Build orderBy clause
@@ -546,6 +556,58 @@ export class RecipeRepository extends BaseRepository {
         costPerBatch,
       },
     });
+
+    await this.cascadeCostToProducts(recipeId, costPerBatch, Number(recipe.yieldQuantity));
+  }
+
+  /**
+   * Push a recipe's new per-unit cost onto every product that names it as its
+   * PRIMARY recipe.
+   *
+   * Why this has to happen at all: `OrderItem.unitCostSnapshot` is frozen from
+   * `Product.costPrice` at deduction time, and that is what Finance reads for
+   * COGS. Without a cascade, a supplier price rise updates the recipe and the
+   * ingredient ledger but leaves `costPrice` — and therefore every future
+   * margin figure — quietly wrong.
+   *
+   * Three guards, each load-bearing:
+   *  - PRIMARY recipe only. A product can link several recipes as alternative
+   *    batch sizes; summing or last-writer-wins across them is how the cost
+   *    preview used to double-count a product linked to its own 10-unit and
+   *    50-unit variants.
+   *  - `costPriceManual` opts a product out entirely, so a figure the owner
+   *    typed is never overwritten.
+   *  - `costPriceOriginal` captures the pre-cascade value ONCE (it is only
+   *    written where it is still null), so enabling this is reversible per
+   *    product instead of destroying merchant data.
+   */
+  private async cascadeCostToProducts(
+    recipeId: string,
+    costPerBatch: number,
+    yieldQuantity: number
+  ): Promise<void> {
+    if (!(yieldQuantity > 0)) return;
+
+    const costPerUnit = costPerBatch / yieldQuantity;
+    if (!Number.isFinite(costPerUnit) || costPerUnit <= 0) return;
+
+    const products = await this.db.product.findMany({
+      where: { primaryRecipeId: recipeId, costPriceManual: false },
+      select: { id: true, costPrice: true, costPriceOriginal: true },
+    });
+
+    for (const product of products) {
+      const rounded = Math.round(costPerUnit * 100) / 100;
+      if (rounded === Number(product.costPrice)) continue;
+
+      await this.db.product.update({
+        where: { id: product.id },
+        data: {
+          costPrice: rounded,
+          ...(product.costPriceOriginal === null && { costPriceOriginal: product.costPrice }),
+        },
+      });
+    }
   }
 
   /**

@@ -245,7 +245,7 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
   if (isActive && sessionStoreId === storeId) {
     if (needsPinReverify) {
       return (
-        <div className="flex min-h-[calc(100vh-200px)] w-full flex-col items-center justify-center p-4">
+        <div className="flex min-h-[calc((100vh-200px)/var(--app-zoom,1))] w-full flex-col items-center justify-center p-4">
           <div className="bg-background relative flex w-full max-w-xs flex-col items-center justify-center rounded-2xl border p-6 shadow-2xl">
             <div className="mt-2 text-center">
               <div className="bg-primary/10 text-primary mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold sm:mb-4 sm:h-16 sm:w-16">
@@ -328,7 +328,7 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-200px)] w-full flex-col items-center justify-center p-4">
+    <div className="flex min-h-[calc((100vh-200px)/var(--app-zoom,1))] w-full flex-col items-center justify-center p-4">
       <div
         className={cn(
           "bg-background relative w-full rounded-2xl border shadow-2xl",

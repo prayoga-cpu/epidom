@@ -119,7 +119,7 @@ export function DashboardClient({
   const lastTileSpan = wideRowCards >= 3 ? "md:col-span-2 lg:col-span-1" : "";
 
   return (
-    <div className="grid min-h-[calc(100vh-120px)] w-full gap-6 pb-6">
+    <div className="grid min-h-[calc((100vh-120px)/var(--app-zoom,1))] w-full gap-6 pb-6">
       <PageHeader pageTitle={t("dashboard.title")} pageDescription={t("dashboard.description")} />
 
       <AnalyticsSection storeId={storeId} />

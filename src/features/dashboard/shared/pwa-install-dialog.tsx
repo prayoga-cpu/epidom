@@ -126,7 +126,7 @@ export function OfflineSyncTrigger({ variant }: { variant: PwaTriggerVariant }) 
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       {/* z-[80] so it renders above the mobile nav drawer (Sheet is z-[70]) when
           opened from inside the drawer */}
-      <DialogContent className="z-[80] flex max-h-[85dvh] flex-col overflow-hidden">
+      <DialogContent className="z-[80] flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>{t("common.pwa.offlineSettingsTitle")}</DialogTitle>
           <DialogDescription>{t("common.pwa.offlineSettingsIntro")}</DialogDescription>

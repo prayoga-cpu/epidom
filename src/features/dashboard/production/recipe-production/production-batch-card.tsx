@@ -172,6 +172,18 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
               </span>
             </div>
 
+            {/* This batch's ingredients came out of inventory at the sale, not
+                here. Completing it is still worth doing (it flips the order
+                items to ready) but it will not draw materials again. */}
+            {batch.triggerType === "ORDER_SHORTFALL" && batch.materialsDrawnAt && (
+              <div className="border-primary/40 bg-primary/5 flex items-start gap-2 rounded-lg border p-2">
+                <CheckCircle className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+                <span className="text-foreground text-xs">
+                  {t("production.settlement.alreadyAccounted")}
+                </span>
+              </div>
+            )}
+
             {/* Completion Date (if completed) */}
             {batch.status === "COMPLETED" && batch.completedDate && (
               <div className="text-muted-foreground text-sm">

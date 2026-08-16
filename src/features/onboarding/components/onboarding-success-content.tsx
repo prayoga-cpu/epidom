@@ -45,7 +45,7 @@ export function OnboardingSuccessContent() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-green-50 to-white px-4 py-12">
+    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center bg-gradient-to-b from-green-50 to-white px-4 py-12">
       <div className="mx-auto max-w-lg text-center">
         {/* Success Icon */}
         <div className="mb-6 inline-flex items-center justify-center rounded-full bg-green-100 p-4">

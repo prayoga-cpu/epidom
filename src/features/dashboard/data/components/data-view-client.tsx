@@ -111,7 +111,7 @@ const CustomProductsSection = dynamic(
  */
 function TabContentSkeleton() {
   return (
-    <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+    <Card className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] overflow-hidden shadow-md">
       <CardHeader className="border-b">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <Skeleton className="h-7 w-32" />
@@ -303,7 +303,7 @@ export function DataViewClient({
     <Tabs
       value={activeTab}
       onValueChange={setActiveTab}
-      className="grid min-h-[calc(100vh-150px)] w-full gap-6"
+      className="grid min-h-[calc((100vh-150px)/var(--app-zoom,1))] w-full gap-6"
     >
       <TabsList className="bg-muted/50 grid h-auto w-full max-w-full grid-cols-2 gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm md:inline-flex md:h-9 md:max-w-none md:grid-cols-none md:justify-start md:gap-0 md:p-1.5">
         <TabsTrigger

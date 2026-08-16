@@ -410,6 +410,13 @@ Migration: `prisma/migrations/<timestamp>_rename_subscription_plans/`. Handles t
 | Never use `prisma db push` against any database except your local dev           | It skips the migration history                  |
 | Test the migration against a snapshot of prod data before merging               | Most migration failures are data-shape problems |
 | Commit the migration file alongside the schema change                           | They must move together                         |
+| Write data backfills as inline SQL in the same `migration.sql`, not a script    | The backfill and the column must land atomically |
+| Combine multi-value backfills into ONE `UPDATE ... CASE`, never one per value   | Each pass fully rewrites the table               |
+| Document the down-SQL as a comment block at the bottom of `migration.sql`       | Prisma migrations are forward-only               |
+
+**Backfills run against live traffic.** `package.json`'s build script is `prisma migrate deploy && tsx scripts/sync-changelog.ts && next build`, so every committed migration applies as the FIRST step of a Vercel build — while the *previous* deployment is still serving. Additive columns with a default or nullable are metadata-only on PG11+, but a table-rewriting `UPDATE` inside the migration blocks writes for its duration. Measure `count(*)` first; if the table is large, move the backfill to a batched, idempotent, `--dry-run`-capable script under `scripts/` and make the code tolerate a not-yet-backfilled row.
+
+**Precedents worth copying:** `20260810124956_add_custom_product_line` (enum + column + index), `20260811033102_add_product_track_stock` (column + a commented backfill explaining why the column default would misrepresent existing rows), and `20260814105502_add_product_stock_mode` (enum + 6 columns + two backfills + documented down-SQL).
 
 ---
 

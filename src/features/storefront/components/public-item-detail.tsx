@@ -219,7 +219,7 @@ export function PublicItemDetail({ storefront, item: initialItem }: PublicItemDe
   };
 
   return (
-    <div className="flex min-h-screen flex-col pb-24" style={themeStyle}>
+    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] flex-col pb-24" style={themeStyle}>
       {/* Header */}
       <header className="bg-card/90 sticky top-0 z-30 flex items-center justify-between border-b px-4 py-3 shadow-sm backdrop-blur-md">
         <Link

@@ -353,12 +353,43 @@ model Product {
   costPrice         Decimal              @db.Decimal(10, 2)
   sellingPrice      Decimal              @db.Decimal(10, 2)
   currentStock      Decimal              @default(0) @db.Decimal(10, 3)
-  // When false, this product has no inventory at all — nothing is ever
-  // decremented on sale and it can never run out (a service, e.g. a haircut,
-  // or an always-available made-to-order item). When true (the default, so
-  // every existing product keeps today's behavior), `currentStock` is real
-  // and is deducted per order — see stock-deduction.service.ts.
-  trackStock        Boolean              @default(true)
+  // How a sale consumes inventory. Authoritative discriminator.
+  //   BATCH_PRODUCED — prepped ahead, or bought in ready to sell. A sale draws
+  //                    the counted finished-goods balance first and stops
+  //                    there; whatever the count does not cover was physically
+  //                    cooked to order, so its raw materials are drawn from the
+  //                    primary recipe at that point (and settled against any
+  //                    later production log — see ProductionBatch
+  //                    .materialsDrawnAt).
+  //   MADE_TO_ORDER  — cooked on demand. No finished-goods count exists; every
+  //                    sale draws raw materials scaled to one unit.
+  //   UNTRACKED      — a service, or an item that never runs out. Nothing moves.
+  //
+  // Defaults to BATCH_PRODUCED deliberately: it matches the migration backfill
+  // AND the behavior of every writer that bypasses Zod (the CSV/AI importer
+  // writes prisma.product.create directly — see data/actions.ts). A recipe-less
+  // BATCH_PRODUCED product oversells visibly; a recipe-less MADE_TO_ORDER
+  // product would silently deduct nothing, which is the bug this exists to fix.
+  stockMode         StockMode            @default(BATCH_PRODUCED)
+  // The single recipe defining what ONE unit of this product consumes.
+  // Replaces RecipeProduct.isDefault, which no writer has ever set true (see
+  // product.repository.ts) and which silently disabled sale-time ingredient
+  // deduction and ORDER_SHORTFALL drafting for every link the app has created
+  // since the M:N migration. Other RecipeProduct links remain as alternative
+  // batch sizes for the Production screen only.
+  // MUST be store-validated on write — the FK is global.
+  primaryRecipeId   String?
+  // When true the owner typed this product's cost themselves and a recipe must
+  // never overwrite it. False (the default) lets a primary-recipe cost change
+  // cascade into `costPrice` — which matters because OrderItem.unitCostSnapshot
+  // is frozen FROM that column, so a stale costPrice silently corrupts every
+  // future COGS figure.
+  costPriceManual   Boolean              @default(false)
+  // The value `costPrice` held immediately before the first cascade overwrote
+  // it. Captured once and never updated again, purely so the cascade is
+  // reversible — without it, turning this on would destroy merchant-typed
+  // figures with no way back.
+  costPriceOriginal Decimal?             @db.Decimal(10, 2)
   unit              String               @default("piece")
   productionTime    Int?
   shelfLife         Int?
@@ -371,6 +402,7 @@ model Product {
   productionBatches ProductionBatch[]
   store             Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
   recipeProducts    RecipeProduct[]
+  primaryRecipe     Recipe?              @relation("ProductPrimaryRecipe", fields: [primaryRecipeId], references: [id], onDelete: SetNull)
   stockMovements    StockMovement[]
   menuItems         MenuItem[]
   optionGroups      ProductOptionGroup[]
@@ -381,6 +413,8 @@ model Product {
   @@index([category])
   @@index([department])
   @@index([productLine])
+  @@index([stockMode])
+  @@index([primaryRecipeId])
   @@map("products")
 }
 
@@ -507,6 +541,7 @@ model Recipe {
   productionBatches     ProductionBatch[]
   ingredients           RecipeIngredient[]
   recipeProducts        RecipeProduct[]
+  primaryForProducts    Product[]          @relation("ProductPrimaryRecipe")
   store                 Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([storeId])
@@ -535,7 +570,6 @@ model RecipeProduct {
   id        String   @id @default(cuid())
   recipeId  String
   productId String
-  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -566,6 +600,17 @@ model ProductionBatch {
   scheduledDate   DateTime
   completedDate   DateTime?
   notes           String?
+  // Set when this batch's raw materials were drawn at SALE time by the
+  // made-to-order fallback (see stock-deduction.service.ts). Null on every
+  // pre-release row, which is exactly why settlement can key off it with no
+  // backfill. A batch with materialsDrawnAt != null and settledQuantity <
+  // plannedQuantity carries an outstanding "already paid for in ingredients"
+  // debt a later manual production run must net against, or the same flour is
+  // drawn twice.
+  materialsDrawnAt DateTime?
+  // How much of this batch's quantity a later manual production run has
+  // already absorbed. See productionBatchService.settleDrawnShortfall.
+  settledQuantity Decimal               @default(0) @db.Decimal(10, 3)
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   storeId         String
@@ -579,6 +624,7 @@ model ProductionBatch {
   @@index([productId])
   @@index([status])
   @@index([scheduledDate])
+  @@index([productId, materialsDrawnAt])
   @@map("production_batches")
 }
 
@@ -602,6 +648,12 @@ model StockMovement {
   // One-to-many: a single WasteEntry can accumulate several movements over
   // its life as it's corrected, so this is never unique.
   wasteEntryId      String?
+  // For a RETURN row: the exact SALE movement it reverses. Makes reversal
+  // cycle-scoped — without it an order that goes DELIVERED → CANCELLED →
+  // DELIVERED → CANCELLED replays BOTH SALE sets and restores double.
+  // Deliberately NOT `referenceId`, which is merchant-entered free text
+  // (PO#, Invoice#) written by the stock-adjust and waste routes.
+  reversesMovementId String?
   material          Material?        @relation(fields: [materialId], references: [id], onDelete: Cascade)
   order             Order?           @relation(fields: [orderId], references: [id])
   product           Product?         @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -613,6 +665,11 @@ model StockMovement {
   @@index([type])
   @@index([createdAt])
   @@index([wasteEntryId])
+  // The deduction/reversal idempotency guards and the reversal replay all
+  // filter on orderId (+ type, ordered by createdAt). There was no orderId
+  // index at all — every guard was a seq scan on the hottest write path.
+  @@index([orderId, type, createdAt])
+  @@index([reversesMovementId])
   @@map("stock_movements")
 }
 
@@ -758,6 +815,19 @@ model Order {
   refundAmount       Decimal         @default(0) @db.Decimal(10, 2)
   refundedAt         DateTime?
   refundReason       String?
+  // Set when deductStockForOrder committed successfully. The ledger (SALE /
+  // RETURN movements) remains the idempotency authority — this exists so a
+  // SWALLOWED deduction failure is recoverable rather than invisible, and so
+  // the catch-up sweep has a bounded candidate set instead of "every DELIVERED
+  // order with no SALE row", which would re-deduct the entire order history.
+  stockDeductedAt    DateTime?
+  // Caller-supplied idempotency key for offline replay. The POS queues orders
+  // to IndexedDB while disconnected and POSTs them on reconnect; a response
+  // that never arrives (or a second tab syncing the same queue) previously
+  // created a DUPLICATE order, with duplicate stock deduction behind it.
+  // Nullable and unique — Postgres permits many NULLs, so every online order is
+  // unaffected. The queue entry's own id is the key.
+  clientRequestId    String?   @unique
   notes              String?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -832,6 +902,11 @@ model OrderItem {
   // change later. Null for legacy rows and for items with no COGS
   // attribution path (aggregator items with only menuItemId, no productId).
   unitCostSnapshot Decimal?        @db.Decimal(14, 6)
+  // Per-UNIT cost of this line's selected ProductOption materials, frozen at
+  // deduction time in base currency. Without it, moving COGS onto snapshots
+  // would DELETE modifier cost from the P&L — and modifier materials are the
+  // only material SALE rows most stores write today.
+  optionCostSnapshot Decimal?      @db.Decimal(14, 6)
   // Phase 3: KDS workflow
   status          OrderItemStatus @default(PENDING)
   preparedAt      DateTime?
@@ -1250,6 +1325,16 @@ enum Department {
 enum ProductLine {
   STANDARD
   CUSTOM
+}
+
+/// How a sale consumes inventory for a Product — the authoritative two-tier
+/// discriminator. Always branch on Product.stockMode, never on trackStock
+/// (which is now derived from it). See Product.stockMode for the semantics of
+/// each value and stock-deduction.service.ts for the algorithm.
+enum StockMode {
+  BATCH_PRODUCED
+  MADE_TO_ORDER
+  UNTRACKED
 }
 
 enum PayType {

@@ -49,8 +49,9 @@ interface ItemFormState {
   sellingPrice: string;
   // false = a service or otherwise unlimited offering (a haircut never runs
   // out); true = a real countable good whose stock is deducted per order.
-  // See Product.trackStock.
-  trackStock: boolean;
+  // Maps to Product.stockMode (UNTRACKED / BATCH_PRODUCED) — the deprecated
+  // `trackStock` column is gone.
+  counted: boolean;
   stockQty: string;
 }
 
@@ -61,7 +62,7 @@ const EMPTY_FORM: ItemFormState = {
   sellingPrice: "",
   // Services are the common case for this product line, so default to
   // untracked — the owner opts into counting stock, not out of it.
-  trackStock: false,
+  counted: false,
   stockQty: "0",
 };
 
@@ -123,7 +124,7 @@ export function CustomProductsSection({ storeId }: CustomProductsSectionProps) {
 
   if (isLoadingSettings) {
     return (
-      <Card className="min-h-[calc(100vh-150px)]">
+      <Card className="min-h-[calc((100vh-150px)/var(--app-zoom,1))]">
         <CardHeader className="border-b">
           <Skeleton className="h-7 w-48" />
         </CardHeader>
@@ -136,7 +137,7 @@ export function CustomProductsSection({ storeId }: CustomProductsSectionProps) {
 
   if (!enabled) {
     return (
-      <Card className="min-h-[calc(100vh-150px)]">
+      <Card className="min-h-[calc((100vh-150px)/var(--app-zoom,1))]">
         <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
           <div className="bg-muted rounded-full p-4">
             <Sparkles className="text-muted-foreground h-8 w-8" />
@@ -255,7 +256,7 @@ function CustomProductsEnabled({
   };
 
   return (
-    <Card className="min-h-[calc(100vh-150px)] overflow-hidden shadow-md">
+    <Card className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] overflow-hidden shadow-md">
       <CardHeader className="border-b">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {renaming ? (
@@ -355,7 +356,7 @@ function CustomProductsEnabled({
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t("common.stock")}</span>
                       <span>
-                        {product.trackStock
+                        {product.stockMode !== "UNTRACKED"
                           ? Number(product.currentStock) || 0
                           : t("data.customProducts.unlimited")}
                       </span>
@@ -398,6 +399,10 @@ function CustomProductsEnabled({
           const sellingPrice = convertToBase(Number(form.sellingPrice));
           const promise = createProduct.mutateAsync({
             storeId,
+            // A custom-line item is a service or an always-available good when
+            // the owner turns stock tracking off; otherwise it is counted like
+            // any other product.
+            stockMode: form.counted ? "BATCH_PRODUCED" : "UNTRACKED",
             sku: generateSku(form.name, form.category || undefined),
             name: form.name,
             category: form.category || undefined,
@@ -405,8 +410,7 @@ function CustomProductsEnabled({
             productLine: "CUSTOM",
             costPrice,
             sellingPrice,
-            trackStock: form.trackStock,
-            currentStock: form.trackStock ? Number(form.stockQty) || 0 : 0,
+            currentStock: form.counted ? Number(form.stockQty) || 0 : 0,
             unit: "piece",
             minStock: 0,
             maxStock: 1000,
@@ -482,7 +486,7 @@ function CustomProductFormDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden">
+      <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{t("data.customProducts.explainerTitle")}</DialogDescription>
@@ -534,23 +538,23 @@ function CustomProductFormDialog({
             </div>
           </div>
           {/* Stock: off for services (a haircut never runs out), on for real
-              countable goods like merchandise — see Product.trackStock. */}
+              countable goods like merchandise — see Product.stockMode. */}
           <div className="space-y-3 rounded-lg border p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-0.5">
                 <p className="text-sm font-medium">{t("data.customProducts.form.trackStock")}</p>
                 <p className="text-muted-foreground text-xs">
-                  {form.trackStock
+                  {form.counted
                     ? t("data.customProducts.form.trackStockOnHint")
                     : t("data.customProducts.form.trackStockOffHint")}
                 </p>
               </div>
               <Switch
-                checked={form.trackStock}
-                onCheckedChange={(checked) => setForm((f) => ({ ...f, trackStock: checked }))}
+                checked={form.counted}
+                onCheckedChange={(checked) => setForm((f) => ({ ...f, counted: checked }))}
               />
             </div>
-            {form.trackStock && (
+            {form.counted && (
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">
                   {t("data.customProducts.form.stockQty")}
@@ -628,7 +632,7 @@ function CustomProductEditDialog({
         // store shows the raw IDR number here.
         costPrice: storedCost > 0 ? String(convertPrice(storedCost)) : "0",
         sellingPrice: storedSelling > 0 ? String(convertPrice(storedSelling)) : "0",
-        trackStock: product.trackStock,
+        counted: product.stockMode !== "UNTRACKED",
         stockQty: String(Number(product.currentStock) || 0),
       }}
       onSubmit={async (form) => {
@@ -637,10 +641,10 @@ function CustomProductEditDialog({
           category: form.category || undefined,
           costPrice: convertToBase(Number(form.costPrice)),
           sellingPrice: convertToBase(Number(form.sellingPrice)),
-          trackStock: form.trackStock,
+          stockMode: form.counted ? "BATCH_PRODUCED" : "UNTRACKED",
           // Only meaningful while tracked — left untouched when it isn't, so
           // toggling tracking off and back on doesn't silently zero a real count.
-          ...(form.trackStock && { currentStock: Number(form.stockQty) || 0 }),
+          ...(form.counted && { currentStock: Number(form.stockQty) || 0 }),
         });
         toast.promise(promise, {
           loading: t("common.actions.saving"),

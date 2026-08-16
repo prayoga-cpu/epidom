@@ -101,6 +101,18 @@ export interface PosMenuItem {
   // so it can be filtered like a genuine third department alongside
   // Kitchen/Bar in PosDepartmentBar/PosItemGrid.
   department?: "KITCHEN" | "BAR" | "CUSTOM" | null;
+  // Finished-goods balance, present ONLY for BATCH_PRODUCED products. Absent
+  // for made-to-order and untracked items, which keep no count — so `undefined`
+  // means "no count exists", not "zero".
+  //
+  // NEVER gate the tile on this. It is a hint, not a stock check: a counted
+  // item at 0 is still sellable (the kitchen makes it fresh and the ingredients
+  // come out at that point), the number is stale by construction because
+  // deduction is deferred to DELIVERED, and it is unenforceable offline —
+  // query-persister mirrors the POS menu but not Product.currentStock, so a
+  // disconnected tablet would render an hours-old figure as authoritative.
+  countedStock?: number;
+  countedUnit?: string;
   modifiers?: unknown;
   product?: {
     optionGroups?: Array<{

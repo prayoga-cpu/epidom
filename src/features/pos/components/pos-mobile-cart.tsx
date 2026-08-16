@@ -31,7 +31,7 @@ export function PosMobileCart({ store, open, onOpenChange }: PosMobileCartProps)
           every other dialog fixed this session. */}
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="flex max-h-[85dvh] flex-col overflow-hidden rounded-3xl p-0 md:hidden"
+          className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden rounded-3xl p-0 md:hidden"
           showCloseButton={false}
         >
           {/* Radix requires a DialogTitle (and warns without a Description)

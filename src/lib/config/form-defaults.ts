@@ -44,13 +44,15 @@ export const FORM_DEFAULTS = {
     description: "",
     category: "",
     department: "KITCHEN" as "KITCHEN" | "BAR",
+    // How a sale consumes inventory (Product.stockMode). Never set `trackStock`
+    // from a form — the server derives it from this via resolveStockMode().
+    stockMode: "BATCH_PRODUCED" as "BATCH_PRODUCED" | "MADE_TO_ORDER" | "UNTRACKED",
     retailPrice: undefined as number | undefined,
     costPrice: undefined as number | undefined,
     unit: "piece",
     currentStock: undefined as number | undefined,
     minStock: undefined as number | undefined,
     maxStock: undefined as number | undefined,
-    recipeId: "none",
   },
 
   /**

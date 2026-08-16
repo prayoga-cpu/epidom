@@ -71,7 +71,7 @@ function CsvImportEntry({ storeId }: { storeId: string }) {
 }
 
 const CONTAINER_STYLES =
-  "flex min-h-screen flex-col items-center justify-center bg-background px-4 py-12 md:px-8";
+  "flex min-h-[calc(100vh/var(--app-zoom,1))] flex-col items-center justify-center bg-background px-4 py-12 md:px-8";
 const CONTENT_WRAPPER_STYLES =
   "animate-in fade-in slide-in-from-bottom-4 w-full max-w-2xl duration-700";
 const CARD_STYLES = "overflow-hidden border border-border shadow-2xl";
@@ -338,7 +338,7 @@ export function OnboardingContent() {
 
   if (isSessionPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center">
         <Loader2 className="animate-spin" style={{ color: "var(--epi-gold-500)" }} />
       </div>
     );

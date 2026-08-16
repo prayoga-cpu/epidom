@@ -23,6 +23,12 @@
 /** localStorage key. Read by the boot script below before first paint. */
 export const ZOOM_STORAGE_KEY = "epidom:ui-zoom";
 
+/**
+ * Present on <html> only while a non-default zoom is applied. Scopes the
+ * Radix popper correction in globals.css — see `applyZoom`.
+ */
+export const ZOOM_ACTIVE_ATTR = "data-app-zoomed";
+
 /** Percentages the stepper walks through, mirroring the browser's own ladder. */
 export const ZOOM_LEVELS = [70, 80, 90, 100, 110, 125, 150] as const;
 
@@ -74,7 +80,28 @@ export function readStoredZoom(): number {
   }
 }
 
-/** Applies a zoom to the document. Idempotent — safe to call on every mount. */
+/**
+ * Applies a zoom to the document. Idempotent — safe to call on every mount.
+ *
+ * Writes the scale twice, to `zoom` and to a `--app-zoom` custom property,
+ * because CSS lengths do not all respond to `zoom` the same way and the second
+ * one is how the layout corrects for that:
+ *
+ *   - Root *percentages* are already divided by the effective zoom. `width:
+ *     auto` on <html>, `w-full`, `min-h-full` — all land on exactly the window
+ *     at every level, for free. (Measured in WebKit: <html>, <body>, the shell
+ *     and the fixed header all paint x=0 w=1680 on a 1680px window from 0.7
+ *     through 1.5.) Compensating these by hand divides an already-correct
+ *     value a second time and *creates* a gap.
+ *   - *Viewport units* are NOT. `100vh` resolves against the undivided 913px
+ *     viewport and is then painted at `913 x scale` — 639px at 0.7, leaving a
+ *     274px dead strip, and 1141px at 1.25, clipping 228px past the fold.
+ *
+ * So the rule for every viewport-unit length in the app is
+ * `calc(<length> / var(--app-zoom, 1))`. The fallback is what makes that safe:
+ * at 100% this property is removed entirely, the divisor is 1, and every such
+ * declaration compiles to exactly what it was before.
+ */
 export function applyZoom(zoom: number): void {
   if (typeof document === "undefined") return;
   const normalized = normalizeZoom(zoom);
@@ -83,8 +110,21 @@ export function applyZoom(zoom: number): void {
   // leaves no inline style behind at all. Assigning "" rather than calling
   // removeProperty("zoom"): `zoom` reaches the CSSOM through its named setter,
   // and removeProperty() doesn't see it there under jsdom.
-  if (normalized === DEFAULT_ZOOM) root.style.zoom = "";
-  else root.style.zoom = String(normalized / 100);
+  if (normalized === DEFAULT_ZOOM) {
+    root.style.zoom = "";
+    root.style.removeProperty("--app-zoom");
+    root.removeAttribute(ZOOM_ACTIVE_ATTR);
+    return;
+  }
+  const scale = String(normalized / 100);
+  root.style.zoom = scale;
+  // Custom properties inherit, so this reaches portalled overlays too — they
+  // mount on <body>, inside the element carrying it.
+  root.style.setProperty("--app-zoom", scale);
+  // Marks "a zoom is in effect" so the popper correction in globals.css can be
+  // scoped to `html[data-app-zoomed]` and therefore not exist at all at 100%,
+  // rather than relying on a `calc(1/1)` that is merely equivalent to inert.
+  root.setAttribute(ZOOM_ACTIVE_ATTR, "");
 }
 
 /**
@@ -147,4 +187,6 @@ export function subscribeZoom(onChange: () => void): () => void {
  */
 export const ZOOM_BOOT_SCRIPT = `try{var z=parseFloat(localStorage.getItem(${JSON.stringify(
   ZOOM_STORAGE_KEY
-)}));if(z>=${MIN_ZOOM}&&z<=${MAX_ZOOM}&&z!==${DEFAULT_ZOOM})document.documentElement.style.zoom=""+z/100}catch(e){}`;
+)}));if(z>=${MIN_ZOOM}&&z<=${MAX_ZOOM}&&z!==${DEFAULT_ZOOM}){var s=""+z/100,d=document.documentElement;d.style.zoom=s;d.style.setProperty("--app-zoom",s);d.setAttribute(${JSON.stringify(
+  ZOOM_ACTIVE_ATTR
+)},"")}}catch(e){}`;

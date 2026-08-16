@@ -899,6 +899,61 @@ export const fr = {
       retry: "Réessayer",
     },
   },
+  production: {
+    pageTitle: "Production",
+    tabs: {
+      produce: "Produire",
+      history: "Historique",
+    },
+    guide: {
+      title: "De la recette au lot de production",
+      description:
+        "Transformez une recette en lot de production planifié : choisissez une recette, vérifiez la disponibilité des matières premières, puis consommez-les pour obtenir du stock fini — chaque lot étant enregistré pour être consulté plus tard.",
+      whoForTitle: "Utilisez ceci si...",
+      whoFor:
+        "Vous cuisinez avec une recette standardisée et vous voulez savoir exactement combien de chaque matière première un lot a consommé.",
+      whoSkipTitle: "Ignorez ceci si...",
+      whoSkip:
+        "Vous cuisinez à la commande sans recette fixe — les lots de production ne feraient qu'ajouter des étapes sans rien vous apporter.",
+      enableButton: "Activer le Suivi de Production",
+      enabling: "Activation...",
+      enabledToast: "Suivi de production activé",
+      disableButton: "Désactiver le Suivi de Production",
+      disabling: "Désactivation...",
+      disabledToast: "Suivi de production désactivé",
+      settingsUpdateFailed: "Impossible de mettre à jour le paramètre. Réessayez.",
+      ownerOnlyNotice: "Demandez au propriétaire de l'établissement d'activer cette fonctionnalité.",
+    },
+
+    // Une partie du lot avait déjà été vendue avant d'être enregistrée
+    prepList: {
+      title: "Préparation du jour",
+      allStocked: "Rien à préparer — tout est au niveau voulu.",
+      onHand: "{count} {unit} en stock · objectif {par}",
+      alreadySold: "{count} déjà vendus avant d'être faits — leurs ingrédients sont déjà sortis.",
+      madeIt: "C'est fait",
+      quantityLabel: "Combien de {name} avez-vous faits ?",
+      logged: "{count} × {name} enregistrés",
+      loggedWithSettlement: "{count} × {name} enregistrés — {settled} étaient déjà vendus, seul le reste entre en stock.",
+      logFailed: "Impossible d'enregistrer cette production",
+    },
+    settlement: {
+      preview:
+        "{settled} sur ces {total} avaient déjà été vendus avant que vous ne les enregistriez — leurs ingrédients sont déjà sortis du stock, donc ce lot n'utilisera des ingrédients que pour {remaining}.",
+      alreadyAccounted: "Déjà pris en compte — inutile de les enregistrer",
+    },
+
+    emptyState: {
+      batchOnly:
+        "La production concerne ce que vous préparez à l'avance. Les plats que vous cuisinez à la commande n'en ont pas besoin — leurs ingrédients sortent du stock automatiquement à la vente.",
+    },
+  },
+  finance: {
+    summary: {
+      unknownCost:
+        "Le coût est inconnu pour {count} articles ({amount} de ventes) — les commandes des applis de livraison ne sont pas liées à vos produits.",
+    },
+  },
   nav: {
     profile: "Profil",
     dashboard: "Tableau de Bord",
@@ -1343,7 +1398,19 @@ export const fr = {
   },
   pos: {
     title: "Caisse POS",
-    orders: "File de Commandes",
+    orders: {
+      title: "File de Commandes",
+      cancel: {
+        foodWasMade: {
+          question: "Annuler cette commande — les plats ont-ils vraiment été préparés ?",
+          yes: "Oui, ils ont été préparés",
+          yesHint:
+            "Nous remettons en stock les articles comptés et laissons les ingrédients comme consommés.",
+          no: "Non, ils n'ont jamais été préparés",
+          noHint: "Nous remettons aussi les ingrédients en stock.",
+        },
+      },
+    },
     unpaidAlertSingular: "{count} commande impayée — appuyez pour voir",
     unpaidAlertPlural: "{count} commandes impayées — appuyez pour voir",
     source: { walkIn: "Sur place", online: "En ligne", manual: "Manuel" },
@@ -1542,6 +1609,7 @@ export const fr = {
       search: "Chercher dans le menu...",
       noItems: "Aucun article dans cette catégorie",
       unavailable: "Indisponible",
+      counted: "{count} comptés",
       customProducts: "Produits Personnalisés",
     },
     connection: {
@@ -1552,6 +1620,7 @@ export const fr = {
     offline: {
       queued: "Hors ligne — commande sauvegardée localement",
       queuedDesc: "Sera soumise automatiquement au retour de la connexion.",
+      synced: "{count} commande(s) hors ligne synchronisée(s)",
     },
     orderCard: {
       customer: "Client",
@@ -1883,6 +1952,7 @@ export const fr = {
       detailsDescription: "Voir les informations complètes sur cette recette",
       duplicateDescription:
         "Créer une copie de cette recette avec un nouveau nom. Tous les ingrédients et instructions seront copiés.",
+      costPerUnit: "Coût par unité",
 
       // Form sections
       sections: {
@@ -2198,6 +2268,31 @@ export const fr = {
         minStockHint: "Point de réapprovisionnement",
         maxStock: "Stock Max",
         maxStockHint: "Limite de stockage",
+        stockMode: {
+          label: "Comment préparez-vous ce produit ?",
+          batch: "Nous comptons combien nous en avons",
+          batchHint:
+            "Préparé à l'avance, ou acheté déjà prêt à la vente. Les ingrédients sortent du stock quand vous enregistrez un lot — et si vous en vendez plus que ce que vous aviez compté, nous sortons les ingrédients à ce moment-là.",
+          madeToOrder: "Nous le préparons au moment de la commande",
+          madeToOrderHint:
+            "Les ingrédients sortent du stock au fur et à mesure des ventes. Rien à compter, rien à préparer à l'avance.",
+          untracked: "Nous ne suivons pas ce produit",
+          untrackedHint: "Un service, ou quelque chose qui ne s'épuise jamais.",
+          switchWarning:
+            "Vous en avez {count} en stock. Si vous changez, nous arrêtons de les compter.",
+        },
+        parLevel: "Préparer plus quand il en reste moins de",
+        reorderLevel: "Réapprovisionner quand il en reste moins de",
+        primaryRecipe: "Recette utilisée pour le stock et le coût",
+        makePrimary: "Définir comme principale",
+        usedForStockAndCost: "Utilisée pour le stock et le coût",
+        noRecipeWarning: "Rien n'est prévu pour sortir du stock quand ce produit se vend",
+      },
+
+      // Stock status badges
+      stockStatus: {
+        notCounted: "Non compté",
+        oversold: "Survendu",
       },
 
       // Units
@@ -2591,6 +2686,12 @@ export const fr = {
       markPaid: "Marquer comme payé",
       markPaidSuccess: "Commande marquée comme payée",
       markPaidFailed: "Échec de la mise à jour de la commande",
+    },
+
+    // Stock passé sous zéro — vendu plus que ce que les comptes indiquaient
+    negativeStock: {
+      title: "Vendu plus que ce que vous aviez",
+      body: "{name} affiche {count} en dessous de zéro. Comptez ce qu'il reste vraiment et corrigez.",
     },
 
     // Table headers
