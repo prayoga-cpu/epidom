@@ -15,6 +15,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { changelogService, type ReleaseTag } from "@/lib/services/changelog.service";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { RichText } from "@/components/shared/rich-text";
 
 const TAG_META: Record<ReleaseTag, { label: string; className: string }> = {
   feat: { label: "Feature", className: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
@@ -82,7 +83,14 @@ export default async function StoreChangelogPage() {
                   {release.items.map((item, j) => (
                     <li key={j} className="flex items-start gap-3">
                       <span className="bg-muted-foreground/60 mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full" />
-                      <span className="text-muted-foreground text-sm leading-relaxed">{item}</span>
+                      {/* min-w-0 is load-bearing: a flex child defaults to
+                          min-width:auto and refuses to shrink below its content,
+                          so one unbreakable token (a shell command, a path)
+                          pushes the whole row past the card instead of wrapping.
+                          break-words handles the ordinary long-word case. */}
+                      <span className="text-muted-foreground min-w-0 flex-1 text-sm leading-relaxed break-words">
+                        <RichText>{item}</RichText>
+                      </span>
                     </li>
                   ))}
                 </ul>

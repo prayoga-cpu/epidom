@@ -4,6 +4,12 @@ export const id = {
     item: "Item",
     ingredient: "Bahan",
     uncategorized: "Tidak Dikategorikan",
+    howMade: {
+      label: "Cara dibuat",
+      batch: "Dihitung di rak",
+      madeToOrder: "Dimasak saat dipesan",
+      untracked: "Tidak dilacak",
+    },
     stockStatus: {
       outOfStock: "Habis",
       lowStock: "Stok Rendah",
@@ -940,6 +946,18 @@ export const id = {
       logged: "{count} × {name} dicatat",
       loggedWithSettlement: "{count} × {name} dicatat — {settled} sudah terjual, jadi hanya sisanya yang masuk stok.",
       logFailed: "Gagal mencatat produksi",
+    },
+    diagram: {
+      alt: "Tepung dan mentega menjadi satu batch roti, roti masuk stok, dan setiap penjualan mengambil satu roti.",
+      rawMaterials: "Tepung, mentega, ragi",
+      bake: "Anda memanggang",
+      ingredientsOut: "bahan keluar",
+      counted: "20 roti dihitung",
+      inStock: "Dalam stok",
+      sell: "Anda menjual",
+      oneOffShelf: "\u22121 roti",
+      sale: "Terjual di kasir",
+      caption: "Bahan keluar sekali saja — saat memanggang. Penjualan hanya mengambil roti dari rak. Kalau terjual lebih banyak dari yang dipanggang, bahannya kami ambil di kasir, jadi tidak pernah dihitung dua kali.",
     },
     settlement: {
       preview:

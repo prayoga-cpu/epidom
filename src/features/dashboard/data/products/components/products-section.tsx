@@ -877,6 +877,21 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                         <span className="text-foreground font-medium">{product.category}</span>
                       </div>
                     )}
+                    {/* The mode itself, in plain language. The stock badge above
+                        can say "Not counted" without ever explaining WHY, which
+                        leaves the owner no way to tell a cook-to-order dish from
+                        a misconfigured one. Change it in Edit → How do you make
+                        this? */}
+                    <div className="flex justify-between gap-2">
+                      <span>{tr("data.products.howMade.label", "How it's made")}:</span>
+                      <span className="text-foreground min-w-0 text-right font-medium">
+                        {product.stockMode === "MADE_TO_ORDER"
+                          ? tr("data.products.howMade.madeToOrder", "Cooked to order")
+                          : product.stockMode === "UNTRACKED"
+                            ? tr("data.products.howMade.untracked", "Not tracked")
+                            : tr("data.products.howMade.batch", "Counted on a shelf")}
+                      </span>
+                    </div>
                     {product.department && (
                       <div className="flex justify-between">
                         <span>{t("common.department")}:</span>

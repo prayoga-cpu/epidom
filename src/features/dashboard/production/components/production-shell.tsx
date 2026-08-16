@@ -1,6 +1,7 @@
 "use client";
 
 import { Factory, Power } from "lucide-react";
+import { BatchFlowDiagram } from "./batch-flow-diagram";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
@@ -53,13 +54,17 @@ export function ProductionShell({ storeId, canManageSettings }: ProductionShellP
   if (!enabled) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
-        <Card className="max-w-lg">
+        <Card className="max-w-2xl">
           <CardContent className="flex flex-col items-center gap-4 pt-6 text-center">
             <div className="bg-muted rounded-full p-4">
               <Factory className="text-muted-foreground h-8 w-8" />
             </div>
             <h2 className="text-lg font-semibold">{t("production.guide.title")}</h2>
             <p className="text-muted-foreground text-sm">{t("production.guide.description")}</p>
+            {/* The bakery is the canonical case for this feature, and the part
+                people get wrong is WHERE the ingredients leave — once at the
+                bake, not again at the till. */}
+            <BatchFlowDiagram />
             <div className="w-full space-y-2 text-left text-sm">
               <div className="rounded-lg border p-3">
                 <p className="font-medium">{t("production.guide.whoForTitle")}</p>

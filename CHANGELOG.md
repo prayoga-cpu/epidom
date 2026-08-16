@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.73.0] - 2026-08-16 · fix
+
+- **Your recipes now work the way you actually cook.** Everything with a recipe is treated as made fresh when it's ordered, so the raw ingredients come out of stock on every sale — rice, chicken, eggs, spices. Items you buy in ready to sell keep being counted on a shelf, and you manage those from the Stock page for adjustments and reordering.
+- **Each product now says how it's made, right on the card.** "Cooked to order", "Counted on a shelf" or "Not tracked" — so you can see at a glance which is which. Change it in Edit, under "How do you make this?", if you prepare something ahead in batches.
+- **The Production screen now shows how it works.** A small bakery diagram walks through it: flour and butter go in when you bake, twenty loaves sit in stock, and each sale takes one off the shelf — so it's clear the ingredients come out once, not twice.
+- **The changelog reads properly now.** Bold text, commands and links were showing as raw symbols, and long lines ran off the side of the screen on a phone. Fixed on both this page and the public one.
+
 ## [2.72.0] - 2026-08-16 · infra
 
 - **Retired two leftover fields from the old stock model.** Nothing you can see changes — the "track stock" switch on custom items works exactly as before. Under the hood it now reads from the single field that decides how each product is made, instead of a second copy that could drift out of step with it.

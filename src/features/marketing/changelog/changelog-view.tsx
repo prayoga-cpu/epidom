@@ -8,6 +8,8 @@
  * both the public marketing page and the in-app dashboard page.
  */
 
+import { renderInlineMarkdown } from "@/components/shared/rich-text";
+
 type ReleaseTag = "feat" | "fix" | "infra" | "ux";
 
 interface Release {
@@ -171,10 +173,35 @@ export function ChangelogView({ releases }: { releases: Release[] }) {
                           opacity: 0.7,
                         }}
                       />
+                      {/* minWidth: 0 is load-bearing — a flex child defaults to
+                          min-width:auto and will not shrink below its content,
+                          so a single unbreakable token (a shell command, a path)
+                          pushes the row past the page instead of wrapping. */}
                       <span
-                        style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(251,249,228,0.62)" }}
+                        style={{
+                          fontSize: 14,
+                          lineHeight: 1.7,
+                          color: "rgba(251,249,228,0.62)",
+                          minWidth: 0,
+                          flex: 1,
+                          overflowWrap: "break-word",
+                        }}
                       >
-                        {item}
+                        {renderInlineMarkdown(item, {
+                          // Entries read "**Lead sentence.** supporting detail",
+                          // so bold is doing sub-heading duty and lifts to full
+                          // cream against the dimmed body around it.
+                          strong: { color: "var(--epi-cream-50)", fontWeight: 600 },
+                          code: {
+                            fontFamily:
+                              "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                            fontSize: "0.85em",
+                            background: "rgba(255,255,255,0.07)",
+                            padding: "1px 5px",
+                            borderRadius: 4,
+                          },
+                          link: { color: tag.text, textDecoration: "underline" },
+                        })}
                       </span>
                     </li>
                   ))}

@@ -4,6 +4,12 @@ export const en = {
     item: "Item",
     ingredient: "Ingredient",
     uncategorized: "Uncategorized",
+    howMade: {
+      label: "How it's made",
+      batch: "Counted on a shelf",
+      madeToOrder: "Cooked to order",
+      untracked: "Not tracked",
+    },
     stockStatus: {
       outOfStock: "Out of Stock",
       lowStock: "Low Stock",
@@ -924,6 +930,18 @@ export const en = {
       logged: "Logged {count} × {name}",
       loggedWithSettlement: "Logged {count} × {name} — {settled} were already sold, so only the rest went into stock.",
       logFailed: "Could not log that production run",
+    },
+    diagram: {
+      alt: "Flour and butter become a batch of loaves, the loaves sit in stock, and each sale takes one loaf.",
+      rawMaterials: "Flour, butter, yeast",
+      bake: "You bake",
+      ingredientsOut: "ingredients out",
+      counted: "20 loaves counted",
+      inStock: "In stock",
+      sell: "You sell",
+      oneOffShelf: "\u22121 loaf",
+      sale: "Sold at the till",
+      caption: "Ingredients leave once — when you bake. A sale just takes a loaf off the shelf. Sell more than you baked and we take the ingredients for those at the till instead, so nothing is counted twice.",
     },
     settlement: {
       preview:

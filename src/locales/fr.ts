@@ -4,6 +4,12 @@ export const fr = {
     item: "Article",
     ingredient: "Ingrédient",
     uncategorized: "Non Catégorisé",
+    howMade: {
+      label: "Mode de préparation",
+      batch: "Compté en stock",
+      madeToOrder: "Préparé à la commande",
+      untracked: "Non suivi",
+    },
     stockStatus: {
       outOfStock: "Rupture de Stock",
       lowStock: "Stock Faible",
@@ -936,6 +942,18 @@ export const fr = {
       logged: "{count} × {name} enregistrés",
       loggedWithSettlement: "{count} × {name} enregistrés — {settled} étaient déjà vendus, seul le reste entre en stock.",
       logFailed: "Impossible d'enregistrer cette production",
+    },
+    diagram: {
+      alt: "La farine et le beurre deviennent une fournée de pains, les pains entrent en stock, et chaque vente en retire un.",
+      rawMaterials: "Farine, beurre, levure",
+      bake: "Vous enfournez",
+      ingredientsOut: "ingrédients sortis",
+      counted: "20 pains comptés",
+      inStock: "En stock",
+      sell: "Vous vendez",
+      oneOffShelf: "\u22121 pain",
+      sale: "Vendu en caisse",
+      caption: "Les ingrédients sortent une seule fois — à la cuisson. Une vente retire simplement un pain du rayon. Si vous vendez plus que vous n'avez cuit, les ingrédients correspondants sortent en caisse, jamais deux fois.",
     },
     settlement: {
       preview:
