@@ -538,6 +538,10 @@ model Recipe {
   productionTimeMinutes Int
   yieldQuantity         Decimal            @db.Decimal(10, 3)
   yieldUnit             String
+  /// See RecipeType. KITCHEN by default because that is what every existing
+  /// recipe is — cooked to order — and because a recipe wrongly marked BATCH
+  /// would silently start rounding its ingredient draw up to a whole batch.
+  type                  RecipeType         @default(KITCHEN)
   productionBatches     ProductionBatch[]
   ingredients           RecipeIngredient[]
   recipeProducts        RecipeProduct[]
@@ -1331,6 +1335,21 @@ enum ProductLine {
 /// discriminator. Always branch on Product.stockMode, never on trackStock
 /// (which is now derived from it). See Product.stockMode for the semantics of
 /// each value and stock-deduction.service.ts for the algorithm.
+/// How a recipe is PRODUCED — distinct from Product.stockMode, which says what
+/// a SALE consumes. The two answer different questions and are deliberately
+/// separate fields.
+///   KITCHEN — the default. Cooked fresh per order from raw materials; the
+///             recipe's ingredients scale per unit sold and leave at the sale.
+///             Never appears on the Production page.
+///   BATCH   — produced ahead in whole, indivisible batches on the Production
+///             page. A dough cannot be split, so a run for 3 units of a recipe
+///             that yields 5 bakes ONE batch: a full batch of ingredients
+///             leaves and 5 finished units land on the shelf.
+enum RecipeType {
+  KITCHEN
+  BATCH
+}
+
 enum StockMode {
   BATCH_PRODUCED
   MADE_TO_ORDER

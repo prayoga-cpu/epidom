@@ -1,4 +1,4 @@
-import { Recipe, Department } from "@prisma/client";
+import { Recipe, Department, RecipeType } from "@prisma/client";
 import {
   recipeRepository,
   RecipeWithIngredients,
@@ -42,6 +42,13 @@ export class RecipeService {
     description?: string;
     category?: string;
     department?: Department;
+    /**
+     * How the recipe is PRODUCED — NOT `Product.stockMode`, which says what a
+     * SALE consumes. KITCHEN (the DB default) is cooked to order and scales per
+     * portion; BATCH is run on the Production page in whole, indivisible
+     * batches. `recipeRepository.create()` passes it straight through.
+     */
+    type?: RecipeType;
     yieldQuantity: number;
     yieldUnit: string;
     productionTimeMinutes: number;
@@ -94,6 +101,8 @@ export class RecipeService {
       description?: string;
       category?: string;
       department?: Department;
+      /** See `createRecipe` — how the recipe is produced, not what a sale consumes. */
+      type?: RecipeType;
       yieldQuantity?: number;
       yieldUnit?: string;
       productionTimeMinutes?: number;
@@ -120,7 +129,11 @@ export class RecipeService {
       }
     }
 
-    // Use updateWithIngredients to handle both recipe and ingredients update
+    // Use updateWithIngredients to handle both recipe and ingredients update.
+    // NOTE: the repository's parameter type does not list `type` yet, but it
+    // spreads whatever it is handed straight into `recipe.update({ data })`, so
+    // the field does reach the DB. Add it to that signature when that file is
+    // touched, so this stops depending on the spread.
     const updated = await recipeRepository.updateWithIngredients(recipeId, data);
     publishStoreEvent(storeId, REALTIME_EVENTS.RECIPE_CHANGED, {
       action: "updated",

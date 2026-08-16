@@ -166,12 +166,28 @@ export async function deductStockForOrder(
   orderId: string,
   storeId: string
 ): Promise<DeductResult> {
-  const alreadyReversed = await reversedSaleIds(orderId);
+  // Idempotency is CYCLE-scoped by time, not by `reversesMovementId`.
+  //
+  // Excluding individually-reversed SALE ids looks equivalent but is not:
+  // reversal is deliberately asymmetric (finished goods come back, cooked
+  // ingredients do not — see reverseStockForOrder), so material SALE rows never
+  // receive a RETURN and are never in that exclusion set. They would therefore
+  // match forever, and an order that was cancelled once could never deduct
+  // again — silently, for every MADE_TO_ORDER line, every BATCH shortfall and
+  // every material-backed modifier.
+  //
+  // A deduction is open iff a SALE exists that is NEWER than the most recent
+  // RETURN, which is true regardless of which rows that RETURN chose to restore.
+  const lastReturn = await prisma.stockMovement.findFirst({
+    where: { orderId, type: MovementType.RETURN },
+    select: { createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
   const openSale = await prisma.stockMovement.findFirst({
     where: {
       orderId,
       type: MovementType.SALE,
-      ...(alreadyReversed.length > 0 ? { NOT: { id: { in: alreadyReversed } } } : {}),
+      ...(lastReturn ? { createdAt: { gt: lastReturn.createdAt } } : {}),
     },
     select: { id: true },
   });
@@ -377,7 +393,13 @@ export async function deductStockForOrder(
         );
         continue;
       }
-      if (roundsAwayToZero(raw)) {
+      // `roundsAwayToZero` only guards a POSITIVE requirement that vanishes at
+      // Decimal(10,3). A requirement that is already 0 — or negative, which a
+      // mis-signed recipe quantity can produce — slips past it and writes a
+      // 0.000 material row plus a 0.000 SALE movement. That movement then
+      // matches the idempotency probe above and permanently blocks the order
+      // from ever deducting. Nothing to move means nothing to write.
+      if (roundStock(raw) === 0 || roundsAwayToZero(raw)) {
         // e.g. 0.4 g of saffron against kg-tracked stock. Writing a 0.000
         // movement would be a permanent silent no-op dressed as a deduction.
         belowPrecision.push(materialId);

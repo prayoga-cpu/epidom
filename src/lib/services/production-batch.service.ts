@@ -5,6 +5,7 @@ import {
   MovementType,
   OrderItemStatus,
   StockMode,
+  RecipeType,
   Department,
   Prisma,
 } from "@prisma/client";
@@ -48,6 +49,38 @@ export class ProductionBatchService {
    */
   private calculateBatchMultiplier(plannedQuantity: number, yieldQuantity: number): number {
     return plannedQuantity / Number(yieldQuantity);
+  }
+
+  /**
+   * How many WHOLE batches a production run of `plannedQuantity` units requires,
+   * and what that actually yields.
+   *
+   * A batch is indivisible. A dough that makes 5 Baguettes and takes 1000 g of
+   * flour cannot be run for 3 — asking for 3 bakes one whole batch: 1000 g of
+   * flour leaves and **5** Baguettes land on the shelf, not 3.
+   *
+   * Plain `plannedQuantity / yieldQuantity` (the multiplier above) draws 0.6 of
+   * a batch for that request, which is not a thing that can happen in a kitchen
+   * and quietly under-counts every ingredient.
+   *
+   * KITCHEN recipes are NOT rounded: they are cooked to order, their ingredients
+   * scale per portion, and three portions really do use three portions' worth.
+   */
+  private resolveBatchRun(
+    plannedQuantity: number,
+    yieldQuantity: number,
+    type: RecipeType
+  ): { batches: number; materialMultiplier: number; producedQuantity: number } {
+    const yieldQty = Number(yieldQuantity);
+    if (type !== RecipeType.BATCH || !(yieldQty > 0)) {
+      return {
+        batches: 1,
+        materialMultiplier: this.calculateBatchMultiplier(plannedQuantity, yieldQty),
+        producedQuantity: plannedQuantity,
+      };
+    }
+    const batches = Math.max(1, Math.ceil(plannedQuantity / yieldQty));
+    return { batches, materialMultiplier: batches, producedQuantity: batches * yieldQty };
   }
 
   /**
@@ -695,10 +728,17 @@ export class ProductionBatchService {
     // Conservative estimate, used only for the availability check below. The
     // authoritative multiplier is recomputed inside the transaction from what
     // settlement actually absorbed.
-    const estimatedMultiplier = this.calculateBatchMultiplier(
+    //
+    // A BATCH recipe rounds UP to whole batches here too, so the availability
+    // check asks for what will really be drawn — otherwise a run could pass the
+    // check on three fifths of a batch and then fail, or go negative, when the
+    // full batch leaves.
+    const estimatedRun = this.resolveBatchRun(
       Number(data.plannedQuantity) - settledQty,
-      Number(recipe.yieldQuantity)
+      Number(recipe.yieldQuantity),
+      recipe.type
     );
+    const estimatedMultiplier = estimatedRun.materialMultiplier;
 
     // Check material availability
     const { isAvailable, ingredients } = await this.checkMaterialAvailability(
@@ -734,10 +774,12 @@ export class ProductionBatchService {
           // needs to be conservative.
           const actualSettled =
             settledQty > 0 ? await this.settleDrawnShortfall(tx, data.productId, settledQty) : 0;
-          const batchMultiplier = this.calculateBatchMultiplier(
+          const run = this.resolveBatchRun(
             Number(data.plannedQuantity) - actualSettled,
-            Number(recipe.yieldQuantity)
+            Number(recipe.yieldQuantity),
+            recipe.type
           );
+          const batchMultiplier = run.materialMultiplier;
 
           // 1. Create production batch
           const batch = await tx.productionBatch.create({
@@ -746,7 +788,12 @@ export class ProductionBatchService {
               batchNumber,
               productId: data.productId,
               recipeId: data.recipeId,
-              plannedQuantity: data.plannedQuantity,
+              // What this run will ACTUALLY produce, not what was requested.
+              // A BATCH recipe rounds up to whole batches, so a request for 3
+              // from a yield-5 recipe bakes 5 — and 5 is what completeProduction
+              // must credit to the shelf, or the ingredients for a full batch
+              // leave while only 3 units come back.
+              plannedQuantity: run.producedQuantity + actualSettled,
               // How much of THIS run was already sold (and already had its
               // ingredients taken) before it was logged. completeProduction
               // subtracts it before crediting finished goods, and
@@ -1048,12 +1095,18 @@ export class ProductionBatchService {
         });
 
         // 3. Create stock movement record (PRODUCTION_IN for products)
+        //
+        // Records what was actually CREDITED, not what was baked. The settled
+        // portion went straight to customers who had already bought it, so it
+        // never reached the shelf — recording `actualQuantity` here while the
+        // balance only moved by `creditedQuantity` breaks the one invariant
+        // stock-precision.ts exists to protect (Σ quantity == currentStock).
         await tx.stockMovement.create({
           data: {
             productId: batch.productId,
             productionBatchId: batchId,
             type: MovementType.PRODUCTION_IN,
-            quantity: actualQuantity,
+            quantity: creditedQuantity,
             unit: batch.unit,
             balanceAfter: newBalance,
             notes: `Production batch ${batch.batchNumber} completed`,
@@ -1365,6 +1418,19 @@ export class ProductionBatchService {
     });
 
     if (!order || order.storeId !== storeId) return { batchesCreated: 0 };
+
+    // Gated exactly like recordDrawnShortfalls, and the asymmetry was a real
+    // bug: this drafter had no gate while the settlement side did. For a
+    // default store (productionEnabled is @default(false)) that meant
+    // ORDER_SHORTFALL batches were created here, materials genuinely left at
+    // the sale, but `materialsDrawnAt` was never stamped — so the debt read as
+    // zero forever and the next production run drew the same materials a
+    // second time. Reached by configuration, not by exception.
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: { productionEnabled: true },
+    });
+    if (!store?.productionEnabled) return { batchesCreated: 0 };
 
     interface ShortfallCandidate {
       productId: string;

@@ -182,6 +182,12 @@ export function serializeRecipe(recipe: RecipeWithIngredientsRepo): RecipeWithIn
     description: recipe.description,
     category: recipe.category,
     department: recipe.department,
+    // How the recipe is PRODUCED (KITCHEN cooked-to-order vs BATCH made-ahead)
+    // — not Product.stockMode, which says what a SALE consumes. Listed here
+    // because this whitelist ends in an `as` cast: a field omitted from it is
+    // dropped with ZERO type errors, which is exactly how `department` sat dead
+    // on every surface this serializer feeds.
+    type: recipe.type,
     yieldQuantity: decimalToNumber(recipe.yieldQuantity),
     yieldUnit: recipe.yieldUnit,
     productionTimeMinutes: recipe.productionTimeMinutes,

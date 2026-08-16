@@ -1887,6 +1887,27 @@ export const id = {
         "Buat salinan resep ini dengan nama baru. Semua bahan dan instruksi akan disalin.",
       costPerUnit: "Biaya per unit",
 
+      // Bagaimana resep DIPRODUKSI. Berbeda dari mode stok produk, yang
+      // menjelaskan apa yang dipotong saat PENJUALAN — jangan disamakan.
+      type: {
+        label: "Bagaimana resep ini dibuat?",
+        kitchen: {
+          label: "Dimasak saat dipesan",
+          description:
+            "Bahan keluar dari stok setiap kali satu porsi terjual. Tidak ada yang perlu disiapkan lebih dulu.",
+        },
+        batch: {
+          label: "Dibuat lebih dulu per batch",
+          description:
+            "Bahan keluar sekali saja, saat Anda mencatat batch-nya. Hasil jadinya masuk ke rak dan penjualan mengambil dari sana.",
+        },
+        batchHint:
+          "Satu batch menghasilkan {n}. Meminta lebih sedikit tetap membuat satu batch penuh.",
+        batchHintNoYield: "Isi jumlah hasil di atas untuk melihat isi satu batch.",
+        badgeKitchen: "Masak saat dipesan",
+        badgeBatch: "Dibuat per batch",
+      },
+
       // Form sections
       sections: {
         basicInfo: "Informasi Dasar",

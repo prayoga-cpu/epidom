@@ -50,6 +50,9 @@ const mockRecipe: RecipeWithIngredients = {
   department: "KITCHEN",
   yieldQuantity: new Prisma.Decimal(1),
   yieldUnit: "piece",
+  // KITCHEN = cooked to order, ingredients scale per portion. BATCH would round
+  // the ingredient draw up to whole batches — see resolveBatchRun.
+  type: "KITCHEN",
   productionTimeMinutes: 60,
   instructions: "Mix and bake",
   costPerBatch: new Prisma.Decimal(15.0),

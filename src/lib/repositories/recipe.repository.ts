@@ -1,4 +1,4 @@
-import { Recipe, Prisma, RecipeProduct, Product, Department, StockMode } from "@prisma/client";
+import { Recipe, Prisma, RecipeProduct, Product, Department, RecipeType } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 
@@ -32,7 +32,7 @@ export interface RecipeFilters {
   search?: string;
   category?: string;
   department?: Department;
-  /** Only recipes with at least one linked BATCH_PRODUCED product. */
+  /** Only BATCH recipes — the ones the Production page can actually run. */
   producibleOnly?: boolean;
   sortBy?:
     | "name"
@@ -77,13 +77,12 @@ export class RecipeRepository extends BaseRepository {
       }),
       ...(category && { category }),
       ...(department && { department }),
-      // A recipe is "producible" only if something it makes is counted on a
-      // shelf. A cook-to-order dish has no batch to run — its ingredients come
-      // out at the sale — so offering it on the Produce tab would invite a
-      // double-draw.
-      ...(producibleOnly && {
-        recipeProducts: { some: { product: { stockMode: StockMode.BATCH_PRODUCED } } },
-      }),
+      // Producible == the recipe declares itself a BATCH recipe. This is the
+      // recipe's OWN property, not something inferred from whatever product
+      // happens to be linked: a kitchen recipe is cooked to order and its
+      // ingredients leave at the sale, so offering it on the Produce tab would
+      // invite a double-draw.
+      ...(producibleOnly && { type: RecipeType.BATCH }),
     };
 
     // Build orderBy clause
@@ -195,6 +194,7 @@ export class RecipeRepository extends BaseRepository {
     description?: string;
     category?: string;
     department?: Department;
+    type?: RecipeType;
     yieldQuantity: number;
     yieldUnit: string;
     productionTimeMinutes: number;
@@ -293,6 +293,7 @@ export class RecipeRepository extends BaseRepository {
       description?: string;
       category?: string;
       department?: Department;
+    type?: RecipeType;
       yieldQuantity?: number;
       yieldUnit?: string;
       productionTimeMinutes?: number;
@@ -669,6 +670,12 @@ export class RecipeRepository extends BaseRepository {
       name: newName,
       description: originalRecipe.description || undefined,
       category: originalRecipe.category || undefined,
+      // Both were being dropped: a duplicated BATCH recipe silently came back
+      // as KITCHEN (and would then scale per portion instead of per batch), and
+      // a Bar recipe came back as Kitchen. `create()` defaults them, so the
+      // omission produced a plausible-looking wrong answer rather than an error.
+      type: originalRecipe.type,
+      department: originalRecipe.department,
       yieldQuantity: Number(originalRecipe.yieldQuantity),
       yieldUnit: originalRecipe.yieldUnit,
       productionTimeMinutes: originalRecipe.productionTimeMinutes,

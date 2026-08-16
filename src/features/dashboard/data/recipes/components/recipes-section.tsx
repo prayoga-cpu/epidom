@@ -43,6 +43,8 @@ import {
   useExportRecipes,
   useRecipeDemand,
   useDeleteRecipeCategory,
+  getRecipeType,
+  getRecipeTypeBadgeKey,
   type RecipeWithIngredients,
 } from "../hooks/use-recipes";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
@@ -540,6 +542,9 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
               // A one-unit yield makes "per batch" and "per unit" the same
               // number — two rows saying one thing. Show one row instead.
               const yieldsSingleUnit = Number(recipe.yieldQuantity) === 1;
+              // How the recipe is PRODUCED (cooked to order vs run ahead in
+              // whole batches) — not what a sale consumes.
+              const recipeType = getRecipeType(recipe);
 
               return (
                 <BaseItemCard
@@ -572,6 +577,16 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                               : t("common.departmentBar")}
                           </Badge>
                         )}
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${
+                            recipeType === "BATCH"
+                              ? "border-primary/40 text-primary"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {t(getRecipeTypeBadgeKey(recipe))}
+                        </Badge>
                         {(recipeDemand.get(recipe.id) ?? 0) > 0 && (
                           <Badge className="bg-blue-100 text-xs text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                             {recipeDemand.get(recipe.id)}×{" "}

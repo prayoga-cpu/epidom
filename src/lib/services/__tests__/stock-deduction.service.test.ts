@@ -23,12 +23,23 @@ function applyDelta({ where, data }: any) {
 
 vi.mock("@/lib/prisma", () => {
   prismaMock = {
-    // reversedSaleIds() reads the RETURN rows; the idempotency guard reads the
-    // SALE rows minus whatever a RETURN already undid.
+    // The idempotency guard is CYCLE-scoped by TIME: it finds the newest RETURN,
+    // then asks whether any SALE is newer. Keying on reversed ids cannot work,
+    // because reversal is asymmetric — material SALE rows never get a RETURN and
+    // would pin the guard shut forever.
     stockMovement: {
       findFirst: vi.fn(async ({ where }: any) => {
-        const excluded: string[] = where.NOT?.id?.in ?? [];
-        return openSales.find((s) => !excluded.includes(s.id)) ?? null;
+        if (where.type === MovementType.RETURN) {
+          const newest = [...reversingReturns].sort(
+            (a: any, b: any) => (b.createdAt ?? 0) - (a.createdAt ?? 0)
+          )[0];
+          return newest ?? null;
+        }
+        if (where.type === MovementType.SALE) {
+          const after = where.createdAt?.gt;
+          return openSales.find((s: any) => after == null || (s.createdAt ?? 0) > after) ?? null;
+        }
+        return null;
       }),
       findMany: vi.fn(async ({ where }: any) => {
         if (where.type === MovementType.RETURN) return reversingReturns;
@@ -343,7 +354,7 @@ describe("deductStockForOrder — option-driven material consumption", () => {
   });
 
   it("is idempotent — a second call is a no-op while an unreversed SALE exists", async () => {
-    openSales = [{ id: "existing-movement" }];
+    openSales = [{ id: "existing-movement", createdAt: 1 }];
 
     const result = await deductStockForOrder("order-1", "store-1");
 
@@ -352,8 +363,10 @@ describe("deductStockForOrder — option-driven material consumption", () => {
   });
 
   it("deducts again after a reversal — the guard is scoped to the DELIVER cycle, not the order", async () => {
-    openSales = [{ id: "sale-1" }];
-    reversingReturns = [{ reversesMovementId: "sale-1" }];
+    // No reversesMovementId: the RETURN restored finished goods only, which is
+    // the normal case. The cycle still closes because it is NEWER than the SALE.
+    openSales = [{ id: "sale-1", createdAt: 1 }];
+    reversingReturns = [{ createdAt: 2 }];
     prismaMock.order.findUnique.mockResolvedValue({
       id: "order-5",
       orderNumber: "POS-5",

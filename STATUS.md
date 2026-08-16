@@ -6,6 +6,27 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-08-16 — Batch Recipes Bake Whole Batches; Recipe.type (2.74.0)
+
+Operator: *"If a recipe produces 5 Baguettes and I order only 3 in kitchen, it will deduct once 5 has been produced."* Correct, and the code did the opposite.
+
+- [x] **`calculateBatchMultiplier` was plain division** — `plannedQuantity / yieldQuantity`, so a run for 3 of a yield-5 recipe drew **0.6 of a batch**. Proven before changing anything: `scripts/verify-batch-rounding.ts` showed 600 g of flour leaving for a 1000 g dough. A dough cannot be split.
+- [x] **`resolveBatchRun`** rounds a BATCH recipe UP to whole batches (`ceil`, floored at 1) and returns `producedQuantity = batches × yield`. The batch row now records that it will produce **5**, not the 3 requested — otherwise a full batch of ingredients leaves while only 3 units come back. Applied to the availability pre-check as well as the authoritative in-transaction draw, so a run cannot pass the check on three fifths and then take a whole batch.
+- [x] **KITCHEN recipes are deliberately NOT rounded.** Cooked to order, scaled per portion — rounding up there would over-draw on every sale.
+- [x] **`Recipe.type` (`KITCHEN | BATCH`)** added. This answers *how is this recipe produced*, which is a different question from `Product.stockMode` (*what does a sale consume*). I argued against `Recipe.type` during planning; that reasoning was about the sale question and did not apply here. Both fields belong.
+- [x] **No backfill.** `KITCHEN` is the column default and all 54 live recipes are exactly that. It is also the safe default for the CSV/AI importer, which writes Prisma directly and bypasses Zod: wrongly-BATCH would start rounding a draw up, wrongly-KITCHEN just keeps today's behaviour.
+- [x] **The Produce tab filters on `Recipe.type = BATCH`**, not on the linked product's `stockMode`. That is the real separation rather than a proxy for it.
+- [x] **Both inline route schemas were silently dropping the field.** `createRecipeSchema` and `updateRecipeSchema` shadow `inventory.schemas.ts` and Zod strips unknown keys with no error, so `type` never saved on create or edit.
+- [x] **`serializeRecipe` dropped it too** — the same whitelist-plus-`as`-cast trap that left `department` dead on every surface it feeds. Fixed at the serializer rather than patched per-route, which also fixes the SSR first paint.
+- [x] **`duplicate()` was dropping `type` AND `department`** — a duplicated BATCH recipe came back as a cook-to-order KITCHEN one, and a Bar recipe came back as Kitchen. `create()` defaults both, so the omission produced a plausible wrong answer instead of an error.
+- [x] Recipe dialogs gained two radio cards next to the yield fields, with a live "One batch makes {n} — asking for fewer still makes a whole batch" callout; list and details show the type as a badge; strings in all three locales.
+
+Verified: `pnpm type-check` 0, `pnpm lint` 0, `pnpm test` **1040 / 96 files** (9 new pinning the rounding rule, including the yield-0 case that must not reach the ingredient loop as an Infinity multiplier). `scripts/verify-batch-rounding.ts` PASS (3 requested → 1000 g → 5 produced) and `scripts/verify-stock-flow.ts` 20/20.
+
+**Note for testing:** `startProduction` is not reachable from any order path — only auto-drafted ORDER_SHORTFALL batches link to orders — so this rounding applies to runs started from the Production page.
+
+---
+
 ## ✅ 2026-08-16 — R4 Cleanup + End-to-End Flow Harness (2.72.0)
 
 - [x] **Dropped `Product.trackStock` and `RecipeProduct.isDefault`** (`20260816090000`). The gate was satisfied: `report-stock-mode-integrity.ts` clean, and **neither drop loses information** — `trackStock == (stockMode <> 'UNTRACKED')` and `isDefault` was `false` on every row. The migration opens with a `DO $$` guard that RAISEs rather than dropping if any row is desynced, and the down-SQL reconstructs both columns *exactly*, not approximately.

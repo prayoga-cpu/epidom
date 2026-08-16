@@ -1865,6 +1865,26 @@ export const en = {
         "Create a copy of this recipe with a new name. All ingredients and instructions will be copied.",
       costPerUnit: "Cost per unit",
 
+      // How the recipe is PRODUCED. Not the same thing as a product's stock
+      // mode, which describes what a SALE consumes — keep the wording apart.
+      type: {
+        label: "How is this recipe made?",
+        kitchen: {
+          label: "Cooked when it's ordered",
+          description:
+            "Ingredients come out of stock as each portion sells. Nothing to prepare in advance.",
+        },
+        batch: {
+          label: "Made ahead in batches",
+          description:
+            "Ingredients come out once, when you record the batch. The finished items go on the shelf and sales take from there.",
+        },
+        batchHint: "One batch makes {n}. Asking for fewer still makes a whole batch.",
+        batchHintNoYield: "Fill in the yield above to see what one batch makes.",
+        badgeKitchen: "Cooked to order",
+        badgeBatch: "Made in batches",
+      },
+
       // Form sections
       sections: {
         basicInfo: "Basic Information",

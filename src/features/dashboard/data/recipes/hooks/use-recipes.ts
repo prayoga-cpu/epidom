@@ -25,12 +25,72 @@ import { REALTIME_EVENTS } from "@/lib/realtime/channels";
  */
 export type StockMode = "BATCH_PRODUCED" | "MADE_TO_ORDER" | "UNTRACKED";
 
+/**
+ * Mirrors the Prisma `RecipeType` enum. Declared locally so client bundles
+ * don't pull the Prisma runtime in.
+ *
+ * This says how the RECIPE IS PRODUCED. It is NOT `Product.stockMode`, which
+ * says what a SALE consumes — do not read one to decide the other.
+ *
+ * - KITCHEN — cooked fresh when ordered. Ingredients leave AT THE SALE, scaled
+ *   per portion. Never appears on the Production page.
+ * - BATCH   — made ahead in whole, indivisible batches on the Production page.
+ *   A dough yielding 5 baguettes cannot be run for 3: asking for 3 bakes one
+ *   whole batch, a full batch of ingredients leaves and 5 land on the shelf.
+ */
+export type RecipeType = "KITCHEN" | "BATCH";
+
+export const RECIPE_TYPES: readonly RecipeType[] = ["KITCHEN", "BATCH"];
+
+/**
+ * Option metadata for the two type radio cards, shared by the add and edit
+ * dialogs so the copy can never drift between them.
+ */
+export const RECIPE_TYPE_OPTIONS: ReadonlyArray<{
+  value: RecipeType;
+  labelKey: string;
+  descriptionKey: string;
+}> = [
+  {
+    value: "KITCHEN",
+    labelKey: "data.recipes.type.kitchen.label",
+    descriptionKey: "data.recipes.type.kitchen.description",
+  },
+  {
+    value: "BATCH",
+    labelKey: "data.recipes.type.batch.label",
+    descriptionKey: "data.recipes.type.batch.description",
+  },
+];
+
+/**
+ * Read a recipe's production type defensively. Recipes written before
+ * `Recipe.type` existed — and any payload whose serializer hasn't been taught
+ * the field yet — come back without it; those are all cook-to-order.
+ */
+export function getRecipeType(recipe: { type?: RecipeType | null }): RecipeType {
+  return recipe.type ?? "KITCHEN";
+}
+
+/** Translation key for the small list/details badge. */
+export function getRecipeTypeBadgeKey(recipe: { type?: RecipeType | null }): string {
+  return getRecipeType(recipe) === "BATCH"
+    ? "data.recipes.type.badgeBatch"
+    : "data.recipes.type.badgeKitchen";
+}
+
 export interface RecipeWithIngredients {
   id: string;
   name: string;
   description: string | null;
   category: string | null;
   department: "KITCHEN" | "BAR" | null;
+  /**
+   * Nullable on purpose: the Server-Component payload for the first paint is
+   * built by `serializeRecipe`, a whitelist that does not carry `type` yet, so
+   * it can legitimately be missing. Read it through `getRecipeType()`.
+   */
+  type: RecipeType | null;
   yieldQuantity: number;
   yieldUnit: string;
   productionTimeMinutes: number;
@@ -111,6 +171,15 @@ export interface RecipesResponse {
   total: number;
 }
 
+/**
+ * Wire payloads. The shared form schemas in `inventory.schemas.ts` don't carry
+ * `type` yet, so the dialogs extend their local resolver schema with it and
+ * these aliases carry it the rest of the way. Without them the field would be
+ * dropped at the `JSON.stringify` boundary with no type error to catch it.
+ */
+export type CreateRecipePayload = CreateRecipeFormInput & { type: RecipeType };
+export type UpdateRecipePayload = UpdateRecipeFormInput & { type?: RecipeType };
+
 // Query keys for cache management (DRY principle)
 export const recipeKeys = {
   all: (storeId: string) => ["recipes", storeId] as const,
@@ -168,7 +237,7 @@ async function fetchRecipeById(storeId: string, recipeId: string): Promise<Recip
 
 async function createRecipe(
   storeId: string,
-  data: CreateRecipeFormInput
+  data: CreateRecipePayload
 ): Promise<RecipeWithIngredients> {
   const response = await fetch(`/api/stores/${storeId}/recipes`, {
     method: "POST",
@@ -189,7 +258,7 @@ async function createRecipe(
 async function updateRecipe(
   storeId: string,
   recipeId: string,
-  data: UpdateRecipeFormInput
+  data: UpdateRecipePayload
 ): Promise<RecipeWithIngredients> {
   const response = await fetch(`/api/stores/${storeId}/recipes/${recipeId}`, {
     method: "PATCH",
@@ -376,7 +445,7 @@ export function useCreateRecipe(storeId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateRecipeFormInput) => createRecipe(storeId, data),
+    mutationFn: (data: CreateRecipePayload) => createRecipe(storeId, data),
     onSuccess: (newRecipe) => {
       trackEvent("create_recipe", { event_category: "dashboard_activity" });
 
@@ -423,7 +492,7 @@ export function useUpdateRecipe(storeId: string, recipeId: string) {
   return useMutation<
     RecipeWithIngredients,
     Error,
-    UpdateRecipeFormInput,
+    UpdateRecipePayload,
     {
       previousRecipe: RecipeWithIngredients | undefined;
       previousQueries: Array<[readonly unknown[], RecipesResponse | undefined]>;

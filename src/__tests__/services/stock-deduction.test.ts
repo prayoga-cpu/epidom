@@ -97,10 +97,28 @@ vi.mock("@/lib/prisma", () => {
         return world.sales.filter((s: any) => !excluded.includes(s.id));
       }),
       findFirst: vi.fn(async ({ where }: any) => {
-        // "What did this row actually remove" lookup inside reverseStockForOrder.
+        // Idempotency is CYCLE-scoped by TIME, not by reversesMovementId:
+        // reversal is asymmetric, so material SALE rows never receive a RETURN
+        // and would otherwise match the guard forever. Three distinct callers,
+        // told apart by `where`:
+        //   1. newest RETURN for the order  -> { type: RETURN }, ordered desc
+        //   2. any SALE newer than it       -> { type: SALE, createdAt: { gt } }
+        //   3. the movement immediately before a given one, inside
+        //      reverseStockForOrder -> { createdAt: { lt }, productId|materialId }
+        if (where.type === MovementType.RETURN) {
+          const newest = [...world.returns].sort(
+            (a: any, b: any) => (b.createdAt ?? 0) - (a.createdAt ?? 0)
+          )[0];
+          return newest ?? null;
+        }
+        if (where.type === MovementType.SALE) {
+          const after = where.createdAt?.gt;
+          return (
+            world.sales.find((s: any) => after == null || (s.createdAt ?? 0) > after) ?? null
+          );
+        }
         if (where.createdAt) return world.priorMovement;
-        const excluded: string[] = where.NOT?.id?.in ?? [];
-        return world.sales.find((s: any) => !excluded.includes(s.id)) ?? null;
+        return null;
       }),
     },
     alert: { findFirst: vi.fn(), create: vi.fn() },
@@ -734,18 +752,24 @@ describe("deductStockForOrder", () => {
   // ── Idempotency, cycle-scoped ───────────────────────────────────────────────
 
   it("is a no-op while an UNREVERSED SALE movement exists for the order", async () => {
-    world.sales = [{ id: "sale-1" }];
+    world.sales = [{ id: "sale-1", createdAt: 1 }];
     const result = await deductStockForOrder("order-1", "store-1");
     expect(result).toEqual({ deducted: 0, skipped: 0, alreadyDeducted: true });
     expect(prismaMock.order.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
-  it("deducts again once a RETURN carrying reversesMovementId has undone the SALE", async () => {
-    // DELIVERED → CANCELLED → DELIVERED must deduct a second time. Before the
-    // RETURN link existed the guard made re-delivery a permanent no-op.
-    world.sales = [{ id: "sale-1" }];
-    world.returns = [{ reversesMovementId: "sale-1" }];
+  it("deducts again once a RETURN has closed the cycle", async () => {
+    // DELIVERED → CANCELLED → DELIVERED must deduct a second time.
+    //
+    // Deliberately NO reversesMovementId on this RETURN: reversal restores
+    // finished goods only, so a material SALE never gets one. Keying the guard
+    // on reversed ids made re-delivery a permanent no-op for every
+    // MADE_TO_ORDER line and every BATCH shortfall; keying it on "is there a
+    // SALE newer than the newest RETURN" is correct regardless of which rows
+    // the reversal chose to restore.
+    world.sales = [{ id: "sale-1", createdAt: 1 }];
+    world.returns = [{ createdAt: 2 }];
     prismaMock.order.findUnique.mockResolvedValue(
       makeOrder([makeItem({ quantity: 2, product: makeProduct({ stock: 10 }) })])
     );
@@ -755,17 +779,28 @@ describe("deductStockForOrder", () => {
     expect(result.alreadyDeducted).toBeUndefined();
     expect(result.deducted).toBe(1);
     expect(world.balances["prod-1"]).toBe(8);
-    // The guard must exclude only the reversed SALE, not every SALE.
+    // The guard asks "is there a SALE newer than the newest RETURN", NOT
+    // "is there a SALE whose id is absent from the reversed set" — the latter
+    // can never clear once a material SALE exists, because those are never
+    // reversed.
     expect(prismaMock.stockMovement.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ NOT: { id: { in: ["sale-1"] } } }),
+        where: expect.objectContaining({
+          type: MovementType.SALE,
+          createdAt: { gt: 2 },
+        }),
       })
     );
   });
 
   it("stays a no-op when a SECOND SALE cycle is open even though an older one was reversed", async () => {
-    world.sales = [{ id: "sale-1" }, { id: "sale-2" }];
-    world.returns = [{ reversesMovementId: "sale-1" }];
+    // sale-2 was written AFTER the cancel, so a second delivery is already
+    // accounted for and must not deduct a third time.
+    world.sales = [
+      { id: "sale-1", createdAt: 1 },
+      { id: "sale-2", createdAt: 3 },
+    ];
+    world.returns = [{ createdAt: 2 }];
     const result = await deductStockForOrder("order-1", "store-1");
     expect(result).toEqual({ deducted: 0, skipped: 0, alreadyDeducted: true });
   });

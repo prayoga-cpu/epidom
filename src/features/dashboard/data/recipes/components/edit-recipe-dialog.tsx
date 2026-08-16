@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { useParams } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
@@ -32,10 +33,15 @@ import { Loader2, Plus, X, Package } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { useUpdateRecipe, type RecipeWithIngredients } from "../hooks/use-recipes";
+import {
+  useUpdateRecipe,
+  getRecipeType,
+  RECIPE_TYPE_OPTIONS,
+  type RecipeWithIngredients,
+} from "../hooks/use-recipes";
 import { useMaterials } from "../../materials/hooks/use-materials";
 import { updateRecipeFormSchema } from "@/lib/validation/inventory.schemas";
-import type { UpdateRecipeFormInput } from "@/lib/validation/inventory.schemas";
+import { cn } from "@/lib/utils";
 import { getCurrencySymbol, formatDerivedUnitCost } from "@/lib/utils/formatting";
 import { formatNumberForInput, createNumberInputHandler } from "@/lib/utils/number-input";
 import { DecimalInput } from "@/components/shared/decimal-input";
@@ -44,7 +50,21 @@ import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
 import { getTranslatedCategory, RECIPE_CATEGORIES } from "../utils/category-helpers";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 
-type RecipeFormValues = UpdateRecipeFormInput;
+/**
+ * The shared form schema in `inventory.schemas.ts` does not carry `type` yet,
+ * so extend it here.
+ *
+ * A BARE enum with NO `.default()` on purpose: `zodResolver` infers useForm's
+ * field type from the schema's INPUT type, and a `.default()` makes the input
+ * optional while the output is required — the two desync and the field lands
+ * as `unknown`. `.optional()` here only mirrors the surrounding `.partial()`
+ * update schema; the starting value comes from `defaultValues` / `form.reset`.
+ */
+const editRecipeFormSchema = updateRecipeFormSchema.extend({
+  type: z.enum(["KITCHEN", "BATCH"]).optional(),
+});
+
+type RecipeFormValues = z.infer<typeof editRecipeFormSchema>;
 
 interface EditRecipeDialogProps {
   open: boolean;
@@ -79,13 +99,15 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
   const savedFormDataRef = useRef<RecipeFormValues | null>(null);
 
   const form = useForm<RecipeFormValues>({
-    resolver: zodResolver(updateRecipeFormSchema),
+    resolver: zodResolver(editRecipeFormSchema),
     mode: "onSubmit", // Validate only on submit to allow undefined values during editing
     defaultValues: {
       name: "",
       description: "",
       category: "",
       department: "KITCHEN",
+      // Set here rather than via `.default()` on the schema (see note above).
+      type: "KITCHEN",
       yieldQuantity: undefined,
       yieldUnit: "",
       productionTimeMinutes: undefined,
@@ -118,6 +140,9 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
         // Recipe.department is drawn from the shared Department enum but,
         // unlike Material, a recipe is never assigned "BOTH".
         department: (recipe.department as "KITCHEN" | "BAR" | undefined) ?? "KITCHEN",
+        // Recipes written before Recipe.type existed come back without it —
+        // every one of those is cooked to order.
+        type: getRecipeType(recipe),
         yieldQuantity: yieldQuantity > 0 ? yieldQuantity : undefined,
         yieldUnit: recipe.yieldUnit,
         productionTimeMinutes: productionTimeMinutes > 0 ? productionTimeMinutes : undefined,
@@ -137,6 +162,15 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
       });
     }
   }, [recipe, open, form]);
+
+  // What one batch makes, live from whatever the yield fields currently hold.
+  // Empty string means "not enough typed in yet to say".
+  const watchedYieldQuantity = form.watch("yieldQuantity");
+  const watchedYieldUnit = form.watch("yieldUnit");
+  const batchYieldLabel =
+    watchedYieldQuantity && watchedYieldQuantity > 0
+      ? `${watchedYieldQuantity}${watchedYieldUnit ? ` ${watchedYieldUnit}` : ""}`
+      : "";
 
   const handleOpenChange = (newOpen: boolean) => {
     // If closing manually (not submitting), clear saved data
@@ -435,6 +469,75 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
                   )}
                 />
               </div>
+
+              {/* How the recipe is PRODUCED. Sits right under the yield because
+                  the two are read together: the yield is what one whole batch
+                  makes. */}
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem className="space-y-0.5">
+                    <FormLabel className="text-sm">{t("data.recipes.type.label")}</FormLabel>
+                    <FormControl>
+                      <div
+                        role="radiogroup"
+                        aria-label={t("data.recipes.type.label")}
+                        className="grid gap-2 sm:grid-cols-2"
+                      >
+                        {RECIPE_TYPE_OPTIONS.map((option) => {
+                          const isSelected = field.value === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              role="radio"
+                              aria-checked={isSelected}
+                              onClick={() => field.onChange(option.value)}
+                              className={cn(
+                                // The whole card is the tap target, min 44px
+                                // tall. Nothing here is hover-gated.
+                                "flex min-h-11 w-full flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors",
+                                isSelected
+                                  ? "border-primary bg-primary/5 ring-primary/40 ring-1"
+                                  : "border-border bg-background hover:bg-muted/50"
+                              )}
+                            >
+                              <span className="flex w-full items-center gap-2">
+                                <span
+                                  aria-hidden="true"
+                                  className={cn(
+                                    "flex size-4 shrink-0 items-center justify-center rounded-full border",
+                                    isSelected ? "border-primary" : "border-muted-foreground/50"
+                                  )}
+                                >
+                                  {isSelected && (
+                                    <span className="bg-primary size-2 rounded-full" />
+                                  )}
+                                </span>
+                                <span className="text-sm font-medium">{t(option.labelKey)}</span>
+                              </span>
+                              <span className="text-muted-foreground text-xs leading-snug">
+                                {t(option.descriptionKey)}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </FormControl>
+                    {/* The thing owners get wrong: a batch is indivisible. Say
+                        what THIS batch makes, at the moment they pick. */}
+                    {field.value === "BATCH" && (
+                      <p className="border-primary/40 bg-primary/5 text-foreground mt-1 rounded-md border border-dashed p-2 text-xs leading-snug">
+                        {batchYieldLabel
+                          ? t("data.recipes.type.batchHint").replace("{n}", batchYieldLabel)
+                          : t("data.recipes.type.batchHintNoYield")}
+                      </p>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Ingredients */}

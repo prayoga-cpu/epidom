@@ -9,6 +9,12 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.74.0] - 2026-08-16 · fix
+
+- **A batch is now baked whole.** If your recipe makes 5 baguettes and you ask the kitchen for 3, it takes the ingredients for one whole batch and puts 5 on the shelf. Before, it took three fifths of the flour — which is not something you can do with a dough. Nothing changes for dishes cooked to order: those still use exactly what the portions need.
+- **Recipes now say how they're made.** Every recipe is either cooked when it's ordered — which is all of yours today, and unchanged — or made ahead in batches. Only batch recipes show up on the Production page, so a dish that's cooked fresh can't be started as a batch by mistake and have its ingredients taken twice.
+- **Duplicating a recipe keeps its settings.** A copy used to come back as a Kitchen recipe cooked to order, whatever the original was.
+
 ## [2.73.0] - 2026-08-16 · fix
 
 - **Your recipes now work the way you actually cook.** Everything with a recipe is treated as made fresh when it's ordered, so the raw ingredients come out of stock on every sale — rice, chicken, eggs, spices. Items you buy in ready to sell keep being counted on a shelf, and you manage those from the Stock page for adjustments and reordering.

@@ -39,7 +39,12 @@ import {
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useMaterials } from "../../materials/hooks/use-materials";
-import { isBatchProduced, type RecipeWithIngredients } from "../hooks/use-recipes";
+import {
+  isBatchProduced,
+  getRecipeType,
+  getRecipeTypeBadgeKey,
+  type RecipeWithIngredients,
+} from "../hooks/use-recipes";
 import { getTranslatedCategory } from "../utils/category-helpers";
 import { convertUnit } from "@/lib/utils/unit-conversion";
 
@@ -113,6 +118,9 @@ export function RecipeDetailsDialog({
   // With a one-unit yield, "cost per batch" and "cost per unit" are the same
   // number. Print it once, as the per-unit figure.
   const yieldsSingleUnit = Number(recipe.yieldQuantity) === 1;
+  // How the recipe is PRODUCED — cooked to order, or run ahead in whole
+  // batches on the Production page. Not what a sale consumes.
+  const recipeType = getRecipeType(recipe);
 
   return (
     <>
@@ -189,14 +197,34 @@ export function RecipeDetailsDialog({
               </Card>
             </div>
 
-            {/* Category Badge */}
-            {recipe.category && (
-              <div>
-                <Badge variant="secondary" className="text-sm">
-                  {getTranslatedCategory(recipe.category, t)}
+            {/* Category + production-type badges */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {recipe.category && (
+                  <Badge variant="secondary" className="text-sm">
+                    {getTranslatedCategory(recipe.category, t)}
+                  </Badge>
+                )}
+                <Badge
+                  variant="outline"
+                  className={`text-sm ${
+                    recipeType === "BATCH"
+                      ? "border-primary/40 text-primary"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {t(getRecipeTypeBadgeKey(recipe))}
                 </Badge>
               </div>
-            )}
+              <p className="text-muted-foreground text-xs leading-snug">
+                {recipeType === "BATCH"
+                  ? t("data.recipes.type.batchHint").replace(
+                      "{n}",
+                      `${recipe.yieldQuantity} ${recipe.yieldUnit}`
+                    )
+                  : t("data.recipes.type.kitchen.description")}
+              </p>
+            </div>
 
             <Separator />
 

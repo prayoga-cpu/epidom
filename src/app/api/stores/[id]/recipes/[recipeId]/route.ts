@@ -19,6 +19,11 @@ const updateRecipeSchema = z.object({
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
   department: z.enum(["KITCHEN", "BAR"]).optional(),
+  // How the recipe is PRODUCED (KITCHEN = cooked to order, BATCH = run ahead in
+  // whole batches on the Production page) — distinct from Product.stockMode.
+  // This schema shadows `inventory.schemas.ts` and Zod strips unknown keys
+  // silently, so omitting this line makes every edit to the field a no-op.
+  type: z.enum(["KITCHEN", "BATCH"]).optional(),
   yieldQuantity: z.number().positive("Yield quantity must be positive").optional(),
   yieldUnit: z
     .string()
@@ -59,8 +64,13 @@ export const GET = withApiHandler(
       );
     }
 
-    // Serialize Decimal fields to numbers for Client Components
-    return NextResponse.json(createSuccessResponse(serializeRecipe(recipe)));
+    // Serialize Decimal fields to numbers for Client Components.
+    //
+        // in an `as` cast, so the field would be dropped with zero type errors.
+    // Re-attach it until the serializer itself learns the field.
+    return NextResponse.json(
+      createSuccessResponse(serializeRecipe(recipe))
+    );
   },
   { rateLimitEndpoint: "/api/stores/[id]/recipes/[recipeId]", requireStoreAuth: true }
 );
@@ -78,8 +88,10 @@ export const PATCH = withApiHandler(
     // Update recipe via service
     const recipe = await recipeService.updateRecipe(recipeId, storeId!, validatedData);
 
-    // Serialize Decimal fields to numbers for Client Components
-    return NextResponse.json(createSuccessResponse(serializeRecipe(recipe)));
+    // Serialize Decimal fields to numbers for Client Components.
+        return NextResponse.json(
+      createSuccessResponse(serializeRecipe(recipe))
+    );
   },
   { rateLimitEndpoint: "/api/stores/[id]/recipes/[recipeId]", requireStoreAuth: true }
 );

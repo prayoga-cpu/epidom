@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { recipeService } from "@/lib/services/recipe.service";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { serializeRecipe, serializeRecipes } from "@/lib/server/serialize";
+import { serializeRecipe } from "@/lib/server/serialize";
 import { z } from "zod";
 import { withApiHandler } from "@/lib/api-handler";
 import { operationsGuard } from "@/lib/auth/require-feature";
@@ -12,6 +12,12 @@ const createRecipeSchema = z.object({
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),
   department: z.enum(["KITCHEN", "BAR"]).default("KITCHEN"),
+  // How the recipe is PRODUCED — NOT Product.stockMode, which says what a SALE
+  // consumes. KITCHEN is cooked to order and scales per portion; BATCH is run
+  // on the Production page in whole, indivisible batches.
+  // This schema shadows `inventory.schemas.ts` and Zod strips unknown keys
+  // silently, so omitting this line makes the field vanish with no error.
+  type: z.enum(["KITCHEN", "BATCH"]).default("KITCHEN"),
   yieldQuantity: z.number().positive("Yield quantity must be positive"),
   yieldUnit: z.string().min(1, "Yield unit is required").max(20, "Yield unit is too long"),
   productionTimeMinutes: z.number().int().nonnegative("Production time must be non-negative"),
@@ -65,10 +71,10 @@ export const GET = withApiHandler(
     // Get recipes from service
     const result = await recipeService.getRecipes(storeId!, filters);
 
-    // Serialize Decimal fields to numbers for Client Components
+    // Serialize Decimal fields to numbers for Client Components.
     return NextResponse.json(
       createSuccessResponse({
-        recipes: serializeRecipes(result.recipes),
+        recipes: result.recipes.map(serializeRecipe),
         total: result.total,
       }),
       { status: 200 }
@@ -100,7 +106,7 @@ export const POST = withApiHandler(
       ...validatedData,
     });
 
-    // Serialize Decimal fields to numbers for Client Components
+    // Serialize Decimal fields to numbers for Client Components.
     return NextResponse.json(createSuccessResponse(serializeRecipe(recipe)), { status: 201 });
   },
   {

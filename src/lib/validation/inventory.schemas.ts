@@ -289,6 +289,10 @@ const baseRecipeSchema = z.object({
   category: z.string().max(100, "Category name is too long").optional(),
   department: departmentSchema.default("KITCHEN"),
   yieldQuantity: z.number().positive("Yield quantity must be positive"),
+  // How this recipe is PRODUCED — distinct from Product.stockMode, which says
+  // what a SALE consumes. KITCHEN (default) is cooked to order and scales per
+  // portion; BATCH is run on the Production page in whole, indivisible batches.
+  type: z.enum(["KITCHEN", "BATCH"]).default("KITCHEN"),
   yieldUnit: z.string().min(1, "Yield unit is required").max(20, "Yield unit is too long"),
   productionTimeMinutes: z
     .number()

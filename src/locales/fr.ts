@@ -1972,6 +1972,28 @@ export const fr = {
         "Créer une copie de cette recette avec un nouveau nom. Tous les ingrédients et instructions seront copiés.",
       costPerUnit: "Coût par unité",
 
+      // Comment la recette est PRODUITE. À ne pas confondre avec le mode de
+      // stock d'un produit, qui décrit ce qu'une VENTE décompte.
+      type: {
+        label: "Comment cette recette est-elle produite ?",
+        kitchen: {
+          label: "Préparée à la commande",
+          description:
+            "Les ingrédients sortent du stock au fil des ventes, portion par portion. Rien à préparer à l'avance.",
+        },
+        batch: {
+          label: "Préparée à l'avance, par fournées",
+          description:
+            "Les ingrédients sortent en une seule fois, au moment où vous enregistrez la fournée. Les produits finis rejoignent le stock et les ventes y puisent.",
+        },
+        batchHint:
+          "Une fournée donne {n}. En demander moins produit tout de même une fournée entière.",
+        batchHintNoYield:
+          "Renseignez la quantité produite ci-dessus pour voir ce que donne une fournée.",
+        badgeKitchen: "À la commande",
+        badgeBatch: "Par fournées",
+      },
+
       // Form sections
       sections: {
         basicInfo: "Informations de Base",

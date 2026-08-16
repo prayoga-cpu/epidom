@@ -12,7 +12,10 @@ var advanceOrderToReadyMock: any;
 vi.mock("@/lib/prisma", () => {
   prismaMock = {
     order: { findUnique: vi.fn() },
-    store: { findUnique: vi.fn() },
+    // Production must be ON for either shortfall path to do anything —
+    // draftShortfallBatchesForOrder is gated exactly like recordDrawnShortfalls
+    // now, so a default (production-off) store drafts nothing.
+    store: { findUnique: vi.fn().mockResolvedValue({ productionEnabled: true }) },
     product: { findFirst: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
     material: { findMany: vi.fn().mockResolvedValue([]) },
     recipeProduct: { findFirst: vi.fn().mockResolvedValue({ id: "rp-1" }) },

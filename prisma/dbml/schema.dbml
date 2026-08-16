@@ -343,6 +343,9 @@ Table recipes {
   productionTimeMinutes Int [not null]
   yieldQuantity Decimal [not null]
   yieldUnit String [not null]
+  type RecipeType [not null, default: 'KITCHEN', note: 'See RecipeType. KITCHEN by default because that is what every existing
+recipe is — cooked to order — and because a recipe wrongly marked BATCH
+would silently start rounding its ingredient draw up to a whole batch.']
   productionBatches production_batches [not null]
   ingredients recipe_ingredients [not null]
   recipeProducts recipe_products [not null]
@@ -1200,6 +1203,11 @@ Enum Department {
 Enum ProductLine {
   STANDARD
   CUSTOM
+}
+
+Enum RecipeType {
+  KITCHEN
+  BATCH
 }
 
 Enum StockMode {
