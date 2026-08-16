@@ -32,7 +32,9 @@ export async function requirePlan(
           userId: true,
           user: {
             select: {
-              subscription: { select: { plan: true, status: true } },
+              subscription: {
+                select: { plan: true, status: true, customPricePendingAt: true },
+              },
             },
           },
         },
@@ -45,6 +47,13 @@ export async function requirePlan(
   }
 
   const subscription = store.business.user.subscription;
+
+  // Access is suspended behind an admin-quoted custom price. /pricing can't
+  // sell them anything — the offer is only payable from their Billing page.
+  if (subscription?.customPricePendingAt) {
+    redirect(`/store/${storeId}/billing?customPrice=pending`);
+  }
+
   let currentPlan: SubscriptionPlan = "FREE";
 
   if (subscription && subscription.status === "ACTIVE") {

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
+import { cn } from "@/lib/utils";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -848,16 +849,23 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                   onSelect={() => toggleSelectItem(product.id)}
                   contentClassName="!px-4"
                 >
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-sm leading-tight font-semibold">{product.name}</h3>
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    {/* min-w-0 so a long product name truncates inside the card
+                        instead of pushing the status badge out of it. */}
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        className="truncate text-sm leading-tight font-semibold"
+                        title={product.name}
+                      >
+                        {product.name}
+                      </h3>
                       {product.sku && <SKUDisplay sku={product.sku} />}
                     </div>
 
                     {/* Stock Status Badge */}
                     <Badge
                       variant={STOCK_STATUS_VARIANT[stockStatus]}
-                      className={`ml-auto text-xs ${
+                      className={`shrink-0 text-xs ${
                         stockStatus === "not_counted"
                           ? "text-muted-foreground border-dashed"
                           : ""
@@ -872,9 +880,16 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                   {/* Product Info */}
                   <div className="text-muted-foreground my-2 space-y-1 text-xs">
                     {product.category && (
-                      <div className="flex justify-between">
-                        <span>{t("common.category")}:</span>
-                        <span className="text-foreground font-medium">{product.category}</span>
+                      // Label holds its width, value truncates — otherwise a
+                      // long category name pushes the label out of the card.
+                      <div className="flex justify-between gap-2">
+                        <span className="shrink-0">{t("common.category")}:</span>
+                        <span
+                          className="text-foreground min-w-0 truncate font-medium"
+                          title={product.category}
+                        >
+                          {product.category}
+                        </span>
                       </div>
                     )}
                     {/* The mode itself, in plain language. The stock badge above
@@ -883,7 +898,9 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                         a misconfigured one. Change it in Edit → How do you make
                         this? */}
                     <div className="flex justify-between gap-2">
-                      <span>{tr("data.products.howMade.label", "How it's made")}:</span>
+                      <span className="shrink-0">
+                        {tr("data.products.howMade.label", "How it's made")}:
+                      </span>
                       <span className="text-foreground min-w-0 text-right font-medium">
                         {product.stockMode === "MADE_TO_ORDER"
                           ? tr("data.products.howMade.madeToOrder", "Cooked to order")
@@ -893,15 +910,16 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
                       </span>
                     </div>
                     {product.department && (
-                      <div className="flex justify-between">
-                        <span>{t("common.department")}:</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="shrink-0">{t("common.department")}:</span>
                         <Badge
                           variant="outline"
-                          className={
+                          className={cn(
+                            "shrink-0",
                             product.department === "KITCHEN"
                               ? "text-amber-600"
                               : "text-blue-600"
-                          }
+                          )}
                         >
                           {product.department === "KITCHEN"
                             ? t("common.departmentKitchen")

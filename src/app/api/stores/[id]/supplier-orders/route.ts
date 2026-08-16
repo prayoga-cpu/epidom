@@ -130,6 +130,7 @@ export const POST = withApiHandler(
         unit: item.unit || material.unit,
         unitPrice,
         total,
+        expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
       });
     }
 

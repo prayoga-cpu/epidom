@@ -84,14 +84,20 @@ export function MaterialDetailsDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] overflow-y-auto sm:max-w-[700px] [&>button]:hidden">
           <DialogHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <DialogTitle className="text-xl">{material.name}</DialogTitle>
+            <div className="flex items-start justify-between gap-3">
+              {/* min-w-0 so a long name wraps instead of pushing the status
+                  badge past the dialog edge. */}
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-xl break-words">{material.name}</DialogTitle>
                 {material.sku && (
-                  <p className="text-muted-foreground mt-1 text-sm">SKU: {material.sku}</p>
+                  <p className="text-muted-foreground mt-1 text-sm break-all">
+                    SKU: {material.sku}
+                  </p>
                 )}
               </div>
-              <Badge variant={getStockStatusVariant(stockStatus, t)}>{stockStatus}</Badge>
+              <Badge variant={getStockStatusVariant(stockStatus, t)} className="shrink-0">
+                {stockStatus}
+              </Badge>
             </div>
           </DialogHeader>
 

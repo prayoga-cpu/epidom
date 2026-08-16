@@ -73,7 +73,11 @@ export function OwnerDashboardClient() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["owner-summary", from, to],
     queryFn: () =>
-      apiClient.get<OwnerSummary>(`/api/owner/summary?from=${from}T00:00:00Z&to=${to}T23:59:59Z`),
+      // No `/api` prefix here: apiClient is constructed with baseURL "/api"
+      // (src/lib/api/client.ts), so a leading "/api" produced a request to
+      // /api/api/owner/summary — a 404 that made the whole page fail to load.
+      // Every other apiClient call site passes a bare path like "/stores/…".
+      apiClient.get<OwnerSummary>(`/owner/summary?from=${from}T00:00:00Z&to=${to}T23:59:59Z`),
     retry: false,
   });
 

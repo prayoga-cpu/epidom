@@ -43,6 +43,18 @@ export const POST = withApiHandler(
       );
     }
 
+    // Same reasoning as /sync: while a custom price is awaiting payment, the
+    // database is deliberately out of step with Stripe — don't "repair" it.
+    if (dbSubscription.customPricePendingAt) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.CONFLICT,
+          "A custom price is awaiting payment on this account. Complete that checkout from your Billing page instead."
+        ),
+        { status: 409 }
+      );
+    }
+
     // Get ALL subscriptions from Stripe
     const allSubscriptions = await stripe.subscriptions.list({
       customer: dbSubscription.stripeCustomerId,

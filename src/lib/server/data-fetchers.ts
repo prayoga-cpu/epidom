@@ -317,6 +317,7 @@ export async function fetchSupplierOrdersForPage(
       unit: item.unit,
       unitPrice: Number(item.unitPrice),
       total: Number(item.total),
+      expiryDate: item.expiryDate?.toISOString() || null,
     })),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),

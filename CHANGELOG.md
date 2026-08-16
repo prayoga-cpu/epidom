@@ -9,6 +9,33 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.77.0] - 2026-08-16 · fix
+
+- **A new order now appears in Orders to Place straight away.** Creating an order saved it correctly — with its supplier, quantities and expiration date — but the list on the Stock page kept showing "No Orders to Place", so it looked like nothing had happened. Two separate faults were hiding it: the page loaded only orders already sent to the supplier, skipping the ones still waiting to be placed, and every refresh after that read the reply from the server in the wrong shape and came back with nothing at all. Both fixed, and the list now also stays correct after you mark an order as placed.
+- **"Send to Supplier" works again.** It reads a single order the same broken way, so the dialog opened with nothing loaded and its Send button permanently greyed out.
+- **Errors say what went wrong.** Failing to create, update or cancel an order showed "[object Object]" instead of the reason, and a store on the POS plan got a blank "Failed to fetch supplier orders" instead of the message explaining that supplier management needs the Operations plan.
+- **Stock movements show up again.** The same underlying fault was hiding your movement history in three places: the Movements tab under Stock, the Adjustment History on each item, and the "Recent Movements" card on your Dashboard. All three were reading the server's reply the wrong way and quietly showing nothing, however much history you had.
+- **Importing stock reports the right numbers.** The "imported / failed" count after a CSV import was read from the wrong place, so the summary came back blank.
+- **Finishing or cancelling a production batch returns the real batch.** Both were reading the reply the wrong way, and the count shown after deleting several products or recipes at once had the same fault.
+- **Hovering a tab no longer empties a list.** Preloading suppliers, products or recipes (which happens when you hover a tab, to make it open instantly) stored them in the wrong shape, so the list it was meant to speed up could come up empty until the cached copy expired — up to ten minutes for the supplier picker. The clearest symptom: hover the Products tab, then open the record-waste dialog, and its item picker had nothing in it.
+- **The Owner dashboard loads again.** It was asking the server for the wrong address, so the whole page failed with nothing to show.
+- **Failed image uploads say why.** Rejecting a photo — too large, wrong type — showed a generic "Upload failed" instead of the actual reason, both on the shared image picker and when saving a store logo.
+- **Exports on a locked plan explain themselves.** Exporting suppliers, products or recipes without the plan for it showed a generic failure instead of telling you the export needs an upgrade.
+
+## [2.76.0] - 2026-08-16 · feat
+
+- **A custom price now says which plan it buys.** When we agree a special price with you, it's quoted against a specific plan — POS, Operations or Enterprise — instead of just being a number attached to whatever you were on.
+- **Paying an agreed price is one button.** The quote appears at the top of your Billing page with the plan and the amount, and a "Pay with Stripe" button that charges exactly that price on the cycle we agreed. Your plan switches on as soon as Stripe confirms the payment.
+- **While a quote is waiting to be paid, the plan features pause.** Your old subscription is closed the moment the new price is set, so you're not paying the previous rate for it, and any locked page sends you to Billing to settle the new one. Billing, your storefront and your account settings stay open the whole time, and nothing in your data is touched.
+
+## [2.75.0] - 2026-08-16 · feat
+
+- **The supplier list on a new order is no longer empty.** Creating an order from the Stock page's "Create Order" button showed a supplier picker with nothing in it, so the order could never be submitted. It now lists every supplier you have on file — the ones who already carry that material first, with their agreed price and your preferred one at the top, and the rest below in case you're ordering from someone else this once. Their phone and email appear under the picker so you can call before you confirm.
+- **Orders can now carry a requested expiration date (DLC).** Ask the supplier for a use-by date, and it prints on the order and follows the goods: when you mark the delivery received, the date lands on the raw material for you, so it's typed once instead of twice. Leave it empty for flour, sugar and anything else that doesn't need one. It's on both the single-item order and the bulk order.
+- **Print an order quote.** Every order gets a "Print order quote" button — right after you create it, and again from the Orders to Place list. The document carries your store's name, address, phone and email, the supplier's contacts, every line with quantity, DLC, unit price and total, the order status, and a signature strip for both sides. Print it or save it as PDF.
+- **Creating an order works again.** The delivery date the form sends was being rejected before it ever reached the database, so "Create Order" failed every time. Fixed for both the single and bulk order forms.
+- **The printed quote's totals are labelled properly.** Subtotal, tax, shipping and total were printing as raw internal names.
+
 ## [2.74.0] - 2026-08-16 · fix
 
 - **A batch is now baked whole.** If your recipe makes 5 baguettes and you ask the kitchen for 3, it takes the ingredients for one whole batch and puts 5 on the shelf. Before, it took three fifths of the flour — which is not something you can do with a dough. Nothing changes for dishes cooked to order: those still use exactly what the portions need.

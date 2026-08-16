@@ -94,6 +94,9 @@ interface UserRow {
     customPriceAmount: number | null;
     customPriceCurrency: string | null;
     customPriceInterval: "MONTHLY" | "YEARLY" | null;
+    customPricePlan: Plan | null;
+    /** Set = quoted but unpaid; the account is suspended until they check out. */
+    customPricePendingAt: string | null;
   } | null;
   business: {
     id: string;
@@ -103,6 +106,16 @@ interface UserRow {
 }
 
 const PLAN_ORDER: Plan[] = ["FREE", "POS", "OPERATIONS", "ENTERPRISE"];
+
+/** Plans a custom price can be quoted for — FREE has nothing to charge for. */
+type PaidPlan = Exclude<Plan, "FREE">;
+const PAID_PLANS: PaidPlan[] = ["POS", "OPERATIONS", "ENTERPRISE"];
+
+/** True for accounts Stripe actually bills — `admin_`/`free_` ids are local stubs. */
+function isStripeBilled(user: UserRow | null): boolean {
+  const customerId = user?.subscription?.stripeCustomerId;
+  return !!customerId && !customerId.startsWith("admin_") && !customerId.startsWith("free_");
+}
 
 const planColors: Record<Plan, string> = {
   FREE: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
@@ -150,6 +163,41 @@ function formatPeriodEnd(dateStr: string | null | undefined): string {
   });
 }
 
+/**
+ * Custom-price pills for a user row: the quoted price/plan, plus an "awaiting
+ * payment" marker while that quote has suspended the account.
+ */
+function CustomPricePills({ subscription }: { subscription: UserRow["subscription"] }) {
+  if (subscription?.customPriceAmount == null) return null;
+
+  const quote = `${subscription.customPriceAmount} ${subscription.customPriceCurrency ?? ""}${
+    subscription.customPriceInterval === "YEARLY" ? "/yr" : "/mo"
+  }`;
+
+  return (
+    <>
+      <span
+        className="inline-flex items-center gap-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-cyan-400 uppercase"
+        title={`Custom price: ${quote}${
+          subscription.customPricePlan ? ` for ${subscription.customPricePlan}` : ""
+        }`}
+      >
+        <CircleDollarSign className="h-2.5 w-2.5" />
+        Custom
+        {subscription.customPricePlan ? ` · ${subscription.customPricePlan}` : ""}
+      </span>
+      {subscription.customPricePendingAt && (
+        <span
+          className="inline-flex items-center rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-orange-400 uppercase"
+          title="Access suspended until they pay the quoted price"
+        >
+          Awaiting payment
+        </span>
+      )}
+    </>
+  );
+}
+
 /** Small count pill anchored to the top-right corner of a nav button. */
 function NavBadge({ count }: { count: number | undefined }) {
   if (!count) return null;
@@ -192,6 +240,7 @@ export function AdminDashboard() {
   const [priceAmount, setPriceAmount] = useState("");
   const [priceCurrency, setPriceCurrency] = useState("EUR");
   const [priceInterval, setPriceInterval] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
+  const [pricePlan, setPricePlan] = useState<PaidPlan>("OPERATIONS");
 
   const { data, isLoading } = useQuery<{ users: UserRow[] }>({
     queryKey: ["admin-users"],
@@ -244,7 +293,12 @@ export function AdminDashboard() {
         toast.success("Account reactivated");
       } else if (action === "set-custom-price") {
         setPriceTarget(null);
-        toast.success("Custom price updated");
+        toast.success(
+          (_data as { subscription?: { customPricePendingAt: string | null } })?.subscription
+            ?.customPricePendingAt
+            ? "Price quoted — old subscription canceled, access suspended until they pay"
+            : "Custom price updated"
+        );
       } else if (action === "clear-custom-price") {
         setPriceTarget(null);
         toast.success("Custom price cleared");
@@ -355,6 +409,16 @@ export function AdminDashboard() {
               setPriceAmount(user.subscription?.customPriceAmount?.toString() ?? "");
               setPriceCurrency(user.subscription?.customPriceCurrency ?? "EUR");
               setPriceInterval(user.subscription?.customPriceInterval ?? "MONTHLY");
+              // Pre-fill with the plan already quoted, else the one they're on
+              // — FREE isn't quotable, so fall back to the mid tier.
+              const quoted = user.subscription?.customPricePlan;
+              setPricePlan(
+                quoted && quoted !== "FREE"
+                  ? quoted
+                  : plan !== "FREE"
+                    ? (plan as PaidPlan)
+                    : "OPERATIONS"
+              );
             }}
           >
             <CircleDollarSign className="mr-2 h-3.5 w-3.5" />
@@ -693,15 +757,7 @@ export function AdminDashboard() {
                       BETA
                     </span>
                   )}
-                  {user.subscription?.customPriceAmount != null && (
-                    <span
-                      className="inline-flex items-center gap-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-cyan-400 uppercase"
-                      title="Custom price set"
-                    >
-                      <CircleDollarSign className="h-2.5 w-2.5" />
-                      Custom
-                    </span>
-                  )}
+                  <CustomPricePills subscription={user.subscription} />
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}
                   >
@@ -867,15 +923,7 @@ export function AdminDashboard() {
                                 BETA
                               </span>
                             )}
-                            {user.subscription?.customPriceAmount != null && (
-                              <span
-                                className="inline-flex items-center gap-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-cyan-400 uppercase"
-                                title="Custom price set"
-                              >
-                                <CircleDollarSign className="h-2.5 w-2.5" />
-                                Custom
-                              </span>
-                            )}
+                            <CustomPricePills subscription={user.subscription} />
                           </div>
                         </TableCell>
                         <TableCell>
@@ -1088,35 +1136,53 @@ export function AdminDashboard() {
               Set Custom Price
             </DialogTitle>
             <DialogDescription>
-              {priceTarget?.subscription?.stripeCustomerId?.startsWith("admin_") ||
-              priceTarget?.subscription?.stripeCustomerId?.startsWith("free_")
-                ? `${priceTarget?.email} isn't Stripe-billed — this is a reference figure only, shown here and on their Billing page, for your own manual invoicing.`
-                : `${priceTarget?.email} is billed via Stripe — this changes what Stripe actually charges them starting next billing cycle.`}
+              {isStripeBilled(priceTarget)
+                ? `${priceTarget?.email} is billed via Stripe — quoting a price here replaces their subscription.`
+                : `${priceTarget?.email} isn't Stripe-billed — this is a reference figure only, shown here and on their Billing page, for your own manual invoicing.`}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 space-y-3 overflow-y-auto py-2">
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={priceAmount}
-                onChange={(e) => setPriceAmount(e.target.value)}
-                placeholder="Amount"
-                className="flex-1"
-              />
-              <Select value={priceCurrency} onValueChange={setPriceCurrency}>
-                <SelectTrigger className="w-28">
+            <div className="space-y-1.5">
+              <label className="text-muted-foreground text-xs font-medium">Plan</label>
+              <Select value={pricePlan} onValueChange={(v) => setPricePlan(v as PaidPlan)}>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CURRENCIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.code}
+                  {PAID_PLANS.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                      {priceTarget?.subscription?.plan === p ? " (current)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-muted-foreground text-xs font-medium">Price</label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={priceAmount}
+                  onChange={(e) => setPriceAmount(e.target.value)}
+                  placeholder="Amount"
+                  className="flex-1"
+                />
+                <Select value={priceCurrency} onValueChange={setPriceCurrency}>
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <Select
               value={priceInterval}
@@ -1130,6 +1196,19 @@ export function AdminDashboard() {
                 <SelectItem value="YEARLY">Yearly</SelectItem>
               </SelectContent>
             </Select>
+            {isStripeBilled(priceTarget) && (
+              <div className="space-y-1 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                <p className="font-semibold">On save, for this account:</p>
+                <ul className="list-inside list-disc space-y-0.5 text-amber-200/90">
+                  <li>their current Stripe subscription is canceled immediately</li>
+                  <li>access is suspended and every plan-gated page sends them to Billing</li>
+                  <li>
+                    Billing shows a pay button that charges this price for {pricePlan} — access
+                    comes back when Stripe confirms the payment
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
           <DialogFooter className="shrink-0 flex-wrap gap-2">
             {priceTarget?.subscription?.customPriceAmount != null && (
@@ -1142,7 +1221,9 @@ export function AdminDashboard() {
                   mutation.mutate({ action: "clear-custom-price", userId: priceTarget.id })
                 }
               >
-                Clear Custom Price
+                {priceTarget?.subscription?.customPricePendingAt
+                  ? "Withdraw & Restore Access"
+                  : "Clear Custom Price"}
               </Button>
             )}
             <Button variant="outline" onClick={() => setPriceTarget(null)}>
@@ -1158,12 +1239,13 @@ export function AdminDashboard() {
                     amount: Number(priceAmount),
                     currency: priceCurrency,
                     interval: priceInterval,
+                    plan: pricePlan,
                   });
                 }
               }}
             >
               <CircleDollarSign className="mr-2 h-4 w-4" />
-              Save
+              {isStripeBilled(priceTarget) ? "Quote & Suspend" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

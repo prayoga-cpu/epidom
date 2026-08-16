@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { unwrapApiData } from "@/lib/api/unwrap";
 import { materialKeys } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { MaterialFilterInput } from "@/lib/validation/inventory.schemas";
 import {
@@ -78,7 +79,10 @@ export async function prefetchProducts(
         throw new Error("Failed to prefetch products");
       }
 
-      return response.json();
+      // Unwrap like prefetchMaterials above: this value is written straight
+      // into the same cache key the real hook reads, so an enveloped payload
+      // here poisons that hook's data until the entry goes stale.
+      return unwrapApiData(await response.json());
     },
     staleTime: 20 * 1000, // 20 seconds
   });
@@ -109,7 +113,10 @@ export async function prefetchRecipes(
         throw new Error("Failed to prefetch recipes");
       }
 
-      return response.json();
+      // Unwrap like prefetchMaterials above: this value is written straight
+      // into the same cache key the real hook reads, so an enveloped payload
+      // here poisons that hook's data until the entry goes stale.
+      return unwrapApiData(await response.json());
     },
     staleTime: 20 * 1000, // 20 seconds
   });
@@ -141,7 +148,10 @@ export async function prefetchSuppliers(
         throw new Error("Failed to prefetch suppliers");
       }
 
-      return response.json();
+      // Unwrap like prefetchMaterials above: this value is written straight
+      // into the same cache key the real hook reads, so an enveloped payload
+      // here poisons that hook's data until the entry goes stale.
+      return unwrapApiData(await response.json());
     },
     staleTime: 5 * 60 * 1000, // 5 minutes (suppliers don't change often)
   });

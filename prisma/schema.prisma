@@ -306,32 +306,45 @@ model BusinessFinanceSettings {
 }
 
 model Subscription {
-  id                   String             @id @default(cuid())
-  userId               String             @unique
-  stripeCustomerId     String             @unique
-  stripeSubscriptionId String?            @unique
-  stripePriceId        String?
-  plan                 SubscriptionPlan   @default(FREE)
-  status               SubscriptionStatus @default(INCOMPLETE)
-  currentPeriodStart   DateTime?
-  currentPeriodEnd     DateTime?
-  trialEndsAt          DateTime?
-  cancelAtPeriodEnd    Boolean            @default(false)
-  // Admin-set custom price override. null = standard catalog pricing
-  // (STRIPE_CONFIG.PLAN_LIMITS[plan].price). Non-null on a real Stripe-billed
-  // account (stripeCustomerId not admin_/free_-prefixed) = live override,
-  // applied via an ad-hoc Stripe price on the subscription item — see
-  // SubscriptionService.setCustomPrice. Non-null on an admin_/free_ account
-  // = reference-only figure for the operator's own manual invoicing, never
-  // sent to Stripe. Deliberately separate from stripePriceId, which Stripe
-  // webhook handlers rewrite on every subscription event, so these three
-  // fields can never be silently clobbered back to catalog pricing.
-  customPriceAmount    Decimal?           @db.Decimal(10, 2)
-  customPriceCurrency  String?
-  customPriceInterval  BillingInterval?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+  stripeCustomerId      String              @unique
+  stripeSubscriptionId  String?             @unique
+  stripePriceId         String?
+  plan                  SubscriptionPlan    @default(FREE)
+  status                SubscriptionStatus  @default(INCOMPLETE)
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  trialEndsAt           DateTime?
+  cancelAtPeriodEnd     Boolean             @default(false)
+  // Admin-set custom price. null = standard catalog pricing
+  // (STRIPE_CONFIG.PLAN_LIMITS[plan].price). Behaviour splits on how the
+  // account is billed — see SubscriptionService.setCustomPrice:
+  //  - real Stripe account (stripeCustomerId not admin_/free_-prefixed): a
+  //    quoted *offer*. The old subscription is canceled on the spot, access is
+  //    suspended (customPricePendingAt set, status forced to INCOMPLETE) and
+  //    the user re-subscribes at this price from their Billing page.
+  //  - admin_/free_ account: reference-only figure for the operator's own
+  //    manual invoicing — never sent to Stripe, never restricts access.
+  // Deliberately separate from stripePriceId, which Stripe webhook handlers
+  // rewrite on every subscription event, so these fields can never be
+  // silently clobbered back to catalog pricing.
+  customPriceAmount     Decimal?            @db.Decimal(10, 2)
+  customPriceCurrency   String?
+  customPriceInterval   BillingInterval?
+  // Which tier the custom price buys. null on reference-only figures and on
+  // rows written before targeted offers existed.
+  customPricePlan       SubscriptionPlan?
+  // Non-null = offer awaiting payment. The plan gates read `status`, so this
+  // is the marker that tells them *why* access is suspended (and sends
+  // requirePlan to Billing instead of /pricing). Cleared by the Stripe webhook
+  // once the custom-price Checkout Session completes.
+  customPricePendingAt  DateTime?
+  // Status to hand back when the operator clears a still-pending offer.
+  customPricePrevStatus SubscriptionStatus?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
@@ -774,6 +787,13 @@ model SupplierOrderItem {
   unit       String
   unitPrice  Decimal       @db.Decimal(10, 2)
   total      Decimal       @db.Decimal(10, 2)
+  // Requested expiration date for this line — the DLC ("date limite de
+  // consommation") a French merchant asks the supplier to honor. Optional:
+  // dry goods and non-perishables don't carry one. When the order is marked
+  // RECEIVED this is copied onto Material.expirationDate (soonest wins), so
+  // the Stock page's expiration filter sees it without a second round of
+  // data entry.
+  expiryDate DateTime?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   material   Material      @relation(fields: [materialId], references: [id], onDelete: Cascade)

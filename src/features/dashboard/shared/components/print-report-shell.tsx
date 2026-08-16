@@ -10,6 +10,13 @@ interface PrintReportShellProps {
   title: string;
   storeName: string;
   generatedAt: string;
+  /**
+   * Store contact lines (address, phone, email, …) printed under the store
+   * name and repeated in the page footer. A document that leaves the
+   * building — a supplier quote above all — has to say who sent it and how
+   * to reach them; internal reports can leave this off.
+   */
+  storeContactLines?: string[];
   /** Shown under the store/account block, e.g. "Filters applied" or a date-range summary. */
   subtitle?: ReactNode;
   children: ReactNode;
@@ -29,6 +36,7 @@ export function PrintReportShell({
   title,
   storeName,
   generatedAt,
+  storeContactLines,
   subtitle,
   children,
 }: PrintReportShellProps) {
@@ -85,6 +93,11 @@ export function PrintReportShell({
             {t("pos.printReport.storeLabel")}
           </p>
           <p className="font-semibold text-black">{storeName}</p>
+          {storeContactLines?.map((line) => (
+            <p key={line} className="text-xs text-gray-700">
+              {line}
+            </p>
+          ))}
         </div>
 
         {subtitle && (
@@ -100,10 +113,15 @@ export function PrintReportShell({
       </div>
 
       {/* Repeating print footer */}
-      <div className="hidden border-t border-gray-300 bg-white px-8 py-2 text-[10px] text-gray-800 print:fixed print:right-0 print:bottom-0 print:left-0 print:flex print:items-center print:justify-between">
+      <div className="hidden gap-4 border-t border-gray-300 bg-white px-8 py-2 text-[10px] text-gray-800 print:fixed print:right-0 print:bottom-0 print:left-0 print:flex print:items-center print:justify-between">
         <span>
           {t("pos.printReport.systemBy")} · {storeName}
         </span>
+        {storeContactLines && storeContactLines.length > 0 && (
+          <span className="min-w-0 flex-1 truncate text-center">
+            {storeContactLines.join(" · ")}
+          </span>
+        )}
         <span>{t("pos.printReport.poweredBy")}</span>
       </div>
     </div>

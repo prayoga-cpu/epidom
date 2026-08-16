@@ -19,6 +19,7 @@ vi.mock("@/lib/stripe", () => ({
   stripe: {
     customers: {
       create: vi.fn().mockResolvedValue({ id: "cus_123" }),
+      retrieve: vi.fn().mockResolvedValue({ id: "cus_123", deleted: false }),
     },
     checkout: {
       sessions: {
@@ -61,6 +62,9 @@ const mockSubscription = {
   customPriceAmount: null,
   customPriceCurrency: null,
   customPriceInterval: null,
+  customPricePlan: null,
+  customPricePendingAt: null,
+  customPricePrevStatus: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -377,14 +381,19 @@ describe("SubscriptionService", () => {
         amount: 100,
         currency: "EUR",
         interval: "MONTHLY",
+        plan: SubscriptionPlan.OPERATIONS,
       });
 
-      expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+      expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
       expect(stripe.subscriptions.update).not.toHaveBeenCalled();
       const [, data] = mocks.subscriptionRepo.update.mock.calls[0];
       expect(String(data.customPriceAmount)).toBe("100");
       expect(data.customPriceCurrency).toBe("EUR");
       expect(data.customPriceInterval).toBe("MONTHLY");
+      expect(data.customPricePlan).toBe(SubscriptionPlan.OPERATIONS);
+      // Reference-only: a BETA account keeps its access and its status.
+      expect(data.customPricePendingAt).toBeUndefined();
+      expect(data.status).toBeUndefined();
     });
 
     it("stores a reference-only price for a free-tier account without calling Stripe", async () => {
@@ -398,59 +407,147 @@ describe("SubscriptionService", () => {
         amount: 50,
         currency: "USD",
         interval: "YEARLY",
+        plan: SubscriptionPlan.POS,
       });
 
-      expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+      expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
       expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+      const [, data] = mocks.subscriptionRepo.update.mock.calls[0];
+      expect(data.customPricePendingAt).toBeUndefined();
     });
 
-    it("applies a live Stripe price override for a real Stripe-billed account", async () => {
+    it("cancels the running subscription and suspends a real Stripe-billed account", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
       mocks.subscriptionRepo.update.mockResolvedValue(mockSubscription);
-      (stripe.subscriptions.retrieve as any).mockResolvedValue({
-        items: {
-          data: [{ id: "si_123", price: { product: "prod_123" } }],
-        },
-      });
 
       await service.setCustomPrice("user-1", {
         amount: 75,
         currency: "EUR",
         interval: "MONTHLY",
+        plan: SubscriptionPlan.ENTERPRISE,
       });
 
-      expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_stripe_123");
-      expect(stripe.subscriptions.update).toHaveBeenCalledWith(
-        "sub_stripe_123",
+      expect(stripe.subscriptions.cancel).toHaveBeenCalledWith("sub_stripe_123", {
+        prorate: false,
+      });
+      const [, data] = mocks.subscriptionRepo.update.mock.calls[0];
+      expect(String(data.customPriceAmount)).toBe("75");
+      expect(data.customPricePlan).toBe(SubscriptionPlan.ENTERPRISE);
+      expect(data.customPricePendingAt).toBeInstanceOf(Date);
+      expect(data.status).toBe(SubscriptionStatus.INCOMPLETE);
+      // The status to hand back if the operator withdraws the quote.
+      expect(data.customPricePrevStatus).toBe(SubscriptionStatus.ACTIVE);
+      // The canceled subscription must not be reused by the next webhook.
+      expect(data.stripeSubscriptionId).toBeNull();
+    });
+
+    it("keeps the pre-offer status when re-quoting an already pending account", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        status: SubscriptionStatus.INCOMPLETE,
+        stripeSubscriptionId: null,
+        customPricePendingAt: new Date("2026-08-01"),
+        customPricePrevStatus: SubscriptionStatus.ACTIVE,
+      });
+      mocks.subscriptionRepo.update.mockResolvedValue(mockSubscription);
+
+      await service.setCustomPrice("user-1", {
+        amount: 60,
+        currency: "EUR",
+        interval: "MONTHLY",
+        plan: SubscriptionPlan.OPERATIONS,
+      });
+
+      expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
+      const [, data] = mocks.subscriptionRepo.update.mock.calls[0];
+      expect(data.customPricePrevStatus).toBe(SubscriptionStatus.ACTIVE);
+    });
+
+    it("still records the offer when the Stripe subscription is already gone", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      mocks.subscriptionRepo.update.mockResolvedValue(mockSubscription);
+      (stripe.subscriptions.cancel as any).mockRejectedValueOnce(new Error("No such subscription"));
+
+      await service.setCustomPrice("user-1", {
+        amount: 20,
+        currency: "EUR",
+        interval: "MONTHLY",
+        plan: SubscriptionPlan.POS,
+      });
+
+      const [, data] = mocks.subscriptionRepo.update.mock.calls[0];
+      expect(data.customPricePendingAt).toBeInstanceOf(Date);
+      expect(data.status).toBe(SubscriptionStatus.INCOMPLETE);
+    });
+  });
+
+  describe("activateFree", () => {
+    it("refuses to reactivate an account that owes an admin-quoted price", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        status: SubscriptionStatus.INCOMPLETE,
+        customPricePendingAt: new Date(),
+      });
+
+      await expect(service.activateFree("user-1", SubscriptionPlan.ENTERPRISE)).rejects.toThrow(
+        "A custom price is awaiting payment on this account."
+      );
+    });
+  });
+
+  describe("createCustomPriceCheckoutSession", () => {
+    const pendingSubscription = {
+      ...mockSubscription,
+      stripeSubscriptionId: null,
+      status: SubscriptionStatus.INCOMPLETE,
+      customPriceAmount: 42.5,
+      customPriceCurrency: "EUR",
+      customPriceInterval: "MONTHLY",
+      customPricePlan: SubscriptionPlan.OPERATIONS,
+      customPricePendingAt: new Date(),
+      customPricePrevStatus: SubscriptionStatus.ACTIVE,
+    } as any;
+
+    it("bills the quoted amount as an ad-hoc price tagged for the webhook", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(pendingSubscription);
+      (stripe.customers.retrieve as any).mockResolvedValue({ id: "cus_123", deleted: false });
+
+      await service.createCustomPriceCheckoutSession(
+        "user-1",
+        "https://app.test/billing?success=true",
+        "https://app.test/billing?canceled=true"
+      );
+
+      expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          items: [
+          customer: "cus_123",
+          mode: "subscription",
+          line_items: [
             expect.objectContaining({
-              id: "si_123",
               price_data: expect.objectContaining({
                 currency: "eur",
-                unit_amount: 7500,
+                unit_amount: 4250,
                 recurring: { interval: "month" },
-                product: "prod_123",
               }),
             }),
           ],
-          proration_behavior: "none",
+          metadata: { userId: "user-1", plan: "OPERATIONS", customPrice: "true" },
+          subscription_data: {
+            metadata: { userId: "user-1", plan: "OPERATIONS", customPrice: "true" },
+          },
         })
       );
     });
 
-    it("throws a 422 AppError when the account has no active Stripe subscription", async () => {
-      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
-        ...mockSubscription,
-        stripeSubscriptionId: null,
-      });
+    it("rejects when no custom price is awaiting payment", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
 
       await expect(
-        service.setCustomPrice("user-1", { amount: 10, currency: "EUR", interval: "MONTHLY" })
-      ).rejects.toThrow(
-        "This account has no active Stripe subscription to apply a live price override to."
-      );
-      expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+        service.createCustomPriceCheckoutSession("user-1", "https://a/s", "https://a/c")
+      ).rejects.toThrow("No custom price is awaiting payment on this account.");
+      expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
     });
   });
 
@@ -470,6 +567,9 @@ describe("SubscriptionService", () => {
         customPriceAmount: null,
         customPriceCurrency: null,
         customPriceInterval: null,
+        customPricePlan: null,
+        customPricePendingAt: null,
+        customPricePrevStatus: null,
       });
     });
 
@@ -489,6 +589,30 @@ describe("SubscriptionService", () => {
       expect(stripe.subscriptions.update).toHaveBeenCalledWith(
         "sub_stripe_123",
         expect.objectContaining({ items: [{ id: "si_123", price: expect.any(String) }] })
+      );
+    });
+
+    it("withdrawing a pending quote hands back the status the account had before it", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeSubscriptionId: null,
+        status: SubscriptionStatus.INCOMPLETE,
+        customPriceAmount: 75,
+        customPricePlan: SubscriptionPlan.ENTERPRISE,
+        customPricePendingAt: new Date(),
+        customPricePrevStatus: SubscriptionStatus.ACTIVE,
+      } as any);
+      mocks.subscriptionRepo.update.mockResolvedValue(mockSubscription);
+
+      await service.clearCustomPrice("user-1");
+
+      expect(mocks.subscriptionRepo.update).toHaveBeenCalledWith(
+        "user-1",
+        expect.objectContaining({
+          customPriceAmount: null,
+          customPricePendingAt: null,
+          status: SubscriptionStatus.ACTIVE,
+        })
       );
     });
   });

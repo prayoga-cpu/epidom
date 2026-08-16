@@ -41,13 +41,14 @@ export function MaterialsCardGridSkeleton({ cards = 6 }: { cards?: number }) {
             >
               <CardContent className="!px-4">
                 {/* Header - matches material card header structure */}
-                <div className="mb-2 flex items-start justify-between">
-                  <div className="flex-1">
-                    <Skeleton className="mb-1 h-4 w-[85px]" />{" "}
-                    {/* Name - matches w-[85px] truncate */}
-                    <Skeleton className="h-3 w-20" /> {/* SKU */}
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    {/* Name — proportional, matching the card's now-fluid
+                        truncating title rather than the old fixed 85px. */}
+                    <Skeleton className="mb-1 h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" /> {/* SKU */}
                   </div>
-                  <Skeleton className="h-5 w-16 rounded-full" /> {/* Status Badge */}
+                  <Skeleton className="h-5 w-16 shrink-0 rounded-full" /> {/* Status Badge */}
                 </div>
 
                 {/* Separator */}

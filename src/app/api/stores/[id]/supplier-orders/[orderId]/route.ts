@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { subscriptionService } from "@/lib/services";
 import { publishStockChanged } from "@/lib/realtime/publish";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
+import { updateSupplierOrderSchema } from "@/lib/validation/inventory.schemas";
 
 /**
  * GET /api/stores/[id]/supplier-orders/[orderId]
@@ -79,19 +80,42 @@ export const PATCH = withApiHandler(
     }
 
     const body = await request.json();
-    const { status, expectedDate, receivedDate, notes } = body;
+    const { status, expectedDate, receivedDate, notes } = updateSupplierOrderSchema.parse(body);
 
     // If changing status to RECEIVED, update material stock
     if (status === "RECEIVED" && existingOrder.status !== "RECEIVED") {
       // Use transaction to update stock and order status together
+      const receivedAt = new Date();
+
       await prisma.$transaction(async (tx) => {
         // Update material stock for each item
         for (const item of existingOrder.items) {
           const newStock = item.material.currentStock.add(item.quantity);
 
+          // Carry the DLC agreed on the order line onto the material, so
+          // receiving a delivery is the only place the merchant has to type
+          // it. Material.expirationDate holds a single next-expiry date (not
+          // one per lot), so among dates still in the future the soonest wins
+          // — a batch expiring sooner must not be masked by a later one.
+          //
+          // The already-passed case has to be handled separately: nothing
+          // clears this field when stock is consumed, so a material routinely
+          // sits on an expired date from a lot that is long gone. A plain
+          // "soonest wins" would reject every incoming DLC there (any future
+          // date loses to a past one) and pin the material as expired
+          // forever, with the Stock page still listing freshly delivered
+          // goods under its "expired" filter.
+          const currentExpiry = item.material.expirationDate;
+          const shouldTakeExpiry =
+            !!item.expiryDate &&
+            (!currentExpiry || currentExpiry < receivedAt || item.expiryDate < currentExpiry);
+
           await tx.material.update({
             where: { id: item.materialId },
-            data: { currentStock: newStock },
+            data: {
+              currentStock: newStock,
+              ...(shouldTakeExpiry && { expirationDate: item.expiryDate }),
+            },
           });
 
           // Create stock movement record

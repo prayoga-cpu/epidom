@@ -17,6 +17,24 @@ export const checkoutSchema = z.object({
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
 /**
+ * Custom-price Checkout Schema.
+ *
+ * No plan/amount here on purpose — both come from the pending offer stored on
+ * the subscription, so a client can't pick its own price. Both URLs accept an
+ * absolute URL or an app-relative path.
+ */
+const redirectUrl = z
+  .string()
+  .refine((v) => v.startsWith("/") || /^https?:\/\//.test(v), "Must be a URL or an absolute path");
+
+export const customPriceCheckoutSchema = z.object({
+  successUrl: redirectUrl.optional(),
+  cancelUrl: redirectUrl.optional(),
+});
+
+export type CustomPriceCheckoutInput = z.infer<typeof customPriceCheckoutSchema>;
+
+/**
  * Customer Portal Schema
  */
 export const portalSchema = z.object({

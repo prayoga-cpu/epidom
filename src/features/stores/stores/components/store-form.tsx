@@ -21,6 +21,7 @@ import { compressImage } from "@/lib/utils/image-compression";
 import { IMAGE_DEFAULT_TARGET_MB } from "@/lib/constants/image";
 import { toast } from "sonner";
 import { X, Upload } from "lucide-react";
+import { unwrapApiError } from "@/lib/api/unwrap";
 
 interface StoreFormProps {
   /**
@@ -119,7 +120,10 @@ export function StoreForm({
         });
 
         if (!response.ok) {
-          const error = await response.json();
+          // /api/upload answers createErrorResponse, so the reason is at
+          // error.error.message — reading the top level always gave undefined
+          // and every rejected upload showed the generic fallback instead.
+          const error = unwrapApiError(await response.json().catch(() => ({})));
           throw new Error(error.message || "Upload failed");
         }
 

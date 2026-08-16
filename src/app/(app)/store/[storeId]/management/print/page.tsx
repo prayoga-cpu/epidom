@@ -51,10 +51,15 @@ export default async function SupplierOrderPrintPage({ params, searchParams }: P
   return (
     <SupplierOrderPrintView
       storeName={store.name}
+      storeAddress={[store.address, store.city, store.country].filter(Boolean).join(", ") || null}
+      storePhone={store.phone}
+      storeEmail={store.email}
       orderNumber={order.orderNumber}
       orderDate={order.orderDate.toISOString()}
       expectedDate={order.expectedDate ? order.expectedDate.toISOString() : null}
+      status={order.status}
       supplierName={order.supplier.name}
+      supplierContactPerson={order.supplier.contactPerson}
       supplierEmail={order.supplier.email}
       supplierPhone={order.supplier.phone}
       supplierAddress={
@@ -68,6 +73,7 @@ export default async function SupplierOrderPrintPage({ params, searchParams }: P
         materialSku: item.material.sku,
         quantity: Number(item.quantity),
         unit: item.unit,
+        expiryDate: item.expiryDate ? item.expiryDate.toISOString() : null,
         unitPriceFormatted: formatCurrency(Number(item.unitPrice), currency),
         totalFormatted: formatCurrency(Number(item.total), currency),
       }))}

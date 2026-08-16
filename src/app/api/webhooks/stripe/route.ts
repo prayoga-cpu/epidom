@@ -128,6 +128,19 @@ export async function POST(request: NextRequest) {
 // Event Handlers
 // ----------------------------------------------------------------------
 
+/**
+ * Fields that lift an admin-quoted custom-price suspension, for a session or
+ * subscription that carries the `customPrice` marker. The quoted amount itself
+ * stays on the row — it's what the user is now paying — only the "awaiting
+ * payment" state is cleared. Empty for every other event, so ordinary Stripe
+ * traffic never touches these columns.
+ */
+function customPriceSettlement(metadata: Stripe.Metadata | null | undefined) {
+  return metadata?.customPrice === "true"
+    ? { customPricePendingAt: null, customPricePrevStatus: null }
+    : {};
+}
+
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId;
   const plan = mapStripePlanToEnum(session.metadata?.plan);
@@ -209,6 +222,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       currentPeriodEnd,
       trialEndsAt: extractTrialEnd(stripeSubscription),
       cancelAtPeriodEnd: false,
+      ...customPriceSettlement(session.metadata),
     });
   } else {
     await subscriptionRepository.create({
@@ -264,6 +278,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       currentPeriodEnd,
       trialEndsAt: extractTrialEnd(subscription),
       cancelAtPeriodEnd: false,
+      ...customPriceSettlement(subscription.metadata),
     });
   } else {
     await subscriptionRepository.create({
@@ -298,14 +313,21 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const priceId = subscription.items.data[0]?.price.id;
   const newPlan = mapPriceIdToEnum(priceId) || mapStripePlanToEnum(subscription.metadata?.plan);
 
+  // An account suspended behind an unpaid custom-price offer keeps its
+  // INCOMPLETE status and quoted plan until that offer is paid — a late event
+  // from the superseded subscription must not hand access back.
+  const suspendedByOffer =
+    existingSubscription.customPricePendingAt != null &&
+    subscription.metadata?.customPrice !== "true";
+
   await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
-    status,
     currentPeriodStart,
     currentPeriodEnd,
     trialEndsAt: extractTrialEnd(subscription),
     cancelAtPeriodEnd,
-    ...(newPlan ? { plan: newPlan } : {}),
+    ...(suspendedByOffer ? {} : { status, ...(newPlan ? { plan: newPlan } : {}) }),
     ...(priceId ? { stripePriceId: priceId } : {}),
+    ...customPriceSettlement(subscription.metadata),
   });
 
   subscriptionService.invalidateUserCache(existingSubscription.userId);
@@ -323,10 +345,17 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     // A subscription that's truly deleted (not just canceled-at-period-end)
     // will only ever come back via a fresh Checkout Session on the catalog
     // price — clear any admin custom-price override so it doesn't linger
-    // and misdisplay against a future re-subscribe.
-    customPriceAmount: null,
-    customPriceCurrency: null,
-    customPriceInterval: null,
+    // and misdisplay against a future re-subscribe. The exception is a pending
+    // offer: setting one cancels the old subscription on purpose, and this
+    // event is that cancellation echoing back.
+    ...(existingSubscription.customPricePendingAt != null
+      ? {}
+      : {
+          customPriceAmount: null,
+          customPriceCurrency: null,
+          customPriceInterval: null,
+          customPricePlan: null,
+        }),
   });
 
   subscriptionService.invalidateUserCache(existingSubscription.userId);
@@ -339,7 +368,12 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   const subscription = await subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
   if (!subscription) return;
 
-  if (subscription.status !== SubscriptionStatus.ACTIVE) {
+  // A paid invoice on the *superseded* subscription must not reactivate an
+  // account that is waiting to pay an admin-quoted custom price.
+  if (
+    subscription.status !== SubscriptionStatus.ACTIVE &&
+    subscription.customPricePendingAt == null
+  ) {
     await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
       status: SubscriptionStatus.ACTIVE,
     });

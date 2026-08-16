@@ -15,6 +15,8 @@ import {
   materialFilterSchema,
   bulkDeleteSchema,
   addMaterialSupplierSchema,
+  createSupplierOrderSchema,
+  updateSupplierOrderSchema,
 } from "../inventory.schemas";
 
 // Valid CUID format: c + 24 lowercase alphanumeric characters = 25 total
@@ -314,5 +316,106 @@ describe("addMaterialSupplierSchema", () => {
       price: -5,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("createSupplierOrderSchema", () => {
+  const baseItem = { materialId: validCuid2, quantity: 20, unit: "kg", unitPrice: 3.99 };
+
+  it("should accept the bare YYYY-MM-DD an <input type=date> produces", () => {
+    // Regression: the schema used to demand an ISO datetime, so every order
+    // created from the reorder dialogs was rejected with a 400.
+    const result = createSupplierOrderSchema.safeParse({
+      supplierId: validCuid1,
+      expectedDate: "2026-08-20",
+      items: [baseItem],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should still accept an ISO datetime with offset", () => {
+    const result = createSupplierOrderSchema.safeParse({
+      supplierId: validCuid1,
+      expectedDate: "2026-08-20T00:00:00.000Z",
+      items: [baseItem],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject a malformed date", () => {
+    const result = createSupplierOrderSchema.safeParse({
+      supplierId: validCuid1,
+      expectedDate: "20/08/2026",
+      items: [baseItem],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("should accept a per-item expiry date (DLC)", () => {
+    const result = createSupplierOrderSchema.safeParse({
+      supplierId: validCuid1,
+      expectedDate: "2026-08-20",
+      items: [{ ...baseItem, expiryDate: "2026-09-15" }],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.items[0].expiryDate).toBe("2026-09-15");
+    }
+  });
+
+  it("should treat the expiry date as optional", () => {
+    const result = createSupplierOrderSchema.safeParse({
+      supplierId: validCuid1,
+      expectedDate: "2026-08-20",
+      items: [baseItem],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.items[0].expiryDate).toBeUndefined();
+    }
+  });
+
+  it("should require at least one item", () => {
+    const result = createSupplierOrderSchema.safeParse({
+      supplierId: validCuid1,
+      expectedDate: "2026-08-20",
+      items: [],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updateSupplierOrderSchema", () => {
+  it("should accept PLACED, the status the UI actually sends", () => {
+    // The enum used to read "ORDERED", a value SupplierOrderStatus has never had.
+    const result = updateSupplierOrderSchema.safeParse({ status: "PLACED" });
+    expect(result.success).toBe(true);
+  });
+
+  it.each(["PENDING", "RECEIVED", "CANCELLED"])("should accept %s", (status) => {
+    expect(updateSupplierOrderSchema.safeParse({ status }).success).toBe(true);
+  });
+
+  it("should reject a status outside the Prisma enum", () => {
+    expect(updateSupplierOrderSchema.safeParse({ status: "ORDERED" }).success).toBe(false);
+  });
+
+  it("should accept a received date as YYYY-MM-DD", () => {
+    const result = updateSupplierOrderSchema.safeParse({
+      status: "RECEIVED",
+      receivedDate: "2026-08-21",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should leave tax and shipping unset when not provided", () => {
+    // They must stay undefined, not default to 0 — the PATCH route writes
+    // whatever comes back, and a 0 default would silently wipe stored values.
+    const result = updateSupplierOrderSchema.safeParse({ status: "PLACED" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tax).toBeUndefined();
+      expect(result.data.shipping).toBeUndefined();
+    }
   });
 });

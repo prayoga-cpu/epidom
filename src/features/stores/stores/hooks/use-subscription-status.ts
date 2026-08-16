@@ -32,6 +32,9 @@ export interface SubscriptionStatusResponse {
     customPriceAmount: number | null;
     customPriceCurrency: string | null;
     customPriceInterval: "MONTHLY" | "YEARLY" | null;
+    customPricePlan: SubscriptionPlan | null;
+    /** Quoted by an admin but not yet paid — access is suspended until it is. */
+    customPricePending: boolean;
   } | null;
   storeUsage: {
     current: number;

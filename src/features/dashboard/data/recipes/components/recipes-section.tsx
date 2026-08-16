@@ -554,9 +554,14 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
                   onSelect={() => toggleSelectItem(recipe.id)}
                   contentClassName="!px-4"
                 >
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="line-clamp-2 text-sm leading-tight font-semibold">
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    {/* min-w-0 so a long unbroken name wraps/clamps inside the
+                        card instead of forcing the row wider than the card. */}
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        className="line-clamp-2 text-sm leading-tight font-semibold break-words"
+                        title={recipe.name}
+                      >
                         {recipe.name}
                       </h3>
                       <div className="mt-1 flex flex-wrap gap-1">

@@ -160,6 +160,7 @@ describe("Stripe Webhook Handler", () => {
       (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
       (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
         userId: "user-123",
+        customPricePendingAt: null,
       });
 
       const req = createRequest(mockEvent);
@@ -175,6 +176,115 @@ describe("Stripe Webhook Handler", () => {
           customPriceInterval: null,
         })
       );
+    });
+
+    it("keeps a pending custom-price quote — this cancellation is what created it", async () => {
+      const mockEvent = {
+        type: "customer.subscription.deleted",
+        data: { object: { id: "sub_123" } },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        customPricePendingAt: new Date(),
+      });
+
+      await POST(createRequest(mockEvent));
+
+      const [, data] = (subscriptionRepository.updateByStripeSubscriptionId as any).mock.calls[0];
+      expect(data.status).toBe(SubscriptionStatus.CANCELED);
+      expect(data).not.toHaveProperty("customPriceAmount");
+      expect(data).not.toHaveProperty("customPricePlan");
+    });
+  });
+
+  describe("custom-price offers", () => {
+    it("lifts the suspension when the custom-price checkout completes", async () => {
+      const mockEvent = {
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            mode: "subscription",
+            subscription: "sub_new",
+            customer: "cus_123",
+            metadata: { userId: "user-123", plan: "ENTERPRISE", customPrice: "true" },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({
+        id: "sub_new",
+        status: "active",
+        current_period_start: 1700000000,
+        current_period_end: 1702678400,
+        items: { data: [{ price: { id: "price_custom" } }] },
+      });
+      (subscriptionRepository.findByUserId as any).mockResolvedValue({
+        userId: "user-123",
+        stripeSubscriptionId: null,
+        customPricePendingAt: new Date(),
+      });
+
+      await POST(createRequest(mockEvent));
+
+      expect(subscriptionRepository.update).toHaveBeenCalledWith(
+        "user-123",
+        expect.objectContaining({
+          plan: SubscriptionPlan.ENTERPRISE,
+          status: SubscriptionStatus.ACTIVE,
+          stripeSubscriptionId: "sub_new",
+          customPricePendingAt: null,
+          customPricePrevStatus: null,
+        })
+      );
+    });
+
+    it("does not reactivate a suspended account from an unrelated subscription update", async () => {
+      const mockEvent = {
+        type: "customer.subscription.updated",
+        data: {
+          object: {
+            id: "sub_old",
+            status: "active",
+            current_period_start: 1700000000,
+            current_period_end: 1702678400,
+            items: { data: [{ price: { id: "price_123" } }] },
+            metadata: { userId: "user-123", plan: "OPERATIONS" },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        customPricePendingAt: new Date(),
+      });
+
+      await POST(createRequest(mockEvent));
+
+      const [, data] = (subscriptionRepository.updateByStripeSubscriptionId as any).mock.calls[0];
+      expect(data).not.toHaveProperty("status");
+      expect(data).not.toHaveProperty("plan");
+    });
+
+    it("does not reactivate a suspended account from a paid invoice", async () => {
+      const mockEvent = {
+        type: "invoice.payment_succeeded",
+        data: { object: { id: "in_1", subscription: "sub_old" } },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        status: SubscriptionStatus.INCOMPLETE,
+        customPricePendingAt: new Date(),
+      });
+
+      await POST(createRequest(mockEvent));
+
+      expect(subscriptionRepository.updateByStripeSubscriptionId).not.toHaveBeenCalled();
     });
   });
 });

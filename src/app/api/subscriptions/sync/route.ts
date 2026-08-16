@@ -31,6 +31,19 @@ export const POST = withApiHandler(
       );
     }
 
+    // Never sync an account that is waiting to pay an admin-quoted custom
+    // price: any subscription still live in Stripe is the superseded one, and
+    // copying it back would hand access out without the new price being paid.
+    if (dbSubscription.customPricePendingAt) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.CONFLICT,
+          "A custom price is awaiting payment on this account. Complete that checkout from your Billing page instead."
+        ),
+        { status: 409 }
+      );
+    }
+
     // Get all active subscriptions from Stripe for this customer
     const stripeSubscriptions = await stripe.subscriptions.list({
       customer: dbSubscription.stripeCustomerId,

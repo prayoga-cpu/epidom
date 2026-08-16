@@ -6,6 +6,7 @@ import {
 } from "@/lib/validation/inventory.schemas";
 import type { Product } from "@prisma/client";
 import { ApiClientError } from "@/lib/api/client";
+import { unwrapApiData, unwrapApiError } from "@/lib/api/unwrap";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
 import { trackEvent } from "@/lib/analytics";
@@ -180,7 +181,9 @@ async function bulkDeleteProducts(
     throw new ApiClientError(error, response.status);
   }
 
-  return response.json();
+  // Route answers createSuccessResponse({ deletedCount, ... }) — the count the
+  // success toast prints lives one level down.
+  return unwrapApiData<{ deletedCount: number }>(await response.json());
 }
 
 async function deleteProductCategory(
@@ -222,7 +225,11 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
   const response = await fetch(`/api/stores/${storeId}/products/export?${params.toString()}`);
 
   if (!response.ok) {
-    const error = await response.json();
+    // The export route reports failures through createErrorResponse, so code
+    // and message sit under `error` — read off the top level this 403 branch
+    // never matched and a locked plan got a generic export failure.
+    const raw = await response.json().catch(() => ({}));
+    const error = unwrapApiError(raw);
 
     // Handle 403 Forbidden (subscription feature locked)
     if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
@@ -235,7 +242,8 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
       throw customError;
     }
 
-    throw new ApiClientError(error, response.status);
+    // `raw`: ApiClientError reads `response.error.message`.
+    throw new ApiClientError(raw, response.status);
   }
 
   // Download CSV file
@@ -639,7 +647,8 @@ async function createMenuItemForProduct(
     const error = await response.json();
     throw new ApiClientError(error, response.status);
   }
-  return response.json();
+  // Route answers createSuccessResponse(item) — callers expect the MenuItem.
+  return unwrapApiData(await response.json());
 }
 
 /**

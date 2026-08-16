@@ -26,6 +26,10 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 5,
     window: 60, // 5 checkout attempts per minute
   },
+  "/api/subscriptions/custom-price/checkout": {
+    limit: 5,
+    window: 60, // 5 checkout attempts per minute
+  },
   "/api/subscriptions/cancel": {
     limit: 5,
     window: 60, // 5 cancellation attempts per minute

@@ -5,6 +5,7 @@ import { StockMovement } from "@prisma/client";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
+import { unwrapApiData, unwrapApiError } from "@/lib/api/unwrap";
 
 export interface StockMovementWithRelations extends StockMovement {
   // reason and referenceId are already in StockMovement from Prisma
@@ -86,11 +87,14 @@ export function useStockMovements(storeId: string, filters?: StockMovementFilter
       const response = await fetch(url);
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to fetch stock movements");
+        const error = unwrapApiError(await response.json().catch(() => ({})));
+        throw new Error(error.message || "Failed to fetch stock movements");
       }
 
-      return response.json();
+      // The route answers `createSuccessResponse({ movements, total })`, so the
+      // rows sit at `data.movements` — returning the raw envelope left every
+      // movements list rendering as empty rather than erroring.
+      return unwrapApiData<StockMovementsResponse>(await response.json());
     },
     enabled: !!storeId && !!(filters?.materialId || filters?.productId),
     // Real-time configuration: Pusher (see useRealtimeChannel above,

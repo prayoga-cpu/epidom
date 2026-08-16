@@ -52,6 +52,8 @@ export async function GET() {
           customPriceAmount: true,
           customPriceCurrency: true,
           customPriceInterval: true,
+          customPricePlan: true,
+          customPricePendingAt: true,
         },
       },
       business: {
@@ -107,6 +109,9 @@ const updateSchema = z.discriminatedUnion("action", [
     amount: z.number().nonnegative().finite().multipleOf(0.01),
     currency: z.string().length(3),
     interval: z.enum(["MONTHLY", "YEARLY"]),
+    // FREE is excluded: a custom price is something the user is asked to pay,
+    // and the free tier has nothing to charge for.
+    plan: z.enum(["POS", "OPERATIONS", "ENTERPRISE"]),
   }),
   z.object({
     action: z.literal("clear-custom-price"),
@@ -216,6 +221,7 @@ export async function PATCH(req: NextRequest) {
         amount: input.amount,
         currency: input.currency.toUpperCase(),
         interval: input.interval,
+        plan: input.plan,
       });
       return NextResponse.json({ subscription });
     } catch (err) {

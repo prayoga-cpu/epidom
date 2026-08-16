@@ -15,8 +15,11 @@ export function SKUDisplay({ sku, className }: SKUDisplayProps) {
     <p
       className={cn(
         "text-muted-foreground hover:text-foreground cursor-pointer text-xs transition-colors",
-        !isExpanded && "max-w-[120px] truncate sm:max-w-[150px]",
-        isExpanded && "break-all whitespace-normal",
+        // Truncates to whatever the parent column actually offers rather than a
+        // fixed 120/150px, which clipped the SKU even on a wide desktop card.
+        // Requires the parent to carry `min-w-0` (see the card headers) — a
+        // flex child won't shrink below its content without it.
+        !isExpanded && "truncate",
         className
       )}
       onClick={(e) => {

@@ -20,7 +20,7 @@ import Stripe from "stripe";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { ApiErrorCode } from "@/types/api/responses";
-import { planHasFeature, type PlanTier } from "@/lib/plans/entitlements";
+import { planHasFeature, PLAN_LABELS, type PlanTier } from "@/lib/plans/entitlements";
 
 /**
  * Subscription Service
@@ -48,6 +48,41 @@ export class SubscriptionService {
   invalidateUserCache(userId: string): void {
     // Placeholder for future caching implementation
     // This method is called from webhook handlers to maintain API compatibility
+  }
+
+  /**
+   * The real Stripe customer id to bill this user on, creating one when needed.
+   *
+   * `admin_`/`free_`-prefixed ids are local stubs, not Stripe customers, so
+   * they never survive a checkout — the first paid session promotes the row to
+   * a real customer id. A stored id that Stripe no longer knows (deleted in the
+   * dashboard, or from another Stripe account) is replaced the same way.
+   */
+  private async resolveStripeCustomerId(
+    user: { id: string; email: string; name?: string | null },
+    subscription: Subscription | null
+  ): Promise<string> {
+    const stored = subscription?.stripeCustomerId;
+    if (stored && !stored.startsWith("free_") && !stored.startsWith("admin_")) {
+      try {
+        const customer = await stripe.customers.retrieve(stored);
+        if (!customer.deleted) return stored;
+      } catch {
+        // Unknown to Stripe — fall through and create a fresh customer.
+      }
+    }
+
+    const created = await stripe.customers.create({
+      email: user.email,
+      name: user.name || undefined,
+      metadata: { userId: user.id },
+    });
+
+    if (subscription) {
+      await this.subscriptionRepo.update(user.id, { stripeCustomerId: created.id });
+    }
+
+    return created.id;
   }
 
   /**
@@ -86,41 +121,7 @@ export class SubscriptionService {
       throw new Error(`You already have an active ${plan} plan`);
     } */
 
-    let stripeCustomerId: string;
-
-    if (subscription && !subscription.stripeCustomerId.startsWith("free_")) {
-      try {
-        const customer = await stripe.customers.retrieve(subscription.stripeCustomerId);
-        if (customer.deleted) throw new Error("Customer deleted");
-        stripeCustomerId = subscription.stripeCustomerId;
-      } catch (error) {
-        // Customer not found in Stripe, create a new one
-        const newCustomer = await stripe.customers.create({
-          email: user.email,
-          name: user.name || undefined,
-          metadata: { userId: user.id },
-        });
-        stripeCustomerId = newCustomer.id;
-        await this.subscriptionRepo.update(userId, { stripeCustomerId });
-      }
-    } else {
-      // Create new Stripe customer
-      const customer = await stripe.customers.create({
-        email: user.email,
-        name: user.name || undefined,
-        metadata: {
-          userId: user.id,
-        },
-      });
-      stripeCustomerId = customer.id;
-
-      if (subscription && subscription.stripeCustomerId.startsWith("free_")) {
-        // Update local record to use real Stripe customer ID
-        await this.subscriptionRepo.update(userId, {
-          stripeCustomerId: stripeCustomerId,
-        });
-      }
-    }
+    const stripeCustomerId = await this.resolveStripeCustomerId(user, subscription);
 
     // Get price ID for plan
     const priceId = STRIPE_CONFIG.PRICE_IDS[plan][yearly ? "YEARLY" : "MONTHLY"];
@@ -338,6 +339,17 @@ export class SubscriptionService {
     userId: string,
     plan: SubscriptionPlan = SubscriptionPlan.FREE
   ): Promise<void> {
+    // Self-service free provisioning must not undo an admin-quoted suspension —
+    // that would flip the account back to ACTIVE without the price being paid.
+    const existing = await this.subscriptionRepo.findByUserId(userId);
+    if (existing?.customPricePendingAt) {
+      throw new AppError(
+        "A custom price is awaiting payment on this account. Complete that checkout from your Billing page.",
+        ApiErrorCode.CONFLICT,
+        409
+      );
+    }
+
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
     // Atomic upsert — safe against concurrent calls (status check + onboarding PATCH firing simultaneously)
@@ -425,15 +437,26 @@ export class SubscriptionService {
   /**
    * Admin-set custom price. Behavior splits on how the account is actually
    * billed:
-   *  - Real Stripe subscription (stripeCustomerId doesn't start with "admin_"
-   *    or "free_"): live override via Stripe's ad-hoc price_data on the
-   *    subscription item — actually changes what Stripe charges next cycle.
-   *  - admin_/free_ accounts: reference-only — stored and displayed, no
-   *    Stripe call, since there's no real billing happening to override.
+   *  - Real Stripe account (stripeCustomerId doesn't start with "admin_" or
+   *    "free_"): a quoted *offer* for `input.plan`. Their running subscription
+   *    is canceled in Stripe immediately — they must not keep paying the old
+   *    price for access they no longer have — access is suspended (status
+   *    INCOMPLETE, every plan gate reads FREE) and their Billing page offers a
+   *    Checkout Session at the quoted price. See
+   *    `createCustomPriceCheckoutSession`.
+   *  - admin_/free_ accounts: reference-only — stored and displayed for the
+   *    operator's own invoicing, no Stripe call, access untouched. There is no
+   *    real billing to supersede, and suspending a BETA account the operator
+   *    granted by hand would just lock them out with no way to pay.
    */
   async setCustomPrice(
     userId: string,
-    input: { amount: number; currency: string; interval: "MONTHLY" | "YEARLY" }
+    input: {
+      amount: number;
+      currency: string;
+      interval: "MONTHLY" | "YEARLY";
+      plan: Exclude<SubscriptionPlan, "FREE">;
+    }
   ): Promise<Subscription> {
     let subscription = await this.subscriptionRepo.findByUserId(userId);
     // A user who's never had a subscription row yet is treated the same way
@@ -456,60 +479,64 @@ export class SubscriptionService {
       !subscription!.stripeCustomerId.startsWith("admin_") &&
       !subscription!.stripeCustomerId.startsWith("free_");
 
-    if (isRealStripe) {
-      if (!subscription!.stripeSubscriptionId) {
-        throw new AppError(
-          "This account has no active Stripe subscription to apply a live price override to.",
-          ApiErrorCode.VALIDATION_ERROR,
-          422
-        );
-      }
-      const stripeSub = await stripe.subscriptions.retrieve(subscription!.stripeSubscriptionId);
-      const item = stripeSub.items.data[0];
-      if (!item) {
-        throw new AppError(
-          "Stripe subscription has no line item to update.",
-          ApiErrorCode.VALIDATION_ERROR,
-          422
-        );
-      }
-      const existingProductId =
-        typeof item.price.product === "string" ? item.price.product : item.price.product.id;
-
-      await stripe.subscriptions.update(subscription!.stripeSubscriptionId, {
-        items: [
-          {
-            id: item.id,
-            price_data: {
-              currency: input.currency.toLowerCase(),
-              unit_amount: Math.round(input.amount * 100),
-              recurring: { interval: input.interval === "YEARLY" ? "year" : "month" },
-              product: existingProductId,
-            },
-          },
-        ],
-        // "none": new price applies starting next invoice/renewal, no
-        // surprise mid-cycle prorated charge/credit. The operator can still
-        // use the Stripe dashboard directly for a one-off prorated
-        // adjustment if ever needed.
-        proration_behavior: "none",
-      });
-    }
-
-    const updated = await this.subscriptionRepo.update(userId, {
+    const priceFields = {
       customPriceAmount: new Prisma.Decimal(input.amount),
       customPriceCurrency: input.currency,
       customPriceInterval: input.interval,
+      customPricePlan: input.plan,
+    };
+
+    if (!isRealStripe) {
+      const updated = await this.subscriptionRepo.update(userId, priceFields);
+      this.invalidateUserCache(userId);
+      return updated;
+    }
+
+    // Cancel the running subscription rather than repricing its item: the user
+    // is being re-quoted, so they pay the new price through a fresh Checkout
+    // Session. `prorate: false` — no refund for unused time, matching how
+    // duplicate subscriptions are cleaned up elsewhere.
+    if (subscription!.stripeSubscriptionId) {
+      try {
+        await stripe.subscriptions.cancel(subscription!.stripeSubscriptionId, { prorate: false });
+      } catch (error) {
+        // Already gone in Stripe (canceled by hand, expired) — the local row is
+        // what matters from here on.
+        logger.warn("Failed to cancel Stripe subscription for custom price offer", {
+          userId,
+          stripeSubscriptionId: subscription!.stripeSubscriptionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    const updated = await this.subscriptionRepo.update(userId, {
+      ...priceFields,
+      customPricePendingAt: new Date(),
+      // Re-quoting an offer that's already pending must not record INCOMPLETE
+      // as the status to restore — keep the one from before the first offer.
+      customPricePrevStatus:
+        subscription!.customPricePendingAt != null
+          ? subscription!.customPricePrevStatus
+          : subscription!.status,
+      status: SubscriptionStatus.INCOMPLETE,
+      stripeSubscriptionId: null,
+      stripePriceId: null,
+      cancelAtPeriodEnd: false,
     });
     this.invalidateUserCache(userId);
     return updated;
   }
 
   /**
-   * Reverts to standard catalog pricing. For a real Stripe account on a plan
-   * with a catalog price, also restores the subscription item to that price
-   * (always the monthly price — the original billing interval isn't
-   * separately tracked once overridden, an accepted simplification).
+   * Reverts to standard catalog pricing. A still-pending offer is withdrawn —
+   * access comes back at whatever status the account had before it (their old
+   * Stripe subscription is already canceled, so this leaves them on their plan
+   * unbilled until the operator re-quotes or they subscribe again). For an
+   * account already paying a custom price, the subscription item is moved back
+   * to the catalog price (always the monthly one — the original billing
+   * interval isn't separately tracked once overridden, an accepted
+   * simplification).
    */
   async clearCustomPrice(userId: string): Promise<Subscription> {
     const subscription = await this.subscriptionRepo.findByUserId(userId);
@@ -540,9 +567,75 @@ export class SubscriptionService {
       customPriceAmount: null,
       customPriceCurrency: null,
       customPriceInterval: null,
+      customPricePlan: null,
+      customPricePendingAt: null,
+      customPricePrevStatus: null,
+      ...(subscription.customPricePendingAt != null
+        ? { status: subscription.customPricePrevStatus ?? SubscriptionStatus.ACTIVE }
+        : {}),
     });
     this.invalidateUserCache(userId);
     return updated;
+  }
+
+  /**
+   * Checkout Session for a pending custom-price offer — the user paying the
+   * price an admin quoted them. Bills an ad-hoc Stripe price built from the
+   * stored amount/currency/interval instead of a catalog price id, and tags
+   * the session `customPrice: "true"` so the webhook knows to lift the
+   * suspension (see api/webhooks/stripe: customPricePendingAt).
+   */
+  async createCustomPriceCheckoutSession(
+    userId: string,
+    successUrl: string,
+    cancelUrl: string
+  ): Promise<Stripe.Checkout.Session> {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", ApiErrorCode.NOT_FOUND, 404);
+    }
+
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+    if (
+      !subscription ||
+      subscription.customPricePendingAt == null ||
+      subscription.customPriceAmount == null ||
+      !subscription.customPricePlan
+    ) {
+      throw new AppError(
+        "No custom price is awaiting payment on this account.",
+        ApiErrorCode.VALIDATION_ERROR,
+        422
+      );
+    }
+
+    const plan = subscription.customPricePlan;
+    const stripeCustomerId = await this.resolveStripeCustomerId(user, subscription);
+
+    return stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: (subscription.customPriceCurrency ?? "EUR").toLowerCase(),
+            unit_amount: Math.round(Number(subscription.customPriceAmount) * 100),
+            recurring: {
+              interval: subscription.customPriceInterval === "YEARLY" ? "year" : "month",
+            },
+            product_data: { name: `Epidom ${PLAN_LABELS[plan]} — custom price` },
+          },
+          quantity: 1,
+        },
+      ],
+      subscription_data: {
+        metadata: { userId: user.id, plan, customPrice: "true" },
+      },
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: { userId: user.id, plan, customPrice: "true" },
+    });
   }
 
   /**

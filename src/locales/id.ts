@@ -971,6 +971,11 @@ export const id = {
     },
   },
   finance: {
+    // Label baris nominal yang dipakai dokumen cetak (penawaran pemasok, …).
+    subtotal: "Subtotal",
+    tax: "Pajak",
+    shipping: "Ongkos Kirim",
+    total: "Total",
     summary: {
       unknownCost:
         "Biaya tidak diketahui untuk {count} item ({amount} dari penjualan) — pesanan dari aplikasi pengantaran tidak terhubung ke produk Anda.",
@@ -2749,6 +2754,11 @@ export const id = {
       description: "Buat pengingat untuk memesan bahan mentah dari pemasok",
       supplier: "Pemasok",
       selectSupplier: "Pilih pemasok",
+      suppliersForMaterial: "Pemasok untuk bahan ini",
+      otherSuppliers: "Pemasok lainnya",
+      allSuppliers: "Semua pemasok",
+      preferred: "Utama",
+      noSuppliers: "Belum ada pemasok — tambahkan dulu di Data › Pemasok.",
       supplierPhone: "Nomor Telepon",
       callSupplier: "Hubungi Pemasok",
       noPhoneAvailable: "Nomor telepon tidak tersedia",
@@ -2758,11 +2768,20 @@ export const id = {
       suggested: "Disarankan",
       expectedDelivery: "Tanggal Pengiriman yang Diharapkan",
       expectedDeliveryHint: "Kapan Anda mengharapkan menerima pesanan ini",
+      expiryDate: "Tanggal kedaluwarsa yang diminta (DLC)",
+      expiryDateHint:
+        "Tanggal kedaluwarsa yang Anda minta dipenuhi pemasok. Diterapkan ke bahan saat kiriman diterima. Kosongkan untuk barang non-perishable.",
       priority: "Prioritas",
       notes: "Catatan",
       notesPlaceholder: "Tambahkan instruksi khusus atau catatan...",
       notesHint: "Catatan opsional untuk pengingat pesanan ini",
       submit: "Buat Pesanan",
+      createdTitle: "Pesanan dibuat",
+      createdDescription: "Cetak penawaran pesanan atau kirim ke pemasok",
+      printQuote: "Cetak penawaran pesanan",
+      printQuoteHint:
+        "Penawaran terbuka di tab baru lengkap dengan detail toko dan total, siap dicetak atau disimpan sebagai PDF.",
+      createAnother: "Buat lagi",
     },
 
     // Orders view
@@ -3307,6 +3326,12 @@ export const id = {
       searchPlaceholder: "Cari berdasarkan referensi, supplier, atau catatan...",
       orderDate: "Tanggal Pesan",
       expectedDate: "Perkiraan Tiba",
+      quoteTitle: "Surat Pesanan Pembelian",
+      dlc: "Kedaluwarsa (DLC)",
+      dlcNotice:
+        "Barang harus dikirim dengan tanggal kedaluwarsa (DLC) tidak lebih awal dari yang tertera pada setiap baris.",
+      signatureStore: "Untuk toko — tanggal & tanda tangan",
+      signatureSupplier: "Untuk supplier — tanggal & tanda tangan",
       sendToSupplier: "Kirim ke Supplier",
       send: "Kirim",
       viaEmail: "Email",
@@ -4182,6 +4207,15 @@ export const id = {
 lifetime: "Akses seumur hidup",
     customPriceNoteBeta: "Harga khusus ditetapkan oleh operator",
     customPriceNoteStripe: "Harga khusus — ditagih melalui Stripe",
+    customPricePending: {
+      title: "Pembayaran diperlukan untuk harga khusus Anda",
+      description:
+        "Kami menyepakati harga khusus untuk akun Anda. Langganan sebelumnya sudah ditutup, jadi bayar harga baru ini untuk mengaktifkan kembali paket Anda.",
+      payNow: "Bayar dengan Stripe",
+      note: "Menunggu pembayaran",
+      restrictedNote:
+        "Sampai pembayaran diterima, Anda tetap bisa membuka halaman Penagihan dan pengaturan akun — sisanya kembali aktif begitu Stripe mengonfirmasi pembayaran.",
+    },
     storeUsage: "Penggunaan toko",
     stores: "toko",
     unlimited: "Tidak Terbatas",

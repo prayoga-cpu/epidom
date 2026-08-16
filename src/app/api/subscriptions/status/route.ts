@@ -96,6 +96,10 @@ export const GET = withApiHandler(
             subscription.customPriceAmount != null ? Number(subscription.customPriceAmount) : null,
           customPriceCurrency: subscription.customPriceCurrency,
           customPriceInterval: subscription.customPriceInterval,
+          customPricePlan: subscription.customPricePlan,
+          // Quoted but unpaid: access is suspended until this Checkout Session
+          // completes (POST /api/subscriptions/custom-price/checkout).
+          customPricePending: subscription.customPricePendingAt != null,
         },
         storeUsage,
       })

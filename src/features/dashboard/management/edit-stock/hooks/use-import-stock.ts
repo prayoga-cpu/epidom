@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
 import { stockMovementKeys } from "./use-stock-movements";
+import { unwrapApiData, unwrapApiError } from "@/lib/api/unwrap";
 
 export interface StockImportResult {
   sku: string;
@@ -34,11 +35,13 @@ async function importStock(storeId: string, file: File): Promise<StockImportResp
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to import stock");
+    const error = unwrapApiError(await response.json().catch(() => ({})));
+    throw new Error(error.message || "Failed to import stock");
   }
 
-  return response.json();
+  // The route wraps its payload, so `summary` — which onSuccess reads to build
+  // the "N imported, M failed" toast — sits one level down.
+  return unwrapApiData<StockImportResponse>(await response.json());
 }
 
 /**

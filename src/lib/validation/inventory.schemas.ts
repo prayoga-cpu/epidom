@@ -450,16 +450,33 @@ export const supplierFilterSchema = z.object({
 export type SupplierFilterInput = z.infer<typeof supplierFilterSchema>;
 
 // Supplier Order schemas
+
+/**
+ * A date coming from the UI, which is always an `<input type="date">` — i.e.
+ * a bare `YYYY-MM-DD`, never an ISO datetime. The previous
+ * `z.string().datetime()` here rejected exactly what the order dialogs send,
+ * so every "Create Order" 400'd at validation. Both shapes are accepted now
+ * (a `Date`, or an ISO datetime from a server-side caller, still pass) and
+ * the route turns whichever arrives into a `Date`.
+ */
+const orderDateSchema = z.union([
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
+  z.string().datetime({ offset: true }),
+  z.date(),
+]);
+
 export const supplierOrderItemSchema = z.object({
   materialId: cuidSchema,
   quantity: decimalSchema.positive("Quantity must be positive"),
   unit: z.string().min(1, "Unit is required").max(20, "Unit is too long").optional(),
   unitPrice: priceSchema,
+  /** Requested DLC (date limite de consommation) for this line. */
+  expiryDate: orderDateSchema.optional().nullable(),
 });
 
 export const createSupplierOrderSchema = z.object({
   supplierId: cuidSchema,
-  expectedDate: z.string().datetime({ offset: true }).optional().or(z.date()).optional(),
+  expectedDate: orderDateSchema.optional(),
   notes: z.string().max(1000, "Notes are too long").optional(),
   tax: priceSchema.default(0),
   shipping: priceSchema.default(0),
@@ -469,11 +486,14 @@ export const createSupplierOrderSchema = z.object({
 export type CreateSupplierOrderInput = z.infer<typeof createSupplierOrderSchema>;
 
 export const updateSupplierOrderSchema = z.object({
-  status: z.enum(["PENDING", "ORDERED", "RECEIVED", "CANCELLED"]).optional(),
-  expectedDate: z.string().datetime({ offset: true }).optional().or(z.date()).optional(),
+  // Mirrors the SupplierOrderStatus enum in schema.prisma — it used to read
+  // "ORDERED", a value the database has never had.
+  status: z.enum(["PENDING", "PLACED", "RECEIVED", "CANCELLED"]).optional(),
+  expectedDate: orderDateSchema.optional(),
+  receivedDate: orderDateSchema.optional(),
   notes: z.string().max(1000, "Notes are too long").optional(),
-  tax: priceSchema.default(0),
-  shipping: priceSchema.default(0),
+  tax: priceSchema.optional(),
+  shipping: priceSchema.optional(),
 });
 
 export type UpdateSupplierOrderInput = z.infer<typeof updateSupplierOrderSchema>;

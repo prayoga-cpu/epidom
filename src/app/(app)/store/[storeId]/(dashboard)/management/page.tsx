@@ -30,11 +30,19 @@ export default async function ManagementPage({ params }: { params: Promise<{ sto
   }
   await requireStaffPageAccess(storeId, "/management");
 
-  // Fetch initial supplier orders
-  // Optimize: Only fetch PLACED (active) and RECEIVED orders for the deliveries tab
-  // This matches the client-side filtering and prevents loading unnecessary data
+  // Fetch initial supplier orders.
+  //
+  // This seeds ONE React Query cache key (`["supplier-orders","list",storeId]`)
+  // that TWO panels read: Supplier Deliveries wants PLACED/RECEIVED, and Orders
+  // to Place wants PENDING. Seeding only the deliveries half left a freshly
+  // created (PENDING) order invisible until the 10s poll came round, since the
+  // hook sets refetchOnMount: false.
+  //
+  // CANCELLED is still excluded: nothing renders it, and cancelled orders
+  // accumulate forever — including them would let them crowd out live ones
+  // under the `take` limit below.
   const supplierOrdersResult = await fetchSupplierOrdersForPage(storeId, {
-    status: ["PLACED", "RECEIVED"],
+    status: ["PENDING", "PLACED", "RECEIVED"],
     take: 100, // Reasonable limit for initial view
   });
 

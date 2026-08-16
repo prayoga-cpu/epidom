@@ -955,6 +955,11 @@ export const en = {
     },
   },
   finance: {
+    // Money-line labels shared by printable documents (supplier quote, …).
+    subtotal: "Subtotal",
+    tax: "Tax",
+    shipping: "Shipping",
+    total: "Total",
     summary: {
       unknownCost:
         "Cost is unknown for {count} items ({amount} of sales) — delivery-app orders aren't linked to your products.",
@@ -2716,6 +2721,11 @@ export const en = {
       description: "Create a reminder to order raw materials from supplier",
       supplier: "Supplier",
       selectSupplier: "Select supplier",
+      suppliersForMaterial: "Suppliers for this material",
+      otherSuppliers: "Other suppliers",
+      allSuppliers: "All suppliers",
+      preferred: "Preferred",
+      noSuppliers: "No suppliers on file yet — add one in Data › Suppliers first.",
       supplierPhone: "Phone Number",
       callSupplier: "Call Supplier",
       noPhoneAvailable: "No phone number available",
@@ -2725,11 +2735,20 @@ export const en = {
       suggested: "Suggested",
       expectedDelivery: "Expected Delivery Date",
       expectedDeliveryHint: "When you expect to receive this order",
+      expiryDate: "Expiration date requested (DLC)",
+      expiryDateHint:
+        "The use-by date you ask the supplier to honor. Applied to the material when the delivery is received. Leave empty for non-perishables.",
       priority: "Priority",
       notes: "Notes",
       notesPlaceholder: "Add any special instructions or notes...",
       notesHint: "Optional notes for this order reminder",
       submit: "Create Order",
+      createdTitle: "Order created",
+      createdDescription: "Print the order quote or send it to the supplier",
+      printQuote: "Print order quote",
+      printQuoteHint:
+        "The quote opens in a new tab with your store details and totals, ready to print or save as PDF.",
+      createAnother: "Create another",
     },
 
     // Orders view
@@ -3275,6 +3294,12 @@ export const en = {
       searchPlaceholder: "Search by reference, supplier, or notes...",
       orderDate: "Order Date",
       expectedDate: "Expected",
+      quoteTitle: "Purchase Order",
+      dlc: "Expiration (DLC)",
+      dlcNotice:
+        "Goods must be delivered with an expiration date (DLC) no earlier than the one stated for each line.",
+      signatureStore: "For the store — date & signature",
+      signatureSupplier: "For the supplier — date & signature",
       sendToSupplier: "Send to Supplier",
       send: "Send",
       viaEmail: "Email",
@@ -4154,6 +4179,15 @@ export const en = {
 lifetime: "Lifetime access",
     customPriceNoteBeta: "Custom price set by the operator",
     customPriceNoteStripe: "Custom price — billed via Stripe",
+    customPricePending: {
+      title: "Payment needed for your custom price",
+      description:
+        "We agreed a special price for your account. Your previous subscription has been closed, so pay the new price to switch your plan on again.",
+      payNow: "Pay with Stripe",
+      note: "Awaiting payment",
+      restrictedNote:
+        "Until the payment goes through you can still reach Billing and your account settings — everything else comes back as soon as Stripe confirms it.",
+    },
     storeUsage: "Store usage",
     stores: "stores",
     unlimited: "Unlimited",

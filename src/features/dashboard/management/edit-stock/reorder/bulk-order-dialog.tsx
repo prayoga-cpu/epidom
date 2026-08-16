@@ -52,6 +52,9 @@ const bulkOrderSchema = z
     supplierName: z.string().min(1, "Supplier name is required"),
     items: z.array(bulkOrderItemSchema),
     expectedDeliveryDate: z.string().min(1, "Please select an expected delivery date"),
+    // One DLC for the whole order — a single delivery from a single supplier
+    // is normally dated as one lot. Optional, like the single-item dialog.
+    expiryDate: z.string().optional(),
     notes: z.string().optional(),
   })
   .refine((data) => data.items.some((item) => item.selected), {
@@ -109,6 +112,7 @@ export function BulkOrderDialog({
         };
       }),
       expectedDeliveryDate: "",
+      expiryDate: "",
       notes: "",
     },
   });
@@ -139,6 +143,7 @@ export function BulkOrderDialog({
         supplierName,
         items,
         expectedDeliveryDate: "",
+        expiryDate: "",
         notes: `Bulk restock order from ${supplierName}`,
       });
     }
@@ -166,6 +171,7 @@ export function BulkOrderDialog({
           quantity: item.quantity,
           unit: item.unit,
           unitPrice: item.unitPrice,
+          ...(data.expiryDate ? { expiryDate: data.expiryDate } : {}),
         })),
         expectedDate: data.expectedDeliveryDate,
         notes: data.notes || `Bulk restock order from ${data.supplierName}`,
@@ -380,6 +386,22 @@ export function BulkOrderDialog({
                   <FormDescription>
                     {t("alerts.createOrderDialog.expectedDeliveryHint")}
                   </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Requested DLC — applies to every selected line */}
+            <FormField
+              control={form.control}
+              name="expiryDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("alerts.createOrderDialog.expiryDate")}</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormDescription>{t("alerts.createOrderDialog.expiryDateHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

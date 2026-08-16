@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
+import { cn } from "@/lib/utils";
 import { useParams } from "next/navigation";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { useQueryClient } from "@tanstack/react-query";
@@ -61,8 +62,9 @@ import {
   useDeleteMaterialCategory,
 } from "../hooks/use-materials";
 import { useFeatureAccess } from "@/features/dashboard/shared/hooks/use-feature-access";
-import { supplierKeys } from "../../suppliers/hooks/use-suppliers";
+import { supplierKeys, type SuppliersResponse } from "../../suppliers/hooks/use-suppliers";
 import { SmartImportDialog } from "../../import";
+import { unwrapApiData } from "@/lib/api/unwrap";
 
 type StockFilter = "in_stock" | "low_stock" | "out_of_stock" | "overstocked" | undefined;
 
@@ -190,7 +192,10 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
         params.append("take", String(SUPPLIER_PREFETCH_FILTERS.take));
         const response = await fetch(`/api/stores/${storeId}/suppliers?${params.toString()}`);
         if (!response.ok) throw new Error("Failed to prefetch suppliers");
-        return response.json();
+        // Written straight into the key useSuppliers reads, so it has to be
+        // the unwrapped payload — the envelope emptied the supplier dropdown
+        // until this entry went stale.
+        return unwrapApiData<SuppliersResponse>(await response.json());
       },
       staleTime: 5 * 60 * 1000, // 5 minutes
     });
@@ -627,18 +632,28 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                   onSelect={() => toggleSelectItem(material.id)}
                   contentClassName="!px-4"
                 >
-                  <div className="mb-2 flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="w-[85px] truncate text-sm leading-tight font-semibold">
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    {/* min-w-0 lets this column shrink so the name truncates to
+                        whatever space the card actually has. It used to be
+                        pinned at w-[85px], which clipped every name to ~10
+                        characters even on a wide desktop card — enough to make
+                        "Farine T55 Bio" and "Farine T55 Tradition" render as
+                        the same unreadable "Farine T55...". */}
+                    <div className="min-w-0 flex-1">
+                      <h3
+                        className="truncate text-sm leading-tight font-semibold"
+                        title={material.name}
+                      >
                         {material.name}
                       </h3>
                       {material.sku && <SKUDisplay sku={material.sku} />}
                     </div>
 
-                    {/* Stock Status Badge */}
+                    {/* Stock Status Badge — shrink-0 so the badge keeps its
+                        label intact and the name column absorbs the squeeze. */}
                     <Badge
                       variant={getStockStatusVariant(stockStatusKey)}
-                      className="ml-auto text-xs"
+                      className="shrink-0 text-xs"
                     >
                       {t(`common.stockStatus.${stockStatusKey}`)}
                     </Badge>
@@ -649,23 +664,31 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                   {/* Material Info */}
                   <div className="text-muted-foreground my-2 space-y-1 text-xs">
                     {material.category && (
-                      <div className="flex justify-between">
-                        <span>{t("common.category")}:</span>
-                        <span className="text-foreground font-medium">{material.category}</span>
+                      // Label holds its width, value truncates — otherwise a
+                      // long category name pushes the label out of the card.
+                      <div className="flex justify-between gap-2">
+                        <span className="shrink-0">{t("common.category")}:</span>
+                        <span
+                          className="text-foreground min-w-0 truncate font-medium"
+                          title={material.category}
+                        >
+                          {material.category}
+                        </span>
                       </div>
                     )}
                     {material.department && (
-                      <div className="flex justify-between">
-                        <span>{t("common.department")}:</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="shrink-0">{t("common.department")}:</span>
                         <Badge
                           variant="outline"
-                          className={
+                          className={cn(
+                            "shrink-0",
                             material.department === "KITCHEN"
                               ? "text-amber-600"
                               : material.department === "BAR"
                                 ? "text-blue-600"
                                 : "text-purple-600"
-                          }
+                          )}
                         >
                           {material.department === "KITCHEN"
                             ? t("common.departmentKitchen")
@@ -675,15 +698,15 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                         </Badge>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span>{t("common.stock")}:</span>
-                      <span className="text-foreground font-medium">
+                    <div className="flex justify-between gap-2">
+                      <span className="shrink-0">{t("common.stock")}:</span>
+                      <span className="text-foreground min-w-0 truncate font-medium">
                         {currentStock} {material.unit}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>{t("common.cost")}:</span>
-                      <span className="text-foreground font-medium">
+                    <div className="flex justify-between gap-2">
+                      <span className="shrink-0">{t("common.cost")}:</span>
+                      <span className="text-foreground min-w-0 truncate font-medium">
                         {formatPrice(
                           Number(material.unitCost) * Number(material.purchaseQuantity ?? 1)
                         )}
@@ -696,9 +719,12 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
                       </span>
                     </div>
 
-                    <div className="flex justify-between">
-                      <span>{t("tables.supplier")}:</span>
-                      <span className="text-foreground font-medium">
+                    <div className="flex justify-between gap-2">
+                      <span className="shrink-0">{t("tables.supplier")}:</span>
+                      <span
+                        className="text-foreground min-w-0 truncate font-medium"
+                        title={primarySupplier?.supplier.name}
+                      >
                         {primarySupplier ? primarySupplier.supplier.name : t("common.notAvailable")}
                       </span>
                     </div>

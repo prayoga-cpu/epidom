@@ -6,6 +6,7 @@ import { invalidateSupplierRelatedQueries } from "@/lib/utils/cache-helpers";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { trackEvent } from "@/lib/analytics";
 import { ApiClientError } from "@/lib/api/client";
+import { unwrapApiError } from "@/lib/api/unwrap";
 
 // Response interfaces
 export interface SuppliersResponse {
@@ -73,7 +74,10 @@ export function useSupplierAccessCheck(storeId: string) {
       const response = await fetch(`/api/stores/${storeId}/suppliers?take=1`);
 
       if (response.status === 403) {
-        const error = await response.json().catch(() => ({}));
+        // createErrorResponse nests these under `error`; reading the top level
+        // meant this branch never matched and the access check reported
+        // "has access" for a locked plan.
+        const error = unwrapApiError(await response.json().catch(() => ({})));
         if (error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
           return false;
         }
@@ -136,7 +140,8 @@ async function fetchSupplierById(
   const response = await fetch(`/api/stores/${storeId}/suppliers/${supplierId}`);
 
   if (!response.ok) {
-    const error = await response.json();
+    const raw = await response.json().catch(() => ({}));
+    const error = unwrapApiError(raw);
 
     // Handle 403 Forbidden (subscription feature locked)
     if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
@@ -150,7 +155,9 @@ async function fetchSupplierById(
       throw customError;
     }
 
-    throw new ApiClientError(error, response.status);
+    // `raw`, not `error`: ApiClientError reads `response.error.message`, so it
+    // needs the whole envelope, not the unwrapped { code, message }.
+    throw new ApiClientError(raw, response.status);
   }
 
   const responseData = await response.json();
@@ -239,7 +246,11 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
   const response = await fetch(`/api/stores/${storeId}/suppliers/export?${params.toString()}`);
 
   if (!response.ok) {
-    const error = await response.json();
+    // The export route reports failures through createErrorResponse, so code
+    // and message sit under `error` — read off the top level this 403 branch
+    // never matched and a locked plan got a generic export failure.
+    const raw = await response.json().catch(() => ({}));
+    const error = unwrapApiError(raw);
 
     // Handle 403 Forbidden (subscription feature locked)
     if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
@@ -252,7 +263,8 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
       throw customError;
     }
 
-    throw new ApiClientError(error, response.status);
+    // `raw`: ApiClientError reads `response.error.message`.
+    throw new ApiClientError(raw, response.status);
   }
 
   // Download CSV file
@@ -311,7 +323,8 @@ export function useSuppliers(
       const response = await fetch(url);
 
       if (!response.ok) {
-        const error = await response.json();
+        const raw = await response.json().catch(() => ({}));
+        const error = unwrapApiError(raw);
 
         // Handle 403 Forbidden (subscription feature locked)
         if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
@@ -328,7 +341,8 @@ export function useSuppliers(
           throw customError;
         }
 
-        throw new ApiClientError(error, response.status);
+        // `raw`, not `error` — see the note in fetchSupplierById above.
+        throw new ApiClientError(raw, response.status);
       }
 
       // Mark access as granted

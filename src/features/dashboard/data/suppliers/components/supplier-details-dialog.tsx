@@ -161,12 +161,12 @@ export function SupplierDetailsDialog({
 
                     return (
                       <div key={ms.id}>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium">{material.name}</p>
+                              <p className="min-w-0 truncate font-medium">{material.name}</p>
                               {ms.isPreferred && (
-                                <Badge variant="default" className="text-xs">
+                                <Badge variant="default" className="shrink-0 text-xs">
                                   Preferred
                                 </Badge>
                               )}

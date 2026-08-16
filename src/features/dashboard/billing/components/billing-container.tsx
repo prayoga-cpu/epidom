@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,11 @@ import {
   XCircle,
   ExternalLink,
   Calendar,
+  CircleDollarSign,
   Store,
   Loader2,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
@@ -42,9 +43,11 @@ const PLAN_PRICE_IDR: Record<string, number> = {
 export function BillingContainer() {
   const { t, formatDate } = useI18n();
   const router = useRouter();
+  const params = useParams<{ storeId?: string }>();
+  const storeId = params?.storeId;
   const searchParams = useSearchParams();
   const { formatPrice } = useCurrency();
-  const { data, isLoading: loading, error: subscriptionError } = useSubscriptionStatus();
+  const { data, isLoading: loading, error: subscriptionError, refetch } = useSubscriptionStatus();
   const { confirm, confirmDialog } = useConfirm();
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +112,50 @@ export function BillingContainer() {
     router.push("/pricing#plans");
   };
 
+  /**
+   * Pay the price an admin quoted for this account. The amount lives on the
+   * subscription, not in this request — we only say where to come back to.
+   */
+  const handlePayCustomPrice = async () => {
+    try {
+      setActionLoading(true);
+      const returnPath = storeId ? `/store/${storeId}/billing` : "/profile";
+      const response = await fetch("/api/subscriptions/custom-price/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          successUrl: `${returnPath}?success=true&plan=${data?.subscription?.customPricePlan ?? ""}`,
+          cancelUrl: `${returnPath}?canceled=true`,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(getApiErrorMessage(result, "Failed to start checkout"));
+      }
+
+      window.location.href = result.data.url;
+    } catch (err: any) {
+      setError(err.message);
+      setActionLoading(false);
+    }
+  };
+
+  // Coming back from a custom-price checkout, the confirming webhook may still
+  // be in flight — poll briefly so a paid quote doesn't sit there reading
+  // "payment needed" until the user thinks to refresh.
+  const awaitingWebhook = !!success && !!data?.subscription?.customPricePending;
+  useEffect(() => {
+    if (!awaitingWebhook) return;
+    const poll = setInterval(() => refetch(), 2000);
+    const giveUp = setTimeout(() => clearInterval(poll), 30000);
+    return () => {
+      clearInterval(poll);
+      clearTimeout(giveUp);
+    };
+  }, [awaitingWebhook, refetch]);
+
   if (loading) {
     return <BillingLoadingSkeleton />;
   }
@@ -138,14 +185,28 @@ export function BillingContainer() {
   // Admin-granted (BETA) accounts switch plans freestyle, with no Stripe billing.
   const isBeta = !!subscription?.isBeta;
 
-  const planName =
-    subscription?.plan === "FREE"
+  const labelForPlan = (value: string | null | undefined) =>
+    value === "FREE"
       ? "Free"
-      : subscription?.plan === "POS"
+      : value === "POS"
         ? t("profile.subscription.plans.starter")
-        : subscription?.plan === "OPERATIONS"
+        : value === "OPERATIONS"
           ? t("profile.subscription.plans.pro")
           : t("profile.subscription.plans.enterprise");
+
+  const planName = labelForPlan(subscription?.plan);
+
+  // An admin quoted this account a price it hasn't paid yet: everything gated
+  // by the plan is suspended until Stripe confirms the payment started here.
+  const customPricePending = !!subscription?.customPricePending;
+  const customPriceLabel =
+    subscription?.customPriceAmount != null
+      ? `${formatCurrency(subscription.customPriceAmount, subscription.customPriceCurrency ?? "EUR")}${
+          subscription.customPriceInterval === "YEARLY"
+            ? t("billing.perYear")
+            : t("billing.perMonth")
+        }`
+      : null;
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 py-8">
@@ -154,15 +215,48 @@ export function BillingContainer() {
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
-            {t("billing.subscriptionActivated")?.replace(
-              "{plan}",
-              plan === "POS"
-                ? t("profile.subscription.plans.starter")
-                : t("profile.subscription.plans.pro")
-            ) ||
-              `Subscription activated successfully! Welcome to ${plan === "POS" ? "Starter" : "Pro"} plan.`}
+            {t("billing.subscriptionActivated")?.replace("{plan}", labelForPlan(plan)) ||
+              `Subscription activated successfully! Welcome to ${labelForPlan(plan)} plan.`}
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Admin-quoted price awaiting payment — access is suspended until it clears */}
+      {customPricePending && (
+        <Card className="border-amber-500/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CircleDollarSign className="h-5 w-5 text-amber-500" />
+              {t("billing.customPricePending.title")}
+            </CardTitle>
+            <CardDescription>{t("billing.customPricePending.description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-sm">
+                  {labelForPlan(subscription?.customPricePlan)}
+                </p>
+                <p className="text-2xl font-bold">{customPriceLabel}</p>
+              </div>
+              <Button
+                onClick={handlePayCustomPrice}
+                disabled={actionLoading}
+                className="w-full gap-2 sm:w-auto"
+              >
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CreditCard className="h-4 w-4" />
+                )}
+                {t("billing.customPricePending.payNow")}
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {t("billing.customPricePending.restrictedNote")}
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Cancellation Notice */}
@@ -209,21 +303,20 @@ export function BillingContainer() {
                 )}
               </div>
               <p className="text-muted-foreground text-sm">
-                {subscription?.customPriceAmount != null
-                  ? `${formatCurrency(subscription.customPriceAmount, subscription.customPriceCurrency ?? "EUR")}${
-                      subscription.customPriceInterval === "YEARLY"
-                        ? t("billing.perYear")
-                        : t("billing.perMonth")
-                    }`
-                  : subscription?.plan === "FREE"
+                {customPriceLabel ??
+                  (subscription?.plan === "FREE"
                     ? "Free forever"
                     : subscription?.plan && PLAN_PRICE_IDR[subscription.plan]
                       ? `${formatPrice(PLAN_PRICE_IDR[subscription.plan])}${t("billing.perMonth")}`
-                      : t("profile.subscription.pricing.enterprise")}
+                      : t("profile.subscription.pricing.enterprise"))}
               </p>
-              {subscription?.customPriceAmount != null && (
+              {customPriceLabel && (
                 <p className="text-muted-foreground text-xs">
-                  {isBeta ? t("billing.customPriceNoteBeta") : t("billing.customPriceNoteStripe")}
+                  {customPricePending
+                    ? t("billing.customPricePending.note")
+                    : isBeta
+                      ? t("billing.customPriceNoteBeta")
+                      : t("billing.customPriceNoteStripe")}
                 </p>
               )}
             </div>

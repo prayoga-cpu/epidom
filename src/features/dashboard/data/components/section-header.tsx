@@ -21,7 +21,10 @@ export function SectionHeader({ title, actions, description, className }: Sectio
   return (
     <CardHeader className={cn(responsive.cardHeader, className)}>
       <div className={responsive.header}>
-        <div>
+        {/* min-w-0 so the title column yields space to the action row rather
+            than the two colliding — the actions carry their own labels and
+            can't compress. */}
+        <div className="min-w-0">
           <CardTitle className={responsiveText.title}>{title}</CardTitle>
           {description && (
             <p className={cn("text-muted-foreground", responsiveText.description)}>{description}</p>

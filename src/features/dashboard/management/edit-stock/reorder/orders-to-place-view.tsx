@@ -23,6 +23,7 @@ import {
   AlertCircle,
   CheckCircle,
   ArrowRight,
+  Printer,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -44,6 +45,12 @@ export function OrdersToPlaceView() {
   const queryClient = useQueryClient();
 
   const { data, isLoading, error, refetch } = useSupplierOrders(storeId);
+
+  // The printable quote lives on its own route and prints itself on mount —
+  // same convention as the delivery print action in reorder-panel.
+  const handlePrintQuote = (orderId: string) => {
+    window.open(`/store/${storeId}/management/print?orderId=${orderId}`, "_blank");
+  };
 
   // Handler to mark order as placed - with proper cache invalidation
   const handleMarkAsPlaced = async (orderId: string) => {
@@ -289,6 +296,12 @@ export function OrdersToPlaceView() {
                                   {item.material.sku}
                                 </Badge>
                               </div>
+                              {item.expiryDate && (
+                                <p className="text-muted-foreground text-xs">
+                                  {t("alerts.createOrderDialog.expiryDate")}:{" "}
+                                  <span className="font-medium">{formatDate(item.expiryDate)}</span>
+                                </p>
+                              )}
                               <div className="flex items-center justify-between text-xs">
                                 <div className="flex gap-3">
                                   <div>
@@ -321,25 +334,38 @@ export function OrdersToPlaceView() {
                           ))}
                         </div>
 
-                        {/* Order Action Button */}
-                        <Button
-                          onClick={() => handleMarkAsPlaced(order.id)}
-                          disabled={placingOrder === order.id}
-                          className="w-full"
-                          size="sm"
-                        >
-                          {placingOrder === order.id ? (
-                            <>
-                              <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
-                              {t("alerts.placing")}
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="mr-1 hidden h-4 w-4 sm:inline" />
-                              {t("alerts.markAsPlaced")}
-                            </>
-                          )}
-                        </Button>
+                        {/* Order Actions */}
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Button
+                            variant="outline"
+                            onClick={() => handlePrintQuote(order.id)}
+                            className="w-full sm:w-auto"
+                            size="sm"
+                          >
+                            <Printer className="mr-1 hidden h-4 w-4 sm:inline" />
+                            {t("alerts.createOrderDialog.printQuote")}
+                          </Button>
+                          {/* flex-1, not w-full: w-full would claim the whole
+                              row on top of the sibling button and overflow it. */}
+                          <Button
+                            onClick={() => handleMarkAsPlaced(order.id)}
+                            disabled={placingOrder === order.id}
+                            className="w-full sm:flex-1"
+                            size="sm"
+                          >
+                            {placingOrder === order.id ? (
+                              <>
+                                <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
+                                {t("alerts.placing")}
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="mr-1 hidden h-4 w-4 sm:inline" />
+                                {t("alerts.markAsPlaced")}
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

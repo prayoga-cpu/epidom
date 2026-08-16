@@ -127,14 +127,16 @@ export function RecipeDetailsDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] overflow-y-auto sm:max-w-[800px] [&>button]:hidden">
           <DialogHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <DialogTitle className="text-2xl">{recipe.name}</DialogTitle>
+            <div className="flex items-start justify-between gap-3">
+              {/* min-w-0 so a long recipe name wraps instead of pushing the
+                  edit/delete actions past the dialog edge. */}
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-2xl break-words">{recipe.name}</DialogTitle>
                 <DialogDescription className="mt-2">
                   {recipe.description || t("data.materials.noDescription")}
                 </DialogDescription>
               </div>
-              <div className="flex gap-2">
+              <div className="flex shrink-0 gap-2">
                 {onEdit && (
                   <Button variant="outline" size="sm" onClick={() => onEdit(recipe)}>
                     <Edit className="h-4 w-4" />
@@ -269,11 +271,11 @@ export function RecipeDetailsDialog({
 
                         return (
                           <div key={index}>
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
                                   <p
-                                    className={`font-medium ${isMaterialDeleted ? "text-muted-foreground line-through" : ""}`}
+                                    className={`min-w-0 truncate font-medium ${isMaterialDeleted ? "text-muted-foreground line-through" : ""}`}
                                   >
                                     {material?.name ||
                                       t("data.materials.deletedMaterial") ||
@@ -361,10 +363,10 @@ export function RecipeDetailsDialog({
                       const showsStock = isBatchProduced(product);
                       return (
                         <div key={recipeProduct.id}>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
-                                <p className="font-medium">{product.name}</p>
+                                <p className="min-w-0 truncate font-medium">{product.name}</p>
                               </div>
                               <p className="text-muted-foreground text-sm">
                                 {product.category && (

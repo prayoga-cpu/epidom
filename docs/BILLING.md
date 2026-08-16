@@ -106,14 +106,20 @@ A user with no subscription is implicitly on `FREE`. Don't require a `Subscripti
 
 ### Admin custom price override
 
-`Subscription.customPriceAmount` / `customPriceCurrency` / `customPriceInterval` (nullable) let an admin override what a specific account is billed, via the Master Admin Panel's "Manage" → "Set Custom Price" action (`SubscriptionService.setCustomPrice`/`clearCustomPrice`). Deliberately separate fields from `stripePriceId` — which every Stripe webhook handler rewrites on its own — so an override can never be silently clobbered back to catalog pricing.
+`Subscription.customPriceAmount` / `customPriceCurrency` / `customPriceInterval` / `customPricePlan` (nullable) let an admin quote a specific account its own price for a specific tier, via the Master Admin Panel's "Manage" → "Set Custom Price" action (`SubscriptionService.setCustomPrice`/`clearCustomPrice`). Deliberately separate fields from `stripePriceId` — which every Stripe webhook handler rewrites on its own — so a quote can never be silently clobbered back to catalog pricing. `customPricePlan` is one of POS/OPERATIONS/ENTERPRISE; FREE is not quotable.
 
 Behavior splits on how the account is actually billed:
 
-- **Real Stripe-paying account** (`stripeCustomerId` not `admin_`/`free_`-prefixed): a **live override** — an ad-hoc Stripe price (`price_data` on the subscription's line item) replaces the catalog price, applied with `proration_behavior: "none"` so it takes effect starting the next invoice rather than an immediate prorated charge/credit. Requires the account to already have a `stripeSubscriptionId`.
-- **Admin-granted/comped account** (`admin_`/`free_`-prefixed `stripeCustomerId`): **reference-only** — no Stripe call at all, since there's no real billing to override. Stored purely for display (admin panel + the account's own Billing page) so the operator has a record for a manual/negotiated invoicing arrangement outside the app.
+- **Real Stripe-paying account** (`stripeCustomerId` not `admin_`/`free_`-prefixed): a **re-quote**. Their running subscription is canceled in Stripe immediately (`prorate: false`) and `stripeSubscriptionId` is cleared, `customPricePendingAt` is stamped, `customPricePrevStatus` records the status to hand back on withdrawal, and `status` drops to `INCOMPLETE` — which is what actually suspends access, since every gate (`requirePlan`, `SubscriptionService.has*Access`, the public storefront routes) already reads a non-ACTIVE subscription as FREE. The user pays from their Billing page: `POST /api/subscriptions/custom-price/checkout` → `createCustomPriceCheckoutSession` builds an ad-hoc `price_data` line item from the stored amount/currency/interval (never from the request body) and tags session + subscription metadata `customPrice: "true"`.
+- **Admin-granted/comped account** (`admin_`/`free_`-prefixed `stripeCustomerId`): **reference-only** — no Stripe call, no suspension. Stored purely for display (admin panel + the account's own Billing page) so the operator has a record for a manual/negotiated invoicing arrangement outside the app. Suspending an account the operator comped by hand would lock it out with nothing to pay.
 
-Clearing an override (`clearCustomPrice`) nulls the three fields and, for a real Stripe account on POS/OPERATIONS, restores the subscription item to that plan's catalog `MONTHLY` price (always monthly — the original interval isn't tracked once overridden). `handleSubscriptionDeleted` in the Stripe webhook also nulls these fields defensively, so a fully-canceled-then-resubscribed account doesn't carry a stale override into its fresh catalog-priced subscription.
+While `customPricePendingAt` is set:
+
+- `requirePlan` redirects to `/store/<storeId>/billing?customPrice=pending` instead of `/pricing` — /pricing can't sell them the quoted price.
+- The Stripe webhook refuses to hand access back from the superseded subscription: `customer.subscription.updated` and `invoice.payment_succeeded` skip the ACTIVE/plan restore, and `customer.subscription.deleted` keeps the quote (that cancellation is the one `setCustomPrice` just issued). Only an event carrying `customPrice: "true"` clears `customPricePendingAt`.
+- `/api/subscriptions/sync`, `/api/subscriptions/cleanup` and `activateFree` refuse with 409 — each of them force-writes `status: ACTIVE` from Stripe and would otherwise be a way around the quote.
+
+Clearing (`clearCustomPrice`) nulls every custom-price field. A still-pending quote is withdrawn and `status` returns to `customPricePrevStatus` (their old Stripe subscription stays canceled — that can't be undone, so re-quote or let them subscribe again). For an account already paying a custom price on POS/OPERATIONS, the subscription item is restored to that plan's catalog `MONTHLY` price (always monthly — the original interval isn't tracked once overridden).
 
 ---
 

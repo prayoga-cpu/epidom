@@ -10,6 +10,7 @@ import { alertKeys } from "@/features/dashboard/shared/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { trackEvent } from "@/lib/analytics";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
+import { unwrapApiData, unwrapApiError } from "@/lib/api/unwrap";
 import {
   invalidateMaterialRelatedQueries,
   invalidateProductRelatedQueries,
@@ -206,13 +207,15 @@ async function completeProduction(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to complete production");
+    const error = unwrapApiError(await response.json().catch(() => ({})));
+    throw new Error(error.message || "Failed to complete production");
   }
 
-  const result = await response.json();
-  // Complete/Cancel API returns batch directly (not wrapped)
-  return result;
+  // The comment here used to claim this route "returns batch directly (not
+  // wrapped)". It does not — the handler ends
+  // `NextResponse.json(createSuccessResponse(batch))`, so the batch is one
+  // level down and the raw result was never a ProductionBatchWithRelations.
+  return unwrapApiData<ProductionBatchWithRelations>(await response.json());
 }
 
 async function cancelProduction(
@@ -227,13 +230,15 @@ async function cancelProduction(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to cancel production");
+    const error = unwrapApiError(await response.json().catch(() => ({})));
+    throw new Error(error.message || "Failed to cancel production");
   }
 
-  const result = await response.json();
-  // Complete/Cancel API returns batch directly (not wrapped)
-  return result;
+  // The comment here used to claim this route "returns batch directly (not
+  // wrapped)". It does not — the handler ends
+  // `NextResponse.json(createSuccessResponse(batch))`, so the batch is one
+  // level down and the raw result was never a ProductionBatchWithRelations.
+  return unwrapApiData<ProductionBatchWithRelations>(await response.json());
 }
 
 async function deleteProductionBatch(storeId: string, batchId: string): Promise<void> {

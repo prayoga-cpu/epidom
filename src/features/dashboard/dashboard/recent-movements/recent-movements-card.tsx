@@ -7,6 +7,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { Activity, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { MovementType } from "@prisma/client";
+import { unwrapApiData } from "@/lib/api/unwrap";
 
 interface Movement {
   id: string;
@@ -47,7 +48,11 @@ export function RecentMovementsCard() {
 
   const { data, isLoading } = useQuery<{ movements: Movement[] }>({
     queryKey: ["stock-movements", storeId, "dashboard", 8],
-    queryFn: () => fetch(`/api/stores/${storeId}/stock-movements?take=8`).then((r) => r.json()),
+    queryFn: () =>
+      fetch(`/api/stores/${storeId}/stock-movements?take=8`)
+        .then((r) => r.json())
+        // The route wraps its payload, so the rows are at `data.movements`.
+        .then(unwrapApiData<{ movements: Movement[] }>),
     enabled: !!storeId,
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,

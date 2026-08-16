@@ -30,7 +30,7 @@ import { toast } from "sonner";
 import { Plus, Loader2, X, Star, Trash2, RefreshCw, Check } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCreateMaterial, useMaterials } from "../hooks/use-materials";
-import { useSuppliers, supplierKeys } from "../../suppliers/hooks/use-suppliers";
+import { useSuppliers, supplierKeys, type SuppliersResponse } from "../../suppliers/hooks/use-suppliers";
 import { useParams } from "next/navigation";
 import {
   createIngredientFormSchema,
@@ -49,6 +49,7 @@ import {
   formatDerivedUnitCost,
   SupplierPackPriceFields,
 } from "./pack-price-fields";
+import { unwrapApiData } from "@/lib/api/unwrap";
 
 // Use the form schema (without storeId)
 const formSchema = createIngredientFormSchema;
@@ -100,7 +101,10 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         params.append("take", String(SUPPLIER_FILTERS.take));
         const response = await fetch(`/api/stores/${storeId}/suppliers?${params.toString()}`);
         if (!response.ok) throw new Error("Failed to prefetch suppliers");
-        return response.json();
+        // Written straight into the key useSuppliers reads, so it has to be
+        // the unwrapped payload — the envelope emptied the supplier dropdown
+        // until this entry went stale.
+        return unwrapApiData<SuppliersResponse>(await response.json());
       },
       staleTime: 10 * 60 * 1000, // 10 minutes - suppliers don't change often
       gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes

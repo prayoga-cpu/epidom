@@ -967,6 +967,12 @@ export const fr = {
     },
   },
   finance: {
+    // Libellés des lignes de montant utilisés par les documents imprimables
+    // (bon de commande fournisseur, …).
+    subtotal: "Sous-total",
+    tax: "TVA",
+    shipping: "Livraison",
+    total: "Total",
     summary: {
       unknownCost:
         "Le coût est inconnu pour {count} articles ({amount} de ventes) — les commandes des applis de livraison ne sont pas liées à vos produits.",
@@ -2792,6 +2798,11 @@ export const fr = {
       description: "Créer un rappel pour commander des matières premières auprès du fournisseur",
       supplier: "Fournisseur",
       selectSupplier: "Sélectionner le fournisseur",
+      suppliersForMaterial: "Fournisseurs de cette matière",
+      otherSuppliers: "Autres fournisseurs",
+      allSuppliers: "Tous les fournisseurs",
+      preferred: "Privilégié",
+      noSuppliers: "Aucun fournisseur enregistré — ajoutez-en un dans Données › Fournisseurs.",
       supplierPhone: "Numéro de Téléphone",
       callSupplier: "Appeler le Fournisseur",
       noPhoneAvailable: "Aucun numéro de téléphone disponible",
@@ -2801,11 +2812,20 @@ export const fr = {
       suggested: "Suggéré",
       expectedDelivery: "Date de Livraison Prévue",
       expectedDeliveryHint: "Quand vous vous attendez à recevoir cette commande",
+      expiryDate: "DLC demandée (date limite de consommation)",
+      expiryDateHint:
+        "La DLC que vous demandez au fournisseur de respecter. Reportée sur la matière première à la réception de la livraison. Laissez vide pour les produits non périssables.",
       priority: "Priorité",
       notes: "Notes",
       notesPlaceholder: "Ajoutez des instructions spéciales ou des notes...",
       notesHint: "Notes optionnelles pour ce rappel de commande",
       submit: "Créer Commande",
+      createdTitle: "Commande créée",
+      createdDescription: "Imprimez le bon de commande ou envoyez-le au fournisseur",
+      printQuote: "Imprimer le bon de commande",
+      printQuoteHint:
+        "Le bon s'ouvre dans un nouvel onglet avec les coordonnées de votre établissement et les totaux, prêt à imprimer ou à enregistrer en PDF.",
+      createAnother: "Créer une autre commande",
     },
 
     // Orders view
@@ -3275,6 +3295,14 @@ export const fr = {
       title: "Livraisons Fournisseurs",
       description: "Gérer les livraisons des fournisseurs et suivre les expéditions",
       searchPlaceholder: "Rechercher par référence, fournisseur ou notes...",
+      orderDate: "Date de Commande",
+      expectedDate: "Livraison Prévue",
+      quoteTitle: "Bon de Commande",
+      dlc: "DLC",
+      dlcNotice:
+        "Les marchandises doivent être livrées avec une date limite de consommation (DLC) au moins égale à celle indiquée sur chaque ligne.",
+      signatureStore: "Pour l'établissement — date & signature",
+      signatureSupplier: "Pour le fournisseur — date & signature",
       filters: {
         status: "Statut",
         allStatuses: "Tous les Statuts",
@@ -4121,6 +4149,15 @@ export const fr = {
     lifetime: "Accès à vie",
     customPriceNoteBeta: "Prix personnalisé défini par l'opérateur",
     customPriceNoteStripe: "Prix personnalisé — facturé via Stripe",
+    customPricePending: {
+      title: "Paiement requis pour votre prix personnalisé",
+      description:
+        "Nous avons convenu d'un prix spécial pour votre compte. Votre abonnement précédent a été clôturé : réglez le nouveau prix pour réactiver votre formule.",
+      payNow: "Payer avec Stripe",
+      note: "En attente de paiement",
+      restrictedNote:
+        "En attendant le paiement, vous gardez l'accès à la Facturation et aux paramètres de votre compte — le reste revient dès que Stripe confirme le règlement.",
+    },
     storeUsage: "Utilisation des magasins",
     stores: "magasins",
     unlimited: "Illimité",

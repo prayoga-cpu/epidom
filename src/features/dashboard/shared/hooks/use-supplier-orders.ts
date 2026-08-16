@@ -7,6 +7,7 @@ import {
   supplierKeys,
   useSupplierAccessStatus,
 } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
+import { unwrapApiData, unwrapApiError } from "@/lib/api/unwrap";
 
 export interface SupplierOrderItem {
   id: string;
@@ -21,6 +22,8 @@ export interface SupplierOrderItem {
   unit: string;
   unitPrice: number;
   total: number;
+  /** Requested DLC (date limite de consommation) for this line, if any. */
+  expiryDate: string | null;
 }
 
 export interface SupplierOrder {
@@ -63,6 +66,8 @@ interface CreateSupplierOrderInput {
     quantity: number;
     unit: string;
     unitPrice: number;
+    /** Requested DLC as `YYYY-MM-DD`; omit for non-perishables. */
+    expiryDate?: string;
   }>;
   expectedDate?: string;
   notes?: string;
@@ -92,6 +97,16 @@ export const supplierOrderKeys = {
 };
 
 /**
+ * These hooks used to return `response.json()` straight to React Query, so the
+ * cache held the API envelope and `data.orders` / `data.order` read as
+ * `undefined`. The server-rendered initialData is correctly shaped, which is
+ * exactly why it hid: the first paint looked right and the first client fetch
+ * quietly replaced it with the envelope, blanking the lists.
+ */
+const unwrap = unwrapApiData;
+const unwrapError = unwrapApiError;
+
+/**
  * Hook to fetch all supplier orders for a store
  * Real-time enabled: Polls every 10 seconds when tab is active
  * Uses shared access check with suppliers to prevent duplicate 403 requests
@@ -108,7 +123,7 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
     queryFn: async () => {
       const response = await fetch(`/api/stores/${storeId}/supplier-orders`);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = unwrapError(await response.json().catch(() => ({})));
 
         // Check if it's a subscription feature locked error
         if (response.status === 403 && errorData.code === "SUBSCRIPTION_FEATURE_LOCKED") {
@@ -130,7 +145,7 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
       // Mark access as granted
       queryClient.setQueryData(supplierKeys.accessCheck(storeId), true);
 
-      return response.json();
+      return unwrap<SupplierOrdersResponse>(await response.json());
     },
     // Disable query if still checking access or no access
     enabled: !!storeId && !isCheckingAccess && !hasNoAccess,
@@ -186,7 +201,7 @@ export function useSupplierOrder(storeId: string, orderId: string) {
     queryFn: async () => {
       const response = await fetch(`/api/stores/${storeId}/supplier-orders/${orderId}`);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = unwrapError(await response.json().catch(() => ({})));
 
         // Check if it's a subscription feature locked error
         if (response.status === 403 && errorData.code === "SUBSCRIPTION_FEATURE_LOCKED") {
@@ -201,7 +216,7 @@ export function useSupplierOrder(storeId: string, orderId: string) {
 
         throw new Error(errorData.message || "Failed to fetch supplier order");
       }
-      return response.json();
+      return unwrap<SupplierOrderResponse>(await response.json());
     },
     enabled: !!storeId && !!orderId && !isCheckingAccess && !hasNoAccess,
     // Cache configuration: Longer staleTime for 403 errors to avoid repeated failed requests
@@ -235,7 +250,7 @@ export function useSupplierOrder(storeId: string, orderId: string) {
 export function useCreateSupplierOrder(storeId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<SupplierOrder, Error, CreateSupplierOrderInput>({
     mutationFn: async (input: CreateSupplierOrderInput) => {
       const response = await fetch(`/api/stores/${storeId}/supplier-orders`, {
         method: "POST",
@@ -245,12 +260,18 @@ export function useCreateSupplierOrder(storeId: string) {
         body: JSON.stringify(input),
       });
 
+      const json = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create supplier order");
+        // Errors come back as { success: false, error: { code, message } }
+        // (createErrorResponse) — reading `.error` alone yielded an object,
+        // so callers surfaced "[object Object]" instead of the reason.
+        throw new Error(unwrapError(json).message || "Failed to create supplier order");
       }
 
-      return response.json();
+      // Returned so the caller can act on the new order — the reorder dialog
+      // needs its id to offer "print quote" straight after creating it.
+      return unwrap<SupplierOrderResponse>(json).order;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -294,12 +315,16 @@ export function useUpdateSupplierOrder(storeId: string, orderId: string) {
         body: JSON.stringify(input),
       });
 
+      const json = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update supplier order");
+        throw new Error(unwrapError(json).message || "Failed to update supplier order");
       }
 
-      return response.json();
+      // Without unwrapping, onSuccess wrote the envelope into the detail cache
+      // and mapped `updatedOrder.order` (undefined) over the list, replacing
+      // the edited row with a hole that then crashed the table renderer.
+      return unwrap<SupplierOrderResponse>(json);
     },
     onMutate: async (newData) => {
       await queryClient.cancelQueries({ queryKey: supplierOrderKeys.lists(storeId) });
@@ -383,12 +408,13 @@ export function useCancelSupplierOrder(storeId: string) {
         method: "DELETE",
       });
 
+      const json = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to cancel supplier order");
+        throw new Error(unwrapError(json).message || "Failed to cancel supplier order");
       }
 
-      return response.json();
+      return unwrap<{ success: boolean }>(json);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

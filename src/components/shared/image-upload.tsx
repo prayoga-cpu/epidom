@@ -30,6 +30,7 @@ import {
 } from "@/lib/utils/image-compression";
 import { IMAGE_DEFAULT_TARGET_MB, IMAGE_RAW_UPLOAD_MAX_MB } from "@/lib/constants/image";
 import { cn } from "@/lib/utils";
+import { unwrapApiError } from "@/lib/api/unwrap";
 
 export interface ImageUploadProps {
   /** Current image URL */
@@ -154,7 +155,10 @@ export function ImageUpload({
         });
 
         if (!response.ok) {
-          const error = await response.json();
+          // /api/upload answers createErrorResponse, so the reason is at
+          // error.error.message — reading the top level always gave undefined
+          // and every rejected upload showed the generic fallback instead.
+          const error = unwrapApiError(await response.json().catch(() => ({})));
           throw new Error(error.message || "Upload failed");
         }
 

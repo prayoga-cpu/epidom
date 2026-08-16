@@ -14,8 +14,12 @@ export const responsive = {
   // Header layout: mobile vertical, tablet+ horizontal
   header: "flex flex-col gap-3 md:flex-row md:items-center md:justify-between",
 
-  // Button group: mobile vertical stack, tablet+ horizontal
-  buttonGroup: "flex w-full flex-col gap-2 md:w-auto md:flex-row md:justify-end",
+  // Button group: mobile vertical stack, tablet+ horizontal.
+  // `md:flex-wrap` matters on sections carrying four or five actions (Data's
+  // Export / Smart Import / Add / Manage Categories / Select): without it the
+  // row can't break, so between the sidebar and ~1400px the buttons compress
+  // into each other instead of flowing onto a second line.
+  buttonGroup: "flex w-full flex-col gap-2 md:w-auto md:flex-row md:flex-wrap md:justify-end",
 
   // Button: mobile full-width, tablet+ auto-width
   button: "w-full md:w-auto",

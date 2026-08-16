@@ -462,11 +462,23 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
                 onSelect={() => toggleSelectItem(supplier.id)}
                 contentClassName="!px-4"
               >
-                <div className="mb-2 flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-sm leading-tight font-semibold">{supplier.name}</h3>
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  {/* min-w-0 so long supplier/contact names truncate inside the
+                      card rather than overflowing it. */}
+                  <div className="min-w-0 flex-1">
+                    <h3
+                      className="truncate text-sm leading-tight font-semibold"
+                      title={supplier.name}
+                    >
+                      {supplier.name}
+                    </h3>
                     {supplier.contactPerson && (
-                      <p className="text-muted-foreground text-xs">{supplier.contactPerson}</p>
+                      <p
+                        className="text-muted-foreground truncate text-xs"
+                        title={supplier.contactPerson}
+                      >
+                        {supplier.contactPerson}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -475,25 +487,34 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
 
                 {/* Supplier Info */}
                 <div className="text-muted-foreground my-2 space-y-1 text-xs">
-                  <div className="flex justify-between">
-                    <span>{t("common.email")}:</span>
-                    <span className="text-foreground max-w-[120px] truncate text-right font-medium">
-                      {supplier.email ? `${supplier.email.split("@")[0]}...` : "-"}
+                  <div className="flex justify-between gap-2">
+                    <span className="shrink-0">{t("common.email")}:</span>
+                    {/* Shows the real address and lets CSS truncate it. It used
+                        to be capped at 120px and faked the overflow by dropping
+                        the domain and appending "..." — which rendered a
+                        plausible-looking but wrong address. */}
+                    <span
+                      className="text-foreground min-w-0 truncate text-right font-medium"
+                      title={supplier.email ?? undefined}
+                    >
+                      {supplier.email || "-"}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>{t("common.phone")}:</span>
-                    <span className="text-foreground font-medium">{supplier.phone || "-"}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="shrink-0">{t("common.phone")}:</span>
+                    <span className="text-foreground min-w-0 truncate text-right font-medium">
+                      {supplier.phone || "-"}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>{t("common.location")}:</span>
-                    <span className="text-foreground text-right font-medium">
+                  <div className="flex justify-between gap-2">
+                    <span className="shrink-0">{t("common.location")}:</span>
+                    <span className="text-foreground min-w-0 truncate text-right font-medium">
                       {[supplier.city, supplier.country].filter(Boolean).join(", ") || "-"}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>{t("data.materials.pageTitle")}:</span>
-                    <span className="text-foreground font-medium">
+                  <div className="flex justify-between gap-2">
+                    <span className="shrink-0">{t("data.materials.pageTitle")}:</span>
+                    <span className="text-foreground shrink-0 font-medium">
                       {supplier.materialSuppliers?.length ?? 0}
                     </span>
                   </div>

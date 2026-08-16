@@ -18,6 +18,7 @@ import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { Loader2, ArrowDownCircle, ArrowUpCircle, Minus, ArrowUpDown } from "lucide-react";
 import { MovementType } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
+import { unwrapApiData } from "@/lib/api/unwrap";
 
 interface Movement {
   id: string;
@@ -98,7 +99,10 @@ export function MovementsTab({ storeId }: MovementsTabProps) {
   const { data, isLoading } = useQuery<{ movements: Movement[]; total: number }>({
     queryKey: ["stock-movements", storeId, "all", filters.typeFilter, filters.dateFrom, filters.dateTo],
     queryFn: () =>
-      fetch(`/api/stores/${storeId}/stock-movements?${params.toString()}`).then((r) => r.json()),
+      fetch(`/api/stores/${storeId}/stock-movements?${params.toString()}`)
+        .then((r) => r.json())
+        // The route wraps its payload, so the ledger rows are at `data.movements`.
+        .then(unwrapApiData<{ movements: Movement[]; total: number }>),
     enabled: !!storeId,
     staleTime: 15 * 1000,
     refetchInterval: 30 * 1000,
