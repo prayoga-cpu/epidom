@@ -54,3 +54,6 @@ seed-storefront-items.ts
 
 # graphify generated knowledge graph (regenerate locally with `graphify update .`)
 graphify-out/
+# Never commit real env files; .env.example is the one exception (AGENTS.md §7.6)
+.env*
+!.env.example

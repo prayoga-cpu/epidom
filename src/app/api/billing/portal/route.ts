@@ -27,10 +27,15 @@ export const POST = withApiHandler(
       );
     }
 
+    // Get origin for building absolute URL — prefer the request's own origin so
+    // the user returns to the domain they came from (apex vs www).
+    const origin =
+      request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
     // Create Stripe Customer Portal session
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,
-      return_url: `${process.env.NEXTAUTH_URL || "http://localhost:3001"}/profile`,
+      return_url: `${origin}/profile`,
     });
 
     return NextResponse.json(
