@@ -15,6 +15,7 @@ import { RemovableFilter } from "./removable-filter";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { usePosOrders } from "../hooks/use-pos-orders";
+import { useCustomerDisplayPublisher } from "../hooks/use-customer-display";
 import { PosStaffGate } from "./pos-staff-gate";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -52,6 +53,10 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [configuringItem, setConfiguringItem] = useState<PosMenuItem | null>(null);
   const cart = usePosCart();
+  // Mirrors this cart onto the customer-facing display window (second
+  // screen), if one is open. No-op when it isn't — the snapshot is just
+  // written and broadcast with nobody listening.
+  useCustomerDisplayPublisher(store.id);
 
   const { data: menuData, isLoading } = usePosMenu(store.id);
   const { data: orders } = usePosOrders(store.id);

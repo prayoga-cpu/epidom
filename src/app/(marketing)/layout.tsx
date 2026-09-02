@@ -3,7 +3,8 @@ import { headers } from "next/headers";
 import { SiteHeader } from "@/features/marketing/shared/components/site-header";
 import { SiteFooter } from "@/features/marketing/shared/components/site-footer";
 import { Suspense } from "react";
-import { I18nProvider, type Locale } from "@/components/lang/i18n-provider";
+import type { Locale } from "@/components/lang/i18n-provider";
+import { EagerI18nProvider } from "@/components/lang/i18n-provider-eager";
 import { CookieConsentBar } from "@/features/marketing/shared/components/cookie-consent-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { LoadingPage } from "@/features/loading/loading-page";
@@ -56,12 +57,12 @@ export default async function LandingLayout({
       <OrganizationStructuredData />
       <ErrorBoundary>
         <Suspense fallback={<LoadingPage />}>
-          <I18nProvider initialLocale={initialLocale}>
+          <EagerI18nProvider initialLocale={initialLocale}>
             <SiteHeader />
             <main>{children}</main>
             <SiteFooter />
             <CookieConsentBar />
-          </I18nProvider>
+          </EagerI18nProvider>
         </Suspense>
       </ErrorBoundary>
     </div>

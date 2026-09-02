@@ -9,6 +9,7 @@ import { usePosCart } from "../hooks/use-pos-cart";
 import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
 import { useReceiptSettings } from "@/features/dashboard/profile/hooks/use-receipt-settings";
 import { useKdsSettings } from "../hooks/use-kds-settings";
+import { markCustomerDisplayPaid } from "../hooks/use-customer-display";
 import { createPosOrderSchema, type CreatePosOrderInput } from "@/lib/validation/pos.schemas";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -294,6 +295,8 @@ export function PosCheckoutDialog({
           description: t("pos.offline.queuedDesc"),
           icon: <WifiOff className="h-4 w-4" />,
         });
+        // Before clearCart(), which wipes the total this reads.
+        markCustomerDisplayPaid(receipt.orderNumber, cart.total);
         cart.clearCart();
         onOpenChange(false);
         return;
@@ -328,6 +331,8 @@ export function PosCheckoutDialog({
         })),
       });
 
+      // Before clearCart(), which wipes the total this reads.
+      markCustomerDisplayPaid(orderNumber, cart.total);
       cart.clearCart();
       onOpenChange(false);
 

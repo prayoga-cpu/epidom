@@ -9,6 +9,21 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.79.0] - 2026-09-02 · ux
+
+- **Every page now loads about a third less code.** The app was sending all three languages — English, French and Indonesian — to every device on every page, roughly 550KB of text to display one language. Each language is now its own download, and you only get the one you read. On the dashboard that is 118KB less over the connection and about 370KB less for the browser to work through before anything appears, which is felt most on the Android tablets behind the counter. Nothing was dropped: every phrase in all three languages is still there.
+- **The low-stock check on every dashboard page got much lighter.** Opening any dashboard page loads the alert badge in the sidebar, and that was reading every column of every raw material you have, plus every column of every supplier attached to them, to use nine values. It now asks only for what it shows. The alerts themselves are unchanged — including the warning for materials that have gone below zero.
+- **Pages stop asking the database the same question twice.** Checking that a store is yours ran two lookups one after the other, and repeated them for the layout, the page and again underneath. Those two now run together and the answer is reused for the rest of the request. The staff-session check had the same problem and got the same fix.
+- **The Profile page fetches its two pieces of data at the same time** instead of waiting for the first before starting the second.
+- **Prices and offline status no longer re-render the whole screen.** Two pieces of shared state that wrap the entire signed-in app were rebuilding themselves on every render, which made every component reading them redraw too — several times per page load. They now only change when something in them actually changes.
+
+## [2.78.0] - 2026-09-02 · feat
+
+- **The till can now show the order on a second screen facing the customer.** Turn it on from the new screen icon in the Cashier header, open its window, and drag it onto your customer-facing monitor. It mirrors the register live: the item you just rang up in large type on the left over your store's logo, the full running receipt on the right, and the total across the bottom. Nothing on it is tappable — it's a display, not a second register.
+- **It's off by default and set per till.** The toggle sits next to the printer settings and works the same way: each device remembers its own answer, so a counter with a customer screen can have it on while the tablet by the kitchen doesn't. Switching it off puts an open display window into standby instead of leaving a stale order frozen on it.
+- **The display wears your storefront's branding.** It takes your logo, display name and theme colour straight from your storefront, and picks light or dark text so a pale brand colour stays readable. A store with no storefront yet falls back to its own name and the Epidom mark.
+- **A settled order says thank you.** When you confirm a payment the customer's screen shows the confirmation, the amount and the order number for a few seconds, then clears itself ready for the next customer. It works offline too — an order queued while the connection is down gets the same confirmation.
+
 ## [2.77.0] - 2026-08-16 · fix
 
 - **A new order now appears in Orders to Place straight away.** Creating an order saved it correctly — with its supplier, quantities and expiration date — but the list on the Stock page kept showing "No Orders to Place", so it looked like nothing had happened. Two separate faults were hiding it: the page loaded only orders already sent to the supplier, skipping the ones still waiting to be placed, and every refresh after that read the reply from the server in the wrong shape and came back with nothing at all. Both fixed, and the list now also stays correct after you mark an order as placed.

@@ -6,6 +6,7 @@
  * across all store-scoped API routes.
  */
 
+import { cache } from "react";
 import { Store } from "@prisma/client";
 import { businessService } from "@/lib/services";
 import { ApiErrorCode, createErrorResponse } from "@/types/api/responses";
@@ -19,6 +20,11 @@ import { NextResponse } from "next/server";
  * @returns The store object if valid
  * @throws Error if verification fails
  *
+ * react-cached per request (same pattern as getSession in src/lib/auth.ts):
+ * several routes verify the same store more than once in a single request —
+ * a layout, then the page, then a service below it — and each one was paying
+ * for the lookup again.
+ *
  * @example
  * ```ts
  * try {
@@ -29,15 +35,26 @@ import { NextResponse } from "next/server";
  * }
  * ```
  */
-export async function verifyStoreOwnership(storeId: string, userId: string): Promise<Store> {
-  // Get user's business
-  const business = await businessService.getBusinessByUserId(userId);
+export const verifyStoreOwnership = cache(async function verifyStoreOwnership(
+  storeId: string,
+  userId: string
+): Promise<Store> {
+  // The two lookups don't depend on each other, so they run together rather
+  // than back to back — this sits in the critical path of nearly every
+  // store-scoped page and API route (29 call sites), and it was costing two
+  // serial round trips before anything could render.
+  //
+  // The checks below still run in the original order, so the error a caller
+  // sees for a given input is unchanged.
+  const [business, store] = await Promise.all([
+    businessService.getBusinessByUserId(userId),
+    businessService.getStoreById(storeId),
+  ]);
+
   if (!business) {
     throw new Error("Business not found");
   }
 
-  // Get store by ID
-  const store = await businessService.getStoreById(storeId);
   if (!store) {
     throw new Error("Store not found");
   }
@@ -48,7 +65,7 @@ export async function verifyStoreOwnership(storeId: string, userId: string): Pro
   }
 
   return store;
-}
+});
 
 /**
  * Verify store ownership and return NextResponse error if failed

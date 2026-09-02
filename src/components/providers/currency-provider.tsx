@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  ReactNode,
+} from "react";
 import { useParams } from "next/navigation";
 import { useUser } from "@/lib/auth-client";
 import { formatCurrency, type Currency } from "@/lib/utils/formatting";
@@ -38,6 +46,21 @@ interface CurrencyContextValue {
   convertPrice: (value: number, fromCurrency?: string) => number;
   convertToBase: (valueInUserCurrency: number, toCurrency?: string) => number;
   refreshExchangeRate: () => Promise<void>;
+}
+
+/**
+ * Every price in this system is persisted/validated to exactly 2 decimal
+ * places (see `priceSchema`'s `.multipleOf(0.01)`), regardless of the
+ * display currency's own natural precision. Multiplying/dividing by a
+ * floating-point exchange rate almost never lands on a clean 2-decimal
+ * value (e.g. `2 / 0.00006...` yields 15+ decimal digits), which would
+ * otherwise fail that server-side check on every submit. Round at the
+ * source so every caller gets a value the schema will actually accept.
+ *
+ * Module scope, not per-render: it closes over nothing.
+ */
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 const CurrencyContext = createContext<CurrencyContextValue | undefined>(undefined);
@@ -89,7 +112,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userCurrency, userLoading, isCurrencySettingsLoading]);
 
-  const fetchExchangeRate = async () => {
+  const fetchExchangeRate = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -105,18 +128,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  /**
-   * Every price in this system is persisted/validated to exactly 2 decimal
-   * places (see `priceSchema`'s `.multipleOf(0.01)`), regardless of the
-   * display currency's own natural precision. Multiplying/dividing by a
-   * floating-point exchange rate almost never lands on a clean 2-decimal
-   * value (e.g. `2 / 0.00006...` yields 15+ decimal digits), which would
-   * otherwise fail that server-side check on every submit. Round at the
-   * source so every caller gets a value the schema will actually accept.
-   */
-  const round2 = (value: number): number => Math.round(value * 100) / 100;
+  }, [userCurrency]);
 
   /**
    * Convert a stored value to the user's display currency. `fromCurrency`
@@ -125,47 +137,66 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
    * live rate today — a value already stored in a third currency is
    * returned unconverted rather than applying a rate for the wrong pair.
    */
-  const convertPrice = (value: number, fromCurrency: string = BASE_CURRENCY): number => {
-    if (fromCurrency === userCurrency) return value;
-    if (fromCurrency === BASE_CURRENCY) return round2(value * exchangeRate);
-    return value;
-  };
+  const convertPrice = useCallback(
+    (value: number, fromCurrency: string = BASE_CURRENCY): number => {
+      if (fromCurrency === userCurrency) return value;
+      if (fromCurrency === BASE_CURRENCY) return round2(value * exchangeRate);
+      return value;
+    },
+    [userCurrency, exchangeRate]
+  );
 
-  const convertToBase = (
-    valueInUserCurrency: number,
-    toCurrency: string = BASE_CURRENCY
-  ): number => {
-    if (toCurrency === userCurrency) return valueInUserCurrency;
-    if (toCurrency === BASE_CURRENCY) return round2(valueInUserCurrency / exchangeRate);
-    return valueInUserCurrency;
-  };
+  const convertToBase = useCallback(
+    (valueInUserCurrency: number, toCurrency: string = BASE_CURRENCY): number => {
+      if (toCurrency === userCurrency) return valueInUserCurrency;
+      if (toCurrency === BASE_CURRENCY) return round2(valueInUserCurrency / exchangeRate);
+      return valueInUserCurrency;
+    },
+    [userCurrency, exchangeRate]
+  );
 
-  const formatPrice = (
-    value: number | null | undefined,
-    fromCurrency: string = BASE_CURRENCY
-  ): string => {
-    const safeValue = value === null || value === undefined || isNaN(value) ? 0 : value;
-    const converted = convertPrice(safeValue, fromCurrency);
-    // Fixed "en-US" locale (not the browser's) keeps digit grouping
-    // deterministic between server and client render, avoiding a
-    // hydration mismatch. Delegates to formatCurrency so both formatting
-    // paths share the same fraction-digit rules (e.g. IDR's 0 decimals).
-    return formatCurrency(converted, userCurrency, "en-US");
-  };
+  const formatPrice = useCallback(
+    (value: number | null | undefined, fromCurrency: string = BASE_CURRENCY): string => {
+      const safeValue = value === null || value === undefined || isNaN(value) ? 0 : value;
+      const converted = convertPrice(safeValue, fromCurrency);
+      // Fixed "en-US" locale (not the browser's) keeps digit grouping
+      // deterministic between server and client render, avoiding a
+      // hydration mismatch. Delegates to formatCurrency so both formatting
+      // paths share the same fraction-digit rules (e.g. IDR's 0 decimals).
+      return formatCurrency(converted, userCurrency, "en-US");
+    },
+    [convertPrice, userCurrency]
+  );
+
+  // This provider wraps the entire authenticated app, so an inline object
+  // literal here re-rendered every consumer on each of its own renders (and
+  // it renders several times per page as the session, finance settings and
+  // exchange rate land in turn).
+  const value = useMemo(
+    () => ({
+      currency: userCurrency,
+      exchangeRate,
+      isLoading,
+      error,
+      formatPrice,
+      convertPrice,
+      convertToBase,
+      refreshExchangeRate: fetchExchangeRate,
+    }),
+    [
+      userCurrency,
+      exchangeRate,
+      isLoading,
+      error,
+      formatPrice,
+      convertPrice,
+      convertToBase,
+      fetchExchangeRate,
+    ]
+  );
 
   return (
-    <CurrencyContext.Provider
-      value={{
-        currency: userCurrency,
-        exchangeRate,
-        isLoading,
-        error,
-        formatPrice,
-        convertPrice,
-        convertToBase,
-        refreshExchangeRate: fetchExchangeRate,
-      }}
-    >
+    <CurrencyContext.Provider value={value}>
       {children}
     </CurrencyContext.Provider>
   );

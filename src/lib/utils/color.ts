@@ -116,3 +116,42 @@ export function getPremiumTheme(hex: string): string {
     return "#FF6B35";
   }
 }
+
+/** sRGB channel → linear light, per the WCAG relative-luminance definition. */
+function srgbToLinear(channel: number): number {
+  return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+}
+
+/**
+ * WCAG relative luminance of a hex color: 0 (black) → 1 (white).
+ * Returns 0 for anything unparseable, so callers fall back to treating it as
+ * a dark background (light text) rather than throwing.
+ */
+export function getLuminance(hex: string): number {
+  const normalized = hex.replace(/^#/, "");
+  const full =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : normalized;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(full)) return 0;
+
+  const r = parseInt(full.substring(0, 2), 16) / 255;
+  const g = parseInt(full.substring(2, 4), 16) / 255;
+  const b = parseInt(full.substring(4, 6), 16) / 255;
+
+  return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
+}
+
+/**
+ * Readable text/ink color to sit on top of `hex` — white on a dark ground,
+ * near-black on a light one. Needed wherever a store's own themeColor paints
+ * a large surface: getPremiumTheme() clamps lightness up to 85%, so a pale
+ * brand color would leave hardcoded white text unreadable.
+ */
+export function getContrastingInk(hex: string): string {
+  return getLuminance(hex) > 0.45 ? "#141210" : "#FFFFFF";
+}

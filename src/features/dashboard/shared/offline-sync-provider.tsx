@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode, useMemo } from "react";
 import { useCurrentStore } from "./hooks/use-current-store";
 import { useOfflineSync } from "@/features/pos/hooks/use-offline-sync";
 import { useOfflineMode } from "@/features/pos/hooks/use-offline-mode";
@@ -54,19 +54,37 @@ export function OfflineSyncProvider({ children }: { children: ReactNode }) {
     if (offlineModeEnabled) await warmPages();
   }, [sync, offlineModeEnabled, warmPages]);
 
-  const value: OfflineSyncContextValue = {
-    storeId: storeId ?? "",
-    lastSyncedAt: sync.lastSyncedAt,
-    isSyncing: sync.isSyncing,
-    pendingCount: sync.pendingCount,
-    isOnline: sync.isOnline,
-    syncNow,
-    offlineModeEnabled: mode.enabled,
-    isPriming: mode.isPriming,
-    isStandalone: mode.isStandalone,
-    enableOfflineMode: mode.enableOfflineMode,
-    disableOfflineMode: mode.disableOfflineMode,
-  };
+  // Mounted at the root of PageShell, so a fresh object literal here
+  // re-rendered every consumer on each of this provider's renders — and it
+  // renders whenever any sync flag ticks.
+  const value: OfflineSyncContextValue = useMemo(
+    () => ({
+      storeId: storeId ?? "",
+      lastSyncedAt: sync.lastSyncedAt,
+      isSyncing: sync.isSyncing,
+      pendingCount: sync.pendingCount,
+      isOnline: sync.isOnline,
+      syncNow,
+      offlineModeEnabled: mode.enabled,
+      isPriming: mode.isPriming,
+      isStandalone: mode.isStandalone,
+      enableOfflineMode: mode.enableOfflineMode,
+      disableOfflineMode: mode.disableOfflineMode,
+    }),
+    [
+      storeId,
+      sync.lastSyncedAt,
+      sync.isSyncing,
+      sync.pendingCount,
+      sync.isOnline,
+      syncNow,
+      mode.enabled,
+      mode.isPriming,
+      mode.isStandalone,
+      mode.enableOfflineMode,
+      mode.disableOfflineMode,
+    ]
+  );
 
   return <OfflineSyncContext.Provider value={value}>{children}</OfflineSyncContext.Provider>;
 }

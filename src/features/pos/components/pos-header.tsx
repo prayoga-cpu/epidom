@@ -16,6 +16,7 @@ import { usePosSession } from "../hooks/use-pos-session";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { PosPrinterMenu } from "./pos-printer-menu";
+import { PosCustomerDisplayMenu } from "./pos-customer-display-menu";
 
 interface PosHeaderProps {
   store: Pick<Store, "id" | "name">;
@@ -92,6 +93,7 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
         </DropdownMenu>
 
         <div className="flex items-center gap-1">
+          <PosCustomerDisplayMenu storeId={store.id} />
           <PosPrinterMenu storeId={store.id} />
           <Button
             onClick={onCartClick}
@@ -130,6 +132,7 @@ export function PosHeader({ store, onCartClick }: PosHeaderProps) {
       </div>
 
       <div className="hidden shrink-0 items-center gap-2 sm:gap-4 md:flex">
+        <PosCustomerDisplayMenu storeId={store.id} />
         <PosPrinterMenu storeId={store.id} />
 
         <div className="text-muted-foreground text-sm font-medium">

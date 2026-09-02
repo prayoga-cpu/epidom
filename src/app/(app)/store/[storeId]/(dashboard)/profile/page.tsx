@@ -17,13 +17,18 @@ export default async function ProfilePage({ params }: { params: Promise<{ storeI
   // restricted staff persona must never reach it.
   await requireOwnerOnly(storeId);
 
-  // Fetch user profile
-  const profileDto = await userService.getProfile(session.user.id);
-
-  // Store name for the Fees & Taxes card header — actual store-scoped data
+  // Both reads together, not one after the other: they share no inputs, and
+  // as serial awaits they added a whole round trip to this page's time to
+  // first byte for no reason. The owner gate above stays sequential — it has
+  // to be able to redirect before any of this is fetched.
+  //
+  // Store name is for the Fees & Taxes card header — actual store-scoped data
   // (settings, orders) stays protected by requireStoreAuth on the API
   // routes, same as every other store-scoped dashboard page.
-  const store = await businessService.getStoreById(storeId).catch(() => null);
+  const [profileDto, store] = await Promise.all([
+    userService.getProfile(session.user.id),
+    businessService.getStoreById(storeId).catch(() => null),
+  ]);
 
   // Transform UserProfileDto to ProfileData format
   const profileData: ProfileData = {

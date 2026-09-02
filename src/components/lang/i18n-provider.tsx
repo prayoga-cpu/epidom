@@ -3,7 +3,7 @@
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { enUS, fr, id as idLocale, type Locale as DateFnsLocale } from "date-fns/locale";
-import { translations } from "@/locales";
+import { getLocaleMessages, isLocaleLoaded, loadLocale } from "@/locales";
 import { getLanguagePreference, setLanguagePreference } from "@/lib/cookie-consent";
 import {
   formatDate as formatDateWithLocale,
@@ -86,6 +86,32 @@ export function I18nProvider({
   initialLocale?: Locale;
 }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale ?? "en");
+  /**
+   * The locale whose dictionary is loaded and therefore renderable. Lags
+   * `locale` only while a non-English chunk is downloading; everything reads
+   * through this so a half-applied switch can never render raw keys.
+   */
+  const [loadedLocale, setLoadedLocale] = useState<Locale>(() =>
+    isLocaleLoaded(initialLocale ?? "en") ? (initialLocale ?? "en") : "en"
+  );
+
+  // Pull in the active locale's chunk whenever it isn't resident yet. `en` is
+  // static, so for English this never runs at all.
+  useEffect(() => {
+    if (isLocaleLoaded(locale)) {
+      setLoadedLocale(locale);
+      return;
+    }
+    let cancelled = false;
+    void loadLocale(locale).then(() => {
+      // A second switch may have landed while this was in flight — the last
+      // one wins, so don't apply a stale result.
+      if (!cancelled) setLoadedLocale(locale);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
 
   useEffect(() => {
     if (initialLocale) {
@@ -137,11 +163,17 @@ export function I18nProvider({
 
   const t = useCallback(
     (key: string) => {
-      let value = get(translations[locale], key);
+      // `loadedLocale` (not `locale`) is what's actually renderable right now.
+      // They differ only in the brief window after a switch while the new
+      // locale's chunk is in flight, during which English is rendered — the
+      // same thing that already happened before hydration.
+      const active = getLocaleMessages(loadedLocale) as TranslationObject | undefined;
+      let value = active ? get(active, key) : undefined;
 
-      // Fallback to English if key is missing
-      if (value === undefined && locale !== "en") {
-        value = get(translations["en"], key);
+      // Fallback to English if key is missing. `en` is statically imported so
+      // this is always available — the fallback never depends on a chunk.
+      if (value === undefined && loadedLocale !== "en") {
+        value = get(getLocaleMessages("en") as TranslationObject, key);
       }
 
       // Support function values like footer.rights(year)
@@ -155,40 +187,40 @@ export function I18nProvider({
       // If value is still undefined, return the key so it never crashes!
       return key;
     },
-    [locale]
+    [loadedLocale]
   );
 
   const formatDate = useCallback(
     (date: Date | string | null | undefined, formatStr?: string) =>
-      formatDateWithLocale(date, formatStr, locale),
-    [locale]
+      formatDateWithLocale(date, formatStr, loadedLocale),
+    [loadedLocale]
   );
   const formatDateTime = useCallback(
-    (date: Date | string | null | undefined) => formatDateTimeWithLocale(date, locale),
-    [locale]
+    (date: Date | string | null | undefined) => formatDateTimeWithLocale(date, loadedLocale),
+    [loadedLocale]
   );
   const formatDateOnly = useCallback(
-    (date: Date | string | null | undefined) => formatDateOnlyWithLocale(date, locale),
-    [locale]
+    (date: Date | string | null | undefined) => formatDateOnlyWithLocale(date, loadedLocale),
+    [loadedLocale]
   );
   const formatTimeOnly = useCallback(
-    (date: Date | string | null | undefined) => formatTimeOnlyWithLocale(date, locale),
-    [locale]
+    (date: Date | string | null | undefined) => formatTimeOnlyWithLocale(date, loadedLocale),
+    [loadedLocale]
   );
   const formatRelativeTime = useCallback(
-    (date: Date | string | null | undefined) => formatRelativeTimeWithLocale(date, locale),
-    [locale]
+    (date: Date | string | null | undefined) => formatRelativeTimeWithLocale(date, loadedLocale),
+    [loadedLocale]
   );
   const formatDayDate = useCallback(
-    (date: Date | string | null | undefined) => formatDayDateWithLocale(date, locale),
-    [locale]
+    (date: Date | string | null | undefined) => formatDayDateWithLocale(date, loadedLocale),
+    [loadedLocale]
   );
   const formatDateTimeWithTimezone = useCallback(
-    (date: Date | string | null | undefined) => formatDateTimeWithTimezoneWithLocale(date, locale),
-    [locale]
+    (date: Date | string | null | undefined) => formatDateTimeWithTimezoneWithLocale(date, loadedLocale),
+    [loadedLocale]
   );
-  const dateLocale = DATE_FNS_LOCALES[locale];
-  const intlLocale = INTL_LOCALES[locale];
+  const dateLocale = DATE_FNS_LOCALES[loadedLocale];
+  const intlLocale = INTL_LOCALES[loadedLocale];
 
   const value = useMemo(
     () => ({

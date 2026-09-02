@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { randomBytes, createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
@@ -78,8 +79,16 @@ export async function createStaffSession(storeId: string, staffMemberId: string)
   });
 }
 
-/** Reads and verifies the active staff session for the current browser, if any. */
-export async function getActiveStaffSession(): Promise<ActiveStaffSession | null> {
+/**
+ * Reads and verifies the active staff session for the current browser, if any.
+ *
+ * react-cached, matching getSessionResult in src/lib/auth.ts: several pages
+ * reach this twice in one request — once through requireStaffPageAccess in the
+ * page and again through a gate or repository below it — and without the cache
+ * that is a duplicate staffSession lookup on every navigation. The cache is
+ * per-request, so it never leaks one browser's persona into another's.
+ */
+export const getActiveStaffSession = cache(async function getActiveStaffSession(): Promise<ActiveStaffSession | null> {
   const cookieStore = await cookies();
   const raw = cookieStore.get(STAFF_SESSION_COOKIE)?.value;
   if (!raw) return null;
@@ -109,7 +118,7 @@ export async function getActiveStaffSession(): Promise<ActiveStaffSession | null
     role: session.staffMember.role,
     allowedPages: resolveStaffAllowedPages(session.staffMember.role, session.staffMember.allowedPages),
   };
-}
+});
 
 /** Ends the active staff session (both the cookie and its DB row), if any. */
 export async function clearStaffSession(): Promise<void> {

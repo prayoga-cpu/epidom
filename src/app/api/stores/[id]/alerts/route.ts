@@ -26,16 +26,34 @@ import { withApiHandler } from "@/lib/api-handler";
  */
 export const GET = withApiHandler(
   async (request, { storeId }) => {
-    // Get all active materials for the store
-    // Optimization: Consider adding database-level filtering if dataset grows large
+    // This runs on EVERY dashboard page load (AlertsPrefetch sits in the
+    // (dashboard) layout), so it is worth keeping narrow. `select` rather
+    // than `include`: the response below reads exactly nine fields, but
+    // `include: { materialSuppliers: { include: { supplier: true } } }` was
+    // hydrating every column of every Material AND every joined Supplier row
+    // and discarding the rest.
+    //
+    // Still no `where` on the stock condition: the predicate is
+    // `currentStock < 0 OR (minStock > 0 AND currentStock <= minStock)`,
+    // a column-to-column comparison Prisma can't express without raw SQL.
+    // Narrowing the projection is the behaviour-preserving half of that fix —
+    // the same rows come back, in the same order.
     const allMaterials = await prisma.material.findMany({
       where: {
         storeId,
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        currentStock: true,
+        minStock: true,
+        unit: true,
         materialSuppliers: {
-          include: {
-            supplier: true,
+          select: {
+            price: true,
+            isPreferred: true,
+            supplier: { select: { id: true, name: true, phone: true } },
           },
         },
       },
