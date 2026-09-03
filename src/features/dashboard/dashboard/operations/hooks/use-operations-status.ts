@@ -23,6 +23,12 @@ export interface OpenTill {
   openedAt: string;
   /** Literal in the store's own currency — not an IDR value to convert. */
   openingCash: number;
+  /**
+   * What should physically be in this drawer right now — the float plus cash
+   * sales and tips, less refunds, paid-outs, safe drops and tip payouts.
+   * Literal in the store's own currency, same as `openingCash`.
+   */
+  expectedCash: number;
   orderCount: number;
 }
 

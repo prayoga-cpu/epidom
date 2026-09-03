@@ -156,6 +156,8 @@ For merchants with staff and ingredient cost concerns. Everything in POS, plus:
 - Clock-in / clock-out with PIN
 - Opening and closing cash counts
 - Cash drawer reconciliation
+- **Cash on hand** — the expected balance in the register, broken down by category (opening float, cash sales, refunds paid out, tips, cash in, paid-outs, safe drops, tips reversed). Computed live rather than only at close, so a mid-shift report shows the current position (labelled provisional) instead of just the opening float. A date-ranged report gives the store-wide figure across every till, including counter cash tied to none of them
+- **Cash In / Out at the till** — record a tip, float top-up, supplier paid in cash, or safe drop; outbound movements require a reason, and every one lands on the staff log and in the drawer maths immediately
 - Discrepancy alerts
 - Shift handover notes
 - Staff roster/scheduling, selfie + geolocation attendance, and till cash reconciliation are unified on one page (`/schedule`, merged 2026-08-07 — `/shifts` and `/attendance` now redirect here): managers get roster setup/publish plus a filterable Log & History (clock events and cash in/out on one timeline); staff get their own upcoming shifts with Clock In/Out and (Cashier/Owner/Manager) Cash In/Out actions, and their own history. Automatic overtime calculation — see `docs/roadmap.md`

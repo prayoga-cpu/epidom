@@ -170,8 +170,11 @@ export function ShiftReportPrintView({
         {/* Header */}
         <div className="text-center">
           <p className="text-base font-bold tracking-wide">{storeName}</p>
+          {/* A cash block alone no longer implies a shift: the store-wide day
+              rollup carries one too. Only a SHIFT-scoped drawer means this
+              paper belongs to one till session. */}
           <p className="mt-0.5 font-bold">
-            {report.cashDrawer ? labels.shiftReportTitle : labels.title}
+            {report.cashDrawer?.scope === "SHIFT" ? labels.shiftReportTitle : labels.title}
           </p>
         </div>
 
@@ -332,15 +335,77 @@ export function ShiftReportPrintView({
           </>
         )}
 
-        {/* Cash drawer — session-scoped reports only */}
+        {/* Cash drawer — every movement between the opening float and the
+            expected total, so the figure can be audited on the paper rather
+            than taken on trust. A STORE_DAY block sums every till in the
+            window, which is a different (and larger) thing than one cashier's
+            accountability, so the heading says so. Zero categories are
+            skipped for the same reason the sales block skips them — a store
+            that takes no tips shouldn't get a "Tips 0" line — but the float
+            and the expected total always print: their absence is itself
+            information. */}
         {report.cashDrawer && (
           <>
-            <Heading>{labels.cashDrawerHeading}</Heading>
+            <Heading>
+              {report.cashDrawer.scope === "STORE_DAY"
+                ? `${labels.cashDrawerHeading} (${labels.allTills})`
+                : labels.cashDrawerHeading}
+            </Heading>
             <div className="space-y-0.5">
               <Row label={labels.openingCash} value={money(report.cashDrawer.openingCash)} />
-              {report.cashDrawer.expectedCash != null && (
-                <Row label={labels.expectedCash} value={money(report.cashDrawer.expectedCash)} />
+              {!!report.cashDrawer.cashSales && (
+                <Row label={labels.cashSales} value={money(report.cashDrawer.cashSales)} />
               )}
+              {!!report.cashDrawer.cashRefunds && (
+                <Row
+                  label={labels.cashRefunds}
+                  value={`-${money(report.cashDrawer.cashRefunds)}`}
+                />
+              )}
+              {!!report.cashDrawer.tips && (
+                <Row label={labels.tips} value={money(report.cashDrawer.tips)} />
+              )}
+              {!!report.cashDrawer.pettyIn && (
+                <Row label={labels.cashIn} value={money(report.cashDrawer.pettyIn)} />
+              )}
+              {!!report.cashDrawer.pettyOut && (
+                <Row label={labels.paidOut} value={`-${money(report.cashDrawer.pettyOut)}`} />
+              )}
+              {!!report.cashDrawer.drops && (
+                <Row label={labels.safeDrop} value={`-${money(report.cashDrawer.drops)}`} />
+              )}
+              {!!report.cashDrawer.tipPayouts && (
+                <Row label={labels.tipsOut} value={`-${money(report.cashDrawer.tipPayouts)}`} />
+              )}
+            </div>
+            {/* Cash sales no till was linked to. Shown OUTSIDE the running
+                block and with no sign, because it is deliberately not part of
+                the expected total below: the schema cannot say whether this
+                money reached a drawer (counter cash) or a courier (delivery).
+                It is here so the figure is visible, not so it is counted. */}
+            {!!report.cashDrawer.unlinkedCashSales && (
+              <div className="mt-1">
+                <Row
+                  label={labels.offTillCash}
+                  value={money(report.cashDrawer.unlinkedCashSales)}
+                />
+              </div>
+            )}
+            <div className="mt-1 border-t border-gray-300 pt-1">
+              {/* An open till keeps taking cash, so the expected figure is a
+                  moving target — flag it rather than let a mid-shift printout
+                  read as a signed-off Z-report. */}
+              <Row
+                label={
+                  report.cashDrawer.hasOpenTill
+                    ? `${labels.expectedCash} (${labels.provisional})`
+                    : labels.expectedCash
+                }
+                value={money(report.cashDrawer.expectedCash)}
+                bold
+              />
+            </div>
+            <div className="space-y-0.5">
               {report.cashDrawer.closingCash != null && (
                 <Row label={labels.closingCash} value={money(report.cashDrawer.closingCash)} />
               )}

@@ -6,6 +6,7 @@ import { requireManagerOrOwnerApi } from "@/lib/auth/require-manager-or-owner";
 import { operationsGuard } from "@/lib/auth/require-feature";
 import { deriveOnDuty, staffClockedInSince } from "@/lib/attendance/on-duty";
 import { selectLateRoster } from "@/lib/attendance/roster-status";
+import { getOpenTillCashOnHand } from "@/lib/services/cash-drawer.service";
 import {
   addDaysToDateKey,
   businessLocalToUTC,
@@ -38,10 +39,11 @@ const LATE_GRACE_MINUTES = 5;
  * GET /api/stores/[id]/operations/status
  *
  * Live operations snapshot for the dashboard's monitoring card: who is on the
- * clock, which POS till sessions are open, and how today's roster is tracking
- * against actual attendance. Read-only aggregate of data the Schedule page
- * already owns — manager/owner only, matching the attendance audit trail, and
- * OPERATIONS-plan only, matching the Schedule/Production pages it summarizes.
+ * clock, which POS till sessions are open and what should be in each of their
+ * drawers, and how today's roster is tracking against actual attendance.
+ * Read-only aggregate of data the Schedule and POS pages already own —
+ * manager/owner only, matching the attendance audit trail, and OPERATIONS-plan
+ * only, matching the Schedule/Production pages it summarizes.
  */
 export const GET = withApiHandler(
   async (_request, { storeId, userId }) => {
@@ -91,6 +93,11 @@ export const GET = withApiHandler(
           id: true,
           openedAt: true,
           openingCash: true,
+          // Always null on an open till, but ShiftCashInput requires both —
+          // the cash service takes the same shape whether the session is open
+          // or being replayed after close.
+          closedAt: true,
+          closingCash: true,
           staffMember: { select: { id: true, name: true, role: true } },
           _count: { select: { orders: true } },
         },
@@ -118,6 +125,11 @@ export const GET = withApiHandler(
         where: { storeId, type: "ABSENCE", timestamp: { gte: dayStart, lt: dayEnd } },
       }),
     ]);
+
+    // Live drawer position per open till. Necessarily a second step — it needs
+    // the shift ids — but internally parallel, and a store runs one to three
+    // tills at once, so this is a handful of concurrent queries, not an N+1.
+    const tillCash = await getOpenTillCashOnHand(storeId!, openTills);
 
     const onDutyEvents = deriveOnDuty(events);
     const onDutyIds = new Set(onDutyEvents.map((event) => event.staffMemberId));
@@ -165,9 +177,13 @@ export const GET = withApiHandler(
           name: till.staffMember.name,
           role: till.staffMember.role,
           openedAt: till.openedAt.toISOString(),
-          // Literal in the store's own currency, like every other
+          // Both literal in the store's own currency, like every other
           // Order/Shift-derived amount — never an IDR value to convert.
           openingCash: Number(till.openingCash),
+          // What should be in the drawer right now: float + cash sales - refunds
+          // + tips + float top-ups - paid-outs - safe drops - tip payouts. The
+          // key is guaranteed present — the map is built from these same tills.
+          expectedCash: tillCash[till.id].expectedCash,
           orderCount: till._count.orders,
         })),
         late,

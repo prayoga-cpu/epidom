@@ -45,7 +45,7 @@ If a task is not aligned with Phase 5, ask the operator before proceeding.
 ## 3. Stack at a glance
 
 - **Framework**: Next.js 16 (App Router, Turbopack), React 19, TypeScript
-- **Database**: PostgreSQL + Prisma ORM v6
+- **Database**: PostgreSQL + Prisma ORM v7
 - **Auth**: Better Auth (email/password + Google OAuth)
 - **UI**: shadcn/ui (New York), Tailwind CSS 4, Radix, Lucide
 - **State**: TanStack Query v5

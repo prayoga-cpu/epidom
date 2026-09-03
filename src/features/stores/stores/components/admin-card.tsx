@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, MessageSquare, TrendingUp, Wrench, Gauge, ArrowRight } from "lucide-react";
+import { Shield, MessageSquare, TrendingUp, Wrench, Gauge, Activity, ArrowRight } from "lucide-react";
 
 const ADMIN_SHORTCUTS = [
+  { href: "/admin/activity", label: "Activity", icon: Activity },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
   { href: "/admin/revenue", label: "Revenue", icon: TrendingUp },
   { href: "/admin/capacity", label: "Usage", icon: Gauge },

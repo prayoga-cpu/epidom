@@ -875,3 +875,155 @@ export async function sendBackupAlertEmail(
     };
   }
 }
+
+// =============================================================================
+// Audit trail notifications
+// =============================================================================
+
+/**
+ * Operator-facing alert for a critical audit event.
+ *
+ * Reuses FEEDBACK_NOTIFICATION_RECIPIENTS rather than introducing a second
+ * distribution list: the people who triage feedback are the same people who
+ * need to know an account was just deleted, and a second list is one more thing
+ * to drift out of date.
+ */
+export async function sendAuditCriticalEmail(payload: {
+  actionCode: string;
+  targetLabel: string;
+  actorEmail: string;
+  occurredAt: string;
+}): Promise<SendEmailResult> {
+  const subject = `[${APP_NAME} Audit] ${payload.actionCode} — ${payload.targetLabel}`;
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🚨 [DEV] Critical Audit Alert");
+    console.log("To:", FEEDBACK_NOTIFICATION_RECIPIENTS.join(", "));
+    console.log("Subject:", subject);
+    console.log("Actor:", payload.actorEmail);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const html = `
+    <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:0 auto">
+      <div style="background:#7f1d1d;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
+        <h2 style="margin:0;font-size:16px">Critical action recorded</h2>
+      </div>
+      <div style="border:1px solid #e5e7eb;border-top:none;padding:20px;border-radius:0 0 8px 8px">
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <tr><td style="padding:6px 0;color:#6b7280">Action</td><td style="padding:6px 0"><code>${escapeHtml(payload.actionCode)}</code></td></tr>
+          <tr><td style="padding:6px 0;color:#6b7280">Target</td><td style="padding:6px 0">${escapeHtml(payload.targetLabel)}</td></tr>
+          <tr><td style="padding:6px 0;color:#6b7280">Performed by</td><td style="padding:6px 0">${escapeHtml(payload.actorEmail)}</td></tr>
+          <tr><td style="padding:6px 0;color:#6b7280">When</td><td style="padding:6px 0">${escapeHtml(payload.occurredAt)}</td></tr>
+        </table>
+        <p style="margin:20px 0 0">
+          <a href="${APP_URL}/admin/activity" style="background:#111827;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;font-size:14px;display:inline-block">Open activity log</a>
+        </p>
+        <p style="color:#6b7280;font-size:12px;margin-top:16px">
+          If this action was not expected, it can be reviewed and — for most action types — reverted from the activity log.
+        </p>
+      </div>
+    </div>`;
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: FEEDBACK_NOTIFICATION_RECIPIENTS,
+      subject,
+      html,
+    });
+    if (error) {
+      console.error("[Email] Failed to send audit critical alert:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+const ACCOUNT_ACTION_COPY: Record<string, { title: string; body: string }> = {
+  "reset-password": {
+    title: "Your password was reset by support",
+    body: "A member of the EPIDOM support team reset the password on your account. You have been signed out on every device and will need to sign in again.",
+  },
+  "temp-password": {
+    title: "A temporary password was issued for your account",
+    body: "A member of the EPIDOM support team issued a temporary password for your account. Please sign in and change it as soon as you can.",
+  },
+  "plan-change": {
+    title: "Your plan was changed by support",
+    body: "A member of the EPIDOM support team changed the plan on your account.",
+  },
+  reactivated: {
+    title: "Your account was reactivated",
+    body: "A member of the EPIDOM support team reactivated your account. Your data is available again.",
+  },
+};
+
+/**
+ * Notify an account holder that support changed something on their account.
+ *
+ * The acting admin is deliberately not named. The user needs to know an action
+ * happened and be able to challenge it; naming an individual staff member
+ * invites retaliation and adds nothing they can act on.
+ */
+export async function sendAccountChangedEmail(payload: {
+  userEmail: string;
+  userName: string;
+  action: string;
+  occurredAt: string;
+}): Promise<SendEmailResult> {
+  const copy = ACCOUNT_ACTION_COPY[payload.action] ?? {
+    title: "Your account was changed by support",
+    body: "A member of the EPIDOM support team made a change to your account.",
+  };
+  const subject = `[${APP_NAME}] ${copy.title}`;
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n✉️  [DEV] Account Changed Notice");
+    console.log("To:", payload.userEmail);
+    console.log("Subject:", subject);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const html = `
+    <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px">
+      <h2 style="font-size:18px;margin:0 0 12px">${escapeHtml(copy.title)}</h2>
+      <p style="color:#374151;font-size:14px;line-height:1.6">Hi ${escapeHtml(payload.userName || "there")},</p>
+      <p style="color:#374151;font-size:14px;line-height:1.6">${escapeHtml(copy.body)}</p>
+      <p style="color:#374151;font-size:14px;line-height:1.6">This happened on ${escapeHtml(payload.occurredAt)}.</p>
+      <p style="margin:20px 0">
+        <a href="${APP_URL}/profile" style="background:#111827;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;font-size:14px;display:inline-block">Review your account activity</a>
+      </p>
+      <p style="color:#6b7280;font-size:13px;line-height:1.6">
+        If you did not expect this, reply to this email or use the "This wasn't me" link on your account activity page.
+      </p>
+    </div>`;
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: payload.userEmail,
+      subject,
+      html,
+    });
+    if (error) {
+      console.error("[Email] Failed to send account-changed notice:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}

@@ -1,28 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+
 import { prisma } from "@/lib/prisma";
-import { isAdminUser } from "@/lib/admin";
+
 import { z } from "zod";
 import { hashPassword } from "better-auth/crypto";
 import { userService, subscriptionService } from "@/lib/services";
-
-async function requireAdmin() {
-  const session = await getSession();
-  if (!session?.user) return null;
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, email: true, isAdmin: true },
-  });
-  if (!user || !isAdminUser(user.email, user.isAdmin)) return null;
-  return user;
-}
+import { getActingAdmin } from "@/lib/auth/require-admin-api";
+import { withAdminApiHandler } from "@/lib/admin-api-handler";
+import { recordAction, beginAction, completeAction, failAction } from "@/lib/audit/record";
+import { captureEntitySnapshot } from "@/lib/audit/snapshot";
+import { notifyCriticalAction, notifyAccountAction } from "@/lib/audit/notify";
 
 /**
  * GET /api/admin/users
  * List all users with subscription, business, store count, and login methods.
  */
 export async function GET() {
-  if (!(await requireAdmin())) {
+  if (!(await getActingAdmin())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -145,12 +139,20 @@ const updateSchema = z.discriminatedUnion("action", [
   }),
 ]);
 
-export async function PATCH(req: NextRequest) {
-  const admin = await requireAdmin();
-  if (!admin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+/**
+ * PATCH /api/admin/users
+ *
+ * Every branch below is now audited. Each captures a before-image *before* the
+ * write, so the action is revertible rather than merely visible — a log that
+ * records "the plan changed" without recording what it changed from cannot
+ * restore anything.
+ *
+ * The two cascade roots (delete-user, reset-account) additionally capture a
+ * full entity-graph snapshot inside the same transaction as the destruction,
+ * because Prisma never observes the 56 `onDelete: Cascade` edges Postgres
+ * follows and there is nothing to reconstruct them from afterwards.
+ */
+export const PATCH = withAdminApiHandler(async (req, { admin }) => {
   let body: unknown;
   try {
     body = await req.json();
@@ -176,7 +178,33 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Cannot modify your own account" }, { status: 400 });
   }
 
+  // Identity is read once up front: after a delete there is no row left to
+  // name the account in the log, so the label has to be captured beforehand.
+  const target = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      isAdmin: true,
+      emailVerified: true,
+      deactivatedAt: true,
+      purgeAt: true,
+    },
+  });
+
+  if (!target) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const who = { userId: target.id, userEmail: target.email, userName: target.name };
+
   if (input.action === "set-plan") {
+    const before = await prisma.subscription.findUnique({
+      where: { userId: input.userId },
+      select: { plan: true, status: true },
+    });
+
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
     const subscription = await prisma.subscription.upsert({
@@ -191,10 +219,22 @@ export async function PATCH(req: NextRequest) {
         currentPeriodEnd: periodEnd,
       },
     });
+
+    await recordAction({
+      actionType: "admin.user.set_plan",
+      targetId: input.userId,
+      payload: { ...who, before, after: { plan: input.plan, status: input.status } },
+    });
+
     return NextResponse.json({ subscription });
   }
 
   if (input.action === "set-period") {
+    const before = await prisma.subscription.findUnique({
+      where: { userId: input.userId },
+      select: { status: true, currentPeriodStart: true, currentPeriodEnd: true },
+    });
+
     const now = new Date();
     const LIFETIME = new Date(now.getTime() + 200 * 365 * 24 * 60 * 60 * 1000);
     const periodEnd = input.lifetime
@@ -212,10 +252,43 @@ export async function PATCH(req: NextRequest) {
         currentPeriodEnd: periodEnd,
       },
     });
+
+    await recordAction({
+      actionType: "admin.user.set_period",
+      targetId: input.userId,
+      payload: {
+        ...who,
+        before: before
+          ? {
+              status: before.status,
+              currentPeriodStart: before.currentPeriodStart?.toISOString() ?? "",
+              currentPeriodEnd: before.currentPeriodEnd?.toISOString() ?? "",
+            }
+          : null,
+        after: {
+          status: "ACTIVE" as const,
+          currentPeriodStart: now.toISOString(),
+          currentPeriodEnd: periodEnd.toISOString(),
+        },
+        lifetime: input.lifetime,
+        months: input.months,
+      },
+    });
+
     return NextResponse.json({ subscription });
   }
 
   if (input.action === "set-custom-price") {
+    const before = await prisma.subscription.findUnique({
+      where: { userId: input.userId },
+      select: {
+        customPriceAmount: true,
+        customPriceCurrency: true,
+        customPriceInterval: true,
+        customPricePlan: true,
+      },
+    });
+
     try {
       const subscription = await subscriptionService.setCustomPrice(input.userId, {
         amount: input.amount,
@@ -223,6 +296,32 @@ export async function PATCH(req: NextRequest) {
         interval: input.interval,
         plan: input.plan,
       });
+
+      await recordAction({
+        actionType: "admin.user.set_custom_price",
+        targetId: input.userId,
+        payload: {
+          ...who,
+          before: before
+            ? {
+                // Decimal -> string, never a JSON number: a Decimal(14,6)
+                // would silently round through JSON.parse.
+                amount: before.customPriceAmount?.toString() ?? null,
+                currency: before.customPriceCurrency,
+                interval: before.customPriceInterval,
+                plan: before.customPricePlan,
+              }
+            : null,
+          after: {
+            amount: input.amount.toString(),
+            currency: input.currency.toUpperCase(),
+            interval: input.interval,
+            plan: input.plan,
+          },
+          stripeSubscriptionCancelled: true,
+        },
+      });
+
       return NextResponse.json({ subscription });
     } catch (err) {
       return NextResponse.json(
@@ -233,8 +332,37 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (input.action === "clear-custom-price") {
+    const before = await prisma.subscription.findUnique({
+      where: { userId: input.userId },
+      select: {
+        customPriceAmount: true,
+        customPriceCurrency: true,
+        customPriceInterval: true,
+        customPricePlan: true,
+      },
+    });
+
     try {
       const subscription = await subscriptionService.clearCustomPrice(input.userId);
+
+      // Only recordable when there was a price to clear; otherwise the payload
+      // has no before-image and the entry would claim a revertibility it lacks.
+      if (before?.customPriceAmount && before.customPriceCurrency && before.customPricePlan) {
+        await recordAction({
+          actionType: "admin.user.clear_custom_price",
+          targetId: input.userId,
+          payload: {
+            ...who,
+            before: {
+              amount: before.customPriceAmount.toString(),
+              currency: before.customPriceCurrency,
+              interval: before.customPriceInterval ?? "MONTHLY",
+              plan: before.customPricePlan,
+            },
+          },
+        });
+      }
+
       return NextResponse.json({ subscription });
     } catch (err) {
       return NextResponse.json(
@@ -250,6 +378,13 @@ export async function PATCH(req: NextRequest) {
       data: { isAdmin: input.isAdmin },
       select: { id: true, email: true, isAdmin: true },
     });
+
+    await recordAction({
+      actionType: "admin.user.set_admin",
+      targetId: input.userId,
+      payload: { ...who, before: target.isAdmin, after: input.isAdmin },
+    });
+
     return NextResponse.json({ user });
   }
 
@@ -283,6 +418,21 @@ export async function PATCH(req: NextRequest) {
       where: { id: input.userId },
       data: { emailVerified: true },
     });
+
+    // The old hash is deliberately NOT captured. Storing a reversible
+    // credential in a table designed to outlive the account would be a worse
+    // liability than the loss of reversibility; see the catalogue caveat.
+    await recordAction({
+      actionType: "admin.user.reset_password",
+      targetId: input.userId,
+      payload: {
+        ...who,
+        credentialExisted: Boolean(existing),
+        emailVerifiedBefore: target.emailVerified,
+      },
+    });
+
+    await notifyAccountAction(target, "reset-password");
 
     return NextResponse.json({ ok: true });
   }
@@ -324,28 +474,96 @@ export async function PATCH(req: NextRequest) {
       data: { emailVerified: true },
     });
 
+    await recordAction({
+      actionType: "admin.user.temp_password",
+      targetId: input.userId,
+      payload: {
+        ...who,
+        credentialExisted: Boolean(existing),
+        emailVerifiedBefore: target.emailVerified,
+      },
+    });
+
+    await notifyAccountAction(target, "temp-password");
+
     // Return the plaintext temp password — shown once to admin, never stored
     return NextResponse.json({ tempPassword: temp });
   }
 
   if (input.action === "delete-user") {
-    await prisma.user.delete({ where: { id: input.userId } });
-    return NextResponse.json({ deleted: true });
+    // Two-phase: the PENDING row commits before the delete, so a cascade that
+    // crashes halfway still leaves evidence the attempt happened.
+    const actionLogId = await beginAction({
+      actionType: "admin.user.delete",
+      targetId: input.userId,
+      payload: { ...who, snapshotId: null, rowCount: 0 },
+    });
+
+    try {
+      const snapshot = await captureEntitySnapshot({
+        rootType: "User",
+        rootId: input.userId,
+        rootLabel: target.email,
+        reasonCode: "admin.user.delete",
+        subjectUserIds: [input.userId],
+      });
+
+      await prisma.user.delete({ where: { id: input.userId } });
+
+      await completeAction(actionLogId, {
+        snapshotId: snapshot?.id ?? null,
+        payload: { ...who, snapshotId: snapshot?.id ?? null, rowCount: snapshot?.rowCount ?? 0 },
+      });
+
+      await notifyCriticalAction("admin.user.delete", target.email, admin.email);
+
+      return NextResponse.json({ deleted: true, snapshotId: snapshot?.id ?? null });
+    } catch (error) {
+      await failAction(actionLogId, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }
 
   if (input.action === "reset-account") {
-    // Wipe business data (cascades stores → storefronts, menus, orders, inventory,
-    // staff, shifts) and stale alerts, revoke every session so the user is signed
-    // out on all devices, then clear the onboarding flag so they restart from the
-    // onboarding wizard on next login. Login account, subscription/billing, and
-    // feedback history are preserved.
-    await prisma.$transaction([
-      prisma.business.deleteMany({ where: { userId: input.userId } }),
-      prisma.alert.deleteMany({ where: { userId: input.userId } }),
-      prisma.session.deleteMany({ where: { userId: input.userId } }),
-      prisma.user.update({ where: { id: input.userId }, data: { hasOnboarded: false } }),
-    ]);
-    return NextResponse.json({ reset: true });
+    const actionLogId = await beginAction({
+      actionType: "admin.user.reset_account",
+      targetId: input.userId,
+      payload: { ...who, snapshotId: null, rowCount: 0 },
+    });
+
+    try {
+      const snapshot = await captureEntitySnapshot({
+        rootType: "Business",
+        rootId: input.userId,
+        rootLabel: target.email,
+        reasonCode: "admin.user.reset_account",
+        subjectUserIds: [input.userId],
+      });
+
+      // Wipe business data (cascades stores → storefronts, menus, orders, inventory,
+      // staff, shifts) and stale alerts, revoke every session so the user is signed
+      // out on all devices, then clear the onboarding flag so they restart from the
+      // onboarding wizard on next login. Login account, subscription/billing, and
+      // feedback history are preserved.
+      await prisma.$transaction([
+        prisma.business.deleteMany({ where: { userId: input.userId } }),
+        prisma.alert.deleteMany({ where: { userId: input.userId } }),
+        prisma.session.deleteMany({ where: { userId: input.userId } }),
+        prisma.user.update({ where: { id: input.userId }, data: { hasOnboarded: false } }),
+      ]);
+
+      await completeAction(actionLogId, {
+        snapshotId: snapshot?.id ?? null,
+        payload: { ...who, snapshotId: snapshot?.id ?? null, rowCount: snapshot?.rowCount ?? 0 },
+      });
+
+      await notifyCriticalAction("admin.user.reset_account", target.email, admin.email);
+
+      return NextResponse.json({ reset: true, snapshotId: snapshot?.id ?? null });
+    } catch (error) {
+      await failAction(actionLogId, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }
 
   if (input.action === "reactivate-user") {
@@ -354,6 +572,19 @@ export async function PATCH(req: NextRequest) {
     // arranged out-of-band.
     try {
       await userService.reactivateAccount(input.userId, { enforceGracePeriod: false });
+
+      await recordAction({
+        actionType: "admin.user.reactivate",
+        targetId: input.userId,
+        payload: {
+          ...who,
+          before: {
+            deactivatedAt: target.deactivatedAt?.toISOString() ?? null,
+            purgeAt: target.purgeAt?.toISOString() ?? null,
+          },
+        },
+      });
+
       return NextResponse.json({ reactivated: true });
     } catch (err) {
       return NextResponse.json(
@@ -364,4 +595,4 @@ export async function PATCH(req: NextRequest) {
   }
 
   return NextResponse.json({ error: "Unhandled action" }, { status: 400 });
-}
+});

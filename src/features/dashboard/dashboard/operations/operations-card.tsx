@@ -40,9 +40,9 @@ function formatDuration(minutes: number, t: (key: string) => string): string {
  */
 export function OperationsCard({ storeId }: OperationsCardProps) {
   const { t, formatTimeOnly } = useI18n();
-  // Till floats are Shift-derived and already literal in the store's own
-  // currency. Bare formatPrice() would convert from IDR and wrongly re-scale
-  // them for any non-IDR store.
+  // Till floats and expected cash are Shift-derived and already literal in the
+  // store's own currency. Bare formatPrice() would convert from IDR and wrongly
+  // re-scale them for any non-IDR store.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number) => formatPriceRaw(value, currency);
 
@@ -113,9 +113,7 @@ export function OperationsCard({ storeId }: OperationsCardProps) {
               <p className="text-xl font-bold">{summary?.scheduledCount ?? 0}</p>
             </div>
             <div className="bg-muted/40 rounded-lg border p-2.5">
-              <p className="text-muted-foreground text-xs">
-                {t("dashboard.operations.lateLabel")}
-              </p>
+              <p className="text-muted-foreground text-xs">{t("dashboard.operations.lateLabel")}</p>
               <p
                 className={`text-xl font-bold ${
                   (summary?.lateCount ?? 0) > 0 ? "text-amber-600 dark:text-amber-400" : ""
@@ -197,8 +195,19 @@ export function OperationsCard({ storeId }: OperationsCardProps) {
                   >
                     <div className="min-w-0">
                       <p className="truncate font-medium">{till.name}</p>
-                      <p className="text-muted-foreground truncate text-xs">
-                        {t("dashboard.operations.tillFloat")} {formatPrice(till.openingCash)}
+                      {/* The float is only what went in at open; what an owner
+                          actually wants at a glance is what should be in the
+                          drawer right now, so the live figure carries the
+                          weight. Wraps rather than truncates — on a phone a
+                          clipped amount is worse than a second line. */}
+                      <p className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+                        <span>
+                          {t("dashboard.operations.tillFloat")} {formatPrice(till.openingCash)}
+                        </span>
+                        <span aria-hidden>·</span>
+                        <span className="text-foreground font-medium">
+                          {t("dashboard.operations.expectedCash")} {formatPrice(till.expectedCash)}
+                        </span>
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">

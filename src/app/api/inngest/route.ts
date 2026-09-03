@@ -12,6 +12,11 @@ import {
   negativeStockSweep,
   catchUpStockDeduction,
 } from "@/lib/inngest/functions/stock-integrity-sweep";
+import {
+  sendAuditCriticalAlert,
+  sendAccountChangedNotice,
+} from "@/lib/inngest/functions/audit-alerts";
+import { pruneAuditTrail, shredAuditSubject } from "@/lib/inngest/functions/audit-retention";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -26,5 +31,9 @@ export const { GET, POST, PUT } = serve({
     checkBackupFreshness,
     negativeStockSweep,
     catchUpStockDeduction,
+    sendAuditCriticalAlert,
+    sendAccountChangedNotice,
+    pruneAuditTrail,
+    shredAuditSubject,
   ],
 });

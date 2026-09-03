@@ -12,6 +12,8 @@ import { prisma } from "@/lib/prisma";
 import { getFinanceSettings } from "@/lib/services/finance-settings.service";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { resolveShiftWindow } from "@/lib/finance/shift-window";
+import { hasCashActivity } from "@/lib/finance/cash-drawer";
+import { getShiftCashOnHand, getWindowCashOnHand } from "@/lib/services/cash-drawer.service";
 import {
   aggregateShiftReport,
   type ShiftReportCashDrawer,
@@ -96,14 +98,18 @@ export async function buildShiftReport(
 
     window = resolveShiftWindow(shift);
     shiftLabel = shift.staffMember?.name ?? null;
+    // Computed live rather than read back off the Shift row: expectedCash is
+    // only WRITTEN at close, so a mid-shift report used to print an opening
+    // float and nothing else. Recomputing also means a movement recorded after
+    // the till was closed is reflected the next time the report is opened.
     cashDrawer = {
+      scope: "SHIFT",
       staffName: shift.staffMember?.name ?? null,
       openedAt: shift.openedAt.toISOString(),
       closedAt: shift.closedAt?.toISOString() ?? null,
-      openingCash: Number(shift.openingCash),
-      closingCash: shift.closingCash != null ? Number(shift.closingCash) : null,
-      expectedCash: shift.expectedCash != null ? Number(shift.expectedCash) : null,
-      cashDifference: shift.cashDifference != null ? Number(shift.cashDifference) : null,
+      tillCount: 1,
+      hasOpenTill: shift.closedAt === null,
+      ...(await getShiftCashOnHand(storeId, shift)),
     };
   } else {
     const now = new Date();
@@ -112,6 +118,25 @@ export async function buildShiftReport(
     const from = request.from ?? new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const to = request.to ?? now;
     window = { from, to, isOpen: false };
+
+    // Store-level cash position for the window. This is the figure a date-ranged
+    // daily report previously had no answer for at all: with two cashiers,
+    // "what is in the register at the end of the day" is both tills plus the
+    // cash orders and movements that were linked to neither.
+    const position = await getWindowCashOnHand(storeId, from, to);
+    if (hasCashActivity(position.total, position.perShift.length)) {
+      cashDrawer = {
+        scope: "STORE_DAY",
+        // No single cashier owns a store-wide figure — naming one would imply
+        // an accountability that does not exist.
+        staffName: null,
+        openedAt: from.toISOString(),
+        closedAt: to.toISOString(),
+        tillCount: position.perShift.length,
+        hasOpenTill: position.hasOpenTill,
+        ...position.total,
+      };
+    }
   }
 
   const dateRange = { gte: window.from, lte: window.to };

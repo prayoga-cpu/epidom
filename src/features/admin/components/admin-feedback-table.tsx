@@ -761,6 +761,13 @@ export function AdminFeedbackTable() {
       }
       return res.json();
     },
+    // Without this the only thing that refreshed the table was the viewing
+    // admin's own invalidateQueries — so a status change made anywhere else
+    // (another admin, another device, a background job) stayed invisible until
+    // someone hit reload, and two people triaging at once would silently
+    // overwrite each other's view of the queue.
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const mutation = useMutation({

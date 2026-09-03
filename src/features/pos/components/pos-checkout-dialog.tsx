@@ -9,7 +9,11 @@ import { usePosCart } from "../hooks/use-pos-cart";
 import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
 import { useReceiptSettings } from "@/features/dashboard/profile/hooks/use-receipt-settings";
 import { useKdsSettings } from "../hooks/use-kds-settings";
-import { markCustomerDisplayPaid } from "../hooks/use-customer-display";
+import {
+  clearCustomerPhone,
+  markCustomerDisplayPaid,
+  useCustomerPhone,
+} from "../hooks/use-customer-display";
 import { createPosOrderSchema, type CreatePosOrderInput } from "@/lib/validation/pos.schemas";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -160,6 +164,22 @@ export function PosCheckoutDialog({
     }
   }, [open, cart.items]);
 
+  // A number the customer typed on the customer-facing screen, if one is
+  // open. It only ever *prefills* this field — the cashier still sees it and
+  // still confirms the order, and an empty check means it can never overwrite
+  // something the cashier typed themselves.
+  const customerPhone = useCustomerPhone((state) => state.phone);
+  const customerPhoneReceivedAt = useCustomerPhone((state) => state.receivedAt);
+
+  useEffect(() => {
+    if (!customerPhone) return;
+    if (form.getValues("customerPhone")) return;
+    form.setValue("customerPhone", customerPhone, { shouldDirty: true });
+    // Keyed on receivedAt as well, so a number sent after the cashier cleared
+    // the field applies, while the same one never re-applies on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerPhone, customerPhoneReceivedAt, open]);
+
   const buildReceipt = (data: CreatePosOrderInput, orderNumber: string): ReceiptData => ({
     storeName: storeName ?? "Epidom POS",
     currency,
@@ -297,6 +317,7 @@ export function PosCheckoutDialog({
         });
         // Before clearCart(), which wipes the total this reads.
         markCustomerDisplayPaid(receipt.orderNumber, cart.total);
+        clearCustomerPhone();
         cart.clearCart();
         onOpenChange(false);
         return;
@@ -333,6 +354,8 @@ export function PosCheckoutDialog({
 
       // Before clearCart(), which wipes the total this reads.
       markCustomerDisplayPaid(orderNumber, cart.total);
+      // This customer's number must not survive onto the next order.
+      clearCustomerPhone();
       cart.clearCart();
       onOpenChange(false);
 

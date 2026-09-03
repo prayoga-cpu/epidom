@@ -1,22 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+
 import { prisma } from "@/lib/prisma";
-import { isAdminUser } from "@/lib/admin";
+
 import { getStorageAdapter } from "@/lib/storage";
+import { getActingAdmin } from "@/lib/auth/require-admin-api";
 
 // Reads live DB stats — never cache.
 export const dynamic = "force-dynamic";
-
-async function requireAdmin() {
-  const session = await getSession();
-  if (!session?.user) return null;
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, email: true, isAdmin: true },
-  });
-  if (!user || !isAdminUser(user.email, user.isAdmin)) return null;
-  return user;
-}
 
 /** How many of the largest tables (by on-disk size) to report. */
 const TOP_TABLES = 15;
@@ -54,7 +44,7 @@ const GROWTH_TABLES = [
 ];
 
 export async function GET() {
-  if (!(await requireAdmin())) {
+  if (!(await getActingAdmin())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

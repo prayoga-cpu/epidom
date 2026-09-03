@@ -7,7 +7,7 @@ Prisma schema, models, migrations, and the rules every query must follow.
 ## Stack
 
 - PostgreSQL 14+
-- Prisma ORM v6.17+
+- Prisma ORM v7.8+ (note: `$use` middleware was removed in v7; `$extends` is the only client hook)
 - Migrations in `prisma/migrations/`
 - Generator targets default Prisma Client
 
@@ -374,6 +374,56 @@ model AggregatorEmail {
 ```
 
 `parseStatus` lifecycle: `pending` → `success` (OpenAI parsed + Order created) | `failed` (parse error, Inngest will retry) | `manual` (no `OPENAI_API_KEY` — body stored for human review).
+
+### Cash on hand (`cash_movements`)
+
+Non-sale cash that moves through the register. `Order` only accounts for cash that arrives by selling
+something; this table is everything else, and without it the expected drawer balance can only ever be
+"opening float + cash sales".
+
+```prisma
+enum CashMovementType {
+  TIP        // cash tip into the drawer — adds
+  PETTY_IN   // float top-up, change delivered — adds
+  PETTY_OUT  // paid-out: COD supplier, staff errand — removes
+  DROP       // safe drop / bank deposit — removes
+  PAYOUT     // tips handed to staff — removes
+}
+
+model CashMovement {
+  id            String           @id @default(cuid())
+  storeId       String
+  shiftId       String?          // nullable: a movement can happen with no till open
+  staffMemberId String?          // SetNull — the financial row outlives the person
+  type          CashMovementType
+  amount        Decimal          @db.Decimal(12, 2)  // ALWAYS POSITIVE
+  reason        String?
+  occurredAt    DateTime         @default(now())
+
+  @@index([storeId])
+  @@index([shiftId])
+  @@index([storeId, occurredAt])
+  @@map("cash_movements")
+}
+```
+
+Three things about this table are deliberate and easy to get wrong:
+
+- **`amount` is never negative.** Direction lives in `CASH_MOVEMENT_DIRECTION`
+  (`src/lib/finance/cash-drawer.ts`), the single place a sign is decided. Keeping the sign out of the
+  column means "how much was tipped today" is a plain `SUM` with no sign filtering, and a UI bug cannot
+  write a negative `TIP` that silently inflates the drawer.
+- **It is an append-only ledger, not a running balance.** The balance is always derived. A mis-entered row
+  is corrected by recording its opposite; the `DELETE` endpoint exists only for a same-session typo and
+  refuses once the owning till has been closed.
+- **`occurredAt`, not `createdAt`, drives the maths** — so a movement entered ten minutes late still lands
+  inside the right shift window.
+
+The expected balance is `openingCash + cashSales - cashRefunds + tips + pettyIn - pettyOut - drops -
+tipPayouts`. Cash sales count orders with `paymentMethod: CASH` and `paymentStatus` in (`PAID`,
+`REFUNDED`) whose status is revenue-counting — `PENDING` is excluded because a delivered-but-unpaid order
+is revenue in waiting, not money in the till. Refunds are attributed by `refundedAt`, **not** `orderDate`:
+a refund issued the morning after a sale left today's drawer, not yesterday's.
 
 ---
 

@@ -296,12 +296,23 @@ describe("aggregateShiftReport — window & cash drawer", () => {
 
   it("passes a supplied cash drawer through untouched", () => {
     const cashDrawer = {
+      scope: "SHIFT" as const,
       staffName: "Budi",
       openedAt: "2026-08-09T03:00:00.000Z",
       closedAt: "2026-08-09T15:00:00.000Z",
+      tillCount: 1,
+      hasOpenTill: false,
       openingCash: 200,
-      closingCash: 1200,
+      cashSales: 900,
+      cashRefunds: 0,
+      tips: 50,
+      pettyIn: 0,
+      pettyOut: 0,
+      drops: 0,
+      tipPayouts: 0,
+      unlinkedCashSales: 0,
       expectedCash: 1150,
+      closingCash: 1200,
       cashDifference: 50,
     };
 

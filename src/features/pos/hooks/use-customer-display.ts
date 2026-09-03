@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 import { usePosCart } from "./use-pos-cart";
 import { useCustomerDisplaySettings } from "./use-customer-display-settings";
@@ -47,6 +47,38 @@ export const useCustomerDisplayPaid = create<CustomerDisplayPaidState>()((set) =
 /** Call from checkout right before clearing the cart. */
 export function markCustomerDisplayPaid(orderNumber: string, total: number): void {
   useCustomerDisplayPaid.getState().markPaid(orderNumber, total);
+}
+
+/**
+ * A phone number the customer entered on the customer-facing screen, waiting
+ * to be picked up by the checkout form.
+ *
+ * Deliberately only a suggestion: it prefills the cashier's phone field and
+ * nothing else. The customer display can't create an order, can't change a
+ * total, and can't write to the database — the cashier still reviews the
+ * number and still confirms the order. Not persisted, and cleared once the
+ * order is placed so the next customer never inherits it.
+ */
+interface CustomerPhoneState {
+  /** E.164, or null when nothing is pending. */
+  phone: string | null;
+  /** Bumped on every submission so checkout can re-apply a number the cashier
+   * cleared, without re-applying the same one forever. */
+  receivedAt: number;
+  setPhone: (phone: string | null) => void;
+  clearPhone: () => void;
+}
+
+export const useCustomerPhone = create<CustomerPhoneState>()((set) => ({
+  phone: null,
+  receivedAt: 0,
+  setPhone: (phone) => set({ phone, receivedAt: Date.now() }),
+  clearPhone: () => set({ phone: null, receivedAt: 0 }),
+}));
+
+/** Clears the pending customer number — call once an order is created. */
+export function clearCustomerPhone(): void {
+  useCustomerPhone.getState().clearPhone();
 }
 
 function writeSnapshot(storeId: string, snapshot: CustomerDisplaySnapshot): void {
@@ -97,6 +129,12 @@ export function useCustomerDisplayPublisher(storeId: string): void {
     channel.onmessage = (event: MessageEvent<CustomerDisplayMessage>) => {
       if (event.data?.type === "request") {
         channel.postMessage({ type: "state", snapshot: snapshotRef.current });
+        return;
+      }
+      if (event.data?.type === "customer-phone") {
+        // Straight into a store the checkout form reads — never written to
+        // the cart or the server from here.
+        useCustomerPhone.getState().setPhone(event.data.phone);
       }
     };
 
@@ -295,4 +333,31 @@ export function useCustomerDisplaySnapshot(storeId: string): CustomerDisplaySnap
   }, [snapshot.phase, snapshot.updatedAt]);
 
   return snapshot;
+}
+
+/**
+ * Display side. Returns a function that hands a number the customer typed
+ * back to the cashier window.
+ *
+ * Its own channel rather than reusing the subscriber's: the two have
+ * different lifetimes (this one outlives a re-render of the snapshot hook)
+ * and BroadcastChannel does not deliver a window its own messages, so there
+ * is no risk of the display hearing itself.
+ */
+export function useSendCustomerPhone(storeId: string): (phone: string | null) => void {
+  const channelRef = useRef<BroadcastChannel | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel(customerDisplayChannelName(storeId));
+    channelRef.current = channel;
+    return () => {
+      channel.close();
+      channelRef.current = null;
+    };
+  }, [storeId]);
+
+  return useCallback((phone: string | null) => {
+    channelRef.current?.postMessage({ type: "customer-phone", phone });
+  }, []);
 }

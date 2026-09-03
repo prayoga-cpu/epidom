@@ -1,27 +1,17 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+
 import { prisma } from "@/lib/prisma";
-import { isAdminUser } from "@/lib/admin";
+
 import { isR2Configured } from "@/lib/backup/r2-client";
+import { getActingAdmin } from "@/lib/auth/require-admin-api";
 
 export const dynamic = "force-dynamic";
 
 /** How many recent runs to show in the history list. */
 const HISTORY_LIMIT = 20;
 
-async function requireAdmin() {
-  const session = await getSession();
-  if (!session?.user) return null;
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, email: true, isAdmin: true },
-  });
-  if (!user || !isAdminUser(user.email, user.isAdmin)) return null;
-  return user;
-}
-
 export async function GET() {
-  if (!(await requireAdmin())) {
+  if (!(await getActingAdmin())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

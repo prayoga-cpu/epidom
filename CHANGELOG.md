@@ -9,6 +9,32 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.82.0] - 2026-09-03 · feat
+
+- **You can now see everything that happened to your account.** Your profile has a new Activity section with two lists: what you did, and what was changed on your account by someone else. Until now, if support reset your password or changed your plan, nothing anywhere told you it had happened.
+- **And you get an email the moment it does.** Any change support makes to your account — a password reset, a temporary password, a plan change, a reactivation — now sends you a message straight away. If it wasn't expected, there's a "This wasn't me" button next to the entry that flags it for the team to look at.
+- **Nothing an administrator does goes unrecorded any more.** Every action on the platform is now written down: who did it, when, from where, and what it touched. Deleting an account, resetting someone's data, changing a plan or granting admin rights all raise an alert to the team as they happen.
+- **Most mistakes can now be undone.** Where an action can be safely reversed, it can be reversed from the log with one click — after a preview that says exactly what will change. Where it cannot, the log says so and explains why instead of pretending. Deleting an account or wiping a store now takes a full copy of the data first, so it can be put back.
+- **The log refuses to do anything dangerous.** It will not undo a change if someone else has since edited the same thing, if the order sits inside a till session that has already been counted and signed off, or if reversing it would leave your stock figures disagreeing with your stock history. In each case it tells you which of those it is.
+- **Your feedback tickets refresh by themselves.** The admin feedback list used to only update for whoever clicked; a status changed anywhere else stayed invisible until a reload.
+- **Activity is kept for 12 months and then permanently deleted**, matching what the Terms already promise. Copies taken before a deletion are held for 90 days.
+
+## [2.81.0] - 2026-09-03 · feat
+
+- **The daily report now tells you how much cash should be in the register.** Until now it printed what you sold and, if you'd picked a specific till session, the float you started with — but never the one number you actually need at closing time. Open the daily report and there's now a Cash on Hand block: opening float, cash sales, refunds paid back out, tips, cash in, paid-outs, safe drops and tips handed to staff, then the total that should be sitting in the drawer.
+- **It works while you're still open.** The expected-cash figure used to be written only at the moment a cashier closed their till, so mid-day it simply didn't exist. It's now calculated live, and a report printed mid-shift is labelled provisional so nobody mistakes it for a signed-off end-of-day count.
+- **A day with two cashiers finally adds up.** Running the report over a date range instead of one till session now gives a store-wide figure covering every till that was open, plus cash taken at the counter that wasn't tied to any of them.
+- **New Cash In / Out button at the till.** Record a tip, top up the float, pay a supplier in cash, or drop takings into the safe — each one lands in the drawer maths straight away and shows up on the staff log with its reason. Anything that takes money *out* requires a reason, because "the till is short" and "we paid the vegetable man" should never look the same.
+- **Three counting mistakes fixed.** An order marked delivered but not yet paid was being counted as cash in the drawer, so tills looked short whenever a customer hadn't settled up. Refunds were never subtracted at all. And a refund issued the morning after a sale was silently rewriting the previous day's takings — refunds now count against the day the money actually left the drawer.
+- **The Finance cash page and the dashboard show the same numbers.** The cash reconciliation table gained the full per-category breakdown and a totals row, and the dashboard's open-till card now shows expected cash alongside the float it started with. Every screen reads from one shared calculation, so no two of them can disagree.
+
+## [2.80.0] - 2026-09-03 · feat
+
+- **Customers can now enter their own WhatsApp number on the customer screen.** A single button on their side of the till opens a panel explaining that if they leave a number, their receipt is sent to that WhatsApp once they've paid. It's the only thing on that screen they can touch — everything else stays read-only.
+- **The number types itself into the cashier's checkout.** Whatever the customer enters lands in the phone field of the payment dialog, so nobody has to read it out across the counter or key it in twice. It only ever fills an empty field — if the cashier already typed a number, the customer's entry never overwrites it, and the cashier still reviews it and still confirms the order.
+- **No keyboard needed.** The number is entered on a large on-screen keypad, because a customer-facing screen usually has no keyboard, and on a touch monitor the pop-up keyboard covers the field you're filling. The country code sits next to it with the flag, defaulting to your store's own country, and all 245 countries are there behind a searchable list.
+- **The number is checked before it goes anywhere.** The confirm button only lights up once the number is actually valid for the chosen country, so a half-typed number can't reach the cashier's form. Customers can remove a number they entered by mistake, and it's cleared automatically once the order is placed so the next customer never inherits it.
+
 ## [2.79.0] - 2026-09-02 · ux
 
 - **Every page now loads about a third less code.** The app was sending all three languages — English, French and Indonesian — to every device on every page, roughly 550KB of text to display one language. Each language is now its own download, and you only get the one you read. On the dashboard that is 118KB less over the connection and about 370KB less for the browser to work through before anything appears, which is felt most on the Android tablets behind the counter. Nothing was dropped: every phrase in all three languages is still there.

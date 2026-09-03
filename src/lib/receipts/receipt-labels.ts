@@ -151,6 +151,23 @@ interface ShiftReportLabels {
   closingCash: string;
   expectedCash: string;
   difference: string;
+  // Cash drawer movement breakdown — every way cash reaches or leaves the
+  // drawer between the opening float and the expected total.
+  cashSales: string;
+  cashRefunds: string;
+  tips: string;
+  cashIn: string;
+  paidOut: string;
+  safeDrop: string;
+  tipsOut: string;
+  /** Qualifies the heading of a STORE_DAY rollup, which sums every till in
+   * the window — not one named cashier's accountability. */
+  allTills: string;
+  /** Cash sales attributable to no till — reported, never counted. */
+  offTillCash: string;
+  /** Qualifies the expected total while a till in scope is still open, so a
+   * mid-shift printout can't be mistaken for a signed-off count. */
+  provisional: string;
   // Order types
   dineIn: string;
   takeaway: string;
@@ -193,6 +210,16 @@ export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
     closingCash: "Kas Akhir",
     expectedCash: "Kas Seharusnya",
     difference: "Selisih",
+    cashSales: "Penjualan Tunai",
+    cashRefunds: "Refund",
+    tips: "Tip",
+    cashIn: "Kas Masuk",
+    paidOut: "Kas Keluar",
+    safeDrop: "Setor Brankas",
+    tipsOut: "Tip Keluar",
+    allTills: "Semua Kasir",
+    offTillCash: "Kas Luar Kasir",
+    provisional: "Sementara",
     dineIn: "Makan di Tempat",
     takeaway: "Bawa Pulang",
     deliveryType: "Pengiriman",
@@ -232,6 +259,16 @@ export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
     closingCash: "Closing Cash",
     expectedCash: "Expected Cash",
     difference: "Difference",
+    cashSales: "Cash Sales",
+    cashRefunds: "Refunds",
+    tips: "Tips",
+    cashIn: "Cash In",
+    paidOut: "Paid Out",
+    safeDrop: "Safe Drop",
+    tipsOut: "Tips Out",
+    allTills: "All Tills",
+    offTillCash: "Cash Off Till",
+    provisional: "Provisional",
     dineIn: "Dine In",
     takeaway: "Takeaway",
     deliveryType: "Delivery",
@@ -271,6 +308,16 @@ export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
     closingCash: "Caisse finale",
     expectedCash: "Caisse attendue",
     difference: "Ecart",
+    cashSales: "Ventes Especes",
+    cashRefunds: "Remboursements",
+    tips: "Pourboires",
+    cashIn: "Entrees",
+    paidOut: "Sorties",
+    safeDrop: "Depot Coffre",
+    tipsOut: "Pourboires Verses",
+    allTills: "Toutes Caisses",
+    offTillCash: "Especes Hors Caisse",
+    provisional: "Provisoire",
     dineIn: "Sur place",
     takeaway: "A emporter",
     deliveryType: "Livraison",

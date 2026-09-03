@@ -141,6 +141,33 @@ const BASE_REPORT: ShiftReportData = {
   cashDrawer: null,
 };
 
+/**
+ * A closed single-till drawer with only sales and refunds moving through it —
+ * every discretionary movement (tips, float top-up, paid-out, safe drop, tips
+ * paid out) is deliberately zero so the same fixture doubles as the
+ * "zero lines are not printed" case.
+ */
+const BASE_CASH_DRAWER: NonNullable<ShiftReportData["cashDrawer"]> = {
+  scope: "SHIFT",
+  staffName: "Budi",
+  openedAt: "2026-08-09T03:00:00.000Z",
+  closedAt: "2026-08-09T15:00:00.000Z",
+  tillCount: 1,
+  hasOpenTill: false,
+  openingCash: 200000,
+  cashSales: 800000,
+  cashRefunds: 12400,
+  tips: 0,
+  pettyIn: 0,
+  pettyOut: 0,
+  drops: 0,
+  tipPayouts: 0,
+  unlinkedCashSales: 0,
+  expectedCash: 987600,
+  closingCash: 987600,
+  cashDifference: 0,
+};
+
 const REPORT_INPUT = {
   report: BASE_REPORT,
   storeName: "Tahoma Cafe",
@@ -207,18 +234,7 @@ describe("buildShiftReportEscPos", () => {
       buildShiftReportEscPos({
         ...REPORT_INPUT,
         shiftLabel: "Budi",
-        report: {
-          ...BASE_REPORT,
-          cashDrawer: {
-            staffName: "Budi",
-            openedAt: "2026-08-09T03:00:00.000Z",
-            closedAt: "2026-08-09T15:00:00.000Z",
-            openingCash: 200000,
-            closingCash: 987600,
-            expectedCash: 987600,
-            cashDifference: 0,
-          },
-        },
+        report: { ...BASE_REPORT, cashDrawer: BASE_CASH_DRAWER },
       })
     );
 
@@ -226,6 +242,75 @@ describe("buildShiftReportEscPos", () => {
     expect(output).toContain("Kas Laci");
     expect(output).toContain("Kas Awal");
     expect(output).toContain("Budi");
+    // One cashier's till: the heading must NOT claim to cover every till.
+    expect(output).not.toContain("Semua Kasir");
+  });
+
+  it("prints each cash movement that has a figure, signed by its direction", () => {
+    const output = decode(
+      buildShiftReportEscPos({
+        ...REPORT_INPUT,
+        report: {
+          ...BASE_REPORT,
+          cashDrawer: { ...BASE_CASH_DRAWER, tips: 45000, pettyOut: 60000, expectedCash: 972600 },
+        },
+      })
+    );
+
+    expect(output).toContain("Penjualan Tunai");
+    // "Tip" is also a substring of "Berdasarkan Tipe Penjualan", so anchor
+    // the assertion to the start of its own row rather than matching anywhere.
+    expect(output).toMatch(/^Tip\s/m);
+    // Outbound movements carry the same leading "-" as the refund line, so a
+    // reader can add the column up by eye and land on the expected total.
+    expect(output).toMatch(/^Kas Keluar\s+-/m);
+    expect(output).toMatch(/^Refund\s+-/m);
+  });
+
+  it("skips a cash movement with no figure instead of printing a zero row", () => {
+    const output = decode(
+      buildShiftReportEscPos({
+        ...REPORT_INPUT,
+        report: { ...BASE_REPORT, cashDrawer: BASE_CASH_DRAWER },
+      })
+    );
+
+    // Nothing was tipped out, dropped to the safe or added to the float.
+    expect(output).not.toContain("Tip Keluar");
+    expect(output).not.toContain("Setor Brankas");
+    expect(output).not.toContain("Kas Masuk");
+    // The float and the expected total print regardless — their absence
+    // would itself be information the person counting the drawer needs.
+    expect(output).toContain("Kas Awal");
+    expect(output).toContain("Kas Seharusnya");
+  });
+
+  it("marks a store-wide day rollup as covering every till, and as provisional", () => {
+    const output = decode(
+      buildShiftReportEscPos({
+        ...REPORT_INPUT,
+        report: {
+          ...BASE_REPORT,
+          cashDrawer: {
+            ...BASE_CASH_DRAWER,
+            scope: "STORE_DAY",
+            staffName: null,
+            tillCount: 3,
+            hasOpenTill: true,
+            closingCash: null,
+            cashDifference: null,
+          },
+        },
+      })
+    );
+
+    expect(output).toContain("Semua Kasir");
+    // A till is still open, so the expected figure keeps moving — the paper
+    // must not read as a final, signed-off count.
+    expect(output).toContain("Sementara");
+    // A cash block no longer implies a shift: this one spans the whole store.
+    expect(output).toContain("LAPORAN HARIAN");
+    expect(output).not.toContain("Kas Akhir");
   });
 
   it("titles an unscoped run a daily report", () => {
@@ -265,7 +350,18 @@ describe("buildShiftReportEscPos", () => {
 
   it("keeps every content line within the paper width at 32 and 48 cols", () => {
     for (const width of [32, 48] as const) {
-      const output = decode(buildShiftReportEscPos({ ...REPORT_INPUT, width }));
+      // Includes the cash drawer, whose "Kas Seharusnya (Sementara)" label is
+      // the longest in the report and the likeliest to overflow 58mm paper.
+      const output = decode(
+        buildShiftReportEscPos({
+          ...REPORT_INPUT,
+          width,
+          report: {
+            ...BASE_REPORT,
+            cashDrawer: { ...BASE_CASH_DRAWER, hasOpenTill: true },
+          },
+        })
+      );
       // Strip ESC/POS control sequences before measuring — only printable
       // text counts against the column budget.
       const lines = output

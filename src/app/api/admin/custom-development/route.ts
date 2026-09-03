@@ -1,44 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { NextResponse } from "next/server";
+
 import { prisma } from "@/lib/prisma";
-import { isAdminUser } from "@/lib/admin";
 import { customDevelopmentService } from "@/lib/services/custom-development.service";
 import { updateCustomDevelopmentTriageSchema } from "@/lib/validation/custom-development.schemas";
-
-async function requireAdmin() {
-  const session = await getSession();
-  if (!session?.user) return null;
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, email: true, isAdmin: true },
-  });
-  if (!user || !isAdminUser(user.email, user.isAdmin)) return null;
-  return user;
-}
+import { withAdminApiHandler } from "@/lib/admin-api-handler";
+import { recordAction } from "@/lib/audit/record";
 
 /**
  * GET /api/admin/custom-development
  * List all custom development requests.
  */
-export async function GET() {
-  if (!(await requireAdmin())) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+export const GET = withAdminApiHandler(async () => {
   const requests = await customDevelopmentService.getAllRequests();
 
   return NextResponse.json({ requests });
-}
+});
 
 /**
  * PATCH /api/admin/custom-development
  * Update the status and/or dev note of a custom development request.
  */
-export async function PATCH(req: NextRequest) {
-  if (!(await requireAdmin())) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+export const PATCH = withAdminApiHandler(async (req) => {
   let body: unknown;
   try {
     body = await req.json();
@@ -54,10 +36,29 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
+  const before = await prisma.customDevelopmentRequest.findUnique({
+    where: { id: parsed.data.id },
+    select: { status: true, devNote: true },
+  });
+
+  if (!before) {
+    return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  }
+
   const request_ = await customDevelopmentService.updateTriage(parsed.data.id, {
     status: parsed.data.status,
     devNote: parsed.data.devNote,
   });
 
+  await recordAction({
+    actionType: "admin.custom_development.triage",
+    targetId: parsed.data.id,
+    payload: {
+      requestId: parsed.data.id,
+      before,
+      after: { status: parsed.data.status, devNote: parsed.data.devNote },
+    },
+  });
+
   return NextResponse.json({ request: request_ });
-}
+});

@@ -19,6 +19,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -58,6 +59,7 @@ import { WasteFormDialog } from "@/features/dashboard/management/waste/waste-for
 import { mapPaymentMethodLabel } from "@/features/pos/lib/order-status-display";
 import { useStoreShifts } from "@/features/pos/hooks/use-store-shifts";
 import { formatShiftLabel, resolveShiftWindow } from "@/lib/finance/shift-window";
+import { sumCashOnHand, type CashOnHandBreakdown } from "@/lib/finance/cash-drawer";
 import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
 import {
   useWasteEntries,
@@ -163,17 +165,17 @@ interface PaymentMethodRow {
   percentOfTotal: number;
 }
 
-interface CashReconciliationRow {
+/** Mirrors CashReconciliationRow in lib/finance/report-aggregation.ts: the
+ * whole CashOnHandBreakdown (float, sales, refunds, tips, float top-ups,
+ * paid-outs, safe drops, tip payouts) plus who/when. `expectedCash` is no
+ * longer nullable — it is computed live, so an open till has one too. */
+interface CashReconciliationRow extends CashOnHandBreakdown {
   shiftId: string;
   staffName: string;
   staffId: string;
   openedAt: string;
   closedAt: string | null;
   isOpen: boolean;
-  openingCash: number;
-  closingCash: number | null;
-  expectedCash: number | null;
-  cashDifference: number | null;
   isFlagged: boolean;
 }
 
@@ -326,6 +328,54 @@ function ReportStatusRow({
         />
       </TableCell>
     </TableRow>
+  );
+}
+
+/**
+ * One label/value line inside a mobile cash-drawer card. The cash tab has far
+ * more categories than fit as table columns on a phone, so the card shows only
+ * the drivers a manager actually chases — and this keeps those lines aligned
+ * (tabular figures, right-hand column) instead of ragged.
+ */
+/**
+ * The discretionary cash categories, in formula order. Sales and the opening
+ * float are always shown; these appear only when non-zero, so a store that
+ * never takes a tip or drops to a safe doesn't read a column of zeros.
+ *
+ * `key` is checked against CashOnHandBreakdown by the row type, so adding a
+ * category to the breakdown without listing it here is a type error rather
+ * than a line that silently stops adding up.
+ */
+const CASH_CATEGORY_LINES: Array<{
+  key: "cashRefunds" | "tips" | "pettyIn" | "pettyOut" | "drops" | "tipPayouts";
+  labelKey: string;
+}> = [
+  { key: "cashRefunds", labelKey: "pages.financeCashRefunds" },
+  { key: "tips", labelKey: "pages.financeCashTips" },
+  { key: "pettyIn", labelKey: "pages.financeCashPettyIn" },
+  { key: "pettyOut", labelKey: "pages.financeCashPettyOut" },
+  { key: "drops", labelKey: "pages.financeCashDrops" },
+  { key: "tipPayouts", labelKey: "pages.financeCashTipPayouts" },
+];
+
+function CashCardLine({
+  label,
+  value,
+  emphasis,
+}: {
+  label: string;
+  value: string;
+  emphasis?: "total" | "variance";
+}) {
+  return (
+    <div
+      className={`flex items-baseline justify-between gap-3 text-sm ${
+        emphasis ? "font-semibold" : ""
+      } ${emphasis === "variance" ? "text-destructive" : ""}`}
+    >
+      <span className={emphasis === "variance" ? "" : "text-muted-foreground"}>{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </div>
   );
 }
 
@@ -698,6 +748,15 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
     [cashReconciliation.data, cashSort.sortField, cashSort.sortDir]
   );
 
+  // Store-level position across every session listed. Same `sumCashOnHand`
+  // the shift report and the dashboard card use, so the Finance total can't
+  // drift from theirs — including its rule that a counted total (and therefore
+  // a variance) only exists once EVERY till in the range has been counted.
+  const cashTotals = useMemo(() => {
+    const rows = cashReconciliation.data?.shifts ?? [];
+    return rows.length ? sumCashOnHand(rows) : null;
+  }, [cashReconciliation.data]);
+
   const marginSort = useSortable<"name" | "totalRevenue" | "margin" | "marginPct">("margin");
   const sortedMarginItems = useMemo(
     () =>
@@ -789,18 +848,39 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
         t("pages.financeCashier"),
         t("pages.financeShiftPeriod"),
         t("pages.financeOpeningCash"),
-        t("pages.financeClosingCash"),
+        t("pages.financeCashSales"),
+        t("pages.financeCashRefunds"),
+        t("pages.financeCashTips"),
+        t("pages.financeCashPettyIn"),
+        t("pages.financeCashPettyOut"),
+        t("pages.financeCashDrops"),
+        t("pages.financeCashTipPayouts"),
         t("pages.financeExpectedCash"),
+        t("pages.financeClosingCash"),
         t("pages.financeCashDifference"),
+      ];
+      // Same column order as the on-screen table, so the sheet reads as the
+      // drawer's arithmetic left-to-right: float in, what moved, what should
+      // be there, what was counted, the gap.
+      const cashCells = (row: CashOnHandBreakdown) => [
+        row.openingCash,
+        row.cashSales,
+        row.cashRefunds,
+        row.tips,
+        row.pettyIn,
+        row.pettyOut,
+        row.drops,
+        row.tipPayouts,
+        row.expectedCash,
+        row.closingCash ?? "—",
+        row.cashDifference ?? "—",
       ];
       const rows = cashReconciliation.data.shifts.map((row) => [
         row.staffName,
         `${formatDateTime(row.openedAt)}${row.closedAt ? ` — ${formatDateTime(row.closedAt)}` : ""}`,
-        row.openingCash,
-        row.closingCash ?? "—",
-        row.expectedCash ?? "—",
-        row.cashDifference ?? "—",
+        ...cashCells(row),
       ]);
+      if (cashTotals) rows.push([t("pages.financeCashTotals"), "", ...cashCells(cashTotals)]);
       XLSX.utils.book_append_sheet(
         wb,
         XLSX.utils.aoa_to_sheet([header, ...rows]),
@@ -2204,8 +2284,12 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
           </div>
         </TabsContent>
 
-        {/* Cash-drawer reconciliation tab — flags a closed shift whose
-            closingCash didn't match expectedCash. */}
+        {/* Cash-drawer reconciliation tab — the live per-category position of
+            every till session (float, cash sales, refunds, tips, float
+            top-ups, paid-outs, safe drops, tip payouts) next to what was
+            actually counted, so a variance can be explained and not just
+            spotted. Flags a CLOSED session whose count didn't match; an open
+            session has a live expected figure but nothing to compare it to. */}
         <TabsContent value="cash">
           <div className="space-y-3 lg:hidden">
             {cashReconciliation.isLoading || cashReconciliation.isError ? (
@@ -2219,40 +2303,127 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
                 />
               </p>
             ) : (
-              sortedCashRows.map((row) => (
-                <div key={row.shiftId} className="bg-muted/50 space-y-2 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{row.staffName}</span>
-                    <div className="flex gap-1.5">
-                      <Badge variant={row.isOpen ? "default" : "outline"}>
-                        {row.isOpen
-                          ? t("pages.financeShiftStatusOpen")
-                          : t("pages.financeShiftStatusClosed")}
-                      </Badge>
-                      {row.isFlagged && <Badge variant="destructive">{t("pages.financeFlagged")}</Badge>}
+              <>
+                {cashTotals && (
+                  <div className="bg-card space-y-2 rounded-lg border p-4">
+                    <p className="font-medium">{t("pages.financeCashTotals")}</p>
+                    {/* Same rule as the per-session cards below: float and
+                        sales always, the rest only when non-zero, so the
+                        lines add up to Expected. */}
+                    <CashCardLine
+                      label={t("pages.financeOpeningCash")}
+                      value={formatOrderPrice(cashTotals.openingCash)}
+                    />
+                    <CashCardLine
+                      label={t("pages.financeCashSales")}
+                      value={formatOrderPrice(cashTotals.cashSales)}
+                    />
+                    {CASH_CATEGORY_LINES.map(
+                      ({ key, labelKey }) =>
+                        cashTotals[key] !== 0 && (
+                          <CashCardLine
+                            key={key}
+                            label={t(labelKey)}
+                            value={formatOrderPrice(cashTotals[key])}
+                          />
+                        )
+                    )}
+                    <CashCardLine
+                      label={t("pages.financeExpectedCash")}
+                      value={formatOrderPrice(cashTotals.expectedCash)}
+                      emphasis="total"
+                    />
+                    <CashCardLine
+                      label={t("pages.financeClosingCash")}
+                      value={
+                        cashTotals.closingCash != null
+                          ? formatOrderPrice(cashTotals.closingCash)
+                          : "—"
+                      }
+                    />
+                    <CashCardLine
+                      label={t("pages.financeCashDifference")}
+                      value={
+                        cashTotals.cashDifference != null
+                          ? formatOrderPrice(cashTotals.cashDifference)
+                          : "—"
+                      }
+                      emphasis={
+                        cashTotals.cashDifference ? "variance" : "total"
+                      }
+                    />
+                    {cashTotals.closingCash == null && (
+                      <p className="text-muted-foreground text-xs">
+                        {t("pages.cashOnHandProvisional")}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {sortedCashRows.map((row) => (
+                  <div key={row.shiftId} className="bg-muted/50 space-y-2 rounded-lg border p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{row.staffName}</span>
+                      <div className="flex gap-1.5">
+                        <Badge variant={row.isOpen ? "default" : "outline"}>
+                          {row.isOpen
+                            ? t("pages.financeShiftStatusOpen")
+                            : t("pages.financeShiftStatusClosed")}
+                        </Badge>
+                        {row.isFlagged && (
+                          <Badge variant="destructive">{t("pages.financeFlagged")}</Badge>
+                        )}
+                      </div>
                     </div>
+                    <p className="text-muted-foreground text-xs">{formatDateTime(row.openedAt)}</p>
+                    {/* Float and sales always show; every discretionary
+                        category shows only when non-zero. That keeps the card
+                        as short as a "drivers only" cut in the common case,
+                        while guaranteeing the visible lines actually sum to
+                        the Expected total below — on a reconciliation screen,
+                        arithmetic that doesn't add up reads as a bug. */}
+                    <CashCardLine
+                      label={t("pages.financeOpeningCash")}
+                      value={formatOrderPrice(row.openingCash)}
+                    />
+                    <CashCardLine
+                      label={t("pages.financeCashSales")}
+                      value={formatOrderPrice(row.cashSales)}
+                    />
+                    {CASH_CATEGORY_LINES.map(
+                      ({ key, labelKey }) =>
+                        row[key] !== 0 && (
+                          <CashCardLine
+                            key={key}
+                            label={t(labelKey)}
+                            value={formatOrderPrice(row[key])}
+                          />
+                        )
+                    )}
+                    <CashCardLine
+                      label={t("pages.financeExpectedCash")}
+                      value={formatOrderPrice(row.expectedCash)}
+                      emphasis="total"
+                    />
+                    <CashCardLine
+                      label={t("pages.financeClosingCash")}
+                      value={row.closingCash != null ? formatOrderPrice(row.closingCash) : "—"}
+                    />
+                    <CashCardLine
+                      label={t("pages.financeCashDifference")}
+                      value={
+                        row.cashDifference != null ? formatOrderPrice(row.cashDifference) : "—"
+                      }
+                      emphasis={row.isFlagged ? "variance" : "total"}
+                    />
                   </div>
-                  <p className="text-muted-foreground text-xs">{formatDateTime(row.openedAt)}</p>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("pages.financeOpeningCash")}</span>
-                    <span>{formatOrderPrice(row.openingCash)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("pages.financeClosingCash")}</span>
-                    <span>{row.closingCash != null ? formatOrderPrice(row.closingCash) : "—"}</span>
-                  </div>
-                  <div
-                    className={`flex justify-between text-sm font-semibold ${row.isFlagged ? "text-destructive" : ""}`}
-                  >
-                    <span className="text-muted-foreground">{t("pages.financeCashDifference")}</span>
-                    <span>{row.cashDifference != null ? formatOrderPrice(row.cashDifference) : "—"}</span>
-                  </div>
-                </div>
-              ))
+                ))}
+              </>
             )}
           </div>
           <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
-            <div className="min-w-[680px]">
+            {/* Thirteen columns of currency — wide on purpose. Scrolling beats
+                crushing every figure into an unreadable column. */}
+            <div className="min-w-[1400px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -2271,8 +2442,17 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
                       {t("pages.financeShiftPeriod")}
                     </SortableHead>
                     <TableHead className="text-right">{t("pages.financeOpeningCash")}</TableHead>
-                    <TableHead className="text-right">{t("pages.financeClosingCash")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeCashSales")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeCashRefunds")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeCashTips")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeCashPettyIn")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeCashPettyOut")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeCashDrops")}</TableHead>
+                    <TableHead className="text-right">
+                      {t("pages.financeCashTipPayouts")}
+                    </TableHead>
                     <TableHead className="text-right">{t("pages.financeExpectedCash")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeClosingCash")}</TableHead>
                     <SortableHead
                       align="right"
                       active={cashSort.sortField === "cashDifference"}
@@ -2287,7 +2467,7 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
                   {cashReconciliation.isLoading || cashReconciliation.isError ? (
                     <ReportStatusRow
                       isError={cashReconciliation.isError}
-                      colSpan={6}
+                      colSpan={13}
                       onRetry={() => cashReconciliation.refetch()}
                       loadingLabel="Loading..."
                       errorLabel={t("pages.financeLoadError")}
@@ -2295,9 +2475,12 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
                     />
                   ) : (
                     sortedCashRows.map((row) => (
-                      <TableRow key={row.shiftId} className={row.isFlagged ? "bg-destructive/5" : undefined}>
+                      <TableRow
+                        key={row.shiftId}
+                        className={row.isFlagged ? "bg-destructive/5" : undefined}
+                      >
                         <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
                             {row.staffName}
                             <Badge variant={row.isOpen ? "default" : "outline"} className="text-xs">
                               {row.isOpen
@@ -2311,19 +2494,42 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                           {formatDateTime(row.openedAt)}
                           {row.closedAt ? ` — ${formatDateTime(row.closedAt)}` : ""}
                         </TableCell>
-                        <TableCell className="text-right">{formatOrderPrice(row.openingCash)}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(row.openingCash)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(row.cashSales)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(row.cashRefunds)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(row.tips)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(row.pettyIn)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(row.pettyOut)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(row.drops)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(row.tipPayouts)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {formatOrderPrice(row.expectedCash)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
                           {row.closingCash != null ? formatOrderPrice(row.closingCash) : "—"}
                         </TableCell>
-                        <TableCell className="text-right">
-                          {row.expectedCash != null ? formatOrderPrice(row.expectedCash) : "—"}
-                        </TableCell>
                         <TableCell
-                          className={`text-right font-semibold ${row.isFlagged ? "text-destructive" : ""}`}
+                          className={`text-right font-semibold tabular-nums ${row.isFlagged ? "text-destructive" : ""}`}
                         >
                           {row.cashDifference != null ? formatOrderPrice(row.cashDifference) : "—"}
                         </TableCell>
@@ -2331,6 +2537,59 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
                     ))
                   )}
                 </TableBody>
+                {cashTotals && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={2} className="whitespace-nowrap">
+                        {t("pages.financeCashTotals")}
+                        {cashTotals.closingCash == null && (
+                          <span className="text-muted-foreground ml-2 text-xs font-normal">
+                            {t("pages.cashOnHandProvisional")}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(cashTotals.openingCash)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(cashTotals.cashSales)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(cashTotals.cashRefunds)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(cashTotals.tips)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(cashTotals.pettyIn)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(cashTotals.pettyOut)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(cashTotals.drops)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(cashTotals.tipPayouts)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(cashTotals.expectedCash)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {cashTotals.closingCash != null
+                          ? formatOrderPrice(cashTotals.closingCash)
+                          : "—"}
+                      </TableCell>
+                      <TableCell
+                        className={`text-right tabular-nums ${cashTotals.cashDifference ? "text-destructive" : ""}`}
+                      >
+                        {cashTotals.cashDifference != null
+                          ? formatOrderPrice(cashTotals.cashDifference)
+                          : "—"}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>

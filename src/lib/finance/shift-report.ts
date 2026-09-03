@@ -15,6 +15,7 @@
  */
 
 import { bucketItemsByCategory, buildPaymentMethodRows } from "./report-aggregation";
+import type { CashOnHandBreakdown } from "./cash-drawer";
 
 /** Money/quantity as it arrives from either a test fixture (number) or Prisma
  * (`Decimal`, which stringifies losslessly). Same widening as
@@ -43,14 +44,34 @@ export interface ShiftReportOrderInput {
   }>;
 }
 
-export interface ShiftReportCashDrawer {
+/**
+ * The cash position printed at the foot of the report.
+ *
+ * Every figure is a positive magnitude — `cashRefunds`, `pettyOut`, `drops`
+ * and `tipPayouts` are the lines that get SUBTRACTED, but they are reported
+ * unsigned so the render paths can print "Paid out  12.50" without each of
+ * them having to know which lines are debits. `expectedCash` is the only
+ * field where the signs have already been applied.
+ *
+ * See computeCashOnHand() in lib/finance/cash-drawer.ts, which produces the
+ * breakdown, and cash-drawer.service.ts for how each category is scoped.
+ */
+export interface ShiftReportCashDrawer extends CashOnHandBreakdown {
+  /**
+   * SHIFT — one till session, the figure a named cashier is accountable for.
+   * STORE_DAY — every till in the window plus the movements that were linked
+   * to none of them. The two are NOT expected to be equal, and the report
+   * says so.
+   */
+  scope: "SHIFT" | "STORE_DAY";
   staffName: string | null;
   openedAt: string;
   closedAt: string | null;
-  openingCash: number;
-  closingCash: number | null;
-  expectedCash: number | null;
-  cashDifference: number | null;
+  /** Till sessions rolled into this figure. Always 1 for a SHIFT scope. */
+  tillCount: number;
+  /** At least one till in scope is still open, so `expectedCash` keeps moving
+   * and a variance against it would be meaningless. */
+  hasOpenTill: boolean;
 }
 
 export interface ShiftReportProductLine {

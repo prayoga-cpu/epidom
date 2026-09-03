@@ -57,11 +57,13 @@ type LogType = "CLOCK_IN" | "CLOCK_OUT" | "ABSENCE" | "CASH_IN" | "CASH_OUT";
 interface UnifiedLogRow {
   id: string;
   timestamp: string;
-  staffMemberId: string;
+  /** Null for an unattributed cash movement — see UnifiedLogRow server-side. */
+  staffMemberId: string | null;
   staffName: string;
   type: LogType;
   selfieUrl: string | null;
   locationLabel: string | null;
+  /** A cash movement's reason, or a till session's close-out notes. */
   notes: string | null;
   amount: number | null;
 }
@@ -92,7 +94,13 @@ interface MissingClockOutRow {
  */
 export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffOption[] }) {
   const { t, formatDateTime } = useI18n();
-  const { formatPrice } = useCurrency();
+  // Till floats, closing counts and cash-movement amounts are all Shift/
+  // CashMovement-derived and already literal in the store's own currency. The
+  // bare one-arg formatPrice() defaults `fromCurrency` to IDR and would
+  // convert them, re-scaling every amount for any non-IDR store — the same
+  // trap operations-card.tsx guards against.
+  const { currency, formatPrice: formatPriceRaw } = useCurrency();
+  const formatPrice = (value: number) => formatPriceRaw(value, currency);
   const queryClient = useQueryClient();
   const [from, setFrom] = useState(startOfMonthLocalISO());
   const [to, setTo] = useState(todayLocalISO());
@@ -312,11 +320,23 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
                           </TableCell>
                           <TableCell>
                             {record.type === "CASH_IN" || record.type === "CASH_OUT" ? (
-                              record.amount != null ? (
-                                formatPrice(record.amount)
-                              ) : (
-                                "—"
-                              )
+                              // A cash row is an amount plus, for a real
+                              // CashMovement, the reason the money moved —
+                              // which for a paid-out or safe drop is the only
+                              // part a manager is actually auditing.
+                              <div className="space-y-0.5">
+                                <span className="font-medium whitespace-nowrap">
+                                  {record.amount != null ? formatPrice(record.amount) : "—"}
+                                </span>
+                                {record.notes && (
+                                  // line-clamp, not truncate: the reason is the
+                                  // audit trail, and a title tooltip would hide
+                                  // it from the iPad this page is read on.
+                                  <p className="text-muted-foreground line-clamp-2 max-w-[220px] text-xs break-words">
+                                    {record.notes}
+                                  </p>
+                                )}
+                              </div>
                             ) : record.selfieUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img

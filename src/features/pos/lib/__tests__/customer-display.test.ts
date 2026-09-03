@@ -5,6 +5,7 @@ import {
   resolveHighlight,
   toCustomerDisplayLines,
   type CustomerDisplayLine,
+  type CustomerDisplayMessage,
 } from "../customer-display";
 import type { CartItem } from "../../types/pos.types";
 import { getContrastingInk, getLuminance } from "@/lib/utils/color";
@@ -136,5 +137,31 @@ describe("getContrastingInk", () => {
     expect(getContrastingInk("#fff")).toBe("#141210");
     expect(getLuminance("not-a-color")).toBe(0);
     expect(getContrastingInk("not-a-color")).toBe("#FFFFFF");
+  });
+});
+
+describe("customer-phone message", () => {
+  it("is a valid CustomerDisplayMessage the cashier can narrow on", () => {
+    // The one message that travels display -> cashier. Typed as a union member
+    // so a handler that forgets it fails to compile rather than silently
+    // dropping the customer's number.
+    const withNumber: CustomerDisplayMessage = { type: "customer-phone", phone: "+6281234567890" };
+    const cleared: CustomerDisplayMessage = { type: "customer-phone", phone: null };
+
+    expect(withNumber.type).toBe("customer-phone");
+    expect(cleared.phone).toBeNull();
+  });
+
+  it("is distinguishable from the two cashier -> display messages", () => {
+    const messages: CustomerDisplayMessage[] = [
+      { type: "request" },
+      { type: "state", snapshot: EMPTY_CUSTOMER_DISPLAY_SNAPSHOT },
+      { type: "customer-phone", phone: "+33612345678" },
+    ];
+    // Mirrors the publisher's own dispatch: anything not request/customer-phone
+    // must not be mistaken for one.
+    expect(messages.filter((m) => m.type === "customer-phone")).toHaveLength(1);
+    expect(messages.filter((m) => m.type === "state")).toHaveLength(1);
+    expect(messages.filter((m) => m.type === "request")).toHaveLength(1);
   });
 });

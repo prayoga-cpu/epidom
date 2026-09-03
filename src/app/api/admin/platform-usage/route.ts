@@ -1,24 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { isAdminUser } from "@/lib/admin";
+
+import { getActingAdmin } from "@/lib/auth/require-admin-api";
 
 // Calls slow external APIs — never cache.
 export const dynamic = "force-dynamic";
 
 /** Safety cap on JSONL lines parsed from the Vercel billing-charges stream. */
 const MAX_CHARGE_LINES = 20000;
-
-async function requireAdmin() {
-  const session = await getSession();
-  if (!session?.user) return null;
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, email: true, isAdmin: true },
-  });
-  if (!user || !isAdminUser(user.email, user.isAdmin)) return null;
-  return user;
-}
 
 interface VercelUsage {
   periodStart: string;
@@ -185,7 +173,7 @@ async function getNeonUsage(): Promise<{ data: NeonUsage | null; error?: string 
 }
 
 export async function GET() {
-  if (!(await requireAdmin())) {
+  if (!(await getActingAdmin())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

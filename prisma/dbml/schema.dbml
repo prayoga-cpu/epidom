@@ -135,6 +135,7 @@ Table stores {
   scheduleShifts schedule_shifts [not null]
   staffSchedules staff_schedules [not null]
   attendanceRecords attendance_records [not null]
+  cashMovements cash_movements [not null]
 }
 
 Table store_finance_settings {
@@ -751,6 +752,7 @@ Table staff_members {
   sessions staff_sessions [not null]
   staffSchedules staff_schedules [not null]
   attendanceRecords attendance_records [not null]
+  cashMovements cash_movements [not null]
 
   indexes {
     (storeId, username) [unique]
@@ -790,6 +792,33 @@ Table shifts {
   store stores [not null]
   staffMember staff_members [not null]
   orders orders [not null]
+  cashMovements cash_movements [not null]
+}
+
+Table cash_movements {
+  id String [pk]
+  storeId String [not null]
+  shiftId String [note: 'The till session this belongs to. Nullable on purpose: a movement can
+legitimately happen with no till open (an owner topping up the float
+before the first shift, an evening safe drop after close). The day-level
+cash-on-hand rollup counts by `occurredAt`, not by this linkage — same
+window-not-linkage rule the shift report already follows.']
+  staffMemberId String [note: 'Who recorded it. SetNull rather than Cascade: the financial row must
+outlive the person, or deleting a staff member would silently rewrite a
+past day\'s cash position.']
+  type CashMovementType [not null]
+  amount Decimal [not null, note: 'Always positive. Direction is derived from `type`, never from the sign.']
+  reason String [note: 'Free-text justification. Required by the API for the outbound types
+(PETTY_OUT / DROP / PAYOUT), where "where did the money go" is the whole
+point of the row; optional for the inbound ones.']
+  occurredAt DateTime [default: `now()`, not null, note: 'When the cash physically moved — what the drawer maths keys on. Distinct
+from createdAt so a movement entered ten minutes late still lands inside
+the right shift window.']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+  shift shifts
+  staffMember staff_members
 }
 
 Table schedule_shifts {
@@ -1008,6 +1037,167 @@ Table backup_runs {
 
   Note: 'One row per nightly logical-backup run (see src/lib/backup/). Not tenant-scoped —
 this is platform-operational metadata, not customer data.'
+}
+
+Table activity_events {
+  id String [pk]
+  requestId String [not null]
+  occurredAt DateTime [default: `now()`, not null]
+  actorKind AuditActorKind [not null]
+  actorRefId String
+  actorName String
+  actorEmail String
+  actorGrant AuditGrantSource
+  storeId String
+  businessId String
+  actionCode String [not null, note: 'Catalogue key from ROUTE_ACTION_MAP, e.g. "admin.user.delete".']
+  method String [not null]
+  route String [not null]
+  statusCode Int
+  outcome ActivityOutcome [not null, default: 'SUCCESS']
+  severity AuditSeverity [not null, default: 'INFO']
+  targetType String [note: 'Prisma model name the request targeted, when the map knows it.']
+  targetId String
+  durationMs Int
+  ipHash String
+  userAgent String
+  actionLogId String [unique, note: 'Set when this request also produced a curated Layer 2 row.']
+  actionLog action_logs
+
+  Note: 'Layer 1 — the coverage floor. One narrow row per mutating request, written
+from the route->action map inside withApiHandler. Carries no row content:
+it answers "something happened here, by whom", not "what changed".
+
+storeId/businessId are bare Strings with no foreign key on purpose. An FK
+would cascade the evidence away at exactly the moment it matters most —
+when the store or tenant is deleted.'
+}
+
+Table action_logs {
+  id String [pk]
+  requestId String
+  occurredAt DateTime [default: `now()`, not null]
+  actionType String [not null, note: 'Key of ACTION_CATALOG in src/lib/audit/catalog.ts.']
+  category String [not null]
+  state ActionLogState [not null, default: 'PENDING']
+  reversibility ActionReversibility [not null]
+  severity AuditSeverity [not null, default: 'NOTICE']
+  actorKind AuditActorKind [not null]
+  actorRefId String
+  actorName String
+  actorEmail String
+  actorGrant AuditGrantSource
+  actorHash String [note: 'Survives actor deletion; lets the trail group by actor after a purge.']
+  storeId String
+  businessId String
+  targetType String
+  targetId String
+  targetLabel String
+  subjectUserIds String[] [not null, note: 'Users whose personal data appears in payload. Drives the GDPR shredder.']
+  payload Json [note: 'Catalogue-validated payload. Decimals are stored as strings and rebuilt
+via new Decimal(...) so no precision is lost through JSON.']
+  reason String [note: 'Operator-supplied justification, required on every reversal.']
+  reversesActionId String [unique, note: 'Set on the reversal row, pointing at what it undid. Nullable + @unique
+gives partial-unique semantics in Postgres (NULLs compare distinct), so
+two admins racing to revert the same action cannot both succeed.']
+  reverses action_logs
+  reversedBy action_logs
+  correctsActionId String [note: 'Set on a forward correction, pointing at the action it corrects. A
+correction is always a new row; log rows are never edited in place.']
+  corrects action_logs
+  correctedBy action_logs [not null]
+  snapshotId String [unique]
+  snapshot entity_snapshots
+  supersededAt DateTime [note: 'Set when a newer action wrote the same (targetType, targetId, field).']
+  flaggedAt DateTime
+  flaggedNote String
+  lockedAt DateTime [note: 'Legal hold. Exempts the row from retention pruning and GDPR shredding.']
+  scrubbedAt DateTime [note: 'Set when payload PII has been shredded on an erasure request.']
+  errorMessage String
+  activityEvent activity_events
+  annotations action_annotations [not null]
+
+  Note: 'Layer 2 — the reversible tier. One row per curated business action, with a
+typed payload and a hand-written reverse() handler in the catalogue.
+
+actionType is a String, not a Postgres enum, deliberately: ALTER TYPE ADD
+VALUE cannot run in the same transaction that inserts the new value, and
+`prisma migrate deploy` is the first step of the Vercel build — an enum
+would force two deploys for every action added.'
+}
+
+Table action_annotations {
+  id String [pk]
+  actionLogId String [not null]
+  actionLog action_logs [not null]
+  authorKind AuditActorKind [not null]
+  authorRefId String
+  authorName String
+  body String [not null]
+  createdAt DateTime [default: `now()`, not null]
+
+  Note: 'Free-text notes an operator attaches to an action. Separate table so the
+ActionLog row itself stays append-only in its event columns.'
+}
+
+Table entity_snapshots {
+  id String [pk]
+  capturedAt DateTime [default: `now()`, not null]
+  status SnapshotStatus [not null, default: 'CAPTURING']
+  rootType String [not null, note: 'Root model name, e.g. "User", "Business", "Store".']
+  rootId String [not null]
+  rootLabel String
+  reasonCode String [not null, note: 'Why it was captured, e.g. "admin.user.delete".']
+  storeId String
+  businessId String
+  subjectUserIds String[] [not null]
+  payload Json [note: 'Serialized graph, parent-first. Null when spilled to blob storage.']
+  payloadUrl String [note: 'Set instead of payload when the graph exceeds the inline size limit.']
+  payloadSha256 String
+  payloadBytes Int [not null, default: 0]
+  rowCount Int [not null, default: 0]
+  modelCount Int [not null, default: 0]
+  orphanRepairs Json [note: 'Rows whose nullable FK the cascade set to NULL, with the values to restore.']
+  schemaVersion String [note: 'Migration name at capture time. A restore across a schema change is
+refused rather than attempted; the payload shape may no longer fit.']
+  expiresAt DateTime [not null]
+  lockedAt DateTime
+  scrubbedAt DateTime
+  errorMessage String
+  actionLog action_logs
+  restoreRuns restore_runs [not null]
+
+  Note: 'Layer 3 — full serialized entity graph captured immediately before a
+cascade-root destruction, inside the same Serializable transaction.
+
+orphanRepairs holds the onDelete: SetNull survivors whose pointers the
+delete is about to null out. They must be captured BEFORE the delete or
+they are unreconstructable afterwards.'
+}
+
+Table restore_runs {
+  id String [pk]
+  snapshotId String [not null]
+  snapshot entity_snapshots [not null]
+  status RestoreRunStatus [not null, default: 'PLANNED']
+  dryRun Boolean [not null, default: true, note: 'True for a preview that was never applied.']
+  plannedAt DateTime [default: `now()`, not null]
+  startedAt DateTime
+  finishedAt DateTime
+  actorRefId String
+  actorName String
+  reason String
+  plan Json [note: 'Planner output: per-model counts, collisions, refusals, drift warnings.']
+  rowsRestored Int [not null, default: 0]
+  modelsDone String[] [not null, note: 'Models already restored, so a PARTIAL run can resume rather than repeat.']
+  quarantined Boolean [not null, default: false, note: 'Set while a non-atomic restore is in flight; the tenant is held
+deactivated until the run reaches SUCCESS so a partial restore leaves an
+invisible tenant rather than a live broken one.']
+  errorMessage String
+
+  Note: 'One row per restore attempt, including refused and dry-run plans. The plan
+is stored so Apply can verify it is acting on the same preview an operator
+approved, and so a refusal is itself part of the record.'
 }
 
 Enum OrderReceiptSendStatus {
@@ -1231,6 +1421,14 @@ Enum BillingInterval {
   YEARLY
 }
 
+Enum CashMovementType {
+  TIP
+  PETTY_IN
+  PETTY_OUT
+  DROP
+  PAYOUT
+}
+
 Enum ScheduleStatus {
   DRAFT
   PUBLISHED
@@ -1260,6 +1458,64 @@ Enum BackupRunStatus {
   RUNNING
   SUCCESS
   FAILED
+}
+
+Enum AuditActorKind {
+  USER
+  STAFF
+  PUBLIC
+  SYSTEM
+  WEBHOOK
+}
+
+Enum AuditGrantSource {
+  DB_FLAG
+  HARDCODED_EMAIL
+}
+
+Enum ActivityOutcome {
+  SUCCESS
+  DENIED
+  FAILED
+}
+
+Enum AuditSeverity {
+  INFO
+  NOTICE
+  CRITICAL
+}
+
+Enum ActionReversibility {
+  REVERSIBLE
+  REVERSIBLE_WITH_CAVEAT
+  COMPENSATE_ONLY
+  SNAPSHOT_RESTORE
+  IRREVERSIBLE
+}
+
+Enum ActionLogState {
+  PENDING
+  RECORDED
+  REVERTED
+  SUPERSEDED
+  FAILED
+}
+
+Enum SnapshotStatus {
+  CAPTURING
+  STORED
+  EXPIRED
+  SHREDDED
+  FAILED
+}
+
+Enum RestoreRunStatus {
+  PLANNED
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+  REFUSED
 }
 
 Ref: session.userId > user.id [delete: Cascade]
@@ -1378,6 +1634,12 @@ Ref: shifts.storeId > stores.id [delete: Cascade]
 
 Ref: shifts.staffMemberId > staff_members.id [delete: Cascade]
 
+Ref: cash_movements.storeId > stores.id [delete: Cascade]
+
+Ref: cash_movements.shiftId > shifts.id [delete: Set Null]
+
+Ref: cash_movements.staffMemberId > staff_members.id [delete: Set Null]
+
 Ref: schedule_shifts.storeId > stores.id [delete: Cascade]
 
 Ref: staff_schedules.storeId > stores.id [delete: Cascade]
@@ -1411,3 +1673,15 @@ Ref: menu_items.storefrontId > storefronts.id [delete: Cascade]
 Ref: menu_items.categoryId > menu_categories.id [delete: Set Null]
 
 Ref: menu_items.productId > products.id [delete: Set Null]
+
+Ref: activity_events.actionLogId - action_logs.id [delete: Set Null]
+
+Ref: action_logs.reversesActionId - action_logs.id [delete: Set Null]
+
+Ref: action_logs.correctsActionId - action_logs.id [delete: Set Null]
+
+Ref: action_logs.snapshotId - entity_snapshots.id [delete: Set Null]
+
+Ref: action_annotations.actionLogId > action_logs.id [delete: Cascade]
+
+Ref: restore_runs.snapshotId > entity_snapshots.id [delete: Cascade]

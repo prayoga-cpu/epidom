@@ -508,8 +508,12 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   doubleSize(false);
   bold(true);
   // A session-scoped run is a shift report; an arbitrary date window is a
-  // daily report. Same layout, honest title.
-  lines(wrapText(report.cashDrawer ? labels.shiftReportTitle : labels.title, cols));
+  // daily report. Same layout, honest title. Keyed on the drawer's *scope*,
+  // not its mere presence — the store-wide day rollup now carries a cash
+  // block too, and titling that "SHIFT REPORT" would be a lie.
+  lines(
+    wrapText(report.cashDrawer?.scope === "SHIFT" ? labels.shiftReportTitle : labels.title, cols)
+  );
   bold(false);
   left();
   line(divider);
@@ -622,19 +626,54 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
     bold(false);
   }
 
-  // ---- Cash drawer (session-scoped runs only) ----------------------------
+  // ---- Cash drawer -------------------------------------------------------
+  // Every movement between the opening float and the expected total, so the
+  // count can be audited against the paper instead of taken on trust. The
+  // browser report (shift-report-print-view.tsx) prints the identical block.
   if (report.cashDrawer) {
-    heading(labels.cashDrawerHeading);
-    row(labels.openingCash, money(report.cashDrawer.openingCash));
-    if (report.cashDrawer.expectedCash != null) {
-      row(labels.expectedCash, money(report.cashDrawer.expectedCash));
+    const drawer = report.cashDrawer;
+    // A STORE_DAY block sums every till in the window plus the cash that was
+    // linked to none of them — a different, larger figure than one cashier's
+    // accountability, so the heading refuses to let the two be confused.
+    heading(
+      drawer.scope === "STORE_DAY"
+        ? `${labels.cashDrawerHeading} (${labels.allTills})`
+        : labels.cashDrawerHeading
+    );
+    row(labels.openingCash, money(drawer.openingCash));
+    // Zero categories are skipped, same as the sales block above — a store
+    // that takes no tips shouldn't spend a line of paper on "Tip 0". The
+    // float and the expected total always print: their absence is itself
+    // information the person counting the drawer needs.
+    if (drawer.cashSales) row(labels.cashSales, money(drawer.cashSales));
+    if (drawer.cashRefunds) row(labels.cashRefunds, `-${money(drawer.cashRefunds)}`);
+    if (drawer.tips) row(labels.tips, money(drawer.tips));
+    if (drawer.pettyIn) row(labels.cashIn, money(drawer.pettyIn));
+    if (drawer.pettyOut) row(labels.paidOut, `-${money(drawer.pettyOut)}`);
+    if (drawer.drops) row(labels.safeDrop, `-${money(drawer.drops)}`);
+    if (drawer.tipPayouts) row(labels.tipsOut, `-${money(drawer.tipPayouts)}`);
+    // Cash sales no till was linked to, printed unsigned and below the rule
+    // because it is deliberately NOT in the expected total: nothing in the
+    // schema says whether this money reached a drawer (counter cash) or a
+    // courier (delivery/aggregator). Visible, not counted.
+    if (drawer.unlinkedCashSales) {
+      row(labels.offTillCash, money(drawer.unlinkedCashSales));
     }
-    if (report.cashDrawer.closingCash != null) {
-      row(labels.closingCash, money(report.cashDrawer.closingCash));
+    line(divider);
+    bold(true);
+    // An open till keeps taking cash, so the expected figure is still moving
+    // — say so, otherwise a mid-shift printout reads as a signed-off count.
+    row(
+      drawer.hasOpenTill ? `${labels.expectedCash} (${labels.provisional})` : labels.expectedCash,
+      money(drawer.expectedCash)
+    );
+    bold(false);
+    if (drawer.closingCash != null) {
+      row(labels.closingCash, money(drawer.closingCash));
     }
-    if (report.cashDrawer.cashDifference != null) {
+    if (drawer.cashDifference != null) {
       bold(true);
-      row(labels.difference, money(report.cashDrawer.cashDifference));
+      row(labels.difference, money(drawer.cashDifference));
       bold(false);
     }
   }

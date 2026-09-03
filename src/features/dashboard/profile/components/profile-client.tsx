@@ -6,6 +6,7 @@ import { PersonalInfoCard } from "./personal-info-card";
 import { BusinessInfoCard } from "./business-info-card";
 import { SubscriptionInfoCard } from "./subscription-info-card";
 import { AccountSettingsCard } from "./account-settings-card";
+import { ActivityLogCard } from "./activity-log-card";
 import { FeesAndTaxesCard } from "./fees-and-taxes-card";
 import { ReceiptSettingsCard } from "./receipt-settings-card";
 import { useProfile } from "../hooks/use-profile";
@@ -105,6 +106,10 @@ export function ProfileClient({
 
       <div className="animate-slide-up-delayed-3">
         <AccountSettingsCard userEmail={profileData.email} />
+      </div>
+
+      <div className="animate-slide-up-delayed-3">
+        <ActivityLogCard />
       </div>
     </div>
   );

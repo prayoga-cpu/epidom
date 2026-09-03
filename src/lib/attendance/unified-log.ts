@@ -1,19 +1,34 @@
 import { prisma } from "@/lib/prisma";
 import type { Decimal } from "@prisma/client/runtime/client";
+import type { CashMovementType } from "@prisma/client";
+import { CASH_MOVEMENT_DIRECTION } from "@/lib/finance/cash-drawer";
 
 /**
  * The merged "who did what, when" log behind the Schedule page's Log tab —
- * combines AttendanceRecord (clock-in/out/absence) and Shift (till cash
- * open/close, rendered as synthetic Cash In/Out events) into one
- * chronological list. Shift itself is untouched — this only reads it and
- * projects openedAt/closedAt into two possible log rows.
+ * combines AttendanceRecord (clock-in/out/absence), Shift (till cash
+ * open/close, rendered as synthetic Cash In/Out events) and CashMovement
+ * (the real non-sale cash ledger: tips, float top-ups, paid-outs, safe drops,
+ * tip payouts) into one chronological list. Neither Shift nor CashMovement is
+ * mutated here — this only reads them and projects them into log rows.
+ *
+ * The two kinds of cash row are deliberately not merged into one concept: a
+ * shift's opening/closing count is a *statement of what is in the drawer*,
+ * while a movement is *money crossing the drawer*. They just happen to answer
+ * the same manager question ("where did the cash go today?"), so they share a
+ * timeline.
  */
 export type UnifiedLogType = "CLOCK_IN" | "CLOCK_OUT" | "ABSENCE" | "CASH_IN" | "CASH_OUT";
 
 export interface UnifiedLogRow {
   id: string;
   timestamp: string;
-  staffMemberId: string;
+  /**
+   * Nullable because a CashMovement can be unattributed — the API leaves it
+   * null rather than pinning an owner-recorded row on some staff member (see
+   * the POST route's "confident wrong answer" note). Attendance and shift rows
+   * always carry one.
+   */
+  staffMemberId: string | null;
   staffName: string;
   type: UnifiedLogType;
   selfieUrl: string | null;
@@ -21,6 +36,10 @@ export interface UnifiedLogRow {
   notes: string | null;
   amount: number | null;
 }
+
+/** Shown for an unattributed cash movement — a dash, not a translated word, so
+ * it needs no locale plumbing through the API into three surfaces. */
+const UNATTRIBUTED_STAFF_NAME = "—";
 
 export interface AttendanceRecordInput {
   id: string;
@@ -44,9 +63,23 @@ export interface ShiftInput {
   notes: string | null;
 }
 
+export interface CashMovementInput {
+  id: string;
+  staffMemberId: string | null;
+  staffMember: { name: string } | null;
+  type: CashMovementType;
+  /** Always positive in the database; direction comes from `type`. */
+  amount: Decimal | number;
+  reason: string | null;
+  occurredAt: Date;
+}
+
 export interface MergeUnifiedLogParams {
   attendanceRecords: AttendanceRecordInput[];
   shifts: ShiftInput[];
+  /** Optional so callers that predate the cash ledger keep compiling; an
+   * absent list simply contributes no rows. */
+  cashMovements?: CashMovementInput[];
   from?: Date;
   to?: Date;
   types?: UnifiedLogType[];
@@ -62,6 +95,7 @@ const CASH_TYPES = new Set<UnifiedLogType>(["CASH_IN", "CASH_OUT"]);
 export function mergeUnifiedLog({
   attendanceRecords,
   shifts,
+  cashMovements = [],
   from,
   to,
   types,
@@ -119,6 +153,33 @@ export function mergeUnifiedLog({
         });
       }
     }
+
+    for (const movement of cashMovements) {
+      // CASH_MOVEMENT_DIRECTION is the single source of truth for which way a
+      // movement pushes the drawer (lib/finance/cash-drawer.ts). A second
+      // direction table here would be one deploy away from disagreeing with
+      // the expected-cash arithmetic on the same screen.
+      const type: UnifiedLogType =
+        CASH_MOVEMENT_DIRECTION[movement.type] === 1 ? "CASH_IN" : "CASH_OUT";
+      if ((!types || types.includes(type)) && inRange(movement.occurredAt)) {
+        rows.push({
+          // Prefixed so it can never collide with the synthetic `${shift.id}-in`
+          // / `-out` ids above — these rows share a React list.
+          id: `movement-${movement.id}`,
+          timestamp: movement.occurredAt.toISOString(),
+          staffMemberId: movement.staffMemberId,
+          staffName: movement.staffMember?.name ?? UNATTRIBUTED_STAFF_NAME,
+          type,
+          selfieUrl: null,
+          locationLabel: null,
+          // The "where did the money go" justification the API demands for
+          // outbound types — the whole point of the row, so it must reach the
+          // log, not just the ledger.
+          notes: movement.reason,
+          amount: Number(movement.amount),
+        });
+      }
+    }
   }
 
   rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -143,7 +204,7 @@ export async function fetchUnifiedLog({
   const wantsAttendance = !types || types.some((t) => ATTENDANCE_TYPES.has(t));
   const wantsCash = !types || types.some((t) => CASH_TYPES.has(t));
 
-  const [attendanceRecords, shifts] = await Promise.all([
+  const [attendanceRecords, shifts, cashMovements] = await Promise.all([
     wantsAttendance
       ? prisma.attendanceRecord.findMany({
           where: {
@@ -172,7 +233,30 @@ export async function fetchUnifiedLog({
           include: { staffMember: { select: { name: true } } },
         })
       : Promise.resolve([]),
+    wantsCash
+      ? prisma.cashMovement.findMany({
+          where: {
+            storeId,
+            ...(staffId && { staffMemberId: staffId }),
+            // Keyed on occurredAt, not createdAt — a paid-out entered ten
+            // minutes late still belongs to the moment the cash moved, which
+            // is also what the drawer arithmetic filters on.
+            ...((from || to) && {
+              occurredAt: { ...(from && { gte: from }), ...(to && { lte: to }) },
+            }),
+          },
+          select: {
+            id: true,
+            staffMemberId: true,
+            type: true,
+            amount: true,
+            reason: true,
+            occurredAt: true,
+            staffMember: { select: { name: true } },
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
-  return mergeUnifiedLog({ attendanceRecords, shifts, from, to, types });
+  return mergeUnifiedLog({ attendanceRecords, shifts, cashMovements, from, to, types });
 }

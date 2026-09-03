@@ -83,7 +83,18 @@ export type CustomerDisplayMessage =
   | { type: "state"; snapshot: CustomerDisplaySnapshot }
   /** Sent by a display window on mount — the cashier window answers with its
    * current snapshot, since broadcasts aren't replayed to late joiners. */
-  | { type: "request" };
+  | { type: "request" }
+  /**
+   * The one thing that travels the other way, display -> cashier: a number
+   * the customer typed themselves so their receipt can reach them on
+   * WhatsApp. It lands in the checkout form's phone field rather than being
+   * saved anywhere directly — the cashier still sees it, and still decides
+   * whether the order is created. `null` clears a number entered by mistake.
+   *
+   * E.164 (e.g. "+6281234567890"), validated on the display before it is
+   * sent, so the cashier's form never receives something it would reject.
+   */
+  | { type: "customer-phone"; phone: string | null };
 
 export const EMPTY_CUSTOMER_DISPLAY_SNAPSHOT: CustomerDisplaySnapshot = {
   phase: "idle",

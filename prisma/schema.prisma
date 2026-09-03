@@ -130,86 +130,87 @@ model Business {
 }
 
 model Store {
-  id                      String                 @id @default(cuid())
-  businessId              String
-  name                    String
-  address                 String?
-  city                    String?
-  country                 String?
-  phone                   String?
-  email                   String?
-  image                   String?
-  createdAt               DateTime               @default(now())
-  updatedAt               DateTime               @updatedAt
-  ingredients             Material[]
-  orders                  Order[]
-  productionBatches       ProductionBatch[]
-  products                Product[]
-  recipes                 Recipe[]
-  business                Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  supplierOrders          SupplierOrder[]
-  suppliers               Supplier[]
-  aiImportMemories        AIImportMemory[]
-  aiImportSessions        AIImportSession[]
-  storefront              Storefront?
-  tables                  Table[]
-  staffMembers            StaffMember[]
-  shifts                  Shift[]
-  reservations            Reservation[]
-  aggregatorConnections   AggregatorConnection[]
-  aggregatorEmails        AggregatorEmail[]
-  financeSettings         StoreFinanceSettings?
-  staffSessions           StaffSession[]
-  wasteEntries            WasteEntry[]
-  pushSubscriptions       PushSubscription[]
-  receiptSettings         StoreReceiptSettings?
+  id                             String                 @id @default(cuid())
+  businessId                     String
+  name                           String
+  address                        String?
+  city                           String?
+  country                        String?
+  phone                          String?
+  email                          String?
+  image                          String?
+  createdAt                      DateTime               @default(now())
+  updatedAt                      DateTime               @updatedAt
+  ingredients                    Material[]
+  orders                         Order[]
+  productionBatches              ProductionBatch[]
+  products                       Product[]
+  recipes                        Recipe[]
+  business                       Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  supplierOrders                 SupplierOrder[]
+  suppliers                      Supplier[]
+  aiImportMemories               AIImportMemory[]
+  aiImportSessions               AIImportSession[]
+  storefront                     Storefront?
+  tables                         Table[]
+  staffMembers                   StaffMember[]
+  shifts                         Shift[]
+  reservations                   Reservation[]
+  aggregatorConnections          AggregatorConnection[]
+  aggregatorEmails               AggregatorEmail[]
+  financeSettings                StoreFinanceSettings?
+  staffSessions                  StaffSession[]
+  wasteEntries                   WasteEntry[]
+  pushSubscriptions              PushSubscription[]
+  receiptSettings                StoreReceiptSettings?
   // When true, this store's fees & taxes are read from Business.financeSettings
   // instead of its own StoreFinanceSettings row (a shared, profile-wide config).
-  syncFinanceWithBusiness Boolean                @default(false)
+  syncFinanceWithBusiness        Boolean                @default(false)
   // Owner-only toggle: when true, cashiers can select "Pay Later" at checkout
   // so an order is served now and settled after delivery. Deliberately a
   // plain per-store flag (not part of the finance sync above) — a business
   // may want tabs allowed at one outlet but not another.
-  payLaterEnabled         Boolean                @default(false)
+  payLaterEnabled                Boolean                @default(false)
   // Owner-only toggle, defaults on (existing stores keep today's behavior).
   // When false, orders skip the kitchen/bar production stages entirely —
   // once payment is recorded they go straight to DELIVERED, for small
   // operations (e.g. a counter-only coffee stand) that have no kitchen
   // workflow to track.
-  kitchenDisplayEnabled   Boolean                @default(true)
+  kitchenDisplayEnabled          Boolean                @default(true)
   // Owner-only toggle, defaults off. Recipe-to-batch production tracking is
   // a distinct manufacturing workflow (plan a batch from a recipe, consume
   // materials, produce finished product) that not every merchant needs —
   // many cook fresh to order with no fixed recipe. Off by default so the
   // Production nav page shows a guide/explainer instead of the workflow
   // until the owner opts in.
-  productionEnabled       Boolean                @default(false)
+  productionEnabled              Boolean                @default(false)
   // Owner-only toggle, defaults off — mirrors productionEnabled exactly (off
   // by default, the Data page's Custom Products tab shows a guide/explainer
   // with a "name + enable" form until opted in). For a second, unrelated
   // product line the store also sells (e.g. a restaurant's hair-salon
   // add-on) that should NOT go through Kitchen/Bar KDS routing or
   // recipe/stock deduction — see Product.productLine.
-  customProductsEnabled  Boolean                @default(false)
+  customProductsEnabled          Boolean                @default(false)
   // Store-owner-authored label for the custom product line (e.g. "Hair
   // Salon", "Barber", "Spa Services") — shown in the Data tab and Menu
   // integration. Not run through i18n (free text, like Storefront.
   // displayName). Null until the owner enables the feature and names it.
-  customProductsLabel    String?
+  customProductsLabel            String?
   // Independent of customProductsEnabled (which drives POS Cashier
   // inclusion) — whether the custom product line's items should ALSO
   // publish to the public customer-facing storefront menu (the "store
   // link"). Off by default: enabling the feature only wires it into the
   // cashier, not the storefront, until the owner opts into this separately
   // from Storefront Settings.
-  customProductsShowOnStorefront Boolean          @default(false)
+  customProductsShowOnStorefront Boolean                @default(false)
   // Daily overtime threshold, in minutes, used by the Attendance "Hours &
   // Overtime" report — worked minutes beyond this per calendar day count as
   // overtime. Flat per-store value (no per-role/per-shift threshold in v1).
-  standardWorkMinutesPerDay Int                  @default(480)
-  scheduleShifts          ScheduleShift[]
-  staffSchedules          StaffSchedule[]
-  attendanceRecords       AttendanceRecord[]
+  standardWorkMinutesPerDay      Int                    @default(480)
+  scheduleShifts                 ScheduleShift[]
+  staffSchedules                 StaffSchedule[]
+  attendanceRecords              AttendanceRecord[]
+  cashMovements                  CashMovement[]
 
   @@index([businessId])
   @@map("stores")
@@ -222,11 +223,11 @@ model StoreFinanceSettings {
   // The currency this store charges customers in (and displays throughout
   // the dashboard/POS/storefront). Moved here from the old User.currency —
   // it's a property of how the store operates, not of whoever's logged in.
-  currency String @default("IDR")
+  currency              String          @default("IDR")
   // Which payment rails this store's fee table/checkout offers by default —
   // editable independently of `currency`; see inferMarket() in
   // payment-fees.config.ts for the one-time suggested default.
-  market   PaymentMarket @default(INDONESIA)
+  market                PaymentMarket   @default(INDONESIA)
   // Which PaymentMethod values the cashier can actually pick at POS
   // checkout. PAY_LATER is deliberately excluded — it has its own
   // `payLaterEnabled` toggle below, never part of this list.
@@ -259,9 +260,9 @@ model StoreReceiptSettings {
   id      String @id @default(cuid())
   storeId String @unique
 
-  footerMessage String?
-  facebookUrl   String?
-  showSocialLinks Boolean @default(true)
+  footerMessage           String?
+  facebookUrl             String?
+  showSocialLinks         Boolean @default(true)
   // Per-store opt-out for the automatic "receipt sent via WhatsApp once
   // paymentStatus flips to PAID" flow — see send-customer-receipt.ts.
   autoSendWhatsappReceipt Boolean @default(true)
@@ -599,24 +600,24 @@ model RecipeProduct {
 }
 
 model ProductionBatch {
-  id              String                @id @default(cuid())
-  batchNumber     String                @unique
-  productId       String
-  recipeId        String?
-  plannedQuantity Decimal               @db.Decimal(10, 3)
-  actualQuantity  Decimal?              @db.Decimal(10, 3)
-  unit            String
-  status          ProductionStatus      @default(PLANNED)
+  id               String                @id @default(cuid())
+  batchNumber      String                @unique
+  productId        String
+  recipeId         String?
+  plannedQuantity  Decimal               @db.Decimal(10, 3)
+  actualQuantity   Decimal?              @db.Decimal(10, 3)
+  unit             String
+  status           ProductionStatus      @default(PLANNED)
   // MANUAL = staff proactively started this (the original flow, unchanged).
   // ORDER_SHORTFALL = auto-drafted by stock-deduction.service.ts when an
   // order needed more of a recipe-linked product than was on hand. These
   // never move stock themselves (see completeProduction) — they're a task
   // record proving a human still needs to physically make the shortfall,
   // and their completion is what flips the linked OrderItem(s) to READY.
-  triggerType     ProductionTriggerType @default(MANUAL)
-  scheduledDate   DateTime
-  completedDate   DateTime?
-  notes           String?
+  triggerType      ProductionTriggerType @default(MANUAL)
+  scheduledDate    DateTime
+  completedDate    DateTime?
+  notes            String?
   // Set when this batch's raw materials were drawn at SALE time by the
   // made-to-order fallback (see stock-deduction.service.ts). Null on every
   // pre-release row, which is exactly why settlement can key off it with no
@@ -627,15 +628,15 @@ model ProductionBatch {
   materialsDrawnAt DateTime?
   // How much of this batch's quantity a later manual production run has
   // already absorbed. See productionBatchService.settleDrawnShortfall.
-  settledQuantity Decimal               @default(0) @db.Decimal(10, 3)
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  storeId         String
-  product         Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
-  recipe          Recipe?               @relation(fields: [recipeId], references: [id])
-  store           Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  stockMovements  StockMovement[]
-  orderItems      OrderItem[]
+  settledQuantity  Decimal               @default(0) @db.Decimal(10, 3)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  storeId          String
+  product          Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recipe           Recipe?               @relation(fields: [recipeId], references: [id])
+  store            Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  stockMovements   StockMovement[]
+  orderItems       OrderItem[]
 
   @@index([storeId])
   @@index([productId])
@@ -646,36 +647,36 @@ model ProductionBatch {
 }
 
 model StockMovement {
-  id                String           @id @default(cuid())
-  productId         String?
-  type              MovementType
-  quantity          Decimal          @db.Decimal(10, 3)
-  unit              String
-  balanceAfter      Decimal          @db.Decimal(10, 3)
-  orderId           String?
-  productionBatchId String?
-  notes             String?
-  createdAt         DateTime         @default(now())
-  materialId        String?
-  reason            String?
-  referenceId       String?
+  id                 String           @id @default(cuid())
+  productId          String?
+  type               MovementType
+  quantity           Decimal          @db.Decimal(10, 3)
+  unit               String
+  balanceAfter       Decimal          @db.Decimal(10, 3)
+  orderId            String?
+  productionBatchId  String?
+  notes              String?
+  createdAt          DateTime         @default(now())
+  materialId         String?
+  reason             String?
+  referenceId        String?
   // Links this movement back to the WasteEntry that produced it — the
   // original WASTE-type movement at creation, plus any later compensating
   // ADJUSTMENT movement from an edit/delete correction (see WasteEntry).
   // One-to-many: a single WasteEntry can accumulate several movements over
   // its life as it's corrected, so this is never unique.
-  wasteEntryId      String?
+  wasteEntryId       String?
   // For a RETURN row: the exact SALE movement it reverses. Makes reversal
   // cycle-scoped — without it an order that goes DELIVERED → CANCELLED →
   // DELIVERED → CANCELLED replays BOTH SALE sets and restores double.
   // Deliberately NOT `referenceId`, which is merchant-entered free text
   // (PO#, Invoice#) written by the stock-adjust and waste routes.
   reversesMovementId String?
-  material          Material?        @relation(fields: [materialId], references: [id], onDelete: Cascade)
-  order             Order?           @relation(fields: [orderId], references: [id])
-  product           Product?         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productionBatch   ProductionBatch? @relation(fields: [productionBatchId], references: [id])
-  wasteEntry        WasteEntry?      @relation(fields: [wasteEntryId], references: [id], onDelete: SetNull)
+  material           Material?        @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  order              Order?           @relation(fields: [orderId], references: [id])
+  product            Product?         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productionBatch    ProductionBatch? @relation(fields: [productionBatchId], references: [id])
+  wasteEntry         WasteEntry?      @relation(fields: [wasteEntryId], references: [id], onDelete: SetNull)
 
   @@index([productId])
   @@index([materialId])
@@ -805,38 +806,38 @@ model SupplierOrderItem {
 }
 
 model Order {
-  id                 String          @id @default(cuid())
-  orderNumber        String          @unique
+  id                 String             @id @default(cuid())
+  orderNumber        String             @unique
   customerName       String
   customerEmail      String?
   customerPhone      String?
   deliveryAddress    String?
-  status             OrderStatus     @default(CONFIRMED)
-  orderDate          DateTime        @default(now())
+  status             OrderStatus        @default(CONFIRMED)
+  orderDate          DateTime           @default(now())
   dueDate            DateTime?
   deliveredDate      DateTime?
-  subtotal           Decimal         @db.Decimal(10, 2)
-  tax                Decimal         @default(0) @db.Decimal(10, 2)
-  delivery           Decimal         @default(0) @db.Decimal(10, 2)
-  total              Decimal         @db.Decimal(10, 2)
+  subtotal           Decimal            @db.Decimal(10, 2)
+  tax                Decimal            @default(0) @db.Decimal(10, 2)
+  delivery           Decimal            @default(0) @db.Decimal(10, 2)
+  total              Decimal            @db.Decimal(10, 2)
   // Phase 5: fees & taxes — amounts are frozen at order-creation/finalize time
   // (not recomputed from current store settings), so editing a store's rates
   // later never rewrites the numbers on past orders. taxRate/serviceChargeRate/
   // processingFeeRate are the audit trail — the rate that produced the amount.
-  serviceCharge      Decimal         @default(0) @db.Decimal(10, 2)
-  processingFee      Decimal         @default(0) @db.Decimal(10, 2)
-  taxRate            Decimal         @default(0) @db.Decimal(6, 4)
-  serviceChargeRate  Decimal         @default(0) @db.Decimal(6, 4)
-  processingFeeRate  Decimal         @default(0) @db.Decimal(6, 4)
+  serviceCharge      Decimal            @default(0) @db.Decimal(10, 2)
+  processingFee      Decimal            @default(0) @db.Decimal(10, 2)
+  taxRate            Decimal            @default(0) @db.Decimal(6, 4)
+  serviceChargeRate  Decimal            @default(0) @db.Decimal(6, 4)
+  processingFeeRate  Decimal            @default(0) @db.Decimal(6, 4)
   // Discount applied at checkout, frozen the same way as the charges above —
   // subtracted from subtotal before tax/service-charge are computed. See
   // computeOrderCharges() in src/lib/finance/order-charges.ts.
-  discountAmount     Decimal         @default(0) @db.Decimal(10, 2)
+  discountAmount     Decimal            @default(0) @db.Decimal(10, 2)
   discountReason     String?
   // Staff-initiated refund (POS order history "Issue Refund" action) — never
   // written automatically. Does not reverse stock: in F&B a refund does not
   // mean the food returns to inventory.
-  refundAmount       Decimal         @default(0) @db.Decimal(10, 2)
+  refundAmount       Decimal            @default(0) @db.Decimal(10, 2)
   refundedAt         DateTime?
   refundReason       String?
   // Set when deductStockForOrder committed successfully. The ledger (SALE /
@@ -851,14 +852,14 @@ model Order {
   // created a DUPLICATE order, with duplicate stock deduction behind it.
   // Nullable and unique — Postgres permits many NULLs, so every online order is
   // unaffected. The queue entry's own id is the key.
-  clientRequestId    String?   @unique
+  clientRequestId    String?            @unique
   notes              String?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
   storeId            String
   // Phase 2 fields
   storefrontId       String?
-  orderType          OrderType       @default(DINE_IN)
+  orderType          OrderType          @default(DINE_IN)
   // Pax at the table, captured at POS checkout for DINE_IN orders. Powers the
   // "by guest" block of the shift/daily report (avg guests per day, avg sales
   // per guest). Nullable on purpose and never defaulted to 1: legacy rows,
@@ -868,24 +869,24 @@ model Order {
   // actually carried one.
   guestCount         Int?
   tableNumber        String?
-  paymentMethod      PaymentMethod   @default(CASH)
-  paymentStatus      PaymentStatus   @default(PENDING)
+  paymentMethod      PaymentMethod      @default(CASH)
+  paymentStatus      PaymentStatus      @default(PENDING)
   paymentProviderRef String?
-  paymentQrString    String?         @db.Text
+  paymentQrString    String?            @db.Text
   // Optional free-text note recorded when manually settling a PENDING order
   // via "Mark as Paid" (e.g. "client paid directly to the owner") — distinct
   // from the order-level `notes` field, which is customer/checkout notes.
   paymentNote        String?
-  source             OrderSource     @default(MANUAL)
+  source             OrderSource        @default(MANUAL)
   // Phase 3 fields
   tableId            String?
   // Phase 4 fields
   shiftId            String?
   items              OrderItem[]
-  store              Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  storefront         Storefront?     @relation(fields: [storefrontId], references: [id], onDelete: SetNull)
-  table              Table?          @relation(fields: [tableId], references: [id], onDelete: SetNull)
-  shift              Shift?          @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  store              Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storefront         Storefront?        @relation(fields: [storefrontId], references: [id], onDelete: SetNull)
+  table              Table?             @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  shift              Shift?             @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   stockMovements     StockMovement[]
   receiptSends       OrderReceiptSend[]
 
@@ -897,56 +898,61 @@ model Order {
   @@index([paymentStatus])
   @@index([tableId])
   @@index([shiftId])
+  // Cash-on-hand attributes refunds by the day the money left the drawer, so
+  // it filters on refundedAt over a window (see cash-drawer.service.ts). That
+  // query runs on every shift/daily report and behind the dashboard's 60s
+  // operations poll, and no existing index covers it.
+  @@index([storeId, refundedAt])
   @@map("orders")
 }
 
 model OrderItem {
-  id              String          @id @default(cuid())
-  orderId         String
-  productId       String?
-  menuItemId      String?
-  name            String          @default("")
-  quantity        Decimal         @db.Decimal(10, 2)
-  unit            String
-  unitPrice       Decimal         @db.Decimal(10, 2)
-  total           Decimal         @db.Decimal(10, 2)
+  id                 String           @id @default(cuid())
+  orderId            String
+  productId          String?
+  menuItemId         String?
+  name               String           @default("")
+  quantity           Decimal          @db.Decimal(10, 2)
+  unit               String
+  unitPrice          Decimal          @db.Decimal(10, 2)
+  total              Decimal          @db.Decimal(10, 2)
   // Free-text instruction for this line (e.g. "no ice"), separate from the
   // order-level Order.notes.
-  notes           String?
+  notes              String?
   // Frozen snapshot of the chosen modifiers/options at order time —
   // [{groupName, optionName, priceAdjustment, materialId?, materialQty?}].
   // Snapshotted (not a live relation) so edits/deletes to the source
   // MenuItem.modifiers or ProductOption rows never rewrite past orders, and
   // so stock-deduction has a stable record of exactly what extra material to
   // subtract even if the option is later changed.
-  selectedOptions Json?
+  selectedOptions    Json?
   // Frozen Material.unitCost at the moment deductStockForOrder() recorded this
   // item's SALE StockMovement — same idea as WasteEntry.unitCostSnapshot, so
   // historical COGS/margin reports don't silently drift if ingredient prices
   // change later. Null for legacy rows and for items with no COGS
   // attribution path (aggregator items with only menuItemId, no productId).
-  unitCostSnapshot Decimal?        @db.Decimal(14, 6)
+  unitCostSnapshot   Decimal?         @db.Decimal(14, 6)
   // Per-UNIT cost of this line's selected ProductOption materials, frozen at
   // deduction time in base currency. Without it, moving COGS onto snapshots
   // would DELETE modifier cost from the P&L — and modifier materials are the
   // only material SALE rows most stores write today.
-  optionCostSnapshot Decimal?      @db.Decimal(14, 6)
+  optionCostSnapshot Decimal?         @db.Decimal(14, 6)
   // Phase 3: KDS workflow
-  status          OrderItemStatus @default(PENDING)
-  preparedAt      DateTime?
-  servedAt        DateTime?
+  status             OrderItemStatus  @default(PENDING)
+  preparedAt         DateTime?
+  servedAt           DateTime?
   // Set when this line triggered (or was folded into) an auto-drafted
   // ORDER_SHORTFALL ProductionBatch — see ProductionBatch.triggerType and
   // stock-deduction.service.ts. Completing that batch flips this item to
   // READY, so the kitchen's "done" tap and the batch's completion are the
   // same real-world event instead of two disconnected systems.
-  productionBatchId String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product         Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
-  menuItem        MenuItem?       @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
-  productionBatch ProductionBatch? @relation(fields: [productionBatchId], references: [id], onDelete: SetNull)
+  productionBatchId  String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  order              Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product            Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
+  menuItem           MenuItem?        @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  productionBatch    ProductionBatch? @relation(fields: [productionBatchId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([productId])
@@ -1388,43 +1394,44 @@ enum BillingInterval {
 }
 
 model StaffMember {
-  id              String         @id @default(cuid())
-  storeId         String
-  name            String
+  id                String             @id @default(cuid())
+  storeId           String
+  name              String
   // Login identity for the staff PIN gate — unique per store (not globally),
   // nullable so existing rows created before this field don't need backfilling.
-  username        String?
+  username          String?
   // Contact details only — no longer used as a login identifier.
-  email           String?
-  whatsapp        String?
-  role            StaffRole      @default(CASHIER)
+  email             String?
+  whatsapp          String?
+  role              StaffRole          @default(CASHIER)
   // Optional display label shown instead of the role's default title (e.g.
   // "Assistant Manager") — the `role` field still drives the default page
   // template below; the owner refines actual access via allowedPages.
-  customRoleLabel String?
+  customRoleLabel   String?
   // Which dashboard pages (nav item hrefs, e.g. "/pos", "/staff") this staff
   // member can reach. Empty = inherit the role's default template (see
   // ROLE_DEFAULT_PAGES in staff-permissions.config.ts) — resolved dynamically
   // so existing rows don't need backfilling and stay in sync if a role
   // template default ever changes.
-  allowedPages    String[]       @default([])
-  pin             String? // bcrypt hash — optional
+  allowedPages      String[]           @default([])
+  pin               String? // bcrypt hash — optional
   // Optional pay rate for labor-cost reporting — hours come from
   // AttendanceRecord/Shift timestamps, cost is hours × payRate for HOURLY,
   // or a flat payRate/period for MONTHLY. NONE (default) means no rate is
   // set (many roles are genuinely off-system payroll); reports must treat
   // NONE as "unknown," not zero.
-  payType         PayType        @default(NONE)
-  payRate         Decimal?       @db.Decimal(12, 2)
-  isActive        Boolean        @default(true)
-  inviteStatus    String? // "pending" | "accepted" | null
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  store           Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  shifts          Shift[]
-  sessions        StaffSession[]
+  payType           PayType            @default(NONE)
+  payRate           Decimal?           @db.Decimal(12, 2)
+  isActive          Boolean            @default(true)
+  inviteStatus      String? // "pending" | "accepted" | null
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shifts            Shift[]
+  sessions          StaffSession[]
   staffSchedules    StaffSchedule[]
   attendanceRecords AttendanceRecord[]
+  cashMovements     CashMovement[]
 
   @@unique([storeId, username])
   @@index([storeId])
@@ -1452,26 +1459,99 @@ model StaffSession {
 }
 
 model Shift {
-  id             String      @id @default(cuid())
+  id             String         @id @default(cuid())
   storeId        String
   staffMemberId  String
-  openedAt       DateTime    @default(now())
+  openedAt       DateTime       @default(now())
   closedAt       DateTime?
-  openingCash    Decimal     @db.Decimal(12, 2)
-  closingCash    Decimal?    @db.Decimal(12, 2)
-  expectedCash   Decimal?    @db.Decimal(12, 2) // calculated from orders
-  cashDifference Decimal?    @db.Decimal(12, 2) // closingCash - expectedCash
+  openingCash    Decimal        @db.Decimal(12, 2)
+  closingCash    Decimal?       @db.Decimal(12, 2)
+  expectedCash   Decimal?       @db.Decimal(12, 2) // calculated from orders
+  cashDifference Decimal?       @db.Decimal(12, 2) // closingCash - expectedCash
   notes          String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  store          Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  staffMember    StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  store          Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember    StaffMember    @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
   orders         Order[]
+  cashMovements  CashMovement[]
 
   @@index([storeId])
   @@index([staffMemberId])
   @@index([openedAt])
   @@map("shifts")
+}
+
+// =============================================================================
+// CASH ON HAND — non-sale cash that moves through the drawer.
+//
+// Orders account for cash that arrives by selling something. This table is
+// everything else: tips, float top-ups, paid-outs, safe drops. Without it the
+// expected-cash figure is only ever "opening float + cash sales", which is not
+// what is actually in the register at the end of the day.
+//
+// Deliberately a ledger, not a running balance. Rows are append-only facts
+// with an `occurredAt`; the balance is always derived (see
+// src/lib/finance/cash-drawer.ts), so a mis-entered row is corrected by
+// recording its reversal, never by mutating history.
+// =============================================================================
+
+/// What kind of physical cash movement a row records.
+///
+/// The sign is NOT stored. `amount` is always positive and the direction comes
+/// from the type via signedCashAmount() in src/lib/finance/cash-drawer.ts — so
+/// a UI bug cannot write a negative TIP that silently inflates the drawer, and
+/// "how much was tipped today" stays a plain SUM with no sign filtering.
+enum CashMovementType {
+  /// Cash tip into the drawer or jar. Adds. Card tips are NOT recorded here —
+  /// they never touch the drawer and would need an Order-level tip field.
+  TIP
+  /// Float top-up: owner adding change, an opening float correction. Adds.
+  PETTY_IN
+  /// Paid-out: COD supplier, staff errand, a small expense settled in cash.
+  /// Removes.
+  PETTY_OUT
+  /// Safe drop or bank deposit — cash deliberately taken out of the register
+  /// mid-day so the drawer never holds too much. Removes.
+  DROP
+  /// Tips handed to staff, typically at close. Removes.
+  PAYOUT
+}
+
+model CashMovement {
+  id            String           @id @default(cuid())
+  storeId       String
+  /// The till session this belongs to. Nullable on purpose: a movement can
+  /// legitimately happen with no till open (an owner topping up the float
+  /// before the first shift, an evening safe drop after close). The day-level
+  /// cash-on-hand rollup counts by `occurredAt`, not by this linkage — same
+  /// window-not-linkage rule the shift report already follows.
+  shiftId       String?
+  /// Who recorded it. SetNull rather than Cascade: the financial row must
+  /// outlive the person, or deleting a staff member would silently rewrite a
+  /// past day's cash position.
+  staffMemberId String?
+  type          CashMovementType
+  /// Always positive. Direction is derived from `type`, never from the sign.
+  amount        Decimal          @db.Decimal(12, 2)
+  /// Free-text justification. Required by the API for the outbound types
+  /// (PETTY_OUT / DROP / PAYOUT), where "where did the money go" is the whole
+  /// point of the row; optional for the inbound ones.
+  reason        String?
+  /// When the cash physically moved — what the drawer maths keys on. Distinct
+  /// from createdAt so a movement entered ten minutes late still lands inside
+  /// the right shift window.
+  occurredAt    DateTime         @default(now())
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  store         Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shift         Shift?           @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  staffMember   StaffMember?     @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([shiftId])
+  @@index([storeId, occurredAt])
+  @@map("cash_movements")
 }
 
 // =============================================================================
@@ -1497,7 +1577,7 @@ enum AttendanceType {
 // every time. Blocks may legitimately overlap (staggered handover coverage)
 // — see StaffSchedule and the Finance by-schedule-shift report.
 model ScheduleShift {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   storeId   String
   name      String
   // Plain "HH:mm" strings — there's no calendar date at the template level,
@@ -1507,10 +1587,10 @@ model ScheduleShift {
   startTime String
   endTime   String
   color     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  store     Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
   schedules StaffSchedule[]
 
   @@unique([storeId, name])
@@ -1523,26 +1603,26 @@ model ScheduleShift {
 // constraint on (staffMemberId, date) — a split shift is legitimately two
 // rows for the same staff/date.
 model StaffSchedule {
-  id              String         @id @default(cuid())
-  storeId         String
-  staffMemberId   String
-  date            DateTime       @db.Date
-  scheduleShiftId String?
-  customStartTime String?
-  customEndTime   String?
+  id                String             @id @default(cuid())
+  storeId           String
+  staffMemberId     String
+  date              DateTime           @db.Date
+  scheduleShiftId   String?
+  customStartTime   String?
+  customEndTime     String?
   // A day off for this staff member on this date — mutually exclusive with
   // scheduleShiftId/customStartTime+customEndTime (enforced in Zod, not the
   // DB, same approach as the block-vs-custom-time choice above).
-  isDayOff        Boolean        @default(false)
-  department      Department?
-  notes           String?
-  status          ScheduleStatus @default(DRAFT)
-  publishedAt     DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  store           Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  staffMember     StaffMember       @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
-  scheduleShift   ScheduleShift?    @relation(fields: [scheduleShiftId], references: [id], onDelete: SetNull)
+  isDayOff          Boolean            @default(false)
+  department        Department?
+  notes             String?
+  status            ScheduleStatus     @default(DRAFT)
+  publishedAt       DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember       StaffMember        @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+  scheduleShift     ScheduleShift?     @relation(fields: [scheduleShiftId], references: [id], onDelete: SetNull)
   attendanceRecords AttendanceRecord[]
 
   @@index([storeId, date])
@@ -1707,7 +1787,7 @@ model Storefront {
   openingHours        Json?
   viewCount           Int     @default(0)
 
-  store          Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store          Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
   menuCategories MenuCategory[]
   menuItems      MenuItem[]
   orders         Order[]
@@ -1740,9 +1820,9 @@ model StorefrontEvent {
   // persistent cross-day identifier, no cookie/consent flow needed) — "unique
   // visitors" over a range is a sum of daily-uniques, the standard DAU-style
   // approximation, not a lifetime-unique count.
-  visitorHash String
-  referrer    String?
-  createdAt   DateTime @default(now())
+  visitorHash  String
+  referrer     String?
+  createdAt    DateTime            @default(now())
 
   storefront Storefront @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
 
@@ -1764,17 +1844,17 @@ model MenuCategory {
 }
 
 model MenuItem {
-  id           String     @id @default(cuid())
-  storefrontId String
-  categoryId   String?
-  productId    String? // optional link to Product for inventory deduction
-  department   Department @default(KITCHEN) // synced from the linked Product on create/update; settable directly otherwise
-  name         String
-  description  String?
-  price        Decimal    @db.Decimal(12, 2)
-  currency     String     @default("IDR")
-  imageUrl     String?
-  isAvailable  Boolean    @default(true)
+  id            String     @id @default(cuid())
+  storefrontId  String
+  categoryId    String?
+  productId     String? // optional link to Product for inventory deduction
+  department    Department @default(KITCHEN) // synced from the linked Product on create/update; settable directly otherwise
+  name          String
+  description   String?
+  price         Decimal    @db.Decimal(12, 2)
+  currency      String     @default("IDR")
+  imageUrl      String?
+  isAvailable   Boolean    @default(true)
   // Independent of `isAvailable` (which gates the public Storefront menu and,
   // for every existing item, also implicitly gates the POS Cashier grid via
   // client-side disabling). Only meaningfully used for MenuItems linked to a
@@ -1782,10 +1862,10 @@ model MenuItem {
   // on Cashier" (this field) are independently toggleable in the Data tab.
   // Defaults true and is never exposed in the UI for regular items, so their
   // existing single-flag behavior is completely unchanged.
-  showOnCashier Boolean   @default(true)
-  isFeatured   Boolean    @default(false)
-  displayOrder Int        @default(0)
-  modifiers    Json? // [{name, options: [{name, priceAdd}]}]
+  showOnCashier Boolean    @default(true)
+  isFeatured    Boolean    @default(false)
+  displayOrder  Int        @default(0)
+  modifiers     Json? // [{name, options: [{name, priceAdd}]}]
 
   storefront Storefront    @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
   category   MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -1817,4 +1897,302 @@ enum BackupRunStatus {
   RUNNING
   SUCCESS
   FAILED
+}
+
+// ============================================================
+// Audit trail — action log, data history and reversal.
+// Three layers, one schema. See docs/AUDIT_LOG_PLAN.md.
+//
+//   ActivityEvent   Layer 1 — every mutating request. No row content.
+//   ActionLog       Layer 2 — curated actions with a typed, reversible payload.
+//   EntitySnapshot  Layer 3 — full serialized graph for cascade roots.
+// ============================================================
+
+/// Who performed an action. STAFF personas operate a shared POS device and
+/// carry no User row of their own (see src/lib/staff-session.ts), which is why
+/// the actor is a kind + opaque ref rather than a plain userId.
+enum AuditActorKind {
+  USER
+  STAFF
+  PUBLIC
+  SYSTEM
+  WEBHOOK
+}
+
+/// How an admin actor satisfied the admin check. HARDCODED_EMAIL is the case
+/// that leaves no other database trace the account was ever privileged
+/// (src/lib/admin.ts) — recording it here is the only durable evidence.
+enum AuditGrantSource {
+  DB_FLAG
+  HARDCODED_EMAIL
+}
+
+enum ActivityOutcome {
+  SUCCESS
+  DENIED
+  FAILED
+}
+
+enum AuditSeverity {
+  INFO
+  NOTICE
+  CRITICAL
+}
+
+/// What can be done to undo an action. Mirrors AuditReversibility in
+/// src/lib/audit/catalog.ts; the two are asserted equal by a type-level check.
+enum ActionReversibility {
+  REVERSIBLE
+  REVERSIBLE_WITH_CAVEAT
+  COMPENSATE_ONLY
+  SNAPSHOT_RESTORE
+  IRREVERSIBLE
+}
+
+/// PENDING is written before a destructive mutation and promoted to RECORDED
+/// after it commits. It is the only artifact that survives a cascade delete
+/// that crashes halfway, so a gap is distinguishable from "nothing happened".
+enum ActionLogState {
+  PENDING
+  RECORDED
+  REVERTED
+  SUPERSEDED
+  FAILED
+}
+
+enum SnapshotStatus {
+  CAPTURING
+  STORED
+  EXPIRED
+  SHREDDED
+  FAILED
+}
+
+enum RestoreRunStatus {
+  PLANNED
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+  REFUSED
+}
+
+/// Layer 1 — the coverage floor. One narrow row per mutating request, written
+/// from the route->action map inside withApiHandler. Carries no row content:
+/// it answers "something happened here, by whom", not "what changed".
+///
+/// storeId/businessId are bare Strings with no foreign key on purpose. An FK
+/// would cascade the evidence away at exactly the moment it matters most —
+/// when the store or tenant is deleted.
+model ActivityEvent {
+  id          String            @id @default(cuid())
+  requestId   String
+  occurredAt  DateTime          @default(now())
+  actorKind   AuditActorKind
+  actorRefId  String?
+  actorName   String?
+  actorEmail  String?
+  actorGrant  AuditGrantSource?
+  storeId     String?
+  businessId  String?
+  /// Catalogue key from ROUTE_ACTION_MAP, e.g. "admin.user.delete".
+  actionCode  String
+  method      String
+  route       String
+  statusCode  Int?
+  outcome     ActivityOutcome   @default(SUCCESS)
+  severity    AuditSeverity     @default(INFO)
+  /// Prisma model name the request targeted, when the map knows it.
+  targetType  String?
+  targetId    String?
+  durationMs  Int?
+  ipHash      String?
+  userAgent   String?
+  /// Set when this request also produced a curated Layer 2 row.
+  actionLogId String?           @unique
+  actionLog   ActionLog?        @relation(fields: [actionLogId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt])
+  @@index([actorKind, actorRefId, occurredAt])
+  @@index([storeId, occurredAt])
+  @@index([actionCode, occurredAt])
+  @@index([targetType, targetId])
+  @@index([outcome, severity, occurredAt])
+  @@index([requestId])
+  @@map("activity_events")
+}
+
+/// Layer 2 — the reversible tier. One row per curated business action, with a
+/// typed payload and a hand-written reverse() handler in the catalogue.
+///
+/// actionType is a String, not a Postgres enum, deliberately: ALTER TYPE ADD
+/// VALUE cannot run in the same transaction that inserts the new value, and
+/// `prisma migrate deploy` is the first step of the Vercel build — an enum
+/// would force two deploys for every action added.
+model ActionLog {
+  id            String              @id @default(cuid())
+  requestId     String?
+  occurredAt    DateTime            @default(now())
+  /// Key of ACTION_CATALOG in src/lib/audit/catalog.ts.
+  actionType    String
+  category      String
+  state         ActionLogState      @default(PENDING)
+  reversibility ActionReversibility
+  severity      AuditSeverity       @default(NOTICE)
+
+  actorKind  AuditActorKind
+  actorRefId String?
+  actorName  String?
+  actorEmail String?
+  actorGrant AuditGrantSource?
+  /// Survives actor deletion; lets the trail group by actor after a purge.
+  actorHash  String?
+
+  storeId        String?
+  businessId     String?
+  targetType     String?
+  targetId       String?
+  targetLabel    String?
+  /// Users whose personal data appears in payload. Drives the GDPR shredder.
+  subjectUserIds String[] @default([])
+
+  /// Catalogue-validated payload. Decimals are stored as strings and rebuilt
+  /// via new Decimal(...) so no precision is lost through JSON.
+  payload Json?
+  /// Operator-supplied justification, required on every reversal.
+  reason  String?
+
+  /// Set on the reversal row, pointing at what it undid. Nullable + @unique
+  /// gives partial-unique semantics in Postgres (NULLs compare distinct), so
+  /// two admins racing to revert the same action cannot both succeed.
+  reversesActionId String?    @unique
+  reverses         ActionLog? @relation("ActionReversal", fields: [reversesActionId], references: [id], onDelete: SetNull)
+  reversedBy       ActionLog? @relation("ActionReversal")
+
+  /// Set on a forward correction, pointing at the action it corrects. A
+  /// correction is always a new row; log rows are never edited in place.
+  correctsActionId String?
+  corrects         ActionLog?  @relation("ActionCorrection", fields: [correctsActionId], references: [id], onDelete: SetNull)
+  correctedBy      ActionLog[] @relation("ActionCorrection")
+
+  snapshotId String?         @unique
+  snapshot   EntitySnapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+
+  /// Set when a newer action wrote the same (targetType, targetId, field).
+  supersededAt DateTime?
+  flaggedAt    DateTime?
+  flaggedNote  String?
+  /// Legal hold. Exempts the row from retention pruning and GDPR shredding.
+  lockedAt     DateTime?
+  /// Set when payload PII has been shredded on an erasure request.
+  scrubbedAt   DateTime?
+  errorMessage String?
+
+  activityEvent ActivityEvent?
+  annotations   ActionAnnotation[]
+
+  @@index([occurredAt])
+  @@index([actionType, occurredAt])
+  @@index([actorKind, actorRefId, occurredAt])
+  @@index([storeId, occurredAt])
+  @@index([targetType, targetId, occurredAt])
+  @@index([state, severity, occurredAt])
+  @@index([subjectUserIds], type: Gin)
+  @@map("action_logs")
+}
+
+/// Free-text notes an operator attaches to an action. Separate table so the
+/// ActionLog row itself stays append-only in its event columns.
+model ActionAnnotation {
+  id          String         @id @default(cuid())
+  actionLogId String
+  actionLog   ActionLog      @relation(fields: [actionLogId], references: [id], onDelete: Cascade)
+  authorKind  AuditActorKind
+  authorRefId String?
+  authorName  String?
+  body        String
+  createdAt   DateTime       @default(now())
+
+  @@index([actionLogId, createdAt])
+  @@map("action_annotations")
+}
+
+/// Layer 3 — full serialized entity graph captured immediately before a
+/// cascade-root destruction, inside the same Serializable transaction.
+///
+/// orphanRepairs holds the onDelete: SetNull survivors whose pointers the
+/// delete is about to null out. They must be captured BEFORE the delete or
+/// they are unreconstructable afterwards.
+model EntitySnapshot {
+  id             String         @id @default(cuid())
+  capturedAt     DateTime       @default(now())
+  status         SnapshotStatus @default(CAPTURING)
+  /// Root model name, e.g. "User", "Business", "Store".
+  rootType       String
+  rootId         String
+  rootLabel      String?
+  /// Why it was captured, e.g. "admin.user.delete".
+  reasonCode     String
+  storeId        String?
+  businessId     String?
+  subjectUserIds String[]       @default([])
+
+  /// Serialized graph, parent-first. Null when spilled to blob storage.
+  payload       Json?
+  /// Set instead of payload when the graph exceeds the inline size limit.
+  payloadUrl    String?
+  payloadSha256 String?
+  payloadBytes  Int       @default(0)
+  rowCount      Int       @default(0)
+  modelCount    Int       @default(0)
+  /// Rows whose nullable FK the cascade set to NULL, with the values to restore.
+  orphanRepairs Json?
+  /// Migration name at capture time. A restore across a schema change is
+  /// refused rather than attempted; the payload shape may no longer fit.
+  schemaVersion String?
+  expiresAt     DateTime
+  lockedAt      DateTime?
+  scrubbedAt    DateTime?
+  errorMessage  String?
+
+  actionLog   ActionLog?
+  restoreRuns RestoreRun[]
+
+  @@index([capturedAt])
+  @@index([rootType, rootId])
+  @@index([status, expiresAt])
+  @@index([subjectUserIds], type: Gin)
+  @@map("entity_snapshots")
+}
+
+/// One row per restore attempt, including refused and dry-run plans. The plan
+/// is stored so Apply can verify it is acting on the same preview an operator
+/// approved, and so a refusal is itself part of the record.
+model RestoreRun {
+  id           String           @id @default(cuid())
+  snapshotId   String
+  snapshot     EntitySnapshot   @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  status       RestoreRunStatus @default(PLANNED)
+  /// True for a preview that was never applied.
+  dryRun       Boolean          @default(true)
+  plannedAt    DateTime         @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  actorRefId   String?
+  actorName    String?
+  reason       String?
+  /// Planner output: per-model counts, collisions, refusals, drift warnings.
+  plan         Json?
+  rowsRestored Int              @default(0)
+  /// Models already restored, so a PARTIAL run can resume rather than repeat.
+  modelsDone   String[]         @default([])
+  /// Set while a non-atomic restore is in flight; the tenant is held
+  /// deactivated until the run reaches SUCCESS so a partial restore leaves an
+  /// invisible tenant rather than a live broken one.
+  quarantined  Boolean          @default(false)
+  errorMessage String?
+
+  @@index([snapshotId, plannedAt])
+  @@index([status, plannedAt])
+  @@map("restore_runs")
 }

@@ -3,6 +3,7 @@ import { withApiHandler } from "@/lib/api-handler";
 import { wasteService } from "@/lib/services/waste.service";
 import { updateWasteSchema } from "@/lib/validation/waste.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { recordAction } from "@/lib/audit/record";
 
 /**
  * GET /api/stores/[id]/waste/[wasteId]
@@ -52,11 +53,40 @@ export const PATCH = withApiHandler(
  * DELETE /api/stores/[id]/waste/[wasteId]
  * Reverses the recorded stock deduction and removes the entry; linked
  * StockMovement rows persist with wasteEntryId set to NULL.
+ *
+ * Recorded as COMPENSATE_ONLY ("waste.delete" in the audit catalogue): the
+ * delete already reversed its own stock movement, so a generic "undo the
+ * deletion" would double-credit the stock. The correct remedy is re-entering
+ * the waste, which the log points operators at instead of offering a Revert
+ * that would corrupt the ledger.
  */
 export const DELETE = withApiHandler(
   async (request, { storeId, params }) => {
     const { wasteId } = params;
+
+    const before = await wasteService.getWasteEntryById(storeId!, wasteId);
+    if (!before) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.NOT_FOUND, "Waste entry not found"),
+        { status: 404 }
+      );
+    }
+
     const result = await wasteService.deleteWasteEntry(storeId!, wasteId);
+
+    await recordAction({
+      actionType: "waste.delete",
+      storeId: storeId!,
+      targetId: wasteId,
+      payload: {
+        storeId: storeId!,
+        wasteId,
+        itemName: before.material?.name ?? before.product?.name ?? "Unknown item",
+        quantity: before.quantity.toString(),
+        reason: before.reason,
+      },
+    });
+
     return NextResponse.json(createSuccessResponse(result));
   },
   { rateLimitEndpoint: "/api/stores/[id]/waste/[wasteId]", requireStoreAuth: true }

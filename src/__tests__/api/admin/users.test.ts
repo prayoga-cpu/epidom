@@ -11,16 +11,60 @@ vi.mock("@/lib/admin", () => ({
 }));
 vi.mock("better-auth/crypto", () => ({ hashPassword: vi.fn().mockResolvedValue("hashed-pw") }));
 
+var mockRecord: any;
+vi.mock("@/lib/audit/record", () => {
+  mockRecord = {
+    recordAction: vi.fn().mockResolvedValue("log-1"),
+    beginAction: vi.fn().mockResolvedValue("log-1"),
+    completeAction: vi.fn().mockResolvedValue(undefined),
+    failAction: vi.fn().mockResolvedValue(undefined),
+    markSuperseded: vi.fn().mockResolvedValue(undefined),
+  };
+  return mockRecord;
+});
+
+var mockSnapshot: any;
+vi.mock("@/lib/audit/snapshot", () => {
+  mockSnapshot = {
+    captureEntitySnapshot: vi
+      .fn()
+      .mockResolvedValue({ id: "snap-1", rowCount: 42, modelCount: 7, bytes: 1024 }),
+  };
+  return mockSnapshot;
+});
+
+var mockNotify: any;
+vi.mock("@/lib/audit/notify", () => {
+  mockNotify = {
+    notifyCriticalAction: vi.fn().mockResolvedValue(undefined),
+    notifyAccountAction: vi.fn().mockResolvedValue(undefined),
+  };
+  return mockNotify;
+});
+
+// captureRequestActivity calls next/server's after(), which has no request
+// scope in a unit test.
+vi.mock("@/lib/audit/activity", () => ({
+  captureRequestActivity: vi.fn(),
+  writeActivityEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 // var avoids TDZ — vi.mock factory is hoisted above const/let declarations.
 var mockPrisma: any;
 vi.mock("@/lib/prisma", () => {
   mockPrisma = {
     user: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), delete: vi.fn() },
     account: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
-    subscription: { upsert: vi.fn() },
+    subscription: { upsert: vi.fn(), findUnique: vi.fn().mockResolvedValue(null) },
     business: { deleteMany: vi.fn() },
     alert: { deleteMany: vi.fn() },
     session: { deleteMany: vi.fn() },
+    // Audit trail tables. The route writes to these on every branch now, so a
+    // mock without them fails on the first recordAction rather than on the
+    // behaviour under test.
+    actionLog: { create: vi.fn().mockResolvedValue({ id: "log-1" }), update: vi.fn() },
+    activityEvent: { create: vi.fn() },
+    entitySnapshot: { create: vi.fn().mockResolvedValue({ id: "snap-1" }) },
     $transaction: vi.fn((ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
   };
   return { prisma: mockPrisma };
@@ -46,9 +90,14 @@ describe("PATCH /api/admin/users", () => {
     vi.mocked(getSession).mockResolvedValue(mockSession as any);
     mockPrisma.user.findUnique.mockResolvedValue({
       id: "admin-id",
+      name: "Admin",
       email: "prayogadevelopment@gmail.com",
       isAdmin: false,
+      emailVerified: true,
+      deactivatedAt: null,
+      purgeAt: null,
     });
+    mockPrisma.subscription.findUnique.mockResolvedValue(null);
   });
 
   describe("auth guards", () => {

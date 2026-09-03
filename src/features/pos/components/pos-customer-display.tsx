@@ -2,19 +2,22 @@
 
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Check, Maximize2, Minimize2, MonitorOff, ShoppingBag } from "lucide-react";
+import { Check, Maximize2, Minimize2, MessageCircle, MonitorOff, ShoppingBag } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { getContrastingInk, getPremiumTheme } from "@/lib/utils/color";
 import { cn } from "@/lib/utils";
-import { useCustomerDisplaySnapshot } from "../hooks/use-customer-display";
+import { useCustomerDisplaySnapshot, useSendCustomerPhone } from "../hooks/use-customer-display";
+import { PosCustomerDisplayPhone } from "./pos-customer-display-phone";
 
 interface PosCustomerDisplayProps {
   storeId: string;
   storeName: string;
   logoUrl: string | null;
   themeColor: string | null;
+  /** ISO-2 country for the store, used to preselect the phone dial code. */
+  defaultCountry: string;
 }
 
 /**
@@ -28,6 +31,7 @@ export function PosCustomerDisplay({
   storeName,
   logoUrl,
   themeColor,
+  defaultCountry,
 }: PosCustomerDisplayProps) {
   const { t, formatDate } = useI18n();
   // Cart amounts are literal in the store's display currency, never IDR —
@@ -37,6 +41,9 @@ export function PosCustomerDisplay({
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
 
   const snapshot = useCustomerDisplaySnapshot(storeId);
+  const sendCustomerPhone = useSendCustomerPhone(storeId);
+  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -78,6 +85,8 @@ export function PosCustomerDisplay({
   const depth = ink === "#FFFFFF" ? "black" : "white";
   const themeStyle = {
     "--cfd-ink": ink,
+    // Text that sits on top of an ink-filled surface (the confirm button).
+    "--cfd-on-ink": ink === "#FFFFFF" ? theme : "#FFFFFF",
     // Set as `background` rather than a Tailwind arbitrary class: a gradient
     // through a CSS var is the shape public-profile.tsx already uses for
     // --store-theme-gradient, and `bg-[var(--x)]` would emit background-COLOR.
@@ -92,6 +101,15 @@ export function PosCustomerDisplay({
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
   const highlight = lines.find((line) => line.id === snapshot.highlightLineId) ?? null;
   const isPaid = snapshot.phase === "paid";
+
+  // One customer's number must never carry over to the next. The paid screen
+  // is the handover point, so clear it there — and close the pad if it is
+  // somehow still open.
+  useEffect(() => {
+    if (!isPaid) return;
+    setSubmittedPhone(null);
+    setPhoneOpen(false);
+  }, [isPaid]);
   // The cashier switched the display off. Standby rather than a frozen last
   // order — a customer must never be shown a total that stopped tracking.
   const isOff = snapshot.phase === "off";
@@ -99,7 +117,7 @@ export function PosCustomerDisplay({
   return (
     <div
       style={themeStyle}
-      className="flex min-h-[calc(100dvh/var(--app-zoom,1))] w-full flex-col overflow-y-auto p-4 text-[color:var(--cfd-ink)] sm:p-6 lg:h-[calc(100dvh/var(--app-zoom,1))] lg:overflow-hidden lg:p-8"
+      className="relative flex min-h-[calc(100dvh/var(--app-zoom,1))] w-full flex-col overflow-y-auto p-4 text-[color:var(--cfd-ink)] sm:p-6 lg:h-[calc(100dvh/var(--app-zoom,1))] lg:overflow-hidden lg:p-8"
     >
       <header className="flex shrink-0 items-center justify-between gap-3 px-1 pb-4 sm:pb-6">
         <p className="min-w-0 truncate text-sm font-medium tracking-wide opacity-70 sm:text-base">
@@ -231,6 +249,27 @@ export function PosCustomerDisplay({
                 </div>
               )}
             </div>
+
+            {/* The only thing on this screen the customer can touch. */}
+            <button
+              type="button"
+              onClick={() => setPhoneOpen(true)}
+              className="flex min-h-14 shrink-0 touch-manipulation items-center justify-center gap-2.5 rounded-3xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] px-5 py-3 text-left text-base font-semibold shadow-lg transition-opacity active:opacity-70 sm:text-lg"
+            >
+              {submittedPhone ? (
+                <>
+                  <Check className="h-5 w-5 shrink-0" />
+                  <span className="min-w-0 truncate">
+                    {t("pos.customerDisplay.phoneSentTo").replace("{phone}", submittedPhone)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="h-5 w-5 shrink-0" />
+                  <span className="min-w-0">{t("pos.customerDisplay.phoneCta")}</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* ── Right: the running receipt ── */}
@@ -321,6 +360,17 @@ export function PosCustomerDisplay({
           </div>
         </div>
       )}
+
+      <PosCustomerDisplayPhone
+        open={phoneOpen}
+        onClose={() => setPhoneOpen(false)}
+        defaultCountry={defaultCountry}
+        submitted={submittedPhone}
+        onSubmit={(phone) => {
+          setSubmittedPhone(phone);
+          sendCustomerPhone(phone);
+        }}
+      />
     </div>
   );
 }

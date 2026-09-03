@@ -3,33 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Shield,
-  Users,
-  Store,
-  Crown,
-  Search,
-  ChevronDown,
-  Trash2,
-  Calendar,
-  ShieldCheck,
-  ShieldOff,
-  Infinity,
-  KeyRound,
-  Eye,
-  EyeOff,
-  LogIn,
-  Copy,
-  Check,
-  TrendingUp,
-  MessageSquare,
-  RotateCcw,
-  Wrench,
-  PowerOff,
-  Power,
-  Gauge,
-  CircleDollarSign,
-} from "lucide-react";
+import { Activity, Calendar, Check, ChevronDown, CircleDollarSign, Copy, Crown, Eye, EyeOff, Gauge, Infinity, KeyRound, LogIn, MessageSquare, Power, PowerOff, RotateCcw, Search, Shield, ShieldCheck, ShieldOff, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -606,6 +580,10 @@ export function AdminDashboard() {
               <p className="text-muted-foreground text-xs">Epidom internal — restricted access</p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => router.push("/admin/activity")}>
+                <Activity className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Activity</span>
+              </Button>
               <Button variant="outline" size="sm" onClick={() => router.push("/admin/revenue")}>
                 <TrendingUp className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Revenue Report</span>

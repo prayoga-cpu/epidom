@@ -5,6 +5,8 @@
  * __tests__/by-shift.test.ts.
  */
 
+import type { CashOnHandBreakdown } from "@/lib/finance/cash-drawer";
+
 export interface CategoryBucketInput {
   total: number | string;
   quantity: number | string;
@@ -313,50 +315,67 @@ export interface CashShiftInput {
   openedAt: Date | string;
   closedAt: Date | string | null;
   staffMember: { id: string; name: string };
-  openingCash: number | string | { toString(): string };
-  closingCash: number | string | { toString(): string } | null;
-  expectedCash: number | string | { toString(): string } | null;
-  cashDifference: number | string | { toString(): string } | null;
+  /**
+   * The session's live cash position, from `getShiftCashOnHand()`. It carries
+   * openingCash/closingCash/expectedCash/cashDifference as well as the
+   * per-category figures, so the frozen `Shift.expectedCash` /
+   * `Shift.cashDifference` columns are deliberately NOT read here: they only
+   * exist once a shift has been closed, and they predate tips/paid-outs/safe
+   * drops ever being part of the arithmetic. Every row closed before that
+   * change carries a figure computed by the old formula, which counted unpaid
+   * cash orders and never subtracted refunds — reading it back would
+   * reintroduce exactly the defect this module exists to remove.
+   *
+   * The trade-off, stated plainly: because the figure is live, settling a cash
+   * order AFTER its till was closed (the POS "Mark as paid" flow) raises that
+   * closed session's expected cash and can flag a drawer that balanced on the
+   * night. The close-time snapshot is still on the Shift row if the original
+   * sign-off is ever needed, and the per-category breakdown shown alongside
+   * makes such a case explainable rather than mysterious.
+   */
+  breakdown: CashOnHandBreakdown;
 }
 
-export interface CashReconciliationRow {
+export interface CashReconciliationRow extends CashOnHandBreakdown {
   shiftId: string;
   staffName: string;
   staffId: string;
   openedAt: string;
   closedAt: string | null;
   isOpen: boolean;
-  openingCash: number;
-  closingCash: number | null;
-  expectedCash: number | null;
-  cashDifference: number | null;
-  /** true when a closed shift's drawer didn't balance (cashDifference != 0). */
+  /** true when a CLOSED session's counted drawer didn't balance. */
   isFlagged: boolean;
 }
 
 /**
- * Cash-drawer reconciliation per cashier session — surfaces
- * Shift.openingCash/closingCash/expectedCash/cashDifference (already
- * recorded at shift close, never previously shown on a Finance report) so a
- * manager can spot over/short drawers without digging through raw shifts.
+ * Cash-drawer reconciliation per cashier session — the full per-category
+ * position (float, cash sales, refunds, tips, paid-outs, safe drops) next to
+ * what was actually counted, so a manager can see *why* a drawer is over or
+ * short instead of only that it is.
+ *
+ * The breakdown arrives pre-rounded from `computeCashOnHand`, so it is spread
+ * through unchanged; this function's job is shaping and ordering, not
+ * arithmetic.
  */
 export function buildCashReconciliationRows(shifts: CashShiftInput[]): CashReconciliationRow[] {
   return shifts
     .map((s) => {
-      const cashDifference = s.cashDifference != null ? Number(s.cashDifference) : null;
+      const isOpen = s.closedAt === null;
       return {
+        ...s.breakdown,
         shiftId: s.id,
         staffName: s.staffMember.name,
         staffId: s.staffMember.id,
         openedAt: new Date(s.openedAt).toISOString(),
         closedAt: s.closedAt ? new Date(s.closedAt).toISOString() : null,
-        isOpen: s.closedAt === null,
-        openingCash: Math.round(Number(s.openingCash) * 100) / 100,
-        closingCash: s.closingCash != null ? Math.round(Number(s.closingCash) * 100) / 100 : null,
-        expectedCash:
-          s.expectedCash != null ? Math.round(Number(s.expectedCash) * 100) / 100 : null,
-        cashDifference: cashDifference != null ? Math.round(cashDifference * 100) / 100 : null,
-        isFlagged: cashDifference != null && Math.round(cashDifference * 100) / 100 !== 0,
+        isOpen,
+        // An open till is never flagged. `expectedCash` is now computed live
+        // for open sessions too, but there is still nothing to compare it
+        // against — a mid-shift drawer simply hasn't been counted yet, and
+        // flagging it would report a "variance" that is just the till's own
+        // running balance.
+        isFlagged:
+          !isOpen && s.breakdown.cashDifference != null && s.breakdown.cashDifference !== 0,
       };
     })
     .sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());

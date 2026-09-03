@@ -48,3 +48,9 @@ jobs:
 
       - name: Type check
         run: pnpm type-check
+
+      # Added with the audit trail: the catalogue's round-trip fixtures and
+      # guard-chain tests are the only enforcement that a REVERSIBLE action can
+      # actually be reversed, and they were not running anywhere before.
+      - name: Test
+        run: pnpm test

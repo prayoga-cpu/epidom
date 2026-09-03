@@ -132,6 +132,15 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 100,
     window: 60,
   },
+  // Cash movements are tapped in one at a time at the till, never in bulk.
+  "/api/stores/[id]/cash-movements": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/cash-movements/[movementId]": {
+    limit: 100,
+    window: 60,
+  },
   "/api/stores/[id]/finance/by-category": {
     limit: 100,
     window: 60,

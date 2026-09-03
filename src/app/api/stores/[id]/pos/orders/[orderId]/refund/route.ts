@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
+import { withApiHandler } from "@/lib/api-handler";
 import { refundOrderSchema } from "@/lib/validation/pos.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 import { computeRefund } from "@/lib/finance/order-charges";
+import { recordAction } from "@/lib/audit/record";
 
 /**
  * POST /api/stores/[id]/pos/orders/[orderId]/refund
@@ -17,24 +17,19 @@ import { computeRefund } from "@/lib/finance/order-charges";
  * stock: in F&B a refund essentially never means the food comes back into
  * inventory. Supports repeat partial refunds; paymentStatus only flips to
  * REFUNDED once the cumulative refunded amount reaches the order total.
+ *
+ * Converted from a hand-rolled auth/verification block to withApiHandler as
+ * part of the audit-trail Phase 0 cleanup (docs/AUDIT_LOG_PLAN.md) — this was
+ * one of the routes that bypassed the wrapper and so bypassed the activity
+ * trail entirely. Recorded as COMPENSATE_ONLY: the money has already moved at
+ * the payment provider, so a generic revert would falsify the financial
+ * record rather than fix it — the remedy is a correcting transaction, which
+ * the log points operators at.
  */
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string; orderId: string }> }
-) {
-  const { id: storeId, orderId } = await params;
+export const POST = withApiHandler(
+  async (request, { storeId, params }) => {
+    const { orderId } = params;
 
-  const session = await getSession();
-  if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-      status: 401,
-    });
-  }
-
-  const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (verification instanceof NextResponse) return verification;
-
-  try {
     const body = await request.json();
     const parsed = refundOrderSchema.safeParse(body);
 
@@ -83,7 +78,20 @@ export async function POST(
       },
     });
 
-    publishStoreEvent(storeId, REALTIME_EVENTS.ORDER_UPDATED, {
+    await recordAction({
+      actionType: "pos.order.refund",
+      storeId: storeId!,
+      targetId: orderId,
+      payload: {
+        storeId: storeId!,
+        orderId,
+        orderNumber: existing.orderNumber,
+        amount: amount.toString(),
+        reason: reason ?? null,
+      },
+    });
+
+    publishStoreEvent(storeId!, REALTIME_EVENTS.ORDER_UPDATED, {
       action: "updated",
       entityId: updated.id,
     });
@@ -97,11 +105,6 @@ export async function POST(
         refundReason: updated.refundReason,
       })
     );
-  } catch (error) {
-    console.error("[POS_ORDER_REFUND]", error);
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.INTERNAL_ERROR, "Internal server error"),
-      { status: 500 }
-    );
-  }
-}
+  },
+  { rateLimitEndpoint: "/api/stores/[id]/pos/orders/[orderId]/refund", requireStoreAuth: true }
+);
