@@ -59,9 +59,9 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: false,
       },
       {
-        href: "/billing",
-        labelKey: "nav.billing",
-        icon: CreditCard,
+        href: "/storefront",
+        labelKey: "nav.storefront",
+        icon: Store,
         showBadge: false,
       },
       {
@@ -71,9 +71,9 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: false,
       },
       {
-        href: "/storefront",
-        labelKey: "nav.storefront",
-        icon: Store,
+        href: "/billing",
+        labelKey: "nav.billing",
+        icon: CreditCard,
         showBadge: false,
       },
     ],
@@ -81,6 +81,13 @@ export const dashboardNavigation: NavSection[] = [
   {
     title: "Point of Sale",
     items: [
+      {
+        href: "/menu",
+        labelKey: "nav.menu",
+        icon: MenuSquare,
+        showBadge: false,
+        requiredPlan: "POS",
+      },
       {
         href: "/pos",
         labelKey: "nav.pos",
@@ -109,18 +116,18 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: false,
         requiredPlan: "POS",
       },
-      {
-        href: "/menu",
-        labelKey: "nav.menu",
-        icon: MenuSquare,
-        showBadge: false,
-        requiredPlan: "POS",
-      },
     ],
   },
   {
     title: "Operations",
     items: [
+      {
+        href: "/data",
+        labelKey: "nav.data",
+        icon: Database,
+        showBadge: false,
+        requiredPlan: "OPERATIONS",
+      },
       {
         href: "/management",
         labelKey: "nav.management",
@@ -132,13 +139,6 @@ export const dashboardNavigation: NavSection[] = [
         href: "/production",
         labelKey: "nav.production",
         icon: Factory,
-        showBadge: false,
-        requiredPlan: "OPERATIONS",
-      },
-      {
-        href: "/data",
-        labelKey: "nav.data",
-        icon: Database,
         showBadge: false,
         requiredPlan: "OPERATIONS",
       },
