@@ -243,4 +243,53 @@ describe("queryStats", () => {
       AND: [{ outcome: "SUCCESS" }, { outcome: "DENIED" }],
     });
   });
+
+  it("narrows the flagged count with the filters, since the card is itself a filter", async () => {
+    prismaMock.activityEvent.count.mockResolvedValue(0);
+    prismaMock.actionLog.count.mockResolvedValue(0);
+    prismaMock.activityEvent.findFirst.mockResolvedValue(null);
+
+    await queryStats({ ...baseQuery, severity: "CRITICAL" });
+
+    // An all-time flagged count on a clickable filter could read higher than
+    // the Events total sitting beside it.
+    const flaggedCall = prismaMock.activityEvent.count.mock.calls[3];
+    expect(flaggedCall![0].where).toEqual({
+      AND: [{ severity: "CRITICAL" }, { actionLog: { flaggedAt: { not: null } } }],
+    });
+  });
+
+  it("leaves revertable as an all-time ActionLog count", async () => {
+    prismaMock.activityEvent.count.mockResolvedValue(0);
+    prismaMock.actionLog.count.mockResolvedValue(0);
+    prismaMock.activityEvent.findFirst.mockResolvedValue(null);
+
+    await queryStats({ ...baseQuery, severity: "CRITICAL" });
+
+    expect(prismaMock.actionLog.count).toHaveBeenCalledTimes(1);
+    expect(prismaMock.actionLog.count.mock.calls[0]![0].where).not.toHaveProperty("AND");
+  });
+});
+
+describe("queryActorSummary — store facets", () => {
+  it("does not cap (actor, store) pairs, which would silently drop restaurants", async () => {
+    primeActorQueries({
+      grouped: [
+        {
+          actorRefId: "user-1",
+          actorKind: "USER",
+          _count: { _all: 1 },
+          _max: { occurredAt: new Date("2026-09-07T08:00:00Z") },
+        },
+      ],
+    });
+
+    await queryActorSummary(baseQuery);
+
+    // A global `take` here caps PAIRS across every actor, so one multi-outlet
+    // operator can crowd out a quieter owner's only restaurant — and the
+    // truncated result is indistinguishable from a complete one.
+    const storeFacetCall = prismaMock.activityEvent.groupBy.mock.calls[3];
+    expect(storeFacetCall![0]).not.toHaveProperty("take");
+  });
 });

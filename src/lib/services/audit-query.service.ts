@@ -66,7 +66,11 @@ export async function resolveActivityQuery(q: ActivityQuery): Promise<ResolvedAc
   const stores = await prisma.store.findMany({
     where: { name: { contains: q.search, mode: "insensitive" } },
     select: { id: true },
-    take: 100,
+    // Ordered so the cap, if it ever bites, truncates the same way twice —
+    // an unordered LIMIT returns an unspecified set that can shift between the
+    // two queries a single page issues.
+    orderBy: { id: "asc" },
+    take: 1000,
   });
   return stores.length ? { ...q, searchStoreIds: stores.map((s) => s.id) } : q;
 }
@@ -287,8 +291,12 @@ export async function queryActorSummary(q: ResolvedActivityQuery): Promise<Actor
       by: ["actorRefId", "actorKind", "storeId"],
       where: { AND: [where, { actorRefId: { in: refIds } }, { storeId: { not: null } }] },
       _count: { _all: true },
-      orderBy: { _count: { actorRefId: "desc" } },
-      take: 500,
+      // Deliberately uncapped. A `take` here would cap (actor, store) PAIRS
+      // globally, so one multi-outlet operator could crowd out a quieter
+      // owner's only restaurant — and a truncated list is indistinguishable
+      // from a complete one, silently reporting "Platform-wide" for someone
+      // whose every event carried a store. Already bounded by the 200 actors
+      // above times the handful of restaurants each of them touches.
     }),
     // A STAFF event never carries an email — resolveActor sets it to null
     // because a staff persona is established by PIN, not by an address — so
@@ -414,10 +422,16 @@ export async function queryStats(q: ResolvedActivityQuery): Promise<TrailStats> 
     // severity/outcome filter and report a wider population than `total`.
     prisma.activityEvent.count({ where: { AND: [where, { severity: "CRITICAL" }] } }),
     prisma.activityEvent.count({ where: { AND: [where, { outcome: "DENIED" }] } }),
-    // `flagged` and `revertable` are counted over ActionLog, which the
-    // ActivityEvent filter cannot address, so both are all-time totals. The UI
-    // labels them as such rather than passing them off as filtered.
-    prisma.actionLog.count({ where: { flaggedAt: { not: null } } }),
+    // Counted over ActivityEvent (via its unique 1:1 actionLog) rather than
+    // over ActionLog directly, so it narrows with the filters like every other
+    // card. The Flagged card is itself a filter toggle; an all-time number on it
+    // could read higher than the Events total beside it.
+    prisma.activityEvent.count({
+      where: { AND: [where, { actionLog: { flaggedAt: { not: null } } }] },
+    }),
+    // `revertable` stays all-time: it counts what the reversal engine could
+    // still act on across the whole trail, which is not a property of the
+    // window being looked at. The UI labels it as such.
     prisma.actionLog.count({
       where: {
         state: "RECORDED",

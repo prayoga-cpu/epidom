@@ -6,6 +6,32 @@ _(AI Agents: Update this checklist every time you finish a task)_
 
 ---
 
+## ✅ 2026-09-07 — Activity "By user": Restaurant + Email Attribution, and Drawer UI (2.83.0)
+
+Operator: *"reorder navbar sections"*, then *"for reorder by users, make it view by restaurant & email, so we will know specifically"* and *"fix the UI"* (with a screenshot of the detail drawer's text running into both panel edges).
+
+- [x] **Sidebar sections reordered** in `src/config/navigation.config.ts` — General, Point of Sale and Operations each now lead with the page reached for first. Shipped in `900c74c` **without the CHANGELOG entry and version bump AGENTS.md §6 requires**; both are folded into 2.83.0 here.
+- [x] **Restaurant, email and job title on the actor rollup** (`queryActorSummary`). A display name identifies nobody: staff personas are per-store and repeat first names, and an owner account is named after the business. `ActivityEvent.storeId` has no Prisma relation to `Store`, so names resolve via a second query; STAFF email and title come from `StaffMember` because `resolveActor` hardcodes `email: null` for staff. Restaurant chips filter the timeline, and search matches store names via `resolveActivityQuery` — resolved once at the route boundary, since the route runs two query functions in parallel and an async `buildWhere` would issue the lookup twice per request.
+- [x] **Three counting bugs in the columns that view displays.** `{ ...where, severity: "CRITICAL" }` **replaced** an active severity/outcome filter instead of narrowing it (same in `queryEntitySummary` and `queryStats`), so a filtered view reported counts drawn from a wider population than the total beside them. The aux sub-queries also grouped by `actorRefId` alone while the main query grouped by `[actorRefId, actorKind]`, merging a SYSTEM job with a WEBHOOK provider of the same name — now keyed on a composite `actorKey`, and drill-down carries the kind so the split survives the click.
+- [x] **Drawer UI**: `SheetContent` ships no padding, so every field and both textarea focus rings sat flush against the panel edges. `max-h-[92dvh]` also missed the `var(--app-zoom,1)` divisor and fought the primitive's `inset-y-0 h-full`. Plus HTTP errors no longer render as "no activity matches", search is debounced, paging can go back, and non-interactive stat cards are no longer buttons.
+
+### Adversarial review pass, and what it caught
+
+Two 8-agent workflows (audit, then review-the-diff). The review found a **blocker in code already pushed as `4deeea2`**, confirmed independently by all four verifiers: deriving `selected` from `rows` let the drawer close with no user gesture (Radix only fires `onOpenChange` for a gesture), so `DetailSheet`'s `plan`/`reason` survived into the next row and re-armed "Apply revert" against an action never previewed — the exact bug the 2.83.0 changelog claims to fix. Reachable without external traffic: each drawer action writes its own audit event and invalidates the list, pushing a row near position 50 off the page. Fixed by resetting on row identity, stamping the plan with the `actionLogId` it was computed for, and keeping a snapshot so the panel cannot vanish mid-typing.
+
+Also corrected from that pass: `placeholderData` carried one view's payload into another (a settled-looking "nothing here", and 0/0/0/0/0 cards after leaving Coverage — the very bug the same commit set out to fix); view bodies rendered "No activity matches these filters" beneath the error message; the Flagged card was labelled all-time while wired as a filter, so it could exceed the Events total beside it; two changelog bullets overclaimed (date/outlet filters were never affected — only severity and outcome) and were rewritten before the release synced publicly.
+
+### ⚠️ Known limits, deliberately not fixed
+
+- `sheet.tsx`'s close button is a 16px touch target against AGENTS.md's 40px floor, and it renders a duplicate sr-only `DialogTitle` so every sheet announces as "Sheet". Shared primitive — affects every sheet in the app, out of scope for this change.
+- No `@@index([actorRefId, occurredAt])`. The new rollups filter on `actorRefId` without constraining `actorKind`, so the existing composite index cannot serve them. A migration auto-applies to production on build, so this was not taken unilaterally.
+- The identity lookup in `queryActorSummary` is unbounded over `ActivityEvent` and cannot use an index (pre-existing, unchanged here, but now on a hotter path).
+- **Unrelated and more serious, found while auditing:** `prune-activity-events` deletes on `occurredAt` alone while `ActivityEvent` has no `lockedAt` column, so a **legal hold does not survive Layer 1 pruning**; and `shredAuditSubject` matches `actorRefId: userId`, which never equals a `StaffMember.id`, so **a staff member's rows are never reached by the GDPR shredder**. Both in `audit-retention.ts`, neither touched by this work.
+
+Verified: `pnpm type-check` and `pnpm lint` clean. `pnpm test` 106 files / 1209 tests green, plus 12 new in `src/lib/services/__tests__/audit-query.service.test.ts` — the first coverage `audit-query.service.ts` has ever had. **One pre-existing failure, not from this work**: `src/lib/utils/__tests__/date-range.test.ts` ("is the exact inverse of describeDateRange for every preset") fails because on 2026-09-07 the `last7Days` and `thisMonth` windows coincide; confirmed failing on a stashed clean tree. CI runs `pnpm test` on every push to main, so main is red until that is fixed separately.
+
+---
+
 ## ✅ 2026-09-03 — Action Log, Data History & Reversal (2.82.0)
 
 Operator: *"give me the comprehensive plan of User's logs of actions & data history... the goal is to track and prevent any risk happen, and able to reverse any data..."*, followed by *"start all of the phases non-stop until no codeside's left to implement."* A 17-agent survey (271 verified facts, 88 catalogued destructive operations across the admin panel, store data, and POS/staff/finance) produced `docs/AUDIT_LOG_PLAN.md`; this entry is the build against it.

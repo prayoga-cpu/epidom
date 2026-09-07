@@ -129,6 +129,10 @@ export function AdminActivityLog() {
   const [storeLabel, setStoreLabel] = useState<string | null>(null);
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [actorRefId, setActorRefId] = useState<string | null>(null);
+  // Paired with the ref id, because an actor is only unique per (kind, refId)
+  // — see actorKey() in audit-query.service.ts. Drilling down on the ref id
+  // alone re-merges the two actors the rollup above just took care to split.
+  const [actorKind, setActorKind] = useState<string | null>(null);
   const [cursorStack, setCursorStack] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -151,6 +155,7 @@ export function AdminActivityLog() {
     if (storeId) p.set("storeId", storeId);
     if (flaggedOnly) p.set("flaggedOnly", "true");
     if (actorRefId) p.set("actorRefId", actorRefId);
+    if (actorKind) p.set("actorKind", actorKind);
     const cursor = cursorStack[cursorStack.length - 1];
     if (cursor) p.set("cursor", cursor);
     return p.toString();
@@ -163,6 +168,7 @@ export function AdminActivityLog() {
     storeId,
     flaggedOnly,
     actorRefId,
+    actorKind,
     cursorStack,
   ]);
 
@@ -188,17 +194,32 @@ export function AdminActivityLog() {
     // as "nothing is happening", which is the one impression it must not give.
     refetchInterval: 30_000,
     // Keeps the previous page on screen while the next one loads, instead of
-    // blanking every row and flashing 0 across all five stat cards.
-    placeholderData: (prev) => prev,
+    // blanking every row. Scoped to the SAME view: each view returns a
+    // different shape, so carrying `{ rows }` into the actors tab (or the
+    // stats-less coverage payload into any tab) renders a settled-looking
+    // "nothing here" and a row of confident zeroes for data never fetched.
+    placeholderData: (prev, prevQuery) =>
+      String(prevQuery?.queryKey?.[1] ?? "").includes(`view=${view}`) ? prev : undefined,
   });
 
   const stats = data?.stats;
   const rows = useMemo(() => data?.rows ?? [], [data?.rows]);
 
-  // The drawer follows the row by id rather than holding a copy of it, so a
-  // flag or a legal hold applied from inside the drawer is reflected as soon as
-  // the list refetches. A detached snapshot could never update.
-  const selected = useMemo(() => rows.find((r) => r.id === selectedId) ?? null, [rows, selectedId]);
+  /**
+   * The drawer tracks its row by id so a flag or legal hold applied inside it
+   * shows up as soon as the list refetches — but it falls back to the last
+   * known copy, because the row genuinely can leave the page underneath it.
+   * Every drawer action writes its own audit event and invalidates the list, so
+   * a row near the bottom of a 50-row page gets pushed off by the very act of
+   * previewing it. Letting the panel vanish there would discard typed input and
+   * strand this component's per-row state on a row nobody can see.
+   */
+  const liveRow = useMemo(() => rows.find((r) => r.id === selectedId) ?? null, [rows, selectedId]);
+  const [rowSnapshot, setRowSnapshot] = useState<ActivityRow | null>(null);
+  useEffect(() => {
+    if (liveRow) setRowSnapshot(liveRow);
+  }, [liveRow]);
+  const selected = selectedId ? (liveRow ?? rowSnapshot) : null;
 
   const act = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
@@ -211,7 +232,12 @@ export function AdminActivityLog() {
       if (!res.ok) throw new Error(json.error ?? "Request failed");
       return json;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-activity"] }),
+    // "plan" is a documented dry run that writes nothing, so refetching the
+    // whole list after it only churns the page the admin is reading.
+    onSuccess: (_data, vars) =>
+      vars.op === "plan"
+        ? undefined
+        : queryClient.invalidateQueries({ queryKey: ["admin-activity"] }),
     // A failed flag or legal hold used to fail silently, leaving the icon
     // showing the state the click did not achieve.
     onError: (e) => toast.error(e instanceof Error ? e.message : "Request failed"),
@@ -262,7 +288,10 @@ export function AdminActivityLog() {
       icon: Flag,
       color: "text-orange-400",
       filterable: true,
-      allTime: true,
+      // Flagged IS filterable, so its count now narrows with the filters too —
+      // an all-time number on a clickable filter could exceed the Events total
+      // sitting right beside it.
+      allTime: false,
     },
     {
       key: "revertable",
@@ -312,9 +341,11 @@ export function AdminActivityLog() {
           </div>
         )}
 
-        {/* Stats. Hidden on Coverage, whose route returns no stats at all — the
-            cards would otherwise read a confident 0/0/0/0/0. */}
-        {view !== "coverage" && (
+        {/* Gated on `stats` itself, not on the view name. Coverage returns no
+            stats, an error returns none, and a cross-view placeholder carries
+            none — no branch may render a confident 0/0/0/0/0 for numbers that
+            were never fetched. */}
+        {stats && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             {statItems.map(({ key, label, value, icon: Icon, color, filterable, allTime }) => {
               const active =
@@ -451,6 +482,7 @@ export function AdminActivityLog() {
                   variant="outline"
                   onClick={() => {
                     setActorRefId(null);
+                    setActorKind(null);
                     resetPaging();
                   }}
                 >
@@ -507,22 +539,24 @@ export function AdminActivityLog() {
           </p>
         )}
 
-        {!isLoading && view === "timeline" && (
+        {!isLoading && !isError && view === "timeline" && (
           <TimelineView
             rows={rows}
             onSelect={(r) => setSelectedId(r.id)}
-            onFilterActor={(id) => {
+            onFilterActor={(id, kind) => {
               setActorRefId(id);
+              setActorKind(kind);
               resetPaging();
             }}
           />
         )}
 
-        {!isLoading && view === "actors" && (
+        {!isLoading && !isError && view === "actors" && (
           <ActorsView
             actors={data?.actors ?? []}
-            onDrillDown={(id) => {
+            onDrillDown={(id, kind) => {
               setActorRefId(id);
+              setActorKind(kind);
               setView("timeline");
               resetPaging();
             }}
@@ -535,7 +569,7 @@ export function AdminActivityLog() {
           />
         )}
 
-        {!isLoading && view === "entities" && (
+        {!isLoading && !isError && view === "entities" && (
           <EntitiesView
             entities={data?.entities ?? []}
             onDrillDown={(t) => {
@@ -546,7 +580,9 @@ export function AdminActivityLog() {
           />
         )}
 
-        {!isLoading && view === "coverage" && <CoverageView coverage={data?.coverage} />}
+        {!isLoading && !isError && view === "coverage" && (
+          <CoverageView coverage={data?.coverage} />
+        )}
 
         {/* This pages rather than appends — the cursor REPLACES the visible
             rows — so the controls say "page", and the stack the component
@@ -604,7 +640,7 @@ function TimelineView({
 }: {
   rows: ActivityRow[];
   onSelect: (r: ActivityRow) => void;
-  onFilterActor: (id: string) => void;
+  onFilterActor: (id: string, kind: string) => void;
 }) {
   if (rows.length === 0) {
     return (
@@ -702,7 +738,7 @@ function TimelineView({
                     {r.actorRefId ? (
                       <button
                         type="button"
-                        onClick={() => onFilterActor(r.actorRefId!)}
+                        onClick={() => onFilterActor(r.actorRefId!, r.actorKind)}
                         className="hover:text-foreground text-left underline-offset-2 hover:underline"
                       >
                         {r.actorName ?? r.actorRefId.slice(0, 8)}
@@ -827,7 +863,7 @@ function ActorsView({
   onFilterStore,
 }: {
   actors: ActorRow[];
-  onDrillDown: (id: string) => void;
+  onDrillDown: (id: string, kind: string) => void;
   onFilterStore: (store: ActorStoreRef) => void;
 }) {
   if (actors.length === 0) {
@@ -851,7 +887,7 @@ function ActorsView({
                 {a.actorRefId ? (
                   <button
                     type="button"
-                    onClick={() => onDrillDown(a.actorRefId!)}
+                    onClick={() => onDrillDown(a.actorRefId!, a.actorKind)}
                     className="text-foreground block max-w-full truncate text-left text-sm font-medium underline-offset-2 hover:underline"
                   >
                     {actorLabel(a)}
@@ -924,7 +960,7 @@ function ActorsView({
                     {a.actorRefId ? (
                       <button
                         type="button"
-                        onClick={() => onDrillDown(a.actorRefId!)}
+                        onClick={() => onDrillDown(a.actorRefId!, a.actorKind)}
                         title={actorLabel(a)}
                         className="block max-w-[260px] truncate text-left underline-offset-2 hover:underline"
                       >
@@ -1118,26 +1154,43 @@ function DetailSheet({
   act: ReturnType<typeof useMutation<any, Error, Record<string, unknown>>>;
 }) {
   const [reason, setReason] = useState("");
-  const [plan, setPlan] = useState<any>(null);
+  /** The plan, stamped with the action it was actually computed for. */
+  const [plan, setPlan] = useState<{ forActionLogId: string; value: any } | null>(null);
   const [note, setNote] = useState("");
 
   const actionLogId = row?.detail?.actionLogId;
 
+  /**
+   * Reset on the ROW, not on the close handler.
+   *
+   * Keying this off `close()` alone was not enough: the sheet is controlled by
+   * `open={Boolean(row)}`, and Radix only fires `onOpenChange` for a *user*
+   * gesture. When the open row left the refetched page the panel closed with no
+   * gesture at all, so `close()` never ran and a computed revert plan — with a
+   * satisfied reason — survived into whichever row was opened next.
+   */
+  useEffect(() => {
+    setPlan(null);
+    setReason("");
+    setNote("");
+  }, [row?.id]);
+
   const close = () => {
-    // Everything in here is scoped to ONE row. Left standing, a revert plan
-    // computed for row A stayed on screen when row B was opened and armed
-    // "Apply revert" against the wrong action.
     setPlan(null);
     setReason("");
     setNote("");
     onClose();
   };
 
+  // Only a plan computed for THIS action may be shown or acted on. Belt and
+  // braces against any future path that resets less thoroughly than the effect.
+  const activePlan = plan && actionLogId && plan.forActionLogId === actionLogId ? plan.value : null;
+
   const runPlan = async () => {
     if (!actionLogId) return;
     try {
       const res = await act.mutateAsync({ op: "plan", actionLogId });
-      setPlan(res.plan);
+      setPlan({ forActionLogId: actionLogId, value: res.plan });
     } catch (e) {
       // Without this the preview of a DESTRUCTIVE operation could fail with no
       // message at all, leaving the admin staring at an unchanged panel.
@@ -1146,7 +1199,7 @@ function DetailSheet({
   };
 
   const runRevert = async () => {
-    if (!actionLogId) return;
+    if (!actionLogId || !activePlan?.ok) return;
     try {
       await act.mutateAsync({ op: "revert", actionLogId, reason, confirmed: true });
       toast.success("Reverted — the action was undone and recorded.");
@@ -1177,7 +1230,7 @@ function DetailSheet({
             the flex parent's overflow-hidden. px-4 because SheetContent ships
             no padding of its own — without it every field, and the focus ring
             of both textareas, sat flush against the panel edges. */}
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <dl className="space-y-2 text-sm">
             <Field label="When" value={row ? fmtTime(row.occurredAt) : ""} />
             <Field label="Actor" value={`${row?.actorName ?? "—"} (${row?.actorKind})`} />
@@ -1202,27 +1255,27 @@ function DetailSheet({
             </p>
           )}
 
-          {plan && (
+          {activePlan && (
             <div
               className={`rounded-lg border p-3 text-xs ${
-                plan.ok
+                activePlan.ok
                   ? "border-emerald-500/40 bg-emerald-500/10"
                   : "border-amber-500/40 bg-amber-500/10"
               }`}
             >
-              <p className="font-medium">{plan.ok ? "Safe to revert" : "Refused"}</p>
+              <p className="font-medium">{activePlan.ok ? "Safe to revert" : "Refused"}</p>
               <p className="text-muted-foreground mt-1">
-                {plan.ok ? plan.effect : plan.refusal?.message}
+                {activePlan.ok ? activePlan.effect : activePlan.refusal?.message}
               </p>
-              {plan.caveat && (
+              {activePlan.caveat && (
                 <p className="mt-2 text-amber-400">
-                  <strong>Caveat:</strong> {plan.caveat}
+                  <strong>Caveat:</strong> {activePlan.caveat}
                 </p>
               )}
             </div>
           )}
 
-          {plan?.ok && (
+          {activePlan?.ok && (
             <div className="space-y-2.5">
               <label htmlFor="revert-reason" className="text-foreground block text-xs font-medium">
                 Why are you reverting this? (required, min 10 characters)
@@ -1270,13 +1323,13 @@ function DetailSheet({
         </div>
 
         {row?.detail && (
-          <div className="border-border flex shrink-0 flex-wrap gap-2 border-t px-4 pt-3 pb-4">
+          <div className="border-border flex shrink-0 flex-wrap gap-2 border-t px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {/* flex-1 rather than w-full: w-full would claim the whole row on
                 top of its siblings and overflow by exactly their width. */}
             {/* Shown whenever there is no *approved* plan. Keying this on `!plan`
                 meant a single refusal hid the button for the rest of the
                 session, with nothing left to click. */}
-            {!plan?.ok && (
+            {!activePlan?.ok && (
               <Button
                 className="flex-1"
                 disabled={!row.detail.revertable || act.isPending}
@@ -1284,14 +1337,14 @@ function DetailSheet({
               >
                 {act.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
-                ) : plan ? (
+                ) : activePlan ? (
                   "Preview again"
                 ) : (
                   "Preview revert"
                 )}
               </Button>
             )}
-            {plan?.ok && (
+            {activePlan?.ok && (
               <Button
                 className="flex-1"
                 variant="destructive"
