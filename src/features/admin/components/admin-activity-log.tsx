@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,7 +19,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -55,6 +61,26 @@ interface ActivityRow {
     lockedAt: string | null;
     revertable: boolean;
   } | null;
+}
+
+/** Mirrors ActorStoreRef / ActorSummary in audit-query.service.ts. */
+interface ActorStoreRef {
+  id: string;
+  name: string;
+  events: number;
+}
+
+interface ActorRow {
+  actorRefId: string | null;
+  actorKind: string;
+  actorName: string | null;
+  actorEmail: string | null;
+  stores: ActorStoreRef[];
+  staffRole: string | null;
+  total: number;
+  destructive: number;
+  denied: number;
+  lastSeen: string;
 }
 
 interface Stats {
@@ -95,43 +121,84 @@ export function AdminActivityLog() {
 
   const [view, setView] = useState<ViewMode>("timeline");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [severity, setSeverity] = useState<string>("ALL");
   const [outcome, setOutcome] = useState<string>("ALL");
   const [targetType, setTargetType] = useState<string>("ALL");
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [storeLabel, setStoreLabel] = useState<string | null>(null);
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [actorRefId, setActorRefId] = useState<string | null>(null);
   const [cursorStack, setCursorStack] = useState<string[]>([]);
-  const [selected, setSelected] = useState<ActivityRow | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // The search box is part of the query key, so an undebounced keystroke is a
+  // round trip to the admin API and a full skeleton flash. Typing "order" used
+  // to cost five of each.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const params = useMemo(() => {
     const p = new URLSearchParams();
     p.set("view", view);
     p.set("limit", "50");
-    if (search.trim()) p.set("search", search.trim());
+    if (debouncedSearch) p.set("search", debouncedSearch);
     if (severity !== "ALL") p.set("severity", severity);
     if (outcome !== "ALL") p.set("outcome", outcome);
     if (targetType !== "ALL") p.set("targetType", targetType);
+    if (storeId) p.set("storeId", storeId);
+    if (flaggedOnly) p.set("flaggedOnly", "true");
     if (actorRefId) p.set("actorRefId", actorRefId);
     const cursor = cursorStack[cursorStack.length - 1];
     if (cursor) p.set("cursor", cursor);
     return p.toString();
-  }, [view, search, severity, outcome, targetType, actorRefId, cursorStack]);
+  }, [
+    view,
+    debouncedSearch,
+    severity,
+    outcome,
+    targetType,
+    storeId,
+    flaggedOnly,
+    actorRefId,
+    cursorStack,
+  ]);
 
-  const { data, isLoading, isError } = useQuery<{
+  const { data, isLoading, isError, error } = useQuery<{
     rows?: ActivityRow[];
     nextCursor?: string | null;
-    actors?: any[];
+    actors?: ActorRow[];
     entities?: any[];
     coverage?: any;
     stats?: Stats;
   }>({
     queryKey: ["admin-activity", params],
-    queryFn: () => fetch(`/api/admin/activity?${params}`).then((r) => r.json()),
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/activity?${params}`);
+      const json = await res.json();
+      // Without this a 403 or a 400 resolves happily to `{ error: … }` and the
+      // table renders "No activity matches these filters" — an audit log
+      // claiming nothing happened is the one lie it must never tell.
+      if (!res.ok) throw new Error(json.error ?? "Could not load the activity log");
+      return json;
+    },
     // The trail is append-only and grows continuously; a stale page here reads
     // as "nothing is happening", which is the one impression it must not give.
     refetchInterval: 30_000,
+    // Keeps the previous page on screen while the next one loads, instead of
+    // blanking every row and flashing 0 across all five stat cards.
+    placeholderData: (prev) => prev,
   });
 
   const stats = data?.stats;
+  const rows = useMemo(() => data?.rows ?? [], [data?.rows]);
+
+  // The drawer follows the row by id rather than holding a copy of it, so a
+  // flag or a legal hold applied from inside the drawer is reflected as soon as
+  // the list refetches. A detached snapshot could never update.
+  const selected = useMemo(() => rows.find((r) => r.id === selectedId) ?? null, [rows, selectedId]);
 
   const act = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
@@ -145,16 +212,67 @@ export function AdminActivityLog() {
       return json;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-activity"] }),
+    // A failed flag or legal hold used to fail silently, leaving the icon
+    // showing the state the click did not achieve.
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Request failed"),
   });
 
   const resetPaging = useCallback(() => setCursorStack([]), []);
 
+  /**
+   * `filterable` cards toggle a filter; the rest are read-outs and must not be
+   * rendered as buttons that do nothing when clicked.
+   *
+   * `allTime` marks the two counts that come from ActionLog, which the
+   * ActivityEvent filters cannot address — saying so is better than quietly
+   * showing a number drawn from a different population than its neighbours.
+   */
   const statItems = [
-    { key: "total", label: "Events", value: stats?.total ?? 0, icon: Activity, color: "text-blue-400" },
-    { key: "critical", label: "Critical", value: stats?.critical ?? 0, icon: ShieldAlert, color: "text-red-400" },
-    { key: "denied", label: "Denied", value: stats?.denied ?? 0, icon: AlertTriangle, color: "text-amber-400" },
-    { key: "flagged", label: "Flagged", value: stats?.flagged ?? 0, icon: Flag, color: "text-orange-400" },
-    { key: "revertable", label: "Revertible", value: stats?.revertable ?? 0, icon: Undo2, color: "text-emerald-400" },
+    {
+      key: "total",
+      label: "Events",
+      value: stats?.total ?? 0,
+      icon: Activity,
+      color: "text-blue-400",
+      filterable: false,
+      allTime: false,
+    },
+    {
+      key: "critical",
+      label: "Critical",
+      value: stats?.critical ?? 0,
+      icon: ShieldAlert,
+      color: "text-red-400",
+      filterable: true,
+      allTime: false,
+    },
+    {
+      key: "denied",
+      label: "Denied",
+      value: stats?.denied ?? 0,
+      icon: AlertTriangle,
+      color: "text-amber-400",
+      filterable: true,
+      allTime: false,
+    },
+    {
+      key: "flagged",
+      label: "Flagged",
+      value: stats?.flagged ?? 0,
+      icon: Flag,
+      color: "text-orange-400",
+      filterable: true,
+      allTime: true,
+    },
+    {
+      key: "revertable",
+      label: "Revertible",
+      value: stats?.revertable ?? 0,
+      icon: Undo2,
+      color: "text-emerald-400",
+      filterable: false,
+      allTime: true,
+    },
   ];
 
   return (
@@ -194,34 +312,59 @@ export function AdminActivityLog() {
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {statItems.map(({ key, label, value, icon: Icon, color }) => {
-            const active =
-              (key === "critical" && severity === "CRITICAL") ||
-              (key === "denied" && outcome === "DENIED");
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  resetPaging();
-                  if (key === "critical") setSeverity(severity === "CRITICAL" ? "ALL" : "CRITICAL");
-                  if (key === "denied") setOutcome(outcome === "DENIED" ? "ALL" : "DENIED");
-                }}
-                className={`border-border bg-card hover:border-foreground/20 rounded-xl border p-4 text-left transition-all ${
-                  active ? "ring-offset-background ring-2 ring-violet-500 ring-offset-2" : ""
-                }`}
-              >
-                <div className="mb-1 flex items-center justify-between">
-                  <p className="text-muted-foreground text-xs">{label}</p>
-                  <Icon className={`h-4 w-4 ${color}`} />
-                </div>
-                <p className="text-foreground text-2xl font-bold">{value}</p>
-              </button>
-            );
-          })}
-        </div>
+        {/* Stats. Hidden on Coverage, whose route returns no stats at all — the
+            cards would otherwise read a confident 0/0/0/0/0. */}
+        {view !== "coverage" && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            {statItems.map(({ key, label, value, icon: Icon, color, filterable, allTime }) => {
+              const active =
+                (key === "critical" && severity === "CRITICAL") ||
+                (key === "denied" && outcome === "DENIED") ||
+                (key === "flagged" && flaggedOnly);
+
+              const body = (
+                <>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="text-muted-foreground truncate text-xs">{label}</p>
+                    <Icon className={`h-4 w-4 shrink-0 ${color}`} />
+                  </div>
+                  <p className="text-foreground text-2xl font-bold">{value}</p>
+                  {allTime && <p className="text-muted-foreground mt-0.5 text-[10px]">all time</p>}
+                </>
+              );
+
+              const shell = `border-border bg-card rounded-xl border p-4 text-left ${
+                active ? "ring-offset-background ring-2 ring-violet-500 ring-offset-2" : ""
+              }`;
+
+              if (!filterable) {
+                return (
+                  <div key={key} className={shell}>
+                    {body}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    resetPaging();
+                    if (key === "critical")
+                      setSeverity(severity === "CRITICAL" ? "ALL" : "CRITICAL");
+                    if (key === "denied") setOutcome(outcome === "DENIED" ? "ALL" : "DENIED");
+                    if (key === "flagged") setFlaggedOnly((v) => !v);
+                  }}
+                  className={`${shell} hover:border-foreground/20 transition-all`}
+                >
+                  {body}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* View switcher + filters */}
         <div className="flex flex-col gap-3">
@@ -251,17 +394,18 @@ export function AdminActivityLog() {
 
           {view !== "coverage" && (
             <div className="flex flex-wrap items-center gap-2">
-              <div className="relative min-w-[160px] max-w-xs flex-1">
+              <div className="relative max-w-xs min-w-[160px] flex-1">
                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
                 <input
                   type="text"
+                  aria-label="Search the activity trail"
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
                     resetPaging();
                   }}
-                  placeholder="Search actor, action, route…"
-                  className="border-border bg-card focus:ring-ring h-9 w-full rounded-md border pl-8 pr-2 text-sm focus:ring-2 focus:outline-none"
+                  placeholder="Search person, email, restaurant, action…"
+                  className="border-border bg-card focus:ring-ring h-9 w-full rounded-md border pr-2 pl-8 text-sm focus:ring-2 focus:outline-none"
                 />
               </div>
 
@@ -313,6 +457,38 @@ export function AdminActivityLog() {
                   Clear user filter ✕
                 </Button>
               )}
+
+              {/* Both of these filters could previously be applied by drilling
+                  down but never seen or cleared — a dead end you could only
+                  escape by reloading the page. */}
+              {storeId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="max-w-[240px]"
+                  onClick={() => {
+                    setStoreId(null);
+                    setStoreLabel(null);
+                    resetPaging();
+                  }}
+                >
+                  <span className="truncate">Restaurant: {storeLabel ?? storeId.slice(0, 8)}</span>{" "}
+                  ✕
+                </Button>
+              )}
+
+              {targetType !== "ALL" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setTargetType("ALL");
+                    resetPaging();
+                  }}
+                >
+                  Table: {targetType} ✕
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -326,13 +502,15 @@ export function AdminActivityLog() {
         )}
 
         {isError && (
-          <p className="text-destructive text-sm">Could not load the activity log.</p>
+          <p className="text-destructive text-sm">
+            {error instanceof Error ? error.message : "Could not load the activity log."}
+          </p>
         )}
 
         {!isLoading && view === "timeline" && (
           <TimelineView
-            rows={data?.rows ?? []}
-            onSelect={setSelected}
+            rows={rows}
+            onSelect={(r) => setSelectedId(r.id)}
             onFilterActor={(id) => {
               setActorRefId(id);
               resetPaging();
@@ -345,6 +523,12 @@ export function AdminActivityLog() {
             actors={data?.actors ?? []}
             onDrillDown={(id) => {
               setActorRefId(id);
+              setView("timeline");
+              resetPaging();
+            }}
+            onFilterStore={(store) => {
+              setStoreId(store.id);
+              setStoreLabel(store.name);
               setView("timeline");
               resetPaging();
             }}
@@ -364,26 +548,35 @@ export function AdminActivityLog() {
 
         {!isLoading && view === "coverage" && <CoverageView coverage={data?.coverage} />}
 
-        {view === "timeline" && data?.nextCursor && (
-          <div className="flex justify-center">
+        {/* This pages rather than appends — the cursor REPLACES the visible
+            rows — so the controls say "page", and the stack the component
+            already kept is finally wired to a way back. */}
+        {view === "timeline" && (cursorStack.length > 0 || data?.nextCursor) && (
+          <div className="flex flex-wrap justify-center gap-2">
             <Button
               variant="outline"
-              onClick={() => setCursorStack((s) => [...s, data.nextCursor!])}
+              disabled={cursorStack.length === 0}
+              onClick={() => setCursorStack((s) => s.slice(0, -1))}
             >
-              Load more
+              Previous page
             </Button>
-          </div>
-        )}
-        {cursorStack.length > 0 && (
-          <div className="flex justify-center">
-            <Button variant="ghost" size="sm" onClick={resetPaging}>
-              Back to newest
+            <Button
+              variant="outline"
+              disabled={!data?.nextCursor}
+              onClick={() => setCursorStack((s) => [...s, data!.nextCursor!])}
+            >
+              Next page
             </Button>
+            {cursorStack.length > 0 && (
+              <Button variant="ghost" onClick={resetPaging}>
+                Back to newest
+              </Button>
+            )}
           </div>
         )}
       </div>
 
-      <DetailSheet row={selected} onClose={() => setSelected(null)} act={act} />
+      <DetailSheet row={selected} onClose={() => setSelectedId(null)} act={act} />
     </div>
   );
 }
@@ -464,19 +657,34 @@ function TimelineView({
         ))}
       </div>
 
-      {/* Desktop table */}
-      <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
+      {/* Desktop table. No -mx-4 here: the negative margin exists to cancel the
+          page's mobile padding, and this element is display:none below lg. */}
+      <div className="hidden overflow-x-auto lg:block">
         <div className="min-w-[980px]">
           <table className="w-full text-sm">
             <thead className="text-muted-foreground border-border border-b text-xs">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">When</th>
-                <th className="px-3 py-2 text-left font-medium">Actor</th>
-                <th className="px-3 py-2 text-left font-medium">Action</th>
-                <th className="px-3 py-2 text-left font-medium">Table</th>
-                <th className="px-3 py-2 text-left font-medium">Severity</th>
-                <th className="px-3 py-2 text-left font-medium">Status</th>
-                <th className="px-3 py-2 text-right font-medium"></th>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  When
+                </th>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  Actor
+                </th>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  Action
+                </th>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  Table
+                </th>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  Severity
+                </th>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  Status
+                </th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">
+                  <span className="sr-only">Details</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -513,9 +721,7 @@ function TimelineView({
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    <span className="text-foreground">
-                      {r.detail?.targetLabel ?? r.actionCode}
-                    </span>
+                    <span className="text-foreground">{r.detail?.targetLabel ?? r.actionCode}</span>
                     {r.detail && (
                       <Badge variant="outline" className="ml-1.5 text-[10px]">
                         detailed
@@ -557,71 +763,214 @@ function TimelineView({
   );
 }
 
+function actorLabel(a: ActorRow): string {
+  return a.actorName ?? a.actorEmail ?? a.actorRefId?.slice(0, 12) ?? a.actorKind;
+}
+
+/**
+ * The restaurants an actor worked in.
+ *
+ * This is the column that makes the view usable: a name on its own identifies
+ * nobody. Half the staff in the system are a first name, several of those first
+ * names repeat across restaurants, and an owner account is named after the
+ * business rather than the person. "Shinta" is a question; "Shinta, cashier at
+ * TAHOMA Coffee & Eatery" is an answer.
+ */
+function StoreCell({
+  stores,
+  onFilterStore,
+}: {
+  stores: ActorStoreRef[];
+  onFilterStore: (store: ActorStoreRef) => void;
+}) {
+  if (!stores || stores.length === 0) {
+    return (
+      <span className="text-muted-foreground text-xs" title="Acted outside any single restaurant">
+        Platform-wide
+      </span>
+    );
+  }
+
+  // Two names, then a count. An account that touched nine restaurants must not
+  // push the numeric columns off the table to say so.
+  const shown = stores.slice(0, 2);
+  const rest = stores.length - shown.length;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {shown.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => onFilterStore(s)}
+          title={`${s.name} — show only this restaurant`}
+          className="border-border bg-muted/50 hover:border-foreground/30 max-w-[180px] truncate rounded border px-1.5 py-0.5 text-xs"
+        >
+          {s.name}
+        </button>
+      ))}
+      {rest > 0 && (
+        <span
+          className="text-muted-foreground text-xs"
+          title={stores.map((s) => s.name).join(", ")}
+        >
+          +{rest} more
+        </span>
+      )}
+    </div>
+  );
+}
+
 function ActorsView({
   actors,
   onDrillDown,
+  onFilterStore,
 }: {
-  actors: any[];
+  actors: ActorRow[];
   onDrillDown: (id: string) => void;
+  onFilterStore: (store: ActorStoreRef) => void;
 }) {
   if (actors.length === 0) {
-    return <p className="text-muted-foreground py-12 text-center text-sm">No actors recorded yet.</p>;
+    return (
+      <p className="text-muted-foreground py-12 text-center text-sm">No actors recorded yet.</p>
+    );
   }
+
   return (
-    <div className="-mx-4 overflow-x-auto sm:mx-0">
-      <div className="min-w-[640px]">
-        <table className="w-full text-sm">
-          <thead className="text-muted-foreground border-border border-b text-xs">
-            <tr>
-              <th className="px-3 py-2 text-left font-medium">User</th>
-              <th className="px-3 py-2 text-right font-medium">Actions</th>
-              <th className="px-3 py-2 text-right font-medium">Destructive</th>
-              <th className="px-3 py-2 text-right font-medium">Denied</th>
-              <th className="px-3 py-2 text-left font-medium">Last seen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {actors.map((a) => (
-              <tr
-                key={`${a.actorKind}-${a.actorRefId ?? "anon"}`}
-                className="border-border hover:bg-muted/40 border-b"
-              >
-                <td className="px-3 py-2">
-                  {a.actorRefId ? (
-                    <button
-                      type="button"
-                      onClick={() => onDrillDown(a.actorRefId)}
-                      className="text-left underline-offset-2 hover:underline"
-                    >
-                      {a.actorName ?? a.actorEmail ?? a.actorRefId.slice(0, 12)}
-                    </button>
-                  ) : (
-                    <span className="text-muted-foreground">{a.actorKind}</span>
-                  )}
-                  <Badge variant="outline" className="ml-1.5 text-[10px]">
-                    {a.actorKind}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2 text-right">{a.total}</td>
-                <td
-                  className={`px-3 py-2 text-right ${a.destructive > 0 ? "font-semibold text-red-400" : "text-muted-foreground"}`}
-                >
-                  {a.destructive}
-                </td>
-                <td
-                  className={`px-3 py-2 text-right ${a.denied > 0 ? "font-semibold text-amber-400" : "text-muted-foreground"}`}
-                >
-                  {a.denied}
-                </td>
-                <td className="text-muted-foreground px-3 py-2">
-                  {a.lastSeen ? fmtTime(a.lastSeen) : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <>
+      {/* Mobile cards, matching the timeline view. A six-column table dragged
+          sideways on a phone is not a view of anything. */}
+      <div className="space-y-3 lg:hidden">
+        {actors.map((a) => (
+          <div
+            key={`${a.actorKind}-${a.actorRefId ?? "anon"}`}
+            className="border-border bg-card rounded-lg border p-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                {a.actorRefId ? (
+                  <button
+                    type="button"
+                    onClick={() => onDrillDown(a.actorRefId!)}
+                    className="text-foreground block max-w-full truncate text-left text-sm font-medium underline-offset-2 hover:underline"
+                  >
+                    {actorLabel(a)}
+                  </button>
+                ) : (
+                  <span className="text-muted-foreground text-sm">{a.actorKind}</span>
+                )}
+                <p className="text-muted-foreground truncate text-xs" title={a.actorEmail ?? ""}>
+                  {a.actorEmail ?? "No email on record"}
+                </p>
+              </div>
+              <Badge variant="outline" className="shrink-0 text-[10px]">
+                {a.staffRole ?? a.actorKind}
+              </Badge>
+            </div>
+
+            <div className="mt-2">
+              <StoreCell stores={a.stores} onFilterStore={onFilterStore} />
+            </div>
+
+            <p className="text-muted-foreground mt-2 text-xs">
+              {a.total} actions
+              {a.destructive > 0 && (
+                <span className="font-semibold text-red-400"> · {a.destructive} destructive</span>
+              )}
+              {a.denied > 0 && (
+                <span className="font-semibold text-amber-400"> · {a.denied} denied</span>
+              )}
+              {a.lastSeen ? ` · ${fmtTime(a.lastSeen)}` : ""}
+            </p>
+          </div>
+        ))}
       </div>
-    </div>
+
+      <div className="hidden overflow-x-auto lg:block">
+        <div className="min-w-[900px]">
+          <table className="w-full text-sm">
+            <thead className="text-muted-foreground border-border border-b text-xs">
+              <tr>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  User
+                </th>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  Restaurant
+                </th>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  Role
+                </th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">
+                  Actions
+                </th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">
+                  Destructive
+                </th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">
+                  Denied
+                </th>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  Last seen
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {actors.map((a) => (
+                <tr
+                  key={`${a.actorKind}-${a.actorRefId ?? "anon"}`}
+                  className="border-border hover:bg-muted/40 border-b"
+                >
+                  <td className="px-3 py-2 align-top">
+                    {a.actorRefId ? (
+                      <button
+                        type="button"
+                        onClick={() => onDrillDown(a.actorRefId!)}
+                        title={actorLabel(a)}
+                        className="block max-w-[260px] truncate text-left underline-offset-2 hover:underline"
+                      >
+                        {actorLabel(a)}
+                      </button>
+                    ) : (
+                      <span className="text-muted-foreground">{a.actorKind}</span>
+                    )}
+                    {/* The email is the only field that separates two people
+                        who share a display name. */}
+                    <p
+                      className="text-muted-foreground max-w-[260px] truncate text-xs"
+                      title={a.actorEmail ?? ""}
+                    >
+                      {a.actorEmail ?? "No email on record"}
+                    </p>
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    <StoreCell stores={a.stores} onFilterStore={onFilterStore} />
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    <Badge variant="outline" className="text-[10px]">
+                      {a.staffRole ?? a.actorKind}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2 text-right align-top">{a.total}</td>
+                  <td
+                    className={`px-3 py-2 text-right align-top ${a.destructive > 0 ? "font-semibold text-red-400" : "text-muted-foreground"}`}
+                  >
+                    {a.destructive}
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-right align-top ${a.denied > 0 ? "font-semibold text-amber-400" : "text-muted-foreground"}`}
+                  >
+                    {a.denied}
+                  </td>
+                  <td className="text-muted-foreground px-3 py-2 align-top whitespace-nowrap">
+                    {a.lastSeen ? fmtTime(a.lastSeen) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -633,7 +982,9 @@ function EntitiesView({
   onDrillDown: (t: string) => void;
 }) {
   if (entities.length === 0) {
-    return <p className="text-muted-foreground py-12 text-center text-sm">No table activity yet.</p>;
+    return (
+      <p className="text-muted-foreground py-12 text-center text-sm">No table activity yet.</p>
+    );
   }
   return (
     <div className="-mx-4 overflow-x-auto sm:mx-0">
@@ -641,10 +992,18 @@ function EntitiesView({
         <table className="w-full text-sm">
           <thead className="text-muted-foreground border-border border-b text-xs">
             <tr>
-              <th className="px-3 py-2 text-left font-medium">Table</th>
-              <th className="px-3 py-2 text-right font-medium">Writes</th>
-              <th className="px-3 py-2 text-right font-medium">Destructive</th>
-              <th className="px-3 py-2 text-left font-medium">Last write</th>
+              <th scope="col" className="px-3 py-2 text-left font-medium">
+                Table
+              </th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">
+                Writes
+              </th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">
+                Destructive
+              </th>
+              <th scope="col" className="px-3 py-2 text-left font-medium">
+                Last write
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -698,10 +1057,18 @@ function CoverageView({ coverage }: { coverage: any }) {
             <table className="w-full text-sm">
               <thead className="text-muted-foreground border-border border-b text-xs">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium">Action</th>
-                  <th className="px-3 py-2 text-left font-medium">Category</th>
-                  <th className="px-3 py-2 text-left font-medium">Severity</th>
-                  <th className="px-3 py-2 text-left font-medium">Reversibility</th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Action
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Category
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Severity
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-left font-medium">
+                    Reversibility
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -756,10 +1123,26 @@ function DetailSheet({
 
   const actionLogId = row?.detail?.actionLogId;
 
+  const close = () => {
+    // Everything in here is scoped to ONE row. Left standing, a revert plan
+    // computed for row A stayed on screen when row B was opened and armed
+    // "Apply revert" against the wrong action.
+    setPlan(null);
+    setReason("");
+    setNote("");
+    onClose();
+  };
+
   const runPlan = async () => {
     if (!actionLogId) return;
-    const res = await act.mutateAsync({ op: "plan", actionLogId });
-    setPlan(res.plan);
+    try {
+      const res = await act.mutateAsync({ op: "plan", actionLogId });
+      setPlan(res.plan);
+    } catch (e) {
+      // Without this the preview of a DESTRUCTIVE operation could fail with no
+      // message at all, leaving the admin staring at an unchanged panel.
+      toast.error(e instanceof Error ? e.message : "Could not preview the revert");
+    }
   };
 
   const runRevert = async () => {
@@ -767,28 +1150,34 @@ function DetailSheet({
     try {
       await act.mutateAsync({ op: "revert", actionLogId, reason, confirmed: true });
       toast.success("Reverted — the action was undone and recorded.");
-      setPlan(null);
-      setReason("");
-      onClose();
+      close();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not revert");
     }
   };
 
   return (
-    <Sheet open={Boolean(row)} onOpenChange={(o) => !o && onClose()}>
+    <Sheet open={Boolean(row)} onOpenChange={(o) => !o && close()}>
       {/* dvh, not vh: iOS Safari sizes vh as if the toolbar were hidden, which
-          pushes the footer actions of a fixed sheet off-screen. */}
-      <SheetContent className="flex max-h-[92dvh] w-full flex-col gap-0 overflow-hidden sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle className="text-base">
+          pushes the footer actions of a fixed sheet off-screen. Divided by
+          --app-zoom because CSS zoom on <html> does not scale viewport units —
+          at 0.7 the panel stopped a third of the way up the screen, at 1.25 the
+          revert buttons fell off the bottom. Height, not max-height: the
+          primitive already pins the panel with inset-y-0, and a max-height
+          fighting that left a strip of bare overlay under the drawer. */}
+      <SheetContent className="flex h-[calc(100dvh/var(--app-zoom,1))] w-full flex-col gap-0 overflow-hidden sm:max-w-lg">
+        <SheetHeader className="shrink-0">
+          {/* pr-10 clears the absolutely-positioned close button. */}
+          <SheetTitle className="pr-10 text-base">
             {row?.detail?.targetLabel ?? row?.actionCode}
           </SheetTitle>
         </SheetHeader>
 
         {/* min-h-0 so this pane actually scrolls instead of being clipped by
-            the flex parent's overflow-hidden. */}
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
+            the flex parent's overflow-hidden. px-4 because SheetContent ships
+            no padding of its own — without it every field, and the focus ring
+            of both textareas, sat flush against the panel edges. */}
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
           <dl className="space-y-2 text-sm">
             <Field label="When" value={row ? fmtTime(row.occurredAt) : ""} />
             <Field label="Actor" value={`${row?.actorName ?? "—"} (${row?.actorKind})`} />
@@ -834,11 +1223,12 @@ function DetailSheet({
           )}
 
           {plan?.ok && (
-            <div className="space-y-2">
-              <label className="text-foreground text-xs font-medium">
+            <div className="space-y-2.5">
+              <label htmlFor="revert-reason" className="text-foreground block text-xs font-medium">
                 Why are you reverting this? (required, min 10 characters)
               </label>
               <Textarea
+                id="revert-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
@@ -847,9 +1237,12 @@ function DetailSheet({
             </div>
           )}
 
-          <div className="space-y-2">
-            <label className="text-foreground text-xs font-medium">Add a note</label>
+          <div className="space-y-2.5">
+            <label htmlFor="activity-note" className="text-foreground block text-xs font-medium">
+              Add a note
+            </label>
             <Textarea
+              id="activity-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
@@ -860,9 +1253,15 @@ function DetailSheet({
               variant="outline"
               disabled={!actionLogId || !note.trim() || act.isPending}
               onClick={async () => {
-                await act.mutateAsync({ op: "annotate", actionLogId, body: note });
-                setNote("");
-                toast.success("Note added");
+                try {
+                  await act.mutateAsync({ op: "annotate", actionLogId, body: note });
+                  setNote("");
+                  toast.success("Note added");
+                } catch {
+                  // The shared onError already toasts; this only stops the
+                  // rejection from escaping as an unhandled promise, and keeps
+                  // the note in the box so it isn't lost.
+                }
               }}
             >
               Save note
@@ -871,16 +1270,25 @@ function DetailSheet({
         </div>
 
         {row?.detail && (
-          <div className="border-border flex flex-wrap gap-2 border-t pt-3">
+          <div className="border-border flex shrink-0 flex-wrap gap-2 border-t px-4 pt-3 pb-4">
             {/* flex-1 rather than w-full: w-full would claim the whole row on
                 top of its siblings and overflow by exactly their width. */}
-            {!plan && (
+            {/* Shown whenever there is no *approved* plan. Keying this on `!plan`
+                meant a single refusal hid the button for the rest of the
+                session, with nothing left to click. */}
+            {!plan?.ok && (
               <Button
                 className="flex-1"
                 disabled={!row.detail.revertable || act.isPending}
                 onClick={runPlan}
               >
-                {act.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Preview revert"}
+                {act.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : plan ? (
+                  "Preview again"
+                ) : (
+                  "Preview revert"
+                )}
               </Button>
             )}
             {plan?.ok && (

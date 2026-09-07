@@ -7,6 +7,7 @@ import {
   queryEntitySummary,
   queryStats,
   getCoverageManifest,
+  resolveActivityQuery,
 } from "@/lib/services/audit-query.service";
 
 /**
@@ -36,7 +37,10 @@ export const GET = withAdminApiHandler(async (request) => {
       { status: 400 }
     );
   }
-  const q = parsed.data;
+  // Resolved once here rather than inside each query function: every branch
+  // below runs two of them in parallel, and a search term needs a store lookup
+  // that would otherwise be issued twice for the same request.
+  const q = await resolveActivityQuery(parsed.data);
 
   if (view === "actors") {
     const [actors, stats] = await Promise.all([queryActorSummary(q), queryStats(q)]);

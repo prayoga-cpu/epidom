@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.83.0] - 2026-09-07 · ux
+
+- **The dashboard menu is in the order you actually work in.** Each group now opens with the page you reach for first: your storefront sits directly under your profile, the menu comes before the till in Point of Sale, and Operations starts with your data rather than your stock. Nothing was added or removed — the same pages, in the order a day actually runs.
+- **When you ask us who changed something, we can answer with a person now.** Our internal activity log named whoever made each change but never said which restaurant they were working in or how to reach them, so two cashiers who share a first name at two different outlets were impossible to tell apart. Every entry now carries the restaurant and the email address next to the name, staff job titles show as well, and the log can be searched by restaurant.
+- **Those answers are also correct now.** Whenever we narrowed the log — to one day, one outlet, or one kind of change — the "destructive" and "refused" counts sitting beside each person ignored that filter and were counted across everything instead, so somebody with three actions on screen could be shown a destructive count drawn from every action they had ever taken.
+- **The detail panel is readable again.** Its text ran flush into both edges of the panel with no margin, and on a screen with the app zoomed in or out it either stopped short of the bottom or pushed its own buttons off the end. A revert preview also used to stay on screen when we moved to a different entry, which could aim an undo at the wrong action.
+
 ## [2.82.0] - 2026-09-03 · feat
 
 - **You can now see everything that happened to your account.** Your profile has a new Activity section with two lists: what you did, and what was changed on your account by someone else. Until now, if support reset your password or changed your plan, nothing anywhere told you it had happened.
