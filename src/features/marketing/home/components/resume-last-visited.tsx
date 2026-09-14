@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/lib/auth-client";
 import {
   LAST_VISITED_COOKIE,
   REMEMBER_PREF_COOKIE,
@@ -17,14 +18,20 @@ import {
  * writes but blocks first-party cookies. In the normal case, the proxy
  * already redirected and this never mounts.
  *
- * Purely localStorage-driven, no API call and no auth check needed here:
- * both keys are only ever written by LastVisitedTracker while genuinely
- * signed in, so an anonymous visitor (or one who's logged out — see
- * nav-user.tsx's logout handler, which clears both keys) simply has nothing
- * to redirect to and this silently no-ops.
+ * localStorage alone isn't enough to decide to redirect: both keys are only
+ * ever WRITTEN while genuinely signed in, but they're only cleared on an
+ * explicit logout (see nav-user.tsx) — a session that simply expires leaves
+ * them behind. Trusting them on their own would bounce a signed-out visitor
+ * straight into a protected page that immediately redirects them to /login,
+ * so the marketing homepage they asked for is never shown — the exact bug
+ * this mirrors in src/proxy.ts. useUser() re-verifies against the actual
+ * session (a real request, since the session cookie is httpOnly and can't be
+ * read from here) before acting on the localStorage candidate.
  */
 export function ResumeLastVisited(): null {
   const router = useRouter();
+  const { user, loading } = useUser();
+  const [candidate, setCandidate] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -39,13 +46,19 @@ export function ResumeLastVisited(): null {
       // one hand, and on the other the single most common way a returning
       // user lands on a 404 the moment they open the app.
       if (last && isSafeRedirectTarget(last) && isResumableAppPath(last)) {
-        router.replace(last);
+        setCandidate(last);
       }
     } catch {
       // Ignore blocked storage — worst case, marketing content just shows.
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Logged in first, resume target second: without a verified session,
+    // there is nothing to resume onto, so leave the marketing page showing.
+    if (!candidate || loading || !user) return;
+    router.replace(candidate);
+  }, [candidate, loading, user, router]);
 
   return null;
 }
