@@ -153,6 +153,15 @@ export default async function proxy(req: NextRequest) {
     basePath.startsWith("/blog/") ||
     basePath.startsWith("/docs");
 
+  // Resolved once, up front: whether this browser presents a Better Auth
+  // session cookie at all. In production Better Auth uses the __Secure-
+  // prefix. This only ever checks presence (the Edge runtime can't verify a
+  // session against the DB) — used below to gate the resume-redirect, and
+  // further down to gate protected-route access.
+  const sessionCookie =
+    req.cookies.get("better-auth.session_token") ||
+    req.cookies.get("__Secure-better-auth.session_token");
+
   // Resume a signed-in returning visitor straight to their last app page
   // instead of showing marketing content — checked here, before any
   // locale-routing logic below, so it fires on every marketing page (not
@@ -160,12 +169,26 @@ export default async function proxy(req: NextRequest) {
   // moment later (see LastVisitedTracker, which is what keeps these two
   // cookies current; this proxy only ever reads them).
   //
+  // Requires an actual session cookie, not just the remember/last-visited
+  // preference cookies: those live for 400 days and outlast any real
+  // session, so once a session expires (or is revoked) a returning visitor
+  // would otherwise get bounced off the marketing homepage into a protected
+  // app path they can no longer access, landing on /login instead of ever
+  // seeing the page they asked for. Without a live session, resuming can
+  // only ever end at /login anyway, so falling through to render the
+  // marketing page normally is strictly better.
+  //
   // Skipped for prefetches: the App Router warms marketing links (the logo,
   // the footer) from inside the dashboard, and answering a prefetch of "/"
   // with a redirect would quietly fill the router cache for the marketing URL
   // with app content the visitor never asked to navigate to.
   const isPrefetchRequest = req.headers.get(RSC_PREFETCH_HEADER) === "1";
-  if (isLocalizedMarketingPath && !isPrefetchRequest && !isResumeExemptPath(basePath, req)) {
+  if (
+    isLocalizedMarketingPath &&
+    !isPrefetchRequest &&
+    !!sessionCookie &&
+    !isResumeExemptPath(basePath, req)
+  ) {
     const remember = req.cookies.get(REMEMBER_PREF_COOKIE)?.value;
     const rawLastVisited = req.cookies.get(LAST_VISITED_COOKIE)?.value;
     if (remember === "true" && rawLastVisited) {
@@ -317,12 +340,6 @@ export default async function proxy(req: NextRequest) {
   }
 
   // PROTECTED ROUTES - Require authentication
-  // Check for Better Auth session cookie
-  // In production, Better Auth uses __Secure- prefix
-  const sessionCookie =
-    req.cookies.get("better-auth.session_token") ||
-    req.cookies.get("__Secure-better-auth.session_token");
-
   // If no token and trying to access protected route, redirect to login
   if (!sessionCookie) {
     const loginUrl = new URL("/login", req.url);
