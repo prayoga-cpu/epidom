@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOfflineQueue } from "./use-offline-queue";
+import { useOfflineTableQueue } from "./use-offline-table-queue";
+import { useOfflineProductionQueue } from "./use-offline-production-queue";
 import { getLastSyncedAt, setLastSyncedAt } from "@/lib/pwa/sync-status";
 import { isOfflinePersistedQueryKey } from "@/lib/pwa/query-persister";
 import { useOnlineStatus, useOnlineRecovery } from "@/hooks/use-network-status";
@@ -41,6 +43,8 @@ import { useOnlineStatus, useOnlineRecovery } from "@/hooks/use-network-status";
 export function useOfflineSync(storeId: string) {
   const queryClient = useQueryClient();
   const offlineQueue = useOfflineQueue(storeId);
+  const tableQueue = useOfflineTableQueue(storeId);
+  const productionQueue = useOfflineProductionQueue(storeId);
   const [lastSyncedAt, setLastSyncedAtState] = useState<Date | null>(null);
   const [isPulling, setIsPulling] = useState(false);
   // setIsPulling (state) doesn't read back synchronously within the same
@@ -95,20 +99,27 @@ export function useOfflineSync(storeId: string) {
     }
   }, [queryClient, storeId, refreshLastSynced]);
 
-  // Push: drain the queued-order write queue. `useOfflineQueue` has its own
-  // `online`-event listener, but that is the same unreliable event described
-  // above, so the push side is driven from here too rather than assumed to
-  // have happened. `syncQueue` is a no-op when the queue is empty, so this
-  // stays cheap on the overwhelmingly common empty-queue reconnect.
+  // Push: drain every offline write queue (orders, table status, production
+  // quick-log). Each hook has its own `online`-event listener, but that is
+  // the same unreliable event described above, so the push side is driven
+  // from here too rather than assumed to have happened. Each `syncQueue` is
+  // a no-op when its queue is empty, so this stays cheap on the
+  // overwhelmingly common empty-queue reconnect. Run in parallel — the three
+  // queues touch disjoint data (orders, tables, production batches), so
+  // there's no ordering dependency between them.
   const flushQueue = useCallback(async () => {
     if (isFlushingRef.current) return;
     isFlushingRef.current = true;
     try {
-      await offlineQueue.syncQueue();
+      await Promise.all([
+        offlineQueue.syncQueue(),
+        tableQueue.syncQueue(),
+        productionQueue.syncQueue(),
+      ]);
     } finally {
       isFlushingRef.current = false;
     }
-  }, [offlineQueue]);
+  }, [offlineQueue, tableQueue, productionQueue]);
 
   // Reconnect runs both directions: flush queued orders, refresh the
   // read-only mirror, then re-read the stamped timestamp (either side may
@@ -127,8 +138,8 @@ export function useOfflineSync(storeId: string) {
 
   return {
     lastSyncedAt,
-    isSyncing: isPulling || offlineQueue.isSyncing,
-    pendingCount: offlineQueue.pendingCount,
+    isSyncing: isPulling || offlineQueue.isSyncing || tableQueue.isSyncing || productionQueue.isSyncing,
+    pendingCount: offlineQueue.pendingCount + tableQueue.pendingCount + productionQueue.pendingCount,
     syncNow: runFullSync,
     isOnline,
   };

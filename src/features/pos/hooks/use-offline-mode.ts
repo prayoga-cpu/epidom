@@ -6,6 +6,7 @@ import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { isOfflineModeEnabled, setOfflineModeEnabled } from "@/lib/pwa/offline-mode";
 import { isOfflinePersistedQueryKey } from "@/lib/pwa/query-persister";
 import { offlinePagePaths, warmOfflineShell } from "@/lib/pwa/offline-status";
+import { OFFLINE_PREFETCH_ENTRIES } from "@/lib/pwa/offline-prefetch-registry";
 
 /**
  * Offline Mode eagerly primes the offline data mirror and the offline page
@@ -54,18 +55,36 @@ export function useOfflineMode(storeId: string) {
         // No-op on browsers without the API (notably iOS Safari).
         await navigator.storage.persist().catch(() => {});
       }
-      // "all" (not "active"): priming means getting everything ready for
-      // offline, including domains cached earlier this session that aren't
-      // the currently-open screen — e.g. enabling this from the topbar while
-      // sitting on the Finance page should still refresh a materials query
-      // fetched earlier and since gone inactive. This still can't create a
-      // query that has never been fetched at all this session (e.g. the
-      // cashier has never opened POS since launch) — that first fetch still
-      // happens the normal way, the first time that screen mounts.
-      await queryClient.refetchQueries({
-        predicate: (query) => isOfflinePersistedQueryKey(query.queryKey),
-        type: "all",
-      });
+      await Promise.all([
+        // Proactive half: fetch every registered domain's default view
+        // directly, regardless of whether any screen has mounted it yet this
+        // session. `refetchQueries` below can only ever touch a query that
+        // already exists in the cache — a domain nobody has opened since
+        // launch (e.g. Menu editor on a device that's only ever sat on
+        // Storefront settings) would otherwise never get mirrored no matter
+        // how many times priming runs. `prefetchQuery` is a no-op if a fresh
+        // (within staleTime) entry already exists, so this is safe to run
+        // alongside the refetch below without double-fetching the common
+        // case. Failures (offline mid-prime, a 403 on a plan-gated domain)
+        // are swallowed per-entry — one bad domain shouldn't block the rest.
+        ...OFFLINE_PREFETCH_ENTRIES.map((entry) =>
+          queryClient
+            .prefetchQuery({
+              queryKey: entry.buildKey(storeId),
+              queryFn: () => entry.fetch(storeId),
+            })
+            .catch(() => {})
+        ),
+        // Opportunistic half: refresh whatever offline-mirrored queries are
+        // already in the cache under a *non-default* shape (e.g. the
+        // materials screen left open with a search/filter applied) —
+        // "all" (not "active") so a domain fetched earlier this session but
+        // since scrolled away from still gets refreshed.
+        queryClient.refetchQueries({
+          predicate: (query) => isOfflinePersistedQueryKey(query.queryKey),
+          type: "all",
+        }),
+      ]);
       await warmPages();
     } finally {
       setIsPriming(false);

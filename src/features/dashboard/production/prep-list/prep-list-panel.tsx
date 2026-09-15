@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChefHat, Check, Loader2 } from "lucide-react";
+import { ChefHat, Check, Loader2, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { usePrepList, useQuickLogProduction, type PrepListItem } from "./hooks/use-prep-list";
+import { enqueueProductionLog } from "@/lib/pwa/offline-production-queue";
 
 interface PrepListPanelProps {
   storeId: string;
@@ -37,6 +38,26 @@ export function PrepListPanel({ storeId }: PrepListPanelProps) {
     if (!(quantity > 0)) return;
 
     setPendingId(item.productId);
+
+    // The one-tap quick-log is the repeated, floor-level action in this
+    // flow — done right after baking/cooking, through a shift — so it
+    // shouldn't block on a flaky connection. Settlement (how much of this
+    // run was already sold) is computed server-side, so it can't be shown
+    // for a queued entry; the sync toast is generic instead.
+    if (!navigator.onLine) {
+      try {
+        await enqueueProductionLog(storeId, item.productId, quantity);
+        toast(t("pos.offline.productionQueued"), {
+          description: t("pos.offline.productionQueuedDesc"),
+          icon: <WifiOff className="h-4 w-4" />,
+        });
+        setAmounts((prev) => ({ ...prev, [item.productId]: "" }));
+      } finally {
+        setPendingId(null);
+      }
+      return;
+    }
+
     try {
       const result = await quickLog.mutateAsync({ productId: item.productId, quantity });
       // Never silently credit less stock than the number the user typed — if

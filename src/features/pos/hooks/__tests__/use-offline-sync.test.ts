@@ -2,15 +2,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // vi.mock is hoisted — vi.hoisted() lets the factory safely reference a
 // mock function that's reconfigured per-test via mockReturnValue.
-const { mockUseOfflineQueue, network } = vi.hoisted(() => ({
-  mockUseOfflineQueue: vi.fn(),
-  // Captured `useOnlineRecovery` callback, so a test can drive the
-  // offline -> online transition directly.
-  network: { onRecovered: null as null | (() => void) },
-}));
+const { mockUseOfflineQueue, mockUseOfflineTableQueue, mockUseOfflineProductionQueue, network } =
+  vi.hoisted(() => ({
+    mockUseOfflineQueue: vi.fn(),
+    mockUseOfflineTableQueue: vi.fn(),
+    mockUseOfflineProductionQueue: vi.fn(),
+    // Captured `useOnlineRecovery` callback, so a test can drive the
+    // offline -> online transition directly.
+    network: { onRecovered: null as null | (() => void) },
+  }));
 
 vi.mock("../use-offline-queue", () => ({
   useOfflineQueue: mockUseOfflineQueue,
+}));
+
+vi.mock("../use-offline-table-queue", () => ({
+  useOfflineTableQueue: mockUseOfflineTableQueue,
+}));
+
+vi.mock("../use-offline-production-queue", () => ({
+  useOfflineProductionQueue: mockUseOfflineProductionQueue,
 }));
 
 // The hook no longer listens for the `window` "online" event — that event
@@ -45,6 +56,18 @@ beforeEach(() => {
   vi.clearAllMocks();
   network.onRecovered = null;
   mockUseOfflineQueue.mockReturnValue({
+    pendingCount: 0,
+    isSyncing: false,
+    syncQueue: vi.fn().mockResolvedValue(undefined),
+    refreshCount: vi.fn(),
+  });
+  mockUseOfflineTableQueue.mockReturnValue({
+    pendingCount: 0,
+    isSyncing: false,
+    syncQueue: vi.fn().mockResolvedValue(undefined),
+    refreshCount: vi.fn(),
+  });
+  mockUseOfflineProductionQueue.mockReturnValue({
     pendingCount: 0,
     isSyncing: false,
     syncQueue: vi.fn().mockResolvedValue(undefined),
@@ -120,5 +143,44 @@ describe("useOfflineSync", () => {
     });
 
     expect(syncQueue).toHaveBeenCalled();
+  });
+
+  it("syncNow flushes the table-status and production queues alongside orders", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    vi.spyOn(qc, "refetchQueries").mockResolvedValue(undefined);
+    const orderSync = vi.fn().mockResolvedValue(undefined);
+    const tableSync = vi.fn().mockResolvedValue(undefined);
+    const productionSync = vi.fn().mockResolvedValue(undefined);
+    mockUseOfflineQueue.mockReturnValue({
+      pendingCount: 0,
+      isSyncing: false,
+      syncQueue: orderSync,
+      refreshCount: vi.fn(),
+    });
+    mockUseOfflineTableQueue.mockReturnValue({
+      pendingCount: 1,
+      isSyncing: false,
+      syncQueue: tableSync,
+      refreshCount: vi.fn(),
+    });
+    mockUseOfflineProductionQueue.mockReturnValue({
+      pendingCount: 1,
+      isSyncing: false,
+      syncQueue: productionSync,
+      refreshCount: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useOfflineSync("store-1"), { wrapper: makeWrapper(qc) });
+
+    // pendingCount aggregates across all three queues.
+    expect(result.current.pendingCount).toBe(2);
+
+    await act(async () => {
+      await result.current.syncNow();
+    });
+
+    expect(orderSync).toHaveBeenCalled();
+    expect(tableSync).toHaveBeenCalled();
+    expect(productionSync).toHaveBeenCalled();
   });
 });

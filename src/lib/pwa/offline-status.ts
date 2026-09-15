@@ -43,9 +43,32 @@ export const OFFLINE_PAGES: readonly OfflinePage[] = [
   { id: "pos", section: "/pos", domains: ["menu", "cashiers", "kdsSettings"] },
   { id: "orders", section: "/pos/orders", domains: ["orders"] },
   { id: "kds", section: "/pos/kds", domains: ["orders", "kdsSettings"] },
-  { id: "data", section: "/data", domains: ["materials"] },
+  {
+    id: "data",
+    section: "/data",
+    domains: [
+      "materials",
+      "recipes",
+      "recipeDemand",
+      "products",
+      "storefrontItemsLinked",
+      "suppliers",
+    ],
+  },
   { id: "staff", section: "/staff", domains: ["staff"] },
-  { id: "schedule", section: "/schedule", domains: ["schedules"] },
+  { id: "schedule", section: "/schedule", domains: ["schedules", "scheduleShifts"] },
+  { id: "menuEditor", section: "/menu", domains: ["storefront"] },
+  { id: "storefront", section: "/storefront", domains: ["storefront", "customProductsSettings"] },
+  { id: "tables", section: "/tables", domains: ["tables"] },
+  { id: "production", section: "/production", domains: ["productionSettings", "recipes"] },
+  { id: "alerts", section: "/alerts", domains: ["alerts"] },
+  { id: "profile", section: "/profile", domains: ["financeSettings", "receiptSettings"] },
+  // Shell-only: opens offline, shows last-loaded content, but nothing here is
+  // data-mirrored — see the exclusion rationale in query-persister.ts.
+  { id: "management", section: "/management", domains: [] },
+  { id: "billing", section: "/billing", domains: [] },
+  { id: "finance", section: "/finance", domains: [] },
+  { id: "customDevelopment", section: "/custom-development", domains: [] },
   { id: "dashboard", section: "/dashboard", domains: [] },
 ];
 

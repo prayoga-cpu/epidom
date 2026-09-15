@@ -25,11 +25,27 @@ describe("isOfflinePersistedQueryKey", () => {
     );
   });
 
-  it("excludes finance, admin, and marketing domains entirely", () => {
-    expect(isOfflinePersistedQueryKey(["finance", "store-1"])).toBe(false);
+  it("excludes Finance Reports, Billing, and other combinatorial/live-only domains", () => {
+    // "finance-summary"/etc (Finance Reports) are keyed by date-range + up to
+    // 5 filter dimensions — deliberately not mirrored (see query-persister.ts).
+    expect(isOfflinePersistedQueryKey(["finance-summary", "store-1", "2026-01-01"])).toBe(false);
     expect(isOfflinePersistedQueryKey(["admin", "capacity"])).toBe(false);
-    expect(isOfflinePersistedQueryKey(["storefront", "store-1"])).toBe(false);
+    expect(isOfflinePersistedQueryKey(["subscription-status"])).toBe(false);
+    expect(isOfflinePersistedQueryKey(["custom-development-requests"])).toBe(false);
     expect(isOfflinePersistedQueryKey(["supplier-orders", "store-1"])).toBe(false);
+    expect(isOfflinePersistedQueryKey(["stock-movements", "store-1"])).toBe(false);
+    expect(isOfflinePersistedQueryKey(["analytics-orders", "store-1"])).toBe(false);
+  });
+
+  it("persists the newly-added shell+data domains", () => {
+    expect(isOfflinePersistedQueryKey(["storefront", "store-1"])).toBe(true);
+    expect(isOfflinePersistedQueryKey(["recipes", "store-1", "list"])).toBe(true);
+    expect(isOfflinePersistedQueryKey(["products", "store-1", "list"])).toBe(true);
+    expect(isOfflinePersistedQueryKey(["suppliers", "store-1", "list"])).toBe(true);
+    expect(isOfflinePersistedQueryKey(["tables", "store-1"])).toBe(true);
+    expect(isOfflinePersistedQueryKey(["alerts", "list", "store-1"])).toBe(true);
+    expect(isOfflinePersistedQueryKey(["finance-settings", "store-1"])).toBe(true);
+    expect(isOfflinePersistedQueryKey(["receipt-settings", "store-1"])).toBe(true);
   });
 
   it("does not match a bare prefix by coincidence — segments must align in order", () => {

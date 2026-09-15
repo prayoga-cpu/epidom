@@ -629,6 +629,14 @@ model ProductionBatch {
   // How much of this batch's quantity a later manual production run has
   // already absorbed. See productionBatchService.settleDrawnShortfall.
   settledQuantity  Decimal               @default(0) @db.Decimal(10, 3)
+  // Caller-supplied idempotency key for offline replay of the prep-list
+  // quick-log action (see src/lib/pwa/offline-production-queue.ts) — same
+  // pattern as Order.clientRequestId. A lost response, or a second tab
+  // flushing the same queue, would otherwise create a duplicate batch and
+  // double-credit both the finished-goods stock and the material deduction
+  // behind it. Nullable and unique — every batch created through any other
+  // flow (start/complete production) is unaffected.
+  clientRequestId  String?               @unique
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   storeId          String

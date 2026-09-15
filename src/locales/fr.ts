@@ -95,6 +95,16 @@ export const fr = {
         staff: "Personnel",
         schedule: "Planning",
         dashboard: "Tableau de bord",
+        menuEditor: "Menu",
+        storefront: "Vitrine",
+        tables: "Tables",
+        production: "Production",
+        alerts: "Alertes",
+        profile: "Profil",
+        management: "Stock",
+        billing: "Facturation",
+        finance: "Rapports financiers",
+        customDevelopment: "Développement sur mesure",
       },
       data: {
         menu: "Menu et tarifs",
@@ -104,6 +114,20 @@ export const fr = {
         materials: "Matières et stock",
         schedules: "Plannings du personnel",
         staff: "Fiches du personnel",
+        recipes: "Recettes",
+        recipeDemand: "Demande de recettes",
+        products: "Produits",
+        customProducts: "Produits personnalisés",
+        storefrontItemsLinked: "Liens du menu",
+        suppliers: "Fournisseurs",
+        storefront: "Vitrine et éditeur de menu",
+        customProductsSettings: "Réglages produits personnalisés",
+        tables: "Tables",
+        productionSettings: "Réglages de production",
+        scheduleShifts: "Modèles de créneaux",
+        alerts: "Alertes",
+        financeSettings: "Frais et taxes",
+        receiptSettings: "Réglages du reçu",
       },
     },
     language: {
@@ -1004,6 +1028,11 @@ export const fr = {
     inventoryProduction: "Inventaire & Production",
   },
   pages: {
+    // The Schedule page (pages.schedule*) has no French strings yet — it was
+    // built while `fr` was deprecated (see AGENTS.md §2) and needs its own
+    // full translation pass, out of scope here. scheduleAddShift is added
+    // ahead of that pass so it's ready once the rest lands.
+    scheduleAddShift: "Ajouter un poste",
     stockLevel: "Niveau de Stock",
     stockUtil: "Utilisation actuelle du stock",
     ordersPending: "Commandes en Attente",
@@ -1733,6 +1762,14 @@ export const fr = {
       queued: "Hors ligne — commande sauvegardée localement",
       queuedDesc: "Sera soumise automatiquement au retour de la connexion.",
       synced: "{count} commande(s) hors ligne synchronisée(s)",
+      tableQueued: "Hors ligne — mise à jour de table sauvegardée localement",
+      tableQueuedDesc: "{label} sera mise à jour automatiquement au retour de la connexion.",
+      tablesSynced: "{count} mise(s) à jour de table synchronisée(s)",
+      tablesConflicted:
+        "{count} mise(s) à jour de table ignorée(s) — un autre appareil les a déjà modifiées, état actualisé",
+      productionQueued: "Hors ligne — production enregistrée localement",
+      productionQueuedDesc: "Sera envoyée automatiquement au retour de la connexion.",
+      productionSynced: "{count} production(s) hors ligne synchronisée(s)",
     },
     orderCard: {
       customer: "Client",
@@ -1742,6 +1779,13 @@ export const fr = {
       moreItems: "autres articles",
       startProcess: "Démarrer",
       complete: "Terminer",
+      cancel: "Annuler la commande",
+      cancelConfirmTitle: "Annuler cette commande ?",
+      cancelConfirmDesc:
+        "Cela annulera la commande et l'exclura de vos rapports financiers. Cette action est irréversible.",
+      cancelConfirmDescDelivered:
+        "Cette commande a déjà été livrée — l'annuler remettra ses articles en stock et l'exclura de vos rapports financiers. Cette action est irréversible.",
+      cancelSuccess: "Commande annulée",
       unpaid: "Non payé",
       markPaid: "Marquer comme payé",
       markPaidSuccess: "Commande marquée comme payée",
@@ -3617,6 +3661,12 @@ export const fr = {
       adjustStock: "Ajuster le Stock",
       bulkAdjust: "Ajustement en Masse",
       viewHistory: "Voir l'Historique",
+      resetToZero: "Remettre à 0",
+      resetToZeroSuccess: "Stock remis à 0",
+      resetToZeroFailed: "Échec de la remise à zéro du stock",
+      resetToZeroConfirmTitle: "Remettre le stock à 0 ?",
+      resetToZeroConfirmDesc:
+        "Cela retirera la totalité des {stock} de {name} du stock. Cette action est irréversible.",
       importCSV: "Importer CSV",
       importCSVDescription: "Fonctionnalité d'importation CSV à venir",
       importCSVDialog: {
@@ -3661,6 +3711,7 @@ export const fr = {
         damaged: "Marchandises Endommagées",
         expired: "Articles Expirés",
         stolen: "Volé/Manquant",
+        resetToZero: "Stock Remis à Zéro",
       },
 
       // Dialogs

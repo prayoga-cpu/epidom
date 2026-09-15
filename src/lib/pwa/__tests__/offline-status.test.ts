@@ -138,8 +138,8 @@ describe("persistence and status agree on what is mirrored", () => {
   });
 
   it("does not persist, or report, anything outside the mirrored set", () => {
-    expect(isOfflinePersistedQueryKey(["finance", "store-1"])).toBe(false);
-    expect(isOfflinePersistedQueryKey(["storefront", "store-1"])).toBe(false);
+    expect(isOfflinePersistedQueryKey(["finance-summary", "store-1", "2026-01-01"])).toBe(false);
+    expect(isOfflinePersistedQueryKey(["subscription-status"])).toBe(false);
   });
 
   it("refuses to attribute a key that stops before the store segment", () => {

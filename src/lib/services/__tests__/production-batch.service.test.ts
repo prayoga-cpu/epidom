@@ -19,7 +19,13 @@ vi.mock("@/lib/prisma", () => {
     product: { findFirst: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
     material: { findMany: vi.fn().mockResolvedValue([]) },
     recipeProduct: { findFirst: vi.fn().mockResolvedValue({ id: "rp-1" }) },
-    productionBatch: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+    productionBatch: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
     alert: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
     user: { findUnique: vi.fn().mockResolvedValue({ email: "owner@example.com" }) },
     $transaction: vi.fn(async (fn: any) => {
@@ -607,5 +613,115 @@ describe("cancelProduction", () => {
     // No material lookups should have been attempted since restoreMaterials
     // was forced false before the restoration branch ran.
     expect(capturedTx.material.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("quickLogProduction", () => {
+  const product = () => ({
+    id: "prod-1",
+    name: "Croissant",
+    unit: "piece",
+    stockMode: StockMode.BATCH_PRODUCED,
+    primaryRecipeId: "recipe-1",
+    primaryRecipe: {
+      id: "recipe-1",
+      storeId: "store-1",
+      yieldQuantity: 1,
+      yieldUnit: "piece",
+      ingredients: [],
+    },
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prismaMock.productionBatch.findUnique.mockResolvedValue(null);
+    prismaMock.product.findFirst.mockResolvedValue(product());
+    prismaMock.$transaction.mockImplementation(async (fn: any) => {
+      capturedTx = {
+        productionBatch: {
+          create: vi.fn().mockImplementation(({ data }: any) => ({ id: "batch-1", ...data })),
+          findMany: vi.fn().mockResolvedValue([]),
+        },
+        material: { update: vi.fn().mockResolvedValue({ currentStock: 10 }) },
+        product: { update: vi.fn().mockResolvedValue({ currentStock: 5 }) },
+        stockMovement: { create: vi.fn() },
+      };
+      return fn(capturedTx);
+    });
+  });
+
+  it(
+    "offline replay: a repeated clientRequestId for the same store returns the existing " +
+      "batch instead of creating a duplicate",
+    async () => {
+      prismaMock.productionBatch.findUnique.mockResolvedValue({
+        id: "batch-1",
+        storeId: "store-1",
+        batchNumber: "QUICK-000001",
+        actualQuantity: 10,
+        settledQuantity: 0,
+        clientRequestId: "queue-entry-1",
+      });
+
+      const result = await productionBatchService.quickLogProduction({
+        storeId: "store-1",
+        productId: "prod-1",
+        quantity: 10,
+        clientRequestId: "queue-entry-1",
+      });
+
+      expect(result.id).toBe("batch-1");
+      // The dedup hit must short-circuit before any of the expensive product/
+      // recipe lookup and transaction work — a duplicate stock deduction is
+      // exactly the bug this check exists to prevent.
+      expect(prismaMock.product.findFirst).not.toHaveBeenCalled();
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    }
+  );
+
+  it("does not treat a clientRequestId match from a different store as a hit", async () => {
+    prismaMock.productionBatch.findUnique.mockResolvedValue({
+      id: "batch-1",
+      storeId: "other-store",
+      clientRequestId: "queue-entry-1",
+    });
+
+    await productionBatchService.quickLogProduction({
+      storeId: "store-1",
+      productId: "prod-1",
+      quantity: 10,
+      clientRequestId: "queue-entry-1",
+    });
+
+    // Falls through to the real creation path instead of returning another
+    // store's batch.
+    expect(prismaMock.product.findFirst).toHaveBeenCalled();
+    expect(capturedTx.productionBatch.create).toHaveBeenCalled();
+  });
+
+  it("stores clientRequestId on the created batch so a later replay can be deduped", async () => {
+    await productionBatchService.quickLogProduction({
+      storeId: "store-1",
+      productId: "prod-1",
+      quantity: 10,
+      clientRequestId: "queue-entry-1",
+    });
+
+    expect(capturedTx.productionBatch.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ clientRequestId: "queue-entry-1" }) })
+    );
+  });
+
+  it("stores a null clientRequestId for a normal (non-offline) quick log", async () => {
+    await productionBatchService.quickLogProduction({
+      storeId: "store-1",
+      productId: "prod-1",
+      quantity: 10,
+    });
+
+    expect(prismaMock.productionBatch.findUnique).not.toHaveBeenCalled();
+    expect(capturedTx.productionBatch.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ clientRequestId: null }) })
+    );
   });
 });

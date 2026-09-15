@@ -21,6 +21,9 @@ const quickLogSchema = z.object({
   // A prep run is counted in whole finished units. Capped so a slipped keypress
   // can't drain a store's entire raw-material inventory in one tap.
   quantity: z.number().positive().max(100000),
+  // Offline replay idempotency key — see offline-production-queue.ts and
+  // ProductionBatch.clientRequestId.
+  clientRequestId: z.string().min(1).max(100).optional(),
 });
 
 export const GET = withApiHandler(

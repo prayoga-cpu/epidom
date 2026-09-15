@@ -397,9 +397,21 @@ export class ProductionBatchService {
     storeId: string;
     productId: string;
     quantity: number;
+    clientRequestId?: string;
   }): Promise<ProductionBatch> {
     if (!(data.quantity > 0)) {
       throw new ValidationError("Quantity must be greater than zero");
+    }
+
+    // Offline replay idempotency, checked before any work — same pattern as
+    // pos/orders. The prep list queues quick-logs to IndexedDB while
+    // disconnected; a lost response or a second tab flushing the same queue
+    // would otherwise create a duplicate batch and double-credit stock.
+    if (data.clientRequestId) {
+      const existing = await prisma.productionBatch.findUnique({
+        where: { clientRequestId: data.clientRequestId },
+      });
+      if (existing && existing.storeId === data.storeId) return existing;
     }
 
     const product = await prisma.product.findFirst({
@@ -465,6 +477,7 @@ export class ProductionBatchService {
             scheduledDate: new Date(),
             completedDate: new Date(),
             notes: "Logged from the prep list",
+            clientRequestId: data.clientRequestId ?? null,
           },
         });
 

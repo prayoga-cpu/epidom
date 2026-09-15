@@ -37,12 +37,25 @@ export interface OfflineDataDomain {
   readonly storeIdIndex: number;
 }
 
-// Domains mirrored for offline use: POS core (menu, live order/KDS queue,
-// cashier staff roster, KDS toggle) plus a read-only inventory/staff
-// reference slice (materials, staff roster, staff schedules). Everything
-// else — finance, admin/capacity analytics, marketing/storefront editor,
-// order history & reporting — is intentionally excluded: large, changes
-// constantly, and low-value to a cashier with no signal.
+// Domains mirrored for offline use. Started as POS-core-only (menu, live
+// order/KDS queue, cashier staff roster, KDS toggle) plus a read-only
+// inventory/staff reference slice; now covers every screen whose data is
+// small, bounded, and safe to show last-known-good offline — catalog/
+// reference data (materials, recipes, products, suppliers), editor shells
+// (storefront/menu), the floor plan (tables), and static per-store settings
+// (production, schedule shifts, alerts, finance/receipt settings).
+//
+// Deliberately still excluded: Finance Reports, order/production history,
+// Billing, Custom Development, and dashboard analytics. Each fails a
+// different bar — Finance's queryKeys are combinatorial across
+// date-range/staff/channel/payment-method filters (mirroring would
+// opportunistically snowball every combo a user happened to view, not a
+// bounded "last 30 days"), order/production history and dashboard analytics
+// are unbounded live aggregates over the store's entire history with no
+// server-side cap, and Billing/Custom Development are either Stripe-live or
+// low-value enough that a stale mirror isn't worth the complexity. See
+// offline-status.ts's OFFLINE_PAGES for the page-level shell-only treatment
+// these get instead.
 export const OFFLINE_DATA_DOMAINS: readonly OfflineDataDomain[] = [
   { id: "menu", prefix: ["pos", "menu"], storeIdIndex: 2 },
   { id: "orders", prefix: ["pos", "orders"], storeIdIndex: 2 },
@@ -51,6 +64,19 @@ export const OFFLINE_DATA_DOMAINS: readonly OfflineDataDomain[] = [
   { id: "materials", prefix: ["materials"], storeIdIndex: 1 },
   { id: "schedules", prefix: ["staff-schedules"], storeIdIndex: 1 },
   { id: "staff", prefix: ["staff"], storeIdIndex: 1 },
+  { id: "recipes", prefix: ["recipes"], storeIdIndex: 1 },
+  { id: "recipeDemand", prefix: ["recipe-demand"], storeIdIndex: 1 },
+  { id: "products", prefix: ["products"], storeIdIndex: 1 },
+  { id: "storefrontItemsLinked", prefix: ["storefront-items-linked"], storeIdIndex: 1 },
+  { id: "suppliers", prefix: ["suppliers"], storeIdIndex: 1 },
+  { id: "storefront", prefix: ["storefront"], storeIdIndex: 1 },
+  { id: "customProductsSettings", prefix: ["custom-products", "settings"], storeIdIndex: 2 },
+  { id: "tables", prefix: ["tables"], storeIdIndex: 1 },
+  { id: "productionSettings", prefix: ["production", "settings"], storeIdIndex: 2 },
+  { id: "scheduleShifts", prefix: ["schedule-shifts"], storeIdIndex: 1 },
+  { id: "alerts", prefix: ["alerts", "list"], storeIdIndex: 2 },
+  { id: "financeSettings", prefix: ["finance-settings"], storeIdIndex: 1 },
+  { id: "receiptSettings", prefix: ["receipt-settings"], storeIdIndex: 1 },
 ];
 
 /** Whether a query's cached data should survive a reload/offline session. */

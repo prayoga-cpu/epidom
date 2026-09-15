@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { TableStatusBadge } from "./table-status-badge";
+import { enqueueTableStatusChange } from "@/lib/pwa/offline-table-queue";
 import { TableCreateDialog } from "./table-create-dialog";
 import { QrCodeDialog } from "@/components/shared/qr-code-dialog";
 import { downloadDataUrl } from "@/lib/utils/export";
@@ -30,6 +31,7 @@ import {
   Loader2,
   QrCode,
   Download,
+  WifiOff,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -206,6 +208,24 @@ export function TablesManager({ storeId }: TablesManagerProps) {
   });
 
   const handleStatusChange = async (table: TableData, status: TableStatus) => {
+    // Seating/freeing a table is the one write on this page staff do
+    // standing at the floor, dozens of times a service — exactly the action
+    // that shouldn't block on a flaky connection. Queue it with the status
+    // this device believed was current; the server rejects a stale replay
+    // (409) rather than silently overwriting whatever another terminal set
+    // in the meantime, and the sync pass resolves that by refreshing instead
+    // of retrying. Every other write on this page (reservations, table
+    // setup) stays online-only — see the offline research notes in
+    // query-persister.ts/offline-status.ts for why those don't need this.
+    if (!navigator.onLine) {
+      await enqueueTableStatusChange(storeId, table.id, status, table.status);
+      toast(t("pos.offline.tableQueued"), {
+        description: t("pos.offline.tableQueuedDesc").replace("{label}", table.label),
+        icon: <WifiOff className="h-4 w-4" />,
+      });
+      return;
+    }
+
     try {
       await apiClient.patch(`/stores/${storeId}/tables/${table.id}`, { status });
       queryClient.invalidateQueries({ queryKey: ["tables", storeId] });
