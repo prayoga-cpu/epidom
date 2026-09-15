@@ -67,7 +67,7 @@ export const GET = withApiHandler(
     const dayStart = businessLocalToUTC(businessDate, "00:00", timezone);
     const dayEnd = businessLocalToUTC(addDaysToDateKey(businessDate, 1), "00:00", timezone);
 
-    const [events, openTills, rosterToday, absentToday] = await Promise.all([
+    const [events, openTills, rosterToday, absencesToday] = await Promise.all([
       prisma.attendanceRecord.findMany({
         where: {
           storeId,
@@ -121,8 +121,14 @@ export const GET = withApiHandler(
           scheduleShift: { select: { name: true, startTime: true } },
         },
       }),
-      prisma.attendanceRecord.count({
+      // Rows, not a bare count — a staff member who reported themselves
+      // absent (see the clock-in/out kiosk's "Report absence") must also
+      // drop out of the late-roster set below, or they sit in "Rostered,
+      // not clocked in" with a late timer climbing all day even though the
+      // store already knows they're not coming in.
+      prisma.attendanceRecord.findMany({
         where: { storeId, type: "ABSENCE", timestamp: { gte: dayStart, lt: dayEnd } },
+        select: { staffMemberId: true },
       }),
     ]);
 
@@ -134,6 +140,7 @@ export const GET = withApiHandler(
     const onDutyEvents = deriveOnDuty(events);
     const onDutyIds = new Set(onDutyEvents.map((event) => event.staffMemberId));
     const clockedInToday = staffClockedInSince(events, dayStart);
+    const absentStaffIds = new Set(absencesToday.map((row) => row.staffMemberId));
 
     const onDuty = onDutyEvents
       .map((event) => ({
@@ -147,10 +154,12 @@ export const GET = withApiHandler(
       }))
       .sort((a, b) => a.since.localeCompare(b.since));
 
-    // Rostered, their start time has passed, and still no clock-in today.
+    // Rostered, their start time has passed, still no clock-in today, and
+    // not already reported absent — an absence is its own signal and
+    // shouldn't also sit in the late list with a climbing timer.
     const late = selectLateRoster(rosterToday, {
       startTimeOf: (row) => row.scheduleShift?.startTime ?? row.customStartTime,
-      attended: new Set([...onDutyIds, ...clockedInToday]),
+      attended: new Set([...onDutyIds, ...clockedInToday, ...absentStaffIds]),
       now,
       businessDate,
       timeZone: timezone,
@@ -191,7 +200,7 @@ export const GET = withApiHandler(
           scheduledCount: rosterToday.length,
           onDutyCount: onDuty.length,
           clockedInCount: clockedInToday.size,
-          absentCount: absentToday,
+          absentCount: absencesToday.length,
           openTillCount: openTills.length,
           lateCount: late.length,
         },

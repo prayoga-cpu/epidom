@@ -63,7 +63,12 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
   const [rangeTo, setRangeTo] = useState(() => addDaysToDateKey(mondayOf(todayLocalISO()), 6));
   const [blocksDialogOpen, setBlocksDialogOpen] = useState(false);
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
-  const [cell, setCell] = useState<{ staffMemberId: string; dateKey: string } | null>(null);
+  // `entryId` absent means "add a new shift for this staff/day" — a day can
+  // now hold several StaffSchedule rows (e.g. a split 8h-10h / 14h-16h shift),
+  // so a cell click has to say which one it means, not just which cell.
+  const [cell, setCell] = useState<{ staffMemberId: string; dateKey: string; entryId?: string } | null>(
+    null
+  );
   const [dayDetail, setDayDetail] = useState<string | null>(null);
   // Persists across range navigation on purpose — a manager filtering to one
   // block or staff member is usually paging through several ranges with that
@@ -288,20 +293,13 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
                 <td className="p-2 align-top font-medium">{member.name}</td>
                 {rangeDays.map((day) => {
                   const entries = entriesFor(member.id, day);
-                  // Gate on the *unfiltered* entry count, not the filtered
-                  // one — a cell can look empty under an active block filter
-                  // while it actually already holds a hidden, non-matching
-                  // entry. Clicking it must not silently create a duplicate;
-                  // clear the filter to edit that entry instead.
-                  const isTrulyEmpty = allEntriesFor(member.id, day).length === 0;
+                  // A cell can look empty under an active block filter while
+                  // it actually holds a hidden, non-matching entry — shown as
+                  // a dot so "add" here reads as "clear the filter to see
+                  // what's already there" rather than a true empty slot.
+                  const hasHiddenEntry = entries.length === 0 && allEntriesFor(member.id, day).length > 0;
                   return (
-                    <td
-                      key={day}
-                      className="hover:bg-muted/40 min-w-[100px] cursor-pointer p-2 align-top"
-                      onClick={() =>
-                        isTrulyEmpty && setCell({ staffMemberId: member.id, dateKey: day })
-                      }
-                    >
+                    <td key={day} className="hover:bg-muted/40 min-w-[100px] p-2 align-top">
                       <div className="flex flex-col gap-1">
                         {entries.map((entry) => (
                           <button
@@ -318,10 +316,9 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
                                   ? `${entry.scheduleShift.color}1a`
                                   : undefined,
                             }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCell({ staffMemberId: member.id, dateKey: day });
-                            }}
+                            onClick={() =>
+                              setCell({ staffMemberId: member.id, dateKey: day, entryId: entry.id })
+                            }
                           >
                             {entry.isDayOff ? (
                               <span className="text-muted-foreground flex items-center gap-1 font-medium">
@@ -347,12 +344,19 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
                             )}
                           </button>
                         ))}
-                        {entries.length === 0 &&
-                          (isTrulyEmpty ? (
-                            <Plus className="text-muted-foreground/30 h-4 w-4" />
-                          ) : (
-                            <span className="bg-muted-foreground/30 h-1.5 w-1.5 rounded-full" />
-                          ))}
+                        {hasHiddenEntry ? (
+                          <span className="bg-muted-foreground/30 h-1.5 w-1.5 rounded-full" />
+                        ) : (
+                          <button
+                            type="button"
+                            title={t("pages.scheduleAddShift")}
+                            aria-label={t("pages.scheduleAddShift")}
+                            className="text-muted-foreground/50 hover:text-foreground hover:border-foreground/40 flex h-8 w-full items-center justify-center rounded-md border border-dashed"
+                            onClick={() => setCell({ staffMemberId: member.id, dateKey: day })}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   );
@@ -394,7 +398,12 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
           staffMemberId={cell.staffMemberId}
           dateKey={cell.dateKey}
           scheduleShifts={scheduleShifts}
-          existing={entriesFor(cell.staffMemberId, cell.dateKey)[0] ?? null}
+          existing={
+            cell.entryId
+              ? (allEntriesFor(cell.staffMemberId, cell.dateKey).find((e) => e.id === cell.entryId) ??
+                null)
+              : null
+          }
           onSaved={invalidate}
         />
       )}

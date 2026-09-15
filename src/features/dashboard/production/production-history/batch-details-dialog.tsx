@@ -525,20 +525,26 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
                           <div className="flex justify-between sm:contents">
                             {/* Quantity */}
                             <div className="sm:col-span-3 sm:text-right">
-                              <span className="text-muted-foreground mr-2 sm:hidden">Qty:</span>
+                              <span className="text-muted-foreground mr-2 sm:hidden">
+                                {t("management.productionHistory.quantityUsed")}:
+                              </span>
                               {ingredient.quantityUsed.toFixed(2)} {ingredient.unit}
                             </div>
 
                             {/* Cost Per Unit - Hidden on very small screens if needed, or shown */}
                             <div className="sm:col-span-2 sm:text-right">
-                              <span className="text-muted-foreground mr-2 sm:hidden">Cost:</span>
+                              <span className="text-muted-foreground mr-2 sm:hidden">
+                                {t("management.productionHistory.costPerUnit")}:
+                              </span>
                               {formatPrice(ingredient.costPerUnit)}
                             </div>
                           </div>
 
                           {/* Total Cost */}
                           <div className="mt-1 flex justify-between border-t pt-2 font-medium sm:col-span-2 sm:mt-0 sm:justify-end sm:border-0 sm:pt-0 sm:text-right">
-                            <span className="text-muted-foreground sm:hidden">Total:</span>
+                            <span className="text-muted-foreground sm:hidden">
+                              {t("management.productionHistory.totalCost")}:
+                            </span>
                             {formatPrice(ingredient.totalCost)}
                           </div>
                         </div>

@@ -9,6 +9,17 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.84.0] - 2026-09-15 · fix
+
+Fixes for seven bug reports filed the same day by one store owner testing the app.
+
+- **You can now see every raw material you have, not just the first 50.** The Data > Materials list quietly capped itself at 50 items with no way to reach the rest — with 94 materials entered, 44 were simply invisible. It now paginates the same way Products already does (10/20/50/100 per page, with page controls), and the Management > Edit Stock list (which showed the same capped count) now requests the API's full 100-item page instead of the 50-item default.
+- **Stock can now be reset to 0 in one click.** Management > Edit Stock's "Adjust Stock" only ever took a manual +/- delta, so zeroing out an item meant typing its exact current balance by hand. A new "Reset to 0" quick action posts the correct adjustment for you.
+- **Cancelling an order now says, in the confirmation itself, that it stops counting toward your financial reports** — it already did, but nothing told you so, and the confirmation dialog's French translation was missing entirely (silently falling back to English).
+- **A staff member you marked absent for the day no longer sits in the dashboard's "not clocked in" list with a climbing late timer.** The Live Operations card excluded on-duty and clocked-in staff from that list, but not staff who'd already reported an absence — so someone correctly marked absent still showed up looking later and later all day.
+- **A production batch's ingredient table no longer shows raw English words on a phone.** Three of its mobile-only field labels ("Qty:", "Cost:", "Total:") were hardcoded instead of translated, so they stayed in English even on a French or Indonesian device.
+- **A day can now hold more than one shift for the same staff member** (e.g. 8h-10h and 14h-16h as two separate blocks). The roster grid already stored multiple shifts per day correctly but only ever let you add or edit the first one — there's now an explicit "add shift" control per day, and clicking any existing shift edits that one specifically.
+
 ## [2.83.0] - 2026-09-07 · ux
 
 - **The dashboard menu is in the order you actually work in.** Each group now opens with the page you reach for first: your storefront sits directly under your profile, the menu comes before the till in Point of Sale, and Operations starts with your data rather than your stock. Nothing was added or removed — the same pages, in the order a day actually runs.

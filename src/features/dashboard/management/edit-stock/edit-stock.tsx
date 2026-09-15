@@ -14,9 +14,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useMaterials, useUpdateMaterial } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { useProducts } from "@/features/dashboard/data/products/hooks/use-products";
+import { useStockAdjustment } from "./hooks/use-stock-adjustment";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { FilterBar } from "@/features/dashboard/shared/components/filter-bar";
 import { sortRows, type SortDir } from "@/features/dashboard/shared/hooks/use-sortable";
@@ -33,6 +35,7 @@ import {
   ShoppingCart,
   ArrowUpDown,
   AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
 import { BulkAdjustmentDialog } from "./bulk-adjustment-dialog";
@@ -147,6 +150,7 @@ export function EditStockCard({
   const [wasteItemId, setWasteItemId] = useState<string | undefined>(undefined);
   const [wasteItemType, setWasteItemType] = useState<ItemType>("material");
   const [expirationPopoverOpen, setExpirationPopoverOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   // New keys ship in a separate locale change; `t()` echoes the key back when
   // it is missing, so fall back to English rather than render a raw key path.
@@ -155,7 +159,15 @@ export function EditStockCard({
     return value === key ? fallback : value;
   };
 
-  const { data: materialsData, isLoading: isLoadingMaterials } = useMaterials(storeId);
+  // take: 100 (the API's max page size) so this list — unlike the paginated
+  // Data > Materials grid — shows every item in one shot instead of silently
+  // capping at the 50-row default (this screen has no page-2 control).
+  const { data: materialsData, isLoading: isLoadingMaterials } = useMaterials(storeId, {
+    sortBy: "name",
+    sortOrder: "asc",
+    skip: 0,
+    take: 100,
+  });
   // Finished goods live here too — this is the only surface where product
   // shrinkage (and oversell) becomes visible.
   const { data: productsData, isLoading: isLoadingProducts } = useProducts(storeId, {
@@ -166,6 +178,7 @@ export function EditStockCard({
   });
   const isLoading = isLoadingMaterials || isLoadingProducts;
   const updateMaterial = useUpdateMaterial(storeId, selectedItemId ?? "");
+  const resetStock = useStockAdjustment(storeId);
 
   const allStockItems: StockItem[] = useMemo(() => {
     const materialItems: StockItem[] = (materialsData?.materials ?? []).map((m) => ({
@@ -380,6 +393,27 @@ export function EditStockCard({
         },
       }
     );
+  };
+
+  // "Reset to 0" posts a single OUT adjustment for the exact current balance
+  // instead of asking the operator to type it themselves — the item's own
+  // ledger value is always the correct delta, so there's no precision to get
+  // wrong by hand.
+  const handleResetToZero = async () => {
+    if (!selectedItem || selectedItem.currentStock <= 0) return;
+    try {
+      await resetStock.mutateAsync({
+        materialId: selectedItem.type === "material" ? selectedItem.id : undefined,
+        productId: selectedItem.type === "product" ? selectedItem.id : undefined,
+        adjustmentType: "OUT",
+        quantity: selectedItem.currentStock,
+        reason: t("management.editStock.reasons.resetToZero"),
+      });
+      toast({ title: t("management.editStock.resetToZeroSuccess") });
+      setResetConfirmOpen(false);
+    } catch {
+      toast({ title: t("management.editStock.resetToZeroFailed"), variant: "destructive" });
+    }
   };
 
   return (
@@ -873,6 +907,16 @@ export function EditStockCard({
                         <History className="mr-1 hidden h-4 w-4 sm:inline" />
                         {t("management.editStock.viewHistory")}
                       </Button>
+
+                      <Button
+                        variant="outline"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        disabled={selectedItem.currentStock <= 0 || resetStock.isPending}
+                        onClick={() => setResetConfirmOpen(true)}
+                      >
+                        <RotateCcw className="mr-1 hidden h-4 w-4 sm:inline" />
+                        {t("management.editStock.resetToZero")}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -927,6 +971,24 @@ export function EditStockCard({
           setBulkAdjustmentOpen(open);
           if (!open) setSelectedItems([]);
         }}
+      />
+
+      <ConfirmationDialog
+        open={resetConfirmOpen}
+        onOpenChange={setResetConfirmOpen}
+        onConfirm={handleResetToZero}
+        title={t("management.editStock.resetToZeroConfirmTitle")}
+        description={
+          selectedItem
+            ? t("management.editStock.resetToZeroConfirmDesc")
+                .replace("{name}", selectedItem.name)
+                .replace("{stock}", `${selectedItem.currentStock} ${selectedItem.unit}`)
+            : ""
+        }
+        confirmText={t("management.editStock.resetToZero")}
+        cancelText={t("common.actions.cancel")}
+        variant="destructive"
+        loading={resetStock.isPending}
       />
     </>
   );

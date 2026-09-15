@@ -10,6 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { MaterialDetailsDialog } from "./material-details-dialog";
@@ -50,6 +57,8 @@ import {
   X,
   Wand2,
   Tags,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -229,6 +238,8 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
   );
   const materials = data?.materials || [];
   const total = data?.total || 0;
+  const currentPage = Math.floor(filters.skip / filters.take) + 1;
+  const totalPages = Math.ceil(total / filters.take);
 
   const deleteMaterial = useDeleteMaterial(storeId);
   const bulkDelete = useBulkDeleteMaterials(storeId);
@@ -363,6 +374,15 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
       stockStatus: value === "all" ? undefined : (value as StockFilter),
       skip: 0,
     }));
+  };
+
+  // Pagination handlers
+  const handlePageChange = (newPage: number) => {
+    setFilters((prev) => ({ ...prev, skip: (newPage - 1) * prev.take }));
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setFilters((prev) => ({ ...prev, take: newSize, skip: 0 }));
   };
 
   // handleDeleteClick is provided by useDialogState hook
@@ -802,6 +822,54 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
               ) : (
                 <AddMaterialDialog />
               )}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {t("pagination.rowsPerPage")}:
+                </span>
+                <Select
+                  value={filters.take.toString()}
+                  onValueChange={(value) => handlePageSizeChange(Number(value))}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 sm:justify-end">
+                <span className="text-muted-foreground text-sm">
+                  {t("pagination.page")} {currentPage} {t("pagination.of")} {totalPages}
+                </span>
+                <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
