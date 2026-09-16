@@ -91,7 +91,7 @@ export function SendReceiptWhatsApp({
       <Button
         size="sm"
         variant="outline"
-        className="h-8 gap-1.5"
+        className="h-10 gap-1.5"
         disabled={updatePhone.isPending}
         onClick={handleSend}
       >

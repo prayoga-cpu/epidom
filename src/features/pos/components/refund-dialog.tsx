@@ -106,6 +106,7 @@ export function RefundDialog({
           <Button
             type="button"
             variant="outline"
+            className="h-11"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
@@ -114,6 +115,7 @@ export function RefundDialog({
           <Button
             type="button"
             variant="destructive"
+            className="h-11"
             onClick={handleConfirm}
             disabled={isSubmitting || !isValid}
           >

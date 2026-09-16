@@ -2,7 +2,6 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { PosOrdersTabs } from "@/features/pos/components/pos-orders-tabs";
-import { PosOrdersPageHeader } from "@/features/pos/components/pos-page-headers";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import { getActiveStaffSession } from "@/lib/staff-session";
 
@@ -28,7 +27,6 @@ export default async function PosOrdersPage({ params }: { params: Promise<{ stor
 
   return (
     <div className="flex h-full flex-1 flex-col">
-      <PosOrdersPageHeader />
       <PosOrdersTabs storeId={storeId} canManageSettings={canManageSettings} />
     </div>
   );

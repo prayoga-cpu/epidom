@@ -263,6 +263,7 @@ export const id = {
       apply: "Terapkan",
       complete: "Selesaikan",
       remove: "Hapus",
+      more: "Lainnya",
       cancelBatch: "Batalkan Batch",
       exportError: "Gagal mengekspor data",
       exportSuccess: "Data berhasil diekspor",

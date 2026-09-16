@@ -49,6 +49,8 @@ export const FEATURE_MIN_PLAN = {
   // Staff rosters, clock-in/out attendance and POS till sessions: the
   // Schedule page and the dashboard's Live Operations card.
   staffOperations: "OPERATIONS",
+  // Cart-line discounts in POS Mode — see PosModeUpgradeBanner.
+  discounts: "OPERATIONS",
   finance: "ENTERPRISE",
 } satisfies Record<string, PlanTier>;
 

@@ -1,152 +1,39 @@
 "use client";
 
-import { useI18n } from "@/components/lang/i18n-provider";
-import { format } from "date-fns";
-import { Wifi, WifiOff, UserCircle2, ShoppingBag } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Store } from "@prisma/client";
+import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { usePosSession } from "../hooks/use-pos-session";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { PosPrinterMenu } from "./pos-printer-menu";
-import { PosCustomerDisplayMenu } from "./pos-customer-display-menu";
 
 interface PosHeaderProps {
-  store: Pick<Store, "id" | "name">;
   /** Opens the mobile cart dialog — the cart button rendered here (mobile
    * only) doesn't own that dialog's state, since it lives in the sibling
-   * PosMobileCart, one level up in PosShell. */
+   * PosMobileCart, one level up in PosShell. Store name, connection status
+   * and the staff badge now live in the persistent PosModeStatusBar
+   * (src/features/pos-mode/), one level up again in PosModeShell — this bar
+   * is just what's left that's specific to /pos itself on narrow viewports. */
   onCartClick: () => void;
 }
 
-export function PosHeader({ store, onCartClick }: PosHeaderProps) {
-  const { t } = useI18n();
+export function PosHeader({ onCartClick }: PosHeaderProps) {
   // Cart total is literal in the store's display currency, never IDR —
   // passing `currency` skips formatPrice's default base-currency conversion.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const cart = usePosCart();
-  const [time, setTime] = useState(new Date());
-  const [isOnline, setIsOnline] = useState(true);
-  const { staffName, staffRole } = usePosSession();
   const totalItems = cart.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
 
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
   return (
-    <header className="bg-background flex h-14 items-center justify-between gap-2 border-b px-3 md:px-6">
-      {/* Mobile (below md — the same breakpoint PosShell already switches
-          the cart pane at): store name/connection/staff/sign-out all
-          collapse into one profile menu on the left, freeing the right
-          side for the cart button that used to float at the bottom of the
-          screen. */}
-      <div className="flex w-full items-center justify-between md:hidden">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 shrink-0 touch-manipulation"
-              aria-label={t("pages.posAccountMenuAriaLabel")}
-            >
-              <UserCircle2 className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel className="flex items-center justify-between gap-2">
-              <span className="truncate font-semibold">{store.name}</span>
-              {isOnline ? (
-                <Wifi className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-              ) : (
-                <WifiOff className="text-destructive h-3.5 w-3.5 shrink-0" />
-              )}
-            </DropdownMenuLabel>
-            {staffName && (
-              <DropdownMenuLabel className="text-muted-foreground -mt-2 text-xs font-normal">
-                {staffName}
-                {staffRole && ` · ${staffRole}`}
-              </DropdownMenuLabel>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <div className="flex items-center gap-1">
-          <PosCustomerDisplayMenu storeId={store.id} />
-          <PosPrinterMenu storeId={store.id} />
-          <Button
-            onClick={onCartClick}
-            size="sm"
-            className="h-10 touch-manipulation gap-1.5 rounded-full px-3"
-          >
-            <ShoppingBag className="h-4 w-4" />
-            {totalItems > 0 && <span className="font-semibold">{totalItems}</span>}
-            {cart.total > 0 && <span className="font-bold">{formatPrice(cart.total)}</span>}
-          </Button>
-        </div>
-      </div>
-
-      {/* Desktop (md and up): unchanged from before. */}
-      <div className="hidden min-w-0 items-center gap-2 sm:gap-4 md:flex">
-        <h1 className="truncate text-base font-semibold sm:text-lg">{store.name}</h1>
-        <div
-          className={`flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium sm:px-2.5 ${
-            isOnline
-              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-              : "bg-destructive/10 text-destructive"
-          }`}
-        >
-          {isOnline ? (
-            <>
-              <Wifi className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{t("pos.connection.online")}</span>
-            </>
-          ) : (
-            <>
-              <WifiOff className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{t("pos.connection.offline")}</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="hidden shrink-0 items-center gap-2 sm:gap-4 md:flex">
-        <PosCustomerDisplayMenu storeId={store.id} />
-        <PosPrinterMenu storeId={store.id} />
-
-        <div className="text-muted-foreground text-sm font-medium">
-          {format(time, "dd MMM yyyy • HH:mm")}
-        </div>
-
-        {staffName && (
-          <div className="bg-primary/10 text-primary flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
-            <UserCircle2 className="h-3.5 w-3.5" />
-            <span>{staffName}</span>
-            {staffRole && <span className="text-primary/60">· {staffRole}</span>}
-          </div>
-        )}
-      </div>
-    </header>
+    <div className="bg-background flex h-12 shrink-0 items-center justify-end border-b px-3 md:hidden">
+      <Button
+        onClick={onCartClick}
+        size="sm"
+        className="h-11 touch-manipulation gap-1.5 rounded-full px-3"
+      >
+        <ShoppingBag className="h-4 w-4" />
+        {totalItems > 0 && <span className="font-semibold">{totalItems}</span>}
+        {cart.total > 0 && <span className="font-bold">{formatPrice(cart.total)}</span>}
+      </Button>
+    </div>
   );
 }

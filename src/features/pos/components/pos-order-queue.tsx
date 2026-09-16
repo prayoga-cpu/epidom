@@ -334,7 +334,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   // no orders right now; explain why instead of the generic empty state.
   if (!activeQueueEnabled) {
     return (
-      <div className="text-muted-foreground flex h-[60vh] flex-col items-center justify-center gap-3 p-6 text-center">
+      <div className="text-muted-foreground flex h-[60dvh] flex-col items-center justify-center gap-3 p-6 text-center">
         <div className="bg-muted rounded-full p-6">
           <Power className="h-10 w-10 opacity-40" />
         </div>
@@ -346,7 +346,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
 
   if (allOrders.length === 0) {
     return (
-      <div className="text-muted-foreground flex h-[60vh] flex-col items-center justify-center text-center">
+      <div className="text-muted-foreground flex h-[60dvh] flex-col items-center justify-center text-center">
         <div className="bg-muted mb-4 rounded-full p-6">
           <UtensilsCrossed className="h-10 w-10 opacity-50" />
         </div>

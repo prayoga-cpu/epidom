@@ -392,9 +392,15 @@ export function PosCheckoutDialog({
           maxWidth="lg"
           footer={
             <>
+              {/* h-11 (44px, not the Button default's 36px): the spec's own
+                  floor for POS Mode, and this is its single most emphasized
+                  control (docs/dashboard-revamp.md's wireframe calls out the
+                  "Bayar" button by name) — not left to the shared dialog
+                  footer's unstyled default. */}
               <Button
                 type="button"
                 variant="outline"
+                className="h-11"
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
               >
@@ -409,6 +415,7 @@ export function PosCheckoutDialog({
               <Button
                 type="submit"
                 form="pos-checkout-form"
+                className="h-11"
                 disabled={isSubmitting || isCashUnderpaid}
               >
                 {isSubmitting ? (
@@ -765,7 +772,7 @@ export function PosCheckoutDialog({
             <Button
               variant="outline"
               onClick={() => setShowPrint(false)}
-              className="w-full sm:w-auto"
+              className="h-11 w-full sm:w-auto"
             >
               {t("pos.print.skip")}
             </Button>
@@ -775,7 +782,7 @@ export function PosCheckoutDialog({
                 setShowPrint(false);
               }}
               disabled={isPrinting}
-              className="w-full sm:w-auto"
+              className="h-11 w-full sm:w-auto"
             >
               {isPrinting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

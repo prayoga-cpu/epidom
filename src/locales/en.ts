@@ -201,6 +201,7 @@ export const en = {
       apply: "Apply",
       complete: "Complete",
       remove: "Remove",
+      more: "More",
       cancelBatch: "Cancel Batch",
       exportError: "Failed to export data",
       exportSuccess: "Data exported successfully",

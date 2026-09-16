@@ -2,7 +2,6 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { KdsShell } from "@/features/pos/components/kds/kds-shell";
-import { KdsPageHeader } from "@/features/pos/components/pos-page-headers";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import { getActiveStaffSession } from "@/lib/staff-session";
 
@@ -24,11 +23,8 @@ export default async function KdsPage({ params }: { params: Promise<{ storeId: s
     !staffSession || staffSession.storeId !== storeId || staffSession.role === "OWNER";
 
   return (
-    <div className="flex h-full flex-1 flex-col">
-      <KdsPageHeader />
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <KdsShell storeId={storeId} canManageSettings={canManageSettings} />
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <KdsShell storeId={storeId} canManageSettings={canManageSettings} />
     </div>
   );
 }

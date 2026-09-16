@@ -69,6 +69,7 @@ export function PosHoldDialog({ open, onOpenChange, onSubmit, isSubmitting }: Po
             <Button
               type="button"
               variant="outline"
+              className="h-11"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
@@ -78,7 +79,7 @@ export function PosHoldDialog({ open, onOpenChange, onSubmit, isSubmitting }: Po
                 renders through a Portal, so a <form> wrapping
                 FormDialogLayout never actually contains this button in the
                 real DOM. */}
-            <Button type="submit" form="pos-hold-form" disabled={isSubmitting}>
+            <Button type="submit" form="pos-hold-form" className="h-11" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {t("pos.hold.submit")}
             </Button>

@@ -255,6 +255,7 @@ export const fr = {
       apply: "Appliquer",
       complete: "Terminer",
       remove: "Supprimer",
+      more: "Plus",
       cancelBatch: "Annuler le Lot",
       exportError: "Échec de l'exportation des données",
       exportSuccess: "Données exportées avec succès",

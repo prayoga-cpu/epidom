@@ -88,7 +88,7 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0"
+          className="h-11 w-11 shrink-0"
           aria-label={t("pos.print.settingsTitle")}
         >
           <Printer className={connected ? "h-4 w-4 text-emerald-500" : "h-4 w-4"} />
@@ -113,7 +113,7 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
               size="sm"
               variant={paperWidth === 32 ? "default" : "outline"}
               onClick={() => setPaperWidth(32)}
-              className="h-8 px-3"
+              className="h-10 px-3"
             >
               {t("pos.print.paperWidth58")}
             </Button>
@@ -122,7 +122,7 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
               size="sm"
               variant={paperWidth === 48 ? "default" : "outline"}
               onClick={() => setPaperWidth(48)}
-              className="h-8 px-3"
+              className="h-10 px-3"
             >
               {t("pos.print.paperWidth80")}
             </Button>
@@ -148,6 +148,7 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
             </div>
             <Button
               size="sm"
+              className="h-10"
               variant={connected ? "outline" : "default"}
               onClick={handleConnectToggle}
               disabled={isConnecting}
@@ -186,7 +187,7 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
               <Button
                 size="sm"
                 variant="outline"
-                className="shrink-0 gap-1.5"
+                className="h-10 shrink-0 gap-1.5"
                 onClick={handleReprintLast}
                 disabled={isReprinting}
               >
@@ -202,7 +203,7 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
             <p className="text-muted-foreground text-xs">{t("pos.print.reprintLastEmpty")}</p>
           )}
           {lastReceiptMeta && (
-            <Button variant="outline" size="sm" className="w-full gap-2" asChild>
+            <Button variant="outline" size="sm" className="h-10 w-full gap-2" asChild>
               <Link
                 href={`/store/${storeId}/pos/orders?tab=history&order=${lastReceiptMeta.orderId}`}
               >
@@ -213,7 +214,7 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
           )}
         </div>
 
-        <Button variant="outline" size="sm" className="w-full gap-2" asChild>
+        <Button variant="outline" size="sm" className="h-10 w-full gap-2" asChild>
           <Link href={`/store/${storeId}/pos/orders?tab=history`}>
             <History className="h-3.5 w-3.5" />
             {t("pos.print.goToOrderHistory")}

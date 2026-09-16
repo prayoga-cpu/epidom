@@ -9,11 +9,7 @@ import {
   CreditCard,
   Mail,
   Store,
-  Monitor,
-  UtensilsCrossed,
-  ChefHat,
   Factory,
-  Grid2X2,
   Users,
   BarChart3,
   MenuSquare,
@@ -79,40 +75,16 @@ export const dashboardNavigation: NavSection[] = [
     ],
   },
   {
+    // /pos, /pos/orders, /pos/kds, /pos/display and /tables deliberately
+    // don't appear here — they live in the (pos-mode) shell now, its own
+    // bottom tab bar, not this rail (docs/dashboard-revamp.md). /menu stays:
+    // it's Back Office (menu *management*, not the live cashier screen).
     title: "Point of Sale",
     items: [
       {
         href: "/menu",
         labelKey: "nav.menu",
         icon: MenuSquare,
-        showBadge: false,
-        requiredPlan: "POS",
-      },
-      {
-        href: "/pos",
-        labelKey: "nav.pos",
-        icon: Monitor,
-        showBadge: false,
-        requiredPlan: "POS",
-      },
-      {
-        href: "/pos/orders",
-        labelKey: "nav.posOrders",
-        icon: UtensilsCrossed,
-        showBadge: false,
-        requiredPlan: "POS",
-      },
-      {
-        href: "/pos/kds",
-        labelKey: "nav.posKds",
-        icon: ChefHat,
-        showBadge: false,
-        requiredPlan: "POS",
-      },
-      {
-        href: "/tables",
-        labelKey: "nav.posTables",
-        icon: Grid2X2,
         showBadge: false,
         requiredPlan: "POS",
       },

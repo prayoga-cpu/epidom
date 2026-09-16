@@ -16,7 +16,6 @@ import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { usePosOrders } from "../hooks/use-pos-orders";
 import { useCustomerDisplayPublisher } from "../hooks/use-customer-display";
-import { PosStaffGate } from "./pos-staff-gate";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -34,10 +33,9 @@ type PosFilterKey = (typeof POS_FILTER_KEYS)[number];
 
 interface PosShellProps {
   store: Pick<Store, "id" | "name">;
-  bypassStaffGate?: boolean;
 }
 
-export function PosShell({ store, bypassStaffGate }: PosShellProps) {
+export function PosShell({ store }: PosShellProps) {
   const { t } = useI18n();
   // Menu item/modifier prices are literal in the store's display currency,
   // never IDR — passing `currency` skips formatPrice's default base-currency
@@ -83,16 +81,16 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
   };
 
   return (
-    <PosStaffGate storeId={store.id} bypassGate={bypassStaffGate}>
-      {/* flex-1 min-h-0 (not a hardcoded h-[calc(100vh-Npx)]): page-shell.tsx
-          gives the POS route's wrapper a genuinely definite height (h-full,
-          not min-h-full) specifically so this can resolve its flex-basis:0
-          growth against it exactly, edge to edge, without needing to guess
-          the surrounding chrome's pixel total. min-h-0 lets it shrink below
-          its content's natural size so overflow-hidden below can actually
-          clip instead of growing past the available space. */}
-      <div className="bg-muted/10 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl">
-        <PosHeader store={store} onCartClick={() => setMobileCartOpen(true)} />
+    <>
+      {/* flex-1 min-h-0 (not a hardcoded h-[calc(100vh-Npx)]): PosModeShell
+          gives /pos's wrapper a genuinely definite height so this can
+          resolve its flex-basis:0 growth against it exactly, edge to edge,
+          without needing to guess the surrounding chrome's pixel total.
+          min-h-0 lets it shrink below its content's natural size so
+          overflow-hidden below can actually clip instead of growing past
+          the available space. */}
+      <div className="bg-muted/10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+        <PosHeader onCartClick={() => setMobileCartOpen(true)} />
         <PosOfflineBanner />
         <PosUnpaidAlert storeId={store.id} unpaidCount={unpaidCount} />
 
@@ -199,6 +197,6 @@ export function PosShell({ store, bypassStaffGate }: PosShellProps) {
           />
         )}
       </div>
-    </PosStaffGate>
+    </>
   );
 }

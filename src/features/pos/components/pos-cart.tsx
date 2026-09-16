@@ -19,6 +19,8 @@ import { ApiClientError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
 import { usePosMenu } from "../hooks/use-pos-menu";
+import { usePosModeUpgradeGate } from "@/features/pos-mode/pos-mode-upgrade-banner";
+import { FEATURE_MIN_PLAN } from "@/lib/plans/entitlements";
 import { MenuItemOptionsDialog } from "@/components/shared/menu-item-options-dialog";
 import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
 import type { CartItem } from "../types/pos.types";
@@ -62,6 +64,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
   const [isDiscountOpen, setIsDiscountOpen] = useState(false);
   const [discountInput, setDiscountInput] = useState("");
   const [discountReasonInput, setDiscountReasonInput] = useState("");
+  const { requireFeature } = usePosModeUpgradeGate();
   const editingMenuItem = editingItem
     ? menuData?.categories
         .flatMap((c: any) => c.items)
@@ -90,6 +93,12 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
 
   const openDiscountPopover = (open: boolean) => {
     if (open) {
+      // Discounts are Operations-tier+ (see FEATURE_MIN_PLAN.discounts) — a
+      // Cashier on a POS-tier store is a real, reachable state (Cashier
+      // creation has no plan guard of its own), not hypothetical. Below
+      // tier, this surfaces PosModeUpgradeBanner instead of opening the
+      // popover.
+      if (!requireFeature(FEATURE_MIN_PLAN.discounts)) return;
       setDiscountInput(cart.discountAmount > 0 ? String(cart.discountAmount) : "");
       setDiscountReasonInput(cart.discountReason ?? "");
     }

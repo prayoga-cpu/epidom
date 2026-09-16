@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { TablesManager } from "@/features/pos/components/tables/tables-manager";
 import { ReservationList } from "@/features/pos/components/tables/reservation-list";
-import { TablesPageHeader } from "@/features/pos/components/pos-page-headers";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 export const metadata = { title: "Tables | Epidom" };
@@ -17,7 +16,6 @@ export default async function TablesPage({ params }: { params: Promise<{ storeId
 
   return (
     <div className="flex h-full flex-1 flex-col">
-      <TablesPageHeader />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <TablesManager storeId={storeId} />
         <ReservationList storeId={storeId} />
