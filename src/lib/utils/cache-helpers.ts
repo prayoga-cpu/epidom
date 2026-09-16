@@ -456,3 +456,66 @@ export async function invalidateSupplierRelatedQueries(
     invalidateSupplierQueriesImmediate(queryClient, storeId, skipSuppliers);
   }
 }
+
+/**
+ * Cache-key prefixes that read order status/revenue and must be refreshed
+ * whenever an order's status or refund amount changes (cancel, refund,
+ * mark-paid). Derived by cross-referencing every API route that filters
+ * `NON_REVENUE_STATUSES` (`src/lib/constants/order-status.ts`) against its
+ * actual client-side consumer's query key — grep
+ * `grep -rln NON_REVENUE_STATUSES src/app/api` and re-check this list if a
+ * report ever looks stuck again, since each feature area invented its own
+ * naming independently instead of sharing one prefix:
+ *
+ * - `finance-*` — `finance-client.tsx`'s dozen report queries, plus
+ *   `finance-settings` (unrelated to revenue, harmless to over-invalidate).
+ * - `analytics-*` — the dashboard's `analytics-section.tsx`
+ *   (`/orders/analytics`, `/customers/analytics`, `/finance/top-items`,
+ *   `/finance/by-department`), 5-minute staleTime — longer than
+ *   `finance-*`'s 30s, so this one was *more* likely to look stuck.
+ * - `owner-summary` — the multi-store Enterprise rollup
+ *   (`owner-dashboard-client.tsx`, `/api/owner/summary`); not per-store
+ *   (no storeId in its key), which is fine for a predicate match.
+ * - `storefront-analytics*` — the Storefront editor's own analytics tab
+ *   (`storefront-analytics.tsx`, `/api/stores/[id]/storefront/analytics`).
+ */
+const REVENUE_QUERY_KEY_PREFIXES = [
+  "finance-",
+  "analytics-",
+  "owner-summary",
+  "storefront-analytics",
+];
+
+/**
+ * Invalidate every Finance report AND dashboard analytics query for a store.
+ *
+ * Each fans its data out across many independent `useQuery` calls, each
+ * keyed by its own literal string (`["finance-summary", ...]`,
+ * `["analytics-orders", ...]`, etc) rather than a shared array prefix — so
+ * there's no single `invalidateQueries({ queryKey })` call that catches them
+ * all. A predicate on the first key segment's string prefix does, and keeps
+ * working if a new `finance-*`/`analytics-*` query is added later without
+ * anyone having to remember to list it here too.
+ *
+ * Call this from any mutation that changes which orders count as revenue
+ * (cancel, refund, mark-paid) — otherwise the Finance page and dashboard
+ * analytics keep serving whatever they last cached for up to their
+ * staleTime, making the change look like it "didn't take" for however long
+ * is left of that window.
+ */
+export function invalidateFinanceQueries(queryClient: QueryClient): void {
+  queryClient.invalidateQueries({
+    predicate: (query) => {
+      const firstKey = query.queryKey[0];
+      return (
+        typeof firstKey === "string" &&
+        REVENUE_QUERY_KEY_PREFIXES.some((prefix) => firstKey.startsWith(prefix))
+      );
+    },
+    // Default refetchType ("active") skips any report the operator isn't
+    // currently looking at — e.g. they cancel from Order History while
+    // Finance sits cached-but-unmounted in another tab. "all" forces those
+    // to refetch too, so switching back doesn't show pre-cancel numbers.
+    refetchType: "all",
+  });
+}

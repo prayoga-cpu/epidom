@@ -177,9 +177,22 @@ function sanitizeMaterialFilters(
 
 interface MaterialsSectionProps {
   initialMaterials?: MaterialWithSuppliers[];
+  /**
+   * The real store-wide count from the server, separate from
+   * `initialMaterials.length` — the server component fetches at most one
+   * page (default take: 50), so `.length` is only ever a fabricated total
+   * that happens to be right when the store has ≤50 materials. Seeding
+   * `total` with `.length` instead of this made pagination invisible
+   * (`totalPages` computed as 1) for the ~20s staleTime window on every
+   * load, for any store with more materials than the page size.
+   */
+  initialMaterialsTotal?: number;
 }
 
-export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {}) {
+export function MaterialsSection({
+  initialMaterials,
+  initialMaterialsTotal,
+}: MaterialsSectionProps = {}) {
   const { t } = useI18n();
   const { advancedReportsAccess } = useFeatureAccess();
   const { formatPrice } = useCurrency();
@@ -232,7 +245,7 @@ export function MaterialsSection({ initialMaterials }: MaterialsSectionProps = {
     initialMaterials
       ? {
           materials: initialMaterials,
-          total: initialMaterials.length,
+          total: initialMaterialsTotal ?? initialMaterials.length,
         }
       : undefined
   );

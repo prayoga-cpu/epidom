@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { invalidateFinanceQueries } from "@/lib/utils/cache-helpers";
 
 /**
  * Staff-initiated refund (POS order history "Issue Refund" action). Same
@@ -15,6 +16,9 @@ export function useRefundOrder(storeId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pos", "orders", storeId] });
       queryClient.invalidateQueries({ queryKey: ["pos", "order-history", storeId], exact: false });
+      // Refund changes refundAmount, which every Finance report nets against
+      // revenue — see invalidateFinanceQueries' doc comment.
+      invalidateFinanceQueries(queryClient);
     },
   });
 }

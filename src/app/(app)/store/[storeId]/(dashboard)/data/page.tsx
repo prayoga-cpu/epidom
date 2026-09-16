@@ -33,8 +33,10 @@ export default async function DataPage({ params }: { params: Promise<{ storeId: 
   return (
     <DataViewClient
       initialMaterials={materialsResult.materials}
+      initialMaterialsTotal={materialsResult.total}
       initialRecipes={recipesResult.recipes}
       initialProducts={productsResult.products}
+      initialProductsTotal={productsResult.total}
       initialSuppliers={suppliersResult.suppliers}
       storeId={storeId}
     />

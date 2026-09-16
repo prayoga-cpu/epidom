@@ -212,8 +212,12 @@ function sanitizeTabState(raw: unknown, defaults: TabState): TabState {
 
 interface DataViewClientProps {
   initialMaterials?: MaterialWithSuppliers[];
+  // Real store-wide counts, separate from the `.length` of the page above —
+  // see MaterialsSection/ProductsSection's own prop docs for why.
+  initialMaterialsTotal?: number;
   initialRecipes?: RecipeWithIngredients[];
   initialProducts?: Product[];
+  initialProductsTotal?: number;
   initialSuppliers?: SupplierWithRelations[];
   storeId: string;
 }
@@ -234,8 +238,10 @@ interface DataViewClientProps {
  */
 export function DataViewClient({
   initialMaterials,
+  initialMaterialsTotal,
   initialRecipes,
   initialProducts,
+  initialProductsTotal,
   initialSuppliers,
   storeId,
 }: DataViewClientProps) {
@@ -350,7 +356,10 @@ export function DataViewClient({
           - Long initial load time */}
       {activeTab === "materials" && (
         <TabsContent value="materials" className="mt-0">
-          <MaterialsSection initialMaterials={initialMaterials} />
+          <MaterialsSection
+            initialMaterials={initialMaterials}
+            initialMaterialsTotal={initialMaterialsTotal}
+          />
         </TabsContent>
       )}
 
@@ -362,7 +371,10 @@ export function DataViewClient({
 
       {activeTab === "products" && (
         <TabsContent value="products" className="mt-0">
-          <ProductsSection initialProducts={initialProducts} />
+          <ProductsSection
+            initialProducts={initialProducts}
+            initialProductsTotal={initialProductsTotal}
+          />
         </TabsContent>
       )}
 

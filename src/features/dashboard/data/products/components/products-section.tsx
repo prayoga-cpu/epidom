@@ -211,9 +211,22 @@ function sanitizeProductFilters(raw: unknown, defaults: ProductFiltersState): Pr
 
 interface ProductsSectionProps {
   initialProducts?: Product[];
+  /**
+   * The real store-wide count from the server, separate from
+   * `initialProducts.length` — the server component fetches at most one page
+   * (default take: 50), so `.length` is only ever a fabricated total that
+   * happens to be right when the store has ≤50 products. Seeding `total`
+   * with `.length` instead of this made pagination invisible (`totalPages`
+   * computed as 1) for the ~30s staleTime window on every load, for any
+   * store with more products than the page size.
+   */
+  initialProductsTotal?: number;
 }
 
-export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) {
+export function ProductsSection({
+  initialProducts,
+  initialProductsTotal,
+}: ProductsSectionProps = {}) {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const params = useParams();
@@ -264,7 +277,7 @@ export function ProductsSection({ initialProducts }: ProductsSectionProps = {}) 
     initialProducts
       ? {
           products: initialProducts,
-          total: initialProducts.length,
+          total: initialProductsTotal ?? initialProducts.length,
         }
       : undefined
   );

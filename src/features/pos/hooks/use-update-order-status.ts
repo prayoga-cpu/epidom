@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { invalidateFinanceQueries } from "@/lib/utils/cache-helpers";
 import type { SettlePaymentMethod } from "../types/pos.types";
 
 /**
@@ -37,6 +38,12 @@ export function useUpdateOrderStatus(storeId: string) {
       queryClient.invalidateQueries({ queryKey: ["pos", "orders", storeId] });
       queryClient.invalidateQueries({ queryKey: ["pos", "order-history", storeId], exact: false });
       queryClient.invalidateQueries({ queryKey: ["alerts", "list", storeId] });
+      // A status change (cancel, mark-paid) moves an order in/out of revenue —
+      // without this, the Finance page and dashboard analytics keep showing
+      // whatever they'd already cached for up to their 30s staleTime, so
+      // cancelling an order can look like it "didn't change the numbers" for
+      // however long is left of that window.
+      invalidateFinanceQueries(queryClient);
     },
   });
 }
