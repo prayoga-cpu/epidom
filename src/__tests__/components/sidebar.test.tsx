@@ -36,13 +36,33 @@ function renderSidebar(plan: string | null) {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Sidebar plan gating", () => {
+  // /pos, /pos/orders, /pos/kds, /tables moved into the (pos-mode) shell's
+  // own bottom tab bar (docs/dashboard-revamp.md) and were removed from
+  // dashboardNavigation entirely — they must never render in this rail
+  // again, at any plan tier. /menu stays (menu *management*, not the live
+  // cashier screen) and is the remaining POS-tier-gated item here.
+  it("never renders /pos, /pos/orders, /pos/kds or /tables, at any plan tier", () => {
+    for (const plan of ["FREE", "POS", "OPERATIONS", "ENTERPRISE"]) {
+      renderSidebar(plan);
+      const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
+      for (const removed of [
+        "/store/store-1/pos",
+        "/store/store-1/pos/orders",
+        "/store/store-1/pos/kds",
+        "/store/store-1/tables",
+      ]) {
+        expect(hrefs).not.toContain(removed);
+      }
+    }
+  });
+
   describe("FREE plan", () => {
-    it("shows POS items as locked links to /pricing", () => {
+    it("shows the POS-tier-gated /menu item as a locked link to /pricing", () => {
       renderSidebar("FREE");
-      const posLinks = screen.getAllByRole("link", { name: /nav\.pos/i });
+      const menuLinks = screen.getAllByRole("link", { name: /nav\.menu/i });
       // The locked link points to /pricing, not the actual page
-      const lockedPos = posLinks.find((l) => l.getAttribute("href")?.startsWith("/pricing"));
-      expect(lockedPos).toBeTruthy();
+      const lockedMenu = menuLinks.find((l) => l.getAttribute("href")?.startsWith("/pricing"));
+      expect(lockedMenu).toBeTruthy();
     });
 
     it("shows lock icon on POS items", () => {
@@ -67,11 +87,11 @@ describe("Sidebar plan gating", () => {
   });
 
   describe("POS plan", () => {
-    it("shows POS items as normal links", () => {
+    it("shows the POS-tier-gated /menu item as a normal link", () => {
       renderSidebar("POS");
       const links = screen.getAllByRole("link");
-      const posLink = links.find((l) => l.getAttribute("href") === "/store/store-1/pos");
-      expect(posLink).toBeTruthy();
+      const menuLink = links.find((l) => l.getAttribute("href") === "/store/store-1/menu");
+      expect(menuLink).toBeTruthy();
     });
 
     it("shows Operations items as locked", () => {
@@ -86,12 +106,12 @@ describe("Sidebar plan gating", () => {
   });
 
   describe("OPERATIONS plan", () => {
-    it("shows POS and Operations items as normal links", () => {
+    it("shows /menu and /management as normal links", () => {
       renderSidebar("OPERATIONS");
       const links = screen.getAllByRole("link");
-      const posLink = links.find((l) => l.getAttribute("href") === "/store/store-1/pos");
+      const menuLink = links.find((l) => l.getAttribute("href") === "/store/store-1/menu");
       const mgmtLink = links.find((l) => l.getAttribute("href") === "/store/store-1/management");
-      expect(posLink).toBeTruthy();
+      expect(menuLink).toBeTruthy();
       expect(mgmtLink).toBeTruthy();
     });
 

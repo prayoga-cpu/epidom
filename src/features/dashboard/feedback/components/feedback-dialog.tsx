@@ -39,7 +39,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
-import { getAllDashboardNavItems } from "@/config/navigation.config";
+import { getAllAppNavItems } from "@/config/navigation.config";
 import { compressImage, isValidImage, isValidImageSize } from "@/lib/utils/image-compression";
 import {
   FeedbackItem,
@@ -132,7 +132,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
   // Page options from the dashboard navigation, plus a catch-all "Other"
   const pageOptions = useMemo(
     () => [
-      ...getAllDashboardNavItems().map((item) => ({
+      ...getAllAppNavItems().map((item) => ({
         value: item.href,
         label: t(item.labelKey),
       })),
@@ -145,7 +145,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
   // against the longest nav item href
   const defaultPage = useMemo(() => {
     const path = (pathname ?? "").replace(/^\/store\/[^/]+/, "");
-    const match = [...getAllDashboardNavItems()]
+    const match = [...getAllAppNavItems()]
       .sort((a, b) => b.href.length - a.href.length)
       .find((item) => path.startsWith(item.href));
     return match?.href ?? "other";

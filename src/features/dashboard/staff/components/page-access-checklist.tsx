@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { dashboardNavigation } from "@/config/navigation.config";
+import { dashboardNavigation, posModeNavItems } from "@/config/navigation.config";
 import { ROLE_DEFAULT_PAGES } from "@/config/staff-permissions.config";
 import type { StaffRole } from "@prisma/client";
 
@@ -11,12 +11,20 @@ import type { StaffRole } from "@prisma/client";
 // never appear as options.
 const OWNER_ONLY_PAGES = new Set(["/profile", "/billing", "/staff"]);
 
-const GRANTABLE_SECTIONS = dashboardNavigation
-  .map((section) => ({
-    ...section,
-    items: section.items.filter((item) => !OWNER_ONLY_PAGES.has(item.href)),
-  }))
-  .filter((section) => section.items.length > 0);
+// posModeNavItems isn't part of dashboardNavigation (it renders in the
+// (pos-mode) shell's own tab bar, not this Back Office rail — see that
+// export's doc comment) but an owner still needs to grant/revoke it here,
+// same as any other page. Its own section, appended after the nav-derived
+// ones, so this checklist covers the same universe as ALL_STAFF_PAGES.
+const GRANTABLE_SECTIONS = [
+  ...dashboardNavigation
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !OWNER_ONLY_PAGES.has(item.href)),
+    }))
+    .filter((section) => section.items.length > 0),
+  { title: "POS Mode", items: posModeNavItems },
+];
 
 interface PageAccessChecklistProps {
   role: StaffRole;

@@ -9,12 +9,17 @@ import {
   CreditCard,
   Mail,
   Store,
+  Monitor,
+  UtensilsCrossed,
+  ChefHat,
   Factory,
+  Grid2X2,
   Users,
   BarChart3,
   MenuSquare,
   Wrench,
   CalendarDays,
+  CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -207,6 +212,41 @@ export const authenticatedNavigation: NavItem[] = [
 export function getAllDashboardNavItems(): NavItem[] {
   return dashboardNavigation.flatMap((section) => section.items);
 }
+
+/**
+ * Every page in the app a staff member could be granted access to —
+ * dashboardNavigation's items plus posModeNavItems. Callers that mean "every
+ * grantable/launchable page" (permission validation, the account-access
+ * summary dialog, the feedback page-picker, the /go/* store launcher) should
+ * use this, not getAllDashboardNavItems() alone — that one is scoped to the
+ * Back Office rail specifically and silently excludes POS Mode's routes by
+ * design (see posModeNavItems' own doc comment).
+ */
+export function getAllAppNavItems(): NavItem[] {
+  return [...getAllDashboardNavItems(), ...posModeNavItems];
+}
+
+/**
+ * POS Mode's own routes — deliberately NOT part of dashboardNavigation (they
+ * render in the (pos-mode) shell's bottom tab bar, not the Back Office rail;
+ * see docs/dashboard-revamp.md). Exported separately so callers that need
+ * the full grantable-page universe (staff-permissions.config.ts's
+ * ALL_STAFF_PAGES) or an owner-facing permission checklist
+ * (page-access-checklist.tsx) can still list them without adding them back
+ * to the rail.
+ */
+export const posModeNavItems: NavItem[] = [
+  { href: "/pos", labelKey: "nav.pos", icon: Monitor, requiredPlan: "POS" },
+  { href: "/pos/orders", labelKey: "nav.posOrders", icon: UtensilsCrossed, requiredPlan: "POS" },
+  { href: "/pos/kds", labelKey: "nav.posKds", icon: ChefHat, requiredPlan: "POS" },
+  { href: "/tables", labelKey: "nav.posTables", icon: Grid2X2, requiredPlan: "POS" },
+  {
+    href: "/pos/schedule",
+    labelKey: "pages.scheduleMyScheduleTitle",
+    icon: CalendarClock,
+    requiredPlan: "POS",
+  },
+];
 
 /**
  * Get navigation items by variant

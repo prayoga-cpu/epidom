@@ -1,20 +1,14 @@
 import type { StaffRole } from "@prisma/client";
-import { getAllDashboardNavItems } from "./navigation.config";
+import { getAllAppNavItems } from "./navigation.config";
 
-/**
- * POS Mode routes that deliberately have no Back Office nav entry (so they
- * never leak into that rail — see docs/dashboard-revamp.md) but must still
- * validate as grantable pages, or the first time an owner edits any
- * permission for an existing Cashier/Kitchen staffer, allowedPagesSchema
- * would silently reject it and they'd lose clock-in access.
- */
-const POS_MODE_ONLY_PAGES = ["/pos/schedule"];
-
-/** Every page a staff member could conceivably be granted — the nav item hrefs. */
-export const ALL_STAFF_PAGES: string[] = [
-  ...getAllDashboardNavItems().map((item) => item.href),
-  ...POS_MODE_ONLY_PAGES,
-];
+/** Every page a staff member could conceivably be granted — every app nav
+ * item's href, dashboardNavigation AND POS Mode's own routes together (see
+ * getAllAppNavItems' own doc comment for why dashboardNavigation alone isn't
+ * enough here). Missing either half silently breaks something an owner
+ * can't easily notice: without the POS Mode half, allowedPagesSchema
+ * rejects a hand-edited Cashier/Kitchen permission set (confirmed by
+ * staff-permissions.config.test.ts). */
+export const ALL_STAFF_PAGES: string[] = getAllAppNavItems().map((item) => item.href);
 
 /**
  * Default page access per role — the starting point shown (and editable) in
