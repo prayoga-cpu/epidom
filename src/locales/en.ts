@@ -1243,6 +1243,8 @@ export const en = {
     scheduleStatus: "Status",
     scheduleClockInOut: "Clock In / Out",
     scheduleMyHistoryTitle: "My History",
+scheduleHistorySortNewestFirst: "Newest first",
+scheduleHistorySortOldestFirst: "Oldest first",
     scheduleLogTitle: "Log & History",
     scheduleLogDesc: "Clock events and till cash, on one timeline",
     scheduleLogFilterType: "Type",

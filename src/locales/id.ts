@@ -1260,6 +1260,8 @@ export const id = {
     scheduleStatus: "Status",
     scheduleClockInOut: "Clock In / Keluar",
     scheduleMyHistoryTitle: "Riwayat Saya",
+scheduleHistorySortNewestFirst: "Terbaru dulu",
+scheduleHistorySortOldestFirst: "Terlama dulu",
     scheduleLogTitle: "Log & Riwayat",
     scheduleLogDesc: "Absensi dan kas sif dalam satu linimasa",
     scheduleLogFilterType: "Jenis",

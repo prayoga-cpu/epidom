@@ -28,7 +28,10 @@ import {
   ImageOff,
   MapPin,
   ReceiptText,
+  ArrowDownNarrowWide,
+  ArrowUpNarrowWide,
 } from "lucide-react";
+import { DateRangeField } from "@/components/ui/date-range-field";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,7 +50,7 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { todayLocalISO } from "@/lib/utils/date-range";
+import { todayLocalISO, addDaysLocalISO } from "@/lib/utils/date-range";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { useRecordCashMovement } from "@/features/pos/hooks/use-cash-movements";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
@@ -146,13 +149,32 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
   });
   const openShift = shiftData?.shifts.find((s) => !s.closedAt) ?? null;
 
+  // Defaults to the last 30 days rather than an unbounded "recent 20" — a
+  // concrete range is what DateRangeField (and every other history/report
+  // view in the app) is built around, and it's a more legible default than
+  // "however many records happened to fit."
+  const [historyFrom, setHistoryFrom] = useState(addDaysLocalISO(todayLocalISO(), -30));
+  const [historyTo, setHistoryTo] = useState(todayLocalISO());
+  const [historySort, setHistorySort] = useState<"desc" | "asc">("desc");
+
   const { data: historyData, isLoading: historyLoading } = useQuery({
-    queryKey: ["schedule-my-log", storeId, staffMemberId],
+    queryKey: ["schedule-my-log", storeId, staffMemberId, historyFrom, historyTo],
     queryFn: () =>
       apiClient.get<{ records: UnifiedLogRow[] }>(`/stores/${storeId}/schedule/my-log`, {
         staffId: staffMemberId,
+        // T00:00:00Z / T23:59:59Z: the API's from/to are full datetimes, not
+        // bare dates — feeding it a bare date silently produces garbage.
+        from: `${historyFrom}T00:00:00Z`,
+        to: `${historyTo}T23:59:59Z`,
+        take: "50",
       }),
   });
+  // Server always returns newest-first; asc is a client-side reverse rather
+  // than a second query shape, since the whole (already date-bounded, ≤50
+  // row) result set is already in memory.
+  const historyRecords = historySort === "asc"
+    ? [...(historyData?.records ?? [])].reverse()
+    : (historyData?.records ?? []);
 
   const invalidateShift = () => {
     queryClient.invalidateQueries({ queryKey: ["my-shift", storeId, staffMemberId] });
@@ -356,17 +378,54 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
       )}
 
       <div className="space-y-3 border-t pt-4">
-        <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
-          <HistoryIcon className="h-4 w-4" />
-          {t("pages.scheduleMyHistoryTitle")}
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
+            <HistoryIcon className="h-4 w-4" />
+            {t("pages.scheduleMyHistoryTitle")}
+          </h2>
+          <div className="flex items-center gap-2">
+            <DateRangeField
+              id="my-history-date-range"
+              from={historyFrom}
+              to={historyTo}
+              onChange={(nextFrom, nextTo) => {
+                setHistoryFrom(nextFrom);
+                setHistoryTo(nextTo);
+              }}
+              align="end"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onClick={() => setHistorySort((s) => (s === "desc" ? "asc" : "desc"))}
+              aria-label={
+                historySort === "desc"
+                  ? t("pages.scheduleHistorySortOldestFirst")
+                  : t("pages.scheduleHistorySortNewestFirst")
+              }
+              title={
+                historySort === "desc"
+                  ? t("pages.scheduleHistorySortNewestFirst")
+                  : t("pages.scheduleHistorySortOldestFirst")
+              }
+            >
+              {historySort === "desc" ? (
+                <ArrowDownNarrowWide className="h-4 w-4" aria-hidden />
+              ) : (
+                <ArrowUpNarrowWide className="h-4 w-4" aria-hidden />
+              )}
+            </Button>
+          </div>
+        </div>
         {historyLoading ? (
           <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
-        ) : (historyData?.records.length ?? 0) === 0 ? (
+        ) : historyRecords.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("pages.noData")}</p>
         ) : (
           <div className="space-y-2">
-            {historyData!.records.map((record) => (
+            {historyRecords.map((record) => (
               <div
                 key={record.id}
                 className="border-border/60 flex items-center gap-3 rounded-lg border p-2.5"
