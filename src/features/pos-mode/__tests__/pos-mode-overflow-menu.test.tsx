@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 vi.mock("@/components/lang/i18n-provider", () => ({
@@ -50,11 +50,15 @@ function defaultSwitcher() {
 
 function renderMenu() {
   return render(
-    <PosModeOverflowMenu storeId="store-1" open={true} onOpenChange={() => {}} />
+    <PosModeOverflowMenu storeId="store-001" open={true} onOpenChange={() => {}} />
   );
 }
 
 describe("PosModeOverflowMenu — account switcher (distinct from Clock In/Out)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it("Clock In/Out is always present, regardless of persona", () => {
     mockSwitcher.mockReturnValue(baseSwitcher());
     renderMenu();
@@ -95,19 +99,60 @@ describe("PosModeOverflowMenu — account switcher (distinct from Clock In/Out)"
     expect(screen.getByText("nav.logoutOwnerAccount")).toBeInTheDocument();
   });
 
-  it("Dashboard link only shows for OWNER/MANAGER, not Cashier/Kitchen", () => {
+  it("Back Office link only shows for OWNER/MANAGER, not Cashier/Kitchen", () => {
     mockSwitcher.mockReturnValue(
       baseSwitcher({ posSession: { staffName: "Cashier Test", staffRole: "CASHIER" } })
     );
     renderMenu();
-    expect(screen.queryByText("nav.dashboard")).toBeNull();
+    expect(screen.queryByText("nav.backOffice")).toBeNull();
   });
 
-  it("Dashboard link shows for MANAGER", () => {
+  it("Back Office link shows for MANAGER", () => {
     mockSwitcher.mockReturnValue(
       baseSwitcher({ posSession: { staffName: "Manager Test", staffRole: "MANAGER" } })
     );
     renderMenu();
-    expect(screen.getByText("nav.dashboard")).toBeInTheDocument();
+    expect(screen.getByText("nav.backOffice")).toBeInTheDocument();
+  });
+
+  it("Back Office link defaults to /dashboard with no resume history", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({ posSession: { staffName: "Owner Test", staffRole: "OWNER" } })
+    );
+    renderMenu();
+    const link = screen.getByText("nav.backOffice").closest("a");
+    expect(link?.getAttribute("href")).toBe("/store/store-001/dashboard");
+  });
+
+  it("Back Office link resumes the last Back Office section visited in this store", async () => {
+    localStorage.setItem("epidom:lastVisitedBackOffice", "/store/store-001/finance");
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({ posSession: { staffName: "Owner Test", staffRole: "OWNER" } })
+    );
+    renderMenu();
+    const link = await screen.findByText("nav.backOffice");
+    expect(link.closest("a")?.getAttribute("href")).toBe("/store/store-001/finance");
+  });
+
+  it("Back Office link ignores resume history saved for a different store", async () => {
+    localStorage.setItem("epidom:lastVisitedBackOffice", "/store/some-other-store/finance");
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({ posSession: { staffName: "Owner Test", staffRole: "OWNER" } })
+    );
+    renderMenu();
+    const link = await screen.findByText("nav.backOffice");
+    expect(link.closest("a")?.getAttribute("href")).toBe("/store/store-001/dashboard");
+  });
+
+  it("Back to Stores shows when not acting as staff (real owner session)", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: false, hasSwitchableStaff: false }));
+    renderMenu();
+    expect(screen.getByText("nav.backToStores")).toBeInTheDocument();
+  });
+
+  it("Back to Stores is hidden while acting as a staff PIN persona", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true }));
+    renderMenu();
+    expect(screen.queryByText("nav.backToStores")).toBeNull();
   });
 });

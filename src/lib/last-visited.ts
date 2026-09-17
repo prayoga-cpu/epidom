@@ -7,6 +7,19 @@
 
 export const LAST_VISITED_COOKIE = "epidom:lastVisitedUrl";
 export const REMEMBER_PREF_COOKIE = "epidom:rememberLastVisited";
+/** Separate from LAST_VISITED_COOKIE because that one is legitimately
+ * overwritten by POS Mode pages too (RESUMABLE_STORE_SECTIONS includes
+ * /pos/*) — on its own it can't answer "where was I in Back Office" while
+ * the device is currently sitting in POS Mode. Used by PosModeOverflowMenu's
+ * "Back Office" shortcut to resume the last section instead of always
+ * landing on /dashboard. */
+export const LAST_VISITED_BACK_OFFICE_COOKIE = "epidom:lastVisitedBackOffice";
+/** The POS Mode mirror of LAST_VISITED_BACK_OFFICE_COOKIE — the last POS
+ * section (till, orders, KDS, this store's schedule) visited in THIS store.
+ * Used by the /stores card's POS shortcut, so re-opening a store's till
+ * drops back onto whatever screen was last open there instead of always the
+ * bare register. */
+export const LAST_VISITED_POS_COOKIE = "epidom:lastVisitedPos";
 
 /** Rejects anything that isn't a same-origin path, so a tampered cookie
  * value can never turn this into an open redirect (e.g. "//evil.com" or
@@ -48,6 +61,7 @@ const RESUMABLE_STORE_SECTIONS = new Set([
   "/pos",
   "/pos/kds",
   "/pos/orders",
+  "/pos/schedule",
   "/production",
   "/profile",
   "/schedule",
@@ -123,6 +137,40 @@ export function isResumableAppPath(value: string): boolean {
   }
 
   return RESUMABLE_ROOT_PATHS.has(`/${segments.join("/")}`);
+}
+
+/**
+ * Whether `value` is a Back Office (non-POS) page inside a store — the
+ * narrower check backing LAST_VISITED_BACK_OFFICE_COOKIE. A bare
+ * "/store/{id}" also counts (it redirects to the user's default landing,
+ * which is itself a valid Back Office resume target in every case except
+ * "pos" — and that combination is vanishingly rare to have saved here, since
+ * reaching this function at all means the tracker just observed a real
+ * Back Office pathname).
+ */
+export function isBackOfficeAppPath(value: string): boolean {
+  if (!isResumableAppPath(value)) return false;
+  const pathname = value.split(/[?#]/)[0];
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] !== "store") return false;
+  const section = `/${segments.slice(2).join("/")}`;
+  return section !== "/pos" && !section.startsWith("/pos/");
+}
+
+/**
+ * The inverse of isBackOfficeAppPath, backing LAST_VISITED_POS_COOKIE — a
+ * store-scoped POS Mode page (till, orders, KDS, this store's own schedule
+ * view). Same as isBackOfficeAppPath, callers still need their own
+ * `startsWith("/store/{id}/")` check for the specific store in question —
+ * this only answers "is this a POS Mode path," not "in which store."
+ */
+export function isPosAppPath(value: string): boolean {
+  if (!isResumableAppPath(value)) return false;
+  const pathname = value.split(/[?#]/)[0];
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] !== "store") return false;
+  const section = `/${segments.slice(2).join("/")}`;
+  return section === "/pos" || section.startsWith("/pos/");
 }
 
 /**

@@ -994,6 +994,7 @@ export const en = {
     profile: "Profile",
     billing: "Billing",
     dashboard: "Dashboard",
+    backOffice: "Back Office",
     storefront: "Storefront",
     management: "Stock",
     production: "Production",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Monitor,
@@ -8,6 +8,8 @@ import {
   CalendarClock,
   ExternalLink,
   LayoutDashboard,
+  ArrowRight,
+  Store,
   RefreshCw,
   LogOut,
 } from "lucide-react";
@@ -21,6 +23,7 @@ import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialo
 import { useAccountSwitcher } from "@/features/dashboard/shared/hooks/use-account-switcher";
 import { VerifyOwnerPinDialog } from "@/features/dashboard/shared/verify-owner-pin-dialog";
 import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
+import { LAST_VISITED_BACK_OFFICE_COOKIE, isBackOfficeAppPath } from "@/lib/last-visited";
 
 interface PosModeOverflowMenuProps {
   storeId: string;
@@ -61,6 +64,23 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
   // showing them a link into a shell they'd immediately be redirected out of
   // would be a dead end, not a shortcut.
   const canReachBackOffice = posSession.staffRole === "OWNER" || posSession.staffRole === "MANAGER";
+
+  // Resumes the last Back Office section actually visited (Finance, Staff,
+  // whatever was open before switching into POS Mode) instead of always
+  // dropping back onto /dashboard — mirrors the same resume behavior already
+  // used app-wide (src/lib/last-visited.ts), scoped to non-POS pages only so
+  // it can't just point right back at this same shell.
+  const [backOfficeHref, setBackOfficeHref] = useState(`/store/${storeId}/dashboard`);
+  useEffect(() => {
+    try {
+      const last = localStorage.getItem(LAST_VISITED_BACK_OFFICE_COOKIE);
+      if (last && last.startsWith(`/store/${storeId}/`) && isBackOfficeAppPath(last)) {
+        setBackOfficeHref(last);
+      }
+    } catch {
+      // Ignore blocked storage — falls back to the default /dashboard landing.
+    }
+  }, [storeId]);
 
   return (
     <>
@@ -117,12 +137,17 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
             </Button>
 
             {canReachBackOffice && (
-              <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
-                <Link href={`/store/${storeId}/dashboard`} onClick={() => onOpenChange(false)}>
-                  <LayoutDashboard className="size-4" aria-hidden />
-                  {t("nav.dashboard")}
-                </Link>
-              </Button>
+              <Link
+                href={backOfficeHref}
+                onClick={() => onOpenChange(false)}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-11 items-center justify-between gap-2 rounded-md px-3 text-sm font-medium transition active:scale-[0.98]"
+              >
+                <span className="flex items-center gap-2">
+                  <LayoutDashboard className="size-4 shrink-0" aria-hidden />
+                  {t("nav.backOffice")}
+                </span>
+                <ArrowRight className="size-4 shrink-0" aria-hidden />
+              </Link>
             )}
 
             {/* Who's using this device — switching or logging out, not
@@ -172,6 +197,18 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
                     {t("nav.switchAccount")}
                   </Button>
                 )
+              )}
+
+              {/* Tied to the real, underlying account session — a staff PIN
+                  persona has no store list of its own, same gate nav-user.tsx
+                  uses for this same action in Back Office. */}
+              {!actingAsStaff && (
+                <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
+                  <Link href="/stores" onClick={() => onOpenChange(false)}>
+                    <Store className="size-4" aria-hidden />
+                    {t("nav.backToStores")}
+                  </Link>
+                </Button>
               )}
 
               <Button

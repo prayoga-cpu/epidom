@@ -4,7 +4,14 @@ import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/lib/auth-client";
-import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE } from "@/lib/last-visited";
+import {
+  LAST_VISITED_COOKIE,
+  LAST_VISITED_BACK_OFFICE_COOKIE,
+  LAST_VISITED_POS_COOKIE,
+  REMEMBER_PREF_COOKIE,
+  isBackOfficeAppPath,
+  isPosAppPath,
+} from "@/lib/last-visited";
 
 // 400 days — the Chrome-enforced ceiling on Set-Cookie max-age, used here as
 // "as long as the platform allows" rather than a deliberately chosen TTL.
@@ -79,6 +86,29 @@ export function LastVisitedTracker(): null {
       setCookie(LAST_VISITED_COOKIE, url);
     } catch {
       // Ignore — same as above.
+    }
+    if (isBackOfficeAppPath(url)) {
+      try {
+        localStorage.setItem(LAST_VISITED_BACK_OFFICE_COOKIE, url);
+      } catch {
+        // Ignore — same as above.
+      }
+      try {
+        setCookie(LAST_VISITED_BACK_OFFICE_COOKIE, url);
+      } catch {
+        // Ignore — same as above.
+      }
+    } else if (isPosAppPath(url)) {
+      try {
+        localStorage.setItem(LAST_VISITED_POS_COOKIE, url);
+      } catch {
+        // Ignore — same as above.
+      }
+      try {
+        setCookie(LAST_VISITED_POS_COOKIE, url);
+      } catch {
+        // Ignore — same as above.
+      }
     }
   }, [user, pathname, searchParams]);
 

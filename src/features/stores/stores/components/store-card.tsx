@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -20,6 +20,7 @@ import { EditStoreDialog } from "./edit-store-dialog";
 import { DeleteStoreDialog } from "./delete-store-dialog";
 import { useRouter } from "next/navigation";
 import { planHasFeature, type PlanTier } from "@/lib/plans/entitlements";
+import { LAST_VISITED_POS_COOKIE, isPosAppPath } from "@/lib/last-visited";
 
 interface StoreCardProps {
   store: StoreType;
@@ -42,6 +43,22 @@ export function StoreCard({ store, isBlocked = false, currentPlan = "FREE" }: St
   // just doesn't render, the sidebar's own CTA surfaces the upsell once
   // they're inside a store.
   const canOpenPos = !isBlocked && planHasFeature(currentPlan, "posAccess");
+
+  // Resumes the last POS screen (till, orders, KDS, this store's schedule)
+  // actually open in THIS store, instead of always dropping back onto the
+  // bare register — same resume mechanism as PosModeOverflowMenu's "Back
+  // Office" shortcut, mirrored for the POS direction.
+  const [posHref, setPosHref] = useState(`/store/${store.id}/pos`);
+  useEffect(() => {
+    try {
+      const last = localStorage.getItem(LAST_VISITED_POS_COOKIE);
+      if (last && last.startsWith(`/store/${store.id}/`) && isPosAppPath(last)) {
+        setPosHref(last);
+      }
+    } catch {
+      // Ignore blocked storage — falls back to the bare till.
+    }
+  }, [store.id]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     if (isBlocked) {
@@ -70,7 +87,7 @@ export function StoreCard({ store, isBlocked = false, currentPlan = "FREE" }: St
             className="bg-card/95 hover:bg-card h-10 gap-1.5 px-2.5 shadow-md backdrop-blur-sm transition-all"
             onClick={(e) => e.stopPropagation()}
           >
-            <Link href={`/store/${store.id}/pos`}>
+            <Link href={posHref}>
               <Monitor className="h-4 w-4" aria-hidden />
               <span className="text-xs font-medium">{t("nav.pos")}</span>
             </Link>

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 vi.mock("@/components/lang/i18n-provider", () => ({
@@ -20,7 +20,7 @@ vi.mock("../delete-store-dialog", () => ({
 import { StoreCard } from "../store-card";
 
 const store = {
-  id: "store-1",
+  id: "store-001",
   businessId: "biz-1",
   name: "Test Store",
   address: null,
@@ -34,10 +34,28 @@ const store = {
 };
 
 describe("StoreCard — switch-to-POS shortcut", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it("renders the POS shortcut at POS tier or above, linking to that store's /pos", () => {
     render(<StoreCard store={store} isBlocked={false} currentPlan="POS" />);
     const posLink = screen.getByRole("link", { name: /nav\.pos/i });
-    expect(posLink.getAttribute("href")).toBe("/store/store-1/pos");
+    expect(posLink.getAttribute("href")).toBe("/store/store-001/pos");
+  });
+
+  it("resumes the last POS screen visited in this store instead of the bare till", async () => {
+    localStorage.setItem("epidom:lastVisitedPos", "/store/store-001/pos/orders");
+    render(<StoreCard store={store} isBlocked={false} currentPlan="POS" />);
+    const posLink = await screen.findByRole("link", { name: /nav\.pos/i });
+    expect(posLink.getAttribute("href")).toBe("/store/store-001/pos/orders");
+  });
+
+  it("ignores a last-visited POS path saved for a different store", async () => {
+    localStorage.setItem("epidom:lastVisitedPos", "/store/some-other-store/pos/kds");
+    render(<StoreCard store={store} isBlocked={false} currentPlan="POS" />);
+    const posLink = await screen.findByRole("link", { name: /nav\.pos/i });
+    expect(posLink.getAttribute("href")).toBe("/store/store-001/pos");
   });
 
   it("does not render below POS tier (FREE)", () => {

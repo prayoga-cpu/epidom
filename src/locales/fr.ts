@@ -1006,6 +1006,7 @@ export const fr = {
   nav: {
     profile: "Profil",
     dashboard: "Tableau de Bord",
+    backOffice: "Back-Office",
     storefront: "Vitrine",
     management: "Gestion",
     tracking: "Suivi",

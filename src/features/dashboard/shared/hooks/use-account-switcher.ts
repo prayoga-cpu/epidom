@@ -6,7 +6,12 @@ import { useOwnerPinStatus } from "./use-owner-pin";
 import { useHasSwitchableStaff } from "./use-has-switchable-staff";
 import { apiClient } from "@/lib/api/client";
 import { signOut } from "@/lib/auth-client";
-import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE } from "@/lib/last-visited";
+import {
+  LAST_VISITED_COOKIE,
+  LAST_VISITED_BACK_OFFICE_COOKIE,
+  LAST_VISITED_POS_COOKIE,
+  REMEMBER_PREF_COOKIE,
+} from "@/lib/last-visited";
 
 /**
  * Identity-switching logic — who's using this shared device right now, and
@@ -86,6 +91,8 @@ export function useAccountSwitcher(storeId: string | undefined) {
     // login-required page — see LastVisitedTracker/middleware.ts.
     try {
       localStorage.removeItem(LAST_VISITED_COOKIE);
+      localStorage.removeItem(LAST_VISITED_BACK_OFFICE_COOKIE);
+      localStorage.removeItem(LAST_VISITED_POS_COOKIE);
       localStorage.removeItem(REMEMBER_PREF_COOKIE);
     } catch {
       // Ignore — worst case the stale value just gets overwritten on next sign-in.
@@ -96,6 +103,8 @@ export function useAccountSwitcher(storeId: string | undefined) {
       // behind would resume-redirect the next signed-out visitor on this
       // device straight into a login-required page.
       document.cookie = `${LAST_VISITED_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+      document.cookie = `${LAST_VISITED_BACK_OFFICE_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+      document.cookie = `${LAST_VISITED_POS_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
       document.cookie = `${REMEMBER_PREF_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
     } catch {
       // Ignore — same as above.

@@ -1010,6 +1010,7 @@ export const id = {
     profile: "Profil",
     billing: "Tagihan",
     dashboard: "Dasbor",
+    backOffice: "Back Office",
     storefront: "Toko Online",
     management: "Stok",
     production: "Produksi",
