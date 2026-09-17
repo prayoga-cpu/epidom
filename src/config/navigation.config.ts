@@ -20,6 +20,7 @@ import {
   Wrench,
   CalendarDays,
   CalendarClock,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,6 +40,13 @@ export interface NavItem {
   showBadge?: boolean;
   badgeKey?: string; // Optional key for badge count (e.g., "alerts")
   requiredPlan?: PlanTier; // Minimum plan needed; undefined = always accessible
+  /** i18n key for a locked item's second line — the business EVENT that earns
+   * this tier, not a generic "Upgrade to X" (STRATEGY.md §5: "upgrade prompts
+   * should explain the event... rather than the feature"). Rendered as a
+   * visible line under the label, not a hover title — a title is invisible
+   * on the mobile drawer, the device this shell's own spec names for "a solo
+   * owner checking in." See sidebar.tsx. */
+  lockedHintKey?: string;
 }
 
 export interface NavSection {
@@ -47,24 +55,19 @@ export interface NavSection {
 }
 
 /**
- * Dashboard navigation items
+ * Dashboard navigation items — grouped by job-to-be-done within the plan-tier
+ * skeleton (docs/back-office-revamp.md): General (always-visible product
+ * surfaces), Operations (run the back-of-house, all OPERATIONS-tier),
+ * Reports (pure reporting/rollup, all ENTERPRISE-tier), Account (your
+ * relationship with Epidom as a platform — billing, support, profile).
+ *
+ * /menu and POS Mode's own routes are deliberately absent — see
+ * grantableOnlyNavItems and posModeNavItems below for why.
  */
 export const dashboardNavigation: NavSection[] = [
   {
     title: "General",
     items: [
-      {
-        href: "/profile",
-        labelKey: "nav.profile",
-        icon: UserRound,
-        showBadge: false,
-      },
-      {
-        href: "/storefront",
-        labelKey: "nav.storefront",
-        icon: Store,
-        showBadge: false,
-      },
       {
         href: "/dashboard",
         labelKey: "nav.dashboard",
@@ -72,26 +75,10 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: false,
       },
       {
-        href: "/billing",
-        labelKey: "nav.billing",
-        icon: CreditCard,
+        href: "/storefront",
+        labelKey: "nav.storefront",
+        icon: Store,
         showBadge: false,
-      },
-    ],
-  },
-  {
-    // /pos, /pos/orders, /pos/kds, /pos/display and /tables deliberately
-    // don't appear here — they live in the (pos-mode) shell now, its own
-    // bottom tab bar, not this rail (docs/dashboard-revamp.md). /menu stays:
-    // it's Back Office (menu *management*, not the live cashier screen).
-    title: "Point of Sale",
-    items: [
-      {
-        href: "/menu",
-        labelKey: "nav.menu",
-        icon: MenuSquare,
-        showBadge: false,
-        requiredPlan: "POS",
       },
     ],
   },
@@ -104,6 +91,7 @@ export const dashboardNavigation: NavSection[] = [
         icon: Database,
         showBadge: false,
         requiredPlan: "OPERATIONS",
+        lockedHintKey: "nav.lockedHint.data",
       },
       {
         href: "/management",
@@ -111,6 +99,7 @@ export const dashboardNavigation: NavSection[] = [
         icon: Boxes,
         showBadge: false,
         requiredPlan: "OPERATIONS",
+        lockedHintKey: "nav.lockedHint.management",
       },
       {
         href: "/production",
@@ -118,6 +107,7 @@ export const dashboardNavigation: NavSection[] = [
         icon: Factory,
         showBadge: false,
         requiredPlan: "OPERATIONS",
+        lockedHintKey: "nav.lockedHint.production",
       },
       {
         href: "/alerts",
@@ -126,6 +116,7 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: true,
         badgeKey: "alerts",
         requiredPlan: "OPERATIONS",
+        lockedHintKey: "nav.lockedHint.alerts",
       },
       {
         href: "/staff",
@@ -133,6 +124,7 @@ export const dashboardNavigation: NavSection[] = [
         icon: Users,
         showBadge: false,
         requiredPlan: "OPERATIONS",
+        lockedHintKey: "nav.lockedHint.staff",
       },
       {
         href: "/schedule",
@@ -140,11 +132,12 @@ export const dashboardNavigation: NavSection[] = [
         icon: CalendarDays,
         showBadge: false,
         requiredPlan: "OPERATIONS",
+        lockedHintKey: "nav.lockedHint.schedule",
       },
     ],
   },
   {
-    title: "Enterprise",
+    title: "Reports",
     items: [
       {
         href: "/finance",
@@ -152,6 +145,32 @@ export const dashboardNavigation: NavSection[] = [
         icon: BarChart3,
         showBadge: false,
         requiredPlan: "ENTERPRISE",
+        lockedHintKey: "nav.lockedHint.finance",
+      },
+      {
+        href: "/owner",
+        labelKey: "nav.owner",
+        icon: Building2,
+        showBadge: false,
+        requiredPlan: "ENTERPRISE",
+        lockedHintKey: "nav.lockedHint.owner",
+      },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      {
+        href: "/profile",
+        labelKey: "nav.profile",
+        icon: UserRound,
+        showBadge: false,
+      },
+      {
+        href: "/billing",
+        labelKey: "nav.billing",
+        icon: CreditCard,
+        showBadge: false,
       },
       {
         href: "/custom-development",
@@ -159,6 +178,7 @@ export const dashboardNavigation: NavSection[] = [
         icon: Wrench,
         showBadge: false,
         requiredPlan: "ENTERPRISE",
+        lockedHintKey: "nav.lockedHint.customDevelopment",
       },
     ],
   },
@@ -214,16 +234,32 @@ export function getAllDashboardNavItems(): NavItem[] {
 }
 
 /**
+ * Grantable pages with no dashboardNavigation entry, deliberately — not
+ * because they're POS Mode routes (see posModeNavItems below), but because
+ * two different pages used to grant the exact same functionality and one
+ * (the standalone /menu page) was retired in favor of the other (Storefront's
+ * Menu tab, /storefront?tab=menu — see docs/back-office-revamp.md). A staff
+ * member could already be granted "/menu" without "/storefront" (Storefront
+ * also exposes WhatsApp number, hours, and other business settings /menu
+ * doesn't) — keeping /menu grantable-but-not-rail preserves that narrower
+ * permission with no StaffMember.allowedPages migration needed.
+ */
+export const grantableOnlyNavItems: NavItem[] = [
+  { href: "/menu", labelKey: "nav.menu", icon: MenuSquare, requiredPlan: "POS" },
+];
+
+/**
  * Every page in the app a staff member could be granted access to —
- * dashboardNavigation's items plus posModeNavItems. Callers that mean "every
- * grantable/launchable page" (permission validation, the account-access
- * summary dialog, the feedback page-picker, the /go/* store launcher) should
- * use this, not getAllDashboardNavItems() alone — that one is scoped to the
- * Back Office rail specifically and silently excludes POS Mode's routes by
- * design (see posModeNavItems' own doc comment).
+ * dashboardNavigation's items, POS Mode's own routes, and grantable-only
+ * pages together. Callers that mean "every grantable/launchable page"
+ * (permission validation, the account-access summary dialog, the feedback
+ * page-picker, the /go/* store launcher) should use this, not
+ * getAllDashboardNavItems() alone — that one is scoped to the Back Office
+ * rail specifically and silently excludes both POS Mode's routes and
+ * grantable-only pages by design.
  */
 export function getAllAppNavItems(): NavItem[] {
-  return [...getAllDashboardNavItems(), ...posModeNavItems];
+  return [...getAllDashboardNavItems(), ...posModeNavItems, ...grantableOnlyNavItems];
 }
 
 /**

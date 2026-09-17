@@ -1,9 +1,9 @@
 import type React from "react";
 import { requirePlan } from "@/lib/auth/require-plan";
 
-// The store's menu (MenuItem/MenuCategory) requires the POS plan to manage
-// directly from the dashboard; FREE-tier users still edit it via Storefront.
-export default async function MenuLayout({
+// Owner (cross-store rollup) requires the ENTERPRISE plan, same gate as
+// Finance (redirects below tier).
+export default async function OwnerLayout({
   children,
   params,
 }: {
@@ -11,6 +11,6 @@ export default async function MenuLayout({
   params: Promise<{ storeId: string }>;
 }) {
   const { storeId } = await params;
-  await requirePlan(storeId, "POS");
+  await requirePlan(storeId, "ENTERPRISE");
   return <>{children}</>;
 }

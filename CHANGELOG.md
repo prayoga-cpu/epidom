@@ -9,6 +9,17 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.85.0] - 2026-09-17 · feat
+
+Back Office revamp, Phase 2 of the dashboard revamp (Phase 1, POS Mode, shipped separately). Built the same way Phase 1 and the website redesign brief were — a deep codebase audit, four live competitor fetches (Moka/Square/Toast/sunday's *management* products this time), and a pass through this project's own strategy docs. Full brief: `docs/back-office-revamp.md`.
+
+- **`/owner` (the multi-outlet Enterprise rollup) moved into the dashboard shell.** It previously lived entirely outside it — no nav entry, no shell chrome, unreachable by any staff persona, discoverable only via one button buried in Finance — despite `nav.owner`'s translation key already existing, unused, in all three locales. Now gated and reachable exactly like Finance, with the old bare `/owner` redirecting so existing links still resolve. Each row in its per-store table now links to that store's own Finance page, closing a drill-down gap the roadmap had named as a Phase 5 acceptance criterion but never shipped.
+- **`/menu` and Storefront's Menu tab were duplicate entry points into the identical editor, inconsistently gated** — `/menu` required the POS plan, Storefront's tab (a FREE-tier user's actual only path to publish a menu) had no gate at all. Consolidated into Storefront's Menu tab (`?tab=menu` URL sync); `/menu` is now a redirect. A staffer previously grantable only the narrower `/menu` permission keeps that exact access — Storefront now detects a menu-only session and renders just the editor, no other tabs.
+- **Nav rail cleanup left over from Phase 1's POS Mode split**: the "Point of Sale" section had been reduced to a single orphaned item after that split moved everything else out. Regrouped by job — General, Operations, Reports (Finance + Owner), Account (Profile, Billing, Custom Development) — instead of by leftover plan-tier labels.
+- **Locked nav items now explain the business event that earns the tier**, not a generic "Upgrade to X" — matching this project's own written upsell philosophy (STRATEGY.md), and rendered as a visible line rather than a hover tooltip that was invisible on the mobile drawer.
+
+Verified: `tsc --noEmit` clean (one pre-existing, unrelated error untouched by this work), `next build` succeeds with no route collisions, `vitest run` 116 files / 1286 tests passing (10 new this phase, covering the permission-schema changes, the new nav structure, and the storefront tab-consolidation logic specifically). Same honest gap as Phase 1: no real browser/device pass in this environment — that needs a human before merging to `main`.
+
 ## [2.84.1] - 2026-09-16 · fix
 
 Follow-up after re-testing 2.84.0 in production found three of its five "fixed" tickets weren't actually fixed — root causes below, all now verified end-to-end against real data rather than by re-reading code.

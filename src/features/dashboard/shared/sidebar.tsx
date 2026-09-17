@@ -131,6 +131,14 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                   const upgradeLabel = item.requiredPlan
                     ? `Upgrade to ${PLAN_LABELS[item.requiredPlan]}`
                     : undefined;
+                  // Event/benefit-framed copy (STRATEGY.md §5: "upgrade prompts
+                  // should explain the event... rather than the feature"), not
+                  // the generic upgradeLabel — that stays only as a supplementary
+                  // hover title, not the primary, always-visible line. A title
+                  // attribute is invisible on the mobile drawer (no hover there),
+                  // the exact device this shell's own spec names for a solo
+                  // owner checking in — see docs/back-office-revamp.md.
+                  const lockedHint = item.lockedHintKey ? t(item.lockedHintKey) : undefined;
 
                   // A staff persona without access to this page just never sees
                   // it — unlike a plan-tier lock, there's no upgrade path to show.
@@ -147,13 +155,20 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                         <Link
                           href={lockedHref}
                           title={upgradeLabel}
-                          className="group text-muted-foreground/40 flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition hover:bg-amber-500/8 hover:text-amber-500/70 active:scale-[0.98]"
+                          className="group text-muted-foreground/40 flex cursor-pointer items-start justify-between gap-3 rounded-md px-3 py-2 text-sm transition hover:bg-amber-500/8 hover:text-amber-500/70 active:scale-[0.98]"
                         >
-                          <span className="flex min-w-0 items-center gap-3">
-                            <Icon className="size-4 shrink-0" aria-hidden />
-                            <span className="truncate">{label}</span>
+                          <span className="flex min-w-0 items-start gap-3">
+                            <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
+                            <span className="flex min-w-0 flex-col">
+                              <span className="truncate">{label}</span>
+                              {lockedHint && (
+                                <span className="text-muted-foreground/50 truncate text-[11px] font-normal">
+                                  {lockedHint}
+                                </span>
+                              )}
+                            </span>
                           </span>
-                          <span className="flex shrink-0 items-center gap-1 text-[10px] font-medium whitespace-nowrap text-amber-500/50 transition-colors group-hover:text-amber-500">
+                          <span className="mt-0.5 flex shrink-0 items-center gap-1 text-[10px] font-medium whitespace-nowrap text-amber-500/50 transition-colors group-hover:text-amber-500">
                             <Lock className="size-3 shrink-0" />
                             {item.requiredPlan && PLAN_LABELS[item.requiredPlan]}
                           </span>
@@ -166,7 +181,7 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                   // precise about what it does and does not buy, because the obvious
                   // reading is wrong: the default does NOT stop prefetching. Every
                   // in-viewport <Link> still issues an RSC request, and on the desktop
-                  // rail all ~18 are in view at once, so the request COUNT is roughly
+                  // rail all 13 are in view at once, so the request COUNT is roughly
                   // unchanged.
                   //
                   // What changes is the SHAPE of each one. `prefetch={true}` forces a

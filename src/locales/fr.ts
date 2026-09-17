@@ -1024,6 +1024,17 @@ export const fr = {
     zoomReset: "Rétablir à 100 %",
     owner: "Tableau de Bord Propriétaire",
     tryEpidom: "Essayer Epidom",
+    lockedHint: {
+      data: "Suivez le coût des ingrédients et les marges",
+      management: "Gérez les commandes, inventaires et le gaspillage",
+      production: "Planifiez vos lots de production et leur coût",
+      alerts: "Soyez alerté avant une rupture de stock",
+      staff: "Ajoutez votre équipe avec des accès individuels",
+      schedule: "Créez et publiez les plannings d'équipe",
+      finance: "Suivez le résultat net et les marges par canal",
+      owner: "Comparez le CA de tous vos points de vente",
+      customDevelopment: "Demandez des fonctionnalités sur mesure",
+    },
   },
   sidebar: {
     inventoryProduction: "Inventaire & Production",

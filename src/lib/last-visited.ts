@@ -44,7 +44,7 @@ const RESUMABLE_STORE_SECTIONS = new Set([
   "/data",
   "/finance",
   "/management",
-  "/menu",
+  "/owner",
   "/pos",
   "/pos/kds",
   "/pos/orders",

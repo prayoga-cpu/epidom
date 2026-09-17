@@ -1022,6 +1022,17 @@ export const en = {
     customDevelopment: "Custom Development",
     owner: "Owner Dashboard",
     tryEpidom: "Try Epidom",
+    lockedHint: {
+      data: "Track ingredient cost & recipe margins",
+      management: "Run purchase orders, stock counts & waste",
+      production: "Plan batches and cost each run",
+      alerts: "Get notified before you run out of stock",
+      staff: "Add your team with their own logins",
+      schedule: "Build and publish shift rosters",
+      finance: "See P&L and margin by channel",
+      owner: "Compare revenue across every outlet",
+      customDevelopment: "Request features built just for your business",
+    },
   },
   sidebar: {
     inventoryProduction: "Inventory & Production",

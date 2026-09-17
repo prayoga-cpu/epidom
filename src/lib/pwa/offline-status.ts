@@ -57,7 +57,9 @@ export const OFFLINE_PAGES: readonly OfflinePage[] = [
   },
   { id: "staff", section: "/staff", domains: ["staff"] },
   { id: "schedule", section: "/schedule", domains: ["schedules", "scheduleShifts"] },
-  { id: "menuEditor", section: "/menu", domains: ["storefront"] },
+  // /menu is a redirect into /storefront?tab=menu now (docs/back-office-
+  // revamp.md) — that entry below already covers the same data domain,
+  // no separate offline-priming entry needed for a redirect-only route.
   { id: "storefront", section: "/storefront", domains: ["storefront", "customProductsSettings"] },
   { id: "tables", section: "/tables", domains: ["tables"] },
   { id: "production", section: "/production", domains: ["productionSettings", "recipes"] },

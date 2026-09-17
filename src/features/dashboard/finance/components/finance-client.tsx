@@ -1116,7 +1116,11 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
         </div>
         <div className="flex shrink-0 gap-2">
           {showOwnerLink && (
-            <Button size="sm" variant="outline" onClick={() => router.push("/owner")}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => router.push(`/store/${storeId}/owner`)}
+            >
               <Store className="mr-2 h-4 w-4" />
               {t("pages.financeAllOutlets")}
             </Button>

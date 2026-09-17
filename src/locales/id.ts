@@ -1038,6 +1038,17 @@ export const id = {
     customDevelopment: "Pengembangan Kustom",
     owner: "Owner Dashboard",
     tryEpidom: "Coba Epidom",
+    lockedHint: {
+      data: "Lacak biaya bahan & margin resep",
+      management: "Kelola PO, stok opname & pemborosan",
+      production: "Rencanakan produksi & hitung biayanya",
+      alerts: "Dapat notifikasi sebelum stok habis",
+      staff: "Tambahkan tim dengan akun masing-masing",
+      schedule: "Susun & terbitkan jadwal shift",
+      finance: "Lihat laba-rugi & margin per kanal",
+      owner: "Bandingkan omzet semua cabang",
+      customDevelopment: "Ajukan fitur khusus untuk bisnis Anda",
+    },
   },
   sidebar: {
     inventoryProduction: "Inventaris & Produksi",

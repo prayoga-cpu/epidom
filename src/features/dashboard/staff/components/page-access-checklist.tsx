@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { dashboardNavigation, posModeNavItems } from "@/config/navigation.config";
+import { dashboardNavigation, posModeNavItems, grantableOnlyNavItems } from "@/config/navigation.config";
 import { ROLE_DEFAULT_PAGES } from "@/config/staff-permissions.config";
 import type { StaffRole } from "@prisma/client";
 
@@ -24,6 +24,7 @@ const GRANTABLE_SECTIONS = [
     }))
     .filter((section) => section.items.length > 0),
   { title: "POS Mode", items: posModeNavItems },
+  { title: "Other", items: grantableOnlyNavItems },
 ];
 
 interface PageAccessChecklistProps {

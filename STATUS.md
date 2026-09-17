@@ -1,35 +1,31 @@
 # STATUS.md
 
-## Current State: v3 Dashboard Revamp — Phase 1 (POS Mode) — ✅ CODE-COMPLETE + TEST-VERIFIED, ⚠️ NO LIVE/DEVICE PASS YET (branch `epidom-revamp`)
+## Current State: v3 Dashboard Revamp — Phase 1 (POS Mode) + Phase 2 (Back Office) — ✅ CODE-COMPLETE + TEST-VERIFIED, ⚠️ NO LIVE/DEVICE PASS YET (branch `epidom-revamp`)
 
-_(AI Agents: update the checklist below every time you finish a stage or a checklist item — check the box, don't re-describe finished work in prose. Keep this file scoped to the active phase; once Phase 1 ships to `main`, fold a short summary into the changelog and reset this file for the next phase.)_
+_(AI Agents: update the checklist below every time you finish a stage or a checklist item — check the box, don't re-describe finished work in prose. Keep this file scoped to the active phase; once both phases ship to `main`, fold a short summary into the changelog and reset this file for the next phase.)_
 
-Spec: `docs/dashboard-revamp.md`. Plan: `/Users/darwinprayoga/.claude/plans/stateful-juggling-seal.md`. Not deployed to production — isolated on `epidom-revamp`. Vercel preview: **https://epidom-44xq5yshn-prayogadevelopment-gmailcoms-projects.vercel.app** (`readyState: READY`, confirmed after the regression-fix commit).
+Specs: `docs/dashboard-revamp.md` (Phase 1), `docs/back-office-revamp.md` (Phase 2). Plan: `/Users/darwinprayoga/.claude/plans/stateful-juggling-seal.md`. Not deployed to production — isolated on `epidom-revamp`.
 
-**What this phase is**: split the dashboard into two shells — a bottom-tab-bar "POS Mode" for Cashier/Kitchen (iPad-first), and the existing left-rail "Back Office" for Owner/Manager, left untouched. POS Mode ships first per the spec's own sequencing; Back Office's shell redesign is Phase 2, deferred until Phase 1 has real usage data.
+**Sequencing note**: `docs/dashboard-revamp.md` originally deferred Phase 2 until Phase 1 shipped with real usage data. The user explicitly chose to proceed with Phase 2 now anyway, fully aware there was no usage data yet and no existing wireframe brief for Back Office — Phase 2's first job was to *produce* that brief (`docs/back-office-revamp.md`), built with the same rigor as the original spec (real competitor research, real codebase audit), before implementing it.
 
-**Confirmed decisions**: upgrade-prompt CRO ships in both places (Back Office sidebar unchanged + a new POS Mode banner for real feature-wall gaps found during planning, e.g. discounts). Rollout is a clean one-shot route move on this branch, no runtime feature flag — git branch isolation + Vercel preview are the safety net before merging to `main`.
-
-**A second verification pass on this same phase caught 5 real regressions** the first pass's code-reading missed — writing and running actual tests (not just re-reading code) found them within minutes. Detailed below (Stage 8's "5 regressions" note); the short version: removing `/pos`/`/pos/orders`/`/pos/kds`/`/tables` from `dashboardNavigation` (Stage 6) silently broke 5 other consumers that assumed that list meant "every page in the app" — including the PWA manifest's own installed `/go/pos` shortcut. All fixed, all now covered by a passing test.
-
-**⚠️ Still-honest gap**: 113 test files / 1266 tests pass, `tsc --noEmit` is clean, `next build` succeeds locally and on Vercel. Role-matrix tab filtering, the kitchen-display toggle, and the upgrade-banner gating logic now have real component-level test coverage (rendered, asserted, passing) — not just code reading. What's still **not** verified: a real browser session, a real iPad, real PIN-login click-through, or the `loading.tsx`/`error.tsx` boundaries under real network conditions. This environment has no Playwright/browser automation available — that pass needs a human before merging to `main`.
+**⚠️ Standing gap, both phases**: `tsc --noEmit` clean, `next build` succeeds locally and on Vercel, full `vitest run` passing (see each phase's own count below). Neither phase has been click-tested in a real browser or on a real device — this environment has no Playwright/browser automation available. Treat the unchecked items in each phase's own Stage 8/verification section as the real remaining work before merging to `main`.
 
 ### Summary table
 
-| Stage | Status | Verified by |
-|---|---|---|
-| 0 — Baseline | ✅ Done | branch/tree checked |
-| 1 — Route-group move | ✅ Done | `next build` route list, zero collisions (caught+fixed one) |
-| 2 — POS Mode shell chrome | ✅ Done | code review, `tsc`, component tests |
-| 3 — PIN gate consolidation | ✅ Done | code review, `tsc` |
-| 4 — Schedule split | ✅ Done | `staff-permissions.config.test.ts` (proves the exact permission-schema regression is fixed) |
-| 5 — Upgrade banner | ✅ Done | `pos-mode-upgrade-banner.test.tsx`, `entitlements.test.ts` |
-| 6 — Back Office nav trim | ✅ Done, **5 regressions found+fixed** | `navigation.config.test.ts`, `sidebar.test.tsx` (updated), manual audit of every `getAllDashboardNavItems` consumer |
-| 7 — Touch-target audit | ✅ Done | grep sweep + manual dialog review |
-| 8 — Verification | ⚠️ Partial | 113 files/1266 tests pass, `tsc`/`next build` clean local+Vercel; real-device/browser pass still outstanding |
-| 9 — Phase 2 (Back Office) | ⏸ Deferred | by design, per spec |
+| Phase | Stage | Status | Verified by |
+|---|---|---|---|
+| 1 | 0-7 (build) | ✅ Done | see Phase 1 detail below |
+| 1 | 8 (verification) | ⚠️ Partial | `tsc`/`next build`/tests clean; real-device/browser pass outstanding |
+| 2 | 1-4 (build) | ✅ Done | see Phase 2 detail below |
+| 2 | 5-6 (audit + verification) | ⚠️ Partial | `tsc`/`next build`/tests clean; real-device/browser pass outstanding |
 
 ---
+
+# Phase 1 — POS Mode
+
+Split the dashboard into two shells — a bottom-tab-bar "POS Mode" for Cashier/Kitchen (iPad-first), and the existing left-rail "Back Office" for Owner/Manager. Confirmed decisions: upgrade-prompt CRO ships in both places (Back Office sidebar unchanged + a new POS Mode banner). Rollout is a clean one-shot route move, no runtime feature flag.
+
+**A second verification pass caught 5 real regressions** the first pass's code-reading missed — writing and running actual tests found them within minutes. Removing `/pos`/`/pos/orders`/`/pos/kds`/`/tables` from `dashboardNavigation` (Stage 6) silently broke 5 other consumers that assumed that list meant "every page in the app" — including the PWA manifest's own installed `/go/pos` shortcut. All fixed, all now covered by a passing test.
 
 ## Stage 0 — Baseline
 
@@ -65,74 +61,106 @@ Spec: `docs/dashboard-revamp.md`. Plan: `/Users/darwinprayoga/.claude/plans/stat
 
 ## Stage 4 — Schedule split (light "my shift" view) — ✅ done
 
-- [x] `(pos-mode)/pos/schedule/page.tsx` rendering `MyScheduleList` (reused, not rebuilt). **Simpler than planned**: sources `staffMemberId` server-side via the existing `getActiveStaffSession()` helper (same `StaffSession` cookie the verify-pin API already sets), not a client-side `usePosSession()` read — Owner's synthetic bypass login never sets that cookie, so it redirects Owner/mismatched sessions to full `/schedule` for free, no extra guard code needed.
+- [x] `(pos-mode)/pos/schedule/page.tsx` rendering `MyScheduleList` (reused, not rebuilt). Sources `staffMemberId` server-side via the existing `getActiveStaffSession()` helper.
 - [x] `ClockInOutDialog` reused unchanged, opened from the overflow menu.
-- [x] `ROLE_DEFAULT_PAGES.CASHIER`/`.KITCHEN`: `"/schedule"` → `"/pos/schedule"`. Also added `/pos/schedule` to `MANAGER`'s list (not originally planned) — the overflow menu's "My Shift" link is role-agnostic, and without this a Manager PIN persona tapping it would dead-end at `requireStaffPageAccess`.
-- [x] `ALL_STAFF_PAGES` fix: added `POS_MODE_ONLY_PAGES = ["/pos/schedule"]`, unioned in — confirmed via direct code read this was a real gap (`allowedPagesSchema` rejects unknown pages), not speculative.
+- [x] `ROLE_DEFAULT_PAGES.CASHIER`/`.KITCHEN`/`.MANAGER`: `/pos/schedule` wired in.
+- [x] `ALL_STAFF_PAGES` fix: `/pos/schedule` unioned in via `posModeNavItems` (confirmed real gap, not speculative).
 
 ## Stage 5 — Upgrade-prompt banner in POS Mode — ✅ done
 
 - [x] `discounts: "OPERATIONS"` added to `FEATURE_MIN_PLAN` (confirmed: zero plan gating existed on discounts before this).
-- [x] `pos-mode-upgrade-banner.tsx` — dismissible strip, every tap target h-11 (44px). Split into a `PosModeUpgradeProvider` (context/state) + separate `PosModeUpgradeBanner` (presentational) so `PosModeShell` controls exactly where it renders (below the status bar), not wherever the provider happens to inject it.
-- [x] `usePosModeUpgradeGate().requireFeature(minPlan, label)` mirrors `useUpgradeGate`'s plan logic with banner presentation instead of a blocking modal — Back Office's modal path is untouched.
-- [x] `pos-cart.tsx`'s discount popover gated in `openDiscountPopover` — checks before opening, not after filling out the form.
+- [x] `pos-mode-upgrade-banner.tsx` — dismissible strip, every tap target h-11 (44px). `PosModeUpgradeProvider` (context/state) + `PosModeUpgradeBanner` (presentational).
+- [x] `usePosModeUpgradeGate().requireFeature(minPlan, label)` mirrors `useUpgradeGate`'s plan logic with banner presentation instead of a blocking modal.
+- [x] `pos-cart.tsx`'s discount popover gated in `openDiscountPopover`.
 - [x] Banner CTA routes through the existing `upgradeHrefFor(minPlan)`.
 
 ## Stage 6 — Back Office nav trim (data only, not mechanism) — ✅ done, 5 regressions found+fixed
 
-- [x] Removed `/pos`, `/pos/orders`, `/pos/kds`, `/tables` from `dashboardNavigation`'s "Point of Sale" section (`/menu` stays). Unused icon imports (`Monitor`, `UtensilsCrossed`, `ChefHat`, `Grid2X2`) cleaned up.
-- [x] `new-orders-card.tsx`'s existing `/dashboard` summary-card link to `/pos/orders` confirmed unchanged/working — zero code needed, exactly as the spec predicted.
-- [x] Deleted the dead `POS_CASHIER_PATH` special case in `page-shell.tsx` (and the `isPosCashier`-conditional `cn()` it drove) — `/pos` no longer renders through `PageShell` at all.
+- [x] Removed `/pos`, `/pos/orders`, `/pos/kds`, `/tables` from `dashboardNavigation`'s "Point of Sale" section. Deleted the dead `POS_CASHIER_PATH` special case in `page-shell.tsx`.
 
-**Regressions this trim caused, found by writing tests instead of re-reading code, all fixed:**
-
-Five other places treated `getAllDashboardNavItems()` as "every page in the app" — true before this trim, false after. Fix: `posModeNavItems` (new, in `navigation.config.ts` — the single source of truth for POS Mode's routes, including `/pos/schedule`) + `getAllAppNavItems()` (= `dashboardNavigation` items + `posModeNavItems`), and every "all pages" consumer below switched to the latter.
-
-1. `ALL_STAFF_PAGES`/`allowedPagesSchema` — would reject `/pos`, `/pos/orders`, `/pos/kds`, `/tables` (not just the new `/pos/schedule`) the moment an owner hand-edited an existing Cashier/Kitchen staffer's permissions. Caught by a failing assertion in `staff-permissions.config.test.ts`.
-2. `PageAccessChecklist` (Staff dialog's permission UI) — would render zero checkboxes for those 4 pages, silently removing an owner's ability to grant/revoke them at all. Fixed: a new "POS Mode" section sourced from `posModeNavItems`.
-3. `AccountAccessDialog` ("what can I see right now") — would render an **empty page list** for any Cashier/Kitchen persona, since it filters `getAllDashboardNavItems()` by the persona's `allowedPages`.
-4. `FeedbackDialog`'s page picker — would lose `/pos`, `/pos/orders`, `/pos/kds`, `/tables`, `/pos/schedule` as selectable feedback-context pages, falling back to "Other".
-5. **The `/go/*` PWA launcher** — `LAUNCHABLE_SECTIONS` would reject `/go/pos` and `/go/pos/orders`, falling back to the default landing instead of launching POS Mode. Confirmed via `src/app/manifest.ts`: these are the manifest's own **installed home-screen shortcuts** — this would have been the single most user-visible regression of the five, silently breaking an already-shipped PWA feature for exactly the audience this phase targets.
-
-New coverage: `navigation.config.test.ts` (proves `dashboardNavigation` excludes POS Mode routes, `posModeNavItems` includes all 5, `getAllAppNavItems` reunites both with no gaps/dupes). `sidebar.test.tsx`'s 3 tests that encoded the *old* behavior (`/pos` as a Back Office sidebar item) rewritten to assert the new one.
+**Regressions found by writing tests instead of re-reading code, all fixed**: `ALL_STAFF_PAGES`/`allowedPagesSchema` would reject `/pos`/`/pos/orders`/`/pos/kds`/`/tables` in a hand-edited staffer permission set; `PageAccessChecklist` would drop their checkboxes entirely; `AccountAccessDialog` would render an empty page list for Cashier/Kitchen; `FeedbackDialog`'s page picker would lose them; **`/go/*` PWA launcher would break the manifest's own installed `/go/pos`/`/go/pos/orders` shortcuts** (the most user-visible one). Fixed via `posModeNavItems` + `getAllAppNavItems()`, with every "all pages" consumer switched to the latter.
 
 ## Stage 7 — Touch-target and constraints audit — ✅ done
 
-- [x] Converted bare `vh` → `dvh`: `tables-manager.tsx:327` (50vh), `pos-order-queue.tsx:337,349` (60vh).
-- [x] Decided + documented: "dvh never vh" targets dialog/sheet/drawer chrome (mobile browser UI shifting the visible viewport), not chrome-free print roots — `order-history-print-view.tsx`/`shift-report-print-view.tsx` keep `vh` deliberately, now with an inline comment explaining why.
-- [x] ≥40-44px pass, real findings: `pos-checkout-dialog.tsx` (Cancel/Confirm footer buttons + the post-checkout print-prompt's two buttons, all were the Button default's 36px → h-11), `pos-hold-dialog.tsx` (footer buttons → h-11), `refund-dialog.tsx` (footer buttons → h-11), `pos-printer-menu.tsx` (trigger icon 36px→44px, paper-width/connect/reprint/history buttons 32px→40px), `send-receipt-whatsapp.tsx` (32px→40px). `pos-item-grid.tsx` checked — cells are already `min-h-[120px]`, well clear, no fix needed.
-- [x] New Stage 2/5 components (`pos-mode-tab-bar.tsx`, `pos-mode-overflow-menu.tsx`, banner) built to ≥44px from the start — confirmed by re-reading what was written, not retrofitted.
-- [x] `:hover`-only spot-check: zero `hover:` usages in any new `src/features/pos-mode/` file.
-- [x] `w-full`/`flex-1` and `min-h-0`/`min-w-0` conventions followed in every new component (checked against what was written).
-- [x] No new code formats currency from a raw `number` — banner/status-bar have no money display; existing `formatPrice` calls elsewhere untouched.
+- [x] Converted bare `vh` → `dvh`: `tables-manager.tsx`, `pos-order-queue.tsx` empty states.
+- [x] ≥40-44px pass: `pos-checkout-dialog.tsx`, `pos-hold-dialog.tsx`, `refund-dialog.tsx`, `pos-printer-menu.tsx`, `send-receipt-whatsapp.tsx` all bumped from the Button default's 32-36px.
+- [x] New Stage 2/5 components built to ≥44px from the start. Zero `hover:`-only controls in `src/features/pos-mode/`.
 
-## Stage 8 — Verification — ⚠️ partial, see the gap note above
+## Stage 8 — Verification — ⚠️ partial
 
-- [x] **Role matrix (OWNER/MANAGER/CASHIER/KITCHEN) × new shell** — `pos-mode-tab-bar.test.tsx` renders the real component with each role's `allowedPages` and asserts exactly which tabs appear (Owner all 4, Cashier 3 minus Dapur, Kitchen only Dapur, Manager all 4, an Owner-role StaffMember row treated as unrestricted). Component-level, not a live click-through.
-- [x] **Kitchen-display toggle live-hides/shows the Dapur tab** — same test file, asserts Dapur present/absent as `kitchenDisplayEnabled` flips, independent of role.
-- [x] **Upgrade banner fires correctly** — `pos-mode-upgrade-banner.test.tsx`: renders nothing until gated, surfaces below tier, silent at tier, dismissible, CTA links to the right pricing URL. Component-level, not a live checkout flow.
-- [x] **Schedule split permission regression** — `staff-permissions.config.test.ts` reproduces the exact failure mode through `updateStaffSchema` directly (the schema the API route uses), not just the resolver — proves a hand-edited Cashier `allowedPages` array keeps `/pos/schedule`.
-- [x] Spec's "Constraints carried over, unchanged" list re-checked against every touched file (see Stage 7).
-- [ ] **Real-device/responsive pass, iPad landscape** — not possible in this environment (no device, no browser automation). Needs a human pass before merge.
-- [ ] **`loading.tsx`/`error.tsx` regression check** — files exist and reference correct patterns, not exercised via a real throttled-network navigation.
-- [x] Pushed to `origin/epidom-revamp`; Vercel preview rebuild triggered after the regression-fix commit, confirmed reaching `readyState: READY` (see Current State line for the URL).
-- [x] `tsc --noEmit` clean (1 pre-existing, unrelated error in `use-push-notifications.ts`, untouched by this work). `next build` succeeds, all routes compile, zero collisions. `vitest run`: **113 test files / 1266 tests, all passing** (1261 pre-existing/updated + 21 new across 5 new test files for this phase specifically).
+- [x] Role matrix, kitchen-display toggle, upgrade banner gating, schedule-split permission regression — all covered by passing component/unit tests (`pos-mode-tab-bar.test.tsx`, `pos-mode-upgrade-banner.test.tsx`, `staff-permissions.config.test.ts`).
+- [ ] **Real-device/responsive pass, iPad landscape** — not possible in this environment. Needs a human pass before merge.
+- [ ] **`loading.tsx`/`error.tsx` regression check under real throttled network** — not exercised live.
+- [x] Pushed to `origin/epidom-revamp`, Vercel preview confirmed `READY`.
+- [x] `tsc --noEmit` clean (1 pre-existing, unrelated error). `next build` clean, zero route collisions.
 
-**What's left before this can merge to `main`, in order of what actually needs a human**: (1) a real click-through on an iPad or iPad-sized browser viewport — PIN login, all 4 tabs, checkout, discount wall, overflow menu, clock in/out; (2) confirm the `/go/pos` PWA shortcut fix actually launches correctly from an installed home-screen icon; (3) confirm an owner can still toggle Cashier/Kitchen POS permissions via the Staff dialog's new "POS Mode" checklist section. Everything else in this phase now has either a passing automated test or a clean production build behind it.
+**What's left before Phase 1 can merge to `main`**: a real click-through on an iPad or iPad-sized viewport (PIN login, all 4 tabs, checkout, discount wall, overflow menu, clock in/out); confirm the `/go/pos` PWA shortcut fix launches from an installed home-screen icon; confirm the Staff dialog's POS Mode permission checkboxes work live.
 
-## Stage 9 — Deferred: Phase 2 (Back Office shell)
+---
 
-Not started. Revisit once Phase 1 has shipped with real usage data, per the spec's own sequencing rule.
+# Phase 2 — Back Office
+
+Built the brief (`docs/back-office-revamp.md`) the same way Phase 1's spec was built: a deep audit of every current Back Office page, live fetches of Moka/Square/Toast/sunday's *management*-side products, and a pass through STRATEGY.md/FEATURES.md/roadmap.md/AGENTS.md. Conclusion: the left-rail/drawer shell itself doesn't need replacing (all four competitors run equally dense management shells) — what needed fixing was IA debt Phase 1 left behind, plus a pre-existing completeness gap.
+
+**Standout finding**: `/owner` (the flagship Enterprise multi-outlet rollup) lived entirely outside the shell being redesigned — no nav entry, no `PageShell` chrome, unreachable by any staff persona, discoverable only via one button buried in Finance, and not delivering the drill-down its own roadmap promised. The i18n key `nav.owner` existed, unused, in all three locales — evidence this was always the intended next step.
+
+## Stage 1 — Nav config foundation — ✅ done
+
+- [x] `dashboardNavigation` regrouped by job: General (Dashboard, Storefront), Operations (unchanged), Reports (Finance, Owner — renamed from "Enterprise"), Account (new — Profile, Billing, Custom Development). Net still 13 items, no single-item section, no grab-bag.
+- [x] `lockedHintKey` added to `NavItem`; all 9 gated items given benefit-framed copy (e.g. Finance: "See P&L and margin by channel") in en/id/fr — matches `STRATEGY.md`'s written upsell philosophy ("explain the event... rather than the feature"), previously violated by a generic `"Upgrade to {plan}"` shown only as an invisible-on-mobile hover title.
+- [x] `grantableOnlyNavItems` added (just `/menu`) — grantable, deliberately absent from the rail, same pattern as `posModeNavItems`.
+- [x] `requireStaffPageAccess` broadened to accept `string | string[]` (verified backward-compatible against all prior call sites).
+- [x] `page-access-checklist.tsx` — new "Other" section sourced from `grantableOnlyNavItems` so an owner can still grant/revoke `/menu` specifically.
+
+## Stage 2 — `/owner` into the shell — ✅ done
+
+- [x] New `(dashboard)/owner/{layout.tsx,page.tsx}`, gated exactly like `finance/` (`requirePlan(storeId, "ENTERPRISE")` + `requireStaffPageAccess`).
+- [x] `OwnerDashboardClient` frame trimmed — dropped the hand-rolled `p-4 sm:p-6 lg:p-8` wrapper now that `PageShell` supplies its own padding; removed the now-dead client-side 403 banner (the layout gates server-side now, matching `FinanceClient`'s own pattern, which has no such branch either).
+- [x] Per-row drill-down link added to the store table (→ that store's `/finance`, ≥44px tap target) — closes `roadmap.md`'s named, previously-unmet acceptance criterion.
+- [x] Old bare `/owner` reduced to `redirect("/go/owner")` — verified `/go/*`'s `LAUNCHABLE_SECTIONS` (derived from `getAllAppNavItems()`) resolves it with zero other changes.
+- [x] `finance-client.tsx`'s "All Outlets" button retargeted to `/store/${storeId}/owner`.
+
+## Stage 3 — `/menu` ↔ `/storefront` consolidation — ✅ done
+
+- [x] **Confirmed sharper than planned**: `/menu` required POS tier; Storefront's Menu tab had *no* plan gate at all (verified directly) — a FREE-tier user's only real path to publish a menu was already Storefront's tab, matching `STRATEGY.md`'s named activation metric.
+- [x] `storefront-editor-client.tsx` — `?tab=` URL sync added (mirrors `finance-client.tsx`'s own `useSearchParams`/`useRouter` idiom).
+- [x] `menu/page.tsx` reduced to a redirect (`/storefront?tab=menu`), plan-gate removed (the destination isn't gated either — a FREE-tier bookmark must still resolve). `menu/layout.tsx` deleted.
+- [x] Menu-only-staff detection via `usePosSession()` — a persona granted `/menu` but not `/storefront` still sees bare `MenuManager`, no tabs, identical to the old page's behavior. `requireStaffPageAccess(storeId, ["/menu", "/storefront"])` — either grant works.
+- [x] Cleaned up now-stale references: `offline-status.ts`'s `menuEditor` entry removed (redirect-only route needs no offline priming), `last-visited.ts`'s resumable-sections set swapped `/menu` for `/owner`.
+
+## Stage 4 — Locked-nav copy — ✅ done
+
+- [x] `sidebar.tsx`'s locked-item rendering now shows `lockedHintKey`'s text as an always-visible second line (not a `title` hover tooltip) — fixes invisibility on the mobile drawer.
+- [x] Stale `~18 in view` comment fixed to the correct current count (13).
+
+## Stage 5 — Constraints & touch-target audit — ✅ done
+
+- [x] No new dialog/sheet/drawer introduced this phase — confirmed by diff review, so the `dvh`-vs-`vh` rule doesn't come into play here (and per direct verification, `page-shell.tsx`/`finance-client.tsx` both already use plain `vh` for in-flow content deliberately — that rule targets dialog/sheet/drawer chrome specifically, not this).
+- [x] New locked-item second line verified to *increase*, not shrink, row tap height (two text lines + existing padding ≈ 50px+, well above the 40px floor).
+- [x] `/owner`'s drill-down link: `size-11` (44px), not hover-gated.
+- [x] No money/quantity value re-parsed into a raw float anywhere this phase touched.
+
+## Stage 6 — Verification & docs — ⚠️ partial
+
+- [x] New/updated tests: `require-staff-page-access.test.ts` (9 cases covering the new array-based grant logic), `navigation.config.test.ts` (extended — `/owner` present+gated, `/menu` grantable-only, every gated item has a `lockedHintKey`, no orphaned single-item section), `sidebar.test.tsx` (rewritten for the new section structure), `storefront-editor-client.test.tsx` (new — 6 cases covering `?tab=` sync and the menu-only-staff branch).
+- [x] `docs/back-office-revamp.md` committed.
+- [x] `tsc --noEmit` clean (same 1 pre-existing, unrelated error). `next build` clean, all routes compile including `/store/[storeId]/owner`, zero collisions.
+- [x] `vitest run`: **116 test files / 1286 tests, all passing** (10 new this phase specifically).
+- [ ] **Manual pass across FREE/POS/OPERATIONS/ENTERPRISE test accounts on the Vercel preview** — not done in this environment (no browser automation).
+- [ ] **Confirm `/owner` reachability + drill-down, `/menu`'s redirect, and the new locked-hint copy render correctly live** — same honest gap as Phase 1.
+
+**What's left before Phase 2 can merge to `main`**: the same class of human pass Phase 1 needs — click through all 4 plan tiers on the Vercel preview, confirm `/owner`'s drill-down link, confirm a menu-only staff PIN session sees the right (tab-less) view, confirm the id/fr locked-hint translations read naturally (drafted, not reviewed).
 
 ---
 
 ## Phase 5+ — Next Candidates (pre-v3 backlog, still valid, not scheduled)
 
-- **E2E tests (Playwright)**: 5 critical journeys — sign-up → publish storefront, place online order, open shift → POS sale → close shift, finance report export, multi-outlet owner drill-down. **This phase is exactly the kind of work that would have caught what manual verification can't reach here.**
+- **E2E tests (Playwright)**: 5 critical journeys — sign-up → publish storefront, place online order, open shift → POS sale → close shift, finance report export, multi-outlet owner drill-down. **Both phases above are exactly the kind of work that would have caught what manual verification can't reach here.**
 - **Custom domains**: map a merchant's own domain to their `@slug` storefront.
 - **Stripe Connect**: 80/20 payment facilitation. Requires legal review for BI/OJK compliance before shipping.
 - **Per-outlet manager permissions**: ENTERPRISE stores with multi-outlet need scoped access.
 - **Aggregator v2 (official API)**: GoFood/GrabFood partner API. 6–12 month relationship-building track.
 - **Cloudflare R2 migration**: swap Vercel Blob for R2 + Cloudflare Images.
 - **Singapore DB region**: migrate Postgres when p95 latency from Jakarta exceeds 200ms.
-- **`fr.ts` locale gap**: ~587 lines behind `en.ts`, notably the entire `/schedule` page and the POS resume/hold/refund flow — full parity backfill not yet scheduled.
+- **`fr.ts` locale gap**: ~587 lines behind `en.ts` (confirmed again this session — several `nav.*` keys are missing entirely, e.g. `production`, `menu`, `customDevelopment`, `billing`, `schedule`), notably the entire `/schedule` page and the POS resume/hold/refund flow — full parity backfill not yet scheduled.
+- **`finance-client.tsx` decomposition** (Phase 2's P1 finding): 2,850 lines, single largest component in the codebase. Split by tab into separate files — zero user-visible change, own PR.
