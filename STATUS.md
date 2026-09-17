@@ -4,7 +4,7 @@
 
 _(AI Agents: update the checklist below every time you finish a stage or a checklist item — check the box, don't re-describe finished work in prose. Keep this file scoped to the active phase; once both phases ship to `main`, fold a short summary into the changelog and reset this file for the next phase.)_
 
-Specs: `docs/dashboard-revamp.md` (Phase 1), `docs/back-office-revamp.md` (Phase 2). Plan: `/Users/darwinprayoga/.claude/plans/stateful-juggling-seal.md`. Not deployed to production — isolated on `epidom-revamp`.
+Specs: `docs/dashboard-revamp.md` (Phase 1), `docs/back-office-revamp.md` (Phase 2). Plan: `/Users/darwinprayoga/.claude/plans/stateful-juggling-seal.md`. Not deployed to production — isolated on `epidom-revamp`. Vercel preview: **https://epidom-gj0nnisqo-prayogadevelopment-gmailcoms-projects.vercel.app** (`readyState: READY`, confirmed after both phases' final commits).
 
 **Sequencing note**: `docs/dashboard-revamp.md` originally deferred Phase 2 until Phase 1 shipped with real usage data. The user explicitly chose to proceed with Phase 2 now anyway, fully aware there was no usage data yet and no existing wireframe brief for Back Office — Phase 2's first job was to *produce* that brief (`docs/back-office-revamp.md`), built with the same rigor as the original spec (real competitor research, real codebase audit), before implementing it.
 
