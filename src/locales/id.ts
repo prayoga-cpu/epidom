@@ -1344,6 +1344,7 @@ export const id = {
     staffSecurityNotice:
       "Demi keamanan, setiap sesi PIN di perangkat (staf atau Pemilik) otomatis keluar pada pukul 00.00 waktu toko ({time}) — siapa pun yang memakai perangkat keesokan harinya harus memilih akun dan memasukkan PIN-nya lagi. Jika Pemilik lupa PIN, kode sekali pakai hanya dikirim ke email terdaftar akun tersebut — tidak pernah ke staf.",
     staffRoleOwner: "Pemilik",
+staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman, semua paket, selalu.",
     staffRoleManager: "Manajer",
     staffRoleCashier: "Kasir",
     staffRoleKitchen: "Dapur",

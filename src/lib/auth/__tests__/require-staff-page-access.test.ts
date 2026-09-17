@@ -81,10 +81,28 @@ describe("requireStaffPageAccess", () => {
     );
   });
 
-  it("no allowed pages at all — falls back to /dashboard", async () => {
+  it("no allowed pages at all — falls back to /pos, not /dashboard (staff can't reach either, but /pos is the safe one)", async () => {
     mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: [] }));
     await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
-      "REDIRECT:/store/store-1/dashboard"
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+
+  it("/pos is granted but isn't allowedPages[0] — still prefers /pos over the array order", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(
+      session({ allowedPages: ["/pos/kds", "/pos/schedule", "/pos"] })
+    );
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+
+  it("Kitchen (no /pos grant at all): falls back to their actual first allowed page", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(
+      session({ role: "KITCHEN", allowedPages: ["/pos/kds", "/pos/schedule"] })
+    );
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos/kds"
     );
   });
 });

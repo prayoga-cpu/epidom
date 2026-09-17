@@ -332,12 +332,18 @@ export function StaffClient({
         {t("pages.staffSecurityNotice").replace("{time}", storeTimeZoneLabel)}
       </div>
 
-      {/* Owner account row */}
+      {/* Owner account row — the one persona StaffRole.OWNER and
+          requireStaffPageAccess/requireOwnerOnly already treat as fully
+          unrestricted (see sidebar.tsx's staffAllowedPages, "role-based, not
+          ID-based"). The hint line makes that existing behavior explicit
+          rather than implicit, so it isn't mistaken for a regular staff row
+          that merely happens to carry the OWNER role (e.g. a seeded one). */}
       <div className="bg-muted/30 flex items-center gap-3 rounded-lg border px-4 py-3">
         <Crown className="h-4 w-4 shrink-0 text-amber-500" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">{currentUserName}</p>
           {currentUserEmail && <p className="text-muted-foreground text-xs">{currentUserEmail}</p>}
+          <p className="text-muted-foreground mt-0.5 text-xs">{t("pages.staffOwnerMasterHint")}</p>
         </div>
         <Badge variant="outline" className="border-amber-400 text-amber-600">
           {t("pages.staffRoleOwner")}

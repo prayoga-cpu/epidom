@@ -1193,6 +1193,7 @@ export const fr = {
     staffSecurityNotice:
       "Pour des raisons de sécurité, chaque session PIN sur un appareil (personnel ou Propriétaire) se déconnecte automatiquement à 00h00, heure du magasin ({time}) — quiconque reprend l'appareil le lendemain doit choisir un compte et saisir à nouveau son PIN. Si le Propriétaire oublie son PIN, un code à usage unique est envoyé uniquement à l'adresse e-mail enregistrée du compte — jamais à un membre du personnel.",
     staffRoleOwner: "Propriétaire",
+staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionnalités, toutes les pages, tous les paliers, toujours.",
     staffRoleManager: "Manager",
     staffRoleCashier: "Caissier",
     staffRoleKitchen: "Cuisine",

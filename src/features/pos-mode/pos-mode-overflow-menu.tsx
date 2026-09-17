@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Monitor, KeyRound, CalendarClock, ExternalLink, LayoutDashboard } from "lucide-react";
+import {
+  Monitor,
+  KeyRound,
+  CalendarClock,
+  ExternalLink,
+  LayoutDashboard,
+  RefreshCw,
+  LogOut,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +18,9 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCustomerDisplaySettings } from "@/features/pos/hooks/use-customer-display-settings";
 import { openCustomerDisplay } from "@/features/pos/lib/open-customer-display";
 import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
-import { usePosSession } from "@/features/pos/hooks/use-pos-session";
+import { useAccountSwitcher } from "@/features/dashboard/shared/hooks/use-account-switcher";
+import { VerifyOwnerPinDialog } from "@/features/dashboard/shared/verify-owner-pin-dialog";
+import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
 
 interface PosModeOverflowMenuProps {
   storeId: string;
@@ -30,13 +40,27 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
   const displayEnabled = useCustomerDisplaySettings((state) => state.enabled);
   const setDisplayEnabled = useCustomerDisplaySettings((state) => state.setEnabled);
   const [clockOpen, setClockOpen] = useState(false);
+
+  const {
+    posSession,
+    actingAsStaff,
+    hasSwitchableStaff,
+    verifyOwnerOpen,
+    setVerifyOwnerOpen,
+    setOwnerPinOpen,
+    setSetOwnerPinOpen,
+    handleBackToOwnerClick,
+    handleSwitchedBackToOwner,
+    handleReturnToPicker,
+    handleOwnerAccountLogout,
+  } = useAccountSwitcher(storeId);
+
   // The one deliberate way back into Back Office from this shell
   // (docs/back-office-revamp.md) — Owner/Manager only. Cashier/Kitchen never
   // see this: their allowedPages has no Back Office pages to land on, and
   // showing them a link into a shell they'd immediately be redirected out of
   // would be a dead end, not a shortcut.
-  const { staffRole } = usePosSession();
-  const canReachBackOffice = staffRole === "OWNER" || staffRole === "MANAGER";
+  const canReachBackOffice = posSession.staffRole === "OWNER" || posSession.staffRole === "MANAGER";
 
   return (
     <>
@@ -69,6 +93,10 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
               </Button>
             </div>
 
+            {/* Clock in/out — a timesheet action for the persona already
+                active. Deliberately its own row, not grouped with the
+                "who is this device" actions below — different question,
+                different answer. */}
             <Button
               variant="outline"
               className="h-11 w-full justify-start gap-2"
@@ -96,11 +124,85 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
                 </Link>
               </Button>
             )}
+
+            {/* Who's using this device — switching or logging out, not
+                clocking in/out. Same actions, same reload/cache-clearing
+                behavior as Back Office's NavUser dropdown
+                (useAccountSwitcher), now reachable without leaving POS
+                Mode first. */}
+            <div className="space-y-2 border-t pt-4">
+              <p className="text-muted-foreground px-1 text-xs font-medium tracking-wide uppercase">
+                {posSession.staffName}
+                {posSession.staffRole ? ` · ${posSession.staffRole}` : ""}
+              </p>
+
+              {actingAsStaff ? (
+                <>
+                  <Button
+                    variant="outline"
+                    className="h-11 w-full justify-start gap-2"
+                    onClick={handleBackToOwnerClick}
+                  >
+                    <KeyRound className="size-4" aria-hidden />
+                    {t("nav.switchAccount")} ({t("pages.staffRoleOwner")})
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-11 w-full justify-start gap-2"
+                    onClick={() => {
+                      onOpenChange(false);
+                      handleReturnToPicker();
+                    }}
+                  >
+                    <LogOut className="size-4" aria-hidden />
+                    {t("nav.logoutStaffSession")}
+                  </Button>
+                </>
+              ) : (
+                hasSwitchableStaff && (
+                  <Button
+                    variant="outline"
+                    className="h-11 w-full justify-start gap-2"
+                    onClick={() => {
+                      onOpenChange(false);
+                      handleReturnToPicker();
+                    }}
+                  >
+                    <RefreshCw className="size-4" aria-hidden />
+                    {t("nav.switchAccount")}
+                  </Button>
+                )
+              )}
+
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive h-11 w-full justify-start gap-2"
+                onClick={() => {
+                  onOpenChange(false);
+                  handleOwnerAccountLogout();
+                }}
+              >
+                <LogOut className="size-4" aria-hidden />
+                {t("nav.logoutOwnerAccount")}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
       <ClockInOutDialog open={clockOpen} onOpenChange={setClockOpen} storeId={storeId} />
+      <VerifyOwnerPinDialog
+        open={verifyOwnerOpen}
+        onOpenChange={setVerifyOwnerOpen}
+        onVerified={handleSwitchedBackToOwner}
+      />
+      <SetOwnerPinDialog
+        open={setOwnerPinOpen}
+        onOpenChange={setSetOwnerPinOpen}
+        title="Set Owner PIN to continue"
+        description="No Owner PIN is set yet. Set one now to switch this device back to your Owner account."
+        onSuccess={handleSwitchedBackToOwner}
+      />
     </>
   );
 }

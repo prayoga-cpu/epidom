@@ -1327,6 +1327,7 @@ export const en = {
     staffSecurityNotice:
       "For security, every PIN session on a device (staff or Owner) automatically logs out at 00:00 store time ({time}) — whoever picks up the device the next day must choose an account and enter its PIN again. If the Owner forgets their PIN, a one-time code is sent only to the account's registered email — never to a staff member.",
     staffRoleOwner: "Owner",
+staffOwnerMasterHint: "Master account — full access to every feature, every page, every plan tier, always.",
     staffRoleManager: "Manager",
     staffRoleCashier: "Cashier",
     staffRoleKitchen: "Kitchen",

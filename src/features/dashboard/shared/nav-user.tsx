@@ -11,19 +11,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUser, signOut } from "@/lib/auth-client";
+import { useUser } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "./hooks/use-current-store";
-import { useOwnerPinStatus } from "./hooks/use-owner-pin";
-import { useHasSwitchableStaff } from "./hooks/use-has-switchable-staff";
+import { useAccountSwitcher } from "./hooks/use-account-switcher";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 import { isAdminEmail } from "@/lib/admin";
 import { Shield, TrendingUp, KeyRound, ShieldCheck, LogOut, RefreshCw, Store } from "lucide-react";
-import { usePosSession } from "@/features/pos/hooks/use-pos-session";
-import { apiClient } from "@/lib/api/client";
 import { VerifyOwnerPinDialog } from "./verify-owner-pin-dialog";
-import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE } from "@/lib/last-visited";
 import { SetOwnerPinDialog } from "./set-owner-pin-dialog";
 import { AccountAccessDialog } from "./account-access-dialog";
 import { ZoomControl } from "./zoom-control";
@@ -37,8 +33,19 @@ export function NavUser() {
   // This prevents blocking initial render
   const { data: profile } = useProfile();
 
-  const posSession = usePosSession();
-  const { data: pinStatus } = useOwnerPinStatus();
+  const {
+    posSession,
+    actingAsStaff,
+    hasSwitchableStaff,
+    verifyOwnerOpen,
+    setVerifyOwnerOpen,
+    setOwnerPinOpen,
+    setSetOwnerPinOpen,
+    handleBackToOwnerClick,
+    handleSwitchedBackToOwner,
+    handleReturnToPicker,
+    handleOwnerAccountLogout,
+  } = useAccountSwitcher(storeId);
 
   // A persona left logged in from a previous day shouldn't keep showing
   // here — real enforcement is the server-side StaffSession expiry, this
@@ -48,106 +55,9 @@ export function NavUser() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [verifyOwnerOpen, setVerifyOwnerOpen] = useState(false);
-  const [setOwnerPinOpen, setSetOwnerPinOpen] = useState(false);
   const [accountAccessOpen, setAccountAccessOpen] = useState(false);
 
-  // Role-based, not ID-based: a StaffMember row can itself have role "OWNER"
-  // (e.g. seeded accounts), and that persona is functionally the owner too —
-  // checking staffId !== "owner" alone missed that case and showed "Switch
-  // back to Owner" while already acting as the (real-row) owner.
-  const actingAsStaff =
-    posSession.isActive && posSession.storeId === storeId && posSession.staffRole !== "OWNER";
   const staffAllowedPages = actingAsStaff ? (posSession.allowedPages ?? []) : null;
-
-  // "Switch Account" only makes sense if there's actually someone else to
-  // switch to — otherwise it reloads into a picker with nothing on it.
-  const hasSwitchableStaff = useHasSwitchableStaff(storeId, !actingAsStaff);
-
-  const handleSwitchedBackToOwner = async () => {
-    posSession.logout();
-    if (storeId) {
-      try {
-        await apiClient.post(`/stores/${storeId}/staff/logout`, {});
-      } catch {
-        // Best-effort — the client-side session is already cleared either way.
-      }
-    }
-    // Hard reload, not just client state: the current page's server-rendered
-    // content was fetched under the (now-cleared) staff session, so a client
-    // router transition wouldn't re-run the page guards or refetch anything
-    // that was hidden/redirected while restricted.
-    window.location.reload();
-  };
-
-  // Clears whichever persona is currently active on this device (staff or
-  // "Continue as Owner" from the gate) without touching the underlying
-  // Better Auth session. Clearing posSession (and the matching server-side
-  // StaffSession cookie, harmless to call even when there isn't one) is
-  // exactly what StoreAccessGate checks to decide whether to show its
-  // "who's using this device?" picker, so a reload lands right back there —
-  // used both for "Switch Account" (owner picking a different persona,
-  // replacing the old in-dropdown PIN-switcher now that the gate exists) and
-  // "Log Out of Staff Session" (staff stepping away, no owner PIN needed).
-  const handleReturnToPicker = async () => {
-    posSession.logout();
-    if (storeId) {
-      try {
-        await apiClient.post(`/stores/${storeId}/staff/logout`, {});
-      } catch {
-        // Best-effort — the client-side session is already cleared either way.
-      }
-    }
-    window.location.reload();
-  };
-
-  // The heavier action, shown regardless of persona: ends the real,
-  // underlying Epidom account session (Better Auth) via the same signOut()
-  // the topbar used to call directly — moved in here (and out of the
-  // topbar) so it's one consistent "leave Epidom entirely" action wherever
-  // you are, Owner or staff. Clears the staff session too for a clean slate.
-  const handleOwnerAccountLogout = async () => {
-    posSession.logout();
-    if (storeId) {
-      try {
-        await apiClient.post(`/stores/${storeId}/staff/logout`, {});
-      } catch {
-        // Best-effort — proceeding to sign out regardless.
-      }
-    }
-    // Otherwise the next signed-out (or different) visitor on this device
-    // would get bounced from the marketing homepage straight into a
-    // login-required page — see LastVisitedTracker/middleware.ts.
-    try {
-      localStorage.removeItem(LAST_VISITED_COOKIE);
-      localStorage.removeItem(REMEMBER_PREF_COOKIE);
-    } catch {
-      // Ignore — worst case the stale value just gets overwritten on next sign-in.
-    }
-    try {
-      // Expire both cookies immediately (Max-Age=0) — middleware reads these
-      // Edge-side on every marketing-page request, so a stale cookie left
-      // behind would resume-redirect the next signed-out visitor on this
-      // device straight into a login-required page.
-      document.cookie = `${LAST_VISITED_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
-      document.cookie = `${REMEMBER_PREF_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
-    } catch {
-      // Ignore — same as above.
-    }
-    try {
-      // Drop the service worker's offline app shell. It holds server-rendered
-      // /store/** documents for THIS account, and a POS tablet is routinely
-      // shared — without this the next owner to sign in here could be served
-      // the previous one's dashboard the first time the wifi drops. See the
-      // SHELL_CACHE block in public/sw.js.
-      navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_APP_SHELL" });
-    } catch {
-      // Ignore — no controller yet (first load, or SW unsupported) means there
-      // is no shell cached to clear in the first place.
-    }
-    await signOut();
-    window.location.href = "/login";
-  };
 
   return (
     <>
@@ -192,12 +102,7 @@ export function NavUser() {
           <DropdownMenuSeparator />
 
           {actingAsStaff ? (
-            <DropdownMenuItem
-              onClick={() => {
-                if (pinStatus?.hasPin) setVerifyOwnerOpen(true);
-                else setSetOwnerPinOpen(true);
-              }}
-            >
+            <DropdownMenuItem onClick={handleBackToOwnerClick}>
               <KeyRound className="mr-2 h-3.5 w-3.5" />
               Back to Owner Account
             </DropdownMenuItem>
