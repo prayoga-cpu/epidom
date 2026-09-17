@@ -14,23 +14,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MapPin, ArrowRight, MoreVertical, Pencil, Trash2, Store, Lock } from "lucide-react";
+import { MapPin, ArrowRight, MoreVertical, Pencil, Trash2, Store, Lock, Monitor } from "lucide-react";
 import { Store as StoreType } from "../hooks/use-stores";
 import { EditStoreDialog } from "./edit-store-dialog";
 import { DeleteStoreDialog } from "./delete-store-dialog";
 import { useRouter } from "next/navigation";
+import { planHasFeature, type PlanTier } from "@/lib/plans/entitlements";
 
 interface StoreCardProps {
   store: StoreType;
   isBlocked?: boolean; // True if subscription is not active
+  /** Same subscription covers every store under one business — used only to
+   * decide whether the POS shortcut below is worth showing for this card. */
+  currentPlan?: PlanTier;
 }
 
-export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
+export function StoreCard({ store, isBlocked = false, currentPlan = "FREE" }: StoreCardProps) {
   const { t } = useI18n();
   const router = useRouter();
   const defaultLanding = useDefaultLanding();
   const [imageError, setImageError] = useState(false);
   const hasImage = store.image && !imageError;
+  // Quick jump straight into this store's till, without landing in Back
+  // Office first (docs/back-office-revamp.md's switch-to-POS CTA, extended
+  // here so it's reachable before a store is even picked). Kept simple —
+  // no locked/upsell variant on this already-dense card; below POS tier it
+  // just doesn't render, the sidebar's own CTA surfaces the upsell once
+  // they're inside a store.
+  const canOpenPos = !isBlocked && planHasFeature(currentPlan, "posAccess");
 
   const handleCardClick = (e: React.MouseEvent) => {
     if (isBlocked) {
@@ -48,6 +59,25 @@ export function StoreCard({ store, isBlocked = false }: StoreCardProps) {
           : "hover:-translate-y-1 hover:border-[var(--color-brand-primary)]/30 hover:shadow-xl"
       }`}
     >
+      {/* Switch-to-POS shortcut — sibling to the big card Link below, not
+          nested inside it (an <a> can't contain another <a>). */}
+      {canOpenPos && (
+        <div className="absolute top-3 left-3 z-10">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="bg-card/95 hover:bg-card h-10 gap-1.5 px-2.5 shadow-md backdrop-blur-sm transition-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Link href={`/store/${store.id}/pos`}>
+              <Monitor className="h-4 w-4" aria-hidden />
+              <span className="text-xs font-medium">{t("nav.pos")}</span>
+            </Link>
+          </Button>
+        </div>
+      )}
+
       {/* Actions Dropdown - Positioned absolutely */}
       {/* Hide dropdown when store is blocked */}
       {!isBlocked && (

@@ -14,6 +14,7 @@ import { ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
+import type { PlanTier } from "@/lib/plans/entitlements";
 
 export function StoresContainer() {
   const { t } = useI18n();
@@ -253,8 +254,20 @@ export function StoresContainer() {
                     // Only set blocked if subscription status is loaded (not undefined)
                     // This prevents showing blocked state during loading
                     const isBlocked = subscriptionStatus !== undefined && !hasActiveSubscription;
+                    // One subscription per business, so every store under it
+                    // shares the same plan — cheap to compute here rather
+                    // than a per-card query.
+                    const currentPlan: PlanTier =
+                      (subscriptionStatus?.subscription?.plan as PlanTier) ?? "FREE";
 
-                    return <StoreCard key={store.id} store={store} isBlocked={isBlocked} />;
+                    return (
+                      <StoreCard
+                        key={store.id}
+                        store={store}
+                        isBlocked={isBlocked}
+                        currentPlan={currentPlan}
+                      />
+                    );
                   })}
               {!isLoadingSubscription && isAdmin && <AdminCard />}
             </div>

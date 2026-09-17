@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Monitor, KeyRound, CalendarClock, ExternalLink } from "lucide-react";
+import { Monitor, KeyRound, CalendarClock, ExternalLink, LayoutDashboard } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -10,6 +10,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCustomerDisplaySettings } from "@/features/pos/hooks/use-customer-display-settings";
 import { openCustomerDisplay } from "@/features/pos/lib/open-customer-display";
 import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
+import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 
 interface PosModeOverflowMenuProps {
   storeId: string;
@@ -29,6 +30,13 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
   const displayEnabled = useCustomerDisplaySettings((state) => state.enabled);
   const setDisplayEnabled = useCustomerDisplaySettings((state) => state.setEnabled);
   const [clockOpen, setClockOpen] = useState(false);
+  // The one deliberate way back into Back Office from this shell
+  // (docs/back-office-revamp.md) — Owner/Manager only. Cashier/Kitchen never
+  // see this: their allowedPages has no Back Office pages to land on, and
+  // showing them a link into a shell they'd immediately be redirected out of
+  // would be a dead end, not a shortcut.
+  const { staffRole } = usePosSession();
+  const canReachBackOffice = staffRole === "OWNER" || staffRole === "MANAGER";
 
   return (
     <>
@@ -79,6 +87,15 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
                 {t("pages.scheduleMyScheduleTitle")}
               </Link>
             </Button>
+
+            {canReachBackOffice && (
+              <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
+                <Link href={`/store/${storeId}/dashboard`} onClick={() => onOpenChange(false)}>
+                  <LayoutDashboard className="size-4" aria-hidden />
+                  {t("nav.dashboard")}
+                </Link>
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

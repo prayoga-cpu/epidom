@@ -36,17 +36,18 @@ function renderSidebar(plan: string | null) {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Sidebar plan gating", () => {
-  // /pos, /pos/orders, /pos/kds, /tables moved into the (pos-mode) shell's
-  // own bottom tab bar (docs/dashboard-revamp.md); /menu was retired as a
+  // /pos/orders, /pos/kds, /tables moved into the (pos-mode) shell's own
+  // bottom tab bar (docs/dashboard-revamp.md); /menu was retired as a
   // standalone rail item in favor of Storefront's Menu tab
-  // (docs/back-office-revamp.md). None should ever render in this rail
-  // again, at any plan tier.
-  it("never renders /pos, /pos/orders, /pos/kds, /tables or /menu, at any plan tier", () => {
+  // (docs/back-office-revamp.md). None of these three should ever render in
+  // this rail again, at any plan tier. /pos itself DOES render — but only as
+  // the single "switch to POS" CTA at the top of the nav, not a
+  // dashboardNavigation item — see the dedicated describe block below.
+  it("never renders /pos/orders, /pos/kds, /tables or /menu, at any plan tier", () => {
     for (const plan of ["FREE", "POS", "OPERATIONS", "ENTERPRISE"]) {
       renderSidebar(plan);
       const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
       for (const removed of [
-        "/store/store-1/pos",
         "/store/store-1/pos/orders",
         "/store/store-1/pos/kds",
         "/store/store-1/tables",
@@ -55,6 +56,29 @@ describe("Sidebar plan gating", () => {
         expect(hrefs).not.toContain(removed);
       }
     }
+  });
+
+  // The one deliberate way from Back Office into the POS Mode shell
+  // (docs/back-office-revamp.md) — a single CTA at the top of the nav,
+  // gated on plan tier and (defensively) staff allowedPages, not a
+  // dashboardNavigation item.
+  describe("Switch-to-POS CTA", () => {
+    it("below POS tier: links to the upgrade flow, not /pos", () => {
+      renderSidebar("FREE");
+      const posLinks = screen.getAllByRole("link", { name: /nav\.pos/i });
+      const ctaLink = posLinks.find((l) => l.getAttribute("href")?.startsWith("/pricing"));
+      expect(ctaLink).toBeTruthy();
+      const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
+      expect(hrefs).not.toContain("/store/store-1/pos");
+    });
+
+    it("at POS tier or above: links directly to /pos", () => {
+      for (const plan of ["POS", "OPERATIONS", "ENTERPRISE"]) {
+        renderSidebar(plan);
+        const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
+        expect(hrefs).toContain("/store/store-1/pos");
+      }
+    });
   });
 
   describe("FREE plan", () => {

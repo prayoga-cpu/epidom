@@ -11,7 +11,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Search, Lock } from "lucide-react";
+import { Search, Lock, Monitor, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlertsCount } from "@/features/dashboard/alerts/hooks/use-alerts-count";
@@ -93,6 +93,47 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
           </div>
         )}
         <nav className="flex-1 p-3">
+          {/* Switch to POS Mode — the one deliberate way from Back Office into
+              the cashier/kitchen shell (docs/back-office-revamp.md: the two
+              shells are separate on purpose, but an Owner/Manager legitimately
+              needs a way in, e.g. to cover a rush or check the till). Not a
+              dashboardNavigation item — /pos lives in posModeNavItems, its own
+              shell's tab bar, not this rail — so it's rendered as a distinct,
+              always-first element instead of blending into a nav section.
+              Hidden entirely for a staff persona without /pos access (Cashier/
+              Kitchen never reach Back Office at all, so in practice this only
+              ever hides for a Manager persona an owner has hand-restricted). */}
+          {(staffAllowedPages === null || staffAllowedPages.includes("/pos")) && (
+            <div className="mb-3">
+              {hasAccess("POS", "/pos") ? (
+                <Link
+                  href={storeId ? `/store/${storeId}/pos` : "/go/pos"}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition active:scale-[0.98]"
+                >
+                  <span className="flex items-center gap-2">
+                    <Monitor className="size-4 shrink-0" aria-hidden />
+                    {t("nav.pos")}
+                  </span>
+                  <ArrowRight className="size-4 shrink-0" aria-hidden />
+                </Link>
+              ) : (
+                <Link
+                  href={upgradeHrefFor("POS")}
+                  title={`Upgrade to ${PLAN_LABELS.POS}`}
+                  className="group text-muted-foreground/40 flex items-center justify-between gap-2 rounded-md border border-dashed px-3 py-2.5 text-sm transition hover:bg-amber-500/8 hover:text-amber-500/70"
+                >
+                  <span className="flex items-center gap-2">
+                    <Monitor className="size-4 shrink-0" aria-hidden />
+                    {t("nav.pos")}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1 text-[10px] font-medium whitespace-nowrap text-amber-500/50 transition-colors group-hover:text-amber-500">
+                    <Lock className="size-3 shrink-0" />
+                    {PLAN_LABELS.POS}
+                  </span>
+                </Link>
+              )}
+            </div>
+          )}
           {navigation.map((section, sectionIndex) => {
             // A staff persona with none of this section's pages granted
             // shouldn't see a dangling section title with nothing under it.
