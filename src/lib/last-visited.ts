@@ -140,6 +140,16 @@ export function isResumableAppPath(value: string): boolean {
 }
 
 /**
+ * POS Mode's own sections — mirrors posModeNavItems in navigation.config.ts
+ * (not imported from it: same Edge-bundle-size reasoning as
+ * RESUMABLE_STORE_SECTIONS above). Notably includes "/tables" — it's a POS
+ * Mode route (src/app/(app)/store/[storeId]/(pos-mode)/tables/) despite its
+ * URL not being nested under /pos, so a naive `startsWith("/pos")` check
+ * would wrongly classify it as Back Office.
+ */
+const POS_MODE_SECTIONS = new Set(["/pos", "/pos/orders", "/pos/kds", "/pos/schedule", "/tables"]);
+
+/**
  * Whether `value` is a Back Office (non-POS) page inside a store — the
  * narrower check backing LAST_VISITED_BACK_OFFICE_COOKIE. A bare
  * "/store/{id}" also counts (it redirects to the user's default landing,
@@ -154,13 +164,13 @@ export function isBackOfficeAppPath(value: string): boolean {
   const segments = pathname.split("/").filter(Boolean);
   if (segments[0] !== "store") return false;
   const section = `/${segments.slice(2).join("/")}`;
-  return section !== "/pos" && !section.startsWith("/pos/");
+  return !POS_MODE_SECTIONS.has(section);
 }
 
 /**
  * The inverse of isBackOfficeAppPath, backing LAST_VISITED_POS_COOKIE — a
- * store-scoped POS Mode page (till, orders, KDS, this store's own schedule
- * view). Same as isBackOfficeAppPath, callers still need their own
+ * store-scoped POS Mode page (till, orders, KDS, tables, this store's own
+ * schedule view). Same as isBackOfficeAppPath, callers still need their own
  * `startsWith("/store/{id}/")` check for the specific store in question —
  * this only answers "is this a POS Mode path," not "in which store."
  */
@@ -170,7 +180,7 @@ export function isPosAppPath(value: string): boolean {
   const segments = pathname.split("/").filter(Boolean);
   if (segments[0] !== "store") return false;
   const section = `/${segments.slice(2).join("/")}`;
-  return section === "/pos" || section.startsWith("/pos/");
+  return POS_MODE_SECTIONS.has(section);
 }
 
 /**

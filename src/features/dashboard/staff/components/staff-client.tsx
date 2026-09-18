@@ -43,7 +43,11 @@ import {
 import { useOwnerPinStatus } from "@/features/dashboard/shared/hooks/use-owner-pin";
 import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
 import { PageAccessChecklist } from "./page-access-checklist";
-import { ROLE_DEFAULT_PAGES } from "@/config/staff-permissions.config";
+import {
+  ROLE_DEFAULT_PAGES,
+  STAFF_ROLE_TEMPLATES,
+  isBaseRoleTemplate,
+} from "@/config/staff-permissions.config";
 
 interface StaffMember {
   id: string;
@@ -72,8 +76,10 @@ interface StaffClientProps {
   storeTimeZoneLabel: string;
 }
 
-const ROLES_FOR_SELECT: StaffRole[] = ["MANAGER", "CASHIER", "KITCHEN"];
-const CUSTOM_ROLE_VALUE = "CUSTOM";
+/** Sentinel Select value for the OWNER row's locked, unchangeable role —
+ * OWNER isn't itself one of STAFF_ROLE_TEMPLATES (an owner's own access
+ * can't be edited via a job-title template), so it needs its own value. */
+const OWNER_TEMPLATE_VALUE = "OWNER";
 
 // Mirrors the backend `usernameSchema` character set (lowercase letters,
 // numbers, underscore, dot) so invalid characters never reach submit —
@@ -141,6 +147,7 @@ export function StaffClient({
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [addCustomRoleActive, setAddCustomRoleActive] = useState(false);
+  const [addTemplateId, setAddTemplateId] = useState("cashier");
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
   const [setPinOpen, setSetPinOpen] = useState(false);
   const { data: pinStatus } = useOwnerPinStatus();
@@ -153,6 +160,7 @@ export function StaffClient({
   const [editRole, setEditRole] = useState<StaffRole>("CASHIER");
   const [editCustomRoleLabel, setEditCustomRoleLabel] = useState("");
   const [editCustomRoleActive, setEditCustomRoleActive] = useState(false);
+  const [editTemplateId, setEditTemplateId] = useState("cashier");
   const [editPayType, setEditPayType] = useState<"HOURLY" | "MONTHLY" | "NONE">("NONE");
   const [editPayRate, setEditPayRate] = useState("");
   const [editAllowedPages, setEditAllowedPages] = useState<string[]>([]);
@@ -172,6 +180,7 @@ export function StaffClient({
   const roleLabel = (r: StaffRole) => t(STAFF_ROLE_LABEL_KEYS[r]);
   const displayRoleLabel = (member: Pick<StaffMember, "role" | "customRoleLabel">) =>
     staffRoleLabel(member, t);
+  const editTemplate = STAFF_ROLE_TEMPLATES.find((tpl) => tpl.id === editTemplateId);
 
   const {
     register,
@@ -195,6 +204,7 @@ export function StaffClient({
   const watchSendInvite = watch("sendInvite" as never);
   const watchRole = watch("role");
   const watchAllowedPages = watch("allowedPages" as never) as string[] | undefined;
+  const addTemplate = STAFF_ROLE_TEMPLATES.find((tpl) => tpl.id === addTemplateId);
 
   // Re-validates as-you-type instead of only on submit — reacting to `watch`
   // (rather than triggering inline from the input's onChange) so this always
@@ -237,7 +247,30 @@ export function StaffClient({
     setEditWhatsapp(member.whatsapp ?? "");
     setEditRole(member.role);
     setEditCustomRoleLabel(member.customRoleLabel ?? "");
-    setEditCustomRoleActive(!!member.customRoleLabel?.trim());
+    // Best-effort only — this drives which template the merged Role
+    // dropdown shows pre-selected, not the actual stored permissions
+    // (role/customRoleLabel/allowedPages, set independently above/below). A
+    // custom label that exactly matches one of this role's named templates
+    // (in the CURRENT locale) selects that template with the checkbox off;
+    // any other label — hand-typed, or saved under a since-changed locale —
+    // falls back to the role's base template with "Use custom label" on, so
+    // what's actually stored isn't silently discarded.
+    const namedMatch = STAFF_ROLE_TEMPLATES.find(
+      (tpl) =>
+        tpl.role === member.role &&
+        !isBaseRoleTemplate(tpl.id) &&
+        t(tpl.labelKey) === member.customRoleLabel
+    );
+    if (namedMatch) {
+      setEditTemplateId(namedMatch.id);
+      setEditCustomRoleActive(false);
+    } else {
+      const baseMatch = STAFF_ROLE_TEMPLATES.find(
+        (tpl) => tpl.role === member.role && isBaseRoleTemplate(tpl.id)
+      );
+      setEditTemplateId(baseMatch?.id ?? "cashier");
+      setEditCustomRoleActive(!!member.customRoleLabel?.trim());
+    }
     setEditPayType(member.payType);
     setEditPayRate(member.payRate != null ? String(member.payRate) : "");
     setEditAllowedPages(
@@ -607,36 +640,61 @@ export function StaffClient({
             <div className="space-y-1">
               <Label>{t("pages.staffRole")}</Label>
               <Select
-                value={addCustomRoleActive ? CUSTOM_ROLE_VALUE : watchRole}
+                value={addTemplateId}
                 onValueChange={(v) => {
-                  if (v === CUSTOM_ROLE_VALUE) {
-                    setAddCustomRoleActive(true);
-                    return;
+                  setAddTemplateId(v);
+                  const template = STAFF_ROLE_TEMPLATES.find((tpl) => tpl.id === v);
+                  if (!template) return;
+                  setValue("role", template.role);
+                  setValue("allowedPages" as never, template.allowedPages as never);
+                  // A custom label already typed in stays untouched (it's an
+                  // intentional override); otherwise the new template's own
+                  // name is what should display.
+                  if (!addCustomRoleActive) {
+                    setValue(
+                      "customRoleLabel" as never,
+                      (isBaseRoleTemplate(v) ? "" : t(template.labelKey)) as never
+                    );
                   }
-                  setAddCustomRoleActive(false);
-                  setValue("customRoleLabel" as never, "" as never);
-                  setValue("role", v as StaffRole);
-                  setValue("allowedPages" as never, ROLE_DEFAULT_PAGES[v as StaffRole] as never);
                 }}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES_FOR_SELECT.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {roleLabel(r)}
+                  {STAFF_ROLE_TEMPLATES.map((tpl) => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      {t(tpl.labelKey)}
                     </SelectItem>
                   ))}
-                  <SelectItem value={CUSTOM_ROLE_VALUE}>
-                    {t("pages.staffRoleCustomOption")}
-                  </SelectItem>
                 </SelectContent>
               </Select>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm select-none">
+                <input
+                  type="checkbox"
+                  className="rounded"
+                  checked={addCustomRoleActive}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setAddCustomRoleActive(next);
+                    if (!next) {
+                      // Falls back to the selected template's own name
+                      // instead of leaving whatever was typed behind.
+                      setValue(
+                        "customRoleLabel" as never,
+                        (!isBaseRoleTemplate(addTemplateId) && addTemplate
+                          ? t(addTemplate.labelKey)
+                          : "") as never
+                      );
+                    }
+                  }}
+                />
+                {t("pages.staffUseCustomLabel")}
+              </label>
               {addCustomRoleActive && (
                 <Input
                   id="add-custom-role"
-                  className="mt-2"
+                  className="mt-1"
                   autoFocus
                   placeholder={t("pages.staffCustomRoleLabelPlaceholder")}
                   {...register("customRoleLabel" as never)}
@@ -647,6 +705,12 @@ export function StaffClient({
               role={watchRole}
               value={watchAllowedPages ?? []}
               onChange={(pages) => setValue("allowedPages" as never, pages as never)}
+              templatePages={addTemplate?.allowedPages}
+              templateLabel={
+                !isBaseRoleTemplate(addTemplateId) && addTemplate
+                  ? t(addTemplate.labelKey)
+                  : undefined
+              }
             />
             <div className="space-y-1">
               <Label htmlFor="pin">
@@ -760,16 +824,19 @@ export function StaffClient({
               <div className="space-y-1">
                 <Label>{t("pages.staffRole")}</Label>
                 <Select
-                  value={editCustomRoleActive ? CUSTOM_ROLE_VALUE : editRole}
+                  value={editTarget.role === "OWNER" ? OWNER_TEMPLATE_VALUE : editTemplateId}
                   onValueChange={(v) => {
-                    if (v === CUSTOM_ROLE_VALUE) {
-                      setEditCustomRoleActive(true);
-                      return;
+                    setEditTemplateId(v);
+                    const template = STAFF_ROLE_TEMPLATES.find((tpl) => tpl.id === v);
+                    if (!template) return;
+                    setEditRole(template.role);
+                    setEditAllowedPages(template.allowedPages);
+                    // A custom label already typed in stays untouched (it's
+                    // an intentional override); otherwise the new
+                    // template's own name is what should display.
+                    if (!editCustomRoleActive) {
+                      setEditCustomRoleLabel(isBaseRoleTemplate(v) ? "" : t(template.labelKey));
                     }
-                    setEditCustomRoleActive(false);
-                    setEditCustomRoleLabel("");
-                    setEditRole(v as StaffRole);
-                    setEditAllowedPages(ROLE_DEFAULT_PAGES[v as StaffRole]);
                   }}
                   disabled={editTarget.role === "OWNER"}
                 >
@@ -777,19 +844,14 @@ export function StaffClient({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(editTarget.role === "OWNER"
-                      ? (["OWNER", ...ROLES_FOR_SELECT] as StaffRole[])
-                      : ROLES_FOR_SELECT
-                    ).map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {roleLabel(r)}
+                    {editTarget.role === "OWNER" && (
+                      <SelectItem value={OWNER_TEMPLATE_VALUE}>{roleLabel("OWNER")}</SelectItem>
+                    )}
+                    {STAFF_ROLE_TEMPLATES.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id}>
+                        {t(tpl.labelKey)}
                       </SelectItem>
                     ))}
-                    {editTarget.role !== "OWNER" && (
-                      <SelectItem value={CUSTOM_ROLE_VALUE}>
-                        {t("pages.staffRoleCustomOption")}
-                      </SelectItem>
-                    )}
                   </SelectContent>
                 </Select>
                 {editTarget.role === "OWNER" && (
@@ -797,9 +859,32 @@ export function StaffClient({
                     {t("pages.staffOwnerRoleLocked")}
                   </p>
                 )}
+                {editTarget.role !== "OWNER" && (
+                  <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm select-none">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={editCustomRoleActive}
+                      onChange={(e) => {
+                        const next = e.target.checked;
+                        setEditCustomRoleActive(next);
+                        if (!next) {
+                          // Falls back to the selected template's own name
+                          // instead of leaving whatever was typed behind.
+                          setEditCustomRoleLabel(
+                            !isBaseRoleTemplate(editTemplateId) && editTemplate
+                              ? t(editTemplate.labelKey)
+                              : ""
+                          );
+                        }
+                      }}
+                    />
+                    {t("pages.staffUseCustomLabel")}
+                  </label>
+                )}
                 {editCustomRoleActive && (
                   <Input
-                    className="mt-2"
+                    className="mt-1"
                     autoFocus
                     value={editCustomRoleLabel}
                     onChange={(e) => setEditCustomRoleLabel(e.target.value)}
@@ -880,6 +965,12 @@ export function StaffClient({
                 role={editRole}
                 value={editAllowedPages}
                 onChange={setEditAllowedPages}
+                templatePages={editTemplate?.allowedPages}
+                templateLabel={
+                  !isBaseRoleTemplate(editTemplateId) && editTemplate
+                    ? t(editTemplate.labelKey)
+                    : undefined
+                }
               />
 
               <div className="space-y-1">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, type ReactNode } from "react";
+import Link from "next/link";
 import { Delete, Loader2, UserRound, ArrowLeft, KeyRound, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -13,11 +14,15 @@ import { usePosSession, useClearStalePosSession } from "@/features/pos/hooks/use
 import { useOwnerPinStatus } from "./hooks/use-owner-pin";
 import { VerifyOwnerPinDialog } from "./verify-owner-pin-dialog";
 import { SetOwnerPinDialog } from "./set-owner-pin-dialog";
+import { staffRoleLabel } from "./lib/staff-role-label";
+import { staffAccessLabelKey } from "./lib/staff-access-label";
 
 interface StaffMember {
   id: string;
   name: string;
   role: StaffRole;
+  customRoleLabel?: string | null;
+  allowedPages?: string[] | null;
   isActive: boolean;
   hasPin: boolean;
 }
@@ -182,6 +187,17 @@ export function StoreAccessGate({ storeId, bypassGate, children }: StoreAccessGa
       >
         {!selectedStaff ? (
           <>
+            {/* This screen is the first checkpoint after picking a store
+                (see the file-level comment) — without an explicit way out, a
+                device stuck here (no staff PIN at hand, changed your mind
+                about which store) has no path back to /stores at all. */}
+            <Button asChild variant="ghost" size="sm" className="absolute top-2 left-2 sm:top-4 sm:left-4">
+              <Link href="/stores">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {t("nav.backToStores")}
+              </Link>
+            </Button>
+
             <div className="text-center">
               <ShieldCheck className="text-muted-foreground/50 mx-auto mb-3 h-8 w-8" />
               <h2 className="text-2xl font-bold tracking-tight">{t("pages.storeAccessGateTitle")}</h2>
@@ -199,21 +215,32 @@ export function StoreAccessGate({ storeId, bypassGate, children }: StoreAccessGa
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                {activeStaff.map((member) => (
-                  <Button
-                    key={member.id}
-                    variant="outline"
-                    className="hover:bg-muted/50 hover:border-primary/50 flex h-24 flex-col items-center justify-center gap-2 transition-colors"
-                    onClick={() => handleStaffClick(member)}
-                  >
-                    <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full font-semibold">
-                      {member.name.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="w-full truncate px-2 text-center font-medium">
-                      {member.name}
-                    </span>
-                  </Button>
-                ))}
+                {activeStaff.map((member) => {
+                  const accessKey = staffAccessLabelKey(member.allowedPages);
+                  return (
+                    <Button
+                      key={member.id}
+                      variant="outline"
+                      className="hover:bg-muted/50 hover:border-primary/50 flex h-auto min-h-24 flex-col items-center justify-center gap-1.5 py-3 transition-colors"
+                      onClick={() => handleStaffClick(member)}
+                    >
+                      <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full font-semibold">
+                        {member.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="w-full truncate px-2 text-center font-medium">
+                        {member.name}
+                      </span>
+                      <span className="text-muted-foreground truncate px-2 text-center text-xs">
+                        {staffRoleLabel(member, t)}
+                      </span>
+                      {accessKey && (
+                        <span className="border-primary/30 text-primary/80 truncate rounded-full border px-2 py-0.5 text-[10px] font-medium">
+                          {t(accessKey)}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })}
               </div>
             )}
 

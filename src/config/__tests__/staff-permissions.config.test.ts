@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { ALL_STAFF_PAGES, ROLE_DEFAULT_PAGES, resolveStaffAllowedPages } from "../staff-permissions.config";
+import {
+  ALL_STAFF_PAGES,
+  ROLE_DEFAULT_PAGES,
+  resolveStaffAllowedPages,
+  STAFF_ROLE_TEMPLATES,
+  isBaseRoleTemplate,
+} from "../staff-permissions.config";
 import { updateStaffSchema } from "@/lib/validation/operations.schemas";
 
 describe("POS Mode routes stay grantable after the shell split", () => {
@@ -52,5 +58,50 @@ describe("POS Mode routes stay grantable after the shell split", () => {
       allowedPages: ["/pos", "/not-a-real-page"],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("STAFF_ROLE_TEMPLATES (merged Role + Job-title picker)", () => {
+  it("every template's pages are grantable — updateStaffSchema accepts them all", () => {
+    for (const tpl of STAFF_ROLE_TEMPLATES) {
+      const result = updateStaffSchema.safeParse({ allowedPages: tpl.allowedPages });
+      expect(result.success, `template "${tpl.id}" has an ungrantable page`).toBe(true);
+    }
+  });
+
+  it("has a unique id per template", () => {
+    const ids = STAFF_ROLE_TEMPLATES.map((tpl) => tpl.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("back-office-only templates (admin, finance) never grant a POS Mode page", () => {
+    const posOnlyPages = new Set(["/pos", "/pos/orders", "/pos/kds", "/tables"]);
+    for (const id of ["admin", "finance"]) {
+      const tpl = STAFF_ROLE_TEMPLATES.find((t) => t.id === id)!;
+      expect(tpl.role).toBe("MANAGER");
+      for (const page of tpl.allowedPages) {
+        expect(posOnlyPages.has(page)).toBe(false);
+      }
+    }
+  });
+
+  it("front-of-house templates (waiter, bartender, host) never grant a Back Office-only page", () => {
+    const backOfficeOnlyPages = new Set(["/finance", "/management", "/production", "/data", "/staff"]);
+    for (const id of ["waiter", "bartender", "host"]) {
+      const tpl = STAFF_ROLE_TEMPLATES.find((t) => t.id === id)!;
+      expect(tpl.role).toBe("CASHIER");
+      for (const page of tpl.allowedPages) {
+        expect(backOfficeOnlyPages.has(page)).toBe(false);
+      }
+    }
+  });
+
+  it("isBaseRoleTemplate is true only for the plain role templates", () => {
+    expect(isBaseRoleTemplate("manager")).toBe(true);
+    expect(isBaseRoleTemplate("cashier")).toBe(true);
+    expect(isBaseRoleTemplate("kitchen")).toBe(true);
+    for (const id of ["admin", "finance", "waiter", "bartender", "host"]) {
+      expect(isBaseRoleTemplate(id)).toBe(false);
+    }
   });
 });

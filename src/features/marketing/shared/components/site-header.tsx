@@ -8,7 +8,7 @@ import { WaitlistDialog } from "@/features/marketing/shared/components/waitlist-
 import { usePathname, useRouter } from "next/navigation";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ArrowLeft } from "lucide-react";
 import { EpidomLogo } from "./epidom-logo";
 import { useSession, signOut } from "@/lib/auth-client";
 import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
@@ -26,12 +26,18 @@ interface SiteHeaderProps {
   showNav?: boolean;
   variant?: "landing" | "authenticated";
   showLogout?: boolean;
+  /** When set, renders an explicit back arrow before the logo, so a page
+   * that's a dead end in the app's own parent/child structure (e.g. /stores,
+   * whose only parent is the marketing homepage) always has a way out
+   * instead of relying on the logo click alone. */
+  backHref?: string;
 }
 
 export const SiteHeader = memo(function SiteHeader({
   showNav = true,
   variant: variantOverride,
   showLogout = false,
+  backHref,
 }: SiteHeaderProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
@@ -170,7 +176,18 @@ export const SiteHeader = memo(function SiteHeader({
 
   return (
     <nav className="epi-floating-nav backdrop-blur-xs" role="navigation" aria-label="Main header">
-      <EpidomLogo href={localizeHref("/")} size={30} />
+      <div className="flex min-w-0 items-center gap-2">
+        {backHref && (
+          <Link
+            href={backHref}
+            aria-label={t("common.actions.back")}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+          >
+            <ArrowLeft className="h-4 w-4 text-[var(--epi-cream-50)]" />
+          </Link>
+        )}
+        <EpidomLogo href={localizeHref("/")} size={30} />
+      </div>
 
       {/* Desktop nav links */}
       {showNav && (
