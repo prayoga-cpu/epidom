@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { trackEvent } from "@/lib/analytics";
+import { safeInternalPath } from "@/lib/safe-redirect";
 
 export function LoginForm() {
   const { t } = useI18n();
@@ -150,7 +151,10 @@ export function LoginForm() {
           });
           await authClient.signIn.social({
             provider: "google",
-            callbackURL: "/stores",
+            // Honors a deep link (e.g. the store-transfer accept page) the
+            // same way the email login does — validated, since OAuth
+            // callbacks are a classic open-redirect vector.
+            callbackURL: safeInternalPath(nextUrl) ?? "/stores",
           });
         }}
       >
@@ -258,7 +262,7 @@ export function LoginForm() {
                   try {
                     const { error } = await authClient.sendVerificationEmail({
                       email: unverifiedEmail,
-                      callbackURL: "/onboarding",
+                      callbackURL: safeInternalPath(nextUrl) ?? "/onboarding",
                     });
 
                     if (error) {
@@ -289,7 +293,11 @@ export function LoginForm() {
       <p className="text-center text-sm" style={{ color: "rgba(251,249,228,0.55)" }}>
         {t("auth.dontHaveAccount")}{" "}
         <Link
-          href="/register"
+          href={
+            safeInternalPath(nextUrl)
+              ? `/register?next=${encodeURIComponent(safeInternalPath(nextUrl)!)}`
+              : "/register"
+          }
           className="font-semibold transition-colors hover:underline"
           style={{ color: "var(--epi-gold-400)" }}
         >

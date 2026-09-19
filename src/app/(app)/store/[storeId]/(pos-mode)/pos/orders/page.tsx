@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { verifyStoreAccess } from "@/lib/utils/store-verification";
 import { PosOrdersTabs } from "@/features/pos/components/pos-orders-tabs";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import { getActiveStaffSession } from "@/lib/staff-session";
@@ -13,7 +13,7 @@ export default async function PosOrdersPage({ params }: { params: Promise<{ stor
     redirect("/login");
   }
 
-  await verifyStoreOwnership(storeId, session.user.id);
+  await verifyStoreAccess(storeId, session.user.id);
   await requireStaffPageAccess(storeId, "/pos/orders");
 
   // Same rule as the Kitchen & Bar page's toggle (kds/page.tsx) — the Active

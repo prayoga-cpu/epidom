@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { verifyStoreAccess } from "@/lib/utils/store-verification";
 import { TablesManager } from "@/features/pos/components/tables/tables-manager";
 import { ReservationList } from "@/features/pos/components/tables/reservation-list";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
@@ -11,7 +11,7 @@ export default async function TablesPage({ params }: { params: Promise<{ storeId
   const { storeId } = await params;
   const session = await getSession();
   if (!session?.user?.id) redirect("/login");
-  await verifyStoreOwnership(storeId, session.user.id);
+  await verifyStoreAccess(storeId, session.user.id);
   await requireStaffPageAccess(storeId, "/tables");
 
   return (

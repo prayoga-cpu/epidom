@@ -17,6 +17,18 @@ export default async function ProfilePage() {
   // Profile page's requireOwnerOnly for the same rule, scoped to one store.
   await requireNoActiveStaffPersona();
 
+  // The canonical Profile is the store-scoped one (/store/{id}/profile), which
+  // renders inside the dashboard shell. This route only still renders for a
+  // deactivated account: every store layout redirects those here because they
+  // can't enter a store, and this page hosts the reactivation flow
+  // (AccountSettingsCard). Redirecting them on into a store would bounce
+  // straight back here, so they are the one case that must not be sent
+  // through the launcher. Everyone else lets /go/profile pick the store
+  // (last visited, else newest, else /stores when they have none).
+  if (!session.user.deactivatedAt) {
+    redirect("/go/profile");
+  }
+
   // Fetch user profile
   const profileDto = await userService.getProfile(session.user.id);
 

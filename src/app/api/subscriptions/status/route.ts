@@ -10,6 +10,9 @@ import { subscriptionService } from "@/lib/services";
 import { getStoreLimit } from "@/config/stripe.config";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { prisma } from "@/lib/prisma";
+import { verifyStoreAccess } from "@/lib/utils/store-verification";
+import { linkedStaffWhere } from "@/lib/auth/staff-link";
 
 /**
  * GET /api/subscriptions/status
@@ -22,10 +25,79 @@ import { withApiHandler } from "@/lib/api-handler";
  */
 export const GET = withApiHandler(
   async (request, { userId }) => {
+    // Asked from inside a store (?storeId=), by a linked staff account: the
+    // plan that governs what they see is the STORE OWNER's, not anything of
+    // their own — a staff login has no subscription, and the auto-provisioning
+    // below would otherwise mint one for them and report FREE, locking every
+    // POS feature in their UI. Read-only and stripped of billing detail: they
+    // can neither manage payment nor see a quoted custom price. The owner's
+    // own request (and any request without a storeId) takes the path below
+    // exactly as before.
+    const requestedStoreId = new URL(request.url).searchParams.get("storeId");
+    if (requestedStoreId) {
+      const access = await verifyStoreAccess(requestedStoreId, userId).catch(() => null);
+      if (access?.accessType === "staff") {
+        const business = await prisma.business.findUnique({
+          where: { id: access.store.businessId },
+          select: { userId: true },
+        });
+        const ownerSub = business
+          ? await subscriptionRepository.findByUserId(business.userId)
+          : null;
+        return NextResponse.json(
+          createSuccessResponse({
+            hasSubscription: !!ownerSub,
+            subscription: ownerSub
+              ? {
+                  id: ownerSub.id,
+                  plan: ownerSub.plan,
+                  status: ownerSub.status,
+                  currentPeriodStart: ownerSub.currentPeriodStart,
+                  currentPeriodEnd: ownerSub.currentPeriodEnd,
+                  trialEndsAt: ownerSub.trialEndsAt,
+                  isTrialing: !!ownerSub.trialEndsAt && ownerSub.trialEndsAt > new Date(),
+                  cancelAtPeriodEnd: ownerSub.cancelAtPeriodEnd,
+                  canManagePayment: false,
+                  canCancel: false,
+                  isBeta: false,
+                  customPriceAmount: null,
+                  customPriceCurrency: null,
+                  customPriceInterval: null,
+                  customPricePlan: null,
+                  customPricePending: ownerSub.customPricePendingAt != null,
+                }
+              : null,
+            storeUsage: null,
+          })
+        );
+      }
+    }
+
     // Get subscription — auto-provision free plan if missing (beta bypass)
     let subscription = await subscriptionRepository.findByUserId(userId);
 
     if (!subscription) {
+      // A staff-only login (linked to a staff profile, no business of its own)
+      // opening the store list has no subscription of its own to speak of, and
+      // must not have one minted just for looking. Someone who owns a business
+      // — including an owner who is ALSO linked as staff elsewhere — falls
+      // through to the normal provisioning below.
+      const ownsBusiness = await prisma.business.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+      if (!ownsBusiness) {
+        const staffLink = await prisma.staffMember.findFirst({
+          where: linkedStaffWhere(userId),
+          select: { id: true },
+        });
+        if (staffLink) {
+          return NextResponse.json(
+            createSuccessResponse({ hasSubscription: false, subscription: null, storeUsage: null })
+          );
+        }
+      }
+
       await subscriptionService.activateFree(userId, "FREE");
       subscription = await subscriptionRepository.findByUserId(userId);
     }

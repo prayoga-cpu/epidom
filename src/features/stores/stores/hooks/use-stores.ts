@@ -18,6 +18,14 @@ export interface Store {
 
   createdAt: Date | string;
   updatedAt: Date | string;
+
+  /**
+   * "staff" = a store this account works at as a linked staff member (POS Mode
+   * only), not one it owns. Absent on responses that predate the field.
+   */
+  accessRole?: "owner" | "staff";
+  /** Staff rows only: the POS page to open, or null when their role has none. */
+  staffHomePath?: string | null;
 }
 
 // Query keys for cache management (DRY principle)

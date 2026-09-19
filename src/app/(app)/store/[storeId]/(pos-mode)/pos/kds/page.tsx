@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { verifyStoreAccess } from "@/lib/utils/store-verification";
 import { KdsShell } from "@/features/pos/components/kds/kds-shell";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import { getActiveStaffSession } from "@/lib/staff-session";
@@ -11,7 +11,7 @@ export default async function KdsPage({ params }: { params: Promise<{ storeId: s
   const { storeId } = await params;
   const session = await getSession();
   if (!session?.user?.id) redirect("/login");
-  await verifyStoreOwnership(storeId, session.user.id);
+  await verifyStoreAccess(storeId, session.user.id);
   await requireStaffPageAccess(storeId, "/pos/kds");
 
   // No active staff session at all means the real owner is browsing —

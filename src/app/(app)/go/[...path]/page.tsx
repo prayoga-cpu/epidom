@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getAllAppNavItems } from "@/config/navigation.config";
 import { LAST_VISITED_COOKIE, normalizeDefaultLanding } from "@/lib/last-visited";
+import { getLinkedStaffForUser, linkedStaffLandingPath } from "@/lib/auth/staff-link";
 
 /**
  * Store launcher. Every entry point that has to name a destination *before*
@@ -77,6 +78,16 @@ export default async function StoreLauncherPage({
 
   const stores = owner?.business?.stores ?? [];
   if (stores.length === 0) {
+    // No store of their own. A login linked to a staff profile has exactly one
+    // store it can enter — the one it works at, POS Mode only — so it goes
+    // straight there: the requested POS page if their grants cover it, else
+    // their first reachable one. A back-office-only role has nowhere to land,
+    // and /stores (which never redirects back here) is where that's explained.
+    const staffLink = await getLinkedStaffForUser(session.user.id);
+    if (staffLink) {
+      redirect(linkedStaffLandingPath(staffLink, requestedSection) ?? "/stores");
+    }
+
     // No business yet, or a business with no outlets — /stores is the create
     // flow, and it's also where a support-recovered account starts over.
     redirect("/stores");

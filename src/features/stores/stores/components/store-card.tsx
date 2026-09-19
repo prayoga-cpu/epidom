@@ -36,13 +36,20 @@ export function StoreCard({ store, isBlocked = false, currentPlan = "FREE" }: St
   const defaultLanding = useDefaultLanding();
   const [imageError, setImageError] = useState(false);
   const hasImage = store.image && !imageError;
+  // A store this account WORKS AT (linked staff login), not one it owns: no
+  // edit/delete, no Back Office, and the card opens the POS page they can reach.
+  // A back-office-only role has no such page — the card stays visible but says so
+  // instead of linking somewhere that would only bounce them back here.
+  const isStaffStore = store.accessRole === "staff";
+  const staffNoAccess = isStaffStore && !store.staffHomePath;
+  const showBlockedView = isBlocked || staffNoAccess;
   // Quick jump straight into this store's till, without landing in Back
   // Office first (docs/back-office-revamp.md's switch-to-POS CTA, extended
   // here so it's reachable before a store is even picked). Kept simple —
   // no locked/upsell variant on this already-dense card; below POS tier it
   // just doesn't render, the sidebar's own CTA surfaces the upsell once
   // they're inside a store.
-  const canOpenPos = !isBlocked && planHasFeature(currentPlan, "posAccess");
+  const canOpenPos = !isBlocked && !isStaffStore && planHasFeature(currentPlan, "posAccess");
 
   // Resumes the last POS screen (till, orders, KDS, this store's schedule)
   // actually open in THIS store, instead of always dropping back onto the
@@ -65,13 +72,16 @@ export function StoreCard({ store, isBlocked = false, currentPlan = "FREE" }: St
       e.preventDefault();
       e.stopPropagation();
       router.push("/pricing?reason=subscription_required");
+    } else if (staffNoAccess) {
+      e.preventDefault();
+      e.stopPropagation();
     }
   };
 
   return (
     <Card
       className={`group border-border bg-card relative flex h-full flex-col overflow-hidden border p-0 shadow-sm transition-all duration-300 sm:py-0 ${
-        isBlocked
+        showBlockedView
           ? "cursor-not-allowed opacity-75"
           : "hover:-translate-y-1 hover:border-[var(--color-brand-primary)]/30 hover:shadow-xl"
       }`}
@@ -95,9 +105,17 @@ export function StoreCard({ store, isBlocked = false, currentPlan = "FREE" }: St
         </div>
       )}
 
+      {isStaffStore && (
+        <div className="absolute top-3 left-3 z-10">
+          <span className="bg-card/95 text-foreground inline-flex h-8 items-center rounded-md px-2.5 text-xs font-medium shadow-md backdrop-blur-sm">
+            {t("stores.staffBadge")}
+          </span>
+        </div>
+      )}
+
       {/* Actions Dropdown - Positioned absolutely */}
-      {/* Hide dropdown when store is blocked */}
-      {!isBlocked && (
+      {/* Hidden when the store is blocked, and for a staff card: edit/delete are the owner's */}
+      {!showBlockedView && !isStaffStore && (
         <div className="absolute top-3 right-3 z-10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -140,7 +158,7 @@ export function StoreCard({ store, isBlocked = false, currentPlan = "FREE" }: St
       )}
 
       {/* Blocked Overlay - Branded Design */}
-      {isBlocked && (
+      {showBlockedView && (
         <div className="from-card/95 via-card/90 to-muted/95 absolute inset-0 z-20 flex flex-col items-center justify-center rounded-lg border-2 border-[var(--color-brand-primary)]/20 bg-gradient-to-br shadow-lg backdrop-blur-md">
           {/* Decorative Pattern Background */}
           <div className="absolute inset-0 overflow-hidden rounded-lg opacity-[0.03]">
@@ -160,26 +178,32 @@ export function StoreCard({ store, isBlocked = false, currentPlan = "FREE" }: St
 
             {/* Title */}
             <p className="mb-2 text-base font-bold tracking-tight text-[var(--color-brand-primary)] sm:text-lg">
-              {t("stores.subscriptionRequired") || "Subscription Required"}
+              {staffNoAccess
+                ? t("stores.staffNoAccessTitle")
+                : t("stores.subscriptionRequired") || "Subscription Required"}
             </p>
 
             {/* Description */}
             <p className="text-muted-foreground mx-auto max-w-[200px] text-xs leading-relaxed sm:text-sm">
-              {t("stores.renewSubscription") || "Renew your subscription to access this store"}
+              {staffNoAccess
+                ? t("stores.staffNoAccessDesc")
+                : t("stores.renewSubscription") || "Renew your subscription to access this store"}
             </p>
 
-            {/* Subtle CTA Hint */}
-            <div className="mt-4 border-t border-[var(--color-brand-primary)]/10 pt-3">
-              <p className="text-[10px] font-medium tracking-wider text-[var(--color-brand-primary)]/70 uppercase">
-                {t("stores.clickToSubscribe") || "Click to Subscribe"}
-              </p>
-            </div>
+            {/* Subtle CTA Hint — only when there is something to click through to */}
+            {!staffNoAccess && (
+              <div className="mt-4 border-t border-[var(--color-brand-primary)]/10 pt-3">
+                <p className="text-[10px] font-medium tracking-wider text-[var(--color-brand-primary)]/70 uppercase">
+                  {t("stores.clickToSubscribe") || "Click to Subscribe"}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Clickable Link Area */}
-      {isBlocked ? (
+      {showBlockedView ? (
         <div onClick={handleCardClick} className="flex h-full cursor-not-allowed flex-col">
           {/* Store Image Container - Enhanced with overlay on hover */}
           <div className="bg-muted relative aspect-[4/3] w-full overflow-hidden">
@@ -269,7 +293,7 @@ export function StoreCard({ store, isBlocked = false, currentPlan = "FREE" }: St
         </div>
       ) : (
         <Link
-          href={`/store/${store.id}/${defaultLanding}`}
+          href={isStaffStore ? (store.staffHomePath ?? "/stores") : `/store/${store.id}/${defaultLanding}`}
           prefetch={true}
           className="flex h-full flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)] focus-visible:ring-offset-2"
         >

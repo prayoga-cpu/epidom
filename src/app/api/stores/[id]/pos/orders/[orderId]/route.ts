@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSessionApi } from "@/lib/auth/require-session";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
+import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { updateOrderStatusSchema } from "@/lib/validation/pos.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { deductStockForOrder, reverseStockForOrder } from "@/lib/services/stock-deduction.service";
@@ -22,8 +22,9 @@ export async function PATCH(
   const session = await requireSessionApi();
   if (session instanceof NextResponse) return session;
 
-  const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (verification instanceof NextResponse) return verification;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, request);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const verification = storeAccess.store;
 
   try {
     const body = await request.json();
@@ -145,7 +146,7 @@ export async function PATCH(
  * Get a single order with all items
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string; orderId: string }> }
 ) {
   const { id: storeId, orderId } = await params;
@@ -153,8 +154,9 @@ export async function GET(
   const session = await requireSessionApi();
   if (session instanceof NextResponse) return session;
 
-  const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (verification instanceof NextResponse) return verification;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, request);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const verification = storeAccess.store;
 
   try {
     const order = await prisma.order.findFirst({

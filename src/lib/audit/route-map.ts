@@ -89,6 +89,27 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
   "POST /api/stores": { code: "store.create", severity: N, targetType: "Store" },
   "PATCH /api/stores/*": { code: "store.update", severity: N, targetType: "Store", targetIdIndex: 0 },
   "DELETE /api/stores/*": { code: "store.delete", severity: C, targetType: "Store", targetIdIndex: 0 },
+  // Ownership transfer changes who can access a store — CRITICAL by this
+  // file's own definition. Accept runs as the RECIPIENT (not yet an owner, so
+  // there's no store scope on the request) and its token travels in the body,
+  // never the path, so nothing bearer-secret lands in the recorded route.
+  "POST /api/stores/*/transfer-ownership": {
+    code: "store.ownership_transfer.invite",
+    severity: C,
+    targetType: "Store",
+    targetIdIndex: 0,
+  },
+  "DELETE /api/stores/*/transfer-ownership": {
+    code: "store.ownership_transfer.cancel",
+    severity: N,
+    targetType: "Store",
+    targetIdIndex: 0,
+  },
+  "POST /api/transfer-ownership/accept": {
+    code: "store.ownership_transfer.accept",
+    severity: C,
+    targetType: "Store",
+  },
 
   // ------------------------------------------------------------ products
   "POST /api/stores/*/products": { code: "product.create", severity: I, targetType: "Product" },
@@ -255,6 +276,19 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
   "DELETE /api/stores/*/staff/*": { code: "staff.delete", severity: C, targetType: "StaffMember", targetIdIndex: 1 },
   "POST /api/stores/*/staff/verify-pin": { code: "staff.pin_verify", severity: N, targetType: "StaffMember" },
   "POST /api/stores/*/staff/logout": { code: "staff.logout", severity: I },
+  // Emails a link that grants a real sign-in to the store — "change who can
+  // access an account", so CRITICAL by this file's own definition.
+  "POST /api/stores/*/staff/*/invite": {
+    code: "staff.invite",
+    severity: C,
+    targetType: "StaffMember",
+    targetIdIndex: 1,
+  },
+  // The claim runs unauthenticated-capable and outside withApiHandler, so it
+  // records itself (src/app/api/staff-invite/complete/route.ts) under this
+  // same code — listed here so the coverage panel doesn't read it as a gap.
+  // The token travels in the body, never the path.
+  "POST /api/staff-invite/complete": { code: "staff.invite.claim", severity: C, targetType: "StaffMember" },
 
   // ------------------------------------------------------------ schedule
   "POST /api/stores/*/staff-schedules": { code: "schedule.create", severity: I, targetType: "StaffSchedule" },

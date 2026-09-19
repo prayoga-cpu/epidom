@@ -6,6 +6,7 @@ import { withApiHandler } from "@/lib/api-handler";
 import { hash, compare } from "bcryptjs";
 import { sendStaffPinEmail } from "@/lib/services/email.service";
 import { ALL_STAFF_PAGES } from "@/config/staff-permissions.config";
+import { emailsMatch } from "@/lib/staff-invite";
 
 const OWNER_ONLY_PAGES = new Set(["/profile", "/billing", "/staff"]);
 function sanitizeAllowedPages(pages: string[] | undefined): string[] | undefined {
@@ -108,9 +109,23 @@ export const PATCH = withApiHandler(
         inviteStatus: true,
         payType: true,
         payRate: true,
+        contractType: true,
         updatedAt: true,
       },
     });
+
+    // An outstanding sign-in invite belongs to the address it was sent to. If
+    // the owner changed that address (usually because it was wrong) or turned
+    // the person off, the old link must stop working. The claim path re-checks
+    // both at claim time regardless; this keeps the "invite sent" state honest.
+    const emailChanged =
+      email !== undefined &&
+      !emailsMatch((updateData.email as string | null) ?? "", existing.email ?? "");
+    if (emailChanged || updateData.isActive === false) {
+      await prisma.staffInvite.deleteMany({
+        where: { staffMemberId: staffId, consumedAt: null },
+      });
+    }
 
     // Send PIN email if requested and we have an email + a PIN
     if (sendPinEmail && pin) {
@@ -147,6 +162,9 @@ export const DELETE = withApiHandler(
     await prisma.staffMember.update({
       where: { id: staffId },
       data: { isActive: false },
+    });
+    await prisma.staffInvite.deleteMany({
+      where: { staffMemberId: staffId, consumedAt: null },
     });
 
     return NextResponse.json(createSuccessResponse({ deleted: staffId }));

@@ -1,13 +1,20 @@
 import { redirect } from "next/navigation";
 import { getActiveStaffSession } from "@/lib/staff-session";
+import { getStoreViewer } from "./store-viewer";
 
 /**
  * Server-side gate for a specific dashboard page. If the current browser has
  * an active staff PIN session for this store, the page must be in that
  * staff member's resolved allowedPages (role default or owner override) —
  * otherwise redirect them to the first page they *are* allowed, or a safe
- * fallback. No active staff session at all means the real owner is
- * browsing — always unrestricted.
+ * fallback. For the store's owner, no active staff session at all means the
+ * real owner is browsing — always unrestricted.
+ *
+ * A LINKED STAFF ACCOUNT (StaffMember.userId) is never the owner, so for one
+ * "no staff session" does NOT mean unrestricted — it means the PIN hasn't been
+ * entered yet, and nothing renders (redirect to the store picker, which is
+ * where the PIN gate lives). The persona must be that account's own member: a
+ * leftover session for a different staffer on the same browser doesn't count.
  *
  * `page` accepts an array when a single route now serves more than one
  * grantable permission (e.g. /storefront also covers the retired standalone
@@ -22,8 +29,24 @@ export async function requireStaffPageAccess(
   storeId: string,
   page: string | string[]
 ): Promise<void> {
+  const viewer = await getStoreViewer(storeId);
+  if (viewer.kind === "none") redirect("/stores");
+
   const staffSession = await getActiveStaffSession();
-  if (!staffSession || staffSession.storeId !== storeId || staffSession.role === "OWNER") return;
+
+  if (viewer.kind === "staff") {
+    if (
+      !staffSession ||
+      staffSession.storeId !== storeId ||
+      staffSession.staffMemberId !== viewer.staffMemberId
+    ) {
+      redirect("/stores");
+    }
+    // Falls through to the page check below — and never takes the owner's
+    // "role OWNER is unrestricted" shortcut, whatever the persona's role says.
+  } else if (!staffSession || staffSession.storeId !== storeId || staffSession.role === "OWNER") {
+    return;
+  }
 
   const pages = Array.isArray(page) ? page : [page];
   if (!pages.some((p) => staffSession.allowedPages.includes(p))) {

@@ -18,9 +18,7 @@ import { useCurrentStore } from "./hooks/use-current-store";
 import { useAccountSwitcher } from "./hooks/use-account-switcher";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 import { isAdminEmail } from "@/lib/admin";
-import { Shield, TrendingUp, KeyRound, ShieldCheck, LogOut, RefreshCw, Store } from "lucide-react";
-import { VerifyOwnerPinDialog } from "./verify-owner-pin-dialog";
-import { SetOwnerPinDialog } from "./set-owner-pin-dialog";
+import { Shield, TrendingUp, ShieldCheck, LogOut, RefreshCw, Store } from "lucide-react";
 import { AccountAccessDialog } from "./account-access-dialog";
 import { ZoomControl } from "./zoom-control";
 
@@ -37,12 +35,7 @@ export function NavUser() {
     posSession,
     actingAsStaff,
     hasSwitchableStaff,
-    verifyOwnerOpen,
-    setVerifyOwnerOpen,
-    setOwnerPinOpen,
-    setSetOwnerPinOpen,
-    handleBackToOwnerClick,
-    handleSwitchedBackToOwner,
+    handleSwitchAccount,
     handleReturnToPicker,
     handleOwnerAccountLogout,
   } = useAccountSwitcher(storeId);
@@ -101,18 +94,11 @@ export function NavUser() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
 
-          {actingAsStaff ? (
-            <DropdownMenuItem onClick={handleBackToOwnerClick}>
-              <KeyRound className="mr-2 h-3.5 w-3.5" />
-              Back to Owner Account
+          {(actingAsStaff || hasSwitchableStaff) && (
+            <DropdownMenuItem onClick={handleSwitchAccount}>
+              <RefreshCw className="mr-2 h-3.5 w-3.5" />
+              {t("nav.switchAccount")}
             </DropdownMenuItem>
-          ) : (
-            hasSwitchableStaff && (
-              <DropdownMenuItem onClick={handleReturnToPicker}>
-                <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                {t("nav.switchAccount")}
-              </DropdownMenuItem>
-            )
           )}
 
           <DropdownMenuItem onClick={() => setAccountAccessOpen(true)}>
@@ -170,18 +156,6 @@ export function NavUser() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <VerifyOwnerPinDialog
-        open={verifyOwnerOpen}
-        onOpenChange={setVerifyOwnerOpen}
-        onVerified={handleSwitchedBackToOwner}
-      />
-      <SetOwnerPinDialog
-        open={setOwnerPinOpen}
-        onOpenChange={setSetOwnerPinOpen}
-        title="Set Owner PIN to continue"
-        description="No Owner PIN is set yet. Set one now to switch this device back to your Owner account."
-        onSuccess={handleSwitchedBackToOwner}
-      />
       <AccountAccessDialog
         open={accountAccessOpen}
         onOpenChange={setAccountAccessOpen}

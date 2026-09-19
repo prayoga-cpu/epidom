@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 vi.mock("@/components/lang/i18n-provider", () => ({
   useI18n: () => ({ t: (k: string) => k }),
@@ -14,12 +14,6 @@ vi.mock("@/features/pos/lib/open-customer-display", () => ({
 }));
 vi.mock("@/features/dashboard/shared/clock-in-out-dialog", () => ({
   ClockInOutDialog: () => null,
-}));
-vi.mock("@/features/dashboard/shared/verify-owner-pin-dialog", () => ({
-  VerifyOwnerPinDialog: () => null,
-}));
-vi.mock("@/features/dashboard/shared/set-owner-pin-dialog", () => ({
-  SetOwnerPinDialog: () => null,
 }));
 
 const mockSwitcher = vi.fn();
@@ -37,20 +31,15 @@ function defaultSwitcher() {
     posSession: { staffName: "Test Acc", staffRole: "CASHIER" },
     actingAsStaff: true,
     hasSwitchableStaff: false,
-    verifyOwnerOpen: false,
-    setVerifyOwnerOpen: vi.fn(),
-    setOwnerPinOpen: false,
-    setSetOwnerPinOpen: vi.fn(),
-    handleBackToOwnerClick: vi.fn(),
-    handleSwitchedBackToOwner: vi.fn(),
+    handleSwitchAccount: vi.fn(),
     handleReturnToPicker: vi.fn(),
     handleOwnerAccountLogout: vi.fn(),
   };
 }
 
-function renderMenu() {
+function renderMenu(props: { linkedStaff?: boolean } = {}) {
   return render(
-    <PosModeOverflowMenu storeId="store-001" open={true} onOpenChange={() => {}} />
+    <PosModeOverflowMenu storeId="store-001" open={true} onOpenChange={() => {}} {...props} />
   );
 }
 
@@ -65,14 +54,11 @@ describe("PosModeOverflowMenu — account switcher (distinct from Clock In/Out)"
     expect(screen.getByText("clockInOut.dialogTitle")).toBeInTheDocument();
   });
 
-  it("acting as staff: shows 'Back to Owner' and 'Log out of staff session', not 'Switch Account'", () => {
+  it("acting as staff: shows 'Switch Account' and 'Log out of staff session' — no direct-to-owner shortcut", () => {
     mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true, hasSwitchableStaff: true }));
     renderMenu();
-    expect(screen.getByText(/nav\.switchAccount \(pages\.staffRoleOwner\)/)).toBeInTheDocument();
+    expect(screen.getByText("nav.switchAccount")).toBeInTheDocument();
     expect(screen.getByText("nav.logoutStaffSession")).toBeInTheDocument();
-    // The bare "Switch Account" (owner picking a different staffer) is a
-    // different button, only shown when NOT acting as staff.
-    expect(screen.queryByText(/^nav\.switchAccount$/)).toBeNull();
   });
 
   it("owner active, other staff exist: shows the bare 'Switch Account' option", () => {
@@ -154,5 +140,94 @@ describe("PosModeOverflowMenu — account switcher (distinct from Clock In/Out)"
     mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true }));
     renderMenu();
     expect(screen.queryByText("nav.backToStores")).toBeNull();
+  });
+
+  describe("which action each button runs", () => {
+    it("'Switch Account' only opens the picker — it never logs the current persona out", () => {
+      const switcher = baseSwitcher({ actingAsStaff: true });
+      mockSwitcher.mockReturnValue(switcher);
+      const onOpenChange = vi.fn();
+      render(<PosModeOverflowMenu storeId="store-001" open={true} onOpenChange={onOpenChange} />);
+
+      fireEvent.click(screen.getByText("nav.switchAccount"));
+
+      expect(switcher.handleSwitchAccount).toHaveBeenCalledTimes(1);
+      expect(switcher.handleReturnToPicker).not.toHaveBeenCalled();
+      expect(switcher.handleOwnerAccountLogout).not.toHaveBeenCalled();
+      // The menu closes first so the picker isn't rendered behind a dialog.
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    it("'Log Out of Staff Session' is the destructive one", () => {
+      const switcher = baseSwitcher({ actingAsStaff: true });
+      mockSwitcher.mockReturnValue(switcher);
+      renderMenu();
+
+      fireEvent.click(screen.getByText("nav.logoutStaffSession"));
+
+      expect(switcher.handleReturnToPicker).toHaveBeenCalledTimes(1);
+      expect(switcher.handleSwitchAccount).not.toHaveBeenCalled();
+    });
+
+    it("an owner with other staff to pick from gets the same non-destructive Switch Account", () => {
+      const switcher = baseSwitcher({ actingAsStaff: false, hasSwitchableStaff: true });
+      mockSwitcher.mockReturnValue(switcher);
+      renderMenu();
+
+      fireEvent.click(screen.getByText("nav.switchAccount"));
+
+      expect(switcher.handleSwitchAccount).toHaveBeenCalledTimes(1);
+      expect(switcher.handleReturnToPicker).not.toHaveBeenCalled();
+    });
+
+    it("no 'switch straight to Owner' shortcut exists any more", () => {
+      mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true, hasSwitchableStaff: true }));
+      renderMenu();
+      expect(screen.queryByText(/pages\.staffRoleOwner/)).toBeNull();
+      expect(screen.getAllByText("nav.switchAccount")).toHaveLength(1);
+    });
+  });
+});
+
+describe("PosModeOverflowMenu — a linked staff account (signed in as themselves)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("hides Back Office even for a Manager: staff logins are POS Mode only, it would just bounce them back", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({ posSession: { staffName: "Mia", staffRole: "MANAGER" } })
+    );
+    renderMenu({ linkedStaff: true });
+    expect(screen.queryByText("nav.backOffice")).toBeNull();
+  });
+
+  it("the same Manager on the owner's device (PIN persona, not linked) still gets Back Office", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({ posSession: { staffName: "Mia", staffRole: "MANAGER" } })
+    );
+    renderMenu({ linkedStaff: false });
+    expect(screen.getByText("nav.backOffice")).toBeInTheDocument();
+  });
+
+  it("offers no 'Switch Account' — a linked account can only ever be itself", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true, hasSwitchableStaff: true }));
+    renderMenu({ linkedStaff: true });
+    expect(screen.queryByText("nav.switchAccount")).toBeNull();
+    // ...but locking the till back to the PIN screen is still theirs to do.
+    expect(screen.getByText("nav.logoutStaffSession")).toBeInTheDocument();
+  });
+
+  it("keeps 'Back to Stores' even while a PIN persona is active (it's their own account's store list)", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true }));
+    renderMenu({ linkedStaff: true });
+    expect(screen.getByText("nav.backToStores")).toBeInTheDocument();
+  });
+
+  it("calls the account logout 'Log Out', not 'Log Out of Owner Account'", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    renderMenu({ linkedStaff: true });
+    expect(screen.getByText("nav.logoutAccount")).toBeInTheDocument();
+    expect(screen.queryByText("nav.logoutOwnerAccount")).toBeNull();
   });
 });

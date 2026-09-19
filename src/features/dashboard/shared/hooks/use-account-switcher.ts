@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
-import { useOwnerPinStatus } from "./use-owner-pin";
 import { useHasSwitchableStaff } from "./use-has-switchable-staff";
 import { apiClient } from "@/lib/api/client";
 import { signOut } from "@/lib/auth-client";
@@ -29,7 +27,6 @@ import {
  */
 export function useAccountSwitcher(storeId: string | undefined) {
   const posSession = usePosSession();
-  const { data: pinStatus } = useOwnerPinStatus();
 
   // Role-based, not ID-based: a StaffMember row can itself have role "OWNER"
   // (e.g. seeded accounts), and that persona is functionally the owner too.
@@ -39,9 +36,6 @@ export function useAccountSwitcher(storeId: string | undefined) {
   // "Switch Account" only makes sense if there's actually someone else to
   // switch to — otherwise it reloads into a picker with nothing on it.
   const hasSwitchableStaff = useHasSwitchableStaff(storeId, !actingAsStaff);
-
-  const [verifyOwnerOpen, setVerifyOwnerOpen] = useState(false);
-  const [setOwnerPinOpen, setSetOwnerPinOpen] = useState(false);
 
   const clearStaffSession = async () => {
     posSession.logout();
@@ -54,18 +48,18 @@ export function useAccountSwitcher(storeId: string | undefined) {
     }
   };
 
-  const handleBackToOwnerClick = () => {
-    if (pinStatus?.hasPin) setVerifyOwnerOpen(true);
-    else setSetOwnerPinOpen(true);
-  };
-
-  const handleSwitchedBackToOwner = async () => {
-    await clearStaffSession();
-    // Hard reload, not just client state: the current page's server-rendered
-    // content was fetched under the (now-cleared) staff session, so a client
-    // router transition wouldn't re-run the page guards or refetch anything
-    // that was hidden/redirected while restricted.
-    window.location.reload();
+  // "I might want to be someone else" — shows the same picker
+  // (StoreAccessGate/PosStaffGate) without touching the current session at
+  // all. Deliberately non-destructive: the old bug here was clearing the
+  // session up front (see handleReturnToPicker below), which meant backing
+  // out of the picker without actually picking anyone forced a PIN
+  // re-entry just to resume being the same persona you already were.
+  // openPicker() only flips a transient, unpersisted flag the gate reads
+  // alongside isActive — the real switch (and any page-guard re-run it
+  // needs) still only happens once a NEW persona's login() actually
+  // succeeds; canceling out just closes the picker again.
+  const handleSwitchAccount = () => {
+    posSession.openPicker();
   };
 
   // Clears whichever persona is currently active on this device (staff or
@@ -74,8 +68,8 @@ export function useAccountSwitcher(storeId: string | undefined) {
   // StaffSession cookie, harmless to call even when there isn't one) is
   // exactly what StoreAccessGate checks to decide whether to show its
   // "who's using this device?" picker, so a reload lands right back there —
-  // used both for "Switch Account" (owner picking a different persona) and
-  // "Log Out of Staff Session" (staff stepping away, no owner PIN needed).
+  // used for "Log Out of Staff Session" (staff actually stepping away, not
+  // just peeking at who else could log in — that's handleSwitchAccount).
   const handleReturnToPicker = async () => {
     await clearStaffSession();
     window.location.reload();
@@ -126,15 +120,9 @@ export function useAccountSwitcher(storeId: string | undefined) {
 
   return {
     posSession,
-    pinStatus,
     actingAsStaff,
     hasSwitchableStaff,
-    verifyOwnerOpen,
-    setVerifyOwnerOpen,
-    setOwnerPinOpen,
-    setSetOwnerPinOpen,
-    handleBackToOwnerClick,
-    handleSwitchedBackToOwner,
+    handleSwitchAccount,
     handleReturnToPicker,
     handleOwnerAccountLogout,
   };

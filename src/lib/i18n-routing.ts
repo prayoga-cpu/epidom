@@ -37,34 +37,25 @@ export function getLocalizedPath(basePath: string, locale: Locale): string {
 }
 
 /**
- * Cookie marking "this visitor's browser-language auto-redirect decision
- * has already been made" — set on first visit to the unprefixed (fr) site
- * so we redirect an English/Indonesian browser to /en or /id at most once,
- * not on every request (and not fight a visitor who deliberately navigates
- * back to the French pages afterwards). A real HTTP cookie, not the
- * localStorage-based preference in src/lib/cookie-consent.ts — that one
- * isn't readable from the Edge proxy.
- */
-export const LOCALE_REDIRECT_COOKIE = "epidom_locale_redirect_seen";
-
-/**
  * Real HTTP cookie recording the visitor's own explicit language pick, made
  * via LangSwitcher on the marketing site (urlDriven mode) — takes priority
- * over the one-time Accept-Language guess above, since a deliberate choice
- * should always win and should keep winning on every future visit to an
- * unprefixed URL (a bookmark, the logo click, typing the bare domain),
- * not just the one that was open when they picked it. Same reasoning as
- * LOCALE_REDIRECT_COOKIE for why this must be a real cookie rather than the
- * localStorage-based preference in src/lib/cookie-consent.ts: only a real
- * cookie is readable from the Edge proxy before any React code runs.
+ * over the Accept-Language-based device-language detection below, since a
+ * deliberate choice should always win and should keep winning on every
+ * future visit to an unprefixed URL (a bookmark, the logo click, typing the
+ * bare domain), not just the one that was open when they picked it. Must be
+ * a real cookie rather than the localStorage-based preference in
+ * src/lib/cookie-consent.ts: only a real cookie is readable from the Edge
+ * proxy before any React code runs.
  */
 export const LOCALE_PREF_COOKIE = "epidom_locale_pref";
 
 /**
  * Best-guess locale from an Accept-Language header, e.g.
- * "en-US,en;q=0.9,fr;q=0.8" — used only to decide a one-time redirect for
- * first-time visitors hitting the unprefixed (fr) site; never changes what
- * a search engine/AI crawler sees (see isLikelyBot).
+ * "en-US,en;q=0.9,fr;q=0.8" — re-evaluated on every visit to the unprefixed
+ * (fr) site as long as no explicit LOCALE_PREF_COOKIE choice exists, so the
+ * site always follows the visitor's current device language rather than
+ * freezing a one-time guess. Never changes what a search engine/AI crawler
+ * sees (see isLikelyBot).
  */
 export function detectLocaleFromAcceptLanguage(header: string | null): Locale {
   if (!header) return DEFAULT_LOCALE;

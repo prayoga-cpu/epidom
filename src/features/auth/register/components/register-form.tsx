@@ -20,10 +20,16 @@ import { useRegister } from "../../hooks/use-auth";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { trackEvent } from "@/lib/analytics";
+import { useSearchParams } from "next/navigation";
+import { safeInternalPath } from "@/lib/safe-redirect";
 
 export function RegisterForm() {
   const { t } = useI18n();
   const { mutate: register, isPending } = useRegister();
+  // A deep link that has to survive signup + email verification (e.g. the
+  // store-transfer accept page) — validated, then used as the post-verify
+  // landing instead of /onboarding.
+  const next = safeInternalPath(useSearchParams().get("next"));
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -36,7 +42,7 @@ export function RegisterForm() {
   });
 
   const onSubmit = (data: RegisterInput) => {
-    register(data, {
+    register(next ? { ...data, callbackURL: next } : data, {
       onError: (err) => {
         toast.error(err.message || t("messages.registrationFailed"));
       },
@@ -67,7 +73,7 @@ export function RegisterForm() {
           });
           await authClient.signIn.social({
             provider: "google",
-            callbackURL: "/onboarding",
+            callbackURL: next ?? "/onboarding",
           });
         }}
       >
@@ -204,7 +210,7 @@ export function RegisterForm() {
       <p className="text-center text-sm" style={{ color: "rgba(251,249,228,0.55)" }}>
         {t("auth.alreadyHaveAccount")}{" "}
         <Link
-          href="/login"
+          href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
           className="font-semibold transition-colors hover:underline"
           style={{ color: "var(--epi-gold-400)" }}
         >

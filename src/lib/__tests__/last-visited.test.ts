@@ -1,5 +1,18 @@
 import { describe, it, expect } from "vitest";
-import { isBackOfficeAppPath, isPosAppPath } from "../last-visited";
+import { isBackOfficeAppPath, isPosAppPath, isResumableAppPath } from "../last-visited";
+
+describe("isResumableAppPath", () => {
+  it("no longer resumes onto the legacy root /profile", () => {
+    // /profile is redirect-only now (deactivated accounts aside), so a stale
+    // cookie holding it must be ignored rather than replayed through a redirect.
+    expect(isResumableAppPath("/profile")).toBe(false);
+    expect(isResumableAppPath("/store/cljabc12345/profile")).toBe(true);
+  });
+
+  it("still resumes the store picker", () => {
+    expect(isResumableAppPath("/stores")).toBe(true);
+  });
+});
 
 describe("isBackOfficeAppPath", () => {
   it("accepts a real Back Office section", () => {

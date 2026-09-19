@@ -489,6 +489,128 @@ export async function sendOwnerPinResetOtpEmail(
   }
 }
 
+/**
+ * Send a store ownership transfer invite — the recipient (who may not have
+ * an Epidom account yet) clicks through to accept and take over the store.
+ */
+export async function sendStoreOwnershipTransferEmail(
+  toEmail: string,
+  storeName: string,
+  fromName: string | null,
+  acceptUrl: string
+): Promise<SendEmailResult> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🔑 [DEV] Store Ownership Transfer Email");
+    console.log("To:", toEmail);
+    console.log("Store:", storeName);
+    console.log("Accept URL:", acceptUrl);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  // Two forms on purpose: the subject is plain text (escaping would show a
+  // literal "&amp;" for "Tom & Jerry"), the HTML body is not.
+  const fromText = fromName || "The current owner";
+  const from = escapeHtml(fromText);
+  const store = escapeHtml(storeName);
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: toEmail,
+      subject: `${fromText} wants to transfer "${storeName}" to you on ${APP_NAME}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #444;">Hi,</h2>
+  <p><strong>${from}</strong> wants to transfer ownership of the store <strong>${store}</strong> on <strong>${APP_NAME}</strong> to you (${escapeHtml(toEmail)}).</p>
+  <p>Accepting gives you full owner access to this store — its data, staff, and settings — and the current owner will no longer have access to it.</p>
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${acceptUrl}" style="display: inline-block; background: #444; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold;">Review &amp; Accept Transfer</a>
+  </div>
+  <p style="color: #888; font-size: 13px;">If you don't have an ${APP_NAME} account yet, you'll be asked to create one with this same email address first. This link expires in 7 days. If you weren't expecting this, you can safely ignore this email — nothing changes until it's accepted.</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+/**
+ * Invite a staff member to claim (or create) their own Epidom sign-in, linked
+ * to their StaffMember row. Deliberately separate from sendStaffPinEmail: that
+ * one delivers a PIN and says nothing about an account. This one carries a
+ * single-use, expiring claim link (StaffInvite.token) and — unlike the PIN
+ * email — the caller awaits its result, so "invite sent" is only ever reported
+ * on confirmed delivery.
+ *
+ * staffName and storeName are owner-typed free text landing inside an email
+ * that carries a security-relevant link, so both are HTML-escaped.
+ */
+export async function sendStaffAccountInviteEmail(
+  toEmail: string,
+  staffName: string,
+  storeName: string,
+  inviteUrl: string
+): Promise<SendEmailResult> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🔗 [DEV] Staff Account Invite Email");
+    console.log("To:", toEmail);
+    console.log("Store:", storeName);
+    console.log("Invite URL:", inviteUrl);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const name = escapeHtml(staffName);
+  const store = escapeHtml(storeName);
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: toEmail,
+      subject: `Set up your ${APP_NAME} sign-in for ${storeName}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #444;">Hi ${name},</h2>
+  <p>You've been added as a staff member at <strong>${store}</strong> on <strong>${APP_NAME}</strong>. You can now sign in with your own account and go straight to the store.</p>
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${inviteUrl}" style="display: inline-block; background: #444; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold;">Set Up My Sign-In</a>
+  </div>
+  <p style="color: #888; font-size: 13px;">This link is for ${escapeHtml(toEmail)} only, can be used once, and expires in 7 days. If you already have an ${APP_NAME} account with this email, you'll be asked to sign in to it; otherwise you'll choose a password. You'll still enter your staff PIN at the store.</p>
+  <p style="color: #888; font-size: 13px;">If you weren't expecting this, you can safely ignore this email — nothing changes until the link is used.</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
 // Recipients for internal feedback notifications
 const FEEDBACK_NOTIFICATION_RECIPIENTS = [
   "cro@prionation.io",

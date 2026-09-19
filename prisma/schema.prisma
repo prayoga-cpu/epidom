@@ -54,6 +54,10 @@ model User {
   customDevelopmentRequests CustomDevelopmentRequest[]
   business                  Business?
   subscription              Subscription?
+  // The StaffMember row this User is linked to as staff (if any) —
+  // distinct from `business`, which is what this User owns. A User can
+  // hold both at once (owns their own store, also works a shift elsewhere).
+  staffMember               StaffMember?
 
   @@map("user")
 }
@@ -160,6 +164,7 @@ model Store {
   aggregatorEmails               AggregatorEmail[]
   financeSettings                StoreFinanceSettings?
   staffSessions                  StaffSession[]
+  staffInvites                   StaffInvite[]
   wasteEntries                   WasteEntry[]
   pushSubscriptions              PushSubscription[]
   receiptSettings                StoreReceiptSettings?
@@ -1393,7 +1398,18 @@ enum StockMode {
 enum PayType {
   HOURLY
   MONTHLY
+  SALES
   NONE
+}
+
+/// The "Contract" card's employment-type detail — purely descriptive
+/// (labor-cost math still runs off `payType`/`payRate` alone), same
+/// no-computed-consequence spirit as `customRoleLabel`.
+enum ContractType {
+  FREELANCE
+  PART_TIME
+  FULL_TIME
+  CONTRACT
 }
 
 enum BillingInterval {
@@ -1425,16 +1441,37 @@ model StaffMember {
   pin               String? // bcrypt hash — optional
   // Optional pay rate for labor-cost reporting — hours come from
   // AttendanceRecord/Shift timestamps, cost is hours × payRate for HOURLY,
-  // or a flat payRate/period for MONTHLY. NONE (default) means no rate is
-  // set (many roles are genuinely off-system payroll); reports must treat
-  // NONE as "unknown," not zero.
+  // a flat payRate/period for MONTHLY, or a payRate% of sales for SALES.
+  // NONE (default) means no rate is set (many roles are genuinely
+  // off-system payroll); reports must treat NONE as "unknown," not zero.
   payType           PayType            @default(NONE)
   payRate           Decimal?           @db.Decimal(12, 2)
+  // Employment type shown on the "Contract" card — purely descriptive,
+  // doesn't feed into any cost calculation (see ContractType's own comment).
+  contractType      ContractType?
   isActive          Boolean            @default(true)
   inviteStatus      String? // "pending" | "accepted" | null
+  // The real Epidom account this staff member can sign in as, once claimed
+  // via the invite-to-sign-in flow (src/app/api/staff-invite/[token]/complete).
+  // Nullable — most rows stay PIN-only forever. @unique caps this at one
+  // linked StaffMember per User platform-wide for v1 (see the plan's "Out of
+  // scope" — lifting this later needs its own multi-store-staff design
+  // pass), enforced here rather than left to UI convention, so a second
+  // claim attempt by the same User fails loudly (P2002) instead of quietly
+  // double-linking. onDelete: SetNull — purging a User account should
+  // unlink this row, not cascade-delete its PIN/attendance/shift history.
+  userId            String?            @unique
+  // Set the moment the claim actually completes (new password set, or an
+  // existing account's session matched the invite email) — this is the "did
+  // someone confirm ownership of THIS StaffMember row's email" claim,
+  // deliberately distinct from User.emailVerified (that account's own,
+  // unrelated Better Auth signup verification).
+  userLinkedAt      DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  staffInvites      StaffInvite[]
   shifts            Shift[]
   sessions          StaffSession[]
   staffSchedules    StaffSchedule[]
@@ -1444,6 +1481,39 @@ model StaffMember {
   @@unique([storeId, username])
   @@index([storeId])
   @@map("staff_members")
+}
+
+/// A single-use, time-limited token letting a StaffMember's contact email
+/// claim (or create) a real Epidom account login — see
+/// docs/staff-account-login.md / the plan this was built from. Deliberately
+/// its own table rather than reusing better-auth's own Verification model:
+/// that one is scoped to better-auth's internal flows (its own email-verify,
+/// its own password-reset) on User.email, and its row shape has no room for
+/// storeId/staffMemberId. Same reasoning already applied to keep
+/// StaffSession fully separate from better-auth's Session.
+model StaffInvite {
+  id              String      @id @default(cuid())
+  storeId         String
+  staffMemberId   String
+  // Snapshot of the target email at send time — StaffMember.email is
+  // mutable (an owner can edit it after sending), and re-deriving from the
+  // live row at click time could silently point an already-delivered link
+  // at a different mailbox than the one that actually received it.
+  email           String
+  // 32 bytes of CSPRNG randomness, base64url — same construction as
+  // StaffSession.token and better-auth's own Session.token. Never a cuid or
+  // other sequential id used as a bearer secret.
+  token           String      @unique
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  invitedByUserId String
+  createdAt       DateTime    @default(now())
+  store           Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember     StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([staffMemberId])
+  @@map("staff_invites")
 }
 
 /// A server-verified "this browser is currently operating as this staff

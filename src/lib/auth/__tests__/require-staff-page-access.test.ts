@@ -5,6 +5,11 @@ vi.mock("@/lib/staff-session", () => ({
   getActiveStaffSession: () => mockGetActiveStaffSession(),
 }));
 
+const mockGetStoreViewer = vi.fn();
+vi.mock("../store-viewer", () => ({
+  getStoreViewer: (...a: unknown[]) => mockGetStoreViewer(...a),
+}));
+
 const mockRedirect = vi.fn((url: string) => {
   throw new Error(`REDIRECT:${url}`);
 });
@@ -14,7 +19,9 @@ vi.mock("next/navigation", () => ({
 
 import { requireStaffPageAccess } from "../require-staff-page-access";
 
-function session(overrides: Partial<{ storeId: string; role: string; allowedPages: string[] }> = {}) {
+function session(
+  overrides: Partial<{ storeId: string; role: string; allowedPages: string[]; staffMemberId: string }> = {}
+) {
   return {
     storeId: "store-1",
     staffMemberId: "staff-1",
@@ -28,6 +35,10 @@ function session(overrides: Partial<{ storeId: string; role: string; allowedPage
 beforeEach(() => {
   mockGetActiveStaffSession.mockReset();
   mockRedirect.mockClear();
+  // Every pre-existing case below is the store's OWNER (with or without a PIN
+  // persona layered on) — the situation this guard was written for.
+  mockGetStoreViewer.mockReset();
+  mockGetStoreViewer.mockResolvedValue({ kind: "owner" });
 });
 
 describe("requireStaffPageAccess", () => {
@@ -104,5 +115,60 @@ describe("requireStaffPageAccess", () => {
     await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
       "REDIRECT:/store/store-1/pos/kds"
     );
+  });
+});
+
+
+describe("requireStaffPageAccess — a linked staff account is never the owner", () => {
+  const linked = { kind: "staff", staffMemberId: "staff-1" };
+
+  it("no PIN persona yet: nothing renders (NOT the owner's 'no session = unrestricted')", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(null);
+    await expect(requireStaffPageAccess("store-1", "/pos")).rejects.toThrow("REDIRECT:/stores");
+  });
+
+  it("a leftover PIN persona for a DIFFERENT staffer on this browser does not count", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(
+      session({ staffMemberId: "someone-else", allowedPages: ["/pos"] })
+    );
+    await expect(requireStaffPageAccess("store-1", "/pos")).rejects.toThrow("REDIRECT:/stores");
+  });
+
+  it("a persona for a different store does not count", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(session({ storeId: "store-2", allowedPages: ["/pos"] }));
+    await expect(requireStaffPageAccess("store-1", "/pos")).rejects.toThrow("REDIRECT:/stores");
+  });
+
+  it("their own persona with the page granted: allowed", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/pos", "/tables"] }));
+    await expect(requireStaffPageAccess("store-1", "/tables")).resolves.toBeUndefined();
+  });
+
+  it("their own persona without the page: redirected to a page they do have", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/pos"] }));
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+
+  it("never takes the owner shortcut for a persona whose role reads OWNER", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(session({ role: "OWNER", allowedPages: ["/pos"] }));
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+});
+
+describe("requireStaffPageAccess — no relationship to the store", () => {
+  it("fails closed", async () => {
+    mockGetStoreViewer.mockResolvedValue({ kind: "none" });
+    mockGetActiveStaffSession.mockResolvedValue(null);
+    await expect(requireStaffPageAccess("store-1", "/pos")).rejects.toThrow("REDIRECT:/stores");
   });
 });

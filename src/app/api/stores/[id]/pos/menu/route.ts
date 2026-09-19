@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
+import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
 
@@ -19,7 +19,7 @@ import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
  * department alongside Kitchen/Bar. Excluded entirely when the store hasn't
  * enabled the feature.
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
 
   const session = await getSession();
@@ -29,8 +29,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     });
   }
 
-  const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (verification instanceof NextResponse) return verification;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, request);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const verification = storeAccess.store;
 
   try {
     const storefront = await prisma.storefront.findUnique({

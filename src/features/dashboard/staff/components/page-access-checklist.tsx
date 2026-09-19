@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { cn } from "@/lib/utils";
 import { dashboardNavigation, posModeNavItems, grantableOnlyNavItems } from "@/config/navigation.config";
 import { ROLE_DEFAULT_PAGES } from "@/config/staff-permissions.config";
 import { staffRoleLabel } from "@/features/dashboard/shared/lib/staff-role-label";
@@ -57,6 +58,13 @@ interface PageAccessChecklistProps {
   /** Display name for templatePages in the summary hint (e.g. "Bartender")
    * — falls back to the plain role label (e.g. "Cashier") when omitted. */
   templateLabel?: string;
+  /** The account owner's own StaffMember row (role OWNER) — requireOwnerOnly
+   * and requireStaffPageAccess already bypass allowedPages entirely for that
+   * role (see their own doc comments), so letting an owner "customize" this
+   * row's access here would be editable but functionally meaningless. When
+   * true, every page renders granted and disabled instead of the normal
+   * toggle/summary/editable states. */
+  master?: boolean;
 }
 
 /**
@@ -73,6 +81,7 @@ export function PageAccessChecklist({
   onChange,
   templatePages: templatePagesProp,
   templateLabel,
+  master,
 }: PageAccessChecklistProps) {
   const { t } = useI18n();
   const templatePages = templatePagesProp ?? ROLE_DEFAULT_PAGES[role] ?? [];
@@ -97,7 +106,8 @@ export function PageAccessChecklist({
   };
 
   const renderEditableGroup = (
-    sections: { title?: string | null; items: typeof posModeNavItems }[]
+    sections: { title?: string | null; items: typeof posModeNavItems }[],
+    locked = false
   ) => (
     <div className="grid gap-3 sm:grid-cols-2">
       {sections.map((section, i) => (
@@ -110,13 +120,20 @@ export function PageAccessChecklist({
           {section.items.map((item) => (
             <label
               key={item.href}
-              className="flex cursor-pointer items-center gap-2 text-sm select-none"
+              className={cn(
+                "flex items-center gap-2 text-sm select-none",
+                locked ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+              )}
             >
               <input
                 type="checkbox"
                 className="rounded"
-                checked={value.includes(item.href)}
-                onChange={(e) => toggle(item.href, e.target.checked)}
+                checked={locked ? true : value.includes(item.href)}
+                disabled={locked}
+                // No handler at all when locked: a disabled input already
+                // swallows real clicks, but a locked (master) checklist
+                // shouldn't be able to emit a change by ANY route.
+                onChange={locked ? undefined : (e) => toggle(item.href, e.target.checked)}
               />
               {t(item.labelKey)}
             </label>
@@ -140,6 +157,34 @@ export function PageAccessChecklist({
       </div>
     );
   };
+
+  if (master) {
+    return (
+      <div className="space-y-3 rounded-lg border p-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-muted-foreground text-xs font-semibold">{t("pages.staffAccessTitle")}</p>
+          <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-amber-600 uppercase">
+            {t("pages.staffAccessMasterBadge")}
+          </span>
+        </div>
+        <p className="text-muted-foreground text-xs">{t("pages.staffAccessMasterHint")}</p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-primary text-[10px] font-bold tracking-wide uppercase">
+              {t("pages.staffAccessGroupPos")}
+            </p>
+            {renderEditableGroup([POS_SECTION], true)}
+          </div>
+          <div className="space-y-2 border-t pt-3">
+            <p className="text-primary text-[10px] font-bold tracking-wide uppercase">
+              {t("pages.staffAccessGroupBackOffice")}
+            </p>
+            {renderEditableGroup(BACK_OFFICE_SECTIONS, true)}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 rounded-lg border p-3">

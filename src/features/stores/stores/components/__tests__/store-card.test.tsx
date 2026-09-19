@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 vi.mock("@/components/lang/i18n-provider", () => ({
   useI18n: () => ({ t: (k: string) => k }),
 }));
+const routerPush = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: routerPush }),
 }));
 vi.mock("@/features/dashboard/profile/hooks/use-default-landing", () => ({
   useDefaultLanding: () => "dashboard",
@@ -71,5 +72,61 @@ describe("StoreCard — switch-to-POS shortcut", () => {
   it("defaults to hidden when currentPlan isn't passed at all", () => {
     render(<StoreCard store={store} isBlocked={false} />);
     expect(screen.queryByRole("link", { name: /nav\.pos/i })).toBeNull();
+  });
+});
+
+describe("StoreCard — a store the account works at as linked staff", () => {
+  const staffStore = {
+    ...store,
+    accessRole: "staff" as const,
+    staffHomePath: "/store/store-001/pos/orders",
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+    routerPush.mockClear();
+  });
+
+  it("is badged as staff and opens the POS page they can reach — not the Back Office landing", () => {
+    render(<StoreCard store={staffStore} isBlocked={false} currentPlan="ENTERPRISE" />);
+
+    expect(screen.getByText("stores.staffBadge")).toBeInTheDocument();
+    const card = screen.getByRole("link", { name: /Test Store/ });
+    expect(card.getAttribute("href")).toBe("/store/store-001/pos/orders");
+  });
+
+  it("offers no owner actions (edit/delete menu) and no separate POS shortcut", () => {
+    render(<StoreCard store={staffStore} isBlocked={false} currentPlan="ENTERPRISE" />);
+
+    expect(screen.queryByText("Open menu")).toBeNull();
+    expect(screen.queryByRole("link", { name: /nav\.pos/i })).toBeNull();
+  });
+
+  it("an owner's card is unchanged: no staff badge, edit/delete menu present, Back Office landing", () => {
+    render(<StoreCard store={{ ...store, accessRole: "owner" }} isBlocked={false} currentPlan="POS" />);
+
+    expect(screen.queryByText("stores.staffBadge")).toBeNull();
+    expect(screen.getByText("Open menu")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Test Store/ }).getAttribute("href")).toBe(
+      "/store/store-001/dashboard"
+    );
+  });
+
+  it("a role with no POS page: the card says so, links nowhere, and never sends them to pricing", () => {
+    render(
+      <StoreCard
+        store={{ ...staffStore, staffHomePath: null }}
+        isBlocked={false}
+        currentPlan="ENTERPRISE"
+      />
+    );
+
+    expect(screen.getByText("stores.staffNoAccessTitle")).toBeInTheDocument();
+    expect(screen.getByText("stores.staffNoAccessDesc")).toBeInTheDocument();
+    expect(screen.queryByText("stores.clickToSubscribe")).toBeNull();
+    expect(screen.queryByRole("link", { name: /Test Store/ })).toBeNull();
+
+    fireEvent.click(screen.getByText("Test Store"));
+    expect(routerPush).not.toHaveBeenCalled();
   });
 });

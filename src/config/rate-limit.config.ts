@@ -238,6 +238,32 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 30 lookups per minute
   },
 
+  // Staff PIN check — a 4-digit PIN has only 10,000 possibilities and there is
+  // no per-staffer lockout, so this is the only brute-force brake. Well above
+  // any real shift-change rhythm on a shared tablet, well below "try them all".
+  "/api/stores/[id]/staff/verify-pin": {
+    limit: 30,
+    window: 60, // 30 PIN attempts per minute
+  },
+
+  // Staff account invites — each one sends an email carrying a sign-in link,
+  // so keep an owner from turning this into a mail cannon.
+  "/api/stores/[id]/staff/[staffId]/invite": {
+    limit: 10,
+    window: 60, // 10 invite emails per minute
+  },
+
+  // Staff invite claim page (unauthenticated, IP-based). The token itself is
+  // 256 bits; this caps guessing attempts and the account-creation path.
+  "/api/staff-invite/lookup": {
+    limit: 30,
+    window: 60, // 30 lookups per minute
+  },
+  "/api/staff-invite/complete": {
+    limit: 10,
+    window: 60, // 10 claim attempts per minute
+  },
+
   // Webhooks (no rate limit - handled by Stripe)
   "/api/webhooks/stripe": {
     limit: 1000,

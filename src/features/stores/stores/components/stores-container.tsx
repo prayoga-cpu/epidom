@@ -28,6 +28,9 @@ export function StoresContainer() {
   // Email check only (no DB isAdmin flag) — same simplification the old
   // top-nav Admin badge used; this card replaces that badge.
   const isAdmin = mounted && isAdminEmail(session?.user?.email);
+  // A linked staff login: every store it can see is one it works at, so there
+  // is no plan of its own to upgrade and no store of its own to create here.
+  const isStaffOnly = !!stores?.length && stores.every((store) => store.accessRole === "staff");
 
   async function handleActivateFree() {
     setIsActivating(true);
@@ -60,9 +63,11 @@ export function StoresContainer() {
           const subscription = profile.subscription;
 
           // Redirect to onboarding only if the user has no business set up at all
-          // (subscription is always active now via free plan provisioning)
+          // (subscription is always active now via free plan provisioning) — and
+          // isn't a linked staff login: staff have no business by design, and
+          // onboarding is the owner's merchant setup, not theirs.
           const hasStore = business?.stores?.length > 0;
-          if (!business || !hasStore) {
+          if ((!business || !hasStore) && !profile.staffLink) {
             // Hard navigation, not router.replace(): a soft/client navigation here
             // can replay a stale cached "redirect to /login" from an earlier
             // unauthenticated visit to /onboarding (Next.js client router cache),
@@ -87,11 +92,13 @@ export function StoresContainer() {
     // - Mobile: w-full (matches button's w-full)
     // - Desktop: fixed width that approximates button's content-based width (w-auto)
     // Text "Subscribe to Create Store" + ArrowRight icon + padding ≈ 200px (sm) to 220px (md)
-    if (isLoadingSubscription) {
+    if (isLoadingSubscription || isLoading) {
       return (
         <Skeleton className="h-9 w-full rounded-full sm:h-10 sm:w-[200px] md:h-11 md:w-[220px]" />
       );
     }
+
+    if (isStaffOnly) return null;
 
     const hasSubscription = subscriptionStatus?.hasSubscription ?? false;
     const subscription = subscriptionStatus?.subscription;
@@ -264,7 +271,9 @@ export function StoresContainer() {
                       <StoreCard
                         key={store.id}
                         store={store}
-                        isBlocked={isBlocked}
+                        // The plan that gates a staff card is the OWNER's, which
+                        // the POS layout enforces on entry — never this account's.
+                        isBlocked={store.accessRole === "staff" ? false : isBlocked}
                         currentPlan={currentPlan}
                       />
                     );

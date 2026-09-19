@@ -10,6 +10,8 @@ import { PosModeUpgradeProvider, PosModeUpgradeBanner } from "./pos-mode-upgrade
 interface PosModeShellProps {
   storeId: string;
   children: React.ReactNode;
+  /** Signed in as a staff member's own linked account — see PosModeOverflowMenu. */
+  linkedStaff?: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ interface PosModeShellProps {
  * src/features/pos/ (the cashier/order/kds/tables feature module) is
  * wrapped here, not rewritten.
  */
-export function PosModeShell({ storeId, children }: PosModeShellProps) {
+export function PosModeShell({ storeId, children, linkedStaff = false }: PosModeShellProps) {
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   return (
@@ -35,7 +37,12 @@ export function PosModeShell({ storeId, children }: PosModeShellProps) {
         <PosModeTabBar storeId={storeId} onOverflowClick={() => setOverflowOpen(true)} />
       </div>
 
-      <PosModeOverflowMenu storeId={storeId} open={overflowOpen} onOpenChange={setOverflowOpen} />
+      <PosModeOverflowMenu
+        storeId={storeId}
+        open={overflowOpen}
+        onOpenChange={setOverflowOpen}
+        linkedStaff={linkedStaff}
+      />
     </PosModeUpgradeProvider>
   );
 }

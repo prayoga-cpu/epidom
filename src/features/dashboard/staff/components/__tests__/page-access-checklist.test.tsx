@@ -124,3 +124,47 @@ describe("PageAccessChecklist", () => {
     });
   });
 });
+
+describe("PageAccessChecklist — master (owner) mode", () => {
+  // The owner's own StaffMember row: requireOwnerOnly/requireStaffPageAccess
+  // bypass allowedPages entirely for role OWNER, so an editable checklist
+  // there would be pure decoration — and worse, a partial stored value (as a
+  // seeded row can have) must not read as "the owner is restricted".
+  it("labels the section MASTER and drops the customize / reset controls", () => {
+    render(<PageAccessChecklist role="OWNER" value={[]} onChange={vi.fn()} master />);
+    expect(screen.getByText("pages.staffAccessMasterBadge")).toBeInTheDocument();
+    expect(screen.getByText("pages.staffAccessMasterHint")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "pages.staffCustomAccessToggle" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "pages.staffResetToRoleDefaults" })).toBeNull();
+  });
+
+  it("shows every page granted and locked, whatever partial value was stored", () => {
+    render(
+      <PageAccessChecklist role="OWNER" value={["/pos", "/dashboard"]} onChange={vi.fn()} master />
+    );
+    const boxes = screen.getAllByRole("checkbox");
+    expect(boxes.length).toBeGreaterThan(10);
+    for (const box of boxes) {
+      expect(box).toBeChecked();
+      expect(box).toBeDisabled();
+    }
+    // Both shells are listed, not just the one the stored value happened to cover.
+    expect(screen.getByRole("checkbox", { name: "nav.pos" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "nav.finance" })).toBeChecked();
+  });
+
+  it("can't be changed by clicking", () => {
+    const onChange = vi.fn();
+    render(<PageAccessChecklist role="OWNER" value={[]} onChange={onChange} master />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "nav.finance" }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("doesn't change how a normal (non-master) checklist behaves", () => {
+    render(
+      <PageAccessChecklist role="CASHIER" value={ROLE_DEFAULT_PAGES.CASHIER} onChange={vi.fn()} />
+    );
+    expect(screen.queryByText("pages.staffAccessMasterBadge")).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "pages.staffCustomAccessToggle" })).toBeEnabled();
+  });
+});

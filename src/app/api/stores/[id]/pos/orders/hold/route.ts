@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSessionApi } from "@/lib/auth/require-session";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
+import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { createHoldOrderSchema } from "@/lib/validation/pos.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { Prisma, type OrderType } from "@prisma/client";
@@ -35,8 +35,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const session = await requireSessionApi();
   if (session instanceof NextResponse) return session;
 
-  const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (verification instanceof NextResponse) return verification;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, request);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const verification = storeAccess.store;
   const store = verification;
 
   // Defense in depth — the client only shows the Hold button when the store's

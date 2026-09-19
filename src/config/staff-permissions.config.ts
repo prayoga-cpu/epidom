@@ -143,3 +143,44 @@ const BASE_ROLE_TEMPLATE_IDS = new Set(["manager", "cashier", "kitchen"]);
 export function isBaseRoleTemplate(templateId: string): boolean {
   return BASE_ROLE_TEMPLATE_IDS.has(templateId);
 }
+
+/**
+ * POS Mode's pages, in the order a linked staff account is sent to the first
+ * one it has been granted. Back Office pages are deliberately absent: staff
+ * accounts are POS Mode only for now — the ~100 Back Office API routes have no
+ * answer yet to "may a Cashier do this?" (see
+ * src/lib/auth/staff-principal-policy.ts). Lives here rather than beside the
+ * redirect helper because the Staff dialog (client) needs it too, to warn an
+ * owner that a back-office-only role has nowhere to sign in to.
+ */
+const STAFF_HOME_PAGES = ["/pos", "/pos/orders", "/pos/kds", "/tables", "/pos/schedule"] as const;
+
+/**
+ * The first POS Mode page a staff member's grants cover, as an in-store path
+ * ("/pos", "/pos/kds", ...), or null when they have none — e.g. a back-office
+ * only Admin/Finance role.
+ */
+export function pickStaffHomePage(allowedPages: readonly string[]): string | null {
+  return STAFF_HOME_PAGES.find((p) => allowedPages.includes(p)) ?? null;
+}
+
+/**
+ * Like pickStaffHomePage, but honours a specific POS Mode page when the caller
+ * asked for one (the PWA shortcut `/go/pos/orders`) and the grants cover it.
+ * Anything else — a Back Office section, a page they weren't granted, junk —
+ * falls back to their first reachable POS page rather than a redirect that
+ * would just bounce.
+ */
+export function pickStaffLandingPage(
+  allowedPages: readonly string[],
+  requested?: string | null
+): string | null {
+  if (
+    requested &&
+    (STAFF_HOME_PAGES as readonly string[]).includes(requested) &&
+    allowedPages.includes(requested)
+  ) {
+    return requested;
+  }
+  return pickStaffHomePage(allowedPages);
+}

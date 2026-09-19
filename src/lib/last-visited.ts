@@ -77,7 +77,6 @@ const RESUMABLE_STORE_SECTIONS = new Set([
  * keep resolving from a months-old cookie.
  */
 const RESUMABLE_ROOT_PATHS = new Set([
-  "/profile",
   "/stores",
   "/owner",
   "/admin",

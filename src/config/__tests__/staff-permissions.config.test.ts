@@ -5,6 +5,8 @@ import {
   resolveStaffAllowedPages,
   STAFF_ROLE_TEMPLATES,
   isBaseRoleTemplate,
+  pickStaffHomePage,
+  pickStaffLandingPage,
 } from "../staff-permissions.config";
 import { updateStaffSchema } from "@/lib/validation/operations.schemas";
 
@@ -103,5 +105,28 @@ describe("STAFF_ROLE_TEMPLATES (merged Role + Job-title picker)", () => {
     for (const id of ["admin", "finance", "waiter", "bartender", "host"]) {
       expect(isBaseRoleTemplate(id)).toBe(false);
     }
+  });
+});
+
+describe("linked staff landing page", () => {
+  it("pickStaffHomePage takes POS Mode pages in tab order, never a Back Office page", () => {
+    expect(pickStaffHomePage(["/dashboard", "/pos/kds", "/pos"])).toBe("/pos");
+    expect(pickStaffHomePage(["/pos/kds", "/tables"])).toBe("/pos/kds");
+    expect(pickStaffHomePage(["/dashboard", "/finance", "/staff"])).toBeNull();
+    expect(pickStaffHomePage([])).toBeNull();
+  });
+
+  it("pickStaffLandingPage honours a requested POS page only when it's granted", () => {
+    const granted = ["/pos", "/pos/orders", "/pos/kds"];
+    expect(pickStaffLandingPage(granted, "/pos/kds")).toBe("/pos/kds");
+    expect(pickStaffLandingPage(granted, "/tables")).toBe("/pos"); // not granted
+    expect(pickStaffLandingPage(granted, "/finance")).toBe("/pos"); // Back Office
+    expect(pickStaffLandingPage(granted, "/pos/../etc")).toBe("/pos"); // junk
+    expect(pickStaffLandingPage(granted, null)).toBe("/pos");
+    expect(pickStaffLandingPage(granted)).toBe("/pos");
+  });
+
+  it("pickStaffLandingPage never lands on a page they weren't granted, even if requested", () => {
+    expect(pickStaffLandingPage(["/dashboard"], "/pos")).toBeNull();
   });
 });

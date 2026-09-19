@@ -9,6 +9,7 @@ import { AccountSettingsCard } from "./account-settings-card";
 import { ActivityLogCard } from "./activity-log-card";
 import { FeesAndTaxesCard } from "./fees-and-taxes-card";
 import { ReceiptSettingsCard } from "./receipt-settings-card";
+import { StoreOwnershipTransferCard } from "./store-ownership-transfer-card";
 import { useProfile } from "../hooks/use-profile";
 import type { ProfileData } from "../types";
 
@@ -101,6 +102,12 @@ export function ProfileClient({
       {storeId && (
         <div className="animate-slide-up-delayed-3">
           <ReceiptSettingsCard storeId={storeId} storeName={storeName} />
+        </div>
+      )}
+
+      {storeId && (
+        <div className="animate-slide-up-delayed-3">
+          <StoreOwnershipTransferCard storeId={storeId} storeName={storeName} />
         </div>
       )}
 

@@ -4,7 +4,6 @@ import { setRequestId } from "./lib/request-context";
 import {
   DEFAULT_LOCALE,
   LOCALE_HEADER,
-  LOCALE_REDIRECT_COOKIE,
   LOCALE_PREF_COOKIE,
   stripLocalePrefix,
   getLocalizedPath,
@@ -250,6 +249,15 @@ export default async function proxy(req: NextRequest) {
     "/onboarding", // Card validation step
     "/forgot-password",
     "/reset-password",
+    // Emailed store-ownership invite. Public on purpose: a recipient with no
+    // account (or not signed in) must SEE what they're being handed and get
+    // sign-in / sign-up options with the link preserved, rather than being
+    // bounced to a bare /login. The token in the URL is the credential; the
+    // page and its API routes enforce everything else themselves.
+    "/transfer-ownership",
+    // Emailed staff sign-in invite — same reasoning as above: the invitee has
+    // no session yet, and the page/API routes verify the token themselves.
+    "/staff-invite",
   ];
 
   // Check if current path is a public route — matched against basePath so
@@ -304,29 +312,23 @@ export default async function proxy(req: NextRequest) {
         }
       }
 
-      // First-time visitor on the unprefixed (fr) site: offer to switch to
-      // /en or /id based on browser language, once. Never for crawlers —
-      // they must always see the canonical fr content at "/" (Google's own
-      // guidance against language/geo auto-redirects breaking crawlability
-      // — see isLikelyBot) — and never a second time for the same visitor
-      // (LOCALE_REDIRECT_COOKIE), so it doesn't fight someone who
-      // deliberately navigates back to the French pages afterwards.
-      const alreadyDecided = req.cookies.has(LOCALE_REDIRECT_COOKIE);
-      const cookieOpts = { maxAge: 60 * 60 * 24 * 365, path: "/" };
-      if (!alreadyDecided && !isLikelyBot(req.headers.get("user-agent"))) {
+      // No explicit pick recorded yet: always follow the browser's device
+      // language on the unprefixed (fr) site, on every visit — not just the
+      // first — so a visitor whose OS/browser language changes (or who
+      // simply never opened LangSwitcher) keeps landing on the language
+      // their device currently reports. Never for crawlers — they must
+      // always see the canonical fr content at "/" (Google's own guidance
+      // against language/geo auto-redirects breaking crawlability — see
+      // isLikelyBot). This stops the moment they pick a language via
+      // LangSwitcher, which records that choice in LOCALE_PREF_COOKIE above
+      // and takes over permanently.
+      if (!isLikelyBot(req.headers.get("user-agent"))) {
         const detected = detectLocaleFromAcceptLanguage(req.headers.get("accept-language"));
         if (detected !== DEFAULT_LOCALE) {
           const redirectUrl = req.nextUrl.clone();
           redirectUrl.pathname = getLocalizedPath(basePath, detected);
-          const redirectResponse = NextResponse.redirect(redirectUrl);
-          redirectResponse.cookies.set(LOCALE_REDIRECT_COOKIE, "1", cookieOpts);
-          return redirectResponse;
+          return NextResponse.redirect(redirectUrl);
         }
-        // Detected fr (or nothing useful) — stay, but remember the
-        // decision so we don't re-parse Accept-Language on every request.
-        const frResponse = NextResponse.next({ request: { headers: localizedRequestHeaders } });
-        frResponse.cookies.set(LOCALE_REDIRECT_COOKIE, "1", cookieOpts);
-        return frResponse;
       }
       // fr has no prefix, so the path already resolves to the right route.
       return NextResponse.next({ request: { headers: localizedRequestHeaders } });

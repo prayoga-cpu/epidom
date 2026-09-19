@@ -21,14 +21,19 @@ import { useCustomerDisplaySettings } from "@/features/pos/hooks/use-customer-di
 import { openCustomerDisplay } from "@/features/pos/lib/open-customer-display";
 import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
 import { useAccountSwitcher } from "@/features/dashboard/shared/hooks/use-account-switcher";
-import { VerifyOwnerPinDialog } from "@/features/dashboard/shared/verify-owner-pin-dialog";
-import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
 import { LAST_VISITED_BACK_OFFICE_COOKIE, isBackOfficeAppPath } from "@/lib/last-visited";
 
 interface PosModeOverflowMenuProps {
   storeId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * This browser is signed in as a staff member's OWN Epidom account (not the
+   * owner's account with a PIN persona on top). Their account is theirs: no
+   * Back Office to return to, nobody else to switch to, and "Owner account"
+   * isn't what they'd be logging out of.
+   */
+  linkedStaff?: boolean;
 }
 
 /**
@@ -38,7 +43,12 @@ interface PosModeOverflowMenuProps {
  * Sheet never gets a truly definite height through this nested flex/scroll
  * chain, Dialog does.
  */
-export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOverflowMenuProps) {
+export function PosModeOverflowMenu({
+  storeId,
+  open,
+  onOpenChange,
+  linkedStaff = false,
+}: PosModeOverflowMenuProps) {
   const { t } = useI18n();
   const displayEnabled = useCustomerDisplaySettings((state) => state.enabled);
   const setDisplayEnabled = useCustomerDisplaySettings((state) => state.setEnabled);
@@ -48,12 +58,7 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
     posSession,
     actingAsStaff,
     hasSwitchableStaff,
-    verifyOwnerOpen,
-    setVerifyOwnerOpen,
-    setOwnerPinOpen,
-    setSetOwnerPinOpen,
-    handleBackToOwnerClick,
-    handleSwitchedBackToOwner,
+    handleSwitchAccount,
     handleReturnToPicker,
     handleOwnerAccountLogout,
   } = useAccountSwitcher(storeId);
@@ -62,8 +67,11 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
   // (docs/back-office-revamp.md) — Owner/Manager only. Cashier/Kitchen never
   // see this: their allowedPages has no Back Office pages to land on, and
   // showing them a link into a shell they'd immediately be redirected out of
-  // would be a dead end, not a shortcut.
-  const canReachBackOffice = posSession.staffRole === "OWNER" || posSession.staffRole === "MANAGER";
+  // would be a dead end, not a shortcut. Same for a linked staff account, even
+  // a Manager: staff logins are POS Mode only for now, so Back Office would
+  // just redirect them straight back here.
+  const canReachBackOffice =
+    !linkedStaff && (posSession.staffRole === "OWNER" || posSession.staffRole === "MANAGER");
 
   // Resumes the last Back Office section actually visited (Finance, Staff,
   // whatever was open before switching into POS Mode) instead of always
@@ -161,48 +169,40 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
                 {posSession.staffRole ? ` · ${posSession.staffRole}` : ""}
               </p>
 
-              {actingAsStaff ? (
-                <>
-                  <Button
-                    variant="outline"
-                    className="h-11 w-full justify-start gap-2"
-                    onClick={handleBackToOwnerClick}
-                  >
-                    <KeyRound className="size-4" aria-hidden />
-                    {t("nav.switchAccount")} ({t("pages.staffRoleOwner")})
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-11 w-full justify-start gap-2"
-                    onClick={() => {
-                      onOpenChange(false);
-                      handleReturnToPicker();
-                    }}
-                  >
-                    <LogOut className="size-4" aria-hidden />
-                    {t("nav.logoutStaffSession")}
-                  </Button>
-                </>
-              ) : (
-                hasSwitchableStaff && (
-                  <Button
-                    variant="outline"
-                    className="h-11 w-full justify-start gap-2"
-                    onClick={() => {
-                      onOpenChange(false);
-                      handleReturnToPicker();
-                    }}
-                  >
-                    <RefreshCw className="size-4" aria-hidden />
-                    {t("nav.switchAccount")}
-                  </Button>
-                )
+              {/* A linked account can only ever be itself — the server refuses
+                  any other persona for it — so there's nobody to switch to. */}
+              {!linkedStaff && (actingAsStaff || hasSwitchableStaff) && (
+                <Button
+                  variant="outline"
+                  className="h-11 w-full justify-start gap-2"
+                  onClick={() => {
+                    onOpenChange(false);
+                    handleSwitchAccount();
+                  }}
+                >
+                  <RefreshCw className="size-4" aria-hidden />
+                  {t("nav.switchAccount")}
+                </Button>
+              )}
+
+              {actingAsStaff && (
+                <Button
+                  variant="outline"
+                  className="h-11 w-full justify-start gap-2"
+                  onClick={() => {
+                    onOpenChange(false);
+                    handleReturnToPicker();
+                  }}
+                >
+                  <LogOut className="size-4" aria-hidden />
+                  {t("nav.logoutStaffSession")}
+                </Button>
               )}
 
               {/* Tied to the real, underlying account session — a staff PIN
                   persona has no store list of its own, same gate nav-user.tsx
                   uses for this same action in Back Office. */}
-              {!actingAsStaff && (
+              {(!actingAsStaff || linkedStaff) && (
                 <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
                   <Link href="/stores" onClick={() => onOpenChange(false)}>
                     <Store className="size-4" aria-hidden />
@@ -220,7 +220,7 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
                 }}
               >
                 <LogOut className="size-4" aria-hidden />
-                {t("nav.logoutOwnerAccount")}
+                {linkedStaff ? t("nav.logoutAccount") : t("nav.logoutOwnerAccount")}
               </Button>
             </div>
           </div>
@@ -228,18 +228,6 @@ export function PosModeOverflowMenu({ storeId, open, onOpenChange }: PosModeOver
       </Dialog>
 
       <ClockInOutDialog open={clockOpen} onOpenChange={setClockOpen} storeId={storeId} />
-      <VerifyOwnerPinDialog
-        open={verifyOwnerOpen}
-        onOpenChange={setVerifyOwnerOpen}
-        onVerified={handleSwitchedBackToOwner}
-      />
-      <SetOwnerPinDialog
-        open={setOwnerPinOpen}
-        onOpenChange={setSetOwnerPinOpen}
-        title="Set Owner PIN to continue"
-        description="No Owner PIN is set yet. Set one now to switch this device back to your Owner account."
-        onSuccess={handleSwitchedBackToOwner}
-      />
     </>
   );
 }

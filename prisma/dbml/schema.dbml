@@ -29,6 +29,7 @@ Table user {
   customDevelopmentRequests custom_development_requests [not null]
   business businesses
   subscription subscriptions
+  staffMember staff_members
 }
 
 Table session {
@@ -121,6 +122,7 @@ Table stores {
   aggregatorEmails aggregator_emails [not null]
   financeSettings store_finance_settings
   staffSessions staff_sessions [not null]
+  staffInvites staff_invites [not null]
   wasteEntries waste_entries [not null]
   pushSubscriptions push_subscriptions [not null]
   receiptSettings store_receipt_settings
@@ -744,11 +746,16 @@ Table staff_members {
   pin String
   payType PayType [not null, default: 'NONE']
   payRate Decimal
+  contractType ContractType
   isActive Boolean [not null, default: true]
   inviteStatus String
+  userId String [unique]
+  userLinkedAt DateTime
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   store stores [not null]
+  user user
+  staffInvites staff_invites [not null]
   shifts shifts [not null]
   sessions staff_sessions [not null]
   staffSchedules staff_schedules [not null]
@@ -758,6 +765,29 @@ Table staff_members {
   indexes {
     (storeId, username) [unique]
   }
+}
+
+Table staff_invites {
+  id String [pk]
+  storeId String [not null]
+  staffMemberId String [not null]
+  email String [not null]
+  token String [unique, not null]
+  expiresAt DateTime [not null]
+  consumedAt DateTime
+  invitedByUserId String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  store stores [not null]
+  staffMember staff_members [not null]
+
+  Note: 'A single-use, time-limited token letting a StaffMember\'s contact email
+claim (or create) a real Epidom account login — see
+docs/staff-account-login.md / the plan this was built from. Deliberately
+its own table rather than reusing better-auth\'s own Verification model:
+that one is scoped to better-auth\'s internal flows (its own email-verify,
+its own password-reset) on User.email, and its row shape has no room for
+storeId/staffMemberId. Same reasoning already applied to keep
+StaffSession fully separate from better-auth\'s Session.'
 }
 
 Table staff_sessions {
@@ -1414,7 +1444,15 @@ Enum StockMode {
 Enum PayType {
   HOURLY
   MONTHLY
+  SALES
   NONE
+}
+
+Enum ContractType {
+  FREELANCE
+  PART_TIME
+  FULL_TIME
+  CONTRACT
 }
 
 Enum BillingInterval {
@@ -1626,6 +1664,12 @@ Ref: reservations.storeId > stores.id [delete: Cascade]
 Ref: reservations.tableId > tables.id [delete: Set Null]
 
 Ref: staff_members.storeId > stores.id [delete: Cascade]
+
+Ref: staff_members.userId - user.id [delete: Set Null]
+
+Ref: staff_invites.storeId > stores.id [delete: Cascade]
+
+Ref: staff_invites.staffMemberId > staff_members.id [delete: Cascade]
 
 Ref: staff_sessions.storeId > stores.id [delete: Cascade]
 
