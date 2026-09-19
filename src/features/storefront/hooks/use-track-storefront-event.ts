@@ -2,7 +2,12 @@
 
 import { useEffect, useRef } from "react";
 
-export type StorefrontEventType = "VIEW" | "MENU_VIEW" | "ITEM_VIEW" | "WHATSAPP_CLICK";
+export type StorefrontEventType =
+  | "VIEW"
+  | "MENU_VIEW"
+  | "ITEM_VIEW"
+  | "WHATSAPP_CLICK"
+  | "REVIEW_CLICK";
 
 interface TrackEventExtra {
   menuItemId?: string;

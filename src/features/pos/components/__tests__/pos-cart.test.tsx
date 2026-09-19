@@ -58,8 +58,8 @@ vi.mock("../../hooks/use-print-receipt", () => ({
   usePrintReceipt: () => ({ print: env.print, isPrinting: false }),
 }));
 vi.mock("../../hooks/use-printer-settings", () => ({
-  usePrinterSettings: (selector: (s: { paperWidth: 32 | 48 }) => unknown) =>
-    selector({ paperWidth: 32 }),
+  usePrinterSettings: (selector: (s: { printers: { MAIN: { paperWidth: 32 | 48 } } }) => unknown) =>
+    selector({ printers: { MAIN: { paperWidth: 32 } } }),
 }));
 
 // The two heavyweight siblings owned by the checkout side: only their props matter here.

@@ -6,6 +6,7 @@ import {
   Monitor,
   KeyRound,
   CalendarClock,
+  Wallet,
   ExternalLink,
   LayoutDashboard,
   ArrowRight,
@@ -21,6 +22,7 @@ import { useCustomerDisplaySettings } from "@/features/pos/hooks/use-customer-di
 import { openCustomerDisplay } from "@/features/pos/lib/open-customer-display";
 import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
 import { useAccountSwitcher } from "@/features/dashboard/shared/hooks/use-account-switcher";
+import { canManageShift } from "@/features/pos/lib/shift-access";
 import { LAST_VISITED_BACK_OFFICE_COOKIE, isBackOfficeAppPath } from "@/lib/last-visited";
 
 interface PosModeOverflowMenuProps {
@@ -136,6 +138,20 @@ export function PosModeOverflowMenu({
               <KeyRound className="size-4" aria-hidden />
               {t("clockInOut.dialogTitle")}
             </Button>
+
+            {/* Open / watch / finish the till. Only for a persona that runs a
+                register — the same rule the status bar's shift label follows. */}
+            {canManageShift({
+              staffRole: posSession.staffRole,
+              allowedPages: posSession.allowedPages,
+            }) && (
+              <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
+                <Link href={`/store/${storeId}/pos/shift`} onClick={() => onOpenChange(false)}>
+                  <Wallet className="size-4" aria-hidden />
+                  {t("pos.shift.title")}
+                </Link>
+              </Button>
+            )}
 
             <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
               <Link href={`/store/${storeId}/pos/schedule`} onClick={() => onOpenChange(false)}>

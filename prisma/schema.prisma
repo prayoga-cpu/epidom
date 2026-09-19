@@ -2088,6 +2088,16 @@ model Storefront {
   grabfoodUrl    String?
   shopeefoodUrl  String?
   googleMapsUrl  String?
+  // Google review integration. Google has no API for posting a review on a
+  // customer's behalf, so this only stores what's needed to deep-link into
+  // Google's own review form (the customer signs in with their Google
+  // account there). Set from Back Office → Storefront → Google Reviews, which
+  // accepts a review link or a Place ID and normalizes it to these fields
+  // server-side — never write them from a raw client value.
+  googlePlaceId       String?
+  googleReviewUrl     String?
+  // Pauses the "Review us on Google" prompts without losing the connection.
+  googleReviewEnabled Boolean @default(true)
   customLinks    Json?
 
   isPublished         Boolean @default(false)
@@ -2114,6 +2124,7 @@ enum StorefrontEventType {
   MENU_VIEW // /[slug]/menu page load
   ITEM_VIEW // /[slug]/menu/[itemId] page load
   WHATSAPP_CLICK // click on the WhatsApp/"chat" CTA
+  REVIEW_CLICK // tap on the "Review us on Google" CTA (profile or order page)
 }
 
 model StorefrontEvent {

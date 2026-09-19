@@ -715,13 +715,20 @@ export async function mergeHeldOrdersInTx(
 
 /** The additive response both routes return (PosOrderCreatedDto + legacy fields). */
 export function buildPosOrderCreatedResponse(
-  order: { id: string; orderNumber: string; status: OrderStatus; paymentStatus: string },
+  order: {
+    id: string;
+    orderNumber: string;
+    status: OrderStatus;
+    paymentStatus: string;
+    queueNumber?: number | null;
+  },
   s: PosSettlement,
   pointsEarned: number
 ): PosOrderCreatedDto & { status: OrderStatus; paymentStatus: string } {
   return {
     orderId: order.id,
     orderNumber: order.orderNumber,
+    queueNumber: order.queueNumber ?? null,
     // Kept alongside the new DTO fields: existing clients read these two.
     status: order.status,
     paymentStatus: order.paymentStatus,

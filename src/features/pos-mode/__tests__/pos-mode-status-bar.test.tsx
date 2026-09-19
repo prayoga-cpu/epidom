@@ -11,6 +11,9 @@ vi.mock("@/features/dashboard/shared/hooks/use-current-store", () => ({
 vi.mock("@/features/pos/components/pos-printer-menu", () => ({
   PosPrinterMenu: () => <button aria-label="printer" />,
 }));
+// Has its own test (pos-mode-shift-chip.test.tsx); it needs a query client this
+// file's bar-layout assertions have no reason to set up.
+vi.mock("../pos-mode-shift-chip", () => ({ PosModeShiftChip: () => null }));
 
 import { PosModeStatusBar } from "../pos-mode-status-bar";
 import { PosModeShell } from "../pos-mode-shell";

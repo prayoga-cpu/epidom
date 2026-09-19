@@ -1,6 +1,7 @@
 import { apiClient } from "./client";
 import {
   UpdateStorefrontInput,
+  UpdateGoogleReviewInput,
   CreateMenuCategoryInput,
   UpdateMenuCategoryInput,
   CreateMenuItemInput,
@@ -17,6 +18,21 @@ export class StorefrontApi {
 
   async updateStorefront(storeId: string, input: UpdateStorefrontInput): Promise<any> {
     return apiClient.patch(`/stores/${storeId}/storefront`, input);
+  }
+
+  /**
+   * Connect / pause / disconnect the Google review link. Its own endpoint —
+   * NOT updateStorefront, whose schema resets isPublished when omitted.
+   */
+  async updateGoogleReview(
+    storeId: string,
+    input: UpdateGoogleReviewInput
+  ): Promise<{
+    googlePlaceId: string | null;
+    googleReviewUrl: string | null;
+    googleReviewEnabled: boolean;
+  }> {
+    return apiClient.patch(`/stores/${storeId}/storefront/google-review`, input);
   }
 
   // ============ Category Operations ============

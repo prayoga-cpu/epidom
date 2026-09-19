@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { storefrontService } from "@/lib/services";
 import { PublicProfile } from "@/features/storefront/components/public-profile";
 import { StorefrontStructuredData } from "@/components/seo/structured-data";
+import { resolveGoogleLinks } from "@/lib/utils/google-review";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -75,8 +76,17 @@ export default async function StorefrontPage({ params }: PageProps) {
   // across the Server->Client boundary just to have them go unused, which is
   // exactly what was crashing with "Decimal objects are not supported."
   const { menuCategories: _menuCategories, ...storefrontWithoutMenu } = storefront;
+
+  // The storefront's Google links are derived here, not stored: connecting
+  // Google Reviews in Back Office also gives the store a Maps link (unless a
+  // hand-entered one exists), and the review link disappears the moment the
+  // prompts are paused — no second field to keep in sync.
+  const { mapsUrl, reviewUrl } = resolveGoogleLinks(storefront);
+
   const serialized = {
     ...storefrontWithoutMenu,
+    googleMapsUrl: mapsUrl,
+    googleReviewUrl: reviewUrl,
     reservableTables,
   };
 
@@ -92,7 +102,7 @@ export default async function StorefrontPage({ params }: PageProps) {
         whatsappNumber={storefront.whatsappNumber}
         instagramUrl={storefront.instagramUrl}
         tiktokUrl={storefront.tiktokUrl}
-        googleMapsUrl={storefront.googleMapsUrl}
+        googleMapsUrl={mapsUrl}
         openingHours={storefront.openingHours}
       />
       <PublicProfile storefront={serialized as any} />

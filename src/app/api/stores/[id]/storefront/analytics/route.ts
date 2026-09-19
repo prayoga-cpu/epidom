@@ -95,6 +95,7 @@ export const GET = withApiHandler(
     let pageViews = 0;
     let menuViews = 0;
     let whatsappClicks = 0;
+    let reviewClicks = 0;
 
     const getBucket = (dateKey: string): DailyBucket => {
       let bucket = buckets.get(dateKey);
@@ -121,6 +122,8 @@ export const GET = withApiHandler(
       } else if (event.type === "WHATSAPP_CLICK") {
         whatsappClicks += 1;
         bucket.whatsappClicks += 1;
+      } else if (event.type === "REVIEW_CLICK") {
+        reviewClicks += 1;
       } else if (event.type === "ITEM_VIEW" && event.menuItemId) {
         const existing = itemViewCounts.get(event.menuItemId);
         itemViewCounts.set(event.menuItemId, {
@@ -166,6 +169,7 @@ export const GET = withApiHandler(
         menuViewRate: rate(menuViews),
         whatsappClicks,
         chatConversionRate: rate(whatsappClicks),
+        reviewClicks,
         storefrontOrders,
         storefrontRevenue,
         orderConversionRate: rate(storefrontOrders),

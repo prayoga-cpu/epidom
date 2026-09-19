@@ -26,6 +26,7 @@ interface StorefrontAnalyticsData {
   menuViewRate: number;
   whatsappClicks: number;
   chatConversionRate: number;
+  reviewClicks: number;
   storefrontOrders: number;
   storefrontRevenue: number;
   orderConversionRate: number;
@@ -145,6 +146,11 @@ export function StorefrontAnalytics({ storeId }: StorefrontAnalyticsProps) {
               label={t("storefront.analytics.chatConversion")}
               value={(data?.whatsappClicks ?? 0).toLocaleString()}
               subtext={`${data?.chatConversionRate ?? 0}% ${t("storefront.analytics.ofVisitors")}`}
+            />
+            <StatCard
+              label={t("storefront.analytics.reviewClicks")}
+              value={(data?.reviewClicks ?? 0).toLocaleString()}
+              subtext={t("storefront.analytics.reviewClicksDesc")}
             />
             <StatCard
               label={t("storefront.analytics.storefrontOrders")}

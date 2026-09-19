@@ -123,6 +123,10 @@ model Storefront {
   grabfoodUrl     String?
   shopeefoodUrl   String?
   googleMapsUrl   String?
+  // Google Reviews — normalized server-side from a pasted review link / Place ID
+  googlePlaceId       String?
+  googleReviewUrl     String?
+  googleReviewEnabled Boolean @default(true)
   customLinks     Json?
 
   isPublished     Boolean  @default(false)

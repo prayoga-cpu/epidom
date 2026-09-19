@@ -254,7 +254,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<OrderHistoryItem | null>(null);
   const [isPrintingReport, setIsPrintingReport] = useState(false);
-  const paperWidth = usePrinterSettings((s) => s.paperWidth);
+  const paperWidth = usePrinterSettings((s) => s.printers.MAIN.paperWidth);
 
   const [filterState, setFilterState] = usePersistedState(
     `epidom-pos-history-filters-${storeId}`,

@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Check, CircleCheckBig, Clock, Loader2, Mail, MessageCircle, Printer } from "lucide-react";
+import {
+  Check,
+  CircleCheckBig,
+  Clipboard,
+  Clock,
+  Loader2,
+  Mail,
+  MessageCircle,
+  Printer,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -20,6 +29,7 @@ import { cn } from "@/lib/utils";
 import type { ReceiptData } from "@/lib/pwa/thermal-printer";
 import type { SendReceiptBody, SendReceiptEmailBody } from "@/types/api/cashier";
 import { usePrintReceipt } from "../hooks/use-print-receipt";
+import { useHasOrderPrinters, usePrintOrder, type OrderPrintInput } from "../hooks/use-print-order";
 
 export interface OrderCompleteResult {
   /** null for an order queued offline — it has no server id (and no receipt page) until it syncs. */
@@ -31,6 +41,8 @@ export interface OrderCompleteResult {
   /** "Cash", "QRIS", or "Cash €10.00 · QRIS €5.00" for a split. */
   paymentSummary: string;
   receipt: ReceiptData;
+  /** What the kitchen / bar tickets and labels are built from — lets this screen reprint them. */
+  printInput?: OrderPrintInput;
   /** Prefills the two send fields. Any part may be missing. */
   customer?: { name?: string | null; phone?: string | null; email?: string | null } | null;
   /** False for a Pay Later order, which is placed but not yet paid. Default true. */
@@ -73,6 +85,8 @@ export function PosOrderCompleteDialog({
 }: PosOrderCompleteDialogProps) {
   const { t } = useI18n();
   const { print, isPrinting } = usePrintReceipt();
+  const { printOrder, isPrinting: isPrintingTickets } = usePrintOrder(storeId);
+  const hasOrderPrinters = useHasOrderPrinters();
 
   return (
     <Dialog open={open}>
@@ -92,28 +106,58 @@ export function PosOrderCompleteDialog({
         {/* Keyed by order so a later sale never inherits the last one's typed address. */}
         <CompleteBody key={result.orderNumber} storeId={storeId} result={result} />
 
-        <div className="flex shrink-0 flex-col gap-2 border-t px-5 py-4 sm:flex-row">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-12 touch-manipulation gap-2 sm:flex-1"
-            disabled={isPrinting}
-            onClick={() => void print(result.receipt)}
-          >
-            {isPrinting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Printer className="size-4" />
-            )}
-            {isPrinting ? t("pos.print.printing") : t("pos.print.confirm")}
-          </Button>
-          <Button
-            type="button"
-            className="h-12 touch-manipulation text-base font-semibold sm:flex-[1.4]"
-            onClick={onNewSale}
-          >
-            {newSaleLabel ?? t("cashierCheckout.complete.newSale")}
-          </Button>
+        <div className="flex shrink-0 flex-col gap-2 border-t px-5 py-4">
+          {/* Only for a shop that has set up a kitchen / bar / label printer. The
+              ticket already printed by itself when the order was placed, so this
+              is the second copy — for a printer that was off, or a ticket that
+              jammed. */}
+          {result.printInput && hasOrderPrinters && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 touch-manipulation gap-2"
+              disabled={isPrintingTickets}
+              onClick={() =>
+                void printOrder(
+                  {
+                    ...result.printInput!,
+                    context: { ...result.printInput!.context, reprint: true },
+                  },
+                  { interactive: true }
+                )
+              }
+            >
+              {isPrintingTickets ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Clipboard className="size-4" />
+              )}
+              {isPrintingTickets ? t("pos.print.printing") : t("pos.printers.printTickets")}
+            </Button>
+          )}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 touch-manipulation gap-2 sm:flex-1"
+              disabled={isPrinting}
+              onClick={() => void print(result.receipt)}
+            >
+              {isPrinting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Printer className="size-4" />
+              )}
+              {isPrinting ? t("pos.print.printing") : t("pos.print.confirm")}
+            </Button>
+            <Button
+              type="button"
+              className="h-12 touch-manipulation text-base font-semibold sm:flex-[1.4]"
+              onClick={onNewSale}
+            >
+              {newSaleLabel ?? t("cashierCheckout.complete.newSale")}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

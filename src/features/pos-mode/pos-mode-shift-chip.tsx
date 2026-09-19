@@ -1,0 +1,59 @@
+"use client";
+
+import Link from "next/link";
+import { useI18n } from "@/components/lang/i18n-provider";
+import { cn } from "@/lib/utils";
+import { useMyShift } from "@/features/pos/hooks/use-my-shift";
+
+/**
+ * The status bar's shift label: green with the start time while the persona's
+ * till is open, amber "No shift" when it isn't — a cashier should never find out
+ * at close that the day's sales weren't going against a drawer. Tapping it opens
+ * the Shift page either way.
+ *
+ * Renders nothing for a persona that can't hold a till (kitchen), and nothing
+ * while the answer is unknown, so it can't claim "No shift" about a shift it
+ * just hasn't loaded yet.
+ *
+ * It is also what keeps the POS session's `shiftId` truthful on every POS route
+ * (see useMyShift), which is why it mounts here and not only on the Shift page.
+ */
+export function PosModeShiftChip({ storeId }: { storeId: string }) {
+  const { t, formatTimeOnly } = useI18n();
+  const { shift, allowed, known } = useMyShift(storeId);
+
+  if (!allowed || !known) return null;
+
+  const title = shift
+    ? t("pos.shift.chipOpenTitle")
+        .replace("{time}", formatTimeOnly(shift.openedAt))
+        .replace("{name}", shift.staffMember?.name ?? "")
+    : t("pos.shift.chipNoneTitle");
+
+  return (
+    <Link
+      href={`/store/${storeId}/pos/shift`}
+      title={title}
+      aria-label={title}
+      className={cn(
+        "flex h-10 shrink-0 touch-manipulation items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition-colors",
+        shift
+          ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400"
+          : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-400"
+      )}
+    >
+      <span
+        className={cn("size-2 shrink-0 rounded-full", shift ? "bg-emerald-500" : "bg-amber-500")}
+        aria-hidden
+      />
+      {shift ? (
+        <span className="whitespace-nowrap">
+          <span className="hidden sm:inline">{t("pos.shift.chipLabel")} · </span>
+          {formatTimeOnly(shift.openedAt)}
+        </span>
+      ) : (
+        <span className="whitespace-nowrap">{t("pos.shift.chipNone")}</span>
+      )}
+    </Link>
+  );
+}

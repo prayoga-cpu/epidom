@@ -42,7 +42,7 @@ export function usePrintReceipt(): {
           // connected" until the cashier happened to open it. Pairing needs a
           // live tap (Web Bluetooth's requestDevice requires user activation),
           // so callers must invoke print() from a click, not from an effect.
-          const connected = await usePrinterSettings.getState().connect();
+          const connected = await usePrinterSettings.getState().connect("MAIN");
           if (!connected) {
             toast.error(t("pos.print.connectFailed"));
             return;

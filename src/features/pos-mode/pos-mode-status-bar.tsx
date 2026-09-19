@@ -6,6 +6,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { PosPrinterMenu } from "@/features/pos/components/pos-printer-menu";
+import { PosModeShiftChip } from "./pos-mode-shift-chip";
 
 interface PosModeStatusBarProps {
   storeId: string;
@@ -19,8 +20,8 @@ interface PosModeStatusBarProps {
 }
 
 /**
- * Persistent 44px strip above every POS Mode route — online status, store
- * name, staff badge, printer menu. Ports the desktop-branch content
+ * Persistent 44px strip above every POS Mode route — online status, shift
+ * label, store name, staff badge, printer menu. Ports the desktop-branch content
  * pos-header.tsx used to render per-page; here it's shell-level so it
  * doesn't repaint between /pos, /pos/orders, /pos/kds, /tables.
  */
@@ -71,6 +72,7 @@ export function PosModeStatusBar({ storeId, toolbarSlotRef }: PosModeStatusBarPr
             </>
           )}
         </div>
+        <PosModeShiftChip storeId={storeId} />
       </div>
 
       {/* min-w-0 flex-1: this region takes whatever is left between the two

@@ -9,6 +9,41 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.92.0] - 2026-09-19 · feat
+
+Up to four printers on one till — a receipt printer, a kitchen printer, a bar printer and a label printer — each paired, sized and switched on on its own.
+
+- **Printers, in the top bar.** The printer button now lists every printer in use with its own **Connect** button, and **Printer settings** opens one card per printer: switch it on, pair it, choose 58mm or 80mm paper, choose whether it prints by itself, and press **Test print** to see its real layout on paper. The icon turns amber when only some of your printers are connected, so a dead kitchen printer can't hide behind a healthy receipt one.
+- **Receipt printer (main).** Cashier to customer: the receipt with prices and total, the bill and the shift report — unchanged. A till that already had auto-print or a paper size chosen keeps both.
+- **Kitchen and bar order tickets.** Items, options and quantities in large bold type, with the table, order type, guests, the call-out number and any notes — and never a price. Each item goes to the printer for its area, using the same Kitchen / Bar setting the kitchen screen already uses. If only one of the two is set up it prints everything, in a section per area. A custom item with no area prints nowhere, exactly as on the kitchen screen.
+- **Item labels.** One sticker per item ordered — two coffees are two stickers, "1/2" and "2/2" — with the call-out number, item, options, note and time. Pick your printer's language (**ESC/POS** or **TSPL**), the sticker size and gap, and whether stickers are for all items, kitchen items or bar items.
+- **It prints when the order is placed** — the same moment the order reaches the kitchen screen. A printer that should have printed but isn't connected is never silent: a warning names it and offers **Connect & print**, and a print that fails partway offers **Try again**. A printer that stops responding is disconnected and named instead of freezing every other printer. On the send-receipt screen, **Print order tickets** prints a second copy, marked REPRINT.
+- **The call-out number on paper.** Tickets and labels carry the order's #12; the server now returns it when an order is created.
+
+Deliberate limits: printers connect over Bluetooth only, and a browser doesn't keep a Bluetooth pairing across a page reload, so each printer has to be reconnected after one (the top-bar list makes that one tap each); Ethernet and Wi-Fi printers are not supported; the printer setup is stored on each tablet, not shared between devices; orders arriving from the online storefront do not print automatically yet; label printing has not been checked on a real label printer.
+
+## [2.91.0] - 2026-09-19 · feat
+
+Google Reviews: customers can review your store on Google Maps in one tap, and your storefront now links to your Google Maps listing on its own.
+
+- **A new Google Reviews tab in Storefront.** Paste the review link from Google Business Profile ("Get more reviews") or your Google Place ID, and Epidom checks it and sets up the review button for you. You can test the link, download a QR code to print for tables, the counter or receipts, pause the button any time without losing the connection, or disconnect.
+- **It shows up on your storefront by itself.** Once connected, a **Review us on Google** button appears on your public storefront page, and your Google Maps link is added for you — no second field to fill in (a Maps URL you entered yourself still takes priority). When an order is delivered, the customer's order page asks for a review too.
+- **See whether it works.** Storefront → Analytics has a new **Google Review taps** card counting taps on the button.
+
+Deliberate limits: Google gives apps no way to post a review on a customer's behalf, so the button opens Google's own review form and the customer signs in with their Google account — Epidom counts taps, not finished reviews, and can't read your reviews. The button is shown to every customer, never only the happy ones, because Google doesn't allow that (or rewarding reviews). A plain Google Maps listing link can't open the review form, so the tab asks for the review link or Place ID instead.
+
+## [2.90.0] - 2026-09-19 · feat
+
+A **Shift** page in POS Mode, apart from My Schedule: open a shift, see who is on charge, count the drawer and end it, then get the shift's report printed, previewed and linkable. Modelled on Moka POS's shift screens.
+
+- **A Shift page of its own.** Opening a shift, watching it and ending it moved out of My Schedule (which keeps clock in/out, your roster and your history, in POS Mode and in Back Office) into **Shift**, in the **More** menu. With a shift open it shows who is on charge, when it started, the opening cash, and a red **Finish shift** button, with **Cash in / out** and a live **shift report** beside it. With none open it asks for the opening cash. The account owner works a shift as the store's owner profile.
+- **The shift label in the top bar.** A green **Shift · 18:00** while your shift is open, an amber **No shift** when it isn't; tap it to open the page. Kitchen accounts, who never count cash, don't see it.
+- **Finish shift.** The cash the till is accountable for, line by line — opening cash, cash sales, refunds, tips, float top-ups, paid out, safe drops, tips paid out — down to the **expected cash**, then the amount you actually counted and the live **difference** (balanced, over or short). Beside it: when the shift started, how many orders it took, every other payment method with its order count and total, and a **note** for whoever opens next. The count is typed blind: it is never pre-filled with the expected figure, and **End shift** stays off until you enter one. **Back** leaves the shift open.
+- **Confirm, then the report.** Ending asks first, showing expected cash, counted cash, the difference, other payments and your note; it can't be undone. Afterwards the shift report is printed on the receipt printer when one is connected, previewed on screen exactly as it prints, and reachable by link (**Copy link**, **Open report**). With no printer connected nothing pops up — **Print report** pairs one, or on an iPad (no Bluetooth printing) opens the browser's print dialog.
+- **Also fixed on the way.** Sales rung up after a shift was opened, without signing in again, were not attached to it — so their cash was missing from the drawer's expected total — and sales after a shift was closed kept attaching to the closed one. The till now follows your real shift on every POS screen.
+
+Deliberate limits: the note is saved with the shift but is not printed on the paper report; opening and ending a shift needs a connection; the Shift page uses the POS page's permission (anyone who can ring up sales can run their own till), not a separate one.
+
 ## [2.89.0] - 2026-09-19 · feat
 
 The cashier is rebuilt after Moka POS and Luna POS: a live receipt-style bill, customers, discounts and loyalty points, split and merge bills, custom items, barcode scanning, a send-receipt screen, cash quick-buttons and a slimmer top bar.

@@ -41,6 +41,9 @@ vi.mock("../storefront-analytics", () => ({
 vi.mock("../menu-manager", () => ({
   MenuManager: () => <div data-testid="menu-manager" />,
 }));
+vi.mock("../storefront-reviews", () => ({
+  StorefrontReviews: () => <div data-testid="reviews-tab" />,
+}));
 
 import { StorefrontEditorClient } from "../storefront-editor-client";
 
@@ -82,9 +85,22 @@ describe("StorefrontEditorClient — Owner/Manager (unrestricted)", () => {
     expect(await screen.findByTestId("menu-manager")).toBeInTheDocument();
   });
 
-  it("renders the full 3-tab editor, not the menu-only-staff bare view", async () => {
+  it("?tab=reviews opens the Google Reviews tab", async () => {
+    mockSearchParams.set("tab", "reviews");
+    renderClient();
+    expect(await screen.findByTestId("reviews-tab")).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-tab")).toBeNull();
+  });
+
+  it("renders the full 4-tab editor, not the menu-only-staff bare view", async () => {
     renderClient();
     expect(await screen.findByRole("tablist")).toBeInTheDocument();
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "storefront.editor.tabs.settings",
+      "storefront.editor.tabs.menu",
+      "storefront.editor.tabs.reviews",
+      "storefront.editor.tabs.analytics",
+    ]);
   });
 });
 

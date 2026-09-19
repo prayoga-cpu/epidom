@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, MessageCircle, Receipt, RefreshCw } from "lucide-react";
+import { ArrowLeft, MessageCircle, Receipt, RefreshCw, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
+import { trackEvent } from "@/features/storefront/hooks/use-track-storefront-event";
 import {
   STATUS_CONFIG,
   PAYMENT_STATUS_CONFIG,
@@ -53,6 +54,8 @@ interface OrderStatusClientProps {
     displayName: string;
     themeColor: string;
     whatsappNumber: string | null;
+    // Resolved server-side; null while Google Reviews is unconnected or paused.
+    googleReviewUrl?: string | null;
   };
   order: {
     id: string;
@@ -332,6 +335,41 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
             <span className="text-foreground text-lg font-bold">{formatPrice(order.total)}</span>
           </div>
         </div>
+
+        {/* Review prompt — only once the order is in the customer's hands: the
+            moment they're most likely to say something. Goes to everyone, never
+            filtered by mood (Google prohibits review gating). */}
+        {currentStatus === "DELIVERED" && storefront.googleReviewUrl && (
+          <div className="bg-card space-y-3 rounded-2xl border p-5 text-center shadow-sm">
+            <div className="flex justify-center gap-0.5" aria-hidden="true">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className="size-5 fill-amber-400 text-amber-400" />
+              ))}
+            </div>
+            <div>
+              <h3 className="text-foreground text-lg font-bold">
+                {t("publicOrder.orderStatus.reviewTitle")}
+              </h3>
+              <p className="text-muted-foreground mt-1 text-sm">
+                {t("publicOrder.orderStatus.reviewBody").replace("{name}", storefront.displayName)}
+              </p>
+            </div>
+            <a
+              href={storefront.googleReviewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent(storefront.slug, "REVIEW_CLICK")}
+              className="block"
+            >
+              <Button
+                className="w-full py-3 text-white"
+                style={{ backgroundColor: "var(--store-theme)" }}
+              >
+                {t("publicOrder.orderStatus.reviewCta")}
+              </Button>
+            </a>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="space-y-3">

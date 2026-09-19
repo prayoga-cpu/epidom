@@ -106,7 +106,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
 
   const lastReceipt = useLastReceipt((s) => s.receipt);
   const { print, isPrinting } = usePrintReceipt();
-  const paperWidth = usePrinterSettings((s) => s.paperWidth);
+  const paperWidth = usePrinterSettings((s) => s.printers.MAIN.paperWidth);
 
   const editingMenuItem = editingItem
     ? menuData?.categories

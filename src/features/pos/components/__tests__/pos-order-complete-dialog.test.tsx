@@ -38,6 +38,11 @@ vi.mock("@/lib/api/client", () => ({
 
 const printer = vi.hoisted(() => ({ print: vi.fn(), isPrinting: false }));
 vi.mock("../../hooks/use-print-receipt", () => ({ usePrintReceipt: () => printer }));
+const orderPrinting = vi.hoisted(() => ({ has: false, printOrder: vi.fn() }));
+vi.mock("../../hooks/use-print-order", () => ({
+  usePrintOrder: () => ({ printOrder: orderPrinting.printOrder, isPrinting: false }),
+  useHasOrderPrinters: () => orderPrinting.has,
+}));
 
 // PhoneInput doesn't forward props to its <input> and pulls in flag assets — a plain input keeps this about the dialog.
 vi.mock("@/components/ui/phone-input", () => ({
@@ -90,6 +95,8 @@ const renderDialog = (
 
 beforeEach(() => {
   api.post.mockResolvedValue({});
+  orderPrinting.has = false;
+  orderPrinting.printOrder.mockClear();
 });
 
 describe("PosOrderCompleteDialog — the money", () => {
@@ -143,6 +150,47 @@ describe("PosOrderCompleteDialog — buttons", () => {
     renderDialog(cashResult());
     fireEvent.click(screen.getByRole("button", { name: "pos.print.confirm" }));
     expect(printer.print).toHaveBeenCalledWith(receipt);
+  });
+});
+
+describe("PosOrderCompleteDialog — order tickets", () => {
+  const printInput = {
+    context: { locale: "en" as const, orderNumber: "#12", queueNumber: 7 },
+    items: [],
+  };
+  const TICKETS = { name: "pos.printers.printTickets" };
+
+  it("offers nothing extra to a shop with no kitchen, bar or label printer", () => {
+    renderDialog(cashResult({ printInput }));
+    expect(screen.queryByRole("button", TICKETS)).toBeNull();
+  });
+
+  it("offers nothing when there is no order to reprint from (e.g. an old result shape)", () => {
+    orderPrinting.has = true;
+    renderDialog(cashResult());
+    expect(screen.queryByRole("button", TICKETS)).toBeNull();
+  });
+
+  it("reprints the tickets and labels on a tap — marked as a reprint, and allowed to pair a printer", () => {
+    orderPrinting.has = true;
+    renderDialog(cashResult({ printInput }));
+    fireEvent.click(screen.getByRole("button", TICKETS));
+
+    expect(orderPrinting.printOrder).toHaveBeenCalledTimes(1);
+    const [sent, options] = orderPrinting.printOrder.mock.calls[0];
+    expect(options).toEqual({ interactive: true });
+    expect(sent.context).toMatchObject({ orderNumber: "#12", queueNumber: 7, reprint: true });
+    // The stored input is not mutated: a second reprint starts from the original.
+    expect(printInput.context).not.toHaveProperty("reprint");
+  });
+
+  it("keeps the receipt button and New Sale where they were", () => {
+    orderPrinting.has = true;
+    renderDialog(cashResult({ printInput }));
+    expect(screen.getByRole("button", { name: "pos.print.confirm" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "cashierCheckout.complete.newSale" })
+    ).toBeInTheDocument();
   });
 });
 

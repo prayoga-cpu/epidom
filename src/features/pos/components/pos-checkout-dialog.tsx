@@ -49,6 +49,7 @@ import {
 import type { PosOrderCreatedDto } from "@/types/api/cashier";
 import { usePrinterSettings } from "../hooks/use-printer-settings";
 import { usePrintReceipt } from "../hooks/use-print-receipt";
+import { usePrintOrder, type OrderPrintInput } from "../hooks/use-print-order";
 import { useLastReceipt, type LastReceiptMeta } from "../hooks/use-last-receipt";
 import { PaymentMethodChip } from "./payment-method-chip";
 import { PosCashPresets } from "./pos-cash-presets";
@@ -162,9 +163,11 @@ export function PosCheckoutDialog({
   // to the kitchen-display-on wording while the setting loads, since that is
   // the deferred (and more surprising) of the two behaviours.
   const kdsEnabled = useKdsSettings(storeId).data?.kitchenDisplayEnabled ?? true;
-  const autoPrint = usePrinterSettings((s) => s.autoPrint);
-  const paperWidth = usePrinterSettings((s) => s.paperWidth);
+  const autoPrint = usePrinterSettings((s) => s.printers.MAIN.autoPrint);
+  const paperWidth = usePrinterSettings((s) => s.printers.MAIN.paperWidth);
   const { print } = usePrintReceipt();
+  // Kitchen / bar tickets and item labels — everything printed that is not the customer's receipt.
+  const { printOrder } = usePrintOrder(storeId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completed, setCompleted] = useState<{
     result: OrderCompleteResult;
@@ -544,6 +547,21 @@ export function PosCheckoutDialog({
           discountAmount: finalDiscount,
           change,
         });
+        // Snapshotted here, before clearCart() empties the lines it reads.
+        const printInput: OrderPrintInput = {
+          context: {
+            locale,
+            orderNumber: args.orderNumber,
+            queueNumber: server?.queueNumber ?? null,
+            orderType: cart.orderType,
+            tableLabel: cart.tableNumber || undefined,
+            guestCount: guests ?? null,
+            cashierName,
+            customerName: customerSnapshot?.name ?? undefined,
+            notes: values.notes || undefined,
+          },
+          items: [...priced.items],
+        };
         const result: OrderCompleteResult = {
           orderId: args.orderId,
           orderNumber: args.orderNumber,
@@ -553,6 +571,7 @@ export function PosCheckoutDialog({
             ? t("cashierCheckout.complete.noPaymentDue")
             : paymentSummaryOf(settled),
           receipt,
+          printInput,
           customer: customerSnapshot,
           paid,
         };
@@ -580,6 +599,11 @@ export function PosCheckoutDialog({
               }
             : null
         );
+        // The order is placed: this is the moment the kitchen KDS would get it, so
+        // it is the moment the kitchen / bar tickets and labels print. Only on
+        // printers already connected and set to print by themselves — a missing
+        // one raises a warning, it never opens a picker.
+        void printOrder(printInput, { interactive: false });
         setCompleted({
           result,
           // Read after onPaid: by now the bill's lines are out of the cart.

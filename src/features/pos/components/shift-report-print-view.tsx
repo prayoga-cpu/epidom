@@ -66,6 +66,14 @@ function Heading({ children }: { children: React.ReactNode }) {
   );
 }
 
+export interface ShiftReportDocumentProps {
+  report: ShiftReportData;
+  storeName: string;
+  currency: string;
+  shiftLabel: string | null;
+  generatedAt: string;
+}
+
 /**
  * Screen/print rendering of the shift / daily report — the visual counterpart
  * to buildShiftReportEscPos() in thermal-printer.ts. Both consume the same
@@ -73,7 +81,311 @@ function Heading({ children }: { children: React.ReactNode }) {
  *
  * Rendered as a fixed white/black receipt column regardless of the app theme
  * (see ReceiptDocument for the same `print-report` rationale) — it emulates a
- * physical printed artifact, not app UI.
+ * physical printed artifact, not app UI. Exported on its own so the Shift page
+ * can show the very same document as an in-app preview after a shift ends.
+ */
+export function ShiftReportDocument({
+  report,
+  storeName,
+  currency,
+  shiftLabel,
+  generatedAt,
+}: ShiftReportDocumentProps) {
+  const { t, locale } = useI18n();
+  const receiptLocale = resolveReceiptLocale(locale);
+  const labels = SHIFT_REPORT_LABELS[receiptLocale];
+  const intlLocale = RECEIPT_INTL_LOCALE[receiptLocale];
+
+  // Amounts are literal in the store's display currency, never IDR — same
+  // model as the rest of the POS (see build-receipt-data.ts).
+  const money = (amount: number) => formatCurrency(amount, currency, intlLocale);
+  const dateTime = (value: string) =>
+    new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", timeStyle: "short" }).format(
+      new Date(value)
+    );
+
+  const orderTypeLabel = (orderType: string) =>
+    orderType === "DINE_IN"
+      ? labels.dineIn
+      : orderType === "TAKEAWAY"
+        ? labels.takeaway
+        : labels.deliveryType;
+
+  return (
+    <div className="print-report mx-auto w-full max-w-sm rounded-sm bg-white p-6 font-mono text-xs text-black shadow-sm print:max-w-none print:shadow-none">
+      {/* Header */}
+      <div className="text-center">
+        <p className="text-base font-bold tracking-wide">{storeName}</p>
+        {/* A cash block alone no longer implies a shift: the store-wide day
+            rollup carries one too. Only a SHIFT-scoped drawer means this
+            paper belongs to one till session. */}
+        <p className="mt-0.5 font-bold">
+          {report.cashDrawer?.scope === "SHIFT" ? labels.shiftReportTitle : labels.title}
+        </p>
+      </div>
+
+      <Divider />
+      <div className="space-y-0.5">
+        <Row label={labels.period} value={dateTime(report.window.from)} />
+        <Row
+          label=""
+          value={
+            report.window.isOpen
+              ? `${dateTime(report.window.to)} (${labels.stillOpen})`
+              : dateTime(report.window.to)
+          }
+        />
+        {shiftLabel && <Row label={labels.cashier} value={shiftLabel} />}
+      </div>
+
+      {/* Sales */}
+      <Divider />
+      <div className="space-y-0.5">
+        <Row label={labels.grossSales} value={money(report.sales.grossSales)} />
+        {!!report.sales.discount && (
+          <Row label={labels.discount} value={`-${money(report.sales.discount)}`} />
+        )}
+        {!!report.sales.serviceCharge && (
+          <Row label={labels.serviceCharge} value={money(report.sales.serviceCharge)} />
+        )}
+        {!!report.sales.tax && <Row label={labels.tax} value={money(report.sales.tax)} />}
+        {!!report.sales.processingFee && (
+          <Row label={labels.processingFee} value={money(report.sales.processingFee)} />
+        )}
+        {!!report.sales.delivery && (
+          <Row label={labels.delivery} value={money(report.sales.delivery)} />
+        )}
+        {!!report.sales.refund && (
+          <Row label={labels.refund} value={`-${money(report.sales.refund)}`} />
+        )}
+      </div>
+      <div className="mt-1 border-t border-gray-300 pt-1">
+        <Row label={labels.total} value={money(report.sales.total)} bold />
+      </div>
+
+      {report.invoices.count === 0 && (
+        <p className="mt-3 text-center text-gray-600">{labels.noData}</p>
+      )}
+
+      {/* Invoices */}
+      <Heading>{labels.invoicesHeading}</Heading>
+      <div className="space-y-0.5">
+        <Row label={labels.invoiceCount} value={String(report.invoices.count)} />
+        <Row
+          label={labels.averagePerInvoice}
+          value={money(report.invoices.averagePerInvoice)}
+        />
+      </div>
+
+      {/* Cancellations */}
+      <Heading>{labels.cancellationsHeading}</Heading>
+      <div className="space-y-0.5">
+        <Row label={labels.invoiceCount} value={String(report.cancellations.invoiceCount)} />
+        <Row label={labels.cancelledItems} value={String(report.cancellations.itemCount)} />
+        <Row label={labels.total} value={money(report.cancellations.total)} />
+      </div>
+
+      {/* By sale type */}
+      {report.byOrderType.length > 0 && (
+        <>
+          <Heading>{labels.byOrderTypeHeading}</Heading>
+          <div className="space-y-0.5">
+            {report.byOrderType.map((bucket) => (
+              <Row
+                key={bucket.orderType}
+                label={`${orderTypeLabel(bucket.orderType)} (${bucket.orderCount})`}
+                value={money(bucket.total)}
+              />
+            ))}
+          </div>
+          <div className="mt-1 border-t border-gray-300 pt-1">
+            <Row label={labels.total} value={money(report.sales.total)} bold />
+          </div>
+        </>
+      )}
+
+      {/* By guest — absent entirely when no order recorded a pax count */}
+      {report.byGuest && (
+        <>
+          <Heading>{labels.byGuestHeading}</Heading>
+          <div className="space-y-0.5">
+            <Row label={labels.totalGuests} value={String(report.byGuest.totalGuests)} />
+            <Row
+              label={labels.invoicesWithGuests}
+              value={String(report.byGuest.invoicesWithGuestCount)}
+            />
+            <Row
+              label={labels.averageGuestsPerDay}
+              value={report.byGuest.averageGuestsPerDay.toFixed(2)}
+            />
+            <Row
+              label={labels.averageSalesPerGuest}
+              value={money(report.byGuest.averageSalesPerGuest)}
+            />
+          </div>
+        </>
+      )}
+
+      {/* By payment method */}
+      {report.byPaymentMethod.length > 0 && (
+        <>
+          <Heading>{labels.byPaymentHeading}</Heading>
+          <div className="space-y-0.5">
+            {report.byPaymentMethod.map((method) => (
+              <Row
+                key={method.paymentMethod}
+                label={mapPaymentMethodLabel(t, method.paymentMethod)}
+                value={money(method.revenue)}
+              />
+            ))}
+          </div>
+          <div className="mt-1 border-t border-gray-300 pt-1">
+            <Row label={labels.total} value={money(report.sales.total)} bold />
+          </div>
+        </>
+      )}
+
+      {/* By product, grouped by menu category */}
+      {report.byProduct.categories.length > 0 && (
+        <>
+          <Heading>{labels.byProductHeading}</Heading>
+          <div className="space-y-3">
+            {report.byProduct.categories.map((category) => (
+              <div key={category.categoryId ?? "none"}>
+                <p className="font-semibold">{category.categoryName}</p>
+                <div className="mt-0.5 space-y-0.5">
+                  {category.lines.map((item) => (
+                    <Row
+                      key={item.name}
+                      label={`x${item.quantity} ${item.name}`}
+                      value={money(item.gross)}
+                    />
+                  ))}
+                </div>
+                <div className="mt-0.5 border-t border-gray-200 pt-0.5">
+                  <Row
+                    label={`${labels.total} (${category.totalQuantity})`}
+                    value={money(category.totalGross)}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-1 border-t border-gray-300 pt-1">
+            <Row
+              label={`${labels.total} (${report.byProduct.totalQuantity})`}
+              value={money(report.byProduct.totalGross)}
+              bold
+            />
+          </div>
+        </>
+      )}
+
+      {/* Cash drawer — every movement between the opening float and the
+          expected total, so the figure can be audited on the paper rather
+          than taken on trust. A STORE_DAY block sums every till in the
+          window, which is a different (and larger) thing than one cashier's
+          accountability, so the heading says so. Zero categories are
+          skipped for the same reason the sales block skips them — a store
+          that takes no tips shouldn't get a "Tips 0" line — but the float
+          and the expected total always print: their absence is itself
+          information. */}
+      {report.cashDrawer && (
+        <>
+          <Heading>
+            {report.cashDrawer.scope === "STORE_DAY"
+              ? `${labels.cashDrawerHeading} (${labels.allTills})`
+              : labels.cashDrawerHeading}
+          </Heading>
+          <div className="space-y-0.5">
+            <Row label={labels.openingCash} value={money(report.cashDrawer.openingCash)} />
+            {!!report.cashDrawer.cashSales && (
+              <Row label={labels.cashSales} value={money(report.cashDrawer.cashSales)} />
+            )}
+            {!!report.cashDrawer.cashRefunds && (
+              <Row
+                label={labels.cashRefunds}
+                value={`-${money(report.cashDrawer.cashRefunds)}`}
+              />
+            )}
+            {!!report.cashDrawer.tips && (
+              <Row label={labels.tips} value={money(report.cashDrawer.tips)} />
+            )}
+            {!!report.cashDrawer.pettyIn && (
+              <Row label={labels.cashIn} value={money(report.cashDrawer.pettyIn)} />
+            )}
+            {!!report.cashDrawer.pettyOut && (
+              <Row label={labels.paidOut} value={`-${money(report.cashDrawer.pettyOut)}`} />
+            )}
+            {!!report.cashDrawer.drops && (
+              <Row label={labels.safeDrop} value={`-${money(report.cashDrawer.drops)}`} />
+            )}
+            {!!report.cashDrawer.tipPayouts && (
+              <Row label={labels.tipsOut} value={`-${money(report.cashDrawer.tipPayouts)}`} />
+            )}
+          </div>
+          {/* Cash sales no till was linked to. Shown OUTSIDE the running
+              block and with no sign, because it is deliberately not part of
+              the expected total below: the schema cannot say whether this
+              money reached a drawer (counter cash) or a courier (delivery).
+              It is here so the figure is visible, not so it is counted. */}
+          {!!report.cashDrawer.unlinkedCashSales && (
+            <div className="mt-1">
+              <Row
+                label={labels.offTillCash}
+                value={money(report.cashDrawer.unlinkedCashSales)}
+              />
+            </div>
+          )}
+          <div className="mt-1 border-t border-gray-300 pt-1">
+            {/* An open till keeps taking cash, so the expected figure is a
+                moving target — flag it rather than let a mid-shift printout
+                read as a signed-off Z-report. */}
+            <Row
+              label={
+                report.cashDrawer.hasOpenTill
+                  ? `${labels.expectedCash} (${labels.provisional})`
+                  : labels.expectedCash
+              }
+              value={money(report.cashDrawer.expectedCash)}
+              bold
+            />
+          </div>
+          <div className="space-y-0.5">
+            {report.cashDrawer.closingCash != null && (
+              <Row label={labels.closingCash} value={money(report.cashDrawer.closingCash)} />
+            )}
+            {report.cashDrawer.cashDifference != null && (
+              <Row
+                label={labels.difference}
+                value={money(report.cashDrawer.cashDifference)}
+                bold
+              />
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Footer */}
+      <div className="my-2 border-t-2 border-gray-400" />
+      <div className="space-y-1 text-center text-gray-600">
+        <p>
+          {labels.printedAt} {dateTime(generatedAt)}
+        </p>
+        <div className="flex items-center justify-center gap-1.5 text-gray-400">
+          <EpidomMark size={14} />
+          <p className="text-[11px]">
+            {RECEIPT_POWERED_BY_URL} | {RECEIPT_LABELS[receiptLocale].poweredByTitle}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The report as a standalone printable page — the document plus a toolbar that
+ * prints it (browser or thermal). See ShiftReportDocument for the rendering.
  */
 export function ShiftReportPrintView({
   report,
@@ -85,18 +397,8 @@ export function ShiftReportPrintView({
 }: ShiftReportPrintViewProps) {
   const { t, locale } = useI18n();
   const receiptLocale = resolveReceiptLocale(locale);
-  const labels = SHIFT_REPORT_LABELS[receiptLocale];
-  const intlLocale = RECEIPT_INTL_LOCALE[receiptLocale];
   const [isPrinting, setIsPrinting] = useState(false);
-  const paperWidth = usePrinterSettings((s) => s.paperWidth);
-
-  // Amounts are literal in the store's display currency, never IDR — same
-  // model as the rest of the POS (see build-receipt-data.ts).
-  const money = (amount: number) => formatCurrency(amount, currency, intlLocale);
-  const dateTime = (value: string) =>
-    new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", timeStyle: "short" }).format(
-      new Date(value)
-    );
+  const paperWidth = usePrinterSettings((s) => s.printers.MAIN.paperWidth);
 
   useEffect(() => {
     if (!autoPrint) return;
@@ -138,13 +440,6 @@ export function ShiftReportPrintView({
     }
   };
 
-  const orderTypeLabel = (orderType: string) =>
-    orderType === "DINE_IN"
-      ? labels.dineIn
-      : orderType === "TAKEAWAY"
-        ? labels.takeaway
-        : labels.deliveryType;
-
   return (
     <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] flex-col items-center gap-4 bg-gray-100 px-4 py-6 print:bg-white print:p-0">
       {/* Non-printing toolbar */}
@@ -166,274 +461,13 @@ export function ShiftReportPrintView({
         </div>
       </div>
 
-      <div className="print-report mx-auto w-full max-w-sm rounded-sm bg-white p-6 font-mono text-xs text-black shadow-sm print:max-w-none print:shadow-none">
-        {/* Header */}
-        <div className="text-center">
-          <p className="text-base font-bold tracking-wide">{storeName}</p>
-          {/* A cash block alone no longer implies a shift: the store-wide day
-              rollup carries one too. Only a SHIFT-scoped drawer means this
-              paper belongs to one till session. */}
-          <p className="mt-0.5 font-bold">
-            {report.cashDrawer?.scope === "SHIFT" ? labels.shiftReportTitle : labels.title}
-          </p>
-        </div>
-
-        <Divider />
-        <div className="space-y-0.5">
-          <Row label={labels.period} value={dateTime(report.window.from)} />
-          <Row
-            label=""
-            value={
-              report.window.isOpen
-                ? `${dateTime(report.window.to)} (${labels.stillOpen})`
-                : dateTime(report.window.to)
-            }
-          />
-          {shiftLabel && <Row label={labels.cashier} value={shiftLabel} />}
-        </div>
-
-        {/* Sales */}
-        <Divider />
-        <div className="space-y-0.5">
-          <Row label={labels.grossSales} value={money(report.sales.grossSales)} />
-          {!!report.sales.discount && (
-            <Row label={labels.discount} value={`-${money(report.sales.discount)}`} />
-          )}
-          {!!report.sales.serviceCharge && (
-            <Row label={labels.serviceCharge} value={money(report.sales.serviceCharge)} />
-          )}
-          {!!report.sales.tax && <Row label={labels.tax} value={money(report.sales.tax)} />}
-          {!!report.sales.processingFee && (
-            <Row label={labels.processingFee} value={money(report.sales.processingFee)} />
-          )}
-          {!!report.sales.delivery && (
-            <Row label={labels.delivery} value={money(report.sales.delivery)} />
-          )}
-          {!!report.sales.refund && (
-            <Row label={labels.refund} value={`-${money(report.sales.refund)}`} />
-          )}
-        </div>
-        <div className="mt-1 border-t border-gray-300 pt-1">
-          <Row label={labels.total} value={money(report.sales.total)} bold />
-        </div>
-
-        {report.invoices.count === 0 && (
-          <p className="mt-3 text-center text-gray-600">{labels.noData}</p>
-        )}
-
-        {/* Invoices */}
-        <Heading>{labels.invoicesHeading}</Heading>
-        <div className="space-y-0.5">
-          <Row label={labels.invoiceCount} value={String(report.invoices.count)} />
-          <Row
-            label={labels.averagePerInvoice}
-            value={money(report.invoices.averagePerInvoice)}
-          />
-        </div>
-
-        {/* Cancellations */}
-        <Heading>{labels.cancellationsHeading}</Heading>
-        <div className="space-y-0.5">
-          <Row label={labels.invoiceCount} value={String(report.cancellations.invoiceCount)} />
-          <Row label={labels.cancelledItems} value={String(report.cancellations.itemCount)} />
-          <Row label={labels.total} value={money(report.cancellations.total)} />
-        </div>
-
-        {/* By sale type */}
-        {report.byOrderType.length > 0 && (
-          <>
-            <Heading>{labels.byOrderTypeHeading}</Heading>
-            <div className="space-y-0.5">
-              {report.byOrderType.map((bucket) => (
-                <Row
-                  key={bucket.orderType}
-                  label={`${orderTypeLabel(bucket.orderType)} (${bucket.orderCount})`}
-                  value={money(bucket.total)}
-                />
-              ))}
-            </div>
-            <div className="mt-1 border-t border-gray-300 pt-1">
-              <Row label={labels.total} value={money(report.sales.total)} bold />
-            </div>
-          </>
-        )}
-
-        {/* By guest — absent entirely when no order recorded a pax count */}
-        {report.byGuest && (
-          <>
-            <Heading>{labels.byGuestHeading}</Heading>
-            <div className="space-y-0.5">
-              <Row label={labels.totalGuests} value={String(report.byGuest.totalGuests)} />
-              <Row
-                label={labels.invoicesWithGuests}
-                value={String(report.byGuest.invoicesWithGuestCount)}
-              />
-              <Row
-                label={labels.averageGuestsPerDay}
-                value={report.byGuest.averageGuestsPerDay.toFixed(2)}
-              />
-              <Row
-                label={labels.averageSalesPerGuest}
-                value={money(report.byGuest.averageSalesPerGuest)}
-              />
-            </div>
-          </>
-        )}
-
-        {/* By payment method */}
-        {report.byPaymentMethod.length > 0 && (
-          <>
-            <Heading>{labels.byPaymentHeading}</Heading>
-            <div className="space-y-0.5">
-              {report.byPaymentMethod.map((method) => (
-                <Row
-                  key={method.paymentMethod}
-                  label={mapPaymentMethodLabel(t, method.paymentMethod)}
-                  value={money(method.revenue)}
-                />
-              ))}
-            </div>
-            <div className="mt-1 border-t border-gray-300 pt-1">
-              <Row label={labels.total} value={money(report.sales.total)} bold />
-            </div>
-          </>
-        )}
-
-        {/* By product, grouped by menu category */}
-        {report.byProduct.categories.length > 0 && (
-          <>
-            <Heading>{labels.byProductHeading}</Heading>
-            <div className="space-y-3">
-              {report.byProduct.categories.map((category) => (
-                <div key={category.categoryId ?? "none"}>
-                  <p className="font-semibold">{category.categoryName}</p>
-                  <div className="mt-0.5 space-y-0.5">
-                    {category.lines.map((item) => (
-                      <Row
-                        key={item.name}
-                        label={`x${item.quantity} ${item.name}`}
-                        value={money(item.gross)}
-                      />
-                    ))}
-                  </div>
-                  <div className="mt-0.5 border-t border-gray-200 pt-0.5">
-                    <Row
-                      label={`${labels.total} (${category.totalQuantity})`}
-                      value={money(category.totalGross)}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-1 border-t border-gray-300 pt-1">
-              <Row
-                label={`${labels.total} (${report.byProduct.totalQuantity})`}
-                value={money(report.byProduct.totalGross)}
-                bold
-              />
-            </div>
-          </>
-        )}
-
-        {/* Cash drawer — every movement between the opening float and the
-            expected total, so the figure can be audited on the paper rather
-            than taken on trust. A STORE_DAY block sums every till in the
-            window, which is a different (and larger) thing than one cashier's
-            accountability, so the heading says so. Zero categories are
-            skipped for the same reason the sales block skips them — a store
-            that takes no tips shouldn't get a "Tips 0" line — but the float
-            and the expected total always print: their absence is itself
-            information. */}
-        {report.cashDrawer && (
-          <>
-            <Heading>
-              {report.cashDrawer.scope === "STORE_DAY"
-                ? `${labels.cashDrawerHeading} (${labels.allTills})`
-                : labels.cashDrawerHeading}
-            </Heading>
-            <div className="space-y-0.5">
-              <Row label={labels.openingCash} value={money(report.cashDrawer.openingCash)} />
-              {!!report.cashDrawer.cashSales && (
-                <Row label={labels.cashSales} value={money(report.cashDrawer.cashSales)} />
-              )}
-              {!!report.cashDrawer.cashRefunds && (
-                <Row
-                  label={labels.cashRefunds}
-                  value={`-${money(report.cashDrawer.cashRefunds)}`}
-                />
-              )}
-              {!!report.cashDrawer.tips && (
-                <Row label={labels.tips} value={money(report.cashDrawer.tips)} />
-              )}
-              {!!report.cashDrawer.pettyIn && (
-                <Row label={labels.cashIn} value={money(report.cashDrawer.pettyIn)} />
-              )}
-              {!!report.cashDrawer.pettyOut && (
-                <Row label={labels.paidOut} value={`-${money(report.cashDrawer.pettyOut)}`} />
-              )}
-              {!!report.cashDrawer.drops && (
-                <Row label={labels.safeDrop} value={`-${money(report.cashDrawer.drops)}`} />
-              )}
-              {!!report.cashDrawer.tipPayouts && (
-                <Row label={labels.tipsOut} value={`-${money(report.cashDrawer.tipPayouts)}`} />
-              )}
-            </div>
-            {/* Cash sales no till was linked to. Shown OUTSIDE the running
-                block and with no sign, because it is deliberately not part of
-                the expected total below: the schema cannot say whether this
-                money reached a drawer (counter cash) or a courier (delivery).
-                It is here so the figure is visible, not so it is counted. */}
-            {!!report.cashDrawer.unlinkedCashSales && (
-              <div className="mt-1">
-                <Row
-                  label={labels.offTillCash}
-                  value={money(report.cashDrawer.unlinkedCashSales)}
-                />
-              </div>
-            )}
-            <div className="mt-1 border-t border-gray-300 pt-1">
-              {/* An open till keeps taking cash, so the expected figure is a
-                  moving target — flag it rather than let a mid-shift printout
-                  read as a signed-off Z-report. */}
-              <Row
-                label={
-                  report.cashDrawer.hasOpenTill
-                    ? `${labels.expectedCash} (${labels.provisional})`
-                    : labels.expectedCash
-                }
-                value={money(report.cashDrawer.expectedCash)}
-                bold
-              />
-            </div>
-            <div className="space-y-0.5">
-              {report.cashDrawer.closingCash != null && (
-                <Row label={labels.closingCash} value={money(report.cashDrawer.closingCash)} />
-              )}
-              {report.cashDrawer.cashDifference != null && (
-                <Row
-                  label={labels.difference}
-                  value={money(report.cashDrawer.cashDifference)}
-                  bold
-                />
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Footer */}
-        <div className="my-2 border-t-2 border-gray-400" />
-        <div className="space-y-1 text-center text-gray-600">
-          <p>
-            {labels.printedAt} {dateTime(generatedAt)}
-          </p>
-          <div className="flex items-center justify-center gap-1.5 text-gray-400">
-            <EpidomMark size={14} />
-            <p className="text-[11px]">
-              {RECEIPT_POWERED_BY_URL} | {RECEIPT_LABELS[receiptLocale].poweredByTitle}
-            </p>
-          </div>
-        </div>
-      </div>
+      <ShiftReportDocument
+        report={report}
+        storeName={storeName}
+        currency={currency}
+        shiftLabel={shiftLabel}
+        generatedAt={generatedAt}
+      />
     </div>
   );
 }

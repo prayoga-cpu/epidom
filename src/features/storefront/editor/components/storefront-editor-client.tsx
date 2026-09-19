@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StorefrontSettings } from "./storefront-settings";
 import { MenuManager } from "./menu-manager";
 import { StorefrontAnalytics } from "./storefront-analytics";
+import { StorefrontReviews } from "./storefront-reviews";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
@@ -19,7 +20,7 @@ interface StorefrontEditorClientProps {
   storeId: string;
 }
 
-const VALID_TABS = ["settings", "menu", "analytics"] as const;
+const VALID_TABS = ["settings", "menu", "reviews", "analytics"] as const;
 type StorefrontTab = (typeof VALID_TABS)[number];
 
 export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps) {
@@ -124,6 +125,12 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
             {hasPos ? t("storefront.editor.tabs.menu") : t("storefront.editor.tabs.storeMenu")}
           </TabsTrigger>
           <TabsTrigger
+            value="reviews"
+            className="data-[state=active]:bg-card shrink-0 data-[state=active]:text-[var(--epi-gold-400)]"
+          >
+            {t("storefront.editor.tabs.reviews")}
+          </TabsTrigger>
+          <TabsTrigger
             value="analytics"
             className="data-[state=active]:bg-card shrink-0 data-[state=active]:text-[var(--epi-gold-400)]"
           >
@@ -152,6 +159,10 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
             </div>
           )}
           <MenuManager storeId={storeId} />
+        </TabsContent>
+
+        <TabsContent value="reviews" className="m-0">
+          <StorefrontReviews storeId={storeId} storefront={storefront} onSaved={() => refetch()} />
         </TabsContent>
 
         <TabsContent value="analytics" className="m-0">

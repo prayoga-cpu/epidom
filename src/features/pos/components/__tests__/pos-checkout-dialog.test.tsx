@@ -87,6 +87,11 @@ vi.mock("@/lib/pwa/thermal-printer", () => ({
 vi.mock("../../hooks/use-print-receipt", () => ({
   usePrintReceipt: () => ({ print: vi.fn(), isPrinting: false }),
 }));
+const printOrder = vi.hoisted(() => vi.fn());
+vi.mock("../../hooks/use-print-order", () => ({
+  usePrintOrder: () => ({ printOrder, isPrinting: false }),
+  useHasOrderPrinters: () => false,
+}));
 
 // The complete screen has its own suite; here it is a probe for what checkout hands it.
 const complete = vi.hoisted(() => ({ props: [] as any[] }));

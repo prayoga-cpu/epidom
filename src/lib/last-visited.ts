@@ -63,6 +63,7 @@ const RESUMABLE_STORE_SECTIONS = new Set([
   "/pos/kds",
   "/pos/orders",
   "/pos/schedule",
+  "/pos/shift",
   "/production",
   "/profile",
   "/schedule",
@@ -147,7 +148,16 @@ export function isResumableAppPath(value: string): boolean {
  * URL not being nested under /pos, so a naive `startsWith("/pos")` check
  * would wrongly classify it as Back Office.
  */
-const POS_MODE_SECTIONS = new Set(["/pos", "/pos/orders", "/pos/kds", "/pos/schedule", "/tables"]);
+const POS_MODE_SECTIONS = new Set([
+  "/pos",
+  "/pos/orders",
+  "/pos/kds",
+  "/pos/schedule",
+  // Not in posModeNavItems (it rides on the "/pos" grant, see shift-access.ts),
+  // but a real POS Mode route all the same.
+  "/pos/shift",
+  "/tables",
+]);
 
 /**
  * Whether `value` is a Back Office (non-POS) page inside a store — the

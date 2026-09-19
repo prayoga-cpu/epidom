@@ -91,6 +91,23 @@ export const updateStorefrontSchema = z.object({
 
 export type UpdateStorefrontInput = z.infer<typeof updateStorefrontSchema>;
 
+// Google review connection (Back Office → Storefront → Google Reviews).
+// Deliberately NOT part of updateStorefrontSchema: that schema's boolean
+// `.default(false)` fields (isPublished, acceptsOrders…) mean any partial
+// PATCH through it silently unpublishes the store. `link` is the raw paste —
+// the server parses it (parseGoogleReviewInput) and stores only the
+// normalized result; an empty string disconnects.
+export const updateGoogleReviewSchema = z
+  .object({
+    link: z.string().max(2048, "Link is too long").optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => v.link !== undefined || v.enabled !== undefined, {
+    message: "Nothing to update",
+  });
+
+export type UpdateGoogleReviewInput = z.infer<typeof updateGoogleReviewSchema>;
+
 // MenuCategory schema
 export const createMenuCategorySchema = z.object({
   name: z.string().min(1, "Category name is required").max(100, "Category name is too long"),
@@ -133,9 +150,10 @@ export const updateMenuItemSchema = createMenuItemSchema.partial();
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;
 
-// Public analytics event (storefront page views, menu/item views, WhatsApp clicks)
+// Public analytics event (storefront page views, menu/item views, WhatsApp
+// and Google-review clicks)
 export const recordStorefrontEventSchema = z.object({
-  type: z.enum(["VIEW", "MENU_VIEW", "ITEM_VIEW", "WHATSAPP_CLICK"]),
+  type: z.enum(["VIEW", "MENU_VIEW", "ITEM_VIEW", "WHATSAPP_CLICK", "REVIEW_CLICK"]),
   menuItemId: z.string().optional(),
   menuItemName: z.string().max(100).optional(),
   referrer: z.string().max(500).optional(),

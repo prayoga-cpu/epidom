@@ -32,6 +32,7 @@ The wedge. Forever free. Replaces Linktree + Google Drive menu + WhatsApp orderi
 - Opening hours display
 - Social links: Instagram, TikTok, WhatsApp
 - Outbound links: GoFood, GrabFood, ShopeeFood, Google Maps
+- Google Reviews: a "Review us on Google" button on the storefront and on a delivered order's page, a printable review QR, and a Maps link derived automatically from the connected Place ID. Deep link into Google's own review form (no API can post a review for a customer), so Epidom counts taps, not completed reviews
 - Custom link buttons (Linktree-style)
 - QR code download for printable assets
 
@@ -102,6 +103,7 @@ For merchants who run service in-person. Everything in FREE, plus:
 ### Receipts _(Phase 3)_
 
 - Bluetooth thermal printer support (58mm, 80mm)
+- Multiple printers per till, each paired on its own: receipt (main), kitchen and bar order tickets (items and quantities, no prices, routed by the item's Kitchen/Bar area), and item labels (ESC/POS or TSPL)
 - ESC/POS commands
 - PDF receipt fallback
 - Email receipt to customer

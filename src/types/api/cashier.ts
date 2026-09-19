@@ -223,6 +223,8 @@ export interface LoyaltySettingsDto {
 export interface PosOrderCreatedDto {
   orderId: string;
   orderNumber: string;
+  /** The call-out number (#12), printed big on kitchen tickets and labels. Null when the order has none. */
+  queueNumber?: number | null;
   total: number;
   discountAmount: number;
   paymentMethod: string;

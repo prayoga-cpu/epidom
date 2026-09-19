@@ -2,6 +2,13 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useEffect } from "react";
 
+/**
+ * The `staffId` PosStaffGate / StoreAccessGate log the account owner in as when
+ * no staff persona was picked. It is a label, not a `StaffMember` id, so nothing
+ * that needs a real staff row (a till session, say) can use it directly.
+ */
+export const OWNER_PERSONA_ID = "owner";
+
 export interface PosSessionState {
   storeId: string | null;
   staffId: string | null;
@@ -40,7 +47,8 @@ export interface PosSessionState {
     allowedPages?: string[] | null;
   }) => void;
   logout: () => void;
-  setShiftId: (shiftId: string) => void;
+  /** Null once the persona's till is closed, so later sales don't attach to it. */
+  setShiftId: (shiftId: string | null) => void;
   /** Refreshes pinVerifiedAt after a lightweight re-verification (no identity/page changes). */
   touchPinVerified: () => void;
   /**

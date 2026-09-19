@@ -39,6 +39,7 @@ describe("isBackOfficeAppPath", () => {
     expect(isBackOfficeAppPath("/store/cljabc12345/pos")).toBe(false);
     expect(isBackOfficeAppPath("/store/cljabc12345/pos/orders")).toBe(false);
     expect(isBackOfficeAppPath("/store/cljabc12345/pos/kds")).toBe(false);
+    expect(isBackOfficeAppPath("/store/cljabc12345/pos/shift")).toBe(false);
     // /tables isn't nested under /pos in the URL, but it's still a POS Mode
     // route (posModeNavItems) — the whole reason this isn't a bare prefix check.
     expect(isBackOfficeAppPath("/store/cljabc12345/tables")).toBe(false);
@@ -62,6 +63,7 @@ describe("isPosAppPath", () => {
     expect(isPosAppPath("/store/cljabc12345/pos/orders")).toBe(true);
     expect(isPosAppPath("/store/cljabc12345/pos/kds")).toBe(true);
     expect(isPosAppPath("/store/cljabc12345/pos/schedule")).toBe(true);
+    expect(isPosAppPath("/store/cljabc12345/pos/shift")).toBe(true);
     expect(isPosAppPath("/store/cljabc12345/tables")).toBe(true);
   });
 

@@ -637,15 +637,6 @@ Table order_queue_counters {
   indexes {
     (storeId, day) [pk]
   }
-
-  Note: 'One tender of a paid Order. Written for EVERY new order (an ordinary
-single-method order gets one row), so readers can rely on it going forward;
-orders created before it have no rows, and every reader falls back to
-Order.paymentMethod / Order.total for those — there is deliberately no
-backfill. `amount` is what was applied to the bill and never includes cash
-change (that lives in `change`), so summing `amount` over an order\'s rows
-always reproduces Order.total. `refundedAmount` attributes a refund to the
-tender that actually gave the money back (cash refunds leave the drawer).'
 }
 
 Table order_payments {
@@ -659,6 +650,15 @@ Table order_payments {
   refundedAmount Decimal [not null, default: 0]
   createdAt DateTime [default: `now()`, not null]
   order orders [not null]
+
+  Note: 'One tender of a paid Order. Written for EVERY new order (an ordinary
+single-method order gets one row), so readers can rely on it going forward;
+orders created before it have no rows, and every reader falls back to
+Order.paymentMethod / Order.total for those — there is deliberately no
+backfill. `amount` is what was applied to the bill and never includes cash
+change (that lives in `change`), so summing `amount` over an order\'s rows
+always reproduces Order.total. `refundedAmount` attributes a refund to the
+tender that actually gave the money back (cash refunds leave the drawer).'
 }
 
 Table customers {
@@ -1154,6 +1154,9 @@ Table storefronts {
   grabfoodUrl String
   shopeefoodUrl String
   googleMapsUrl String
+  googlePlaceId String
+  googleReviewUrl String
+  googleReviewEnabled Boolean [not null, default: true]
   customLinks Json
   isPublished Boolean [not null, default: false]
   acceptsOrders Boolean [not null, default: false]
@@ -1660,6 +1663,7 @@ Enum StorefrontEventType {
   MENU_VIEW
   ITEM_VIEW
   WHATSAPP_CLICK
+  REVIEW_CLICK
 }
 
 Enum BackupRunStatus {

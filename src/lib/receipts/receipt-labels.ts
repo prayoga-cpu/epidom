@@ -341,6 +341,65 @@ export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
   },
 };
 
+interface TicketLabels {
+  /** Heading of a ticket that carries more than one prep area (one printer
+   * serving Kitchen AND Bar). */
+  orderTicket: string;
+  kitchen: string;
+  bar: string;
+  orderNo: string;
+  type: string;
+  /** Who the bill is for — a walk-in's name or the attached customer. */
+  customer: string;
+  /** Marks a second copy, so the pass does not cook the same order twice. */
+  reprint: string;
+  testTitle: string;
+  testBody: string;
+}
+
+/**
+ * Vocabulary of the kitchen / bar order ticket and the item label — what the
+ * captain's copy says instead of the customer's receipt. Deliberately ASCII
+ * (no accents that matter): it goes through toPrinterAscii like everything else.
+ * The order-type and cashier words are shared with the receipt / shift report
+ * (SHIFT_REPORT_LABELS.dineIn, RECEIPT_LABELS.cashier) rather than repeated.
+ */
+export const TICKET_LABELS: Record<ReceiptLocale, TicketLabels> = {
+  id: {
+    orderTicket: "PESANAN",
+    kitchen: "DAPUR",
+    bar: "BAR",
+    orderNo: "Pesanan",
+    type: "Tipe",
+    customer: "Pelanggan",
+    reprint: "CETAK ULANG",
+    testTitle: "TES PRINTER",
+    testBody: "Printer terhubung dengan baik.",
+  },
+  en: {
+    orderTicket: "ORDER",
+    kitchen: "KITCHEN",
+    bar: "BAR",
+    orderNo: "Order",
+    type: "Type",
+    customer: "Customer",
+    reprint: "REPRINT",
+    testTitle: "PRINTER TEST",
+    testBody: "Printer connected and working.",
+  },
+  fr: {
+    orderTicket: "COMMANDE",
+    kitchen: "CUISINE",
+    bar: "BAR",
+    orderNo: "Commande",
+    type: "Type",
+    customer: "Client",
+    reprint: "REIMPRESSION",
+    testTitle: "TEST IMPRIMANTE",
+    testBody: "Imprimante connectee.",
+  },
+};
+
 /** Our own domain, shown in the receipt footer — not the merchant's. */
 export const RECEIPT_POWERED_BY_URL = "www.epidom.fr";
 

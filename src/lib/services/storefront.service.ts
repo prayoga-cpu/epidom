@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type {
   UpdateStorefrontInput,
+  UpdateGoogleReviewInput,
   CreateMenuCategoryInput,
   UpdateMenuCategoryInput,
   CreateMenuItemInput,
@@ -8,8 +9,25 @@ import type {
   RecordStorefrontEventInput,
 } from "@/lib/validation/storefront.schemas";
 import { Prisma, Department } from "@prisma/client";
+import { parseGoogleReviewInput, type GoogleLinkFailure } from "@/lib/utils/google-review";
 import { getExchangeRate } from "./exchange-rate.service";
 import { getFinanceSettings } from "./finance-settings.service";
+
+/**
+ * The pasted Google link couldn't be turned into a review link. `reason`
+ * lets the route hand the client a machine-readable code to translate,
+ * instead of the client string-matching an English message.
+ */
+export class GoogleReviewLinkError extends Error {
+  constructor(public readonly reason: Exclude<GoogleLinkFailure, "empty">) {
+    super(
+      reason === "mapsListing"
+        ? "This is a Google Maps listing link, not a review link."
+        : "This doesn't look like a Google review link or Place ID."
+    );
+    this.name = "GoogleReviewLinkError";
+  }
+}
 
 export class StorefrontService {
   /**
@@ -267,6 +285,54 @@ export class StorefrontService {
             ? undefined
             : (input.openingHours as Prisma.InputJsonValue),
       },
+    });
+  }
+
+  /**
+   * Connect, pause or disconnect the store's Google review link.
+   *
+   * `input.link` is the raw paste and is parsed here — the server is the
+   * authority, so a hand-crafted request can never store a non-Google URL
+   * behind a "Review us on Google" button. An empty link disconnects (and
+   * re-arms the switch, so the next connection isn't silently paused).
+   * Deliberately a dedicated write, not part of updateStorefront: that one
+   * resets isPublished/acceptsOrders whenever they're absent from the body.
+   */
+  async updateGoogleReview(storeId: string, input: UpdateGoogleReviewInput) {
+    const data: Prisma.StorefrontUpdateInput = {};
+
+    if (input.link !== undefined) {
+      const link = input.link.trim();
+      if (link === "") {
+        data.googlePlaceId = null;
+        data.googleReviewUrl = null;
+        data.googleReviewEnabled = true;
+      } else {
+        const parsed = parseGoogleReviewInput(link);
+        if (!parsed.ok) {
+          // "empty" can't happen past the trim check above.
+          throw new GoogleReviewLinkError(parsed.reason === "mapsListing" ? "mapsListing" : "invalid");
+        }
+        data.googlePlaceId = parsed.placeId;
+        data.googleReviewUrl = parsed.reviewUrl;
+      }
+    }
+
+    if (input.enabled !== undefined) {
+      data.googleReviewEnabled = input.enabled;
+    }
+
+    const existing = await prisma.storefront.findUnique({
+      where: { storeId },
+      select: { id: true },
+    });
+    // Same auto-create-the-draft behavior as updateStorefront.
+    if (!existing) await this.getStorefrontByStoreId(storeId);
+
+    return prisma.storefront.update({
+      where: { storeId },
+      data,
+      select: { googlePlaceId: true, googleReviewUrl: true, googleReviewEnabled: true },
     });
   }
 

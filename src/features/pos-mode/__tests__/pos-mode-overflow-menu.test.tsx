@@ -28,7 +28,12 @@ function baseSwitcher(overrides: Partial<ReturnType<typeof defaultSwitcher>> = {
 }
 function defaultSwitcher() {
   return {
-    posSession: { staffName: "Test Acc", staffRole: "CASHIER" },
+    posSession: { staffName: "Test Acc", staffRole: "CASHIER" } as {
+      staffName: string;
+      staffRole: string;
+      /** Absent = a session that never carried a page list (unrestricted). */
+      allowedPages?: string[] | null;
+    },
     actingAsStaff: true,
     hasSwitchableStaff: false,
     handleSwitchAccount: vi.fn(),
@@ -231,3 +236,52 @@ describe("PosModeOverflowMenu — a linked staff account (signed in as themselve
     expect(screen.queryByText("nav.logoutOwnerAccount")).toBeNull();
   });
 });
+
+describe("PosModeOverflowMenu — Shift link", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("a cashier with the POS page gets a link to the Shift page", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({
+        posSession: { staffName: "Sam", staffRole: "CASHIER", allowedPages: ["/pos", "/pos/orders"] },
+      })
+    );
+    renderMenu();
+    const link = screen.getByText("pos.shift.title").closest("a");
+    expect(link).toHaveAttribute("href", "/store/store-001/pos/shift");
+  });
+
+  it("the owner persona (unrestricted) gets it too", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({
+        posSession: { staffName: "Owner", staffRole: "OWNER", allowedPages: null },
+      })
+    );
+    renderMenu();
+    expect(screen.getByText("pos.shift.title")).toBeInTheDocument();
+  });
+
+  it("kitchen holds no till, so no Shift link — but My Schedule stays", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({
+        posSession: { staffName: "Kim", staffRole: "KITCHEN", allowedPages: ["/pos/kds", "/pos/schedule"] },
+      })
+    );
+    renderMenu();
+    expect(screen.queryByText("pos.shift.title")).toBeNull();
+    expect(screen.getByText("pages.scheduleMyScheduleTitle")).toBeInTheDocument();
+  });
+
+  it("a floor-only persona without the POS page has no till either", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({
+        posSession: { staffName: "Hana", staffRole: "CASHIER", allowedPages: ["/tables", "/pos/schedule"] },
+      })
+    );
+    renderMenu();
+    expect(screen.queryByText("pos.shift.title")).toBeNull();
+  });
+});
+
