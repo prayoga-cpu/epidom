@@ -73,7 +73,9 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-11 w-11 shrink-0"
+            // Square like the rest of the top bar's controls, and h-auto (not a fixed
+            // h-11) so the bar's default stretch makes it exactly as tall as the bar.
+            className="h-auto w-11 shrink-0 rounded-none"
             aria-label={t("pos.print.settingsTitle")}
           >
             {/* Green when every printer in use is up, amber when only some are —

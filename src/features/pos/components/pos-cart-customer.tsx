@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, Plus, Search, UserPlus, UserRound, X } from "lucide-react";
+import { Loader2, Search, UserPlus, UserRound, X } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { Button } from "@/components/ui/button";
@@ -211,9 +211,11 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
           type="button"
           disabled={!online}
           onClick={() => setMode("search")}
-          className="text-muted-foreground hover:text-foreground hover:border-foreground/40 flex h-11 w-full touch-manipulation items-center gap-2 rounded-md border border-dashed px-3 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-60"
+          className="text-muted-foreground hover:text-foreground hover:border-foreground/40 flex h-11 w-full cursor-pointer touch-manipulation items-center gap-2 rounded-md border border-dashed px-3 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-60"
         >
-          <Plus className="h-4 w-4 shrink-0" />
+          {/* The same profile glyph the attached-customer chip uses, so the row
+              reads as "customer" at a glance and becomes that chip once picked. */}
+          <UserRound className="h-4 w-4 shrink-0" />
           <span className="truncate">{t("cashierCart.customer.add")}</span>
           {!online && (
             <span className="ml-auto truncate text-xs font-normal">

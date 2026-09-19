@@ -36,7 +36,10 @@ export function PosModeShiftChip({ storeId }: { storeId: string }) {
       title={title}
       aria-label={title}
       className={cn(
-        "flex h-10 shrink-0 touch-manipulation items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition-colors",
+        // Same size as the status bar's Connected pill (px-2 py-0.5, gap-1) so the
+        // two read as a pair. The ::before grows the tap target back to 40px
+        // (AGENTS.md touch floor) without growing the pill itself.
+        "relative flex shrink-0 touch-manipulation items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors before:absolute before:-inset-x-1 before:-inset-y-2.5",
         shift
           ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400"
           : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-400"

@@ -167,3 +167,34 @@ describe("PosItemGrid view modes", () => {
     expect(screen.getByText("Cut")).toBeInTheDocument();
   });
 });
+
+describe("PosItemGrid — floating toolbar", () => {
+  it("floats the toolbar over the menu in a zero-height sticky strip — no row of its own", () => {
+    const { container } = renderGrid("grid", {
+      toolbar: <div data-testid="view-switch">switch</div>,
+    });
+    const scroller = container.querySelector("[data-view-mode]") as HTMLElement;
+    const strip = screen.getByTestId("view-switch").closest(".sticky") as HTMLElement;
+    expect(scroller).toContainElement(strip);
+
+    // Pinned to the top of the scroller (top-0 is measured from inside its padding,
+    // so it lands level with the first heading), above the tiles, right-aligned.
+    for (const cls of ["sticky", "top-0", "z-10", "h-0", "items-start", "justify-end"]) {
+      expect(strip.className).toContain(cls);
+    }
+    // Nothing reserves space for it: no height and no margin — the first category
+    // starts right at the top instead of below an empty band.
+    expect(strip.className).not.toMatch(/\bh-(?!0\b)\d/);
+    expect(strip.className).not.toMatch(/\bm[bt]-/);
+    // It still comes before the first category, so it is first in tab order too.
+    const firstHeading = screen.getByRole("heading", { name: "Mains" });
+    expect(
+      strip.compareDocumentPosition(firstHeading) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it("renders no strip without a toolbar", () => {
+    const { container } = renderGrid("grid");
+    expect(container.querySelector(".sticky")).toBeNull();
+  });
+});

@@ -46,7 +46,17 @@ export function PosModeStatusBar({ storeId, toolbarSlotRef }: PosModeStatusBarPr
   const switchUserLabel = t("cashierCheckout.topBar.switchUser");
 
   return (
-    <header className="bg-background flex h-11 shrink-0 items-center gap-2 border-b px-3">
+    // No right padding: the staff button below runs edge to edge, so it can sit
+    // flush against the right side (and the full height) of the bar.
+    //
+    // Deliberately NO `items-center`: a flex row's default alignment stretches every
+    // child to the bar's full height, which is what lets the search field and the
+    // staff button run edge to edge with no gap above or below. (An earlier version
+    // kept items-center and re-stretched each child with `self-stretch` — a utility
+    // no other file used, so a browser holding an older stylesheet never got the rule
+    // and the controls floated ~3px off the top and bottom.) Anything that should sit
+    // in the MIDDLE of the bar centers itself — see the left group below.
+    <header className="bg-background flex h-11 shrink-0 gap-2 border-b pl-3">
       <div className="flex min-w-0 shrink-0 items-center gap-2">
         {/* Store name text is dropped below lg to make room for the toolbar
             slot; sr-only (not hidden) keeps the page's <h1> for screen readers. */}
@@ -78,25 +88,30 @@ export function PosModeStatusBar({ storeId, toolbarSlotRef }: PosModeStatusBarPr
       {/* min-w-0 flex-1: this region takes whatever is left between the two
           groups and must be allowed to shrink below its content, or a long filter
           strip pushes the printer and staff buttons off the bar. Hidden below md,
-          where /pos draws its own row instead. */}
+          where /pos draws its own row instead. Stretched by the bar's default
+          alignment (and stretching its own children the same way), so /pos's search
+          field fills the bar edge to edge instead of floating with a margin. */}
       <div
         ref={toolbarSlotRef}
         data-testid="pos-toolbar-slot"
-        className="hidden min-w-0 flex-1 items-center gap-2 md:flex"
+        className="hidden min-w-0 flex-1 gap-2 md:flex"
       />
 
-      <div className="ml-auto flex shrink-0 items-center gap-2">
+      <div className="ml-auto flex shrink-0 gap-2">
         <PosPrinterMenu storeId={storeId} />
         {staffName && (
           // A real button, not a badge: on a shared till the cashier taps their own
           // name to hand over. Opens the same "Switch Account" picker as the
           // overflow menu (StoreAccessGate / PosStaffGate read `pickerOpen`), with
           // the current session left intact underneath so backing out is free.
+          // Square and full-height — no fixed height, so the group's default stretch
+          // fills the bar (min-h-10 keeps the 40px touch floor): a block that ends
+          // at the bar's edges, not a pill inside it.
           <button
             type="button"
             onClick={openPicker}
             title={switchUserLabel}
-            className="bg-primary/10 text-primary hover:bg-primary/15 flex h-10 shrink-0 touch-manipulation items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors"
+            className="bg-primary/10 text-primary hover:bg-primary/15 flex min-h-10 shrink-0 cursor-pointer touch-manipulation items-center gap-1.5 rounded-none px-4 text-xs font-medium transition-colors"
           >
             <UserCircle2 className="h-4 w-4" />
             <span className="sr-only">{switchUserLabel}: </span>

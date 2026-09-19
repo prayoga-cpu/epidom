@@ -45,6 +45,12 @@ interface UseBarcodeScannerOptions {
   onScan: (code: string) => void;
   /** Off, the listener isn't even attached. Default true. */
   enabled?: boolean;
+  /**
+   * Longest pause between two keys that still counts as one scan (ms). Default is
+   * ScanDetector's. Changing it re-attaches the listener, so it is only ever
+   * moved by the cashier's own scanner-speed setting, never per keystroke.
+   */
+  maxGapMs?: number;
 }
 
 /**
@@ -64,7 +70,11 @@ interface UseBarcodeScannerOptions {
  * not Date.now() at handler time: a busy main thread must not stretch the gaps
  * between a scanner's keys and make a real scan look like slow typing.
  */
-export function useBarcodeScanner({ onScan, enabled = true }: UseBarcodeScannerOptions): void {
+export function useBarcodeScanner({
+  onScan,
+  enabled = true,
+  maxGapMs,
+}: UseBarcodeScannerOptions): void {
   // A ref so a new inline callback each render never re-attaches the listener
   // (which would drop a half-received scan).
   const onScanRef = useRef(onScan);
@@ -74,7 +84,7 @@ export function useBarcodeScanner({ onScan, enabled = true }: UseBarcodeScannerO
 
   useEffect(() => {
     if (!enabled) return;
-    const detector = new ScanDetector();
+    const detector = new ScanDetector({ maxGapMs });
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
@@ -92,5 +102,5 @@ export function useBarcodeScanner({ onScan, enabled = true }: UseBarcodeScannerO
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [enabled]);
+  }, [enabled, maxGapMs]);
 }

@@ -25,9 +25,14 @@ export default async function PosOrdersPage({ params }: { params: Promise<{ stor
   const canManageSettings =
     !staffSession || staffSession.storeId !== storeId || staffSession.role === "OWNER";
 
+  // PosModeShell's <main> is overflow-hidden, so the page has to own its scroll
+  // — without this inner scroller both tabs (Active and History) ran past the
+  // bottom tab bar and were clipped, with no scrollbar. Same chain as /tables.
   return (
     <div className="flex h-full flex-1 flex-col">
-      <PosOrdersTabs storeId={storeId} canManageSettings={canManageSettings} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <PosOrdersTabs storeId={storeId} canManageSettings={canManageSettings} />
+      </div>
     </div>
   );
 }

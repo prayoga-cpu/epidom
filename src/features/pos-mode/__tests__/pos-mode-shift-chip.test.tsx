@@ -63,10 +63,15 @@ describe("PosModeShiftChip", () => {
     expect(link.className).toContain("amber");
   });
 
-  it("is a real tap target of at least 40px", () => {
+  it("is as compact as the Connected pill but keeps a tap target of at least 40px", () => {
     mockUseMyShift.mockReturnValue({ shift: null, allowed: true, known: true });
     render(<PosModeShiftChip storeId="store-1" />);
-    expect(screen.getByRole("link").className).toContain("h-10");
+    const { className } = screen.getByRole("link");
+    // Visible size: the same px-2 py-0.5 the status bar's Connected pill uses.
+    expect(className).toContain("px-2 ");
+    expect(className).toContain("py-0.5");
+    // Hit area: ~20px pill + 2 × 10px from the invisible ::before.
+    expect(className).toContain("before:-inset-y-2.5");
   });
 
   it("renders nothing for a persona that holds no till (kitchen)", () => {

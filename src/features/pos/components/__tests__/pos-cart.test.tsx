@@ -212,14 +212,16 @@ describe("PosCart — flex chain and footer (the tablet invariants)", () => {
       "cashierCart.footer.saveBill",
       "cashierCart.footer.printBill",
       /Charge/,
-      "cashierCart.actions.discount",
-      "cashierCart.actions.reprintLast",
       "cashierCart.actions.more",
     ]) {
-      const el = button(name);
-      expect(el.className).toContain("flex-1");
-      expect(el.className).not.toContain("w-full");
+      expect(button(name).className).not.toContain("w-full");
     }
+    // Save Bill, Print Bill and Charge share their rows' free space; the square
+    // More button beside Charge keeps its own fixed size instead.
+    for (const name of ["cashierCart.footer.saveBill", "cashierCart.footer.printBill", /Charge/]) {
+      expect(button(name).className).toContain("flex-1");
+    }
+    expect(button("cashierCart.actions.more").className).toContain("shrink-0");
   });
 
   it("gives every footer control a >=44px tap target", () => {
@@ -228,16 +230,26 @@ describe("PosCart — flex chain and footer (the tablet invariants)", () => {
     for (const name of ["cashierCart.footer.saveBill", "cashierCart.footer.printBill"]) {
       expect(button(name).className).toContain("h-11");
     }
-    // The quick row wraps long labels instead of truncating them, so it grows
-    // from an 44px floor rather than being pinned to it.
-    for (const name of [
-      "cashierCart.actions.discount",
-      "cashierCart.actions.reprintLast",
-      "cashierCart.actions.more",
-    ]) {
-      expect(button(name).className).toContain("min-h-11");
-    }
     expect(button(/Charge/).className).toContain("min-h-12");
+    // More is icon-only and square, the same 48px as Charge's floor.
+    expect(button("cashierCart.actions.more").className).toContain("size-12");
+  });
+
+  it("puts More, icon-only, on the right of Charge — Discount and Reprint Last are no longer on the surface", () => {
+    cart().addItem("m1", "Ramen", 10, 1);
+    renderCart();
+    const charge = button(/Charge/);
+    const more = button("cashierCart.actions.more");
+    // Same row, More after Charge.
+    expect(more.parentElement).toBe(charge.parentElement);
+    expect(charge.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // No visible title on it — just the icon (the name lives in aria-label). A
+    // burger, not the ⋯ dots the POS tab bar's own More already uses.
+    expect(more.textContent).toBe("");
+    expect(more.querySelector("svg.lucide-menu")).toBeTruthy();
+    expect(more.querySelector("svg.lucide-ellipsis")).toBeNull();
+    expect(screen.queryByRole("button", { name: "cashierCart.actions.discount" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "cashierCart.actions.reprintLast" })).toBeNull();
   });
 
   it("puts the customer row inside the scroller so an expanded picker can't squeeze the footer off screen", () => {
@@ -367,14 +379,21 @@ describe("PosCart — keeping the cart's rules in sync", () => {
   });
 });
 
-// ── Quick row and More ───────────────────────────────────────────────────────
+// ── More ─────────────────────────────────────────────────────────────────────
+// Discount and Reprint Last used to have quick-row buttons of their own; they now
+// live only in the More sheet, which the square ⋯ button beside Charge opens.
 
-describe("PosCart — quick row", () => {
-  it("Discount opens the discount dialog at the plan", () => {
+/** A tile in the open More sheet. */
+const moreTile = (action: string) =>
+  document.querySelector(`button[data-action="${action}"]`) as HTMLButtonElement;
+
+describe("PosCart — More", () => {
+  it("Discount, from More, opens the discount dialog at the plan", () => {
     cart().addItem("m1", "Ramen", 10, 1);
     renderCart();
-    fireEvent.click(button("cashierCart.actions.discount"));
-    expect(env.requireFeature).toHaveBeenCalledWith("OPERATIONS");
+    fireEvent.click(button("cashierCart.actions.more"));
+    fireEvent.click(moreTile("discount"));
+    expect(env.requireFeature).toHaveBeenCalledWith("OPERATIONS", expect.any(String));
     expect(screen.getByRole("heading", { name: "cashierCart.discountDialog.title" })).toBeTruthy();
   });
 
@@ -382,31 +401,29 @@ describe("PosCart — quick row", () => {
     env.plan = "POS";
     cart().addItem("m1", "Ramen", 10, 1);
     renderCart();
-    fireEvent.click(button("cashierCart.actions.discount"));
+    fireEvent.click(button("cashierCart.actions.more"));
+    fireEvent.click(moreTile("discount"));
     expect(env.requireFeature).toHaveReturnedWith(false);
     expect(screen.queryByRole("heading", { name: "cashierCart.discountDialog.title" })).toBeNull();
   });
 
-  it("Discount is disabled on an empty bill and highlighted once a discount is on", () => {
-    const { unmount } = renderCart();
-    expect(button("cashierCart.actions.discount").disabled).toBe(true);
-    unmount();
-
-    cart().addItem("m1", "Ramen", 100, 1);
-    cart().setDiscount(10, "Regular");
+  it("Discount is disabled in More while the bill is empty", () => {
     renderCart();
-    expect(button("cashierCart.actions.discount").className).toContain("border-primary");
+    fireEvent.click(button("cashierCart.actions.more"));
+    expect(moreTile("discount").disabled).toBe(true);
   });
 
-  it("Reprint Last is disabled until a sale has been completed on this device", () => {
+  it("Reprint Last is disabled in More until a sale has been completed on this device", () => {
     renderCart();
-    expect(button("cashierCart.actions.reprintLast").disabled).toBe(true);
+    fireEvent.click(button("cashierCart.actions.more"));
+    expect(moreTile("reprintLast").disabled).toBe(true);
   });
 
-  it("Reprint Last prints the last receipt", async () => {
+  it("Reprint Last, from More, prints the last receipt", async () => {
     useLastReceipt.setState({ receipt: lastReceipt, meta: null });
     renderCart();
-    fireEvent.click(button("cashierCart.actions.reprintLast"));
+    fireEvent.click(button("cashierCart.actions.more"));
+    fireEvent.click(moreTile("reprintLast"));
     await waitFor(() => expect(env.print).toHaveBeenCalledWith(lastReceipt));
   });
 

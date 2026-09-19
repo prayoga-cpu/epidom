@@ -21,7 +21,8 @@ interface AddFilterMenuProps {
   className?: string;
 }
 
-/** Notion-style "+ Add filter" trigger — lists only filter dimensions not already visible. */
+/** Notion-style "+ Add filter" trigger — lists only filter dimensions not already visible.
+ * Ghost styling: no border and square corners, just the label until hovered. */
 export function AddFilterMenu({ options, onAdd, className }: AddFilterMenuProps) {
   const { t } = useI18n();
 
@@ -33,7 +34,7 @@ export function AddFilterMenu({ options, onAdd, className }: AddFilterMenuProps)
         <button
           type="button"
           className={cn(
-            "border-input text-muted-foreground hover:text-foreground hover:border-foreground/40 flex h-9 items-center gap-1.5 rounded-md border border-dashed px-3 text-sm font-medium transition-colors",
+            "text-muted-foreground hover:bg-accent hover:text-accent-foreground flex h-9 cursor-pointer items-center gap-1.5 rounded-none px-3 text-sm font-medium transition-colors",
             className
           )}
         >

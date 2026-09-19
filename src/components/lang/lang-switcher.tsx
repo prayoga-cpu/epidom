@@ -4,7 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useI18n } from "./i18n-provider";
 import { stripLocalePrefix, getLocalizedPath, LOCALE_PREF_COOKIE } from "@/lib/i18n-routing";
 
-const OPTS = [
+/** Exported so other language pickers (POS Mode's More menu) offer the same set, in the same order. */
+export const LANGUAGE_OPTIONS = [
   { label: "Français", value: "fr", short: "FR", flag: "🇫🇷" },
   { label: "Indonesia", value: "id", short: "ID", flag: "🇮🇩" },
   { label: "English", value: "en", short: "EN", flag: "🇺🇸" },
@@ -46,7 +47,7 @@ export default function LangSwitcher({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const current = OPTS.find((o) => o.value === locale) ?? OPTS[0];
+  const current = LANGUAGE_OPTIONS.find((o) => o.value === locale) ?? LANGUAGE_OPTIONS[0];
 
   const triggerStyle: React.CSSProperties = {
     display: "inline-flex",
@@ -111,7 +112,7 @@ export default function LangSwitcher({
             zIndex: 200,
           }}
         >
-          {OPTS.map((opt) => {
+          {LANGUAGE_OPTIONS.map((opt) => {
             const active = opt.value === locale;
             return (
               <button

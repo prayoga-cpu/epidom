@@ -21,6 +21,16 @@ vi.mock("@/features/dashboard/shared/hooks/use-account-switcher", () => ({
   useAccountSwitcher: () => mockSwitcher(),
 }));
 
+// Both have their own suites; here only WHERE and FOR WHOM the menu mounts them matters.
+vi.mock("../pos-mode-preferences", () => ({
+  PosModePreferences: () => <div data-testid="preferences" />,
+}));
+vi.mock("../pos-mode-store-switcher", () => ({
+  PosModeStoreSwitcher: ({ storeId, onNavigate }: { storeId: string; onNavigate: () => void }) => (
+    <button data-testid="store-switcher" data-store-id={storeId} onClick={onNavigate} />
+  ),
+}));
+
 import { PosModeOverflowMenu } from "../pos-mode-overflow-menu";
 
 function baseSwitcher(overrides: Partial<ReturnType<typeof defaultSwitcher>> = {}) {
@@ -285,3 +295,51 @@ describe("PosModeOverflowMenu — Shift link", () => {
   });
 });
 
+describe("PosModeOverflowMenu — device preferences and store switching", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("offers language and light/dark to every persona — they belong to the device, not the signed-in role", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({ actingAsStaff: true, posSession: { staffName: "Sam", staffRole: "CASHIER" } })
+    );
+    renderMenu();
+    expect(screen.getByTestId("preferences")).toBeInTheDocument();
+  });
+
+  it("offers them to a linked staff account too", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true }));
+    renderMenu({ linkedStaff: true });
+    expect(screen.getByTestId("preferences")).toBeInTheDocument();
+  });
+
+  it("the owner's real session gets the store switcher, for this store", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: false }));
+    renderMenu();
+    expect(screen.getByTestId("store-switcher")).toHaveAttribute("data-store-id", "store-001");
+  });
+
+  it("a staff PIN persona doesn't — it's scoped to the store it logged into, same as Back to Stores", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true }));
+    renderMenu();
+    expect(screen.queryByTestId("store-switcher")).toBeNull();
+    expect(screen.queryByText("nav.backToStores")).toBeNull();
+  });
+
+  it("a linked staff account keeps it even with a persona active — the store list is its own account's", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true }));
+    renderMenu({ linkedStaff: true });
+    expect(screen.getByTestId("store-switcher")).toBeInTheDocument();
+  });
+
+  it("picking a store closes the menu", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: false }));
+    const onOpenChange = vi.fn();
+    render(<PosModeOverflowMenu storeId="store-001" open={true} onOpenChange={onOpenChange} />);
+
+    fireEvent.click(screen.getByTestId("store-switcher"));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});

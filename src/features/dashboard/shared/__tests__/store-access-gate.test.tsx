@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
 vi.mock("@/components/lang/i18n-provider", () => ({
@@ -10,8 +10,9 @@ vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
 }));
 
+const mockStaff = vi.fn<() => unknown[]>(() => []);
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: () => ({ data: { staff: [] }, isLoading: false }),
+  useQuery: () => ({ data: { staff: mockStaff() }, isLoading: false }),
 }));
 
 vi.mock("@/lib/api/client", () => ({
@@ -29,7 +30,10 @@ vi.mock("@/features/pos/hooks/use-pos-session", () => ({
 vi.mock("../hooks/use-owner-pin", () => ({
   useOwnerPinStatus: () => ({ data: { hasPin: true } }),
 }));
-vi.mock("../verify-owner-pin-dialog", () => ({ VerifyOwnerPinDialog: () => null }));
+vi.mock("../verify-owner-pin-dialog", () => ({
+  VerifyOwnerPinDialog: ({ open }: { open: boolean }) =>
+    open ? <div>verify-owner-pin</div> : null,
+}));
 vi.mock("../set-owner-pin-dialog", () => ({ SetOwnerPinDialog: () => null }));
 
 import { StoreAccessGate } from "../store-access-gate";
@@ -40,6 +44,8 @@ function session(overrides: Record<string, unknown> = {}) {
   return {
     isActive: true,
     storeId: STORE_ID,
+    staffId: null,
+    staffRole: null,
     pickerOpen: false,
     closePicker: vi.fn(),
     login: vi.fn(),
@@ -47,9 +53,13 @@ function session(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function renderGate() {
+function member(id: string, name: string) {
+  return { id, name, role: "CASHIER", isActive: true, hasPin: true, allowedPages: null };
+}
+
+function renderGate(props: { forcePicker?: boolean } = {}) {
   return render(
-    <StoreAccessGate storeId={STORE_ID}>
+    <StoreAccessGate storeId={STORE_ID} {...props}>
       <div>protected-page</div>
     </StoreAccessGate>
   );
@@ -118,5 +128,87 @@ describe("StoreAccessGate — Switch Account picker (pickerOpen)", () => {
     mockSession.mockReturnValue(session({ storeId: "some-other-store" }));
     renderGate();
     expect(screen.queryByText("protected-page")).toBeNull();
+  });
+});
+
+describe("StoreAccessGate — the already-logged-in persona's own card", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    mockPathname.mockReturnValue(`/store/${STORE_ID}/dashboard`);
+    mockStaff.mockReturnValue([member("staff-1", "Test Acc"), member("staff-2", "Testing")]);
+    // No PIN entered + a non-ok reply is what a PIN-protected staffer looks like.
+    fetchMock.mockReset().mockResolvedValue({ ok: false, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    mockStaff.mockReturnValue([]);
+  });
+
+  const cardFor = (name: string) => screen.getByText(name).closest("button") as HTMLButtonElement;
+
+  it("marks only the active staffer's card as current", () => {
+    mockSession.mockReturnValue(
+      session({ pickerOpen: true, staffId: "staff-1", staffRole: "CASHIER" })
+    );
+    renderGate();
+    expect(cardFor("Test Acc").getAttribute("aria-current")).toBe("true");
+    expect(cardFor("Testing").getAttribute("aria-current")).toBeNull();
+  });
+
+  it("clicking your own card resumes the session — no PIN step, no re-login", () => {
+    const s = session({ pickerOpen: true, staffId: "staff-1", staffRole: "CASHIER" });
+    mockSession.mockReturnValue(s);
+    renderGate();
+    fireEvent.click(cardFor("Test Acc"));
+    expect(s.closePicker).toHaveBeenCalledTimes(1);
+    expect(s.login).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("pages.staffAuthEnterPin")).toBeNull();
+  });
+
+  it("clicking someone ELSE's card still goes through PIN entry", async () => {
+    const s = session({ pickerOpen: true, staffId: "staff-1", staffRole: "CASHIER" });
+    mockSession.mockReturnValue(s);
+    renderGate();
+    fireEvent.click(cardFor("Testing"));
+    expect(await screen.findByText("pages.staffAuthEnterPin")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(s.closePicker).not.toHaveBeenCalled();
+  });
+
+  it("owner active: 'Continue as Owner' is the current card and resumes without the Owner PIN", () => {
+    const s = session({ pickerOpen: true, staffId: "owner", staffRole: "OWNER" });
+    mockSession.mockReturnValue(s);
+    renderGate();
+    const btn = screen.getByText("pages.storeAccessGateContinueAsOwner").closest("button")!;
+    expect(btn.getAttribute("aria-current")).toBe("true");
+    // Nobody in the staff grid is marked when the owner is the one logged in.
+    expect(cardFor("Test Acc").getAttribute("aria-current")).toBeNull();
+    fireEvent.click(btn);
+    expect(s.closePicker).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("verify-owner-pin")).toBeNull();
+  });
+
+  it("staffer active: 'Continue as Owner' is not marked and still asks for the Owner PIN", () => {
+    const s = session({ pickerOpen: true, staffId: "staff-1", staffRole: "CASHIER" });
+    mockSession.mockReturnValue(s);
+    renderGate();
+    const btn = screen.getByText("pages.storeAccessGateContinueAsOwner").closest("button")!;
+    expect(btn.getAttribute("aria-current")).toBeNull();
+    fireEvent.click(btn);
+    expect(screen.getByText("verify-owner-pin")).toBeInTheDocument();
+    expect(s.closePicker).not.toHaveBeenCalled();
+  });
+
+  it("forcePicker (server no longer agrees with the local persona): nothing is marked or resumable", () => {
+    const s = session({ pickerOpen: true, staffId: "staff-1", staffRole: "CASHIER" });
+    mockSession.mockReturnValue(s);
+    renderGate({ forcePicker: true });
+    expect(cardFor("Test Acc").getAttribute("aria-current")).toBeNull();
+    fireEvent.click(cardFor("Test Acc"));
+    expect(s.closePicker).not.toHaveBeenCalled();
   });
 });

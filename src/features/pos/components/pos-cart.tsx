@@ -3,13 +3,12 @@
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/use-confirm";
-import { Info, Loader2, ReceiptText, Save, ShoppingBag } from "lucide-react";
+import { Info, Loader2, Menu, ReceiptText, Save, ShoppingBag } from "lucide-react";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { PosCartItem } from "./pos-cart-item";
 import { PosCartHeader } from "./pos-cart-header";
 import { PosCartCustomer } from "./pos-cart-customer";
 import { PosCartTotals } from "./pos-cart-totals";
-import { PosCartActions } from "./pos-cart-actions";
 import { PosMoreSheet, type MoreAction } from "./pos-more-sheet";
 import { PosCustomItemDialog } from "./pos-custom-item-dialog";
 import { PosDiscountDialog } from "./pos-discount-dialog";
@@ -58,11 +57,11 @@ interface PosCartProps {
  *
  * Top to bottom: header (Order Queue, Dine In | Take Away, pax/table), then a
  * scrolling receipt — the optional customer row followed by the lines — and a
- * pinned footer with the totals, the quick row (Discount · Reprint Last ·
- * More), Save Bill / Print Bill and the big Charge button. Everything the
- * cashier needs is in this panel; the only pop-ups are the deliberate ones
- * (More, and the discount / coupon / points / custom item / merge / split /
- * save dialogs).
+ * pinned footer with the totals, Save Bill / Print Bill and the big Charge
+ * button, with a square burger (☰) More button beside it. Everything the cashier needs
+ * is in this panel; the only pop-ups are the deliberate ones (More — which holds
+ * Discount, Reprint Last and the rarer actions — and the discount / coupon /
+ * points / custom item / merge / split / save dialogs).
  */
 export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosCartProps) {
   const { t, locale } = useI18n();
@@ -102,7 +101,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
   // Only to print a resumed bill under its real number.
   const { data: queueOrders } = usePosOrdersSnapshot(storeId);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
-  const { currentPlan, requireFeature } = usePosModeUpgradeGate();
+  const { currentPlan } = usePosModeUpgradeGate();
 
   const lastReceipt = useLastReceipt((s) => s.receipt);
   const { print, isPrinting } = usePrintReceipt();
@@ -155,15 +154,6 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
     cart.resumingOrderId !== null;
 
   const openDiscount = () => setIsDiscountOpen(true);
-
-  const handleQuickDiscount = () => {
-    // Discounts are Operations-tier+ (see FEATURE_MIN_PLAN.discounts) — a
-    // Cashier on a POS-tier store is a real, reachable state (Cashier
-    // creation has no plan guard of its own), not hypothetical. Below
-    // tier, this surfaces PosModeUpgradeBanner instead of opening the dialog.
-    if (!requireFeature(FEATURE_MIN_PLAN.discounts)) return;
-    openDiscount();
-  };
 
   const handleClear = async () => {
     // "Clear sale" wipes lines, customer, discount and points at once, and the
@@ -324,16 +314,6 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
       <div className="bg-background shrink-0 space-y-2 border-t p-3 shadow-[0_-6px_10px_-6px_rgba(0,0,0,0.15)] sm:p-4">
         {hasItems && <PosCartTotals taxLabel={financeSettings?.taxLabel} />}
 
-        <PosCartActions
-          onDiscount={handleQuickDiscount}
-          onReprintLast={handleReprintLast}
-          onMore={() => setIsMoreOpen(true)}
-          discountDisabled={!hasItems}
-          discountActive={cart.discountSource !== null}
-          canReprint={lastReceipt !== null}
-          isPrinting={isPrinting}
-        />
-
         <div className="flex gap-2">
           <Button
             type="button"
@@ -366,7 +346,9 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
           </Button>
         </div>
 
-        <div className="flex gap-2">
+        {/* items-center: if a large total wraps Charge onto a second line, the
+            square More button stays a square and sits at the row's middle. */}
+        <div className="flex items-center gap-2">
           <Button
             // flex-1 (not w-full!): width:100% ignores sibling elements in a
             // flex row, so it would claim the *entire* row's width on top of
@@ -385,6 +367,22 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
               <span>{t("cashierCart.footer.charge")}</span>
               <span className="tabular-nums">{formatPrice(cart.total)}</span>
             </span>
+          </Button>
+          {/* Icon-only, square: 48px matches Charge's min-h-12 so the two line up.
+              Discount, Reprint Last, coupons, split/merge and the rest live in the
+              sheet it opens; the accessible name stands in for the visible label.
+              A burger, not the ⋯ dots: the POS tab bar's own "More" already owns
+              the dots, and two identical-looking buttons would read as the same one. */}
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-12 shrink-0 touch-manipulation"
+            aria-label={t("cashierCart.actions.more")}
+            title={t("cashierCart.actions.more")}
+            onClick={() => setIsMoreOpen(true)}
+          >
+            <Menu className="size-5" />
           </Button>
         </div>
       </div>

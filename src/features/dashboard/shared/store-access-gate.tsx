@@ -53,6 +53,15 @@ interface StoreAccessGateProps {
 const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"] as const;
 
 /**
+ * Marks the persona that's already logged in on this device, when the picker was
+ * opened over a live session ("Switch Account"). The `dark:` twins are needed —
+ * Button's outline variant sets its own dark background/border, which would
+ * otherwise win over the plain amber classes in dark mode.
+ */
+const CURRENT_PERSONA_CLASS =
+  "border-amber-500/60 bg-amber-500/10 hover:border-amber-500 hover:bg-amber-500/15 dark:border-amber-500/60 dark:bg-amber-500/10 dark:hover:bg-amber-500/15";
+
+/**
  * First checkpoint entering a store each day — "who is using this device
  * right now?" Sits above every dashboard route (see the (dashboard)
  * layout), not just POS, because a device that's stayed logged into the
@@ -77,7 +86,15 @@ export function StoreAccessGate({
   const { t } = useI18n();
   const pathname = usePathname();
   const [isMounted, setIsMounted] = useState(false);
-  const { isActive, storeId: sessionStoreId, pickerOpen, closePicker, login } = usePosSession();
+  const {
+    isActive,
+    storeId: sessionStoreId,
+    staffId: sessionStaffId,
+    staffRole: sessionStaffRole,
+    pickerOpen,
+    closePicker,
+    login,
+  } = usePosSession();
   useClearStalePosSession();
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [pin, setPin] = useState("");
@@ -97,6 +114,15 @@ export function StoreAccessGate({
   // even while a session is technically still active (pickerOpen — see
   // usePosSession's own doc comment on that field).
   const hasSessionHere = isActive && sessionStoreId === storeId && !forcePicker;
+
+  // Reached via "Switch Account" with the current session still intact
+  // underneath — the one case where the picker is showing someone who's
+  // ALREADY logged in, so their own card can resume instead of re-verifying.
+  // Role-based for the owner (a seeded StaffMember row can itself be OWNER —
+  // see useAccountSwitcher), and those rows never appear in activeStaff below.
+  const resumable = pickerOpen && hasSessionHere;
+  const activeAsOwner = resumable && sessionStaffRole === "OWNER";
+  const activeStaffId = resumable && !activeAsOwner ? sessionStaffId : null;
 
   const { data, isLoading } = useQuery({
     queryKey: ["staff", storeId],
@@ -152,6 +178,11 @@ export function StoreAccessGate({
   };
 
   const handleStaffClick = (member: StaffMember) => {
+    // Already this person's session — nothing to prove, same as "Back".
+    if (member.id === activeStaffId) {
+      closePicker();
+      return;
+    }
     setSelectedStaff(member);
     setPin("");
     verifyPin(member.id, "");
@@ -175,6 +206,10 @@ export function StoreAccessGate({
   );
 
   const handleContinueAsOwner = () => {
+    if (activeAsOwner) {
+      closePicker();
+      return;
+    }
     if (pinStatus?.hasPin) setVerifyOwnerOpen(true);
     else setSetOwnerPinOpen(true);
   };
@@ -231,6 +266,8 @@ export function StoreAccessGate({
                 session still intact underneath) — canceling out should just
                 resume that session instantly, not detour through /stores or
                 force a PIN re-entry for a persona that's already logged in.
+                Tapping that persona's own (amber) card below is the same
+                cancel, so it resumes without a PIN too.
                 This gate wraps BOTH shells (the (dashboard) and (pos-mode)
                 layouts each mount it, POS's outside PosStaffGate), so which
                 shell "back" returns to is read from where the user actually
@@ -248,7 +285,12 @@ export function StoreAccessGate({
                 {isPosAppPath(pathname) ? t("nav.pos") : t("nav.backOffice")}
               </Button>
             ) : (
-              <Button asChild variant="ghost" size="sm" className="absolute top-2 left-2 sm:top-4 sm:left-4">
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="absolute top-2 left-2 sm:top-4 sm:left-4"
+              >
                 <Link href="/stores">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   {t("nav.backToStores")}
@@ -258,7 +300,9 @@ export function StoreAccessGate({
 
             <div className="text-center">
               <ShieldCheck className="text-muted-foreground/50 mx-auto mb-3 h-8 w-8" />
-              <h2 className="text-2xl font-bold tracking-tight">{t("pages.storeAccessGateTitle")}</h2>
+              <h2 className="text-2xl font-bold tracking-tight">
+                {t("pages.storeAccessGateTitle")}
+              </h2>
               <p className="text-muted-foreground mt-1 text-sm">{t("pages.storeAccessGateDesc")}</p>
             </div>
 
@@ -275,14 +319,26 @@ export function StoreAccessGate({
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {activeStaff.map((member) => {
                   const accessKey = staffAccessLabelKey(member.allowedPages);
+                  const isCurrent = member.id === activeStaffId;
                   return (
                     <Button
                       key={member.id}
                       variant="outline"
-                      className="hover:bg-muted/50 hover:border-primary/50 flex h-auto min-h-24 flex-col items-center justify-center gap-1.5 py-3 transition-colors"
+                      aria-current={isCurrent ? "true" : undefined}
+                      className={cn(
+                        "hover:bg-muted/50 hover:border-primary/50 flex h-auto min-h-24 flex-col items-center justify-center gap-1.5 py-3 transition-colors",
+                        isCurrent && CURRENT_PERSONA_CLASS
+                      )}
                       onClick={() => handleStaffClick(member)}
                     >
-                      <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full font-semibold">
+                      <div
+                        className={cn(
+                          "flex h-10 w-10 items-center justify-center rounded-full font-semibold",
+                          isCurrent
+                            ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                            : "bg-primary/10 text-primary"
+                        )}
+                      >
                         {member.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="w-full truncate px-2 text-center font-medium">
@@ -304,7 +360,14 @@ export function StoreAccessGate({
 
             {!linkedStaff && (
               <div className="flex justify-center border-t pt-6">
-                <Button type="button" variant="outline" size="sm" onClick={handleContinueAsOwner}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-current={activeAsOwner ? "true" : undefined}
+                  className={cn(activeAsOwner && CURRENT_PERSONA_CLASS)}
+                  onClick={handleContinueAsOwner}
+                >
                   <KeyRound className="mr-2 h-3.5 w-3.5" />
                   {t("pages.storeAccessGateContinueAsOwner")}
                 </Button>

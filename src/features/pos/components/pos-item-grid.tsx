@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useOnlineStatus } from "@/hooks/use-network-status";
 import type { PosMenuItem, PosMenuCategory } from "../types/pos.types";
@@ -21,6 +22,9 @@ interface PosItemGridProps {
   customDepartmentLabel?: string | null;
   /** grid = image tiles (default), columns = compact text tiles, list = one row per item. */
   viewMode?: PosViewMode;
+  /** Controls for the menu itself (the view switch). They float over the top-right
+   * of the menu — no row of their own, and they stay put while it scrolls. */
+  toolbar?: ReactNode;
 }
 
 export function PosItemGrid({
@@ -31,6 +35,7 @@ export function PosItemGrid({
   searchQuery,
   customDepartmentLabel,
   viewMode = "grid",
+  toolbar,
 }: PosItemGridProps) {
   const { t } = useI18n();
   // The counted-stock chip is suppressed offline: the POS menu IS mirrored to
@@ -243,6 +248,26 @@ export function PosItemGrid({
         viewMode !== "grid" && "px-2"
       )}
     >
+      {toolbar && (
+        // Floats instead of taking a row: a ZERO-height sticky strip (so it costs no
+        // layout space and stays pinned while the menu scrolls beneath it) whose
+        // contents overflow downward — items-start stops the flex row stretching
+        // them down to nothing. top-0, not a padding-sized offset: a sticky `top`
+        // is measured from INSIDE this container's padding, so 0 already lands it
+        // on the container's own top gutter (pt-2 / sm:p-4), level with the first
+        // heading, and it never shifts once you scroll. Grid view has no side
+        // gutter on a phone (tiles run to the screen edge), so it brings its own;
+        // the other views already have px-2. The shadow is what lets it read as
+        // floating over tiles.
+        <div
+          className={cn(
+            "sticky top-0 z-10 flex h-0 items-start justify-end",
+            viewMode === "grid" && "px-3 sm:px-0"
+          )}
+        >
+          <div className="rounded-md shadow-md">{toolbar}</div>
+        </div>
+      )}
       {standardCategories.map(renderCategory)}
       {customCategories.length > 0 && (
         <section className="border-primary/30 bg-primary/5 mt-2 rounded-xl border p-3 sm:p-4">

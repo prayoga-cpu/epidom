@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, within, act } from "@testing-library/react";
+import { render, screen, fireEvent, within, act, cleanup } from "@testing-library/react";
 import type { PosMenuCategory } from "../../types/pos.types";
 
 const STRINGS: Record<string, string> = {
@@ -55,6 +55,7 @@ import { PosShell } from "../pos-shell";
 import { PosModeToolbarSlotContext } from "@/features/pos-mode/pos-mode-toolbar-slot";
 import { usePosCart } from "../../hooks/use-pos-cart";
 import { usePosViewMode } from "../../hooks/use-pos-view-mode";
+import { usePosScannerSettings } from "../../hooks/use-pos-scanner-settings";
 
 const store = { id: "store-1", name: "Cafe" };
 
@@ -112,8 +113,8 @@ function renderShell(slot?: { available: boolean; element: HTMLElement | null })
 
 const search = () => screen.getByPlaceholderText("pos.menu.search") as HTMLInputElement;
 
-/** A wedge-scanner burst: 10ms between keys, then Enter, with controlled event timestamps. */
-function scan(code: string, start = 1000) {
+/** A wedge-scanner burst (10ms between keys unless `gap` says otherwise), then Enter, with controlled event timestamps. */
+function scan(code: string, start = 1000, gap = 10) {
   const press = (key: string, at: number) => {
     const ev = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
     Object.defineProperty(ev, "timeStamp", { value: at });
@@ -122,19 +123,23 @@ function scan(code: string, start = 1000) {
     });
     return ev;
   };
-  [...code].forEach((c, i) => press(c, start + i * 10));
-  return press("Enter", start + code.length * 10);
+  [...code].forEach((c, i) => press(c, start + i * gap));
+  return press("Enter", start + code.length * gap);
 }
 
 beforeEach(() => {
   localStorage.clear();
   usePosCart.getState().clearCart();
   usePosViewMode.setState({ viewMode: "grid" });
+  usePosScannerSettings.setState({ enabled: true, speed: "standard" });
   menu.categories = categoriesFixture();
   setViewport(false);
 });
 
 afterEach(() => {
+  // Unmount first: the scanner panel is a Radix popover portaled into <body>, and
+  // wiping the body underneath a still-mounted tree makes React's own cleanup throw.
+  cleanup();
   document.body.innerHTML = "";
 });
 
@@ -148,14 +153,11 @@ describe("PosShell toolbar — one bar at ≥md, its own row below", () => {
     const row = search().closest("div.border-b") as HTMLElement;
     expect(row.className).toContain("md:hidden");
     expect(
-      within(row).getByRole("group", { name: "cashierCheckout.view.label" })
-    ).toBeInTheDocument();
-    expect(
       within(row).getByRole("button", { name: "cashierCheckout.scan.focus" })
     ).toBeInTheDocument();
   });
 
-  it("at md+ the search, filters, view toggle and scan button are portaled into the status bar's slot", () => {
+  it("at md+ the search, filters and scan button are portaled into the status bar's slot — the view toggle is not", () => {
     setViewport(true);
     const slot = document.createElement("div");
     document.body.appendChild(slot);
@@ -163,16 +165,49 @@ describe("PosShell toolbar — one bar at ≥md, its own row below", () => {
 
     expect(slot).toContainElement(search());
     expect(
-      within(slot).getByRole("group", { name: "cashierCheckout.view.label" })
-    ).toBeInTheDocument();
-    expect(
       within(slot).getByRole("button", { name: "cashierCheckout.scan.focus" })
     ).toBeInTheDocument();
+    expect(within(slot).queryByRole("group", { name: "cashierCheckout.view.label" })).toBeNull();
+    // Still on screen — down in the menu container instead.
+    expect(screen.getByRole("group", { name: "cashierCheckout.view.label" })).toBeInTheDocument();
     expect(
       within(slot).getByRole("button", { name: /pos\.filters\.addFilter/ })
     ).toBeInTheDocument();
     // Exactly one search box on screen: no second row underneath.
     expect(screen.getAllByPlaceholderText("pos.menu.search")).toHaveLength(1);
+  });
+
+  it("in the status bar the search field is a flat, full-height block — square, no border, no margin", () => {
+    setViewport(true);
+    const slot = document.createElement("div");
+    document.body.appendChild(slot);
+    renderShell({ available: true, element: slot });
+
+    const field = search();
+    expect(field.className).toContain("h-full");
+    expect(field.className).toContain("rounded-none");
+    expect(field.className).toContain("border-0");
+    expect(field.className).not.toContain("h-10");
+
+    // "+ Add filter" is ghost: no border, dashed or otherwise, square corners, a
+    // pointer cursor — and as tall as the bar, so its hover tint is a flat block.
+    // (h-full, not `self-stretch`: a class no other file uses can be missing from a
+    // browser holding an older stylesheet.)
+    const add = within(slot).getByRole("button", { name: /pos\.filters\.addFilter/ });
+    expect(add.className).not.toMatch(/\bborder\b|border-dashed/);
+    expect(add.className).toContain("rounded-none");
+    expect(add.className).not.toContain("rounded-md");
+    expect(add.className).toContain("cursor-pointer");
+    expect(add.className).toContain("h-full");
+    expect(add.className).not.toContain("h-9");
+    expect(add.className).not.toContain("self-stretch");
+  });
+
+  it('outside the status bar, "+ Add filter" keeps its normal 36px height', () => {
+    renderShell(); // no slot → the inline row
+    const add = screen.getByRole("button", { name: /pos\.filters\.addFilter/ });
+    expect(add.className).toContain("h-9");
+    expect(add.className).not.toContain("h-full");
   });
 
   it("the portaled controls still work (state stays in the shell)", () => {
@@ -185,7 +220,7 @@ describe("PosShell toolbar — one bar at ≥md, its own row below", () => {
     expect(screen.getByText("Ramen")).toBeInTheDocument();
     expect(screen.queryByText("Tea")).toBeNull();
 
-    fireEvent.click(within(slot).getByRole("button", { name: "cashierCheckout.view.list" }));
+    fireEvent.click(screen.getByRole("button", { name: "cashierCheckout.view.list" }));
     expect(container.querySelector('[data-view-mode="list"]')).not.toBeNull();
   });
 
@@ -211,11 +246,32 @@ describe("PosShell toolbar — one bar at ≥md, its own row below", () => {
     );
   });
 
-  it("the scan button parks focus in the search box", () => {
+  it("the view toggle is the first thing in the menu container, ahead of every category", () => {
+    const { container } = renderShell();
+    const menuArea = container.querySelector("[data-view-mode]") as HTMLElement;
+    const group = within(menuArea).getByRole("group", { name: "cashierCheckout.view.label" });
+    expect(menuArea.firstElementChild).toContainElement(group);
+    const firstHeading = within(menuArea).getAllByRole("heading", { level: 2 })[0];
+    expect(group.compareDocumentPosition(firstHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    // …and no longer in the search toolbar.
+    const row = search().closest("div.border-b") as HTMLElement;
+    expect(within(row).queryByRole("group", { name: "cashierCheckout.view.label" })).toBeNull();
+  });
+
+  it("the scan button sits inside the search box and opens the scanner panel", () => {
     renderShell();
-    expect(document.activeElement).not.toBe(search());
-    fireEvent.click(screen.getByRole("button", { name: "cashierCheckout.scan.focus" }));
-    expect(document.activeElement).toBe(search());
+    const scanButton = screen.getByRole("button", { name: "cashierCheckout.scan.focus" });
+    expect(search().parentElement).toContainElement(scanButton);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(scanButton);
+    const panel = screen.getByRole("dialog", { name: "cashierCheckout.scan.title" });
+    expect(
+      within(panel).getByPlaceholderText("cashierCheckout.scan.testPlaceholder")
+    ).toBeInTheDocument();
+    expect(within(panel).getByText("cashierCheckout.scan.settingsTitle")).toBeInTheDocument();
   });
 
   it("switching the view toggle re-lays the menu out and remembers it", () => {
@@ -342,5 +398,33 @@ describe("PosShell — a scanner aimed at the page", () => {
     document.body.appendChild(dialog);
     scan("5901234123457");
     expect(usePosCart.getState().items).toHaveLength(0);
+  });
+
+  it("ignores a page-wide scan while the scanner panel is open, so a test never adds to the sale", () => {
+    renderShell();
+    fireEvent.click(screen.getByRole("button", { name: "cashierCheckout.scan.focus" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    scan("5901234123457");
+    expect(usePosCart.getState().items).toHaveLength(0);
+  });
+
+  it("stops listening page-wide when 'scan anywhere' is switched off", () => {
+    usePosScannerSettings.setState({ enabled: false });
+    renderShell();
+    scan("5901234123457");
+    expect(usePosCart.getState().items).toHaveLength(0);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("a slow scanner is missed at Standard speed and read once set to Slow", () => {
+    // 100ms between keys: over the 50ms Standard limit, under Slow's 120ms.
+    renderShell();
+    scan("5901234123457", 1000, 100);
+    expect(usePosCart.getState().items).toHaveLength(0);
+
+    act(() => usePosScannerSettings.setState({ speed: "slow" }));
+    scan("5901234123457", 5000, 100);
+    expect(usePosCart.getState().items).toHaveLength(1);
+    expect(usePosCart.getState().items[0].menuItemId).toBe("m-ramen");
   });
 });

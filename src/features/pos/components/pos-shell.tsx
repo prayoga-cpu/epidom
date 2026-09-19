@@ -14,17 +14,18 @@ import { PosUnpaidAlert } from "./pos-unpaid-alert";
 import { AddFilterMenu } from "./add-filter-menu";
 import { RemovableFilter } from "./removable-filter";
 import { PosViewToggle } from "./pos-view-toggle";
+import { PosScannerMenu } from "./pos-scanner-menu";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { usePosOrders } from "../hooks/use-pos-orders";
 import { usePosViewMode } from "../hooks/use-pos-view-mode";
 import { useBarcodeScanner } from "../hooks/use-barcode-scanner";
+import { SCANNER_SPEED_GAP_MS, usePosScannerSettings } from "../hooks/use-pos-scanner-settings";
 import { useCustomerDisplayPublisher } from "../hooks/use-customer-display";
 import { findItemByBarcode } from "../lib/barcode";
 import { usePosModeToolbarSlot } from "@/features/pos-mode/pos-mode-toolbar-slot";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ScanBarcode, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -142,18 +143,23 @@ export function PosShell({ store }: PosShellProps) {
   // A scanner aimed at the page rather than the search box (focus on a tile, or
   // nowhere). Scans that land in a text field are that field's business — the
   // search box handles its own Enter below.
+  const scannerEnabled = usePosScannerSettings((s) => s.enabled);
+  const scannerSpeed = usePosScannerSettings((s) => s.speed);
   useBarcodeScanner({
     onScan: (code) => {
       if (!addByBarcode(code)) toast.error(t("cashierCheckout.scan.noMatch"));
     },
+    enabled: scannerEnabled,
+    maxGapMs: SCANNER_SPEED_GAP_MS[scannerSpeed],
   });
 
   const toolbarSlot = usePosModeToolbarSlot();
   const isMd = useMinWidth(MD_MIN_WIDTH_PX);
-  // At ≥md the search / filters / view toggle / scan button live in the shell's
+  // At ≥md the search (with its scan button) and filters live in the shell's
   // status bar (one 44px row for the whole screen); below md they get a row of
-  // their own here, as before. `portalTarget` is null until the bar has mounted
-  // its slot.
+  // their own here, as before. The view toggle is in neither: it belongs to the
+  // menu container (see PosItemGrid's `toolbar`). `portalTarget` is null until
+  // the bar has mounted its slot.
   const portalTarget = toolbarSlot.available && isMd ? toolbarSlot.element : null;
 
   const renderToolbar = (variant: "inline" | "bar") => (
@@ -164,14 +170,23 @@ export function PosShell({ store }: PosShellProps) {
           variant === "bar" ? "w-44 shrink-0 lg:w-64" : "min-w-[9rem] flex-1 sm:max-w-xs"
         )}
       >
-        <Search className="text-muted-foreground pointer-events-none absolute top-3 left-2.5 h-4 w-4" />
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
         <Input
           ref={searchRef}
           type="search"
           placeholder={t("pos.menu.search")}
-          // h-10, not the Input default's h-9: a 40px tap target (AGENTS.md touch
-          // floor), and it still fits the 44px status bar with its 1px border.
-          className="h-10 pl-9"
+          // Inline: h-10, not the Input default's h-9 — a 40px tap target (AGENTS.md
+          // touch floor). In the status bar it is a flat block instead: the bar's
+          // full height, square, no border, no margin. The tint stands in for the
+          // border so it still reads as a field in light mode, and the focus ring
+          // goes inset — an outer ring would be clipped by the bar's top edge.
+          // pr-11 leaves room for the scanner button that sits inside the box.
+          className={cn(
+            "pr-11 pl-9",
+            variant === "bar"
+              ? "bg-muted/40 h-full rounded-none border-0 shadow-none focus-visible:ring-2 focus-visible:ring-inset"
+              : "h-10"
+          )}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -187,6 +202,13 @@ export function PosShell({ store }: PosShellProps) {
               setSearchQuery("");
             }
           }}
+        />
+        {/* Hardware scanners type into whatever has focus; this opens the panel to
+            test the scanner and tune how the till listens for it. */}
+        <PosScannerMenu
+          categories={menuData?.categories ?? []}
+          // Same flat, full-height block as the search field it sits in.
+          className={variant === "bar" ? "h-full rounded-none" : undefined}
         />
       </div>
 
@@ -226,27 +248,11 @@ export function PosShell({ store }: PosShellProps) {
             (k) => !activeFilterKeys.includes(k) && (k !== "category" || categoryNames.length > 0)
           ).map((k) => ({ key: k, label: t(`pos.filters.${k}`) }))}
           onAdd={(k) => addFilter(k as PosFilterKey)}
+          // In the bar it is as tall as the bar, like the search field beside it, so its
+          // hover tint is a flat block. h-full (the strip it sits in is a stretched flex
+          // child, so its height is definite) rather than a stretch utility.
+          className={variant === "bar" ? "h-full" : undefined}
         />
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2">
-        <PosViewToggle />
-        {/* Hardware scanners type into whatever has focus; this just parks focus in
-            the search box so a scan there is picked up by its Enter handler. */}
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="size-10 touch-manipulation"
-          aria-label={t("cashierCheckout.scan.focus")}
-          title={t("cashierCheckout.scan.focus")}
-          onClick={() => {
-            searchRef.current?.focus();
-            searchRef.current?.select();
-          }}
-        >
-          <ScanBarcode className="size-4" />
-        </Button>
       </div>
     </>
   );
@@ -300,6 +306,7 @@ export function PosShell({ store }: PosShellProps) {
                 searchQuery={searchQuery}
                 onItemClick={handleItemClick}
                 viewMode={viewMode}
+                toolbar={<PosViewToggle />}
                 customDepartmentLabel={
                   menuData?.customProductsEnabled ? menuData.customProductsLabel : null
                 }

@@ -24,6 +24,8 @@ import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialo
 import { useAccountSwitcher } from "@/features/dashboard/shared/hooks/use-account-switcher";
 import { canManageShift } from "@/features/pos/lib/shift-access";
 import { LAST_VISITED_BACK_OFFICE_COOKIE, isBackOfficeAppPath } from "@/lib/last-visited";
+import { PosModePreferences } from "./pos-mode-preferences";
+import { PosModeStoreSwitcher } from "./pos-mode-store-switcher";
 
 interface PosModeOverflowMenuProps {
   storeId: string;
@@ -74,6 +76,12 @@ export function PosModeOverflowMenu({
   // just redirect them straight back here.
   const canReachBackOffice =
     !linkedStaff && (posSession.staffRole === "OWNER" || posSession.staffRole === "MANAGER");
+
+  // Whether this device's real account session has a store list to go to — a
+  // staff PIN persona is scoped to the store it logged into and has none. A
+  // linked staff account is the exception: it IS the account, so the list is
+  // its own. Gates "Back to Stores" and the store switcher alike.
+  const hasAccountStoreList = !actingAsStaff || linkedStaff;
 
   // Resumes the last Back Office section actually visited (Finance, Staff,
   // whatever was open before switching into POS Mode) instead of always
@@ -174,6 +182,10 @@ export function PosModeOverflowMenu({
               </Link>
             )}
 
+            {/* Device preferences (language, light/dark) — every persona, since
+                they belong to the tablet, not to whoever is signed in. */}
+            <PosModePreferences />
+
             {/* Who's using this device — switching or logging out, not
                 clocking in/out. Same actions, same reload/cache-clearing
                 behavior as Back Office's NavUser dropdown
@@ -218,7 +230,11 @@ export function PosModeOverflowMenu({
               {/* Tied to the real, underlying account session — a staff PIN
                   persona has no store list of its own, same gate nav-user.tsx
                   uses for this same action in Back Office. */}
-              {(!actingAsStaff || linkedStaff) && (
+              {hasAccountStoreList && (
+                <PosModeStoreSwitcher storeId={storeId} onNavigate={() => onOpenChange(false)} />
+              )}
+
+              {hasAccountStoreList && (
                 <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
                   <Link href="/stores" onClick={() => onOpenChange(false)}>
                     <Store className="size-4" aria-hidden />

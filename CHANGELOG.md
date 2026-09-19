@@ -9,6 +9,23 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.93.0] - 2026-09-19 · feat
+
+Switch store, change language and turn dark mode on or off without leaving the till — all from the **More** menu.
+
+- **Switch store.** The More menu now shows the store you're in. Tap it to see your other stores and jump straight to that store's till — not its back office. If a sale is in progress you're asked first, because it belongs to the store you're leaving and would otherwise follow you into the next one; use **Save Bill** beforehand if you want to keep it. Staff who sign in with their own account see the stores they work at, and a store where their role has no till screen is greyed out.
+- **Language.** One tap between **FR**, **ID** and **EN**.
+- **Dark mode.** A switch for light and dark — the whole row is the tap target, not just the small switch.
+- **Fix: Order Queue scrolls again.** On the Order Queue page, both the **Active** and **History** tabs ran past the bottom tab bar and couldn't be scrolled, so orders further down the list were unreachable. The page now scrolls.
+- **Scan barcode button, now inside the search box.** Tap it to open a panel with a **Test** field — scan any barcode to see whether the scanner works, whether your menu has that code, and how slowly the scanner sent its keys, without adding anything to the sale. Below it, two settings kept on that tablet: **Scan anywhere on this screen** (turn it off and a scan only counts when typed into the search box) and **Scanner speed** — choose **Slow / Bluetooth** if scans are sometimes missed. Not yet tried with a real hardware scanner.
+- **Menu view options moved.** The grid / columns / list switch is no longer in the top bar; it now floats in the top-right corner of the menu, over the tiles, and stays there as you scroll — it no longer takes a row of its own.
+- **Charge has a menu button beside it.** **Discount** and **Reprint Last** are no longer separate buttons above **Save Bill** — open the **☰** button to the right of **Charge** and pick them, along with split, merge, coupon and the rest, from the **More** menu. Reprinting the last receipt is now two taps instead of one. The **Add Customer** row shows a person icon.
+- **Flatter top bar.** The search box and its scan button, **Add filter**, the printer button and your name button in the top bar are now square and run the full height of the bar with no gap above or below, and show a pointer cursor. **Add filter** lost its dashed outline and is now just the label until you hover it — the same on the Order Queue and Order History filter rows.
+- **Switch Account shows who's signed in.** When you open **Switch Account**, the person already signed in on this tablet — or **Continue as owner**, if that's you — is highlighted in amber, and tapping it takes you straight back with no PIN to re-enter.
+- **Shift label matches the connection label.** The "No shift" / open-shift label in the top bar is now the same compact size as the green **Connected** label. Its tap area is unchanged.
+
+Language and dark mode are shown to everyone whatever their role, because they belong to the tablet, not to whoever is signed in. The store list is not shown while someone is signed in with a staff PIN on the owner's device — that person is tied to one store — and **Back to Stores** is still there for creating or managing stores. Not yet checked on an iPad or a phone-sized screen.
+
 ## [2.92.0] - 2026-09-19 · feat
 
 Up to four printers on one till — a receipt printer, a kitchen printer, a bar printer and a label printer — each paired, sized and switched on on its own.

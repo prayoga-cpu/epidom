@@ -1662,6 +1662,12 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       clear: "Tout effacer",
       items: "articles",
     },
+    switchStore: {
+      confirmTitle: "Changer de magasin ?",
+      confirmDesc:
+        "La vente en cours appartient à ce magasin et sera vidée avant de passer à {store}. Enregistrez d'abord l'addition si vous voulez la conserver.",
+      confirmAction: "Vider la vente et changer",
+    },
     customerDisplay: {
       settingsTitle: "Écran client",
       enable: "Écran client",
@@ -6202,6 +6208,24 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       added: "{name} ajouté",
       unavailable: "{name} n'est pas disponible",
       noMatch: "Aucun article avec ce code-barres",
+      title: "Lecteur de code-barres",
+      testTitle: "Tester votre lecteur",
+      testPrompt: "Scannez n'importe quel code-barres. Rien n'est ajouté à la vente.",
+      testPlaceholder: "Scanner un code-barres…",
+      testMatch: "Correspond à {name}",
+      testNoMatch: "Le lecteur fonctionne, mais aucun article du menu n'a ce code-barres",
+      testDetail: "Lu {code} · pause la plus longue {gap} ms",
+      testTyped: "Cela ressemble à une saisie au clavier, pas à un scan",
+      testTypedDetail:
+        "Pause la plus longue {gap} ms ; un scan doit rester sous {limit} ms. Si c'était bien un scan, passez sur Lent ci-dessous.",
+      settingsTitle: "Réglages",
+      settingEnabled: "Scanner partout sur cet écran",
+      settingEnabledDesc:
+        "Désactivé : un scan ne compte que s'il est saisi dans la barre de recherche.",
+      speedLabel: "Vitesse du lecteur",
+      speedStandard: "Standard",
+      speedSlow: "Lent / Bluetooth",
+      speedDesc: "Choisissez Lent uniquement si des scans sont manqués.",
     },
     view: {
       label: "Affichage du menu",

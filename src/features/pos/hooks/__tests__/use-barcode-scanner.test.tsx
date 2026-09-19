@@ -115,6 +115,18 @@ describe("useBarcodeScanner", () => {
     expect(onScan).not.toHaveBeenCalled();
   });
 
+  it("takes a longer pause between keys when given a larger maxGapMs (a slow Bluetooth scanner)", () => {
+    const onScan = vi.fn();
+    renderHook(() => useBarcodeScanner({ onScan }));
+    scan("12345678", document.body, 1000, 100);
+    expect(onScan).not.toHaveBeenCalled();
+
+    const slow = vi.fn();
+    renderHook(() => useBarcodeScanner({ onScan: slow, maxGapMs: 120 }));
+    scan("12345678", document.body, 5000, 100);
+    expect(slow).toHaveBeenCalledWith("12345678");
+  });
+
   it("does not add to a cart the cashier can't see while a dialog is open", () => {
     const onScan = vi.fn();
     const dialog = document.createElement("div");

@@ -46,7 +46,37 @@ describe("PosModeStatusBar — switch user", () => {
     const button = screen.getByRole("button", { name: /cashierCheckout\.topBar\.switchUser/ });
     expect(button).toHaveTextContent("Sam");
     expect(button.tagName).toBe("BUTTON");
-    expect(button.className).toContain("h-10");
+    expect(button.className).toContain("min-h-10");
+  });
+
+  it("the staff badge is a square block flush with the bar's right edge and full height", () => {
+    render(<PosModeStatusBar storeId="store-1" />);
+    const button = screen.getByRole("button", { name: /cashierCheckout\.topBar\.switchUser/ });
+    expect(button.className).toContain("rounded-none");
+    expect(button.className).not.toContain("rounded-full");
+    expect(button.className).toContain("cursor-pointer");
+
+    // Full height comes from the bar's DEFAULT flex alignment (stretch), so the
+    // button must not pin its own height…
+    expect(button.className).not.toMatch(/(^|\s)h-(\d|\[|px|full)/);
+    // …and neither the bar nor the button's group may vertically center their
+    // children, or each would keep its own height and leave a gap top and bottom.
+    // (Deliberately not `self-stretch`: a class no other file uses can be missing
+    // from a browser holding an older stylesheet, which reopened exactly that gap.)
+    const bar = screen.getByRole("banner");
+    expect(bar.className).not.toContain("items-center");
+    expect(button.parentElement!.className).not.toContain("items-center");
+    expect(button.className).not.toContain("self-stretch");
+
+    // The bar leaves no right padding between the button and the edge.
+    expect(bar.className).not.toMatch(/\bpx-3\b|\bpr-/);
+  });
+
+  it("the toolbar slot is stretched by the bar too, so /pos's search field can fill it", () => {
+    render(<PosModeStatusBar storeId="store-1" />);
+    const slot = screen.getByTestId("pos-toolbar-slot");
+    expect(slot.className).not.toContain("items-center");
+    expect(slot.className).not.toMatch(/(^|\s)h-\d/);
   });
 
   it("tapping it opens the existing Switch Account picker without ending the session", () => {
