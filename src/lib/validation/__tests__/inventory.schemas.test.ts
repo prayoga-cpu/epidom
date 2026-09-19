@@ -419,3 +419,50 @@ describe("updateSupplierOrderSchema", () => {
     }
   });
 });
+
+describe("Product barcode (optional, unique per store)", () => {
+  const base = {
+    storeId: validCuid1,
+    sku: "PROD-001",
+    name: "Chocolate Cake",
+    costPrice: 10,
+    sellingPrice: 25,
+  };
+
+  it("is optional: absent stays absent, so a PATCH without it leaves the stored value alone", () => {
+    const created = createProductSchema.parse(base);
+    expect(created.barcode).toBeUndefined();
+    expect(updateProductSchema.parse({ name: "New name" }).barcode).toBeUndefined();
+  });
+
+  it("trims what it is given", () => {
+    expect(createProductSchema.parse({ ...base, barcode: "  8991234567890  " }).barcode).toBe(
+      "8991234567890"
+    );
+  });
+
+  it("turns an empty or blank field into null — which CLEARS the stored barcode on update", () => {
+    expect(createProductSchema.parse({ ...base, barcode: "" }).barcode).toBeNull();
+    expect(updateProductSchema.parse({ barcode: "   " }).barcode).toBeNull();
+    expect(updateProductSchema.parse({ barcode: null }).barcode).toBeNull();
+  });
+
+  it("keeps the case as typed — the POS matches it exactly", () => {
+    expect(createProductSchema.parse({ ...base, barcode: "AbC-123" }).barcode).toBe("AbC-123");
+  });
+
+  it("accepts the characters a scanner emits (digits, letters, . _ - / +)", () => {
+    for (const ok of ["8991234567890", "ABC-123", "a.b_c/d+e", "0001"]) {
+      expect(createProductSchema.safeParse({ ...base, barcode: ok }).success, ok).toBe(true);
+    }
+  });
+
+  it("rejects embedded spaces, other symbols and over-long codes", () => {
+    for (const bad of ["12 34", "abc$", "é123", "x".repeat(65)]) {
+      const r = createProductSchema.safeParse({ ...base, barcode: bad });
+      expect(r.success, bad).toBe(false);
+      if (!r.success) expect(r.error.issues[0].path).toEqual(["barcode"]);
+    }
+    expect(createProductSchema.safeParse({ ...base, barcode: "x".repeat(64) }).success).toBe(true);
+  });
+});

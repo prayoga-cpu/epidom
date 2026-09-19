@@ -28,6 +28,7 @@ export const ROLE_DEFAULT_PAGES: Record<StaffRole, string[]> = {
     "/management",
     "/production",
     "/data",
+    "/customers",
     "/alerts",
     "/schedule",
     // Manager reaches the full roster builder at /schedule, but the POS
@@ -92,6 +93,7 @@ export const STAFF_ROLE_TEMPLATES: StaffRoleTemplate[] = [
       "/management",
       "/production",
       "/data",
+      "/customers",
       "/alerts",
       "/schedule",
       "/pos/schedule",

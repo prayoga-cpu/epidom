@@ -105,6 +105,28 @@ const POLICY: Record<string, StaffRoutePolicy> = {
   "GET /api/stores/*/orders/payment-totals": post(POS_QUEUE),
   "GET /api/stores/*/orders/stream": post(POS_ANY),
 
+  // ---- POS: customers, promotions, merge and e-mail receipts (2.88.0) -----
+  // The cart's inline customer box and discount tiles. ONLY the list/create
+  // pair of customers is here — `GET /customers/*` is deliberately absent so a
+  // `*` can never also admit `/customers/export` (the whole customer table as a
+  // CSV) or `/customers/analytics`. Editing a customer, adjusting points,
+  // exporting, and every promotion WRITE (presets, coupons, loyalty settings)
+  // are Back Office actions with no staff-account route: default-deny leaves
+  // them to the owner (and, on the owner's own device, a manager persona via
+  // requireManagerOrOwnerApi in the handler).
+  //
+  // The promotion reads below are OPERATIONS-tier and the routes enforce that
+  // on the STORE OWNER's plan (requirePromotionsPlanApi), so a staff account is
+  // judged on what its employer pays for — not on its own empty subscription.
+  "GET /api/stores/*/customers": post(POS),
+  "POST /api/stores/*/customers": post(POS),
+  "GET /api/stores/*/discount-presets": post(POS),
+  "POST /api/stores/*/coupons/validate": post(POS),
+  "GET /api/stores/*/loyalty-settings": post(POS),
+  "POST /api/stores/*/pos/orders/merge": post(POS),
+  // Same reach as the WhatsApp send above: the order queue's receipt actions.
+  "POST /api/stores/*/pos/orders/*/send-receipt-email": post(POS_QUEUE),
+
   // ---- POS: kitchen display -----------------------------------------------
   // Read-only for staff. The PATCH (the store-wide Active Queue on/off switch)
   // is owner-only by its own rule and deliberately absent.

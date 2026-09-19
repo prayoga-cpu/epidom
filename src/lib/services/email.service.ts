@@ -948,6 +948,137 @@ export async function sendSupplierOrderEmail(
 }
 
 /**
+ * Customer-facing receipt email copy, per locale.
+ *
+ * Deliberately not routed through `useI18n()`/`src/locales`: this module runs
+ * server-side with no React context, and the recipient's language is the
+ * store's business locale, not whatever the cashier's dashboard is set to.
+ * Same reasoning as receipt-labels.ts, which owns the printed receipt's
+ * vocabulary — but the copy is different (a chat/email greeting, not a label
+ * on a 32-column till roll), so it is not shared with it.
+ */
+const RECEIPT_EMAIL_COPY: Record<
+  "en" | "fr" | "id",
+  {
+    subject: (orderNumber: string, storeName: string) => string;
+    greeting: string;
+    intro: (storeName: string) => string;
+    totalLabel: string;
+    orderLabel: string;
+    cta: string;
+    footer: string;
+  }
+> = {
+  en: {
+    subject: (orderNumber, storeName) => `Your receipt ${orderNumber} from ${storeName}`,
+    greeting: "Hello,",
+    intro: (storeName) => `Thank you for your visit to <strong>${storeName}</strong>.`,
+    totalLabel: "Total",
+    orderLabel: "Receipt",
+    cta: "View receipt",
+    footer: "This receipt stays available at the link above.",
+  },
+  fr: {
+    subject: (orderNumber, storeName) => `Votre reçu ${orderNumber} — ${storeName}`,
+    greeting: "Bonjour,",
+    intro: (storeName) => `Merci pour votre visite chez <strong>${storeName}</strong>.`,
+    totalLabel: "Total",
+    orderLabel: "Reçu",
+    cta: "Voir le reçu",
+    footer: "Ce reçu reste consultable via le lien ci-dessus.",
+  },
+  id: {
+    subject: (orderNumber, storeName) => `Struk ${orderNumber} dari ${storeName}`,
+    greeting: "Halo,",
+    intro: (storeName) => `Terima kasih sudah mampir ke <strong>${storeName}</strong>.`,
+    totalLabel: "Total",
+    orderLabel: "Struk",
+    cta: "Lihat struk",
+    footer: "Struk ini tetap bisa dibuka lewat tautan di atas.",
+  },
+};
+
+/**
+ * Email a customer their receipt — the email counterpart of the WhatsApp
+ * receipt (send-customer-receipt.ts), linking to the same public
+ * `/r/[orderId]` page rather than attaching a PDF: that page is already the
+ * canonical rendering, it reprints, and a link survives an email client that
+ * strips attachments.
+ *
+ * Same dev/no-key short-circuit as the rest of this module — without
+ * RESEND_API_KEY it reports success with `messageId: "dev-mode"` so local POS
+ * work isn't blocked on an email provider (AGENTS.md §6, graceful degradation).
+ */
+export async function sendReceiptEmail(payload: {
+  to: string;
+  storeName: string;
+  orderNumber: string;
+  /** Already formatted in the store's display currency — never converted here. */
+  totalFormatted: string;
+  receiptUrl: string;
+  locale?: "en" | "fr" | "id";
+}): Promise<SendEmailResult> {
+  const copy = RECEIPT_EMAIL_COPY[payload.locale ?? "id"] ?? RECEIPT_EMAIL_COPY.id;
+  const subject = copy.subject(payload.orderNumber, payload.storeName);
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🧾 [DEV] Receipt Email");
+    console.log("To:", payload.to);
+    console.log("Subject:", subject);
+    console.log("URL:", payload.receiptUrl);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const html = `
+    <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111827">
+      <h2 style="font-size:18px;margin:0 0 16px">${escapeHtml(payload.storeName)}</h2>
+      <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 8px">${escapeHtml(copy.greeting)}</p>
+      <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 20px">${copy.intro(escapeHtml(payload.storeName))}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;border:1px solid #e5e7eb;border-radius:8px">
+        <tr>
+          <td style="padding:10px 14px;color:#6b7280">${escapeHtml(copy.orderLabel)}</td>
+          <td style="padding:10px 14px;text-align:right"><strong>${escapeHtml(payload.orderNumber)}</strong></td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;color:#6b7280;border-top:1px solid #e5e7eb">${escapeHtml(copy.totalLabel)}</td>
+          <td style="padding:10px 14px;text-align:right;border-top:1px solid #e5e7eb"><strong>${escapeHtml(payload.totalFormatted)}</strong></td>
+        </tr>
+      </table>
+      <p style="margin:24px 0">
+        <a href="${escapeHtml(payload.receiptUrl)}" style="background:#111827;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-size:14px;display:inline-block">${escapeHtml(copy.cta)}</a>
+      </p>
+      <p style="color:#6b7280;font-size:12px;line-height:1.6;margin:0">${escapeHtml(copy.footer)}</p>
+    </div>`;
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: payload.to,
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send receipt email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("[Email] Receipt email error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
  * Send an internal alert when the nightly database backup hasn't succeeded
  * recently — the one check that catches "the backup silently stopped working."
  */

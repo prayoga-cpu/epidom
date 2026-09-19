@@ -68,8 +68,18 @@ export interface CustomerDisplaySnapshot {
   subtotal: number;
   tax: number;
   serviceCharge: number;
+  /** The WHOLE discount off the bill — a manual/preset/coupon discount PLUS the
+   * value of any redeemed points. Kept as one total so a display window that
+   * predates the split (or never learns of it) still shows a correct line. */
   discountAmount: number;
+  /** Composite label for `discountAmount`, e.g. "Member + 250 pts". */
   discountReason: string | null;
+  /** Points redeemed on this bill (0 when none). Additive: `discountAmount`
+   * already includes their value, so a display that ignores these two fields
+   * loses nothing but the ability to break the line in two. */
+  pointsRedeemed: number;
+  /** The currency value of `pointsRedeemed` — the part of `discountAmount` that came from points. */
+  pointsDiscountAmount: number;
   total: number;
   /** Set only while `phase === "paid"`. */
   paidOrderNumber: string | null;
@@ -106,20 +116,71 @@ export const EMPTY_CUSTOMER_DISPLAY_SNAPSHOT: CustomerDisplaySnapshot = {
   serviceCharge: 0,
   discountAmount: 0,
   discountReason: null,
+  pointsRedeemed: 0,
+  pointsDiscountAmount: 0,
   total: 0,
   paidOrderNumber: null,
   updatedAt: 0,
 };
 
+/**
+ * Cart lines as the customer sees them. Reads nothing but the line's own
+ * fields — never `menuItemId` — because a Custom Item has none (null): the
+ * customer is checking what they're being charged for, and an ad-hoc line is
+ * exactly as legitimate a charge as a menu one.
+ */
 export function toCustomerDisplayLines(items: CartItem[]): CustomerDisplayLine[] {
   return items.map((item) => ({
     id: item.id,
     name: item.name,
     quantity: item.quantity,
     lineTotal: item.lineTotal,
-    modifiers: item.modifiers.map((modifier) => modifier.optionName),
+    modifiers: (item.modifiers ?? []).map((modifier) => modifier.optionName),
     notes: item.notes,
   }));
+}
+
+/** The cart's money, as the "building" snapshot reads it. */
+export interface CustomerDisplayCartTotals {
+  subtotal: number;
+  tax: number;
+  serviceCharge: number;
+  discountAmount: number;
+  discountReason: string | null;
+  pointsRedeemed: number;
+  pointsDiscountAmount: number;
+  total: number;
+}
+
+/**
+ * The snapshot for an order still being rung up. Extracted from the publisher
+ * so the shape other windows consume is built in ONE testable place: every
+ * field of CustomerDisplaySnapshot is always present, so an older display
+ * window (which ignores the points fields) and a newer one read it alike.
+ */
+export function buildCustomerDisplayBuildingSnapshot(args: {
+  lines: CustomerDisplayLine[];
+  highlight: CustomerDisplayHighlight | null;
+  totals: CustomerDisplayCartTotals;
+  updatedAt: number;
+}): CustomerDisplaySnapshot {
+  const { lines, highlight, totals } = args;
+  return {
+    phase: lines.length > 0 ? "building" : "idle",
+    lines,
+    highlightLineId: highlight?.id ?? null,
+    highlightIsNew: highlight?.isNew ?? false,
+    subtotal: totals.subtotal,
+    tax: totals.tax,
+    serviceCharge: totals.serviceCharge,
+    discountAmount: totals.discountAmount,
+    discountReason: totals.discountReason,
+    pointsRedeemed: totals.pointsRedeemed,
+    pointsDiscountAmount: totals.pointsDiscountAmount,
+    total: totals.total,
+    paidOrderNumber: null,
+    updatedAt: args.updatedAt,
+  };
 }
 
 /**

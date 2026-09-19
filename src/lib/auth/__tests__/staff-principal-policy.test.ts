@@ -58,6 +58,8 @@ describe("the staff allow-list itself", () => {
         "DELETE /api/stores/*/reservations/*",
         "GET /api/stores/*/attendance/history",
         "GET /api/stores/*/attendance/status",
+        "GET /api/stores/*/customers",
+        "GET /api/stores/*/discount-presets",
         "GET /api/stores/*/finance/settings",
         "GET /api/stores/*/notifications",
         "GET /api/stores/*/orders",
@@ -72,6 +74,7 @@ describe("the staff allow-list itself", () => {
         "GET /api/stores/*/reports/shift-report",
         "GET /api/stores/*/reservations",
         "GET /api/stores/*/schedule-shifts",
+        "GET /api/stores/*/loyalty-settings",
         "GET /api/stores/*/schedule/my-log",
         "GET /api/stores/*/shifts",
         "GET /api/stores/*/shifts/*",
@@ -89,11 +92,15 @@ describe("the staff allow-list itself", () => {
         "POST /api/stores/*/attendance/absence",
         "POST /api/stores/*/attendance/clock-in",
         "POST /api/stores/*/attendance/clock-out",
+        "POST /api/stores/*/coupons/validate",
+        "POST /api/stores/*/customers",
         "POST /api/stores/*/pos/orders",
         "POST /api/stores/*/pos/orders/*/finalize",
         "POST /api/stores/*/pos/orders/*/refund",
         "POST /api/stores/*/pos/orders/*/send-receipt",
+        "POST /api/stores/*/pos/orders/*/send-receipt-email",
         "POST /api/stores/*/pos/orders/hold",
+        "POST /api/stores/*/pos/orders/merge",
         "POST /api/stores/*/reservations",
         "POST /api/stores/*/shifts",
         "POST /api/stores/*/staff/logout",
@@ -374,5 +381,64 @@ describe("authorizeStaffPrincipal — shared reads every POS page needs", () => 
     expect(await status(req("PATCH", `/api/stores/${STORE}/finance/settings`, { taxRate: 0 }))).toBe(403);
     getActiveStaffSession.mockResolvedValue(null);
     expect(await status(req("GET", `/api/stores/${STORE}/finance/settings`))).toBe(403);
+  });
+});
+
+describe("authorizeStaffPrincipal — cashier revamp routes (2.88.0)", () => {
+  const cashierRoutes: Array<[string, string, unknown?]> = [
+    ["GET", "/customers"],
+    ["POST", "/customers", { name: "Ana" }],
+    ["GET", "/discount-presets"],
+    ["POST", "/coupons/validate", { code: "SAVE10", itemsTotal: 20 }],
+    ["GET", "/loyalty-settings"],
+    ["POST", "/pos/orders/merge", { targetOrderId: "a", sourceOrderIds: ["b"] }],
+  ];
+
+  it.each(cashierRoutes)("a cashier with the till page can %s %s", async (method, path, body) => {
+    getActiveStaffSession.mockResolvedValue(persona({ allowedPages: ["/pos"] }));
+    expect(await status(req(method, `/api/stores/${STORE}${path}`, body))).toBeNull();
+  });
+
+  it.each(cashierRoutes)("...but not %s %s without the till page or a PIN persona", async (method, path, body) => {
+    getActiveStaffSession.mockResolvedValue(persona({ allowedPages: ["/tables"] }));
+    expect(await status(req(method, `/api/stores/${STORE}${path}`, body))).toBe(403);
+    getActiveStaffSession.mockResolvedValue(null);
+    expect(await status(req(method, `/api/stores/${STORE}${path}`, body))).toBe(403);
+  });
+
+  it("e-mail receipts follow the order queue, like the WhatsApp send beside them", async () => {
+    const path = `/api/stores/${STORE}/pos/orders/o1/send-receipt-email`;
+    getActiveStaffSession.mockResolvedValue(persona({ allowedPages: ["/pos/orders"] }));
+    expect(await status(req("POST", path, { email: "a@b.co" }))).toBeNull();
+    getActiveStaffSession.mockResolvedValue(persona({ allowedPages: ["/tables"] }));
+    expect(await status(req("POST", path, { email: "a@b.co" }))).toBe(403);
+  });
+
+  // The whole point of listing GET /customers exactly and never GET /customers/*:
+  // a `*` would also have admitted the CSV export of every customer.
+  it("no staff account — not even a manager — reaches the Back Office customer and promotion routes", () => {
+    const ownerOnly: Array<[string, string]> = [
+      ["GET", `/api/stores/${STORE}/customers/export`],
+      ["GET", `/api/stores/${STORE}/customers/analytics`],
+      ["GET", `/api/stores/${STORE}/customers/c1`],
+      ["PATCH", `/api/stores/${STORE}/customers/c1`],
+      ["POST", `/api/stores/${STORE}/customers/c1/points`],
+      ["GET", `/api/stores/${STORE}/coupons`],
+      ["POST", `/api/stores/${STORE}/coupons`],
+      ["PATCH", `/api/stores/${STORE}/coupons/k1`],
+      ["POST", `/api/stores/${STORE}/discount-presets`],
+      ["PATCH", `/api/stores/${STORE}/discount-presets/p1`],
+      ["DELETE", `/api/stores/${STORE}/discount-presets/p1`],
+      ["PUT", `/api/stores/${STORE}/loyalty-settings`],
+    ];
+    for (const [method, path] of ownerOnly) {
+      expect(resolveStaffRoutePolicy(method, path), `${method} ${path}`).toBeNull();
+    }
+  });
+
+  it("a manager persona on a linked account is refused those routes at the policy layer too", async () => {
+    getActiveStaffSession.mockResolvedValue(persona({ role: "MANAGER", allowedPages: ["/pos", "/data"] }));
+    expect(await status(req("POST", `/api/stores/${STORE}/discount-presets`, { name: "x" }))).toBe(403);
+    expect(await status(req("GET", `/api/stores/${STORE}/customers/export`))).toBe(403);
   });
 });

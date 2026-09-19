@@ -26,6 +26,7 @@ import {
 } from "../lib/date-range-presets";
 import type { OrderHistoryFilters, OrderHistoryItem } from "../types/pos.types";
 import { mapPaymentMethodLabel } from "../lib/order-status-display";
+import { formatQueueNumber } from "../lib/queue-number";
 import { OrderHistoryDetailDialog } from "./order-history-detail-dialog";
 import { UnpaidFilterToggle } from "./unpaid-filter-toggle";
 import { AddFilterMenu } from "./add-filter-menu";
@@ -572,6 +573,25 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     }
   };
 
+  /**
+   * How the bill was paid, for the table cell.
+   *
+   * A multi-tender order carries the literal "SPLIT" in `paymentMethod`, which
+   * mapPaymentMethodLabel renders as "Split payment" — true, but it hides the
+   * one thing the cashier is scanning the column for. When the tender rows are
+   * there, name the methods instead; orders placed before multi-tender have
+   * none and keep the single label exactly as before.
+   */
+  const mapOrderPaymentMethod = (order: OrderHistoryItem) => {
+    const tenders = order.payments ?? [];
+    if (tenders.length > 1) {
+      return Array.from(new Set(tenders.map((p) => mapPaymentMethodLabel(t, p.method)))).join(
+        " + "
+      );
+    }
+    return mapPaymentMethodLabel(t, order.paymentMethod);
+  };
+
   function openPrintReport() {
     const params = buildOrderHistoryParams(filters, 0);
     params.delete("take");
@@ -953,7 +973,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
       ) : (
         <>
           <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-[1080px]">
+            <div className="min-w-[1200px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -966,9 +986,11 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                     </TableHead>
                     <TableHead>{t("pos.history.colDate")}</TableHead>
                     <TableHead>{t("pos.history.colOrder")}</TableHead>
+                    <TableHead className="text-center">{t("pos.queue.colQueue")}</TableHead>
                     <TableHead>{t("pos.history.colSource")}</TableHead>
                     <TableHead>{t("pos.history.colType")}</TableHead>
                     <TableHead>{t("pos.history.colCustomer")}</TableHead>
+                    <TableHead>{t("pos.queue.colTable")}</TableHead>
                     <TableHead>{t("pos.history.colItems")}</TableHead>
                     <TableHead className="text-right">{t("pos.history.colTotal")}</TableHead>
                     <TableHead>{t("pos.history.colPaymentMethod")}</TableHead>
@@ -999,6 +1021,9 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                         </div>
                       </TableCell>
                       <TableCell className="font-mono">{order.orderNumber}</TableCell>
+                      <TableCell className="text-center font-semibold tabular-nums">
+                        {formatQueueNumber(order.queueNumber)}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={getSourceBadgeVariant(order.source)}>
                           {mapSourceLabel(order.source)}
@@ -1006,6 +1031,9 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                       </TableCell>
                       <TableCell>{mapTypeLabel(order.orderType)}</TableCell>
                       <TableCell className="max-w-[160px] truncate">{order.customerName}</TableCell>
+                      <TableCell className="max-w-[96px] truncate">
+                        {order.table?.label || order.tableNumber || "–"}
+                      </TableCell>
                       <TableCell className="max-w-64 truncate">
                         {order.items.slice(0, 2).map(itemLine).join(", ")}
                         {order.items.length > 2 && (
@@ -1022,7 +1050,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                         {formatPrice(Number(order.total))}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {mapPaymentMethodLabel(t, order.paymentMethod)}
+                        {mapOrderPaymentMethod(order)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getPaymentBadgeVariant(order.paymentStatus)}>

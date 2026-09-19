@@ -52,6 +52,23 @@ export interface ReceiptData {
   paymentMethod: string;
   amountTendered?: number;
   change?: number;
+  /**
+   * "bill" is the provisional pre-payment print ("Print Bill"): it has no
+   * payment lines and says it is not a receipt. Defaults to "receipt".
+   */
+  documentType?: "receipt" | "bill";
+  /**
+   * Per-tender breakdown for a bill settled with two or more tenders. When
+   * present with more than one entry it replaces the single paymentMethod /
+   * amountTendered / change lines. `method` is the same string paymentMethod
+   * would carry (an enum value, or the typed label for OTHER).
+   */
+  payments?: Array<{
+    method: string;
+    amount: number;
+    amountTendered?: number;
+    change?: number;
+  }>;
   cashierName?: string;
   tableLabel?: string;
   notes?: string;
@@ -248,8 +265,22 @@ export function wrapText(text: string, cols: number): string[] {
   return text.split("\n").flatMap((paragraph) => wrapLine(paragraph, cols));
 }
 
-function labelRow(label: string, value: string): string {
-  return `${label.padEnd(9)}: ${value}`;
+/**
+ * `Label    : value`, wrapped rather than overflowed.
+ *
+ * The padded-label form is 11 characters before the value even starts, so on
+ * 58mm paper (32 cols) an ordinary cashier name or table label runs off the
+ * edge — and the printer then wraps it wherever it likes, breaking the
+ * column. Continuation lines are indented under the value so the block still
+ * reads as one field. Returns lines (never a single string) so callers cannot
+ * accidentally emit an over-wide one.
+ */
+function labelRow(label: string, value: string, cols: number): string[] {
+  const prefix = `${label.padEnd(9)}: `;
+  if (prefix.length + value.length <= cols) return [`${prefix}${value}`];
+  const indent = " ".repeat(Math.min(prefix.length, Math.max(0, cols - 1)));
+  const wrapped = wrapText(value, Math.max(1, cols - indent.length));
+  return [`${prefix}${wrapped[0] ?? ""}`, ...wrapped.slice(1).map((l) => `${indent}${l}`)];
 }
 
 // ESC/POS command bytes
@@ -292,6 +323,46 @@ function createEscPosWriter() {
   return { push, text, line, lines, blank, bold, center, left, doubleSize, init, bytes };
 }
 
+type EscPosWriter = ReturnType<typeof createEscPosWriter>;
+
+/**
+ * `label` left, `value` right-aligned to the paper width — the ONLY safe way
+ * to emit a two-column line.
+ *
+ * `formatCols` forces a minimum one-space gap, so it silently overflows the
+ * paper whenever label + value already fills the width. On 58mm (32 cols) that
+ * happens with entirely ordinary content: a discount reason, a long tender
+ * label, or "Makan di Tempat (46)" next to a 7-figure rupiah total (33 chars).
+ * An overflowing line wraps at the printer's own discretion, which is what
+ * produces a value orphaned on its own line mid-column. Instead, detect the
+ * case and lay it out deliberately: label wrapped on its own line(s), value
+ * right-aligned underneath.
+ *
+ * Shared by the receipt and the shift report so neither can regrow its own
+ * unguarded `formatCols` call — that is exactly how this bug class came back.
+ */
+function createColumnRow(w: EscPosWriter, cols: number) {
+  return (label: string, value: string) => {
+    if (label.length + value.length < cols) {
+      w.line(formatCols(label, value, cols));
+      return;
+    }
+    // Leading whitespace IS the hierarchy on a receipt — "  2x Rp 1.250.000"
+    // under its item name, "  TUNAI" under its tender. wrapText splits on
+    // /\s+/ and would drop it, flattening a wrapped line into the level above
+    // and making a sub-line read as a new item. Re-applied to every wrapped
+    // line, with the indent bounded so it can never eat the whole width.
+    const indent = label.slice(0, label.length - label.trimStart().length);
+    const safeIndent = indent.slice(0, Math.max(0, cols - 1));
+    w.lines(
+      wrapText(label.trimStart(), Math.max(1, cols - safeIndent.length)).map(
+        (l) => `${safeIndent}${l}`
+      )
+    );
+    w.line(value.length >= cols ? value : value.padStart(cols));
+  };
+}
+
 export function buildEscPos(receipt: ReceiptData): Uint8Array {
   const cols = receipt.width ?? 32;
   const divider = "-".repeat(cols);
@@ -302,6 +373,13 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
 
   const w = createEscPosWriter();
   const { line, lines, blank, bold, center, left, doubleSize } = w;
+  // Every two-column line goes through this, never bare formatCols — see
+  // createColumnRow for why (32-col paper overflows on ordinary content).
+  const row = createColumnRow(w, cols);
+  // A "bill" is the provisional pre-payment print: same items, charges and
+  // total, but no payment lines (nothing has been paid yet) and a footer that
+  // says so, so it can never be mistaken for proof of payment.
+  const isBill = receipt.documentType === "bill";
 
   // Initialize printer
   w.init();
@@ -321,6 +399,14 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
     lines(wrapText(receipt.tagline, cols));
   }
 
+  // The document's own title, printed only for a bill — a receipt has never
+  // carried one and must stay byte-identical.
+  if (isBill) {
+    bold(true);
+    lines(wrapText(labels.billTitle, cols));
+    bold(false);
+  }
+
   // ---- Address / contact block ----
   const contactLine = [receipt.email, receipt.phone].filter(Boolean).join("  ");
   const handleLine = receipt.instagramHandle ? `@${receipt.instagramHandle}` : "";
@@ -335,21 +421,19 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   // ---- Bill info block ----
   line(divider);
   left();
-  line(labelRow(labels.billNo, receipt.orderNumber));
-  line(labelRow(labels.date, receipt.date));
-  if (receipt.cashierName) line(labelRow(labels.cashier, receipt.cashierName));
-  if (receipt.tableLabel) line(labelRow(labels.table, receipt.tableLabel));
+  lines(labelRow(labels.billNo, receipt.orderNumber, cols));
+  lines(labelRow(labels.date, receipt.date, cols));
+  if (receipt.cashierName) lines(labelRow(labels.cashier, receipt.cashierName, cols));
+  if (receipt.tableLabel) lines(labelRow(labels.table, receipt.tableLabel, cols));
 
   // ---- Items ----
   line(divider);
   bold(true);
-  line(formatCols(labels.item, labels.total, cols));
+  row(labels.item, labels.total);
   bold(false);
   for (const item of receipt.items) {
     lines(wrapText(item.name, cols));
-    line(
-      formatCols(`  ${item.quantity}x ${money(item.unitPrice)}`, money(item.total), cols)
-    );
+    row(`  ${item.quantity}x ${money(item.unitPrice)}`, money(item.total));
     if (item.optionNames && item.optionNames.length > 0) {
       lines(wrapText(`  ${item.optionNames.join(", ")}`, cols));
     }
@@ -360,39 +444,54 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
 
   // ---- Totals ----
   line(divider);
-  line(formatCols(labels.subtotal, money(receipt.subtotal), cols));
+  row(labels.subtotal, money(receipt.subtotal));
   if (receipt.tax) {
-    line(formatCols(receipt.taxLabel || labels.tax, money(receipt.tax), cols));
+    row(receipt.taxLabel || labels.tax, money(receipt.tax));
   }
   if (receipt.serviceCharge) {
-    line(
-      formatCols(receipt.serviceChargeLabel || labels.service, money(receipt.serviceCharge), cols)
-    );
+    row(receipt.serviceChargeLabel || labels.service, money(receipt.serviceCharge));
   }
   if (receipt.discountAmount) {
-    line(
-      formatCols(
-        receipt.discountReason ? `${labels.discount} (${receipt.discountReason})` : labels.discount,
-        `-${money(receipt.discountAmount)}`,
-        cols
-      )
+    row(
+      receipt.discountReason ? `${labels.discount} (${receipt.discountReason})` : labels.discount,
+      `-${money(receipt.discountAmount)}`
     );
   }
 
   line(divider);
   bold(true);
-  line(formatCols(labels.total, money(receipt.total), cols));
+  row(labels.total, money(receipt.total));
   bold(false);
 
   // ---- Payment ----
-  line(divider);
-  if (receipt.paymentMethod === "CASH" && receipt.amountTendered) {
-    line(formatCols(labels.cash, money(receipt.amountTendered), cols));
-    if (receipt.change !== undefined && receipt.change >= 0) {
-      line(formatCols(labels.change, money(receipt.change), cols));
+  // Omitted entirely on a bill: nothing has been paid yet, and printing a
+  // payment block on a provisional print is how a bill gets mistaken for a
+  // receipt.
+  if (!isBill) {
+    line(divider);
+    const tenders = receipt.payments ?? [];
+    if (tenders.length > 1) {
+      // A bill settled with several tenders: one line per tender, with the
+      // cash ones carrying their own tendered/change underneath. The single
+      // paymentMethod line below cannot describe this — Order.paymentMethod
+      // is the literal string "SPLIT" for these.
+      for (const tender of tenders) {
+        row(tender.method, money(tender.amount));
+        if (tender.amountTendered !== undefined) {
+          row(`  ${labels.cash}`, money(tender.amountTendered));
+          if (tender.change !== undefined && tender.change >= 0) {
+            row(`  ${labels.change}`, money(tender.change));
+          }
+        }
+      }
+    } else if (receipt.paymentMethod === "CASH" && receipt.amountTendered) {
+      row(labels.cash, money(receipt.amountTendered));
+      if (receipt.change !== undefined && receipt.change >= 0) {
+        row(labels.change, money(receipt.change));
+      }
+    } else {
+      row(`${labels.paidVia} (${receipt.paymentMethod})`, labels.paid);
     }
-  } else {
-    line(formatCols(`${labels.paidVia} (${receipt.paymentMethod})`, labels.paid, cols));
   }
 
   if (receipt.notes) {
@@ -403,7 +502,10 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   // ---- Footer ----
   line(divider);
   center();
-  lines(wrapText(receipt.footerMessage || labels.defaultFooter, cols));
+  // A bill says what it is instead of thanking the customer for a payment
+  // they haven't made — the merchant's own footer message is a receipt
+  // sign-off and would read as one here.
+  lines(wrapText(isBill ? labels.billNotice : receipt.footerMessage || labels.defaultFooter, cols));
 
   const socialLine = [
     receipt.instagramHandle ? `IG @${receipt.instagramHandle}` : null,
@@ -418,7 +520,9 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   }
 
   line(divider);
-  line(`${RECEIPT_POWERED_BY_URL} | ${labels.poweredByTitle}`);
+  // 40 characters at its shortest — it does not fit 58mm paper on one line,
+  // so it wraps here the same way the shift report's does.
+  lines(wrapText(`${RECEIPT_POWERED_BY_URL} | ${labels.poweredByTitle}`, cols));
 
   // Extra feed + an explicit tear-guide line. Cheap cutter-less BT printers
   // (the common case for small IDN merchants) rely on the customer tearing
@@ -472,25 +576,9 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   const w = createEscPosWriter();
   const { line, lines, blank, bold, center, left, doubleSize } = w;
 
-  /**
-   * `label` left, `value` right-aligned to the paper width.
-   *
-   * `formatCols` forces a minimum one-space gap, so it silently overflows the
-   * paper whenever label + value already fills the width — on 58mm (32 cols)
-   * that happens with entirely ordinary content ("Makan di Tempat (46)" plus
-   * a 7-figure rupiah total is 33 chars). An overflowing line wraps at the
-   * printer's own discretion, which is what produces a value orphaned on its
-   * own line mid-column. Instead, detect the case and lay it out deliberately:
-   * label wrapped on its own line(s), value right-aligned underneath.
-   */
-  const row = (label: string, value: string) => {
-    if (label.length + value.length < cols) {
-      line(formatCols(label, value, cols));
-      return;
-    }
-    lines(wrapText(label, cols));
-    line(value.length >= cols ? value : value.padStart(cols));
-  };
+  // Overflow-safe two-column line — shared with the receipt builder, see
+  // createColumnRow.
+  const row = createColumnRow(w, cols);
   const heading = (title: string) => {
     blank();
     bold(true);

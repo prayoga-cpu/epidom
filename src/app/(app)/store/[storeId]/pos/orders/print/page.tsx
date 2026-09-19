@@ -80,6 +80,12 @@ export default async function OrderHistoryPrintPage({ params, searchParams }: Pr
       take: PRINT_ROW_CAP,
       include: {
         table: { select: { label: true } },
+        // Tenders, so the report's payment-method column can name how a split
+        // bill was actually settled instead of printing "Split payment".
+        // `method` only: it is all that column reads, and selecting the money
+        // columns would push Prisma Decimals across the server/client boundary,
+        // where they arrive as strings (Decimal.toJSON) rather than numbers.
+        payments: { select: { method: true }, orderBy: { createdAt: "asc" } },
         items: {
           select: {
             id: true,

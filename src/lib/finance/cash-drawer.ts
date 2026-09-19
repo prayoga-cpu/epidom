@@ -55,12 +55,35 @@ export const OUTBOUND_CASH_MOVEMENT_TYPES = (
   Object.keys(CASH_MOVEMENT_DIRECTION) as CashMovementType[]
 ).filter((type) => CASH_MOVEMENT_DIRECTION[type] === -1);
 
+/**
+ * One tender of a multi-tender bill (`OrderPayment`). `amount` is what was
+ * applied to the bill — never the cash handed over — so summing it reproduces
+ * `Order.total`, and `refundedAmount` is the cumulative refund attributed to
+ * THIS tender.
+ */
+export interface CashOnHandTenderInput {
+  method: string;
+  amount: DecimalLike;
+  refundedAmount?: DecimalLike;
+}
+
 export interface CashOnHandOrderInput {
   paymentMethod: string;
   paymentStatus: string;
   status: string;
   total: DecimalLike;
   refundAmount: DecimalLike;
+  /**
+   * Per-tender breakdown, when the order has one.
+   *
+   * Every order created from release 2.88.0 on writes an `OrderPayment` row
+   * per tender (an ordinary single-method sale gets exactly one), but orders
+   * placed before it have none and there is deliberately no backfill. So the
+   * rule everywhere is: use the rows when present, fall back to the
+   * whole-order `paymentMethod`/`total`/`refundAmount` when absent. An empty
+   * or missing array means "legacy order", never "paid nothing".
+   */
+  payments?: CashOnHandTenderInput[];
 }
 
 export interface CashMovementInput {
@@ -128,10 +151,64 @@ export function signedCashAmount(movement: CashMovementInput): number {
  */
 export function isCollectedCashOrder(order: CashOnHandOrderInput): boolean {
   return (
-    order.paymentMethod === CASH_PAYMENT_METHOD &&
+    hasCashTender(order) &&
     (order.paymentStatus === "PAID" || order.paymentStatus === "REFUNDED") &&
     !NON_REVENUE_STATUSES.includes(order.status as (typeof NON_REVENUE_STATUSES)[number])
   );
+}
+
+/**
+ * Did any part of this bill arrive as notes and coins?
+ *
+ * With tender rows that is "at least one CASH row" — a SPLIT order settled
+ * half in cash and half by card did put money in the drawer, and reading only
+ * `Order.paymentMethod` (which is the literal string "SPLIT") would miss it
+ * entirely. Without rows it is the legacy whole-order question.
+ */
+function hasCashTender(order: CashOnHandOrderInput): boolean {
+  if (order.payments && order.payments.length > 0) {
+    return order.payments.some((p) => p.method === CASH_PAYMENT_METHOD);
+  }
+  return order.paymentMethod === CASH_PAYMENT_METHOD;
+}
+
+/**
+ * Cash this order put IN the drawer.
+ *
+ * The whole point of the multi-tender rework: a SPLIT bill contributes exactly
+ * its CASH tenders, never its total (which would invent the card money as cash
+ * and print a shortage the size of it) and never zero.
+ */
+export function cashCollectedFromOrder(order: CashOnHandOrderInput): number {
+  if (!isCollectedCashOrder(order)) return 0;
+  if (order.payments && order.payments.length > 0) {
+    return round2(
+      sum(order.payments.filter((p) => p.method === CASH_PAYMENT_METHOD).map((p) => p.amount))
+    );
+  }
+  return round2(Number(order.total));
+}
+
+/**
+ * Cash this order took back OUT of the drawer.
+ *
+ * Refunding a card tender on a split bill moves no notes, so only the CASH
+ * tenders' `refundedAmount` counts. Legacy orders have only the order-level
+ * cumulative `refundAmount`, which was all cash by definition when
+ * `paymentMethod` was CASH.
+ */
+export function cashRefundedFromOrder(order: CashOnHandOrderInput): number {
+  if (!isCollectedCashOrder(order)) return 0;
+  if (order.payments && order.payments.length > 0) {
+    return round2(
+      sum(
+        order.payments
+          .filter((p) => p.method === CASH_PAYMENT_METHOD)
+          .map((p) => p.refundedAmount ?? 0)
+      )
+    );
+  }
+  return round2(Number(order.refundAmount));
 }
 
 export interface ComputeCashOnHandInput {
@@ -147,10 +224,11 @@ export interface ComputeCashOnHandInput {
    * `orderDate`. A refund is a cash movement on the day the money leaves the
    * drawer, which is frequently not the day of the sale.
    *
-   * Caveat worth knowing: `Order.refundAmount` is cumulative and `refundedAt`
-   * only records the most recent refund, so an order refunded in two parts on
-   * two different days attributes its whole refund total to the later day.
-   * Fixing that properly needs a refund ledger, which the schema does not have.
+   * Caveat worth knowing: `Order.refundAmount` (and `OrderPayment.refundedAmount`)
+   * is cumulative while `refundedAt` only records the most recent refund, so an
+   * order refunded in two parts on two different days attributes its whole
+   * refund total to the later day. Fixing that properly needs a refund ledger,
+   * which the schema does not have.
    */
   refundedOrders: CashOnHandOrderInput[];
   movements: CashMovementInput[];
@@ -181,17 +259,15 @@ export function computeCashOnHand({
 }: ComputeCashOnHandInput): CashOnHandBreakdown {
   const opening = round2(Number(openingCash));
 
-  const cashSales = round2(
-    sum(salesOrders.filter(isCollectedCashOrder).map((order) => order.total))
-  );
+  // cashCollectedFromOrder / cashRefundedFromOrder already apply
+  // isCollectedCashOrder and return 0 for anything that collected no cash, so
+  // a plain sum over the unfiltered list is correct — and a SPLIT bill
+  // contributes only its CASH tenders.
+  const cashSales = round2(sum(salesOrders.map(cashCollectedFromOrder)));
 
-  const cashRefunds = round2(
-    sum(refundedOrders.filter(isCollectedCashOrder).map((order) => order.refundAmount))
-  );
+  const cashRefunds = round2(sum(refundedOrders.map(cashRefundedFromOrder)));
 
-  const unlinkedCashSales = round2(
-    sum(unlinkedSalesOrders.filter(isCollectedCashOrder).map((order) => order.total))
-  );
+  const unlinkedCashSales = round2(sum(unlinkedSalesOrders.map(cashCollectedFromOrder)));
 
   const byType = (type: CashMovementType) =>
     round2(sum(movements.filter((m) => m.type === type).map((m) => m.amount)));

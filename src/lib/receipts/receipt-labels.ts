@@ -39,6 +39,16 @@ interface ReceiptLabels {
   notes: string;
   defaultFooter: string;
   poweredByTitle: string;
+  /**
+   * Title of a PROVISIONAL print — the "Print Bill" the cashier hands over
+   * before payment (`ReceiptData.documentType: "bill"`). Deliberately the word
+   * each market's waitstaff actually uses: "l'addition" in France, "nota
+   * sementara" in Indonesia.
+   */
+  billTitle: string;
+  /** Replaces the thank-you footer on a bill, so it can never pass for proof
+   * of payment. Must survive toPrinterAscii — no accents that matter. */
+  billNotice: string;
 }
 
 export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
@@ -60,6 +70,8 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     notes: "Catatan",
     defaultFooter: "Terima kasih!\nSilakan datang kembali",
     poweredByTitle: "Cafe & Restaurant System",
+    billTitle: "NOTA SEMENTARA",
+    billNotice: "Ini bukan bukti pembayaran",
   },
   en: {
     billNo: "Bill No.",
@@ -79,6 +91,8 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     notes: "Notes",
     defaultFooter: "Thank you!\nPlease come again",
     poweredByTitle: "Cafe & Restaurant System",
+    billTitle: "BILL",
+    billNotice: "This is not a receipt",
   },
   fr: {
     billNo: "N° de facture",
@@ -98,6 +112,8 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     notes: "Remarques",
     defaultFooter: "Merci !\nÀ bientôt",
     poweredByTitle: "Cafe & Restaurant System",
+    billTitle: "ADDITION",
+    billNotice: "Ceci n'est pas un reçu",
   },
 };
 

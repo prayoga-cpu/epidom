@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import type { OrderStatus, OrderItemStatus, PaymentMethod } from "@prisma/client";
-import type { CreatePosOrderInput, SelectedOptionInput } from "@/lib/validation/pos.schemas";
+import type { OrderStatus, OrderItemStatus, PaymentMethod, Department } from "@prisma/client";
+import {
+  isCustomOrderItem,
+  type CreatePosOrderInput,
+  type SelectedOptionInput,
+} from "@/lib/validation/pos.schemas";
 import { deductStockForOrder } from "./stock-deduction.service";
 import { productionBatchService } from "./production-batch.service";
 import { resolveInitialOrderItemStatus } from "./order-status.helpers";
@@ -66,7 +70,8 @@ export async function draftShortfallBatchesForConfirmedOrder(
 export class OrderBuildError extends Error {}
 
 export interface BuiltOrderItem {
-  menuItemId: string;
+  /** null for a POS Custom Item — an ad-hoc line with no MenuItem behind it. */
+  menuItemId: string | null;
   name: string;
   quantity: number;
   unit: string;
@@ -74,8 +79,14 @@ export interface BuiltOrderItem {
   total: number;
   notes?: string;
   selectedOptions?: SelectedOptionInput[];
-  // SERVED for CUSTOM-productLine items (no prep step), PENDING otherwise —
-  // see resolveInitialOrderItemStatus.
+  /** True only for a Custom Item. Unrelated to Product.productLine = CUSTOM. */
+  isCustom: boolean;
+  /** Prep area persisted on the line itself; only ever set for a Custom Item,
+   * since every ordinary line derives it from menuItem.department. */
+  department: Department | null;
+  // SERVED for CUSTOM-productLine items and for a Custom Item with no prep
+  // area (no prep step either way), PENDING otherwise — see
+  // resolveInitialOrderItemStatus.
   initialStatus: OrderItemStatus;
 }
 
@@ -84,39 +95,72 @@ export interface BuiltOrderItem {
  * is available, then reprice each line from the current menu (never trusts
  * client-sent prices). Shared by order creation, hold, and finalize so
  * pricing logic lives in exactly one place.
+ *
+ * Custom Items are the one exception to "never trust the client": they have no
+ * menu row to reprice against, so the cashier's typed name/price ARE the
+ * record. The Zod schema bounds both (≤80 chars, ≤ CUSTOM_ITEM_MAX_UNIT_PRICE)
+ * because Order is an immutable ledger — a bad number here is permanent.
  */
 export async function validateAndBuildOrderItems(
   storeId: string,
   items: CreatePosOrderInput["items"]
 ): Promise<{ orderItems: BuiltOrderItem[]; subtotal: number }> {
+  const menuLines = items.filter((i) => !isCustomOrderItem(i));
+
   // Dedupe: the cart can list the same menu item on multiple lines (e.g. two
   // orders of the same drink with different notes), and Prisma's `id: { in }`
   // only ever returns one row per unique id — comparing against the raw,
   // possibly-repeating items array would then falsely flag available items.
-  const uniqueMenuItemIds = [...new Set(items.map((i) => i.menuItemId))];
-  const menuItems = await prisma.menuItem.findMany({
-    where: {
-      id: { in: uniqueMenuItemIds },
-      storefront: { storeId },
-      isAvailable: true,
-    },
-    include: {
-      product: { select: { productLine: true } },
-    },
-  });
+  const uniqueMenuItemIds = [
+    ...new Set(menuLines.map((i) => (i as { menuItemId: string }).menuItemId)),
+  ];
+  // Skip the round trip entirely for an all-Custom-Item sale (an ad-hoc bill
+  // with nothing from the menu is a legitimate Luna-parity use case).
+  const menuItems = uniqueMenuItemIds.length
+    ? await prisma.menuItem.findMany({
+        where: {
+          id: { in: uniqueMenuItemIds },
+          storefront: { storeId },
+          isAvailable: true,
+        },
+        include: {
+          product: { select: { productLine: true } },
+        },
+      })
+    : [];
 
   if (menuItems.length !== uniqueMenuItemIds.length) {
     const foundIds = new Set(menuItems.map((m) => m.id));
     // Name the exact items so the cashier knows what to remove, rather than a
     // vague "something is wrong" — this is the common case when a held order
     // is resumed after the menu changed (item deleted / made unavailable).
-    const missingNames = items.filter((i) => !foundIds.has(i.menuItemId)).map((i) => i.name);
+    const missingNames = menuLines
+      .filter((i) => !foundIds.has((i as { menuItemId: string }).menuItemId))
+      .map((i) => i.name);
     throw new OrderBuildError(`No longer available, remove from cart: ${missingNames.join(", ")}`);
   }
 
   const menuItemMap = new Map(menuItems.map((m) => [m.id, m]));
 
   const orderItems: BuiltOrderItem[] = items.map((i) => {
+    if (isCustomOrderItem(i)) {
+      const unitPrice = i.unitPrice;
+      const department = (i.department ?? null) as Department | null;
+      return {
+        menuItemId: null,
+        name: i.name,
+        quantity: i.quantity,
+        unit: "pcs",
+        unitPrice,
+        total: unitPrice * i.quantity,
+        notes: i.notes,
+        selectedOptions: undefined,
+        isCustom: true,
+        department,
+        initialStatus: resolveInitialOrderItemStatus(null, { isCustom: true, department }),
+      };
+    }
+
     const menuItem = menuItemMap.get(i.menuItemId)!;
     const modifierTotal = (i.selectedOptions ?? []).reduce((sum, m) => sum + m.priceAdjustment, 0);
     const unitPrice = Number(menuItem.price) + modifierTotal;
@@ -130,6 +174,8 @@ export async function validateAndBuildOrderItems(
       total,
       notes: i.notes,
       selectedOptions: i.selectedOptions,
+      isCustom: false,
+      department: null,
       initialStatus: resolveInitialOrderItemStatus(menuItem.product?.productLine),
     };
   });

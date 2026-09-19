@@ -40,6 +40,16 @@ describe("POS Mode routes stay grantable after the shell split", () => {
     expect(ROLE_DEFAULT_PAGES.MANAGER).toContain("/pos/schedule");
   });
 
+  // Customer records are a manager's page: a Cashier captures a customer at the
+  // till (POS), but browsing/exporting the whole list is not theirs.
+  it("Manager (and the back-office Admin template) can reach /customers; Cashier and Kitchen cannot", () => {
+    expect(ALL_STAFF_PAGES).toContain("/customers");
+    expect(ROLE_DEFAULT_PAGES.MANAGER).toContain("/customers");
+    expect(STAFF_ROLE_TEMPLATES.find((t) => t.id === "admin")!.allowedPages).toContain("/customers");
+    expect(ROLE_DEFAULT_PAGES.CASHIER).not.toContain("/customers");
+    expect(ROLE_DEFAULT_PAGES.KITCHEN).not.toContain("/customers");
+  });
+
   it("resolveStaffAllowedPages falls back to the role default when no override is set", () => {
     expect(resolveStaffAllowedPages("CASHIER", [])).toEqual(ROLE_DEFAULT_PAGES.CASHIER);
   });

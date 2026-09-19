@@ -40,6 +40,8 @@ import { useRecipesForSelector } from "../../recipes/hooks/use-recipes";
 import { generateSku } from "@/lib/utils/sku-generator";
 import { useSkuAvailability } from "@/hooks/use-sku-availability";
 import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
+import { BARCODE_MAX_LENGTH, BARCODE_PATTERN } from "@/lib/validation/inventory.schemas";
+import { BarcodeField } from "./barcode-field";
 import { toast as sonnerToast } from "sonner";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -83,6 +85,16 @@ function createProductSchema(t: (key: string) => string) {
   return z.object({
     name: z.string().min(2, t("common.validation.productNameMin")),
     sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
+    // Optional scan code. Empty = none; the server enforces per-store uniqueness
+    // and reports a clash back onto this field.
+    barcode: z
+      .string()
+      .max(BARCODE_MAX_LENGTH, t("promotions.product.barcodeInvalid"))
+      .refine(
+        (v) => !v.trim() || BARCODE_PATTERN.test(v.trim()),
+        t("promotions.product.barcodeInvalid")
+      )
+      .optional(),
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
     department: z.enum(["KITCHEN", "BAR"]),
@@ -146,6 +158,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
     mode: "onSubmit", // Validate only on submit to allow undefined values during editing
     defaultValues: {
       ...FORM_DEFAULTS.product,
+      barcode: "",
       recipeIds: [],
       primaryRecipeId: undefined,
       linkedMenuItemId: undefined,
@@ -326,6 +339,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
       // Note: retailPrice maps to sellingPrice
       const apiData = {
         sku: data.sku,
+        barcode: data.barcode?.trim() || null,
         name: data.name,
         description: data.description,
         category: data.category,
@@ -468,7 +482,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem className="space-y-0.5">
+                    <FormItem className="space-y-0.5 sm:col-span-2">
                       <FormLabel className="text-sm">{t("data.products.form.name")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.namePlaceholder")} {...field} />
@@ -530,6 +544,8 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                     </FormItem>
                   )}
                 />
+
+                <BarcodeField control={form.control} />
               </div>
 
               <FormField

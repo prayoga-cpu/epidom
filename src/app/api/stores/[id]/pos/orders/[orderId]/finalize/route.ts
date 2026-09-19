@@ -4,18 +4,20 @@ import { prisma } from "@/lib/prisma";
 import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { createPosOrderSchema } from "@/lib/validation/pos.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { Prisma, type PaymentMethod, type OrderType } from "@prisma/client";
 import { inngest } from "@/lib/inngest/client";
 import {
-  validateAndBuildOrderItems,
-  resolveSettledOrderStatus,
   deliverOrderImmediately,
   draftShortfallBatchesForConfirmedOrder,
-  OrderBuildError,
-  type BuiltOrderItem,
 } from "@/lib/services/pos-order-builder";
-import { resolveFinanceSettingsForOrder } from "@/lib/services";
-import { computeOrderCharges } from "@/lib/finance/order-charges";
+import {
+  applySettlementBookkeeping,
+  buildPosOrderCreatedResponse,
+  buildPosSettlement,
+  buildSettlementOrderData,
+  claimHeldOrderForSettlement,
+  mapSettlementError,
+  POS_ORDER_TX_TIMEOUT_MS,
+} from "@/lib/services/pos-order-settlement";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
@@ -24,10 +26,11 @@ import { REALTIME_EVENTS } from "@/lib/realtime/channels";
  *
  * Turns a HELD order into a real placed order — the cashier resumed it,
  * chose a payment method (and possibly edited the cart), and is now paying.
- * Mirrors POST /pos/orders (same repricing, same CASH-vs-not status/payment
- * coupling, same payment initiation + merchant notification) but operates on
- * the existing HELD row instead of creating a new one, and only fires the
- * "order placed" notification / payment initiation here — never at hold time.
+ * Mirrors POST /pos/orders (same repricing, same discount/tender resolution,
+ * same payment initiation + merchant notification — all of it now literally
+ * the same code, via pos-order-settlement.ts) but operates on the existing
+ * HELD row instead of creating a new one, and only fires the "order placed"
+ * notification / payment initiation here — never at hold time.
  */
 export async function POST(
   request: Request,
@@ -60,22 +63,15 @@ export async function POST(
 
     const input = parsed.data;
 
-    // Defense in depth — the client only shows "Pay Later" as a checkout
-    // option when the store has enabled it, but never trust that a request
-    // actually came from a client that enforced it.
-    if (input.paymentMethod === "PAY_LATER" && !store.payLaterEnabled) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Pay Later is not enabled for this store"),
-        { status: 422 }
-      );
-    }
-
     const existing = await prisma.order.findFirst({ where: { id: orderId, storeId } });
     if (!existing) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"), {
         status: 404,
       });
     }
+    // Fast 409 for the common case. NOT the race guard — two tills finalizing
+    // the same saved bill both pass this. claimHeldOrderForSettlement inside
+    // the transaction is what actually serializes them.
     if (existing.status !== "HELD") {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.CONFLICT, "Order is no longer held"),
@@ -83,122 +79,83 @@ export async function POST(
       );
     }
 
-    let orderItems: BuiltOrderItem[];
-    let subtotal: number;
-    let financeSettings: Awaited<ReturnType<typeof resolveFinanceSettingsForOrder>>;
+    let settlement;
     try {
-      // Independent reads (both only need storeId) — run concurrently
-      // instead of two sequential round trips on the critical checkout path.
-      const [built, settings] = await Promise.all([
-        validateAndBuildOrderItems(storeId, input.items),
-        resolveFinanceSettingsForOrder(storeId),
-      ]);
-      ({ orderItems, subtotal } = built);
-      financeSettings = settings;
+      settlement = await buildPosSettlement({ storeId, store, input });
     } catch (err) {
-      if (err instanceof OrderBuildError) {
-        return NextResponse.json(createErrorResponse(ApiErrorCode.INVALID_INPUT, err.message), {
-          status: 422,
-        });
-      }
+      const mapped = mapSettlementError(err);
+      if (mapped) return mapped;
       throw err;
     }
 
-    const charges = computeOrderCharges({
-      itemsTotal: subtotal,
-      discountAmount: input.discountAmount,
-      paymentMethod: input.paymentMethod as PaymentMethod,
-      settings: financeSettings,
+    const orderData = buildSettlementOrderData({
+      settlement,
+      input,
+      // The checkout dialog only sends customerName/guestCount when it has
+      // them, so finalizing must not wipe what the hold already captured.
+      fallbackCustomerName: existing.customerName,
+      existingGuestCount: existing.guestCount,
+      existingCustomerId: existing.customerId,
     });
+    const { immediatelyDelivered, settledStatus } = settlement;
 
-    // Defense in depth — the client already disables the Confirm button for
-    // this case, but never trust that a request actually came from a client
-    // that enforced it.
-    if (
-      input.paymentMethod === "CASH" &&
-      input.amountTendered != null &&
-      input.amountTendered < charges.total
-    ) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.INVALID_INPUT,
-          "Amount tendered is less than the order total"
-        ),
-        { status: 422 }
+    let transactionResult;
+    try {
+      transactionResult = await prisma.$transaction(
+        async (tx) => {
+          // FIRST statement: take the bill. Everything below — including the
+          // coupon use and the points burn — is conditional on having won.
+          await claimHeldOrderForSettlement(tx, {
+            orderId: existing.id,
+            storeId,
+            settledStatus,
+          });
+
+          await tx.orderItem.deleteMany({ where: { orderId: existing.id } });
+          // A hold never writes tenders, but clear them anyway so this stays a
+          // true replace rather than an append if the row ever has any.
+          await tx.orderPayment.deleteMany({ where: { orderId: existing.id } });
+
+          const updated = await tx.order.update({
+            where: { id: existing.id },
+            data: {
+              ...orderData,
+              shiftId: input.shiftId ?? existing.shiftId,
+            },
+            include: { items: true },
+          });
+
+          // If table is assigned, mark it as OCCUPIED (parity with create) —
+          // skipped when immediately delivered, same as create. updateMany so
+          // the write is store-scoped: `update` by id alone would let a
+          // forged tableId flip another tenant's table.
+          if (input.tableId && input.orderType === "DINE_IN" && !immediatelyDelivered) {
+            await tx.table.updateMany({
+              where: { id: input.tableId, storeId },
+              data: { status: "OCCUPIED" },
+            });
+          }
+
+          const bookkeeping = await applySettlementBookkeeping(tx, {
+            orderId: updated.id,
+            storeId,
+            settlement,
+            currentNotes: orderData.notes,
+          });
+
+          return { order: updated, pointsEarned: bookkeeping.pointsEarned };
+        },
+        { timeout: POS_ORDER_TX_TIMEOUT_MS }
       );
+    } catch (err) {
+      // A lost claim (409) or a lost coupon/points race surfaces here, after
+      // the whole transaction has rolled back — nothing was consumed.
+      const mapped = mapSettlementError(err);
+      if (mapped) return mapped;
+      throw err;
     }
 
-    const settledStatus = resolveSettledOrderStatus(
-      input.paymentMethod as PaymentMethod,
-      store.kitchenDisplayEnabled
-    );
-    const immediatelyDelivered = settledStatus === "DELIVERED";
-
-    const order = await prisma.$transaction(async (tx) => {
-      await tx.orderItem.deleteMany({ where: { orderId: existing.id } });
-
-      const updated = await tx.order.update({
-        where: { id: existing.id },
-        data: {
-          customerName: input.customerName ?? existing.customerName,
-          customerPhone: input.customerPhone,
-          orderType: input.orderType as OrderType,
-          // Falls back to whatever the hold already recorded — the checkout
-          // dialog only sends guestCount for DINE_IN, so finalizing a
-          // takeaway must not wipe a pax count a dine-in hold had captured
-          // before the cashier switched the order type.
-          guestCount:
-            input.orderType === "DINE_IN"
-              ? (input.guestCount ?? existing.guestCount)
-              : null,
-          tableNumber: input.tableNumber,
-          tableId: input.tableId,
-          shiftId: input.shiftId ?? existing.shiftId,
-          paymentMethod: input.paymentMethod as PaymentMethod,
-          paymentStatus: input.paymentMethod === "PAY_LATER" ? "PENDING" : "PAID",
-          paymentNote: input.paymentNote,
-          status: settledStatus,
-          ...(immediatelyDelivered && { deliveredDate: new Date() }),
-          notes: input.notes,
-          subtotal: new Prisma.Decimal(charges.subtotal),
-          tax: new Prisma.Decimal(charges.tax),
-          delivery: new Prisma.Decimal(0),
-          total: new Prisma.Decimal(charges.total),
-          discountAmount: new Prisma.Decimal(charges.discountAmount),
-          discountReason: charges.discountAmount > 0 ? input.discountReason : undefined,
-          serviceCharge: new Prisma.Decimal(charges.serviceCharge),
-          processingFee: new Prisma.Decimal(charges.processingFee),
-          taxRate: new Prisma.Decimal(charges.taxRate),
-          serviceChargeRate: new Prisma.Decimal(charges.serviceChargeRate),
-          processingFeeRate: new Prisma.Decimal(charges.processingFeeRate),
-          items: {
-            create: orderItems.map((i) => ({
-              menuItemId: i.menuItemId,
-              name: i.name,
-              quantity: new Prisma.Decimal(i.quantity),
-              unit: i.unit,
-              unitPrice: new Prisma.Decimal(i.unitPrice),
-              total: new Prisma.Decimal(i.total),
-              notes: i.notes,
-              selectedOptions: i.selectedOptions as Prisma.InputJsonValue | undefined,
-              status: i.initialStatus,
-            })),
-          },
-        },
-        include: { items: true },
-      });
-
-      // If table is assigned, mark it as OCCUPIED (parity with create) —
-      // skipped when immediately delivered, same as create.
-      if (input.tableId && input.orderType === "DINE_IN" && !immediatelyDelivered) {
-        await tx.table.update({
-          where: { id: input.tableId },
-          data: { status: "OCCUPIED" },
-        });
-      }
-
-      return updated;
-    });
+    const { order, pointsEarned } = transactionResult;
 
     publishStoreEvent(storeId, REALTIME_EVENTS.ORDER_UPDATED, {
       action: "updated",
@@ -225,11 +182,11 @@ export async function POST(
             storeId,
             storefrontSlug: null,
             orderNumber: order.orderNumber,
-            customerName: input.customerName ?? "Walk-in",
-            totalAmount: charges.total,
+            customerName: settlement.customerName,
+            totalAmount: settlement.charges.total,
             currency: "IDR",
-            paymentMethod: input.paymentMethod,
-            items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
+            paymentMethod: settlement.paymentMethod,
+            items: settlement.orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
             merchantPhone: store.phone ?? null,
             storeName: store.name,
           },
@@ -239,20 +196,8 @@ export async function POST(
       }
     });
 
-    // Calculate change for cash payments
-    const change =
-      input.paymentMethod === "CASH" && input.amountTendered != null
-        ? Math.max(0, input.amountTendered - charges.total)
-        : null;
-
     return NextResponse.json(
-      createSuccessResponse({
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        change,
-      })
+      createSuccessResponse(buildPosOrderCreatedResponse(order, settlement, pointsEarned))
     );
   } catch (error) {
     console.error("[POS_ORDERS_FINALIZE]", error);

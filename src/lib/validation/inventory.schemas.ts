@@ -41,10 +41,30 @@ export const productOptionGroupSchema = z.object({
 export type ProductOptionInput = z.infer<typeof productOptionSchema>;
 export type ProductOptionGroupInput = z.infer<typeof productOptionGroupSchema>;
 
+// Product barcode (EAN / UPC / whatever a keyboard-wedge scanner types). Optional
+// and unique per store; the POS matches it EXACTLY, so the value is kept as typed
+// apart from trimming — no case-folding. An empty field means "no barcode" (null,
+// which also CLEARS one on update) rather than a value that fails the pattern.
+// Letters, digits and the punctuation Code 128 / GS1 codes actually use; spaces
+// are excluded on purpose — a scanner never emits one, and one typed by hand is
+// almost always a paste accident that would then never match a scan.
+export const BARCODE_MAX_LENGTH = 64;
+export const BARCODE_PATTERN = /^[A-Za-z0-9._\-\/+]+$/;
+
+export const barcodeSchema = z.preprocess(
+  (value) => (typeof value === "string" ? value.trim() || null : value),
+  z
+    .string()
+    .max(BARCODE_MAX_LENGTH, `Barcode must be at most ${BARCODE_MAX_LENGTH} characters`)
+    .regex(BARCODE_PATTERN, "Use letters, digits and . _ - / + only (no spaces)")
+    .nullable()
+);
+
 // Product schemas
 const baseProductSchema = z.object({
   storeId: cuidSchema,
   sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
+  barcode: barcodeSchema.optional(),
   name: z.string().min(1, "Name is required").max(200, "Name is too long"),
   description: z.string().max(1000, "Description is too long").optional(),
   category: z.string().max(100, "Category name is too long").optional(),

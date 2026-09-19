@@ -319,3 +319,105 @@ describe("aggregateShiftReport — window & cash drawer", () => {
     expect(empty({ cashDrawer }).cashDrawer).toEqual(cashDrawer);
   });
 });
+
+/**
+ * Multi-tender attribution (release 2.88.0). The payment block is printed
+ * directly under the sales TOTAL on the Z-report, so the two have to agree:
+ * attributing a split bill to its whole total under "SPLIT" would both invent
+ * a method nobody paid with and — once any order is split — stop the column
+ * from summing to the day's revenue.
+ */
+describe("aggregateShiftReport — by payment method with tenders", () => {
+  it("splits a multi-tender bill across the methods that took the money", () => {
+    const report = aggregateShiftReport({
+      orders: [
+        order({
+          paymentMethod: "SPLIT",
+          total: 100,
+          payments: [
+            { method: "CASH", amount: 40 },
+            { method: "STRIPE_CARD", amount: 60 },
+          ],
+        }),
+      ],
+      cancelledOrders: [],
+      window: WINDOW,
+    });
+
+    expect(report.byPaymentMethod).toEqual([
+      { paymentMethod: "STRIPE_CARD", orderCount: 1, revenue: 60, percentOfTotal: 60 },
+      { paymentMethod: "CASH", orderCount: 1, revenue: 40, percentOfTotal: 40 },
+    ]);
+    // The block prints sales.total underneath it; the two must reconcile.
+    expect(report.byPaymentMethod.reduce((sum, m) => sum + m.revenue, 0)).toBe(
+      report.sales.total
+    );
+    expect(report.byPaymentMethod.some((m) => m.paymentMethod === "SPLIT")).toBe(false);
+  });
+
+  it("keeps attributing an order with no tender rows to its whole-order method", () => {
+    const report = aggregateShiftReport({
+      orders: [order({ paymentMethod: "QRIS", total: 250 })],
+      cancelledOrders: [],
+      window: WINDOW,
+    });
+
+    expect(report.byPaymentMethod).toEqual([
+      { paymentMethod: "QRIS", orderCount: 1, revenue: 250, percentOfTotal: 100 },
+    ]);
+  });
+
+  it("mixes legacy and multi-tender orders in one window", () => {
+    const report = aggregateShiftReport({
+      orders: [
+        order({ paymentMethod: "CASH", total: 100 }), // legacy, no rows
+        order({
+          paymentMethod: "SPLIT",
+          total: 100,
+          payments: [
+            { method: "CASH", amount: 25 },
+            { method: "QRIS", amount: 75 },
+          ],
+        }),
+      ],
+      cancelledOrders: [],
+      window: WINDOW,
+    });
+
+    const byMethod = Object.fromEntries(
+      report.byPaymentMethod.map((m) => [m.paymentMethod, m.revenue])
+    );
+    expect(byMethod).toEqual({ CASH: 125, QRIS: 75 });
+    expect(report.byPaymentMethod.reduce((sum, m) => sum + m.revenue, 0)).toBe(200);
+  });
+
+  it("treats an empty payments array as a legacy order, not as paying nothing", () => {
+    const report = aggregateShiftReport({
+      orders: [order({ paymentMethod: "CASH", total: 80, payments: [] })],
+      cancelledOrders: [],
+      window: WINDOW,
+    });
+    expect(report.byPaymentMethod).toEqual([
+      { paymentMethod: "CASH", orderCount: 1, revenue: 80, percentOfTotal: 100 },
+    ]);
+  });
+
+  it("accepts Decimal-like tender amounts", () => {
+    const decimal = (v: string) => ({ toString: () => v });
+    const report = aggregateShiftReport({
+      orders: [
+        order({
+          paymentMethod: "SPLIT",
+          total: 100,
+          payments: [
+            { method: "CASH", amount: decimal("33.33") },
+            { method: "QRIS", amount: decimal("66.67") },
+          ],
+        }),
+      ],
+      cancelledOrders: [],
+      window: WINDOW,
+    });
+    expect(report.byPaymentMethod.reduce((sum, m) => sum + m.revenue, 0)).toBe(100);
+  });
+});

@@ -1,8 +1,8 @@
 /**
  * Data View Client Component
  *
- * Main component for displaying materials, recipes, products, and suppliers in tabs.
- * Uses lazy loading and code splitting for optimal performance.
+ * Main component for displaying materials, recipes, products, suppliers and
+ * promotions in tabs. Uses lazy loading and code splitting for optimal performance.
  */
 
 "use client";
@@ -83,6 +83,19 @@ const SuppliersSection = dynamic(
   () =>
     import("../suppliers/components/suppliers-section").then((mod) => ({
       default: mod.SuppliersSection,
+    })),
+  {
+    loading: () => <TabContentSkeleton />,
+    ssr: false, // Prevent SSR to avoid hydration mismatch
+  }
+);
+
+// Discount presets, coupons and loyalty points (OPERATIONS tier — the section
+// shows the upgrade gate itself, so the tab is always visible).
+const PromotionsSection = dynamic(
+  () =>
+    import("../promotions/components/promotions-section").then((mod) => ({
+      default: mod.PromotionsSection,
     })),
   {
     loading: () => <TabContentSkeleton />,
@@ -194,7 +207,7 @@ function TabContentSkeleton() {
   );
 }
 
-type DataTab = "materials" | "recipes" | "products" | "suppliers" | "customProducts";
+type DataTab = "materials" | "recipes" | "products" | "suppliers" | "promotions" | "customProducts";
 
 interface TabState {
   tab: DataTab;
@@ -202,7 +215,14 @@ interface TabState {
 
 const TAB_DEFAULTS: TabState = { tab: "materials" };
 
-const DATA_TABS: DataTab[] = ["materials", "recipes", "products", "suppliers", "customProducts"];
+const DATA_TABS: DataTab[] = [
+  "materials",
+  "recipes",
+  "products",
+  "suppliers",
+  "promotions",
+  "customProducts",
+];
 
 function sanitizeTabState(raw: unknown, defaults: TabState): TabState {
   if (!raw || typeof raw !== "object") return defaults;
@@ -342,6 +362,12 @@ export function DataViewClient({
         </TabsTrigger>
         <TabsTrigger
           className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
+          value="promotions"
+        >
+          {t("promotions.tab")}
+        </TabsTrigger>
+        <TabsTrigger
+          className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
           value="customProducts"
           onMouseEnter={() => handleTabHover("customProducts")}
         >
@@ -381,6 +407,12 @@ export function DataViewClient({
       {activeTab === "suppliers" && (
         <TabsContent value="suppliers" className="mt-0">
           <SuppliersSection initialSuppliers={initialSuppliers} />
+        </TabsContent>
+      )}
+
+      {activeTab === "promotions" && (
+        <TabsContent value="promotions" className="mt-0">
+          <PromotionsSection storeId={storeId} />
         </TabsContent>
       )}
 

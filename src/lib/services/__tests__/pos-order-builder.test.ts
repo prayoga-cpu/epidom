@@ -45,6 +45,10 @@ describe("validateAndBuildOrderItems", () => {
         unit: "pcs",
         unitPrice: 15000,
         total: 30000,
+        notes: undefined,
+        selectedOptions: undefined,
+        isCustom: false,
+        department: null,
         initialStatus: "PENDING",
       },
     ]);
@@ -149,6 +153,85 @@ describe("validateAndBuildOrderItems", () => {
         { menuItemId: "missing", name: "Ghost", quantity: 1, unitPrice: 1 },
       ] as any)
     ).rejects.toThrow(OrderBuildError);
+  });
+});
+
+/**
+ * Custom Items are the ONE line type whose client-sent name/price the server
+ * keeps — there is no menu row to reprice from. The Zod schema is what bounds
+ * them; this covers what the builder does with them afterwards.
+ */
+describe("validateAndBuildOrderItems — Custom Items", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("keeps the cashier-typed name and price, with no menuItemId", async () => {
+    const { orderItems, subtotal } = await validateAndBuildOrderItems("store-1", [
+      { custom: true, name: "Corkage", quantity: 2, unitPrice: 25000, notes: "table 4" },
+    ] as any);
+
+    expect(orderItems).toEqual([
+      {
+        menuItemId: null,
+        name: "Corkage",
+        quantity: 2,
+        unit: "pcs",
+        unitPrice: 25000,
+        total: 50000,
+        notes: "table 4",
+        selectedOptions: undefined,
+        isCustom: true,
+        department: null,
+        // No prep area ⇒ nothing would ever move it off PENDING.
+        initialStatus: "SERVED",
+      },
+    ]);
+    expect(subtotal).toBe(50000);
+  });
+
+  it("never hits the menu for an all-custom cart", async () => {
+    await validateAndBuildOrderItems("store-1", [
+      { custom: true, name: "Corkage", quantity: 1, unitPrice: 1000 },
+    ] as any);
+    expect(prismaMock.menuItem.findMany).not.toHaveBeenCalled();
+  });
+
+  it("starts PENDING when the cashier chose a prep area", async () => {
+    const { orderItems } = await validateAndBuildOrderItems("store-1", [
+      { custom: true, name: "Special cocktail", quantity: 1, unitPrice: 90000, department: "BAR" },
+    ] as any);
+
+    expect(orderItems[0].department).toBe("BAR");
+    expect(orderItems[0].initialStatus).toBe("PENDING");
+  });
+
+  it("mixes custom and menu lines, repricing only the menu ones", async () => {
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      { id: "menu-1", name: "Latte", price: 25000 },
+    ]);
+
+    const { orderItems, subtotal } = await validateAndBuildOrderItems("store-1", [
+      { menuItemId: "menu-1", name: "Latte", quantity: 1, unitPrice: 1 },
+      { custom: true, name: "Tip", quantity: 1, unitPrice: 5000 },
+    ] as any);
+
+    // Order is preserved, so the cart line and the receipt line still match up.
+    expect(orderItems.map((i) => i.name)).toEqual(["Latte", "Tip"]);
+    expect(orderItems[0].unitPrice).toBe(25000);
+    expect(orderItems[1].unitPrice).toBe(5000);
+    expect(subtotal).toBe(30000);
+  });
+
+  it("does not count custom lines when reporting unavailable menu items", async () => {
+    prismaMock.menuItem.findMany.mockResolvedValue([]); // the menu line is gone
+
+    await expect(
+      validateAndBuildOrderItems("store-1", [
+        { menuItemId: "menu-1", name: "Latte", quantity: 1, unitPrice: 1 },
+        { custom: true, name: "Tip", quantity: 1, unitPrice: 5000 },
+      ] as any)
+    ).rejects.toThrow(/Latte/);
   });
 });
 

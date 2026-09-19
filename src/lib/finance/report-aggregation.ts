@@ -229,6 +229,66 @@ export function buildPaymentMethodRows(grouped: PaymentMethodGroupInput[]): Paym
     .sort((a, b) => b.revenue - a.revenue);
 }
 
+export interface TenderMethodGroupInput {
+  method: string;
+  _sum: { amount: number | string | { toString(): string } | null };
+  _count: { id: number };
+}
+
+/**
+ * Payment-method rows for a window that may contain BOTH multi-tender orders
+ * and orders that predate `OrderPayment`.
+ *
+ * Why two groupBys unioned rather than one query: an order's money lives in
+ * two different places depending on when it was rung up. From release 2.88.0
+ * every order writes one `OrderPayment` row per tender, so
+ * `orderPayment.groupBy({ by: ["method"] })` filtered through the same order
+ * `where` is the exact per-method revenue — and a bill split cash+card shows up
+ * under CASH and under the card, never as a "SPLIT" row and never twice at its
+ * full total. Orders created before that have no rows at all and there is no
+ * backfill, so they are picked up by a second `order.groupBy` restricted to
+ * `payments: { none: {} }` and attributed to `Order.paymentMethod` exactly as
+ * before. The two sets are disjoint by construction (an order either has rows
+ * or it doesn't), so summing them double-counts nothing and the method totals
+ * still add up to the window's revenue.
+ *
+ * `orderCount` is "how many PAYMENTS used this method". For legacy rows that is
+ * one per order, as it always was; for a split bill it is one per tender, so
+ * the counts across methods can add up to more than the number of orders. That
+ * is the right figure for a per-method row (a cash+card bill really was settled
+ * by one cash payment and one card payment) but it is NOT an order count: any
+ * "total orders" figure must come from a separate `order.count` over the same
+ * filter, never from summing this column — see orders/payment-totals/route.ts.
+ * The revenue column, which the percentages are computed from, still sums to
+ * the window total either way.
+ */
+export function buildTenderPaymentMethodRows(
+  tenderGroups: TenderMethodGroupInput[],
+  legacyGroups: PaymentMethodGroupInput[]
+): PaymentMethodRow[] {
+  const merged = new Map<string, { total: number; count: number }>();
+
+  const add = (method: string, total: number, count: number) => {
+    const bucket = merged.get(method) ?? { total: 0, count: 0 };
+    bucket.total += total;
+    bucket.count += count;
+    merged.set(method, bucket);
+  };
+
+  for (const g of tenderGroups) add(g.method, Number(g._sum.amount ?? 0), g._count.id);
+  for (const g of legacyGroups) add(g.paymentMethod, Number(g._sum.total ?? 0), g._count.id);
+
+  // Delegated so the percentage, rounding and sort rules live in exactly one
+  // place and the two payment-method surfaces cannot drift.
+  return buildPaymentMethodRows(
+    Array.from(merged.entries()).map(([paymentMethod, b]) => ({
+      paymentMethod,
+      _sum: { total: b.total },
+      _count: { id: b.count },
+    }))
+  );
+}
+
 export interface ItemMarginInput {
   name: string;
   quantity: number | string;

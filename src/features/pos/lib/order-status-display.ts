@@ -40,6 +40,29 @@ export function getOrderStatusBadgeClass(status: string): string {
   }
 }
 
+/**
+ * Solid dot for a status — the same color family as the badge and accent above,
+ * for places (the split list's rows) where a full badge would be noise. DELIVERED
+ * only ever shows in the queue while it is still unpaid, so it reads as urgent.
+ */
+export function getOrderStatusDotClass(status: string): string {
+  switch (status) {
+    case "CONFIRMED":
+      return "bg-blue-500";
+    case "IN_PRODUCTION":
+      return "bg-orange-500";
+    case "READY":
+      return "bg-emerald-500";
+    case "HELD":
+      return "bg-slate-500";
+    case "DELIVERED":
+    case "CANCELLED":
+      return "bg-destructive";
+    default:
+      return "bg-muted-foreground";
+  }
+}
+
 export function getOrderSourceBadgeVariant(source: string): "default" | "secondary" | "outline" {
   switch (source) {
     case "POS":

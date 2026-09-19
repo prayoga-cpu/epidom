@@ -76,6 +76,8 @@ export class ProductRepository extends BaseRepository {
         OR: [
           { name: { contains: search, mode: "insensitive" } },
           { sku: { contains: search, mode: "insensitive" } },
+          // A scanned/typed barcode finds its product from the Data page too.
+          { barcode: { contains: search, mode: "insensitive" } },
           { description: { contains: search, mode: "insensitive" } },
           { category: { contains: search, mode: "insensitive" } },
         ],
@@ -168,6 +170,27 @@ export class ProductRepository extends BaseRepository {
           equals: sku,
           mode: "insensitive",
         },
+        ...(excludeId && { id: { not: excludeId } }),
+      },
+      select: { id: true },
+    });
+
+    return !!product;
+  }
+
+  /**
+   * Check if a barcode is already on another product of this store.
+   *
+   * EXACT, case-sensitive match — the same comparison as the
+   * `@@unique([storeId, barcode])` index and as the POS scanner lookup
+   * (findItemByBarcode). Contrast existsBySku's case-insensitive check: a SKU is
+   * a human label, a barcode is an identifier a scanner must reproduce exactly.
+   */
+  async existsByBarcode(storeId: string, barcode: string, excludeId?: string): Promise<boolean> {
+    const product = await this.db.product.findFirst({
+      where: {
+        storeId,
+        barcode,
         ...(excludeId && { id: { not: excludeId } }),
       },
       select: { id: true },

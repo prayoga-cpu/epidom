@@ -48,14 +48,35 @@ import {
 } from "@/lib/finance/cash-drawer";
 import { resolveShiftWindow } from "@/lib/finance/shift-window";
 
-/** Exactly the fields CashOnHandOrderInput needs — nothing heavier. */
+/**
+ * Exactly the fields CashOnHandOrderInput needs — nothing heavier.
+ *
+ * `payments` is selected UNFILTERED on purpose: an empty array has to mean
+ * "this order predates multi-tender, fall back to paymentMethod/total", and
+ * filtering the relation down to CASH rows would make a card-only SPLIT order
+ * indistinguishable from a legacy cash one.
+ */
 const CASH_ORDER_SELECT = {
   paymentMethod: true,
   paymentStatus: true,
   status: true,
   total: true,
   refundAmount: true,
+  payments: { select: { method: true, amount: true, refundedAmount: true } },
 } as const;
+
+/**
+ * Orders whose money could have touched a drawer: a legacy/single-tender CASH
+ * order, or any bill with at least one CASH tender (a SPLIT paid part cash,
+ * part card). Filtering on `paymentMethod: "CASH"` alone — which is all these
+ * queries used to do — silently drops every split bill's cash.
+ */
+const COLLECTS_CASH: Prisma.OrderWhereInput = {
+  OR: [
+    { paymentMethod: CASH_PAYMENT_METHOD },
+    { payments: { some: { method: CASH_PAYMENT_METHOD } } },
+  ],
+};
 
 /** Cash movements carry only a type and an amount into the arithmetic. */
 const CASH_MOVEMENT_SELECT = { type: true, amount: true } as const;
@@ -85,14 +106,14 @@ export async function getShiftCashOnHand(
   const [salesOrders, refundedOrders, movements] = await Promise.all([
     // Rung up on THIS till.
     prisma.order.findMany({
-      where: { storeId, shiftId: shift.id, paymentMethod: CASH_PAYMENT_METHOD },
+      where: { storeId, shiftId: shift.id, ...COLLECTS_CASH },
       select: CASH_ORDER_SELECT,
     }),
     // Refunded while this till was open, whoever originally sold it.
     prisma.order.findMany({
       where: {
         storeId,
-        paymentMethod: CASH_PAYMENT_METHOD,
+        ...COLLECTS_CASH,
         refundAmount: { gt: 0 },
         refundedAt: { gte: window.from, lte: window.to },
       },
@@ -186,7 +207,7 @@ export async function getWindowCashOnHand(
     prisma.order.findMany({
       where: {
         storeId,
-        paymentMethod: CASH_PAYMENT_METHOD,
+        ...COLLECTS_CASH,
         orderDate: occurredIn,
         shiftId: { not: null },
       },
@@ -196,7 +217,7 @@ export async function getWindowCashOnHand(
     prisma.order.findMany({
       where: {
         storeId,
-        paymentMethod: CASH_PAYMENT_METHOD,
+        ...COLLECTS_CASH,
         orderDate: occurredIn,
         shiftId: null,
       },
@@ -205,7 +226,7 @@ export async function getWindowCashOnHand(
     prisma.order.findMany({
       where: {
         storeId,
-        paymentMethod: CASH_PAYMENT_METHOD,
+        ...COLLECTS_CASH,
         refundAmount: { gt: 0 },
         refundedAt: occurredIn,
       },

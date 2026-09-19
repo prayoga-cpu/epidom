@@ -68,6 +68,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         product: {
           select: {
             productLine: true,
+            // Scannable code for the POS search box / barcode scanner. Surfaced
+            // as a top-level `barcode` below (a menu item with no Product has
+            // none), not left nested under `product`.
+            barcode: true,
             // Drives the POS "counted" chip. Deliberately labelled "counted",
             // never "available": it is the finished-goods balance, and a
             // BATCH_PRODUCED item at 0 counted is still perfectly sellable —
@@ -115,6 +119,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         return {
           ...i,
           price: Number(i.price),
+          // PosMenuItem.barcode — offline menu mirror persists it automatically.
+          barcode: i.product?.barcode ?? null,
           ...counted,
           ...(isCustom && { department: "CUSTOM" as const, isAvailable: true }),
         };

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import {
@@ -17,7 +16,8 @@ import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePrinterSettings } from "../hooks/use-printer-settings";
 import { useLastReceipt } from "../hooks/use-last-receipt";
-import { isBluetoothSupported, isPrinterConnected, printReceipt } from "@/lib/pwa/thermal-printer";
+import { usePrintReceipt } from "../hooks/use-print-receipt";
+import { isBluetoothSupported } from "@/lib/pwa/thermal-printer";
 import { toast } from "sonner";
 
 interface PosPrinterMenuProps {
@@ -41,7 +41,9 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
   } = usePrinterSettings();
   const lastReceipt = useLastReceipt((s) => s.receipt);
   const lastReceiptMeta = useLastReceipt((s) => s.meta);
-  const [isReprinting, setIsReprinting] = useState(false);
+  // Same connect / print / toast behavior as checkout's receipt screen and the
+  // cart's Reprint — see usePrintReceipt.
+  const { print, isPrinting: isReprinting } = usePrintReceipt();
   const supported = isBluetoothSupported();
 
   const handleConnectToggle = async () => {
@@ -58,28 +60,8 @@ export function PosPrinterMenu({ storeId }: PosPrinterMenuProps) {
     }
   };
 
-  const handleReprintLast = async () => {
-    if (!lastReceipt) return;
-    if (!isBluetoothSupported()) {
-      toast.error(t("pos.print.bluetoothUnsupported"));
-      return;
-    }
-    setIsReprinting(true);
-    try {
-      if (!isPrinterConnected()) {
-        const ok = await usePrinterSettings.getState().connect();
-        if (!ok) {
-          toast.error(t("pos.print.connectFailed"));
-          return;
-        }
-      }
-      await printReceipt(lastReceipt);
-      toast.success(t("pos.print.success"));
-    } catch (err: any) {
-      toast.error(err?.message ?? t("pos.print.failed"));
-    } finally {
-      setIsReprinting(false);
-    }
+  const handleReprintLast = () => {
+    if (lastReceipt) void print(lastReceipt);
   };
 
   return (

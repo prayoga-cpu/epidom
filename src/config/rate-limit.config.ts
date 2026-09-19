@@ -128,6 +128,70 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 100,
     window: 60,
   },
+  // Cashier revamp (2.88.0). The list is the POS search-as-you-type box, so it
+  // gets headroom over the usual 100 — one lookup is several debounced requests.
+  "/api/stores/[id]/customers": {
+    limit: 200,
+    window: 60,
+  },
+  "/api/stores/[id]/customers/[customerId]": {
+    limit: 100,
+    window: 60,
+  },
+  // Money-adjacent (it edits a spendable balance) and only ever done by hand.
+  "/api/stores/[id]/customers/[customerId]/points": {
+    limit: 30,
+    window: 60, // 30 manual adjustments per minute
+  },
+  "/api/stores/[id]/customers/export": {
+    limit: 10,
+    window: 60, // 10 exports per minute
+  },
+  "/api/stores/[id]/discount-presets": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/discount-presets/[presetId]": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/coupons": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/coupons/[couponId]": {
+    limit: 100,
+    window: 60,
+  },
+  // A code is guessable input, so this read is capped below the usual 100.
+  "/api/stores/[id]/coupons/validate": {
+    limit: 60,
+    window: 60, // 60 checks per minute
+  },
+  "/api/stores/[id]/loyalty-settings": {
+    limit: 100,
+    window: 60,
+  },
+  // Till actions that were riding the default limit. Merge rewrites saved bills
+  // and refund moves money; a receipt send costs a WhatsApp message or an email
+  // (and now accepts a typed-in phone/e-mail), so none of them should be
+  // hammerable.
+  "/api/stores/[id]/pos/orders/merge": {
+    limit: 30,
+    window: 60, // 30 merges per minute
+  },
+  "/api/stores/[id]/pos/orders/[orderId]/refund": {
+    limit: 30,
+    window: 60, // 30 refunds per minute
+  },
+  "/api/stores/[id]/pos/orders/[orderId]/send-receipt": {
+    limit: 30,
+    window: 60, // 30 WhatsApp receipts per minute
+  },
+  "/api/stores/[id]/pos/orders/[orderId]/send-receipt-email": {
+    limit: 30,
+    window: 60, // 30 e-mail receipts per minute
+  },
   "/api/stores/[id]/finance/settings": {
     limit: 100,
     window: 60,

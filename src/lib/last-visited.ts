@@ -53,6 +53,7 @@ const RESUMABLE_STORE_SECTIONS = new Set([
   "/billing",
   "/changelog",
   "/custom-development",
+  "/customers",
   "/dashboard",
   "/data",
   "/finance",

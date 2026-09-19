@@ -43,8 +43,24 @@ export function buildOrderHistoryWhere(
     where.source = source as OrderSource;
   }
 
+  // Matches the whole-order method (single-tender orders, and everything
+  // placed before OrderPayment existed) OR any one of the order's tenders, so
+  // filtering by CASH still finds a bill that was settled half in cash and
+  // half by card — whose `paymentMethod` is the literal "SPLIT".
+  //
+  // Wrapped in AND rather than spread as a bare `OR`: the free-text `q` filter
+  // below already owns `where.OR`, and two OR keys in one object means the
+  // second silently wins. SPLIT stays a legal value (it selects multi-tender
+  // bills — no tender is ever SPLIT) even though the UI never offers it.
   if (paymentMethod && (Object.values(PaymentMethod) as string[]).includes(paymentMethod)) {
-    where.paymentMethod = paymentMethod as PaymentMethod;
+    where.AND = [
+      {
+        OR: [
+          { paymentMethod: paymentMethod as PaymentMethod },
+          { payments: { some: { method: paymentMethod as PaymentMethod } } },
+        ],
+      },
+    ];
   }
 
   if (unpaid) {
@@ -58,7 +74,15 @@ export function buildOrderHistoryWhere(
   const itemFilter: Prisma.OrderItemWhereInput = {};
   if (productId) itemFilter.menuItemId = productId;
   if (department && (Object.values(Department) as string[]).includes(department)) {
-    itemFilter.menuItem = { department: department as Department };
+    // A Custom Item has no MenuItem at all (`menuItemId: null`) and carries its
+    // prep area on `OrderItem.department` instead, so matching only through the
+    // relation silently drops every custom line from a Kitchen/Bar filter —
+    // the lines a cashier typed in by hand are exactly the ones they go looking
+    // for. Both spellings of "this item belongs to that department" count.
+    itemFilter.OR = [
+      { menuItem: { department: department as Department } },
+      { department: department as Department },
+    ];
   }
   if (Object.keys(itemFilter).length > 0) {
     where.items = { some: itemFilter };

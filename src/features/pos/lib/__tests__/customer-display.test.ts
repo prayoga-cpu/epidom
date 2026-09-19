@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   EMPTY_CUSTOMER_DISPLAY_SNAPSHOT,
+  buildCustomerDisplayBuildingSnapshot,
   parseCustomerDisplaySnapshot,
   resolveHighlight,
   toCustomerDisplayLines,
@@ -42,6 +43,180 @@ describe("toCustomerDisplayLines", () => {
         notes: "no ice",
       },
     ]);
+  });
+});
+
+describe("toCustomerDisplayLines — custom lines", () => {
+  const customLine: CartItem = {
+    id: "custom-1",
+    menuItemId: null,
+    isCustom: true,
+    name: "Delivery fee",
+    unitPrice: 4,
+    quantity: 2,
+    modifiers: [],
+    lineTotal: 8,
+    department: null,
+    notes: "leave at door",
+  };
+
+  it("shows a Custom Item (no menu item behind it) like any other charge", () => {
+    expect(toCustomerDisplayLines([customLine])).toEqual([
+      {
+        id: "custom-1",
+        name: "Delivery fee",
+        quantity: 2,
+        lineTotal: 8,
+        modifiers: [],
+        notes: "leave at door",
+      },
+    ]);
+  });
+
+  it("does not depend on menuItemId — null, empty or set all map the same", () => {
+    const [a, b, c] = [null, "", "m1"].map(
+      (menuItemId) => toCustomerDisplayLines([{ ...customLine, menuItemId }])[0]
+    );
+    expect(a).toEqual(b);
+    expect(b).toEqual(c);
+  });
+
+  it("tolerates a line whose modifiers are missing (a stale persisted cart)", () => {
+    const lines = toCustomerDisplayLines([{ ...customLine, modifiers: undefined as any }]);
+    expect(lines[0].modifiers).toEqual([]);
+  });
+
+  it("keeps a custom line as a genuinely new highlight when it is added", () => {
+    const before = toCustomerDisplayLines([]);
+    const after = toCustomerDisplayLines([customLine]);
+    expect(resolveHighlight(before, after, null)).toEqual({ id: "custom-1", isNew: true });
+  });
+});
+
+describe("buildCustomerDisplayBuildingSnapshot", () => {
+  const totals = {
+    subtotal: 80,
+    tax: 8,
+    serviceCharge: 0,
+    discountAmount: 30,
+    discountReason: "Member + 100 pts",
+    pointsRedeemed: 100,
+    pointsDiscountAmount: 10,
+    total: 88,
+  };
+
+  it("is 'building' with lines, 'idle' without", () => {
+    const withLines = buildCustomerDisplayBuildingSnapshot({
+      lines: [line("a")],
+      highlight: { id: "a", isNew: true },
+      totals,
+      updatedAt: 5,
+    });
+    expect(withLines).toMatchObject({
+      phase: "building",
+      highlightLineId: "a",
+      highlightIsNew: true,
+    });
+
+    const empty = buildCustomerDisplayBuildingSnapshot({
+      lines: [],
+      highlight: null,
+      totals: { ...totals, discountAmount: 0, pointsRedeemed: 0, pointsDiscountAmount: 0 },
+      updatedAt: 5,
+    });
+    expect(empty).toMatchObject({ phase: "idle", highlightLineId: null, highlightIsNew: false });
+  });
+
+  it("carries the discount and the points as separate lines' worth of data", () => {
+    const snapshot = buildCustomerDisplayBuildingSnapshot({
+      lines: [line("a")],
+      highlight: null,
+      totals,
+      updatedAt: 5,
+    });
+    // discountAmount stays the TOTAL (primary + points value), so a display that
+    // only knows the old fields still shows a correct line.
+    expect(snapshot.discountAmount).toBe(30);
+    expect(snapshot.discountReason).toBe("Member + 100 pts");
+    expect(snapshot.pointsRedeemed).toBe(100);
+    expect(snapshot.pointsDiscountAmount).toBe(10);
+    expect(snapshot.total).toBe(88);
+  });
+
+  it("keeps EVERY field of the snapshot shape other windows consume", () => {
+    const snapshot = buildCustomerDisplayBuildingSnapshot({
+      lines: [line("a")],
+      highlight: null,
+      totals,
+      updatedAt: 5,
+    });
+    expect(Object.keys(snapshot).sort()).toEqual(
+      Object.keys(EMPTY_CUSTOMER_DISPLAY_SNAPSHOT).sort()
+    );
+  });
+
+  it("survives the localStorage round trip", () => {
+    const snapshot = buildCustomerDisplayBuildingSnapshot({
+      lines: [line("a")],
+      highlight: { id: "a", isNew: false },
+      totals,
+      updatedAt: 42,
+    });
+    expect(parseCustomerDisplaySnapshot(JSON.stringify(snapshot))).toEqual(snapshot);
+  });
+});
+
+describe("the snapshot shape across releases", () => {
+  it("an older snapshot (no points fields) parses with zeros for them", () => {
+    const parsed = parseCustomerDisplaySnapshot(
+      JSON.stringify({
+        phase: "building",
+        lines: [line("a")],
+        discountAmount: 10,
+        discountReason: "Member",
+        updatedAt: 9,
+      })
+    );
+    expect(parsed).toMatchObject({
+      discountAmount: 10,
+      discountReason: "Member",
+      pointsRedeemed: 0,
+      pointsDiscountAmount: 0,
+    });
+  });
+
+  it("an older display window reading a NEW snapshot still finds every field it knows", () => {
+    const fresh = buildCustomerDisplayBuildingSnapshot({
+      lines: [line("a")],
+      highlight: null,
+      totals: {
+        subtotal: 1,
+        tax: 0,
+        serviceCharge: 0,
+        discountAmount: 0,
+        discountReason: null,
+        pointsRedeemed: 0,
+        pointsDiscountAmount: 0,
+        total: 1,
+      },
+      updatedAt: 1,
+    });
+    for (const key of [
+      "phase",
+      "lines",
+      "highlightLineId",
+      "highlightIsNew",
+      "subtotal",
+      "tax",
+      "serviceCharge",
+      "discountAmount",
+      "discountReason",
+      "total",
+      "paidOrderNumber",
+      "updatedAt",
+    ]) {
+      expect(fresh).toHaveProperty(key);
+    }
   });
 });
 

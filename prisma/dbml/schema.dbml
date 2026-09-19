@@ -138,6 +138,11 @@ Table stores {
   staffSchedules staff_schedules [not null]
   attendanceRecords attendance_records [not null]
   cashMovements cash_movements [not null]
+  customers customers [not null]
+  discountPresets discount_presets [not null]
+  coupons coupons [not null]
+  loyaltySettings store_loyalty_settings
+  orderQueueCounters order_queue_counters [not null]
 }
 
 Table store_finance_settings {
@@ -226,6 +231,7 @@ Table subscriptions {
 Table products {
   id String [pk]
   sku String [not null]
+  barcode String
   name String [not null]
   description String
   category String
@@ -258,6 +264,7 @@ Table products {
 
   indexes {
     (storeId, sku) [unique]
+    (storeId, barcode) [unique]
   }
 }
 
@@ -536,11 +543,17 @@ Table orders {
   processingFeeRate Decimal [not null, default: 0]
   discountAmount Decimal [not null, default: 0]
   discountReason String
+  customerId String
+  couponId String
+  pointsRedeemed Int [not null, default: 0]
+  pointsEarned Int [not null, default: 0]
+  splitGroupId String
   refundAmount Decimal [not null, default: 0]
   refundedAt DateTime
   refundReason String
   stockDeductedAt DateTime
   clientRequestId String [unique]
+  queueNumber Int
   notes String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -564,6 +577,9 @@ Table orders {
   shift shifts
   stockMovements stock_movements [not null]
   receiptSends order_receipt_sends [not null]
+  payments order_payments [not null]
+  customer customers
+  coupon coupons
 }
 
 Table order_items {
@@ -578,6 +594,8 @@ Table order_items {
   total Decimal [not null]
   notes String
   selectedOptions Json
+  isCustom Boolean [not null, default: false]
+  department Department
   unitCostSnapshot Decimal
   optionCostSnapshot Decimal
   status OrderItemStatus [not null, default: 'PENDING']
@@ -596,7 +614,8 @@ Table order_receipt_sends {
   id String [pk]
   orderId String [not null]
   channel String [not null, default: 'WHATSAPP']
-  recipientPhone String [not null]
+  recipientPhone String
+  recipientEmail String
   status OrderReceiptSendStatus [not null]
   fonnteMessageId String
   errorMessage String
@@ -607,6 +626,143 @@ Table order_receipt_sends {
 /r/[orderId]) — one row per send attempt, whether it succeeded or not.
 Lets order history show "already sent"/"failed" instead of a bare button,
 and lets a merchant retry a FAILED send. See send-customer-receipt.ts.'
+}
+
+Table order_queue_counters {
+  storeId String [not null]
+  day String [not null]
+  last Int [not null, default: 0]
+  store stores [not null]
+
+  indexes {
+    (storeId, day) [pk]
+  }
+
+  Note: 'One tender of a paid Order. Written for EVERY new order (an ordinary
+single-method order gets one row), so readers can rely on it going forward;
+orders created before it have no rows, and every reader falls back to
+Order.paymentMethod / Order.total for those — there is deliberately no
+backfill. `amount` is what was applied to the bill and never includes cash
+change (that lives in `change`), so summing `amount` over an order\'s rows
+always reproduces Order.total. `refundedAmount` attributes a refund to the
+tender that actually gave the money back (cash refunds leave the drawer).'
+}
+
+Table order_payments {
+  id String [pk]
+  orderId String [not null]
+  method PaymentMethod [not null]
+  amount Decimal [not null]
+  amountTendered Decimal
+  change Decimal
+  note String
+  refundedAmount Decimal [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+  order orders [not null]
+}
+
+Table customers {
+  id String [pk]
+  storeId String [not null]
+  name String [not null]
+  phone String
+  email String
+  notes String
+  points Int [not null, default: 0]
+  memberSince DateTime
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+  orders orders [not null]
+  loyaltyEntries loyalty_entries [not null]
+
+  indexes {
+    (storeId, phone) [unique]
+  }
+
+  Note: 'A store\'s own customer record (POS "Add customer" / Back Office Customers).
+Deliberately holds NO cached spend/visit totals: lifetime spend, order count
+and last visit are aggregated from Order at read time, because Order is an
+immutable ledger and a cached figure silently drifts on refund/cancel. Only
+`points` is cached, and it is backed by the LoyaltyEntry ledger.'
+}
+
+Table loyalty_entries {
+  id String [pk]
+  customerId String [not null]
+  orderId String
+  type LoyaltyEntryType [not null]
+  points Int [not null]
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  customer customers [not null]
+
+  Note: 'Ledger behind Customer.points. `points` is signed (EARN +, REDEEM −,
+REVERSAL either way, ADJUST either way). `orderId` is a plain reference, not
+a relation: orders are never hard-deleted and the customer cascade already
+covers store deletion.'
+}
+
+Table discount_presets {
+  id String [pk]
+  storeId String [not null]
+  name String [not null]
+  type DiscountType [not null]
+  value Decimal [not null]
+  isActive Boolean [not null, default: true]
+  sortOrder Int [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+
+  Note: 'A named, reusable discount the cashier can tap at POS ("Member", "Free",
+"Promo 17 Agustus"). Soft-deleted via isActive — past orders only ever
+froze the resulting amount + a reason string, never a foreign key.'
+}
+
+Table coupons {
+  id String [pk]
+  storeId String [not null]
+  code String [not null]
+  name String
+  type DiscountType [not null]
+  value Decimal [not null]
+  minSubtotal Decimal
+  maxUses Int
+  usedCount Int [not null, default: 0]
+  validFrom DateTime
+  validUntil DateTime
+  isActive Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+  orders orders [not null]
+
+  indexes {
+    (storeId, code) [unique]
+  }
+
+  Note: 'A code the cashier types at POS. `usedCount` is bumped inside the order
+transaction with a conditional update (usedCount < maxUses) so two tills
+can\'t both redeem the last use. Soft-deleted via isActive.'
+}
+
+Table store_loyalty_settings {
+  id String [pk]
+  storeId String [unique, not null]
+  enabled Boolean [not null, default: false]
+  spendPerPoint Decimal [not null, default: 0]
+  pointValue Decimal [not null, default: 0]
+  minRedeemPoints Int [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+
+  Note: 'Per-store loyalty-points configuration — same 1:1 shape as
+StoreReceiptSettings (the GET resolves defaults and never returns null).
+Kept off StoreFinanceSettings on purpose: that row resolves through
+Business sync and updateFinanceSettings() throws for a synced store, whereas
+loyalty is always a per-store decision.'
 }
 
 Table alerts {
@@ -1236,6 +1392,18 @@ Enum OrderReceiptSendStatus {
   FAILED
 }
 
+Enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+Enum LoyaltyEntryType {
+  EARN
+  REDEEM
+  ADJUST
+  REVERSAL
+}
+
 Enum SubscriptionPlan {
   FREE
   POS
@@ -1364,6 +1532,7 @@ Enum PaymentMethod {
   APPLE_PAY
   GOOGLE_PAY
   OTHER
+  SPLIT
 }
 
 Enum PaymentMarket {
@@ -1639,6 +1808,10 @@ Ref: orders.tableId > tables.id [delete: Set Null]
 
 Ref: orders.shiftId > shifts.id [delete: Set Null]
 
+Ref: orders.customerId > customers.id [delete: Set Null]
+
+Ref: orders.couponId > coupons.id [delete: Set Null]
+
 Ref: order_items.orderId > orders.id [delete: Cascade]
 
 Ref: order_items.productId > products.id [delete: Set Null]
@@ -1648,6 +1821,20 @@ Ref: order_items.menuItemId > menu_items.id [delete: Set Null]
 Ref: order_items.productionBatchId > production_batches.id [delete: Set Null]
 
 Ref: order_receipt_sends.orderId > orders.id [delete: Cascade]
+
+Ref: order_queue_counters.storeId > stores.id [delete: Cascade]
+
+Ref: order_payments.orderId > orders.id [delete: Cascade]
+
+Ref: customers.storeId > stores.id [delete: Cascade]
+
+Ref: loyalty_entries.customerId > customers.id [delete: Cascade]
+
+Ref: discount_presets.storeId > stores.id [delete: Cascade]
+
+Ref: coupons.storeId > stores.id [delete: Cascade]
+
+Ref: store_loyalty_settings.storeId - stores.id [delete: Cascade]
 
 Ref: alerts.userId > user.id [delete: Cascade]
 

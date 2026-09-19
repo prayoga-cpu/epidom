@@ -35,7 +35,8 @@ type PaymentMethod =
   | "PAYPAL"
   | "APPLE_PAY"
   | "GOOGLE_PAY"
-  | "OTHER";
+  | "OTHER"
+  | "SPLIT";
 
 interface OrderItem {
   id: string;

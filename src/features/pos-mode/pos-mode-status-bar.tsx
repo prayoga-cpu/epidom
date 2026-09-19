@@ -9,6 +9,13 @@ import { PosPrinterMenu } from "@/features/pos/components/pos-printer-menu";
 
 interface PosModeStatusBarProps {
   storeId: string;
+  /**
+   * Ref callback for the toolbar slot (see pos-mode-toolbar-slot.tsx): an empty
+   * flex-1 region between the store name and the right-hand controls that /pos
+   * fills with its search, filters, view toggle and scan button at ≥md. Left
+   * empty on every other route, where it is just a spacer.
+   */
+  toolbarSlotRef?: (element: HTMLElement | null) => void;
 }
 
 /**
@@ -17,10 +24,10 @@ interface PosModeStatusBarProps {
  * pos-header.tsx used to render per-page; here it's shell-level so it
  * doesn't repaint between /pos, /pos/orders, /pos/kds, /tables.
  */
-export function PosModeStatusBar({ storeId }: PosModeStatusBarProps) {
+export function PosModeStatusBar({ storeId, toolbarSlotRef }: PosModeStatusBarProps) {
   const { t } = useI18n();
   const { store } = useCurrentStore();
-  const { staffName, staffRole } = usePosSession();
+  const { staffName, staffRole, openPicker } = usePosSession();
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -35,10 +42,16 @@ export function PosModeStatusBar({ storeId }: PosModeStatusBarProps) {
     };
   }, []);
 
+  const switchUserLabel = t("cashierCheckout.topBar.switchUser");
+
   return (
-    <header className="bg-background flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3">
-      <div className="flex min-w-0 items-center gap-2">
-        <h1 className="truncate text-sm font-semibold">{store?.name}</h1>
+    <header className="bg-background flex h-11 shrink-0 items-center gap-2 border-b px-3">
+      <div className="flex min-w-0 shrink-0 items-center gap-2">
+        {/* Store name text is dropped below lg to make room for the toolbar
+            slot; sr-only (not hidden) keeps the page's <h1> for screen readers. */}
+        <h1 className="sr-only truncate text-sm font-semibold lg:not-sr-only lg:max-w-[9rem] xl:max-w-[14rem]">
+          {store?.name}
+        </h1>
         <div
           className={`flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
             isOnline
@@ -60,14 +73,34 @@ export function PosModeStatusBar({ storeId }: PosModeStatusBarProps) {
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      {/* min-w-0 flex-1: this region takes whatever is left between the two
+          groups and must be allowed to shrink below its content, or a long filter
+          strip pushes the printer and staff buttons off the bar. Hidden below md,
+          where /pos draws its own row instead. */}
+      <div
+        ref={toolbarSlotRef}
+        data-testid="pos-toolbar-slot"
+        className="hidden min-w-0 flex-1 items-center gap-2 md:flex"
+      />
+
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         <PosPrinterMenu storeId={storeId} />
         {staffName && (
-          <div className="bg-primary/10 text-primary flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
-            <UserCircle2 className="h-3.5 w-3.5" />
-            <span className="max-w-[8rem] truncate">{staffName}</span>
-            {staffRole && <span className="hidden text-primary/60 sm:inline">· {staffRole}</span>}
-          </div>
+          // A real button, not a badge: on a shared till the cashier taps their own
+          // name to hand over. Opens the same "Switch Account" picker as the
+          // overflow menu (StoreAccessGate / PosStaffGate read `pickerOpen`), with
+          // the current session left intact underneath so backing out is free.
+          <button
+            type="button"
+            onClick={openPicker}
+            title={switchUserLabel}
+            className="bg-primary/10 text-primary hover:bg-primary/15 flex h-10 shrink-0 touch-manipulation items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors"
+          >
+            <UserCircle2 className="h-4 w-4" />
+            <span className="sr-only">{switchUserLabel}: </span>
+            <span className="max-w-[6rem] truncate lg:max-w-[8rem]">{staffName}</span>
+            {staffRole && <span className="text-primary/60 hidden xl:inline">· {staffRole}</span>}
+          </button>
         )}
       </div>
     </header>

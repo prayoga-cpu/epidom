@@ -67,6 +67,7 @@ Examples: Croissant, Bread Loaf, Birthday Cake, Cookies Pack.
 | Field | Purpose | Required | Typical Values |
 |-------|---------|----------|----------------|
 | sku | Unique identifier | YES | "PRD-001", "CAKE-001" |
+| barcode | Scannable code the cashier's scanner reads (EAN/UPC) | NO | "8991234567890" |
 | name | Display name | YES | "Roti Tawar", "Croissant" |
 | description | Product details | NO | "Freshly baked daily" |
 | category | Menu category | NO | "Bread", "Pastry", "Cake" |
@@ -81,6 +82,7 @@ Examples: Croissant, Bread Loaf, Birthday Cake, Cookies Pack.
 
 ### VALIDATION RULES
 - SKU must be UNIQUE within the store
+- barcode, when present, must be UNIQUE within the store (never invent one; leave it empty)
 - sellingPrice must be ≥ costPrice
 - If has productionTime, probably made in-house
 

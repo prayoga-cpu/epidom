@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Store } from "@prisma/client";
 import { PosHeader } from "./pos-header";
 import { PosCategoryBar } from "./pos-category-bar";
@@ -12,12 +13,20 @@ import { PosOfflineBanner } from "./pos-offline-banner";
 import { PosUnpaidAlert } from "./pos-unpaid-alert";
 import { AddFilterMenu } from "./add-filter-menu";
 import { RemovableFilter } from "./removable-filter";
+import { PosViewToggle } from "./pos-view-toggle";
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosCart } from "../hooks/use-pos-cart";
 import { usePosOrders } from "../hooks/use-pos-orders";
+import { usePosViewMode } from "../hooks/use-pos-view-mode";
+import { useBarcodeScanner } from "../hooks/use-barcode-scanner";
 import { useCustomerDisplayPublisher } from "../hooks/use-customer-display";
+import { findItemByBarcode } from "../lib/barcode";
+import { usePosModeToolbarSlot } from "@/features/pos-mode/pos-mode-toolbar-slot";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScanBarcode, Search } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -31,6 +40,28 @@ import type { PosMenuItem } from "../types/pos.types";
 const POS_FILTER_KEYS = ["department", "category"] as const;
 type PosFilterKey = (typeof POS_FILTER_KEYS)[number];
 
+/** Tailwind's `md` breakpoint — where the toolbar moves up into the status bar. */
+const MD_MIN_WIDTH_PX = 768;
+
+/**
+ * Viewport-width media query as external state. The server snapshot is false so
+ * SSR and the first client render agree; the real value lands right after
+ * mount. Uses the same media query Tailwind's `md:` classes do, so the JS
+ * switch below and the CSS visibility classes can never disagree.
+ */
+function useMinWidth(minPx: number): boolean {
+  const query = `(min-width: ${minPx}px)`;
+  return useSyncExternalStore(
+    (onChange) => {
+      const mql = window.matchMedia(query);
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false
+  );
+}
+
 interface PosShellProps {
   store: Pick<Store, "id" | "name">;
 }
@@ -43,13 +74,15 @@ export function PosShell({ store }: PosShellProps) {
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<
-    "KITCHEN" | "BAR" | "CUSTOM" | null
-  >(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<"KITCHEN" | "BAR" | "CUSTOM" | null>(
+    null
+  );
   const [activeFilterKeys, setActiveFilterKeys] = useState<PosFilterKey[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [configuringItem, setConfiguringItem] = useState<PosMenuItem | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const viewMode = usePosViewMode((s) => s.viewMode);
   const cart = usePosCart();
   // Mirrors this cart onto the customer-facing display window (second
   // screen), if one is open. No-op when it isn't — the snapshot is just
@@ -80,6 +113,144 @@ export function PosShell({ store }: PosShellProps) {
     setConfiguringItem(item);
   };
 
+  /**
+   * Adds the item whose barcode is EXACTLY `code`, the same way tapping its tile
+   * would (so an item with option groups opens its options dialog). Returns
+   * whether the code matched a product — false leaves the caller to treat it as
+   * ordinary search text or a scan miss.
+   */
+  const addByBarcode = (code: string): boolean => {
+    const item = findItemByBarcode(menuData?.categories ?? [], code);
+    if (!item) return false;
+
+    if (!item.isAvailable) {
+      // A tap on an unavailable tile does nothing; a scan says why instead.
+      toast.error(t("cashierCheckout.scan.unavailable").replace("{name}", item.name));
+      return true;
+    }
+    const needsOptions = getMergedOptionGroups(item, item.product).length > 0;
+    handleItemClick(item);
+    // The options dialog opening is its own feedback; only confirm a direct add.
+    if (!needsOptions) {
+      toast.success(t("cashierCheckout.scan.added").replace("{name}", item.name), {
+        duration: 1500,
+      });
+    }
+    return true;
+  };
+
+  // A scanner aimed at the page rather than the search box (focus on a tile, or
+  // nowhere). Scans that land in a text field are that field's business — the
+  // search box handles its own Enter below.
+  useBarcodeScanner({
+    onScan: (code) => {
+      if (!addByBarcode(code)) toast.error(t("cashierCheckout.scan.noMatch"));
+    },
+  });
+
+  const toolbarSlot = usePosModeToolbarSlot();
+  const isMd = useMinWidth(MD_MIN_WIDTH_PX);
+  // At ≥md the search / filters / view toggle / scan button live in the shell's
+  // status bar (one 44px row for the whole screen); below md they get a row of
+  // their own here, as before. `portalTarget` is null until the bar has mounted
+  // its slot.
+  const portalTarget = toolbarSlot.available && isMd ? toolbarSlot.element : null;
+
+  const renderToolbar = (variant: "inline" | "bar") => (
+    <>
+      <div
+        className={cn(
+          "relative",
+          variant === "bar" ? "w-44 shrink-0 lg:w-64" : "min-w-[9rem] flex-1 sm:max-w-xs"
+        )}
+      >
+        <Search className="text-muted-foreground pointer-events-none absolute top-3 left-2.5 h-4 w-4" />
+        <Input
+          ref={searchRef}
+          type="search"
+          placeholder={t("pos.menu.search")}
+          // h-10, not the Input default's h-9: a 40px tap target (AGENTS.md touch
+          // floor), and it still fits the 44px status bar with its 1px border.
+          className="h-10 pl-9"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            // Read the DOM value, not state: a scanner's keys arrive faster than a
+            // re-render, and Enter must see the whole code.
+            const value = e.currentTarget.value.trim();
+            if (!value) return;
+            // Only an EXACT barcode hit adds an item; anything else is left alone
+            // as an ordinary name search.
+            if (addByBarcode(value)) {
+              e.preventDefault();
+              setSearchQuery("");
+            }
+          }}
+        />
+      </div>
+
+      {/* Filters sit beside the search bar and scroll horizontally
+          as a single strip instead of wrapping — the search input
+          keeps its width, this row absorbs the overflow. On a phone the strip
+          drops to a line of its own (basis-full) rather than being squeezed to
+          nothing between the search box and the buttons. */}
+      <div
+        className={cn(
+          "flex min-w-0 items-center gap-2 overflow-x-auto",
+          variant === "bar" ? "flex-1" : "basis-full sm:flex-1 sm:basis-auto"
+        )}
+      >
+        {activeFilterKeys.includes("department") && (
+          <RemovableFilter onRemove={() => removeFilter("department")}>
+            <PosDepartmentBar
+              selectedDepartment={selectedDepartment}
+              onSelectDepartment={setSelectedDepartment}
+              customDepartmentLabel={
+                menuData?.customProductsEnabled ? menuData.customProductsLabel : null
+              }
+            />
+          </RemovableFilter>
+        )}
+        {activeFilterKeys.includes("category") && categoryNames.length > 0 && (
+          <RemovableFilter onRemove={() => removeFilter("category")}>
+            <PosCategoryBar
+              categories={categoryNames}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
+          </RemovableFilter>
+        )}
+        <AddFilterMenu
+          options={POS_FILTER_KEYS.filter(
+            (k) => !activeFilterKeys.includes(k) && (k !== "category" || categoryNames.length > 0)
+          ).map((k) => ({ key: k, label: t(`pos.filters.${k}`) }))}
+          onAdd={(k) => addFilter(k as PosFilterKey)}
+        />
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2">
+        <PosViewToggle />
+        {/* Hardware scanners type into whatever has focus; this just parks focus in
+            the search box so a scan there is picked up by its Enter handler. */}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-10 touch-manipulation"
+          aria-label={t("cashierCheckout.scan.focus")}
+          title={t("cashierCheckout.scan.focus")}
+          onClick={() => {
+            searchRef.current?.focus();
+            searchRef.current?.select();
+          }}
+        >
+          <ScanBarcode className="size-4" />
+        </Button>
+      </div>
+    </>
+  );
+
   return (
     <>
       {/* flex-1 min-h-0 (not a hardcoded h-[calc(100vh-Npx)]): PosModeShell
@@ -99,51 +270,21 @@ export function PosShell({ store }: PosShellProps) {
               refusing to shrink below its natural width (the flex-item
               default) and squeezing the fixed-width cart pane next to it. */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="bg-background flex items-center gap-3 border-b p-4">
-              <div className="relative w-full max-w-[200px] shrink-0 sm:max-w-xs">
-                <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
-                <Input
-                  type="search"
-                  placeholder={t("pos.menu.search")}
-                  className="pl-9"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-
-              {/* Filters sit beside the search bar and scroll horizontally
-                  as a single strip instead of wrapping — the search input
-                  keeps its width, this row absorbs the overflow. */}
-              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
-                {activeFilterKeys.includes("department") && (
-                  <RemovableFilter onRemove={() => removeFilter("department")}>
-                    <PosDepartmentBar
-                      selectedDepartment={selectedDepartment}
-                      onSelectDepartment={setSelectedDepartment}
-                      customDepartmentLabel={
-                        menuData?.customProductsEnabled ? menuData.customProductsLabel : null
-                      }
-                    />
-                  </RemovableFilter>
+            {portalTarget ? (
+              createPortal(renderToolbar("bar"), portalTarget)
+            ) : (
+              // Hidden by CSS at ≥md ONLY when a status-bar slot exists to take
+              // over (the frame before it mounts its node would otherwise show
+              // both); without a PosModeShell there is no slot, so this row stays.
+              <div
+                className={cn(
+                  "bg-background flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2",
+                  toolbarSlot.available && "md:hidden"
                 )}
-                {activeFilterKeys.includes("category") && categoryNames.length > 0 && (
-                  <RemovableFilter onRemove={() => removeFilter("category")}>
-                    <PosCategoryBar
-                      categories={categoryNames}
-                      selectedCategory={selectedCategory}
-                      onSelectCategory={setSelectedCategory}
-                    />
-                  </RemovableFilter>
-                )}
-                <AddFilterMenu
-                  options={POS_FILTER_KEYS.filter(
-                    (k) =>
-                      !activeFilterKeys.includes(k) && (k !== "category" || categoryNames.length > 0)
-                  ).map((k) => ({ key: k, label: t(`pos.filters.${k}`) }))}
-                  onAdd={(k) => addFilter(k as PosFilterKey)}
-                />
+              >
+                {renderToolbar("inline")}
               </div>
-            </div>
+            )}
 
             {isLoading ? (
               <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3 xl:grid-cols-4">
@@ -158,6 +299,7 @@ export function PosShell({ store }: PosShellProps) {
                 selectedDepartment={selectedDepartment}
                 searchQuery={searchQuery}
                 onItemClick={handleItemClick}
+                viewMode={viewMode}
                 customDepartmentLabel={
                   menuData?.customProductsEnabled ? menuData.customProductsLabel : null
                 }

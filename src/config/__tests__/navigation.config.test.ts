@@ -44,6 +44,22 @@ describe("Back Office rail vs. the full app page universe", () => {
     }
   });
 
+  // Customer records are captured at POS, so the page is POS-tier — the
+  // promotion mechanics (presets, coupons, points) are the OPERATIONS part and
+  // live on the Data page's Promotions tab, not here.
+  it("dashboardNavigation contains /customers at POS tier, with its locked hint", () => {
+    const customers = getAllDashboardNavItems().find((i) => i.href === "/customers");
+    expect(customers).toBeDefined();
+    expect(customers?.labelKey).toBe("nav.customers");
+    expect(customers?.requiredPlan).toBe("POS");
+    expect(customers?.lockedHintKey).toBe("nav.lockedHint.customers");
+    expect(customers?.showBadge).toBe(false);
+  });
+
+  it("/customers is grantable to staff (ALL_STAFF_PAGES derives from the nav)", () => {
+    expect(getAllAppNavItems().map((i) => i.href)).toContain("/customers");
+  });
+
   it("no dashboardNavigation section is reduced to a single orphan item", () => {
     for (const section of dashboardNavigation) {
       expect(section.items.length).toBeGreaterThan(1);

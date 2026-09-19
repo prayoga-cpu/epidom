@@ -21,6 +21,7 @@ import {
   CalendarDays,
   CalendarClock,
   Building2,
+  ContactRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -79,6 +80,18 @@ export const dashboardNavigation: NavSection[] = [
         labelKey: "nav.storefront",
         icon: Store,
         showBadge: false,
+      },
+      // Customer records captured at POS (name / phone / e-mail, plus loyalty
+      // points when the store runs the program). Capturing a customer is POS-tier;
+      // only the promotion mechanics (presets, coupons, points) are OPERATIONS —
+      // see FEATURE_MIN_PLAN.loyaltyAndPromotions.
+      {
+        href: "/customers",
+        labelKey: "nav.customers",
+        icon: ContactRound,
+        showBadge: false,
+        requiredPlan: "POS",
+        lockedHintKey: "nav.lockedHint.customers",
       },
     ],
   },

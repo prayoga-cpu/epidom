@@ -12,12 +12,27 @@ describe("isResumableAppPath", () => {
   it("still resumes the store picker", () => {
     expect(isResumableAppPath("/stores")).toBe(true);
   });
+
+  // RESUMABLE_STORE_SECTIONS is hand-maintained (it can't import the nav config
+  // on the Edge), so a page added to the nav has to be added there too — or a
+  // returning user is bounced off it on their next launch.
+  it("resumes onto the Customers page, with or without a query string", () => {
+    expect(isResumableAppPath("/store/cljabc12345/customers")).toBe(true);
+    expect(isResumableAppPath("/store/cljabc12345/customers?q=ana")).toBe(true);
+    // ...but not onto a sub-path that isn't a real page.
+    expect(isResumableAppPath("/store/cljabc12345/customers/export")).toBe(false);
+  });
 });
 
 describe("isBackOfficeAppPath", () => {
   it("accepts a real Back Office section", () => {
     expect(isBackOfficeAppPath("/store/cljabc12345/finance")).toBe(true);
     expect(isBackOfficeAppPath("/store/cljabc12345/staff?tab=roster")).toBe(true);
+  });
+
+  it("counts Customers as a Back Office page (it is not a POS Mode route)", () => {
+    expect(isBackOfficeAppPath("/store/cljabc12345/customers")).toBe(true);
+    expect(isPosAppPath("/store/cljabc12345/customers")).toBe(false);
   });
 
   it("rejects POS Mode pages — this is the whole reason it's separate from isResumableAppPath", () => {

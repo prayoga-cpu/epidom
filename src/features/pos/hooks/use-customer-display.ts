@@ -7,6 +7,7 @@ import { useCustomerDisplaySettings } from "./use-customer-display-settings";
 import {
   CUSTOMER_DISPLAY_PAID_MS,
   EMPTY_CUSTOMER_DISPLAY_SNAPSHOT,
+  buildCustomerDisplayBuildingSnapshot,
   customerDisplayChannelName,
   customerDisplaySnapshotKey,
   parseCustomerDisplaySnapshot,
@@ -107,6 +108,10 @@ export function useCustomerDisplayPublisher(storeId: string): void {
   const serviceCharge = usePosCart((state) => state.serviceCharge);
   const discountAmount = usePosCart((state) => state.discountAmount);
   const discountReason = usePosCart((state) => state.discountReason);
+  // discountAmount already includes the value of redeemed points; these two
+  // ride along (additively) so the display can break the line in two.
+  const pointsRedeemed = usePosCart((state) => state.pointsRedeemed);
+  const pointsDiscountAmount = usePosCart((state) => state.pointsDiscountAmount);
   const total = usePosCart((state) => state.total);
 
   const paidAt = useCustomerDisplayPaid((state) => state.at);
@@ -233,20 +238,21 @@ export function useCustomerDisplayPublisher(storeId: string): void {
           paidOrderNumber,
           updatedAt: Date.now(),
         }
-      : {
-          phase: lines.length > 0 ? "building" : "idle",
+      : buildCustomerDisplayBuildingSnapshot({
           lines,
-          highlightLineId: highlight?.id ?? null,
-          highlightIsNew: highlight?.isNew ?? false,
-          subtotal,
-          tax,
-          serviceCharge,
-          discountAmount,
-          discountReason,
-          total,
-          paidOrderNumber: null,
+          highlight,
+          totals: {
+            subtotal,
+            tax,
+            serviceCharge,
+            discountAmount,
+            discountReason,
+            pointsRedeemed,
+            pointsDiscountAmount,
+            total,
+          },
           updatedAt: Date.now(),
-        };
+        });
 
     snapshotRef.current = snapshot;
     writeSnapshot(storeId, snapshot);
@@ -260,6 +266,8 @@ export function useCustomerDisplayPublisher(storeId: string): void {
     serviceCharge,
     discountAmount,
     discountReason,
+    pointsRedeemed,
+    pointsDiscountAmount,
     total,
     paidAt,
     paidOrderNumber,

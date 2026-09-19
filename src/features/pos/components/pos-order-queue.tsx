@@ -13,13 +13,17 @@ import { PosOrderCard } from "./pos-order-card";
 import { PosOrderRow } from "./pos-order-row";
 import { PosOrderBoard } from "./pos-order-board";
 import { PosOrderQueueToolbar } from "./pos-order-queue-toolbar";
+import { PosOrderSourceTabs } from "./pos-order-source-tabs";
+import { PosOrderSplitView } from "./pos-order-split-view";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchX, UtensilsCrossed, Power } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  countOrdersBySource,
   matchesQueueFilters,
   sortQueueOrders,
+  toSourceTab,
   QUEUE_STATUSES,
   QUEUE_FILTER_KEYS,
   QUEUE_PAYMENT_METHODS,
@@ -27,7 +31,7 @@ import {
   type QueueFilterKey,
   type QueuePaymentMethodFilter,
   type QueueSortBy,
-  type QueueSourceFilter,
+  type QueueSourceTab,
   type QueueStatusFilter,
   type QueueTypeFilter,
   type QueueView,
@@ -41,7 +45,9 @@ interface PosOrderQueueProps {
 interface QueueFiltersState {
   view: QueueView;
   statusFilter: QueueStatusFilter;
-  sourceFilter: QueueSourceFilter;
+  // The POS / Online tab. Never "All": a persisted "ALL" from before the tabs
+  // existed is read as POS (see toSourceTab).
+  sourceFilter: QueueSourceTab;
   typeFilter: QueueTypeFilter;
   unpaidOnly: boolean;
   sortBy: QueueSortBy;
@@ -56,9 +62,9 @@ interface QueueFiltersState {
 }
 
 const QUEUE_FILTERS_DEFAULTS: QueueFiltersState = {
-  view: "grid",
+  view: "split",
   statusFilter: "ALL",
-  sourceFilter: "ALL",
+  sourceFilter: "POS",
   typeFilter: "ALL",
   unpaidOnly: false,
   sortBy: "newest",
@@ -69,9 +75,8 @@ const QUEUE_FILTERS_DEFAULTS: QueueFiltersState = {
   activeFilterKeys: [],
 };
 
-const VIEWS: QueueView[] = ["grid", "compact", "board"];
+const VIEWS: QueueView[] = ["split", "grid", "compact", "board"];
 const STATUS_FILTERS: QueueStatusFilter[] = ["ALL", ...QUEUE_STATUSES];
-const SOURCE_FILTERS: QueueSourceFilter[] = ["ALL", "POS", "ONLINE"];
 const TYPE_FILTERS: QueueTypeFilter[] = ["ALL", "DINE_IN", "TAKEAWAY", "DELIVERY"];
 const SORT_BYS: QueueSortBy[] = ["newest", "oldest", "total-desc", "total-asc"];
 const DEPARTMENT_FILTERS: QueueDepartmentFilter[] = ["ALL", "KITCHEN", "BAR", "CUSTOM"];
@@ -80,7 +85,6 @@ const PAYMENT_METHOD_FILTERS: QueuePaymentMethodFilter[] = ["ALL", ...QUEUE_PAYM
 // The reset applied to a filter's own value when it's removed from view —
 // hiding a filter also clears it, so it can never keep narrowing results silently.
 const QUEUE_FILTER_RESET: Record<QueueFilterKey, Partial<QueueFiltersState>> = {
-  source: { sourceFilter: "ALL" },
   type: { typeFilter: "ALL" },
   department: { departmentFilter: "ALL" },
   product: { productFilter: "ALL" },
@@ -103,7 +107,7 @@ function sanitizeQueueFilters(raw: unknown, defaults: QueueFiltersState): QueueF
   return {
     view: pick(r.view, VIEWS, defaults.view),
     statusFilter: pick(r.statusFilter, STATUS_FILTERS, defaults.statusFilter),
-    sourceFilter: pick(r.sourceFilter, SOURCE_FILTERS, defaults.sourceFilter),
+    sourceFilter: toSourceTab(r.sourceFilter),
     typeFilter: pick(r.typeFilter, TYPE_FILTERS, defaults.typeFilter),
     unpaidOnly: typeof r.unpaidOnly === "boolean" ? r.unpaidOnly : defaults.unpaidOnly,
     sortBy: pick(r.sortBy, SORT_BYS, defaults.sortBy),
@@ -237,6 +241,10 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [allOrders, staffRoster]);
 
+  // Badge counts on the POS / Online tabs: every open order, whatever the other
+  // filters say — the tab is "how many are waiting there", not "how many match".
+  const sourceCounts = useMemo(() => countOrdersBySource(allOrders), [allOrders]);
+
   // Source/type/search filters apply everywhere; the status filter is a hard
   // filter in grid/compact views but only highlights a column in board view
   // (which keeps every status visible), so it's applied separately below.
@@ -294,7 +302,6 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
 
   const hasActiveFilters =
     statusFilter !== "ALL" ||
-    sourceFilter !== "ALL" ||
     typeFilter !== "ALL" ||
     unpaidOnly ||
     productFilter !== "ALL" ||
@@ -307,7 +314,6 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     setFilters((prev) => ({
       ...prev,
       statusFilter: "ALL",
-      sourceFilter: "ALL",
       typeFilter: "ALL",
       unpaidOnly: false,
       productFilter: "ALL",
@@ -358,14 +364,27 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
 
   const noResults = view === "board" ? boardOrders.length === 0 : visibleOrders.length === 0;
 
+  const noMatches = (
+    <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+      <SearchX className="h-8 w-8 opacity-50" />
+      <p className="text-foreground font-medium">{t("pos.queue.noMatches")}</p>
+      <p className="text-sm">{t("pos.queue.noMatchesDesc")}</p>
+    </div>
+  );
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-6">
+      <PosOrderSourceTabs
+        value={sourceFilter}
+        onChange={(v) => patchFilters({ sourceFilter: v })}
+        counts={sourceCounts}
+      />
+
       <PosOrderQueueToolbar
         statusCounts={statusCounts}
         statusFilter={statusFilter}
         onStatusFilterChange={(v) => patchFilters({ statusFilter: v })}
-        sourceFilter={sourceFilter}
-        onSourceFilterChange={(v) => patchFilters({ sourceFilter: v })}
+        showStatusTiles={view !== "split"}
         typeFilter={typeFilter}
         onTypeFilterChange={(v) => patchFilters({ typeFilter: v })}
         departmentFilter={departmentFilter}
@@ -399,12 +418,21 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
         onClearFilters={clearFilters}
       />
 
-      {noResults ? (
-        <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <SearchX className="h-8 w-8 opacity-50" />
-          <p className="text-foreground font-medium">{t("pos.queue.noMatches")}</p>
-          <p className="text-sm">{t("pos.queue.noMatchesDesc")}</p>
-        </div>
+      {view === "split" ? (
+        // Rendered even with nothing to list: the rail has to stay so the cashier
+        // can pick another status, and the source tabs above stay too. The
+        // no-matches notice sits in the list column instead of replacing the view.
+        <PosOrderSplitView
+          orders={visibleOrders}
+          storeId={storeId}
+          statusCounts={statusCounts}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(v) => patchFilters({ statusFilter: v })}
+          onUpdateStatus={handleUpdateStatus}
+          emptyState={noMatches}
+        />
+      ) : noResults ? (
+        noMatches
       ) : view === "board" ? (
         <PosOrderBoard
           orders={boardOrders}

@@ -51,6 +51,14 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
 
   const hasContactBlock = !!(data.address || data.email || data.phone || data.instagramHandle);
 
+  // A "bill" is the provisional pre-payment print: same items and totals, no
+  // payment block (nothing has been paid), and a footer saying so. Mirrors
+  // buildEscPos() in thermal-printer.ts exactly — same ReceiptData, same rules.
+  const isBill = data.documentType === "bill";
+  // Two or more tenders can't be described by the single paymentMethod line:
+  // Order.paymentMethod is the literal "SPLIT" for those.
+  const tenders = data.payments ?? [];
+
   return (
     <div
       className={cn(
@@ -67,6 +75,7 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
       <div className="text-center">
         <p className="text-base font-bold tracking-wide">{data.storeName}</p>
         {data.tagline && <p className="mt-0.5">{data.tagline}</p>}
+        {isBill && <p className="mt-1 font-bold">{labels.billTitle}</p>}
       </div>
 
       {hasContactBlock && (
@@ -141,19 +150,37 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
         <span>{formatMoney(data.total)}</span>
       </div>
 
-      <Divider />
-      <div className="space-y-0.5">
-        {data.paymentMethod === "CASH" && data.amountTendered ? (
-          <>
-            <Row label={labels.cash} value={formatMoney(data.amountTendered)} />
-            {data.change !== undefined && data.change >= 0 && (
-              <Row label={labels.change} value={formatMoney(data.change)} />
+      {!isBill && (
+        <>
+          <Divider />
+          <div className="space-y-0.5">
+            {tenders.length > 1 ? (
+              tenders.map((tender, i) => (
+                <div key={i} className="space-y-0.5">
+                  <Row label={tender.method} value={formatMoney(tender.amount)} />
+                  {tender.amountTendered !== undefined && (
+                    <div className="space-y-0.5 pl-3 text-gray-600">
+                      <Row label={labels.cash} value={formatMoney(tender.amountTendered)} />
+                      {tender.change !== undefined && tender.change >= 0 && (
+                        <Row label={labels.change} value={formatMoney(tender.change)} />
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : data.paymentMethod === "CASH" && data.amountTendered ? (
+              <>
+                <Row label={labels.cash} value={formatMoney(data.amountTendered)} />
+                {data.change !== undefined && data.change >= 0 && (
+                  <Row label={labels.change} value={formatMoney(data.change)} />
+                )}
+              </>
+            ) : (
+              <Row label={`${labels.paidVia} (${data.paymentMethod})`} value={labels.paid} />
             )}
-          </>
-        ) : (
-          <Row label={`${labels.paidVia} (${data.paymentMethod})`} value={labels.paid} />
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
       {data.notes && (
         <>
@@ -166,7 +193,7 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
 
       <Divider />
       <div className="text-center whitespace-pre-line">
-        {data.footerMessage || labels.defaultFooter}
+        {isBill ? labels.billNotice : data.footerMessage || labels.defaultFooter}
       </div>
 
       {social.length > 0 && (

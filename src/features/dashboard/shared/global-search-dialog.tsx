@@ -23,6 +23,8 @@ import {
   Store,
   FileText,
   Settings,
+  ContactRound,
+  TicketPercent,
 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "./hooks/use-current-store";
@@ -107,6 +109,24 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         description: t("data.materials.pageTitle"),
         href: `/store/${storeId}/data`,
         icon: <Database className="size-4" />,
+        category: t("search.categories.navigation"),
+        gateHref: "/data",
+      },
+      {
+        id: "customers",
+        title: t("nav.customers"),
+        description: t("customers.page.description"),
+        href: `/store/${storeId}/customers`,
+        icon: <ContactRound className="size-4" />,
+        category: t("search.categories.navigation"),
+        gateHref: "/customers",
+      },
+      {
+        id: "promotions",
+        title: t("promotions.tab"),
+        description: t("promotions.searchDescription"),
+        href: `/store/${storeId}/data?tab=promotions`,
+        icon: <TicketPercent className="size-4" />,
         category: t("search.categories.navigation"),
         gateHref: "/data",
       },

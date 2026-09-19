@@ -23,6 +23,7 @@ vi.mock("@/lib/repositories/product.repository", () => ({
     deleteByCategory: vi.fn(),
     belongsToStore: vi.fn(),
     existsBySku: vi.fn(),
+    existsByBarcode: vi.fn(),
     existsByName: vi.fn(),
   },
 }));
@@ -354,6 +355,177 @@ describe("ProductService", () => {
 
       expect(result).toContain("SKU");
       expect(result).toContain("Name");
+    });
+  });
+});
+
+describe("ProductService — barcode (optional, unique per store)", () => {
+  let service: ProductService;
+
+  const newProduct = {
+    storeId: "store-1",
+    sku: "NEW-SKU",
+    name: "New Product",
+    costPrice: 10,
+    sellingPrice: 25,
+  };
+
+  // What Prisma throws when the (storeId, barcode) unique index is violated.
+  const p2002 = (target: string[]) =>
+    new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+      code: "P2002",
+      clientVersion: "test",
+      meta: { target },
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ProductService();
+    mockedProductRepo.existsBySku.mockResolvedValue(false);
+    mockedProductRepo.existsByName.mockResolvedValue(false);
+    mockedProductRepo.existsByBarcode.mockResolvedValue(false);
+  });
+
+  describe("createProduct", () => {
+    it("rejects a barcode another product already uses — a 409 pinned to the barcode field", async () => {
+      mockedProductRepo.existsByBarcode.mockResolvedValue(true);
+
+      const err = await service.createProduct({ ...newProduct, barcode: "8991234567890" }).then(
+        () => null,
+        (e) => e
+      );
+
+      expect(err).toMatchObject({
+        statusCode: 409,
+        code: "CONFLICT",
+        details: [{ field: "barcode", message: expect.stringContaining("8991234567890") }],
+      });
+      expect(mockedProductRepo.existsByBarcode).toHaveBeenCalledWith("store-1", "8991234567890");
+      expect(mockedProductRepo.create).not.toHaveBeenCalled();
+    });
+
+    it("saves the barcode when it is free", async () => {
+      mockedProductRepo.create.mockResolvedValue(mockProduct);
+
+      await service.createProduct({ ...newProduct, barcode: "8991234567890" });
+
+      expect(mockedProductRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ barcode: "8991234567890" })
+      );
+    });
+
+    it("skips the uniqueness check entirely when there is no barcode (many products may have none)", async () => {
+      mockedProductRepo.create.mockResolvedValue(mockProduct);
+
+      await service.createProduct({ ...newProduct });
+      await service.createProduct({ ...newProduct, barcode: null });
+      await service.createProduct({ ...newProduct, barcode: "" });
+
+      expect(mockedProductRepo.existsByBarcode).not.toHaveBeenCalled();
+      for (const [data] of mockedProductRepo.create.mock.calls) {
+        expect(data).not.toHaveProperty("barcode");
+      }
+    });
+
+    it("maps a lost race (P2002 on the barcode index) to the same 409", async () => {
+      mockedProductRepo.create.mockRejectedValue(p2002(["storeId", "barcode"]));
+
+      await expect(service.createProduct({ ...newProduct, barcode: "123" })).rejects.toMatchObject({
+        statusCode: 409,
+        details: [{ field: "barcode" }],
+      });
+    });
+
+    it("does not disguise a P2002 on some other column as a barcode clash", async () => {
+      const other = p2002(["storeId", "sku"]);
+      mockedProductRepo.create.mockRejectedValue(other);
+
+      await expect(service.createProduct({ ...newProduct, barcode: "123" })).rejects.toBe(other);
+    });
+  });
+
+  describe("updateProduct", () => {
+    const current = { ...mockProduct, barcode: "111" };
+
+    it("checks a CHANGED barcode against every OTHER product (excluding itself)", async () => {
+      mockedProductRepo.findById.mockResolvedValue(current);
+      mockedProductRepo.update.mockResolvedValue({ ...current, barcode: "222" });
+
+      await service.updateProduct("prod-1", "store-1", { barcode: "222" });
+
+      expect(mockedProductRepo.existsByBarcode).toHaveBeenCalledWith("store-1", "222", "prod-1");
+      expect(mockedProductRepo.update).toHaveBeenCalledWith(
+        "prod-1",
+        expect.objectContaining({ barcode: "222" })
+      );
+    });
+
+    it("rejects a changed barcode that another product holds", async () => {
+      mockedProductRepo.findById.mockResolvedValue(current);
+      mockedProductRepo.existsByBarcode.mockResolvedValue(true);
+
+      await expect(
+        service.updateProduct("prod-1", "store-1", { barcode: "222" })
+      ).rejects.toMatchObject({ statusCode: 409, details: [{ field: "barcode" }] });
+      expect(mockedProductRepo.update).not.toHaveBeenCalled();
+    });
+
+    it("does not re-check (or flag itself for) a barcode that did not change", async () => {
+      mockedProductRepo.findById.mockResolvedValue(current);
+      mockedProductRepo.update.mockResolvedValue(current);
+
+      await service.updateProduct("prod-1", "store-1", { barcode: "111", name: mockProduct.name });
+
+      expect(mockedProductRepo.existsByBarcode).not.toHaveBeenCalled();
+    });
+
+    it("null CLEARS the barcode (written as null, no uniqueness check)", async () => {
+      mockedProductRepo.findById.mockResolvedValue(current);
+      mockedProductRepo.update.mockResolvedValue({ ...current, barcode: null });
+
+      await service.updateProduct("prod-1", "store-1", { barcode: null });
+
+      expect(mockedProductRepo.existsByBarcode).not.toHaveBeenCalled();
+      expect(mockedProductRepo.update).toHaveBeenCalledWith(
+        "prod-1",
+        expect.objectContaining({ barcode: null })
+      );
+    });
+
+    it("undefined leaves the stored barcode untouched (the key is not sent at all)", async () => {
+      mockedProductRepo.findById.mockResolvedValue(current);
+      mockedProductRepo.update.mockResolvedValue(current);
+
+      await service.updateProduct("prod-1", "store-1", { description: "x" });
+
+      const [, data] = mockedProductRepo.update.mock.calls[0];
+      expect(data).not.toHaveProperty("barcode");
+    });
+
+    it("maps a lost race on update to the barcode 409 too", async () => {
+      mockedProductRepo.findById.mockResolvedValue(current);
+      mockedProductRepo.update.mockRejectedValue(p2002(["storeId", "barcode"]));
+
+      await expect(
+        service.updateProduct("prod-1", "store-1", { barcode: "222" })
+      ).rejects.toMatchObject({ statusCode: 409, details: [{ field: "barcode" }] });
+    });
+  });
+
+  describe("exportProducts", () => {
+    it("carries a Barcode column right after SKU", async () => {
+      const { arrayToCSV } = await import("@/lib/utils/csv-export");
+      mockedProductRepo.findAll.mockResolvedValue({
+        products: [{ ...mockProduct, barcode: "8991234567890" }],
+        total: 1,
+      });
+
+      await service.exportProducts("store-1", {});
+
+      const [rows, headers, columns] = vi.mocked(arrayToCSV).mock.calls.at(-1)!;
+      expect(headers.slice(0, 3)).toEqual(["SKU", "Barcode", "Name"]);
+      expect(columns[1](rows[0])).toBe("8991234567890");
+      expect(columns[1]({ ...mockProduct, barcode: null })).toBe("");
     });
   });
 });
