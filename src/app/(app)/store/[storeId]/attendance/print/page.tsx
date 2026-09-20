@@ -96,11 +96,14 @@ export default async function AttendancePrintPage({ params, searchParams }: Prin
 
   const { currency } = await getFinanceSettings(storeId);
 
+  // Attendance only: till cash is the Shifts page's report, not part of who was
+  // on the clock.
   const records = await fetchUnifiedLog({
     storeId,
     from: fromDate,
     to: toDate,
     staffId: staffId ?? undefined,
+    types: ["CLOCK_IN", "CLOCK_OUT", "ABSENCE"],
   });
 
   const logRows = records.map((r) => ({

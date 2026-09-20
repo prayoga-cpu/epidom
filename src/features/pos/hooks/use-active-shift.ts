@@ -7,22 +7,27 @@ import { canManageShift } from "../lib/shift-access";
 import { OWNER_PERSONA_ID, usePosSession } from "./use-pos-session";
 
 /**
- * The persona's own till session (`Shift`) — the one Shift page, the status-bar
- * chip and checkout all care about.
+ * The store's till session (`Shift`) — the one Shift page, the status-bar chip
+ * and checkout all care about.
+ *
+ * A till belongs to the STORE, not to whoever opened it: one is open at a time
+ * (the server refuses a second), and every persona on every device signed in to
+ * the store sees the same one. `staffMember` is who STARTED it, shown as such —
+ * a cashier picking up at handover sees the owner's shift, not "no shift".
  *
  * NOT `ScheduleShift` (a roster block) and not the time-window "filter by
- * shift" of Order History: this is the till a named person opened with a
- * counted float and is accountable for at close. See
- * project_shift_window_semantics.
+ * shift" of Order History: this is the drawer someone counted a float into.
+ * See project_shift_window_semantics.
  */
 
-export interface MyShift {
+export interface TillShift {
   id: string;
   openedAt: string;
   closedAt: string | null;
   /** Prisma `Decimal` crosses JSON as a string — `Number(...)` before arithmetic. */
   openingCash: string | number;
   closingCash: string | number | null;
+  /** Who opened it. Not necessarily the persona looking at it. */
   staffMember: { id: string; name: string; role: string } | null;
 }
 
@@ -67,7 +72,9 @@ export function useShiftStaffMemberId(storeId: string) {
 
 /** Every cache a till opening or closing makes stale. */
 function invalidateShiftCaches(queryClient: ReturnType<typeof useQueryClient>, storeId: string) {
-  queryClient.invalidateQueries({ queryKey: ["pos", "my-shift", storeId] });
+  queryClient.invalidateQueries({ queryKey: ["pos", "active-shift", storeId] });
+  // The Shift page's history: a shift that has just ended belongs at the top of it.
+  queryClient.invalidateQueries({ queryKey: ["pos", "shift-history", storeId] });
   // The "filter by shift" pickers on Order History and Finance list sessions.
   queryClient.invalidateQueries({ queryKey: ["pos", "store-shifts", storeId] });
   // Dashboard operations card: open tills and their live expected cash.
@@ -78,7 +85,8 @@ function invalidateShiftCaches(queryClient: ReturnType<typeof useQueryClient>, s
 }
 
 /**
- * The persona's open shift, or null when there is none.
+ * The store's open shift, or null when there is none — the same answer for every
+ * persona and device signed in to the store (see the note at the top of the file).
  *
  * Also the one place that keeps `usePosSession().shiftId` truthful. That field
  * used to be written only at PIN login, so a till opened afterwards left every
@@ -86,8 +94,12 @@ function invalidateShiftCaches(queryClient: ReturnType<typeof useQueryClient>, s
  * total), and a till closed afterwards kept attaching sales to a session that
  * had already been signed off. Mounted by the status bar on every POS route, so
  * the session is corrected wherever the cashier happens to be.
+ *
+ * `staffMemberId` is who the CURRENT persona is as a `StaffMember` — what they
+ * would open a shift or record a cash movement as. It plays no part in which
+ * shift is returned.
  */
-export function useMyShift(storeId: string) {
+export function useActiveShift(storeId: string) {
   const session = usePosSession();
   const { staffMemberId, isResolving } = useShiftStaffMemberId(storeId);
   const setShiftId = usePosSession((s) => s.setShiftId);
@@ -98,29 +110,50 @@ export function useMyShift(storeId: string) {
     canManageShift({ staffRole: session.staffRole, allowedPages: session.allowedPages });
 
   const query = useQuery({
-    queryKey: ["pos", "my-shift", storeId, staffMemberId],
+    // No persona in the key on purpose: switching account on this tablet reuses the
+    // answer already in the cache instead of flashing "No shift" while it refetches.
+    queryKey: ["pos", "active-shift", storeId],
     queryFn: async () => {
-      // One open shift per staff member is enforced on POST, so the newest row
-      // is the open one whenever there is one.
-      const res = await apiClient.get<{ shifts: MyShift[] }>(`/stores/${storeId}/shifts`, {
-        staffId: staffMemberId!,
+      // Filtered on the server: the newest row of the store is usually a CLOSED
+      // shift, so `take: 1` alone could hide an open one behind it. Newest open
+      // first — one is enforced on POST, but shifts opened per-person before that
+      // rule can still overlap, and the newest is the one sales attach to; closing
+      // it surfaces the next.
+      const res = await apiClient.get<{ shifts: TillShift[] }>(`/stores/${storeId}/shifts`, {
+        status: "open",
         take: "1",
       });
-      return res.shifts.find((s) => !s.closedAt) ?? null;
+      return res.shifts[0] ?? null;
     },
-    enabled: allowed && !!staffMemberId,
+    enabled: allowed,
     staleTime: 30 * 1000,
+    // The shift is opened and closed from other tablets and accounts, and nothing
+    // pushes that here — without a poll a device shows "No shift" until someone
+    // navigates. Cheap (one row) and paused while the tab is hidden.
+    refetchInterval: 60 * 1000,
   });
 
   const shift = query.data ?? null;
   const sessionShiftId = session.shiftId;
+  // When this persona signed in. Login carries the shift the SERVER just resolved
+  // (verify-pin), which is fresher than anything already in this shared cache.
+  const loginAt = session.pinVerifiedAt ?? 0;
+  const { isSuccess, dataUpdatedAt, refetch } = query;
   useEffect(() => {
     // Only on a settled answer — a loading or failed query is "unknown", and
     // unlinking the session on unknown would drop the till mid-sale.
-    if (!query.isSuccess) return;
+    if (!isSuccess) return;
+    // The cached answer is OLDER than this login. The key has no persona in it, so
+    // after an account switch the cache can predate a shift another tablet opened
+    // since; applying it would overwrite the login's shift with "no shift" and leave
+    // sales unlinked until the next poll. Ask again and reconcile from that instead.
+    if (dataUpdatedAt < loginAt) {
+      void refetch({ cancelRefetch: false });
+      return;
+    }
     const next = shift?.id ?? null;
     if (next !== sessionShiftId) setShiftId(next);
-  }, [query.isSuccess, shift?.id, sessionShiftId, setShiftId]);
+  }, [isSuccess, dataUpdatedAt, loginAt, shift?.id, sessionShiftId, setShiftId, refetch]);
 
   return {
     shift,
@@ -146,19 +179,18 @@ export function useOpenShift(storeId: string) {
 
   return useMutation({
     mutationFn: (body: OpenShiftInput) =>
-      apiClient.post<{ shift: MyShift }>(`/stores/${storeId}/shifts`, body),
+      apiClient.post<{ shift: TillShift }>(`/stores/${storeId}/shifts`, body),
     onSuccess: ({ shift }) => {
       // Seed the cache with the row the server just returned BEFORE pointing the
-      // session at it: useMyShift reconciles session.shiftId against that query,
+      // session at it: useActiveShift reconciles session.shiftId against that query,
       // and a stale "no shift" there would unlink the till the moment it opened.
-      if (shift.staffMember) {
-        queryClient.setQueryData(["pos", "my-shift", storeId, shift.staffMember.id], shift);
-      }
+      queryClient.setQueryData(["pos", "active-shift", storeId], shift);
       setShiftId(shift.id);
       invalidateShiftCaches(queryClient, storeId);
     },
-    // A 409 means this persona already has a till open — opened on another
-    // device. Re-read rather than leave a form offering to open a second one.
+    // A 409 means the store already has a till open — someone else opened it, on
+    // this device or another. Re-read rather than leave a form offering to open a
+    // second one; the page flips to the shift that is running.
     onError: () => invalidateShiftCaches(queryClient, storeId),
   });
 }
@@ -169,13 +201,13 @@ export function useCloseShift(storeId: string) {
 
   return useMutation({
     mutationFn: ({ shiftId, ...body }: CloseShiftInput & { shiftId: string }) =>
-      apiClient.patch<{ shift: MyShift }>(`/stores/${storeId}/shifts/${shiftId}`, body),
+      apiClient.patch<{ shift: TillShift }>(`/stores/${storeId}/shifts/${shiftId}`, body),
     onSuccess: (_result, { shiftId }) => {
       // Same reason as opening, in reverse: clear the cached open shift first, or
-      // useMyShift would read it back and re-attach the session to a till that
+      // useActiveShift would read it back and re-attach the session to a till that
       // has just been signed off, until the refetch lands.
-      queryClient.setQueriesData<MyShift | null>(
-        { queryKey: ["pos", "my-shift", storeId] },
+      queryClient.setQueriesData<TillShift | null>(
+        { queryKey: ["pos", "active-shift", storeId] },
         (old) => (old?.id === shiftId ? null : old)
       );
       // Before the next sale, not after: anything rung up from here on must not

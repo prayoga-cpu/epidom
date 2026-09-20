@@ -14,12 +14,13 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 const mockReport = vi.fn();
 const mockClose = vi.fn();
-vi.mock("@/features/pos/hooks/use-my-shift", () => ({
+vi.mock("@/features/pos/hooks/use-active-shift", () => ({
   useShiftReport: () => mockReport(),
   useCloseShift: () => mockClose(),
 }));
 
 import { toast } from "sonner";
+import { ApiClientError } from "@/lib/api/client";
 import { FinishShiftScreen } from "../shift/finish-shift-screen";
 
 const shift = {
@@ -262,8 +263,28 @@ describe("FinishShiftScreen — ending the shift", () => {
     });
   });
 
+  // The shift is the store's, so "somebody else already finished it" is routine now: a
+  // 409 says so instead of inviting a retry that can never succeed.
+  it("a 409 says the shift was already ended — not the generic 'try again'", async () => {
+    mutateAsync.mockRejectedValue(
+      new ApiClientError(
+        { success: false, error: { code: "CONFLICT", message: "Shift is already closed" } } as never,
+        409
+      )
+    );
+    const { onEnded } = renderScreen();
+    await countAndEnd("80000");
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "pos.shift.endShift" })
+    );
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("pos.shift.alreadyEnded"));
+    expect(toast.error).not.toHaveBeenCalledWith("pos.shift.endFailed");
+    expect(onEnded).not.toHaveBeenCalled();
+  });
+
   it("a failed close reports it and does not move on to the report", async () => {
-    mutateAsync.mockRejectedValue(new Error("409"));
+    mutateAsync.mockRejectedValue(new Error("boom"));
     const { onEnded } = renderScreen();
     await countAndEnd("80000");
     fireEvent.click(

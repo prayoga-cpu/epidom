@@ -136,6 +136,7 @@ Table stores {
   standardWorkMinutesPerDay Int [not null, default: 480]
   scheduleShifts schedule_shifts [not null]
   staffSchedules staff_schedules [not null]
+  scheduleImages schedule_images [not null]
   attendanceRecords attendance_records [not null]
   cashMovements cash_movements [not null]
   customers customers [not null]
@@ -1047,6 +1048,22 @@ Table staff_schedules {
   attendanceRecords attendance_records [not null]
 }
 
+Table schedule_images {
+  id String [pk]
+  storeId String [not null]
+  imageUrl String [not null]
+  startDate DateTime [not null]
+  endDate DateTime [not null]
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+
+  indexes {
+    (storeId, startDate, endDate) [unique]
+  }
+}
+
 Table attendance_records {
   id String [pk]
   storeId String [not null]
@@ -1883,6 +1900,8 @@ Ref: staff_schedules.storeId > stores.id [delete: Cascade]
 Ref: staff_schedules.staffMemberId > staff_members.id [delete: Cascade]
 
 Ref: staff_schedules.scheduleShiftId > schedule_shifts.id [delete: Set Null]
+
+Ref: schedule_images.storeId > stores.id [delete: Cascade]
 
 Ref: attendance_records.storeId > stores.id [delete: Cascade]
 

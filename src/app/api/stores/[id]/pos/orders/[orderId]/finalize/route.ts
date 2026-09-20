@@ -20,6 +20,7 @@ import {
 } from "@/lib/services/pos-order-settlement";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
+import { resolveSaleShiftId } from "@/lib/services/shift-link";
 
 /**
  * POST /api/stores/[id]/pos/orders/[orderId]/finalize
@@ -99,6 +100,12 @@ export async function POST(
     });
     const { immediatelyDelivered, settledStatus } = settlement;
 
+    // Settling happens NOW, in whichever shift is open now: resolve what the client named
+    // (it can be a minute stale on a shared till). Nothing named keeps the hold's own link.
+    const shiftId = input.shiftId
+      ? await resolveSaleShiftId(storeId, input.shiftId)
+      : existing.shiftId;
+
     let transactionResult;
     try {
       transactionResult = await prisma.$transaction(
@@ -120,7 +127,7 @@ export async function POST(
             where: { id: existing.id },
             data: {
               ...orderData,
-              shiftId: input.shiftId ?? existing.shiftId,
+              shiftId,
             },
             include: { items: true },
           });

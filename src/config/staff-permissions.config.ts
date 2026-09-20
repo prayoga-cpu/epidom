@@ -31,6 +31,8 @@ export const ROLE_DEFAULT_PAGES: Record<StaffRole, string[]> = {
     "/customers",
     "/alerts",
     "/schedule",
+    // The shift report: every till session and how its drawer closed.
+    "/shifts",
     // Manager reaches the full roster builder at /schedule, but the POS
     // Mode overflow menu's "My Shift" link is the same for every role —
     // without this, a Manager PIN persona tapping it from POS Mode would
@@ -96,6 +98,7 @@ export const STAFF_ROLE_TEMPLATES: StaffRoleTemplate[] = [
       "/customers",
       "/alerts",
       "/schedule",
+      "/shifts",
       "/pos/schedule",
     ],
   },

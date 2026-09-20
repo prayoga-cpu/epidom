@@ -12,10 +12,10 @@ vi.mock("@/components/providers/currency-provider", () => ({
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
-const mockMyShift = vi.fn();
+const mockActiveShift = vi.fn();
 const mockOpen = vi.fn();
-vi.mock("@/features/pos/hooks/use-my-shift", () => ({
-  useMyShift: () => mockMyShift(),
+vi.mock("@/features/pos/hooks/use-active-shift", () => ({
+  useActiveShift: () => mockActiveShift(),
   useOpenShift: () => mockOpen(),
 }));
 
@@ -41,6 +41,9 @@ vi.mock("../shift/finish-shift-screen", () => ({
     </div>
   ),
 }));
+vi.mock("../shift/shift-history-list", () => ({
+  ShiftHistoryList: ({ storeId }: { storeId: string }) => <p>HISTORY LIST {storeId}</p>,
+}));
 vi.mock("../shift/shift-closed-dialog", () => ({
   ShiftClosedDialog: ({ ended, onDone }: { ended: { shiftId: string }; onDone: () => void }) => (
     <div>
@@ -55,6 +58,7 @@ vi.mock("../shift/cash-movement-dialog", () => ({
 }));
 
 import { toast } from "sonner";
+import { ApiClientError } from "@/lib/api/client";
 import { ShiftPage } from "../shift/shift-page";
 import { ShiftStatusCard } from "../shift/shift-status-card";
 import { OpenShiftCard } from "../shift/open-shift-card";
@@ -83,7 +87,7 @@ function shiftState(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   sessionReady = true;
-  mockMyShift.mockReset();
+  mockActiveShift.mockReset();
   mockOpen.mockReset();
   vi.mocked(toast.error).mockReset();
   vi.mocked(toast.success).mockReset();
@@ -98,9 +102,13 @@ describe("ShiftStatusCard", () => {
     return handlers;
   }
 
-  it("shows who is on charge, when it started and the float it started with", () => {
+  it("shows who STARTED the shift, when, and the float it started with", () => {
     renderCard();
     expect(screen.getByText("pos.shift.activeBadge", { selector: "span" })).toBeInTheDocument();
+    // "Started by", not "User": the shift is the store's, and whoever is looking at
+    // it may be a different account than the one that opened it.
+    expect(screen.getByText("pos.shift.startedBy")).toBeInTheDocument();
+    expect(screen.queryByText("pos.shift.user")).toBeNull();
     expect(screen.getByText("Sam")).toBeInTheDocument();
     expect(screen.getByText(`DT(${shift.openedAt})`)).toBeInTheDocument();
     // Literal in the store's own currency: the provider's currency passed through.
@@ -161,6 +169,31 @@ describe("OpenShiftCard", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("pos.shift.openFailed"));
   });
 
+  // A 409 means somebody else opened the store's shift first. The page is about to show
+  // it, so the toast says that rather than "couldn't open, try again".
+  it("a 409 says a shift is already open — not the generic failure", async () => {
+    const mutate = vi.fn((_body, opts) =>
+      opts.onError(
+        new ApiClientError(
+          {
+            success: false,
+            error: { code: "CONFLICT", message: "This store already has an open shift" },
+          } as never,
+          409
+        )
+      )
+    );
+    mockOpen.mockReturnValue({ mutate, isPending: false });
+    render(
+      <OpenShiftCard storeId="s1" staffMemberId={shift.staffMember.id} onCashMovement={() => {}} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "pos.shift.open" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("pos.shift.alreadyOpen"));
+    expect(toast.error).not.toHaveBeenCalledWith("pos.shift.openFailed");
+  });
+
   it("cash can move before the first shift — the movement action is offered", () => {
     const onCashMovement = vi.fn();
     render(
@@ -178,40 +211,70 @@ describe("OpenShiftCard", () => {
 describe("ShiftPage", () => {
   it("waits for the persona instead of claiming the role can't hold a shift", () => {
     sessionReady = false;
-    mockMyShift.mockReturnValue(shiftState({ allowed: false }));
+    mockActiveShift.mockReturnValue(shiftState({ allowed: false }));
     render(<ShiftPage storeId="s1" />);
     expect(screen.queryByText("pos.shift.unavailableRole")).toBeNull();
   });
 
   it("a role that runs no register is told so", () => {
-    mockMyShift.mockReturnValue(shiftState({ allowed: false }));
+    mockActiveShift.mockReturnValue(shiftState({ allowed: false }));
     render(<ShiftPage storeId="s1" />);
     expect(screen.getByText("pos.shift.unavailableRole")).toBeInTheDocument();
   });
 
   it("an owner with no staff profile to attach a shift to is told so", () => {
-    mockMyShift.mockReturnValue(shiftState({ staffMemberId: null }));
+    mockActiveShift.mockReturnValue(shiftState({ staffMemberId: null }));
     render(<ShiftPage storeId="s1" />);
     expect(screen.getByText("pos.shift.unavailableNoStaff")).toBeInTheDocument();
   });
 
-  it("a failed read offers a retry", () => {
+  it("a failed read with no answer to show offers a retry", () => {
     const refetch = vi.fn();
-    mockMyShift.mockReturnValue(shiftState({ isError: true, refetch }));
+    mockActiveShift.mockReturnValue(shiftState({ isError: true, known: false, refetch }));
     render(<ShiftPage storeId="s1" />);
     fireEvent.click(screen.getByRole("button", { name: "common.actions.retry" }));
     expect(refetch).toHaveBeenCalled();
   });
 
+  // The regression the static review reproduced: the 60s poll fails once (Wi-Fi blip),
+  // isError is set beside a good last-known shift, and the page used to be replaced by
+  // the load-failed card — unmounting the Finish screen and the count being typed.
+  it("a failed background poll does NOT replace the page while a last-known shift exists", () => {
+    mockActiveShift.mockReturnValue(shiftState({ shift, isError: true, known: true }));
+    render(<ShiftPage storeId="s1" />);
+
+    expect(screen.queryByText("pos.shift.loadFailed")).toBeNull();
+    expect(screen.getByRole("button", { name: "pos.shift.finish" })).toBeInTheDocument();
+  });
+
+  it("…and it keeps the Finish screen (and what was typed into it) on screen", () => {
+    mockActiveShift.mockReturnValue(shiftState({ shift }));
+    const { rerender } = render(<ShiftPage storeId="s1" />);
+    fireEvent.click(screen.getByRole("button", { name: "pos.shift.finish" }));
+    expect(screen.getByText("FINISH SCREEN")).toBeInTheDocument();
+
+    mockActiveShift.mockReturnValue(shiftState({ shift, isError: true, known: true }));
+    rerender(<ShiftPage storeId="s1" />);
+
+    expect(screen.getByText("FINISH SCREEN")).toBeInTheDocument();
+    expect(screen.queryByText("pos.shift.loadFailed")).toBeNull();
+  });
+
+  it("a failed read with a known answer of 'no shift' still shows the open-shift form", () => {
+    mockActiveShift.mockReturnValue(shiftState({ isError: true, known: true }));
+    render(<ShiftPage storeId="s1" />);
+    expect(screen.getByRole("button", { name: "pos.shift.open" })).toBeInTheDocument();
+  });
+
   it("no open shift: the open-shift card", () => {
-    mockMyShift.mockReturnValue(shiftState());
+    mockActiveShift.mockReturnValue(shiftState());
     render(<ShiftPage storeId="s1" />);
     expect(screen.getByRole("button", { name: "pos.shift.open" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "pos.shift.finish" })).toBeNull();
   });
 
   it("an open shift: the status card, whose live report opens in a new tab without printing", () => {
-    mockMyShift.mockReturnValue(shiftState({ shift }));
+    mockActiveShift.mockReturnValue(shiftState({ shift }));
     render(<ShiftPage storeId="s1" />);
     fireEvent.click(screen.getByRole("button", { name: /pages\.shiftViewReport/ }));
     expect(window.open).toHaveBeenCalledWith(
@@ -220,8 +283,29 @@ describe("ShiftPage", () => {
     );
   });
 
+  it("lists the store's shift history under the open shift AND under the open-shift form", () => {
+    mockActiveShift.mockReturnValue(shiftState({ shift }));
+    const { unmount } = render(<ShiftPage storeId="s1" />);
+    expect(screen.getByText("HISTORY LIST s1")).toBeInTheDocument();
+    unmount();
+
+    mockActiveShift.mockReturnValue(shiftState());
+    render(<ShiftPage storeId="s1" />);
+    expect(screen.getByText("HISTORY LIST s1")).toBeInTheDocument();
+  });
+
+  it("hides the history while a shift is being finished", () => {
+    mockActiveShift.mockReturnValue(shiftState({ shift }));
+    render(<ShiftPage storeId="s1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "pos.shift.finish" }));
+
+    expect(screen.getByText("FINISH SCREEN")).toBeInTheDocument();
+    expect(screen.queryByText(/HISTORY LIST/)).toBeNull();
+  });
+
   it("Finish opens the finish screen, Back returns to the shift", () => {
-    mockMyShift.mockReturnValue(shiftState({ shift }));
+    mockActiveShift.mockReturnValue(shiftState({ shift }));
     render(<ShiftPage storeId="s1" />);
 
     fireEvent.click(screen.getByRole("button", { name: "pos.shift.finish" }));
@@ -233,7 +317,7 @@ describe("ShiftPage", () => {
   });
 
   it("ending the shift leaves the finish screen and shows the report dialog until Done", () => {
-    mockMyShift.mockReturnValue(shiftState({ shift }));
+    mockActiveShift.mockReturnValue(shiftState({ shift }));
     render(<ShiftPage storeId="s1" />);
 
     fireEvent.click(screen.getByRole("button", { name: "pos.shift.finish" }));
@@ -247,13 +331,13 @@ describe("ShiftPage", () => {
   });
 
   it("cash in/out attaches to the open shift; with none open it attaches to none", () => {
-    mockMyShift.mockReturnValue(shiftState({ shift }));
+    mockActiveShift.mockReturnValue(shiftState({ shift }));
     const { unmount } = render(<ShiftPage storeId="s1" />);
     fireEvent.click(screen.getByRole("button", { name: /pages\.cashMovementTitle/ }));
     expect(screen.getByText(`MOVEMENT DIALOG ${shift.id}`)).toBeInTheDocument();
     unmount();
 
-    mockMyShift.mockReturnValue(shiftState());
+    mockActiveShift.mockReturnValue(shiftState());
     render(<ShiftPage storeId="s1" />);
     fireEvent.click(screen.getByRole("button", { name: /pages\.cashMovementTitle/ }));
     expect(screen.getByText("MOVEMENT DIALOG null")).toBeInTheDocument();

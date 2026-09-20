@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useCurrency } from "@/components/providers/currency-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,20 +51,19 @@ interface StaffOption {
   role: StaffRole;
 }
 
-type LogType = "CLOCK_IN" | "CLOCK_OUT" | "ABSENCE" | "CASH_IN" | "CASH_OUT";
+type LogType = "CLOCK_IN" | "CLOCK_OUT" | "ABSENCE";
 
-interface UnifiedLogRow {
+/** Everything this log shows. Till cash is the Shifts page's, not attendance. */
+const ATTENDANCE_TYPES: LogType[] = ["CLOCK_IN", "CLOCK_OUT", "ABSENCE"];
+
+interface AttendanceLogRow {
   id: string;
   timestamp: string;
-  /** Null for an unattributed cash movement — see UnifiedLogRow server-side. */
   staffMemberId: string | null;
   staffName: string;
   type: LogType;
   selfieUrl: string | null;
   locationLabel: string | null;
-  /** A cash movement's reason, or a till session's close-out notes. */
-  notes: string | null;
-  amount: number | null;
 }
 
 interface DailyHoursRow {
@@ -86,21 +84,17 @@ interface MissingClockOutRow {
 }
 
 /**
- * The Schedule page's manager-facing Log & History section — absorbs what
- * used to be the standalone /attendance page's Log + Hours tabs and the
- * /shifts page's cash-reconciliation table into one place, since a manager
- * monitoring "who did what, when" wants clock events and till cash events
- * on the same timeline, not two separate pages.
+ * The Schedule page's manager-facing Log & History section: the attendance log
+ * (clock-ins, clock-outs, absences) and the hours / overtime it adds up to —
+ * what used to be the standalone /attendance page.
+ *
+ * Till cash — a shift's opening float, its closing count, tips and paid-outs —
+ * is deliberately NOT here. That is the Shifts page's report (/shifts): who was
+ * on the clock and what was in the drawer are different questions and were
+ * being read off one mixed timeline.
  */
 export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffOption[] }) {
   const { t, formatDateTime } = useI18n();
-  // Till floats, closing counts and cash-movement amounts are all Shift/
-  // CashMovement-derived and already literal in the store's own currency. The
-  // bare one-arg formatPrice() defaults `fromCurrency` to IDR and would
-  // convert them, re-scaling every amount for any non-IDR store — the same
-  // trap operations-card.tsx guards against.
-  const { currency, formatPrice: formatPriceRaw } = useCurrency();
-  const formatPrice = (value: number) => formatPriceRaw(value, currency);
   const queryClient = useQueryClient();
   const [from, setFrom] = useState(startOfMonthLocalISO());
   const [to, setTo] = useState(todayLocalISO());
@@ -113,11 +107,13 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
   const { data: logData, isLoading: logLoading } = useQuery({
     queryKey: ["schedule-log", storeId, from, to, staffId, typeFilter],
     queryFn: () =>
-      apiClient.get<{ records: UnifiedLogRow[] }>(`/stores/${storeId}/schedule/log`, {
+      apiClient.get<{ records: AttendanceLogRow[] }>(`/stores/${storeId}/schedule/log`, {
         from: new Date(from).toISOString(),
         to: new Date(new Date(to).getTime() + 86_400_000 - 1).toISOString(),
         ...(staffId !== "all" && { staffId }),
-        ...(typeFilter !== "all" && { type: typeFilter }),
+        // Always explicit: "all" means all ATTENDANCE types, never the route's own
+        // default of every kind (which would bring till cash back in).
+        type: typeFilter !== "all" ? typeFilter : ATTENDANCE_TYPES.join(","),
       }),
   });
 
@@ -192,10 +188,6 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
         return t("clockInOut.typeClockOut");
       case "ABSENCE":
         return t("clockInOut.typeAbsence");
-      case "CASH_IN":
-        return t("clockInOut.typeCashIn");
-      case "CASH_OUT":
-        return t("clockInOut.typeCashOut");
     }
   };
 
@@ -204,7 +196,6 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
       case "ABSENCE":
         return "destructive";
       case "CLOCK_IN":
-      case "CASH_IN":
         return "default";
       default:
         return "secondary";
@@ -265,8 +256,6 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
                 <SelectItem value="CLOCK_IN">{t("clockInOut.typeClockIn")}</SelectItem>
                 <SelectItem value="CLOCK_OUT">{t("clockInOut.typeClockOut")}</SelectItem>
                 <SelectItem value="ABSENCE">{t("clockInOut.typeAbsence")}</SelectItem>
-                <SelectItem value="CASH_IN">{t("clockInOut.typeCashIn")}</SelectItem>
-                <SelectItem value="CASH_OUT">{t("clockInOut.typeCashOut")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -319,25 +308,7 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {record.type === "CASH_IN" || record.type === "CASH_OUT" ? (
-                              // A cash row is an amount plus, for a real
-                              // CashMovement, the reason the money moved —
-                              // which for a paid-out or safe drop is the only
-                              // part a manager is actually auditing.
-                              <div className="space-y-0.5">
-                                <span className="font-medium whitespace-nowrap">
-                                  {record.amount != null ? formatPrice(record.amount) : "—"}
-                                </span>
-                                {record.notes && (
-                                  // line-clamp, not truncate: the reason is the
-                                  // audit trail, and a title tooltip would hide
-                                  // it from the iPad this page is read on.
-                                  <p className="text-muted-foreground line-clamp-2 max-w-[220px] text-xs break-words">
-                                    {record.notes}
-                                  </p>
-                                )}
-                              </div>
-                            ) : record.selfieUrl ? (
+                            {record.selfieUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={record.selfieUrl}

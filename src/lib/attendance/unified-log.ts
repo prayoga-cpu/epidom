@@ -19,9 +19,18 @@ import { CASH_MOVEMENT_DIRECTION } from "@/lib/finance/cash-drawer";
  */
 export type UnifiedLogType = "CLOCK_IN" | "CLOCK_OUT" | "ABSENCE" | "CASH_IN" | "CASH_OUT";
 
+/**
+ * What a row IS, independent of the CASH_IN / CASH_OUT direction it borrows for the
+ * timeline. A shift's opening float and closing COUNT are statements of what is in the
+ * drawer, not money crossing it — showing them as "Cash In" / "Cash Out" made a manager
+ * summing the cash log read balances as movements.
+ */
+export type UnifiedLogOrigin = "attendance" | "shift-open" | "shift-close" | "movement";
+
 export interface UnifiedLogRow {
   id: string;
   timestamp: string;
+  origin: UnifiedLogOrigin;
   /**
    * Nullable because a CashMovement can be unattributed — the API leaves it
    * null rather than pinning an owner-recorded row on some staff member (see
@@ -112,6 +121,7 @@ export function mergeUnifiedLog({
         rows.push({
           id: record.id,
           timestamp: record.timestamp.toISOString(),
+          origin: "attendance",
           staffMemberId: record.staffMemberId,
           staffName: record.staffMember.name,
           type: record.type,
@@ -130,12 +140,15 @@ export function mergeUnifiedLog({
         rows.push({
           id: `${shift.id}-in`,
           timestamp: shift.openedAt.toISOString(),
+          origin: "shift-open",
           staffMemberId: shift.staffMemberId,
           staffName: shift.staffMember.name,
           type: "CASH_IN",
           selfieUrl: null,
           locationLabel: null,
-          notes: shift.notes,
+          // Shift.notes is the closing note (written at Finish shift). Repeating it on the
+          // opening row attached "short 5k" to the moment the float was counted in.
+          notes: null,
           amount: Number(shift.openingCash),
         });
       }
@@ -143,6 +156,7 @@ export function mergeUnifiedLog({
         rows.push({
           id: `${shift.id}-out`,
           timestamp: shift.closedAt.toISOString(),
+          origin: "shift-close",
           staffMemberId: shift.staffMemberId,
           staffName: shift.staffMember.name,
           type: "CASH_OUT",
@@ -167,6 +181,7 @@ export function mergeUnifiedLog({
           // / `-out` ids above — these rows share a React list.
           id: `movement-${movement.id}`,
           timestamp: movement.occurredAt.toISOString(),
+          origin: "movement",
           staffMemberId: movement.staffMemberId,
           staffName: movement.staffMember?.name ?? UNATTRIBUTED_STAFF_NAME,
           type,

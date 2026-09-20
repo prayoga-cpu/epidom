@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { ApiClientError } from "@/lib/api/client";
 import { openShiftSchema, type OpenShiftInput } from "@/lib/validation/operations.schemas";
-import { useOpenShift } from "../../hooks/use-my-shift";
+import { useOpenShift } from "../../hooks/use-active-shift";
 
 interface OpenShiftCardProps {
   storeId: string;
@@ -48,7 +49,15 @@ export function OpenShiftCard({ storeId, staffMemberId, onCashMovement }: OpenSh
             { ...values, staffId: staffMemberId },
             {
               onSuccess: () => toast.success(t("pos.shift.opened")),
-              onError: () => toast.error(t("pos.shift.openFailed")),
+              // 409: somebody else opened the store's shift first (another tablet, or
+              // another account on this one). Not a failure to retry — the page is about
+              // to show the shift that is running, so say that instead.
+              onError: (error) =>
+                toast.error(
+                  error instanceof ApiClientError && error.status === 409
+                    ? t("pos.shift.alreadyOpen")
+                    : t("pos.shift.openFailed")
+                ),
             }
           )
         )}

@@ -20,6 +20,7 @@ import {
   POS_ORDER_TX_TIMEOUT_MS,
 } from "@/lib/services/pos-order-settlement";
 import { allocateQueueNumber } from "@/lib/services/order-queue-number";
+import { resolveSaleShiftId } from "@/lib/services/shift-link";
 import { serializePosOrders } from "@/lib/server/serialize";
 import { decimalToNumber } from "@/types/prisma";
 import { publishStoreEvent } from "@/lib/realtime/publish";
@@ -194,6 +195,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const orderData = buildSettlementOrderData({ settlement, input });
     const { immediatelyDelivered, settledStatus } = settlement;
 
+    // The client's idea of the open shift can be a minute stale on a shared till.
+    const shiftId = await resolveSaleShiftId(storeId, input.shiftId);
+
     let transactionResult;
     try {
       transactionResult = await prisma.$transaction(
@@ -215,7 +219,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
               // The unique index makes a concurrent double-flush fail loudly here
               // rather than silently creating a second order.
               clientRequestId: input.clientRequestId ?? null,
-              shiftId: input.shiftId,
+              shiftId,
               source: "POS",
             },
             include: {

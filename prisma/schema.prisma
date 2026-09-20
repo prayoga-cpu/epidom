@@ -214,6 +214,7 @@ model Store {
   standardWorkMinutesPerDay      Int                    @default(480)
   scheduleShifts                 ScheduleShift[]
   staffSchedules                 StaffSchedule[]
+  scheduleImages                 ScheduleImage[]
   attendanceRecords              AttendanceRecord[]
   cashMovements                  CashMovement[]
   customers                      Customer[]
@@ -1938,6 +1939,32 @@ model StaffSchedule {
   @@index([staffMemberId])
   @@index([scheduleShiftId])
   @@map("staff_schedules")
+}
+
+// The other way to publish a roster: a photo or screenshot of a schedule that
+// lives outside Epidom, uploaded by a manager and shown to EVERY staff member on
+// My Schedule for the dates it covers. Independent of StaffSchedule — a store
+// may use named blocks, an image, or both; staff see whatever exists.
+//
+// Covers an inclusive date range (same `@db.Date` semantics as
+// StaffSchedule.date, and the same range the roster grid publishes over).
+// Unique on that range so re-uploading for the same dates replaces the image
+// instead of stacking duplicates; different ranges may overlap.
+model ScheduleImage {
+  id        String   @id @default(cuid())
+  storeId   String
+  // A Vercel Blob URL produced by /api/upload — never a caller-supplied host.
+  imageUrl  String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, startDate, endDate])
+  @@index([storeId, endDate])
+  @@map("schedule_images")
 }
 
 // One clock event (clock-in, clock-out, or a reported absence). No DB-level

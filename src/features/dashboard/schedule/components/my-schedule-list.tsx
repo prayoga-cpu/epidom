@@ -18,9 +18,11 @@ import { DateRangeField } from "@/components/ui/date-range-field";
 import { apiClient } from "@/lib/api/client";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { todayLocalISO, addDaysLocalISO } from "@/lib/utils/date-range";
+import { format } from "date-fns";
+import { todayLocalISO, addDaysLocalISO, parseLocalISO } from "@/lib/utils/date-range";
 import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
 import type { StaffScheduleEntry } from "./staff-schedule-cell-dialog";
+import type { ScheduleImageRow } from "./schedule-image-panel";
 
 interface MySchedule extends StaffScheduleEntry {
   scheduleShift: { name: string; startTime: string; endTime: string; color: string | null } | null;
@@ -38,7 +40,7 @@ interface UnifiedLogRow {
 }
 
 export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; staffMemberId: string }) {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, dateLocale } = useI18n();
   // History amounts (a till's float, a cash movement) are Shift/CashMovement-
   // derived and already literal in the store's own currency. The bare one-arg
   // formatPrice() defaults `fromCurrency` to IDR and would convert them,
@@ -59,6 +61,19 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
   });
   const upcoming = (data?.schedules ?? []).filter((s) => s.date >= todayLocalISO());
   const today = todayLocalISO();
+
+  // The manager's other way to publish a roster: a picture. The same for the whole
+  // team (nothing per-person to filter), so it needs no staffId. `from: today` keeps
+  // every image whose dates haven't fully passed. Key shares the ["schedule-images",
+  // storeId] prefix so the manager publishing or removing one refreshes this.
+  const { data: imageData } = useQuery({
+    queryKey: ["schedule-images", storeId, "from", today],
+    queryFn: () =>
+      apiClient.get<{ images: ScheduleImageRow[] }>(`/stores/${storeId}/schedule-images`, {
+        from: today,
+      }),
+  });
+  const images = imageData?.images ?? [];
 
   // Defaults to the last 30 days rather than an unbounded "recent 20" — a
   // concrete range is what DateRangeField (and every other history/report
@@ -118,10 +133,40 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
         </div>
       </div>
 
+      {images.length > 0 && (
+        <section aria-label={t("pages.scheduleImageTitle")} className="space-y-3">
+          {images.map((image) => (
+            <Card key={image.id}>
+              <CardContent className="space-y-2 py-3">
+                <p className="text-sm font-semibold">
+                  {/* Locale-formatted like the rest of the app, not the raw 2026-09-14 keys. */}
+                  {format(parseLocalISO(image.startDate), "d MMM yyyy", { locale: dateLocale })} –{" "}
+                  {format(parseLocalISO(image.endDate), "d MMM yyyy", { locale: dateLocale })}
+                </p>
+                {/* The roster as the manager uploaded it. Tap opens it full size,
+                    where a phone can pinch-zoom the small print. */}
+                <a href={image.imageUrl} target="_blank" rel="noopener noreferrer" className="block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={image.imageUrl}
+                    alt={t("pages.scheduleImageAlt")}
+                    className="mx-auto max-h-[calc(75dvh/var(--app-zoom,1))] w-auto max-w-full rounded-lg border object-contain"
+                  />
+                </a>
+                {image.note && <p className="text-muted-foreground text-xs">{image.note}</p>}
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
+
       {isLoading ? (
         <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
       ) : upcoming.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{t("pages.scheduleNoPublishedSchedule")}</p>
+        // An image alone is a published schedule — don't tell the person there isn't one.
+        images.length === 0 && (
+          <p className="text-muted-foreground text-sm">{t("pages.scheduleNoPublishedSchedule")}</p>
+        )
       ) : (
         <div className="space-y-2">
           {upcoming.map((entry) => (

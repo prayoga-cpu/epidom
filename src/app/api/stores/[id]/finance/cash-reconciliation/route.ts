@@ -8,11 +8,17 @@
  * top-ups, paid-outs and safe drops being part of the arithmetic at all.
  *
  * Query params: from, to, staffId
+ *
+ * Manager/owner only — it is the manager's shift report (Back Office Finance and
+ * Shifts pages). Every shift's expected cash, counted cash and difference is here,
+ * so "the store is authenticated" is not enough: on the owner's shared iPad a
+ * cashier persona is the owner's session, and only this guard tells them apart.
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { requireManagerOrOwnerApi } from "@/lib/auth/require-manager-or-owner";
 import { buildCashReconciliationRows } from "@/lib/finance/report-aggregation";
 import { getShiftCashOnHand } from "@/lib/services/cash-drawer.service";
 
@@ -23,6 +29,9 @@ export const dynamic = "force-dynamic";
 
 export const GET = withApiHandler(
   async (request, { storeId }) => {
+    const guardResponse = await requireManagerOrOwnerApi(storeId!);
+    if (guardResponse) return guardResponse;
+
     const { searchParams } = new URL(request.url);
     const now = new Date();
     const from = new Date(

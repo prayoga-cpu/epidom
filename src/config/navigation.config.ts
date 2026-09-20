@@ -22,6 +22,7 @@ import {
   CalendarClock,
   Building2,
   ContactRound,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -146,6 +147,16 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: false,
         requiredPlan: "OPERATIONS",
         lockedHintKey: "nav.lockedHint.schedule",
+      },
+      {
+        // The manager's read-back of every till session. Attendance stays under
+        // Schedule; opening and finishing a shift is POS Mode's /pos/shift.
+        href: "/shifts",
+        labelKey: "nav.shifts",
+        icon: Wallet,
+        showBadge: false,
+        requiredPlan: "OPERATIONS",
+        lockedHintKey: "nav.lockedHint.shifts",
       },
     ],
   },

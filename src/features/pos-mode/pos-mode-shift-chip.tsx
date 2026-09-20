@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
-import { useMyShift } from "@/features/pos/hooks/use-my-shift";
+import { useActiveShift } from "@/features/pos/hooks/use-active-shift";
 
 /**
  * The status bar's shift label: green with the start time while the persona's
@@ -16,11 +16,11 @@ import { useMyShift } from "@/features/pos/hooks/use-my-shift";
  * just hasn't loaded yet.
  *
  * It is also what keeps the POS session's `shiftId` truthful on every POS route
- * (see useMyShift), which is why it mounts here and not only on the Shift page.
+ * (see useActiveShift), which is why it mounts here and not only on the Shift page.
  */
 export function PosModeShiftChip({ storeId }: { storeId: string }) {
   const { t, formatTimeOnly } = useI18n();
-  const { shift, allowed, known } = useMyShift(storeId);
+  const { shift, allowed, known } = useActiveShift(storeId);
 
   if (!allowed || !known) return null;
 

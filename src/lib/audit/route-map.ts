@@ -306,6 +306,13 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
   },
   "POST /api/stores/*/staff-schedules/bulk": { code: "schedule.bulk_write", severity: C, targetType: "StaffSchedule" },
   "POST /api/stores/*/staff-schedules/publish": { code: "schedule.publish", severity: C, targetType: "StaffSchedule" },
+  "POST /api/stores/*/schedule-images": { code: "schedule_image.publish", severity: I, targetType: "ScheduleImage" },
+  "DELETE /api/stores/*/schedule-images/*": {
+    code: "schedule_image.delete",
+    severity: C,
+    targetType: "ScheduleImage",
+    targetIdIndex: 1,
+  },
   "POST /api/stores/*/schedule-shifts": { code: "schedule_shift.create", severity: I, targetType: "ScheduleShift" },
   "PATCH /api/stores/*/schedule-shifts/*": {
     code: "schedule_shift.update",

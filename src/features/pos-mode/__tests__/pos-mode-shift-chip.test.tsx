@@ -15,9 +15,9 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const mockUseMyShift = vi.fn();
-vi.mock("@/features/pos/hooks/use-my-shift", () => ({
-  useMyShift: () => mockUseMyShift(),
+const mockUseActiveShift = vi.fn();
+vi.mock("@/features/pos/hooks/use-active-shift", () => ({
+  useActiveShift: () => mockUseActiveShift(),
 }));
 
 import { PosModeShiftChip } from "../pos-mode-shift-chip";
@@ -31,11 +31,11 @@ const openShift = {
   staffMember: { id: "staff-1", name: "Sam", role: "CASHIER" },
 };
 
-beforeEach(() => mockUseMyShift.mockReset());
+beforeEach(() => mockUseActiveShift.mockReset());
 
 describe("PosModeShiftChip", () => {
   it("open shift: shows the label and start time, and links to the Shift page", () => {
-    mockUseMyShift.mockReturnValue({ shift: openShift, allowed: true, known: true });
+    mockUseActiveShift.mockReturnValue({ shift: openShift, allowed: true, known: true });
     render(<PosModeShiftChip storeId="store-1" />);
 
     const link = screen.getByRole("link");
@@ -46,7 +46,7 @@ describe("PosModeShiftChip", () => {
   });
 
   it("names who is on charge in the tooltip", () => {
-    mockUseMyShift.mockReturnValue({ shift: openShift, allowed: true, known: true });
+    mockUseActiveShift.mockReturnValue({ shift: openShift, allowed: true, known: true });
     render(<PosModeShiftChip storeId="store-1" />);
     // The i18n mock returns the key, so the replace() placeholders are absent — but
     // the accessible name must be set and non-empty.
@@ -54,7 +54,7 @@ describe("PosModeShiftChip", () => {
   });
 
   it("no open shift: an amber 'No shift' that still leads to the Shift page", () => {
-    mockUseMyShift.mockReturnValue({ shift: null, allowed: true, known: true });
+    mockUseActiveShift.mockReturnValue({ shift: null, allowed: true, known: true });
     render(<PosModeShiftChip storeId="store-1" />);
 
     const link = screen.getByRole("link");
@@ -64,7 +64,7 @@ describe("PosModeShiftChip", () => {
   });
 
   it("is as compact as the Connected pill but keeps a tap target of at least 40px", () => {
-    mockUseMyShift.mockReturnValue({ shift: null, allowed: true, known: true });
+    mockUseActiveShift.mockReturnValue({ shift: null, allowed: true, known: true });
     render(<PosModeShiftChip storeId="store-1" />);
     const { className } = screen.getByRole("link");
     // Visible size: the same px-2 py-0.5 the status bar's Connected pill uses.
@@ -75,13 +75,13 @@ describe("PosModeShiftChip", () => {
   });
 
   it("renders nothing for a persona that holds no till (kitchen)", () => {
-    mockUseMyShift.mockReturnValue({ shift: null, allowed: false, known: false });
+    mockUseActiveShift.mockReturnValue({ shift: null, allowed: false, known: false });
     const { container } = render(<PosModeShiftChip storeId="store-1" />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it("renders nothing while the answer is unknown — never claims 'No shift' about a shift it hasn't loaded", () => {
-    mockUseMyShift.mockReturnValue({ shift: null, allowed: true, known: false });
+    mockUseActiveShift.mockReturnValue({ shift: null, allowed: true, known: false });
     const { container } = render(<PosModeShiftChip storeId="store-1" />);
     expect(container).toBeEmptyDOMElement();
   });

@@ -95,3 +95,15 @@ export function differenceTone(difference: number | null): DifferenceTone {
   if (difference === 0) return "balanced";
   return difference > 0 ? "over" : "short";
 }
+
+/**
+ * Chip colours for a tone — shared by the Finish screen's live difference, the
+ * Shift page's history and the Back Office shift report, so "short" is the same
+ * red everywhere a cash difference is shown.
+ */
+export const DIFFERENCE_TONE_CLASSES: Record<DifferenceTone, string> = {
+  pending: "bg-muted/60 text-muted-foreground",
+  balanced: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  over: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  short: "bg-destructive/10 text-destructive",
+};

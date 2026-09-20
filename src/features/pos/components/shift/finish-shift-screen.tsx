@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { ApiClientError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { closeShiftSchema, type CloseShiftInput } from "@/lib/validation/operations.schemas";
 import { mapPaymentMethodLabel } from "../../lib/order-status-display";
@@ -19,17 +20,18 @@ import {
   buildCashDetailRows,
   buildOtherPayments,
   cashDifference,
+  DIFFERENCE_TONE_CLASSES,
   differenceTone,
   type CashDetailKey,
   type DifferenceTone,
 } from "../../lib/shift-summary";
-import { useCloseShift, useShiftReport, type MyShift } from "../../hooks/use-my-shift";
+import { useCloseShift, useShiftReport, type TillShift } from "../../hooks/use-active-shift";
 import { EndShiftConfirmDialog } from "./end-shift-confirm-dialog";
 import type { EndedShift } from "./shift-closed-dialog";
 
 interface FinishShiftScreenProps {
   storeId: string;
-  shift: MyShift;
+  shift: TillShift;
   onBack: () => void;
   onEnded: (ended: EndedShift) => void;
 }
@@ -45,13 +47,6 @@ const CASH_ROW_LABELS: Record<CashDetailKey, string> = {
   paidOut: "pages.cashMovementTypePettyOut",
   safeDrop: "pages.cashMovementTypeDrop",
   tipsPaidOut: "pages.cashMovementTypePayout",
-};
-
-const TONE_CLASSES: Record<DifferenceTone, string> = {
-  pending: "bg-muted/60 text-muted-foreground",
-  balanced: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  over: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  short: "bg-destructive/10 text-destructive",
 };
 
 function MoneyRow({
@@ -152,8 +147,14 @@ export function FinishShiftScreen({ storeId, shift, onBack, onEnded }: FinishShi
         closingCash,
         notes: note?.trim() || undefined,
       });
-    } catch {
-      toast.error(t("pos.shift.endFailed"));
+    } catch (error) {
+      // 409: another account or tablet already ended it. Retrying can't work, and the
+      // page drops back to the open-shift form once it re-reads.
+      toast.error(
+        error instanceof ApiClientError && error.status === 409
+          ? t("pos.shift.alreadyEnded")
+          : t("pos.shift.endFailed")
+      );
       return;
     }
     setConfirmOpen(false);
@@ -266,7 +267,7 @@ export function FinishShiftScreen({ storeId, shift, onBack, onEnded }: FinishShi
 
                   <div
                     role="status"
-                    className={cn("rounded-xl px-3 py-2.5 text-sm", TONE_CLASSES[tone])}
+                    className={cn("rounded-xl px-3 py-2.5 text-sm", DIFFERENCE_TONE_CLASSES[tone])}
                   >
                     <div className="flex items-baseline justify-between gap-3 font-semibold">
                       <span>

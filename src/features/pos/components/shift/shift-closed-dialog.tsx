@@ -8,8 +8,9 @@ import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { isBluetoothSupported } from "@/lib/pwa/thermal-printer";
+import { shiftReportPath } from "@/lib/finance/shift-report-path";
 import { resolveReceiptLocale } from "@/lib/receipts/receipt-labels";
-import { useShiftReport, type ShiftReportResponse } from "../../hooks/use-my-shift";
+import { useShiftReport, type ShiftReportResponse } from "../../hooks/use-active-shift";
 import {
   usePrintShiftReport,
   type PrintShiftReportResult,
@@ -75,7 +76,7 @@ export function ShiftClosedDialog({ storeId, ended, onDone }: ShiftClosedDialogP
   }, [data]);
 
   const reportPath = (autoPrint: boolean) =>
-    `/store/${storeId}/pos/orders/daily-report?shiftId=${ended.shiftId}${autoPrint ? "" : "&print=0"}`;
+    shiftReportPath(storeId, ended.shiftId, { print: autoPrint });
 
   const handlePrint = async () => {
     if (!data) return;
@@ -106,10 +107,15 @@ export function ShiftClosedDialog({ storeId, ended, onDone }: ShiftClosedDialogP
         title={t("pos.shift.closedTitle")}
         description={name ? t("pos.shift.closedDesc").replace("{name}", name) : undefined}
         footer={
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:justify-end">
+          // Wraps instead of holding one row: four nowrap buttons together are wider
+          // than this dialog once a label runs longer than English's, and a
+          // non-wrapping justify-end row spills off its LEFT edge — that is what
+          // cropped Print. flex-1 (never w-full, AGENTS.md) lets the text buttons
+          // share a wrapped row; sm: keeps them at natural width, right-aligned.
+          <div className="flex w-full flex-wrap justify-end gap-2">
             <Button
               type="button"
-              className="h-11"
+              className="h-11 flex-1 sm:flex-none"
               onClick={handlePrint}
               disabled={!data || isPrinting}
             >
@@ -120,17 +126,29 @@ export function ShiftClosedDialog({ storeId, ended, onDone }: ShiftClosedDialogP
               )}
               {t("pos.shift.printReport")}
             </Button>
-            <Button type="button" variant="outline" className="h-11" onClick={handleCopyLink}>
-              <Copy className="mr-2 size-4" aria-hidden />
-              {t("pos.shift.copyLink")}
+            {/* Icon only — the name lives in aria-label. 44px square: the touch floor. */}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-11"
+              aria-label={t("pos.shift.copyLink")}
+              onClick={handleCopyLink}
+            >
+              <Copy className="size-4" aria-hidden />
             </Button>
-            <Button asChild variant="outline" className="h-11">
+            <Button asChild variant="outline" className="h-11 flex-1 sm:flex-none">
               <a href={reportPath(false)} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="mr-2 size-4" aria-hidden />
                 {t("pos.shift.openReport")}
               </a>
             </Button>
-            <Button type="button" variant="secondary" className="h-11" onClick={onDone}>
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-11 flex-1 sm:flex-none"
+              onClick={onDone}
+            >
               {t("pos.shift.done")}
             </Button>
           </div>

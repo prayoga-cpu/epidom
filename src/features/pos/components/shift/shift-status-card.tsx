@@ -4,10 +4,10 @@ import { Banknote, ReceiptText, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import type { MyShift } from "../../hooks/use-my-shift";
+import type { TillShift } from "../../hooks/use-active-shift";
 
 interface ShiftStatusCardProps {
-  shift: MyShift;
+  shift: TillShift;
   onFinish: () => void;
   onCashMovement: () => void;
   onViewReport: () => void;
@@ -53,7 +53,9 @@ export function ShiftStatusCard({
       </span>
 
       <div className="text-center">
-        <p className="text-muted-foreground text-xs">{t("pos.shift.user")}</p>
+        {/* Who STARTED it — the shift is the store's, and whoever is looking at it
+            may be a different account picking up at handover. */}
+        <p className="text-muted-foreground text-xs">{t("pos.shift.startedBy")}</p>
         <p className="text-lg font-bold break-words">{shift.staffMember?.name ?? "—"}</p>
       </div>
 

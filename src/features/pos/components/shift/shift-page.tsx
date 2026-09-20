@@ -4,12 +4,14 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useMyShift } from "../../hooks/use-my-shift";
+import { shiftReportPath } from "@/lib/finance/shift-report-path";
+import { useActiveShift } from "../../hooks/use-active-shift";
 import { usePosSession } from "../../hooks/use-pos-session";
 import { CashMovementDialog } from "./cash-movement-dialog";
 import { FinishShiftScreen } from "./finish-shift-screen";
 import { OpenShiftCard } from "./open-shift-card";
 import { ShiftClosedDialog, type EndedShift } from "./shift-closed-dialog";
+import { ShiftHistoryList } from "./shift-history-list";
 import { ShiftStatusCard } from "./shift-status-card";
 
 /**
@@ -22,7 +24,8 @@ import { ShiftStatusCard } from "./shift-status-card";
  */
 export function ShiftPage({ storeId }: { storeId: string }) {
   const { t } = useI18n();
-  const { shift, allowed, staffMemberId, isLoading, isError, refetch } = useMyShift(storeId);
+  const { shift, allowed, known, staffMemberId, isLoading, isError, refetch } =
+    useActiveShift(storeId);
   // The owner's persona is logged in one tick after first render on stores that
   // skip the staff picker — that gap is "not known yet", not "your role can't".
   const sessionReady = usePosSession((s) => s.isActive && s.storeId === storeId);
@@ -49,7 +52,11 @@ export function ShiftPage({ storeId }: { storeId: string }) {
     );
   }
 
-  if (isError) {
+  // Only when there is NO answer to show. The hook polls every minute, and a single
+  // failed poll (a Wi-Fi blip) leaves isError set beside a perfectly good last-known
+  // shift — replacing the page then would unmount the Finish screen and lose the
+  // count the cashier is typing. Last-known data still counts.
+  if (isError && !known) {
     return centered(
       <>
         <p className="text-sm">{t("pos.shift.loadFailed")}</p>
@@ -68,8 +75,7 @@ export function ShiftPage({ storeId }: { storeId: string }) {
     );
   }
 
-  const reportHref = (id: string) =>
-    `/store/${storeId}/pos/orders/daily-report?shiftId=${id}&print=0`;
+  const reportHref = (id: string) => shiftReportPath(storeId, id);
 
   return (
     <>
@@ -102,6 +108,9 @@ export function ShiftPage({ storeId }: { storeId: string }) {
               onCashMovement={() => setMovementOpen(true)}
             />
           )}
+          {/* Under either card: the store's finished shifts, so a handover can see
+              who ran the last one and how the drawer closed. */}
+          <ShiftHistoryList storeId={storeId} />
         </div>
       )}
 

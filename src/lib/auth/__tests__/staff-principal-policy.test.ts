@@ -73,6 +73,8 @@ describe("the staff allow-list itself", () => {
         "GET /api/stores/*/pos/orders/*/send-receipt",
         "GET /api/stores/*/reports/shift-report",
         "GET /api/stores/*/reservations",
+        // A roster image is the same for the whole team, read on My Schedule.
+        "GET /api/stores/*/schedule-images",
         "GET /api/stores/*/schedule-shifts",
         "GET /api/stores/*/loyalty-settings",
         "GET /api/stores/*/schedule/my-log",
@@ -129,6 +131,10 @@ describe("the staff allow-list itself", () => {
       ["PATCH", `/api/stores/${STORE}/finance/settings`], // read-only for staff
       ["POST", `/api/stores/${STORE}/cash-movements`],
       ["DELETE", `/api/stores/${STORE}/cash-movements/m1`],
+      // A staff account may READ the roster image; publishing or removing one is
+      // the manager's, and not being listed is what keeps it that way.
+      ["POST", `/api/stores/${STORE}/schedule-images`],
+      ["DELETE", `/api/stores/${STORE}/schedule-images/i1`],
     ];
     for (const [method, path] of forbidden) {
       expect(resolveStaffRoutePolicy(method, path), `${method} ${path}`).toBeNull();
@@ -440,5 +446,25 @@ describe("authorizeStaffPrincipal — cashier revamp routes (2.88.0)", () => {
     getActiveStaffSession.mockResolvedValue(persona({ role: "MANAGER", allowedPages: ["/pos", "/data"] }));
     expect(await status(req("POST", `/api/stores/${STORE}/discount-presets`, { name: "x" }))).toBe(403);
     expect(await status(req("GET", `/api/stores/${STORE}/customers/export`))).toBe(403);
+  });
+});
+
+describe("authorizeStaffPrincipal — the team's roster image", () => {
+  const read = () =>
+    status(req("GET", `/api/stores/${STORE}/schedule-images`, undefined, "?from=2026-09-19"));
+
+  it("a persona with My Schedule may read it — it is the same for everyone, so no staffId is required", async () => {
+    getActiveStaffSession.mockResolvedValue(persona());
+    expect(await read()).toBeNull();
+  });
+
+  it("a persona without the My Schedule page may not", async () => {
+    getActiveStaffSession.mockResolvedValue(persona({ allowedPages: ["/pos"] }));
+    expect(await read()).toBe(403);
+  });
+
+  it("with no persona at all there is nothing to read as", async () => {
+    getActiveStaffSession.mockResolvedValue(null);
+    expect(await read()).toBe(403);
   });
 });

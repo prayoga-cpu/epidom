@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRangeField } from "@/components/ui/date-range-field";
 import { ChevronLeft, ChevronRight, Settings2, Send, Plus, CalendarOff, Printer, Layers } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
@@ -19,7 +20,14 @@ import { ScheduleDayDetailDialog } from "./schedule-day-detail-dialog";
 import { ScheduleGridFilters } from "./schedule-grid-filters";
 import { ApplyShiftTemplateDialog } from "./apply-shift-template-dialog";
 import { ScheduleLog } from "./schedule-log";
+import { ScheduleImagePanel } from "./schedule-image-panel";
 import type { StaffRole } from "@prisma/client";
+
+// How the roster is kept: named shift blocks in the grid, or a photo/screenshot of
+// a schedule made elsewhere. Only which one the manager is LOOKING at — staff see
+// whatever exists for their dates, so a store can use both.
+type ScheduleView = "blocks" | "image";
+const VIEW_STORAGE_KEY = "epidom-schedule-view";
 
 // The grid must always cover at least a full week — shorter custom ranges
 // would leave the Draft/Publish-per-range workflow covering less than a
@@ -75,6 +83,27 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
   // same lens, so resetting it on prev/next/pick would be a papercut.
   const [staffFilter, setStaffFilter] = useState<string[]>([]);
   const [blockFilter, setBlockFilter] = useState<string[]>([]);
+
+  // Remembered per device so a manager who keeps the roster as an image doesn't
+  // land on the empty grid every visit. Read after mount (not in the initial
+  // state) so server and client render the same first frame; storage can be
+  // blocked or empty, in which case it is just "blocks".
+  const [view, setView] = useState<ScheduleView>("blocks");
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(VIEW_STORAGE_KEY) === "image") setView("image");
+    } catch {
+      // ignore
+    }
+  }, []);
+  const changeView = (next: ScheduleView) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      // ignore
+    }
+  };
 
   const today = todayLocalISO();
 
@@ -195,6 +224,7 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("pages.scheduleTitle")}</h1>
         </div>
+        {view === "blocks" && (
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setBlocksDialogOpen(true)}>
             <Settings2 className="mr-2 h-4 w-4" />
@@ -217,7 +247,16 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
             {isRangePublished ? t("pages.schedulePublished") : t("pages.schedulePublishWeek")}
           </Button>
         </div>
+        )}
       </div>
+
+      {/* Two ways to publish a roster. Same date range either way (below). */}
+      <Tabs value={view} onValueChange={(v) => changeView(v as ScheduleView)}>
+        <TabsList>
+          <TabsTrigger value="blocks">{t("pages.scheduleViewBlocks")}</TabsTrigger>
+          <TabsTrigger value="image">{t("pages.scheduleViewImage")}</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => shiftRange(-rangeDays.length)}>
@@ -252,6 +291,15 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
         />
       </div>
 
+      {view === "image" ? (
+        <ScheduleImagePanel
+          key={`${rangeFrom}_${rangeTo}`}
+          storeId={storeId}
+          rangeFrom={rangeFrom}
+          rangeTo={rangeTo}
+        />
+      ) : (
+      <>
       <ScheduleGridFilters
         staff={staff}
         scheduleShifts={scheduleShifts}
@@ -367,6 +415,8 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
         </table>
       </div>
       {isLoading && <p className="text-muted-foreground text-sm">{t("common.loading")}</p>}
+      </>
+      )}
 
       <div className="border-t pt-4">
         <ScheduleLog storeId={storeId} staff={staff} />

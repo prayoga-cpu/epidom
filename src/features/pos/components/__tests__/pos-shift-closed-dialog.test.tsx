@@ -7,7 +7,7 @@ vi.mock("@/components/lang/i18n-provider", () => ({
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 const mockReport = vi.fn();
-vi.mock("@/features/pos/hooks/use-my-shift", () => ({ useShiftReport: () => mockReport() }));
+vi.mock("@/features/pos/hooks/use-active-shift", () => ({ useShiftReport: () => mockReport() }));
 
 const mockPrint = vi.fn();
 vi.mock("@/features/pos/hooks/use-print-shift-report", () => ({
@@ -237,5 +237,34 @@ describe("ShiftClosedDialog — the link", () => {
     const { onDone } = await renderDialog();
     fireEvent.click(screen.getByRole("button", { name: "pos.shift.done" }));
     expect(onDone).toHaveBeenCalled();
+  });
+});
+
+describe("ShiftClosedDialog — footer layout", () => {
+  it("Copy link is icon-only: named for screen readers, no visible text, a 44px target", async () => {
+    await renderDialog();
+    const copy = screen.getByRole("button", { name: "pos.shift.copyLink" });
+    expect(copy.textContent).toBe("");
+    expect(copy.querySelector("svg")).not.toBeNull();
+    expect(copy.className).toContain("size-11");
+  });
+
+  it("wraps rather than holding one row, so no button can be pushed past the dialog's edge", async () => {
+    await renderDialog();
+    const row = printButton().parentElement!;
+    // A non-wrapping justify-end row spills off its left edge — the cropped Print.
+    expect(row.className).toContain("flex-wrap");
+    expect(row.className).not.toMatch(/(^|\s)(sm:)?grid(\s|$)/);
+
+    // The text buttons share a wrapped row with flex-1 — never w-full (AGENTS.md).
+    const textButtons = [
+      printButton(),
+      screen.getByRole("link", { name: /pos\.shift\.openReport/ }),
+      screen.getByRole("button", { name: "pos.shift.done" }),
+    ];
+    for (const el of textButtons) {
+      expect(el.className).toContain("flex-1");
+      expect(el.className).not.toContain("w-full");
+    }
   });
 });

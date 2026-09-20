@@ -177,6 +177,10 @@ const POLICY: Record<string, StaffRoutePolicy> = {
   "GET /api/stores/*/schedule/my-log": post(MY_SCHEDULE, { selfRequired: true }),
   "GET /api/stores/*/staff-schedules": post(MY_SCHEDULE, { selfRequired: true }),
   "GET /api/stores/*/schedule-shifts": post(MY_SCHEDULE),
+  // A roster image is the same for the whole team, so any persona with My
+  // Schedule may read it — no selfRequired. Writes stay manager/owner-only and
+  // are not listed (default-deny keeps them off a linked staff account).
+  "GET /api/stores/*/schedule-images": post(MY_SCHEDULE),
 };
 
 // ---------------------------------------------------------------------------

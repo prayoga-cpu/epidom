@@ -87,6 +87,36 @@ describe("mergeUnifiedLog", () => {
     expect(cashIn.id).not.toBe(cashOut.id);
   });
 
+  // A shift's opening float and closing COUNT are statements of what is in the drawer, not
+  // money crossing it. Both borrow CASH_IN / CASH_OUT for the timeline, so each row says
+  // what it really is — otherwise the cash log reads balances as movements.
+  it("labels each row with what it IS: opening float, closing count, or a real movement", () => {
+    const rows = mergeUnifiedLog({
+      attendanceRecords: [attendance("a1", "CLOCK_IN", "2026-08-10T00:30:00.000Z")],
+      shifts: [shift("s1", "2026-08-10T01:00:00.000Z", "2026-08-10T09:00:00.000Z", 100, 150)],
+      cashMovements: [movement("m1", "TIP", "2026-08-10T04:00:00.000Z")],
+    });
+    const byId = Object.fromEntries(rows.map((r) => [r.id, r.origin]));
+
+    expect(byId["a1"]).toBe("attendance");
+    expect(byId["s1-in"]).toBe("shift-open");
+    expect(byId["s1-out"]).toBe("shift-close");
+    expect(byId["movement-m1"]).toBe("movement");
+  });
+
+  // Shift.notes is written at Finish shift — it is the CLOSING note. It used to ride on the
+  // opening row too, pinning "short 5k" to the moment the float was counted in.
+  it("puts the closing note on the closing row only", () => {
+    const closed: ShiftInput = {
+      ...shift("s1", "2026-08-10T01:00:00.000Z", "2026-08-10T09:00:00.000Z", 100, 150),
+      notes: "short 5k",
+    };
+    const rows = mergeUnifiedLog({ attendanceRecords: [], shifts: [closed] });
+
+    expect(rows.find((r) => r.origin === "shift-open")!.notes).toBeNull();
+    expect(rows.find((r) => r.origin === "shift-close")!.notes).toBe("short 5k");
+  });
+
   it("an open shift (no closedAt) only produces a CASH_IN row", () => {
     const rows = mergeUnifiedLog({
       attendanceRecords: [],

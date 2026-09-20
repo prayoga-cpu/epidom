@@ -14,6 +14,7 @@ import {
 } from "@/lib/services/pos-order-settlement";
 import { claimOrderTransition } from "@/lib/services/order-status.helpers";
 import { allocateQueueNumber } from "@/lib/services/order-queue-number";
+import { resolveSaleShiftId } from "@/lib/services/shift-link";
 import { resolveOrderDiscount } from "@/lib/services/pos-discount.service";
 import { resolveFinanceSettingsForOrder } from "@/lib/services";
 import { computeOrderCharges } from "@/lib/finance/order-charges";
@@ -250,6 +251,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     // Fresh hold.
     const orderNumber = generateOrderNumber();
+    // The client's idea of the open shift can be a minute stale on a shared till.
+    const shiftId = await resolveSaleShiftId(storeId, input.shiftId);
 
     const created = await prisma.$transaction(async (tx) => {
       // A hold is born with its call-out number; /finalize later updates this
@@ -262,7 +265,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           queueNumber,
           storeId,
           customerName: customer?.name ?? input.customerName ?? "Walk-in",
-          shiftId: input.shiftId,
+          shiftId,
           // Inert placeholder — never charged, overwritten with the real
           // choice at /finalize. HELD orders never reach payment/stock logic.
           paymentMethod: "CASH",

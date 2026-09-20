@@ -94,6 +94,29 @@ export const openShiftSchema = z.object({
 });
 export type OpenShiftInput = z.infer<typeof openShiftSchema>;
 
+/**
+ * GET /stores/[id]/shifts query. `take` is CLAMPED to the route's ceiling, not
+ * rejected — the Shift page's "Show more" widens its request by 10 each tap and
+ * must keep working past 100. Anything else malformed is a 400: `take=abc` used to
+ * reach Prisma as NaN and 500, and a mistyped `status` used to be ignored, so the
+ * "open shift" read could quietly return a closed one.
+ */
+export const listShiftsQuerySchema = z.object({
+  take: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .transform((n) => Math.min(n, 100))
+    .default(20),
+  skip: z.coerce.number().int().min(0).default(0),
+  status: z.enum(["open", "closed"]).optional(),
+  staffId: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+});
+export type ListShiftsQuery = z.infer<typeof listShiftsQuerySchema>;
+
 export const closeShiftSchema = z.object({
   closingCash: z.number().min(0),
   notes: z.string().max(500).optional(),

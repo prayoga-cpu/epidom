@@ -70,3 +70,58 @@ export const publishScheduleSchema = z.object({
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
 });
 export type PublishScheduleInput = z.infer<typeof publishScheduleSchema>;
+
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * A REAL calendar day, not merely YYYY-MM-DD-shaped. Date.UTC rolls an impossible day over
+ * ("2026-02-31" becomes 3 March), so an unchecked key is stored as a different date than the
+ * one asked for and the panel's exact-range match could never find its own row again.
+ * Round-tripping through a Date catches every such case (month 13, day 45, Feb 29 off-leap).
+ */
+export function isRealDateKey(key: string): boolean {
+  if (!DATE_KEY.test(key)) return false;
+  const date = new Date(`${key}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === key;
+}
+
+const realDateKey = z
+  .string()
+  .regex(DATE_KEY, "Use YYYY-MM-DD")
+  .refine(isRealDateKey, "Not a real calendar date");
+
+/**
+ * A picture of a roster made outside Epidom, published to every staff member's
+ * My Schedule for the dates it covers (see ScheduleImage in schema.prisma).
+ *
+ * The URL must be one our own upload endpoint produced (Vercel Blob), never a
+ * caller-chosen host: it is rendered in an <img> and opened from an <a href> on
+ * every staff device, and z.string().url() alone accepts `javascript:`. Same rule
+ * as the feedback screenshot. Zod runs refinements even when .url() fails, so
+ * new URL() must not throw.
+ */
+export const scheduleImageSchema = z
+  .object({
+    imageUrl: z
+      .string()
+      .max(2048)
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return (
+            url.protocol === "https:" && url.hostname.endsWith(".public.blob.vercel-storage.com")
+          );
+        } catch {
+          return false;
+        }
+      }, "Invalid image URL"),
+    startDate: realDateKey,
+    endDate: realDateKey,
+    note: z.string().trim().max(200).optional(),
+  })
+  // YYYY-MM-DD sorts lexically, so string comparison is date comparison.
+  .refine((v) => v.endDate >= v.startDate, {
+    message: "endDate must be on or after startDate",
+    path: ["endDate"],
+  });
+export type ScheduleImageInput = z.infer<typeof scheduleImageSchema>;
