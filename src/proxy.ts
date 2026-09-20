@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { setRequestId } from "./lib/request-context";
+import { sessionCookieNames } from "./lib/auth/cookies";
 import {
   DEFAULT_LOCALE,
   LOCALE_HEADER,
@@ -157,9 +158,11 @@ export default async function proxy(req: NextRequest) {
   // prefix. This only ever checks presence (the Edge runtime can't verify a
   // session against the DB) — used below to gate the resume-redirect, and
   // further down to gate protected-route access.
+  const [plainSessionCookieName, secureSessionCookieName] = sessionCookieNames(
+    process.env.VERCEL_ENV
+  );
   const sessionCookie =
-    req.cookies.get("better-auth.session_token") ||
-    req.cookies.get("__Secure-better-auth.session_token");
+    req.cookies.get(plainSessionCookieName) || req.cookies.get(secureSessionCookieName);
 
   // Resume a signed-in returning visitor straight to their last app page
   // instead of showing marketing content — checked here, before any

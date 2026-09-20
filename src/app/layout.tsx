@@ -65,6 +65,12 @@ export const viewport: Viewport = {
   themeColor: "#18181b",
 };
 
+// GA4 and Meta Pixel carry hardcoded production IDs. A Vercel preview (dev.epidom.fr)
+// is public and shares the .epidom.fr cookie domain, so mounting them there would feed
+// every tester's clicks, sign-ups and checkouts into production's analytics and ad
+// optimisation. Unset VERCEL_ENV (local dev/build) keeps tracking as it always was.
+const TRACKING_ENABLED = !process.env.VERCEL_ENV || process.env.VERCEL_ENV === "production";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -77,8 +83,8 @@ export default function RootLayout({
             or 150% preference doesn't render at 100% and snap on hydration.
             See src/lib/app-zoom.ts. */}
         <script dangerouslySetInnerHTML={{ __html: ZOOM_BOOT_SCRIPT }} />
-        <MetaPixelScript />
-        <MetaPixelConsentBridge />
+        {TRACKING_ENABLED && <MetaPixelScript />}
+        {TRACKING_ENABLED && <MetaPixelConsentBridge />}
       </head>
       <body
         className={`font-sans ${bebasNeue.variable} ${GeistSans.variable} ${GeistMono.variable}`}
@@ -92,8 +98,8 @@ export default function RootLayout({
               <section>
                 {children}
                 <ConditionalAnalytics />
-                <GoogleAnalyticsScript />
-                <GoogleAnalyticsConsentBridge />
+                {TRACKING_ENABLED && <GoogleAnalyticsScript />}
+                {TRACKING_ENABLED && <GoogleAnalyticsConsentBridge />}
                 <WebVitalsReporter />
               </section>
             </QueryProvider>

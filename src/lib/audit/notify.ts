@@ -1,4 +1,5 @@
 import { inngest } from "@/lib/inngest/client";
+import { isAdminEmail } from "@/lib/admin";
 
 /**
  * Alerting for critical audit events.
@@ -55,11 +56,23 @@ export async function notifyCriticalAction(
 /**
  * Tell the affected account holder that an admin changed something on their
  * account, at the moment it happens.
+ *
+ * On a Vercel preview (dev.epidom.fr) only admins are notified. The preview runs
+ * against a nightly clone of production's users but shares production's Inngest
+ * and Resend keys, so a temp-password or plan change made there for a real
+ * customer would email that customer about a change to a throwaway copy of their
+ * account. Suppressing at the emit point holds whichever deployment Inngest
+ * routes the event to. Production behaviour is unchanged.
  */
 export async function notifyAccountAction(
   target: { id: string; email: string; name: string },
   action: AccountActionCode
 ): Promise<void> {
+  if (process.env.VERCEL_ENV === "preview" && !isAdminEmail(target.email)) {
+    console.info(`[audit] preview: account-change notice (${action}) suppressed for ${target.id}`);
+    return;
+  }
+
   try {
     await inngest.send({
       name: "audit/account.changed",
