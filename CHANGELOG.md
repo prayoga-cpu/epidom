@@ -9,6 +9,16 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.96.0] - 2026-09-20 · feat
+
+Zoom is now available everywhere — on the till as well as in the Back Office, on a phone as well as on a desktop — and it no longer pushes a phone's layout out of shape.
+
+- **Zoom on the till.** The **More** menu in POS Mode now has a **Zoom** row next to Language and Dark mode, so a cashier can fit more of the queue on a small counter screen, or enlarge everything for a kitchen display, without leaving the till. Until now zoom only existed in the Back Office account menu.
+- **Zoom in the Back Office menu on a phone.** The menu that slides in from the right now has a **Zoom** control alongside Language and Theme — where you'd look for it on a phone. The account menu still has it too.
+- **A phone can't be zoomed into a broken layout.** Zooming in leaves the page less room to lay out in, and a phone has little to spare: at 125% or 150% the page was laid out narrower than the app is built for, so content could run off the edge. A phone now zooms **out** freely (70–90%) but stops zooming in once the page would get too narrow, and the control says so — "Screen too narrow to zoom in further". Tablets and desktop keep the full 70–150%.
+- **Your choice is kept.** Turn a tablet to portrait and the zoom steps down to what fits; turn it back and your 150% returns. The saved setting is never overwritten just because the screen was narrow for a moment.
+- **Fix: a few sizes ignored the zoom.** The slide-in menu's width, and the "no orders" and "no tables" screens on the till, were sized against the physical screen rather than the zoomed page, so at 70% or 150% they came out too narrow, too wide or too short. They now follow the zoom like the rest of the layout.
+
 ## [2.95.0] - 2026-09-20 · feat
 
 Customers can give their WhatsApp number — and their name and email, if they like — on the customer screen, and a receipt now emails itself.

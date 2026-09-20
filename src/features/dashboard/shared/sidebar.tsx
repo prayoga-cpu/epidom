@@ -21,6 +21,7 @@ import LangSwitcher from "@/components/lang/lang-switcher";
 import { StoreSwitcher } from "./store-switcher";
 import { OfflineSyncTrigger, PwaInstallTrigger } from "./pwa-install-dialog";
 import { ThemeToggle } from "./theme-toggle";
+import { ZoomControl } from "./zoom-control";
 import { FeedbackButton } from "@/features/dashboard/feedback/components/feedback-button";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { APP_VERSION } from "@/lib/version";
@@ -288,6 +289,13 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
                 {t("common.language.label")}
               </span>
               <LangSwitcher className="w-full" />
+            </div>
+            {/* Zoom sits with the other per-device display preferences. The account
+                dropdown carries it too, but on a phone the drawer is where language
+                and theme live, so it is where someone looking for it will look. */}
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs font-medium">{t("nav.zoom")}</span>
+              <ZoomControl label="none" />
             </div>
             {/* Quick actions: theme + feedback. Styled for the light card surface
                 (override the topbar-only cream color to the themed foreground). */}

@@ -5,13 +5,14 @@ import { useTheme } from "next-themes";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { LANGUAGE_OPTIONS } from "@/components/lang/lang-switcher";
+import { ZoomControl } from "@/features/dashboard/shared/zoom-control";
 import { cn } from "@/lib/utils";
 
 /**
- * Language and light/dark, for the POS Mode More menu — the same two device
- * preferences Back Office keeps in its Topbar (LangSwitcher, ThemeToggle),
- * which POS Mode's shell deliberately doesn't mount. Both are per-device, not
- * per-persona, so every role sees them.
+ * Language, light/dark and zoom, for the POS Mode More menu — the same device
+ * preferences Back Office keeps in its Topbar and account dropdown (LangSwitcher,
+ * ThemeToggle, ZoomControl), which POS Mode's shell deliberately doesn't mount.
+ * All are per-device, not per-persona, so every role sees them.
  *
  * Not a reuse of those two components: both are styled for the dark navy
  * Topbar (hardcoded cream-on-navy colours) and LangSwitcher opens an absolute
@@ -76,6 +77,12 @@ export function PosModePreferences() {
           onCheckedChange={(on) => setTheme(on ? "dark" : "light")}
         />
       </label>
+
+      {/* Zoom is the third per-device preference, and the one a till needs most —
+          a counter screen is exactly where the browser's own zoom is out of reach
+          (locked viewport, installed PWA). The shell's More menu is the only
+          route to it in POS Mode, which has no topbar or account dropdown. */}
+      <ZoomControl label="inline" />
     </div>
   );
 }

@@ -324,7 +324,7 @@ export function TablesManager({ storeId }: TablesManagerProps) {
       </div>
 
       {tables.length === 0 ? (
-        <div className="text-muted-foreground flex h-[50dvh] flex-col items-center justify-center gap-4">
+        <div className="text-muted-foreground flex h-[calc(50dvh/var(--app-zoom,1))] flex-col items-center justify-center gap-4">
           <div className="bg-muted rounded-full p-6">
             <Users className="h-10 w-10 opacity-40" />
           </div>

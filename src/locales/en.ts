@@ -1021,6 +1021,7 @@ export const en = {
     zoomIn: "Zoom in",
     zoomOut: "Zoom out",
     zoomReset: "Reset zoom to 100%",
+    zoomLimit: "Screen too narrow to zoom in further",
     finance: "Finance Reports",
     customDevelopment: "Custom Development",
     owner: "Owner Dashboard",

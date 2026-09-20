@@ -1026,6 +1026,7 @@ export const fr = {
     zoomIn: "Agrandir l'affichage",
     zoomOut: "Réduire l'affichage",
     zoomReset: "Rétablir à 100 %",
+    zoomLimit: "Écran trop étroit pour agrandir davantage",
     owner: "Tableau de Bord Propriétaire",
     tryEpidom: "Essayer Epidom",
     lockedHint: {

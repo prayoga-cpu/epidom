@@ -93,3 +93,30 @@ describe("PosModePreferences — dark mode", () => {
     expect(screen.getByLabelText("common.theme.dark")).toBe(screen.getByRole("switch"));
   });
 });
+
+describe("PosModePreferences — zoom", () => {
+  beforeEach(() => {
+    currentLocale = "en";
+    resolvedTheme = "light";
+    window.localStorage.clear();
+    document.documentElement.style.zoom = "";
+    document.documentElement.style.removeProperty("--app-zoom");
+    document.documentElement.removeAttribute("data-app-zoomed");
+  });
+
+  // POS Mode has no topbar or account dropdown, so this card is the only place
+  // a cashier can reach zoom — the browser's own is out of reach on a locked
+  // viewport or an installed PWA.
+  it("offers the zoom stepper next to language and dark mode", () => {
+    render(<PosModePreferences />);
+    expect(screen.getByText("nav.zoom")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "nav.zoomIn" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "nav.zoomOut" })).toBeInTheDocument();
+  });
+
+  it("zooms the app when a step is tapped", () => {
+    render(<PosModePreferences />);
+    fireEvent.click(screen.getByRole("button", { name: "nav.zoomOut" }));
+    expect(document.documentElement.style.zoom).toBe("0.9");
+  });
+});

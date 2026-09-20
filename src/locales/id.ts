@@ -1037,6 +1037,7 @@ export const id = {
     zoomIn: "Perbesar tampilan",
     zoomOut: "Perkecil tampilan",
     zoomReset: "Kembalikan ke 100%",
+    zoomLimit: "Layar terlalu sempit untuk memperbesar lagi",
     finance: "Laporan Keuangan",
     customDevelopment: "Pengembangan Kustom",
     owner: "Owner Dashboard",

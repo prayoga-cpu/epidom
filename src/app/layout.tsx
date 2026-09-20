@@ -11,6 +11,7 @@ import { GoogleAnalyticsConsentBridge } from "@/components/analytics/google-anal
 import { WebVitalsReporter } from "@/components/analytics/web-vitals-reporter";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { PwaProvider } from "@/components/providers/pwa-provider";
+import { AppZoomSync } from "@/components/providers/app-zoom-sync";
 import { ChunkErrorReloader } from "@/components/providers/chunk-error-reloader";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -94,6 +95,7 @@ export default function RootLayout({
           <ErrorBoundary>
             <QueryProvider>
               <PwaProvider />
+              <AppZoomSync />
               <ChunkErrorReloader />
               <section>
                 {children}

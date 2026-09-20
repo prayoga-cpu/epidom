@@ -1,21 +1,34 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import {
   DEFAULT_ZOOM,
+  MIN_LAYOUT_WIDTH,
   ZOOM_BOOT_SCRIPT,
   ZOOM_CHANGE_EVENT,
   ZOOM_LEVELS,
   ZOOM_STORAGE_KEY,
   applyZoom,
   canStepZoom,
+  maxZoomForWidth,
   normalizeZoom,
+  readEffectiveZoom,
+  readMaxZoom,
   readStoredZoom,
+  resolveZoom,
   setStoredZoom,
   stepZoom,
   subscribeZoom,
 } from "@/lib/app-zoom";
 
+const JSDOM_DEFAULT_WIDTH = 1024;
+
+/** `innerWidth` is what the cap reads; jsdom exposes it as a plain settable value. */
+function setViewportWidth(width: number) {
+  Object.defineProperty(window, "innerWidth", { configurable: true, writable: true, value: width });
+}
+
 describe("app zoom", () => {
   beforeEach(() => {
+    setViewportWidth(JSDOM_DEFAULT_WIDTH);
     window.localStorage.clear();
     document.documentElement.style.zoom = "";
     // Reset alongside `zoom` — a value left behind by one case would otherwise
@@ -171,12 +184,139 @@ describe("app zoom", () => {
       unsubscribe();
     });
 
+    // The ceiling moves with the screen (rotation, a dragged window), and a
+    // control that is already open has to re-read it.
+    it("reports the screen being resized", () => {
+      const onChange = vi.fn();
+      const unsubscribe = subscribeZoom(onChange);
+      window.dispatchEvent(new Event("resize"));
+      expect(onChange).toHaveBeenCalledTimes(1);
+      unsubscribe();
+      window.dispatchEvent(new Event("resize"));
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
     it("ignores unrelated storage keys", () => {
       const onChange = vi.fn();
       const unsubscribe = subscribeZoom(onChange);
       window.dispatchEvent(new StorageEvent("storage", { key: "some-other-key" }));
       expect(onChange).not.toHaveBeenCalled();
       unsubscribe();
+    });
+  });
+
+  // Zooming in shrinks the layout (`innerWidth / zoom`) while media queries keep
+  // reading the physical screen, so on a phone a zoomed-in layout is the phone
+  // layout squeezed narrower than it was built for. These pin the cap that
+  // stops that — the numbers are the layout width at the boundary level.
+  describe("maxZoomForWidth", () => {
+    it("allows every level once the screen is wide enough to hold the top one", () => {
+      const top = ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
+      // 563 / 1.5 = 375.3 — just inside the floor.
+      expect(maxZoomForWidth(Math.ceil(MIN_LAYOUT_WIDTH * (top / 100)))).toBe(top);
+      expect(maxZoomForWidth(1280)).toBe(top);
+      expect(maxZoomForWidth(1920)).toBe(top);
+    });
+
+    it("stops at the last level whose layout is still at least the minimum width", () => {
+      expect(maxZoomForWidth(562)).toBe(125); // 562 / 1.5 = 374.7: one px short
+      expect(maxZoomForWidth(430)).toBe(110); // iPhone Pro Max: 391 at 110%, 344 at 125%
+      expect(maxZoomForWidth(412)).toBe(100); // Pixel: 374.5 at 110%
+      expect(maxZoomForWidth(390)).toBe(100); // iPhone: 354 at 110%
+    });
+
+    // The cap only ever removes zoom-IN. A 360px Android would otherwise be
+    // dropped to 90% at its own default just to reach a 375px layout.
+    it("never forces the UI below 100%", () => {
+      expect(maxZoomForWidth(375)).toBe(DEFAULT_ZOOM);
+      expect(maxZoomForWidth(360)).toBe(DEFAULT_ZOOM);
+      expect(maxZoomForWidth(320)).toBe(DEFAULT_ZOOM);
+    });
+
+    it("does not restrict anything when the width is unusable", () => {
+      const top = ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
+      expect(maxZoomForWidth(NaN)).toBe(top);
+      expect(maxZoomForWidth(0)).toBe(top);
+      expect(maxZoomForWidth(-5)).toBe(top);
+    });
+  });
+
+  describe("resolveZoom", () => {
+    it("holds a saved zoom-in to the screen's ceiling", () => {
+      expect(resolveZoom(150, 390)).toBe(100);
+      expect(resolveZoom(150, 430)).toBe(110);
+      expect(resolveZoom(125, 800)).toBe(125);
+    });
+
+    it("leaves zooming out alone — a wider layout is always safe", () => {
+      expect(resolveZoom(70, 390)).toBe(70);
+      expect(resolveZoom(90, 320)).toBe(90);
+    });
+  });
+
+  describe("on a narrow screen", () => {
+    it("applyZoom holds a saved zoom-in to what fits, and clears it entirely at 100%", () => {
+      setViewportWidth(390);
+      applyZoom(150);
+      expect(document.documentElement.style.zoom).toBe("");
+      expect(document.documentElement.style.getPropertyValue("--app-zoom")).toBe("");
+      expect(document.documentElement.hasAttribute("data-app-zoomed")).toBe(false);
+    });
+
+    it("applyZoom applies the highest level that does fit", () => {
+      setViewportWidth(430);
+      applyZoom(150);
+      expect(document.documentElement.style.zoom).toBe("1.1");
+      expect(document.documentElement.style.getPropertyValue("--app-zoom")).toBe("1.1");
+    });
+
+    it("still zooms out", () => {
+      setViewportWidth(390);
+      applyZoom(70);
+      expect(document.documentElement.style.zoom).toBe("0.7");
+    });
+
+    // The saved value is the user's choice; the cap is a property of the screen
+    // it is on right now. Rotating must give the choice back.
+    it("keeps the saved preference, and restores it when the screen widens again", () => {
+      window.localStorage.setItem(ZOOM_STORAGE_KEY, "150");
+      setViewportWidth(390);
+      expect(readStoredZoom()).toBe(150);
+      expect(readEffectiveZoom()).toBe(100);
+      expect(readMaxZoom()).toBe(100);
+
+      setViewportWidth(1024);
+      expect(readEffectiveZoom()).toBe(150);
+      expect(readMaxZoom()).toBe(150);
+    });
+
+    it("re-applies on a later applyZoom once the screen has changed", () => {
+      setViewportWidth(390);
+      applyZoom(150);
+      expect(document.documentElement.style.zoom).toBe("");
+      setViewportWidth(1024);
+      applyZoom(150);
+      expect(document.documentElement.style.zoom).toBe("1.5");
+    });
+  });
+
+  describe("stepping under a ceiling", () => {
+    it("stops going up at the ceiling", () => {
+      expect(stepZoom(100, 1, 100)).toBe(100);
+      expect(canStepZoom(100, 1, 100)).toBe(false);
+      expect(stepZoom(100, 1, 110)).toBe(110);
+      expect(canStepZoom(100, 1, 110)).toBe(true);
+      expect(stepZoom(110, 1, 110)).toBe(110);
+    });
+
+    it("never restricts stepping down", () => {
+      expect(stepZoom(100, -1, 100)).toBe(90);
+      expect(canStepZoom(100, -1, 100)).toBe(true);
+    });
+
+    it("defaults to the ladder's own top when no ceiling is given", () => {
+      expect(stepZoom(125, 1)).toBe(150);
+      expect(canStepZoom(150, 1)).toBe(false);
     });
   });
 
@@ -213,6 +353,44 @@ describe("app zoom", () => {
 
       expect(booted).toEqual(snapshot());
       expect(booted).toEqual({ zoom: "0.8", appZoom: "0.8", marked: true });
+    });
+
+    // The same cap has to hold before React mounts — otherwise a phone with a
+    // saved 150% paints its first frame at 150% and only corrects on hydration.
+    it("holds a saved zoom-in to what the screen can take, like applyZoom", () => {
+      window.localStorage.setItem(ZOOM_STORAGE_KEY, "150");
+
+      for (const width of [390, 430, 450, 562, 563, 1024]) {
+        for (const key of ["zoom", "--app-zoom"]) {
+          document.documentElement.style.removeProperty(key);
+        }
+        document.documentElement.style.zoom = "";
+        document.documentElement.removeAttribute("data-app-zoomed");
+
+        setViewportWidth(width);
+        run();
+        const booted = document.documentElement.style.zoom;
+
+        document.documentElement.style.zoom = "";
+        document.documentElement.style.removeProperty("--app-zoom");
+        applyZoom(150);
+        expect(booted, `width ${width}`).toBe(document.documentElement.style.zoom);
+      }
+    });
+
+    it("does not zoom in at all on a phone", () => {
+      window.localStorage.setItem(ZOOM_STORAGE_KEY, "150");
+      setViewportWidth(390);
+      run();
+      expect(document.documentElement.style.zoom).toBe("");
+      expect(document.documentElement.hasAttribute("data-app-zoomed")).toBe(false);
+    });
+
+    it("still zooms a phone out", () => {
+      window.localStorage.setItem(ZOOM_STORAGE_KEY, "70");
+      setViewportWidth(390);
+      run();
+      expect(document.documentElement.style.zoom).toBe("0.7");
     });
 
     it("leaves the document alone at the default, when unset, or on junk", () => {

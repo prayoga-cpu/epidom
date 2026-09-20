@@ -38,6 +38,41 @@ const MIN_ZOOM = ZOOM_LEVELS[0];
 const MAX_ZOOM = ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
 
 /**
+ * The narrowest layout, in CSS px, the app is built to render — AGENTS.md's
+ * "375 px (mobile)" floor. Zooming in shrinks the layout viewport to
+ * `innerWidth / zoom`, but media queries keep reading the *physical* screen
+ * (measured in Chromium: `innerWidth` 390 and `(min-width: 640px)` false at
+ * every zoom, while the layout was 260px wide at 150%). So a phone at 150% still
+ * gets the phone layout, just squeezed into 260px, and overflows. Rather than
+ * let it, zooming in stops where the layout would drop below this width — see
+ * `maxZoomForWidth`.
+ */
+export const MIN_LAYOUT_WIDTH = 375;
+
+/**
+ * Highest level the given physical viewport can zoom to without laying out
+ * narrower than `MIN_LAYOUT_WIDTH`. Never below the default: a 360px phone still
+ * renders at 100%, it just can't zoom *in* — this caps, it never forces a
+ * smaller UI. Zooming out only widens the layout, so it is never restricted.
+ *
+ * Only phones (and desktop windows dragged phone-narrow) are affected: every
+ * level is available from 563px up.
+ */
+export function maxZoomForWidth(viewportWidth: number): number {
+  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return MAX_ZOOM;
+  let max: number = DEFAULT_ZOOM;
+  for (const level of ZOOM_LEVELS) {
+    if (level > max && viewportWidth / (level / 100) >= MIN_LAYOUT_WIDTH) max = level;
+  }
+  return max;
+}
+
+/** The zoom actually applied: the saved preference, held to what this screen can take. */
+export function resolveZoom(zoom: unknown, viewportWidth: number): number {
+  return Math.min(normalizeZoom(zoom), maxZoomForWidth(viewportWidth));
+}
+
+/**
  * Fired on `window` after a change. The topbar mounts `<NavUser>` twice (the
  * desktop bar and the mobile one), so a control instance can't own the state
  * alone — both subscribe to this and re-read the stored value.
@@ -81,6 +116,27 @@ export function readStoredZoom(): number {
 }
 
 /**
+ * What this screen can zoom to right now. Read at call time, not cached: a
+ * tablet rotating from landscape to portrait, or a window being dragged
+ * narrower, changes the answer.
+ */
+export function readMaxZoom(): number {
+  if (typeof window === "undefined") return MAX_ZOOM;
+  return maxZoomForWidth(window.innerWidth);
+}
+
+/**
+ * The zoom in effect on this screen — the saved preference held to
+ * `readMaxZoom()`. The stored value itself is left alone, so a 150% chosen on a
+ * tablet comes back when it is rotated to landscape instead of being lost the
+ * moment it briefly didn't fit.
+ */
+export function readEffectiveZoom(): number {
+  if (typeof window === "undefined") return DEFAULT_ZOOM;
+  return resolveZoom(readStoredZoom(), window.innerWidth);
+}
+
+/**
  * Applies a zoom to the document. Idempotent — safe to call on every mount.
  *
  * Writes the scale twice, to `zoom` and to a `--app-zoom` custom property,
@@ -104,7 +160,10 @@ export function readStoredZoom(): number {
  */
 export function applyZoom(zoom: number): void {
   if (typeof document === "undefined") return;
-  const normalized = normalizeZoom(zoom);
+  // Held to what this screen can take (`maxZoomForWidth`). `innerWidth` is not
+  // affected by the zoom applied below — measured in Chromium — so re-running
+  // this after it changes the layout cannot feed back into its own input.
+  const normalized = resolveZoom(zoom, window.innerWidth);
   const root = document.documentElement;
   // Clear rather than write `zoom: 1` at the default, so the untouched case
   // leaves no inline style behind at all. Assigning "" rather than calling
@@ -143,23 +202,35 @@ export function setStoredZoom(zoom: number): number {
   return normalized;
 }
 
-/** Next level up (`+1`) or down (`-1`), clamped at the ends of the ladder. */
-export function stepZoom(current: number, direction: 1 | -1): number {
+/**
+ * Next level up (`+1`) or down (`-1`), clamped at the ends of the ladder — and,
+ * going up, at `maxZoom` (what the screen can take, see `readMaxZoom`).
+ */
+export function stepZoom(current: number, direction: 1 | -1, maxZoom: number = MAX_ZOOM): number {
   const index = ZOOM_LEVELS.indexOf(normalizeZoom(current) as (typeof ZOOM_LEVELS)[number]);
   const next = index + direction;
-  if (next < 0 || next >= ZOOM_LEVELS.length) return ZOOM_LEVELS[index];
+  if (next < 0 || next >= ZOOM_LEVELS.length || ZOOM_LEVELS[next] > maxZoom) {
+    return ZOOM_LEVELS[index];
+  }
   return ZOOM_LEVELS[next];
 }
 
-export function canStepZoom(current: number, direction: 1 | -1): boolean {
+export function canStepZoom(
+  current: number,
+  direction: 1 | -1,
+  maxZoom: number = MAX_ZOOM
+): boolean {
   const normalized = normalizeZoom(current);
-  return direction === 1 ? normalized < MAX_ZOOM : normalized > MIN_ZOOM;
+  return direction === 1 ? normalized < Math.min(MAX_ZOOM, maxZoom) : normalized > MIN_ZOOM;
 }
 
 /**
- * Subscribes to changes from this tab (custom event) and from other tabs
+ * Subscribes to changes from this tab (custom event), from other tabs
  * (`storage`) — an owner with the dashboard open in two tabs gets one
- * consistent zoom rather than two.
+ * consistent zoom rather than two — and to the screen changing size, which
+ * moves the zoom ceiling (`readMaxZoom`) under a control that is already open.
+ * A resize only *notifies*: applying the new ceiling to the document is
+ * `<AppZoomSync>`'s job, since a control isn't mounted while its menu is shut.
  */
 export function subscribeZoom(onChange: () => void): () => void {
   const handleStorage = (event: StorageEvent) => {
@@ -169,9 +240,11 @@ export function subscribeZoom(onChange: () => void): () => void {
   };
   window.addEventListener(ZOOM_CHANGE_EVENT, onChange);
   window.addEventListener("storage", handleStorage);
+  window.addEventListener("resize", onChange);
   return () => {
     window.removeEventListener(ZOOM_CHANGE_EVENT, onChange);
     window.removeEventListener("storage", handleStorage);
+    window.removeEventListener("resize", onChange);
   };
 }
 
@@ -187,6 +260,8 @@ export function subscribeZoom(onChange: () => void): () => void {
  */
 export const ZOOM_BOOT_SCRIPT = `try{var z=parseFloat(localStorage.getItem(${JSON.stringify(
   ZOOM_STORAGE_KEY
-)}));if(z>=${MIN_ZOOM}&&z<=${MAX_ZOOM}&&z!==${DEFAULT_ZOOM}){var s=""+z/100,d=document.documentElement;d.style.zoom=s;d.style.setProperty("--app-zoom",s);d.setAttribute(${JSON.stringify(
+)}));if(z>=${MIN_ZOOM}&&z<=${MAX_ZOOM}){var w=window.innerWidth,c=${DEFAULT_ZOOM},L=${JSON.stringify(
+  ZOOM_LEVELS
+)};for(var i=0;i<L.length;i++)if(L[i]>c&&w/(L[i]/100)>=${MIN_LAYOUT_WIDTH})c=L[i];if(z>c)z=c;if(z!==${DEFAULT_ZOOM}){var s=""+z/100,d=document.documentElement;d.style.zoom=s;d.style.setProperty("--app-zoom",s);d.setAttribute(${JSON.stringify(
   ZOOM_ACTIVE_ATTR
-)},"")}}catch(e){}`;
+)},"")}}}catch(e){}`;
