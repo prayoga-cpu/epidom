@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReceiptData } from "@/lib/pwa/thermal-printer";
 
 // Keys echo back, except the two templated ones this suite reads the interpolated text of.
@@ -8,7 +9,11 @@ const STRINGS: Record<string, string> = {
   "cashierCheckout.complete.orderNumber": "Order {number}",
 };
 vi.mock("@/components/lang/i18n-provider", () => ({
-  useI18n: () => ({ t: (k: string) => STRINGS[k] ?? k, locale: "en" }),
+  useI18n: () => ({
+    t: (k: string) => STRINGS[k] ?? k,
+    locale: "en",
+    formatDateTimeWithTimezone: (d: string) => `at ${d}`,
+  }),
 }));
 vi.mock("@/components/providers/currency-provider", () => ({
   useCurrency: () => ({
@@ -29,10 +34,10 @@ const api = vi.hoisted(() => {
       super(response.error.message);
     }
   }
-  return { post: vi.fn(), ApiClientError };
+  return { post: vi.fn(), get: vi.fn(), ApiClientError };
 });
 vi.mock("@/lib/api/client", () => ({
-  apiClient: { post: api.post },
+  apiClient: { post: api.post, get: api.get },
   ApiClientError: api.ApiClientError,
 }));
 
@@ -82,22 +87,48 @@ const cashResult = (over: Partial<OrderCompleteResult> = {}): OrderCompleteResul
 const renderDialog = (
   result: OrderCompleteResult,
   extra: { onNewSale?: () => void; newSaleLabel?: string } = {}
-) =>
-  render(
-    <PosOrderCompleteDialog
-      open
-      storeId="store-1"
-      result={result}
-      onNewSale={extra.onNewSale ?? (() => {})}
-      newSaleLabel={extra.newSaleLabel}
-    />
+) => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <PosOrderCompleteDialog
+        open
+        storeId="store-1"
+        result={result}
+        onNewSale={extra.onNewSale ?? (() => {})}
+        newSaleLabel={extra.newSaleLabel}
+      />
+    </QueryClientProvider>
   );
+};
+
+/** One row of the order's send log, as GET .../send-receipt returns it. */
+const sendRow = (over: Record<string, unknown> = {}) => ({
+  id: "send-1",
+  channel: "EMAIL",
+  recipientPhone: null,
+  recipientEmail: "alice@example.com",
+  status: "SENT",
+  fonnteMessageId: null,
+  errorMessage: null,
+  sentAt: "2026-09-19T21:57:00.000Z",
+  ...over,
+});
+
+/** The send log the mocked GET serves; the mocked email POST appends to it, like the real route. */
+let sendLog: Array<ReturnType<typeof sendRow>> = [];
 
 beforeEach(() => {
+  sendLog = [];
   api.post.mockResolvedValue({});
+  api.get.mockImplementation(async () => sendLog);
   orderPrinting.has = false;
   orderPrinting.printOrder.mockClear();
 });
+
+const emailStatus = () => screen.getByTestId("receipt-email-status");
 
 describe("PosOrderCompleteDialog — the money", () => {
   it("cash: 'Paid X' and a huge Change figure, formatted in the store's currency", () => {
@@ -204,7 +235,11 @@ describe("PosOrderCompleteDialog — send receipt", () => {
   });
 
   it("emails the receipt: POST send-receipt-email { email }", async () => {
-    renderDialog(cashResult());
+    api.post.mockImplementation(async (url: string) => {
+      if (url.endsWith("/send-receipt-email")) sendLog = [sendRow()];
+      return {};
+    });
+    renderDialog(cashResult({ paid: false }));
     fireEvent.click(screen.getByRole("button", { name: /cashierCheckout\.complete\.sendEmail/ }));
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith(
@@ -217,10 +252,11 @@ describe("PosOrderCompleteDialog — send receipt", () => {
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith("cashierCheckout.complete.sentToast")
     );
-    // The button now reads as sent.
+    // The status now comes from the send log, and the button offers a resend.
+    await waitFor(() => expect(emailStatus()).toHaveAttribute("data-state", "sent"));
     expect(
-      await screen.findByRole("button", { name: /cashierCheckout\.complete\.sent$/ })
-    ).toBeDisabled();
+      screen.getByRole("button", { name: /cashierCheckout\.complete\.resendEmail/ })
+    ).toBeEnabled();
   });
 
   it("WhatsApp: POST send-receipt { phone }", async () => {
@@ -286,5 +322,82 @@ describe("PosOrderCompleteDialog — send receipt", () => {
   it("does not offer SMS", () => {
     renderDialog(cashResult());
     expect(screen.queryByText(/sms/i)).toBeNull();
+  });
+});
+
+describe("PosOrderCompleteDialog — is the emailed receipt sent?", () => {
+  it("says it was emailed, to whom and when, and offers a resend", async () => {
+    sendLog = [sendRow()];
+    renderDialog(cashResult());
+
+    await waitFor(() => expect(emailStatus()).toHaveAttribute("data-state", "sent"));
+    expect(emailStatus()).toHaveTextContent("pos.receiptEmail.sent");
+    expect(emailStatus()).toHaveTextContent("alice@example.com");
+    expect(emailStatus()).toHaveTextContent("at 2026-09-19T21:57:00.000Z");
+    expect(
+      screen.getByRole("button", { name: /cashierCheckout\.complete\.resendEmail/ })
+    ).toBeEnabled();
+  });
+
+  it("reports a failed send with the reason, and the button stays a plain Send to retry with", async () => {
+    sendLog = [sendRow({ status: "FAILED", errorMessage: "Recipient rejected" })];
+    renderDialog(cashResult());
+
+    await waitFor(() => expect(emailStatus()).toHaveAttribute("data-state", "failed"));
+    expect(emailStatus()).toHaveTextContent("pos.receiptEmail.failed");
+    expect(emailStatus()).toHaveTextContent("Recipient rejected");
+    expect(
+      screen.getByRole("button", { name: /cashierCheckout\.complete\.sendEmail/ })
+    ).toBeEnabled();
+  });
+
+  it("a delivered receipt is not undone by a later failed resend", async () => {
+    // The log is most-recent-first: a failure on top of a success.
+    sendLog = [
+      sendRow({ id: "send-2", status: "FAILED", errorMessage: "Timeout" }),
+      sendRow({ id: "send-1" }),
+    ];
+    renderDialog(cashResult());
+    await waitFor(() => expect(emailStatus()).toHaveAttribute("data-state", "sent"));
+  });
+
+  it("a manual send that fails shows up as failed too (the server logs the attempt)", async () => {
+    api.post.mockImplementation(async (url: string) => {
+      if (url.endsWith("/send-receipt-email")) {
+        sendLog = [sendRow({ status: "FAILED", errorMessage: "Provider down" })];
+        throw new api.ApiClientError({ error: { message: "Provider down" } }, 503);
+      }
+      return {};
+    });
+    renderDialog(cashResult({ paid: false }));
+    fireEvent.click(screen.getByRole("button", { name: /cashierCheckout\.complete\.sendEmail/ }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Provider down"));
+    await waitFor(() => expect(emailStatus()).toHaveAttribute("data-state", "failed"));
+  });
+
+  it("a paid order that already has an address is on its way — not reported as 'not sent'", async () => {
+    // The background job sends a moment after the order is created.
+    renderDialog(cashResult());
+    await waitFor(() => expect(emailStatus()).toHaveAttribute("data-state", "sending"));
+    expect(emailStatus()).toHaveTextContent("alice@example.com");
+    expect(emailStatus()).not.toHaveTextContent("pos.receiptEmail.notSent");
+  });
+
+  it("with no address to send to, it is simply not sent yet", async () => {
+    renderDialog(cashResult({ customer: null }));
+    await waitFor(() => expect(emailStatus()).toHaveAttribute("data-state", "not_sent"));
+    expect(emailStatus()).toHaveTextContent("pos.receiptEmail.notSent");
+  });
+
+  it("an unpaid (Pay Later) order is not waiting on an automatic receipt", async () => {
+    renderDialog(cashResult({ paid: false }));
+    await waitFor(() => expect(emailStatus()).toHaveAttribute("data-state", "not_sent"));
+  });
+
+  it("offline (no order id): there is no log to read, so no status is claimed", () => {
+    renderDialog(cashResult({ orderId: null }));
+    expect(screen.queryByTestId("receipt-email-status")).toBeNull();
+    expect(api.get).not.toHaveBeenCalled();
   });
 });

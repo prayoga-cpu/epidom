@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateStoreInput } from "@/lib/validation/business.schemas";
 import { ApiSuccessResponse } from "@/types/api/responses";
+import { UnauthorizedError, isUnauthorizedError } from "@/lib/api/unauthorized";
 
 // Store type matching Prisma schema
 export interface Store {
@@ -46,6 +47,10 @@ export function useStores() {
     queryFn: async () => {
       const response = await fetch("/api/stores");
 
+      // No live session: keep that fact (a bare Error would flatten it into text)
+      // so the page can send the person to sign in.
+      if (response.status === 401) throw new UnauthorizedError();
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error?.message || "Failed to fetch stores");
@@ -54,6 +59,8 @@ export function useStores() {
       const data: ApiSuccessResponse<Store[]> = await response.json();
       return data.data;
     },
+    // The app-wide default is one retry; a 401 can never succeed on a retry.
+    retry: (failureCount, error) => !isUnauthorizedError(error) && failureCount < 1,
   });
 }
 

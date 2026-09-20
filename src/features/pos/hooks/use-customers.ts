@@ -49,6 +49,26 @@ export function useCustomerSearch(storeId: string, query: string, enabled = true
   });
 }
 
+/**
+ * The customer who owns exactly this E.164 number, or null.
+ *
+ * The list endpoint's `q` is a substring search across name, phone and email, so
+ * it can return near-misses (a longer number containing this one); the exact
+ * match is picked out here rather than trusting the first row. The customer
+ * display's "are you already a member?" check runs on this — a wrong answer
+ * would greet a stranger as someone else.
+ */
+export async function findCustomerByPhone(
+  storeId: string,
+  phone: string
+): Promise<CustomerRowDto | null> {
+  const result = await apiClient.get<CustomerListDto>(`/stores/${storeId}/customers`, {
+    q: phone,
+    limit: String(CUSTOMER_SEARCH_LIMIT),
+  });
+  return result.customers.find((c) => c.phone === phone) ?? null;
+}
+
 /** One customer with fresh points and lifetime spend — never trust a persisted snapshot's balance. */
 export function fetchCustomerDetail(storeId: string, customerId: string) {
   return apiClient.get<CustomerDetailDto>(`/stores/${storeId}/customers/${customerId}`);

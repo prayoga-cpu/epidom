@@ -14,12 +14,22 @@ import { ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
+import { isUnauthorizedError } from "@/lib/api/unauthorized";
 import type { PlanTier } from "@/lib/plans/entitlements";
 
 export function StoresContainer() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const { data: stores, isLoading, error, refetch } = useStores();
+  // The account has no live session — it expired or was revoked while this page
+  // was open (the proxy only checks that a session cookie exists, and the layout
+  // only guards a fresh load). Signing in is the only way forward, so go there
+  // rather than park on a "Try Again" that can never work. Hard navigation, for
+  // the same reason as the onboarding redirect below.
+  const unauthorized = isUnauthorizedError(error);
+  useEffect(() => {
+    if (unauthorized) window.location.href = "/login";
+  }, [unauthorized]);
   const { data: subscriptionStatus, isLoading: isLoadingSubscription } = useSubscriptionStatus();
   const [isActivating, setIsActivating] = useState(false);
   const { data: session } = useSession();
@@ -200,7 +210,7 @@ export function StoresContainer() {
           )}
 
           {/* Error State */}
-          {error && !isLoading && (
+          {error && !isLoading && !unauthorized && (
             <div className="animate-slide-up-delayed flex min-h-[calc((100vh-250px)/var(--app-zoom,1))] items-center justify-center px-4 py-8 text-center sm:min-h-[calc((100vh-300px)/var(--app-zoom,1))] sm:py-12 md:py-16">
               <div className="w-full max-w-md">
                 <AlertCircle className="text-destructive mx-auto mb-4 h-10 w-10 sm:h-12 sm:w-12" />

@@ -11,9 +11,9 @@ import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finan
 import { useReceiptSettings } from "@/features/dashboard/profile/hooks/use-receipt-settings";
 import { useKdsSettings } from "../hooks/use-kds-settings";
 import {
-  clearCustomerPhone,
+  clearCustomerIntake,
   markCustomerDisplayPaid,
-  useCustomerPhone,
+  useCustomerIntake,
 } from "../hooks/use-customer-display";
 import { paymentMethodEnum } from "@/lib/validation/pos.schemas";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
@@ -276,11 +276,13 @@ export function PosCheckoutDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, flatMethods.join(",")]);
 
-  // A number the customer typed on the customer-facing screen, if one is open.
-  // It is only a fallback for the order's phone: an attached customer's own
-  // number always wins, and it is cleared once the order is placed so the next
-  // customer never inherits it.
-  const displayPhone = useCustomerPhone((state) => state.phone);
+  // A number (and optionally an email) the customer typed on the customer-facing
+  // screen, if one is open. They are only fallbacks for the order's contact
+  // fields: an attached customer's own details always win, and they are cleared
+  // once the order is placed so the next customer never inherits them. The email
+  // is what makes the receipt send itself when the order is paid.
+  const displayPhone = useCustomerIntake((state) => state.phone);
+  const displayEmail = useCustomerIntake((state) => state.email) || null;
 
   const onToggleSplit = (on: boolean) => {
     setSplitMode(on);
@@ -500,6 +502,7 @@ export function PosCheckoutDialog({
         tableNumber: cart.tableNumber,
         customer: cart.customer,
         fallbackPhone: displayPhone,
+        fallbackEmail: displayEmail,
         notes: values.notes ?? "",
         // The offline queue never carried the shift (it may be closed by the time
         // the order replays); keep queued payloads exactly as they always were.
@@ -514,8 +517,8 @@ export function PosCheckoutDialog({
       // cleared or (for a split bill) has this bill's lines taken out.
       const customerSnapshot = cart.customer
         ? { name: cart.customer.name, phone: cart.customer.phone, email: cart.customer.email }
-        : displayPhone
-          ? { name: null, phone: displayPhone, email: null }
+        : displayPhone || displayEmail
+          ? { name: null, phone: displayPhone, email: displayEmail }
           : null;
       const finishSale = (args: {
         orderId: string | null;
@@ -583,8 +586,8 @@ export function PosCheckoutDialog({
         } else {
           // Before clearCart(), which wipes the total this reads.
           markCustomerDisplayPaid(args.orderNumber, finalTotal);
-          // This customer's number must not survive onto the next order.
-          clearCustomerPhone();
+          // This customer's number, name and email must not survive onto the next order.
+          clearCustomerIntake();
           cart.clearCart();
         }
         onOpenChange(false);

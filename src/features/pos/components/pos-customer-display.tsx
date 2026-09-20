@@ -8,7 +8,10 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { getContrastingInk, getPremiumTheme } from "@/lib/utils/color";
 import { cn } from "@/lib/utils";
-import { useCustomerDisplaySnapshot, useSendCustomerPhone } from "../hooks/use-customer-display";
+import {
+  useCustomerDisplaySnapshot,
+  useCustomerIntakeChannel,
+} from "../hooks/use-customer-display";
 import { PosCustomerDisplayPhone } from "./pos-customer-display-phone";
 
 interface PosCustomerDisplayProps {
@@ -41,7 +44,7 @@ export function PosCustomerDisplay({
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
 
   const snapshot = useCustomerDisplaySnapshot(storeId);
-  const sendCustomerPhone = useSendCustomerPhone(storeId);
+  const { status: intakeStatus, sendPhone, sendDetails } = useCustomerIntakeChannel(storeId);
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
@@ -101,6 +104,12 @@ export function PosCustomerDisplay({
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
   const highlight = lines.find((line) => line.id === snapshot.highlightLineId) ?? null;
   const isPaid = snapshot.phase === "paid";
+  // The till said this number belongs to an existing customer: greet them on the
+  // button instead of just repeating the number back.
+  const member =
+    submittedPhone && intakeStatus?.phone === submittedPhone && intakeStatus.match === "existing"
+      ? intakeStatus
+      : null;
 
   // One customer's number must never carry over to the next. The paid screen
   // is the handover point, so clear it there — and close the pad if it is
@@ -133,9 +142,7 @@ export function PosCustomerDisplay({
             type="button"
             onClick={toggleFullscreen}
             aria-label={t(
-              isFullscreen
-                ? "pos.customerDisplay.exitFullscreen"
-                : "pos.customerDisplay.fullscreen"
+              isFullscreen ? "pos.customerDisplay.exitFullscreen" : "pos.customerDisplay.fullscreen"
             )}
             className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full opacity-50 transition-opacity hover:opacity-100"
           >
@@ -260,7 +267,11 @@ export function PosCustomerDisplay({
                 <>
                   <Check className="h-5 w-5 shrink-0" />
                   <span className="min-w-0 truncate">
-                    {t("pos.customerDisplay.phoneSentTo").replace("{phone}", submittedPhone)}
+                    {member
+                      ? member.firstName
+                        ? t("pos.customerDisplay.welcomeBack").replace("{name}", member.firstName)
+                        : t("pos.customerDisplay.welcomeBackNoName")
+                      : t("pos.customerDisplay.phoneSentTo").replace("{phone}", submittedPhone)}
                   </span>
                 </>
               ) : (
@@ -366,10 +377,12 @@ export function PosCustomerDisplay({
         onClose={() => setPhoneOpen(false)}
         defaultCountry={defaultCountry}
         submitted={submittedPhone}
-        onSubmit={(phone) => {
+        status={intakeStatus}
+        onSubmitPhone={(phone) => {
           setSubmittedPhone(phone);
-          sendCustomerPhone(phone);
+          sendPhone(phone);
         }}
+        onSubmitDetails={sendDetails}
       />
     </div>
   );

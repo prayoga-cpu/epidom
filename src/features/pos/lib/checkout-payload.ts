@@ -66,6 +66,13 @@ export interface BuildCheckoutPayloadInput {
   customer: Pick<CartCustomer, "id" | "name" | "phone"> | null;
   /** A number typed on the customer-facing screen; used when the customer has none. */
   fallbackPhone?: string | null;
+  /**
+   * An email typed on the customer-facing screen. Sent whenever present and left
+   * for the server to weigh: an attached customer's own address wins there, this
+   * is only what an unsaved walk-in has. Its presence is what makes the receipt
+   * email itself once the order is paid.
+   */
+  fallbackEmail?: string | null;
   notes: string;
   shiftId?: string;
   splitGroupId?: string;
@@ -133,6 +140,7 @@ export function buildCheckoutPayload(input: BuildCheckoutPayloadInput): CreatePo
     customerId,
     customerName: clean(customer?.name),
     customerPhone: clean(customer?.phone) ?? clean(input.fallbackPhone),
+    customerEmail: clean(input.fallbackEmail),
     notes: clean(input.notes),
     shiftId: input.shiftId,
     splitGroupId: input.splitGroupId,

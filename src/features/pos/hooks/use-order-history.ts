@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { OrderHistoryFilters, OrderHistoryPage } from "../types/pos.types";
 import { apiClient } from "@/lib/api/client";
+import { DATE_ONLY, localDayEnd, localDayStart } from "../lib/date-range-presets";
 
 export interface PaymentMethodTotal {
   paymentMethod: string;
@@ -33,15 +34,18 @@ export function useDebouncedValue<T>(value: T, delay = 300): T {
  * shift filter instead stores a full ISO datetime — a till session's
  * open→close window has minute precision — and must pass through untouched,
  * or `2026-08-09T22:00:00.000ZT00:00:00Z` reaches the server as garbage.
+ *
+ * The day is the USER's day — 00:00 to 23:59:59.999 on their own clock, sent as
+ * the UTC instants those are. It used to be `${value}T00:00:00Z`, a UTC day: for
+ * anyone east of UTC (Indonesia is UTC+7…+9) "Today" then began hours after
+ * their midnight and quietly filed the small hours under yesterday.
  */
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-
 function toRangeStart(value: string): string {
-  return DATE_ONLY.test(value) ? `${value}T00:00:00Z` : value;
+  return DATE_ONLY.test(value) ? localDayStart(value).toISOString() : value;
 }
 
 function toRangeEnd(value: string): string {
-  return DATE_ONLY.test(value) ? `${value}T23:59:59Z` : value;
+  return DATE_ONLY.test(value) ? localDayEnd(value).toISOString() : value;
 }
 
 export function buildOrderHistoryParams(

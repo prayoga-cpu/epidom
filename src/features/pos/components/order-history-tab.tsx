@@ -14,13 +14,16 @@ import {
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosStaffList } from "../hooks/use-pos-staff-list";
 import { useStoreShifts } from "../hooks/use-store-shifts";
+import { useTodayKey } from "../hooks/use-today-key";
 import { formatShiftLabel, resolveShiftWindow } from "@/lib/finance/shift-window";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
 import type { SettlePaymentMethod } from "../types/pos.types";
 import {
+  DATE_ONLY,
   DATE_RANGE_PRESETS,
+  localDateKey,
   resolveDateRangePreset,
   type DateRangePreset,
 } from "../lib/date-range-presets";
@@ -31,6 +34,7 @@ import { OrderHistoryDetailDialog } from "./order-history-detail-dialog";
 import { UnpaidFilterToggle } from "./unpaid-filter-toggle";
 import { AddFilterMenu } from "./add-filter-menu";
 import { RemovableFilter } from "./removable-filter";
+import { ResetToTodayButton } from "./reset-to-today-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -81,7 +85,9 @@ const ORDER_STATUSES = [
 const DEPARTMENT_VALUES = ["ALL", "KITCHEN", "BAR"] as const;
 const DATE_PRESET_VALUES: DateRangePreset[] = [...DATE_RANGE_PRESETS, "custom"];
 
-// The optional filter dropdowns hidden by default behind "+ Add filter".
+// The optional filter dropdowns hidden by default behind "+ Add filter". The
+// date range is not one of them: it is always on (Today unless changed), so it
+// is always shown — see the date <Select> below.
 const HISTORY_FILTER_KEYS = [
   "status",
   "source",
@@ -90,7 +96,6 @@ const HISTORY_FILTER_KEYS = [
   "staff",
   "paymentMethod",
   "shift",
-  "dateRange",
 ] as const;
 type HistoryFilterKey = (typeof HISTORY_FILTER_KEYS)[number];
 
@@ -114,7 +119,7 @@ const PAYMENT_METHOD_VALUES = [
 ] as const;
 const PAYMENT_METHOD_FILTER_VALUES = ["ALL", ...PAYMENT_METHOD_VALUES] as const;
 
-interface HistoryFiltersState {
+export interface HistoryFiltersState {
   status: string;
   source: string;
   from: string;
@@ -130,14 +135,27 @@ interface HistoryFiltersState {
    * preset, not a separate server-side filter. See lib/finance/shift-window.ts. */
   shiftId: string;
   activeFilterKeys: HistoryFilterKey[];
+  /** Shape of the saved state — see HISTORY_FILTERS_VERSION. */
+  version: number;
 }
 
-const HISTORY_FILTERS_DEFAULTS: HistoryFiltersState = {
+/**
+ * Bumped when the saved shape's meaning changes. 2 = the date defaults to TODAY
+ * (it used to be all-time) and is always shown. usePersistedState can't tell a
+ * saved default from a deliberate choice, so without this every user who had ever
+ * touched a filter would stay pinned to "All time" and never see the new default.
+ */
+const HISTORY_FILTERS_VERSION = 2;
+
+// Everyone starts on today's orders (on their own clock) — the date defaults to
+// a PRESET rather than to stored dates, so it can never go stale: see
+// resolveHistoryRange.
+export const HISTORY_FILTERS_DEFAULTS: HistoryFiltersState = {
   status: "ALL",
   source: "ALL",
   from: "",
   to: "",
-  datePreset: "all",
+  datePreset: "today",
   unpaidOnly: false,
   productId: "ALL",
   department: "ALL",
@@ -145,6 +163,7 @@ const HISTORY_FILTERS_DEFAULTS: HistoryFiltersState = {
   paymentMethod: "ALL",
   shiftId: "ALL",
   activeFilterKeys: [],
+  version: HISTORY_FILTERS_VERSION,
 };
 
 // The reset applied to a filter's own value when it's removed from view —
@@ -158,16 +177,34 @@ const HISTORY_FILTER_RESET: Record<HistoryFilterKey, Partial<HistoryFiltersState
   paymentMethod: { paymentMethod: "ALL" },
   // Clearing the shift also clears the window it drove — otherwise the
   // session's ISO from/to would keep silently narrowing results with no
-  // visible control left to explain why.
-  shift: { shiftId: "ALL", datePreset: "all", from: "", to: "" },
-  dateRange: { datePreset: "all", from: "", to: "" },
+  // visible control left to explain why. It falls back to the default (today).
+  shift: { shiftId: "ALL", datePreset: "today", from: "", to: "" },
 };
+
+/**
+ * The from/to actually queried. A preset is re-resolved against the CURRENT day
+ * every time instead of trusting the dates saved alongside it, so a "Today" saved
+ * yesterday — or left open past midnight — means today, not a stale date. A custom
+ * range (including a shift's ISO window) is exactly what was stored.
+ */
+export function resolveHistoryRange(
+  datePreset: DateRangePreset,
+  from: string,
+  to: string,
+  now: Date = new Date()
+): { from: string; to: string } {
+  if (datePreset === "custom") return { from, to };
+  return resolveDateRangePreset(datePreset, now) ?? { from: "", to: "" };
+}
 
 function pick<T>(value: unknown, allowed: readonly T[], fallback: T): T {
   return allowed.includes(value as T) ? (value as T) : fallback;
 }
 
-function sanitizeHistoryFilters(raw: unknown, defaults: HistoryFiltersState): HistoryFiltersState {
+export function sanitizeHistoryFilters(
+  raw: unknown,
+  defaults: HistoryFiltersState
+): HistoryFiltersState {
   if (!raw || typeof raw !== "object") return defaults;
   const r = raw as Partial<Record<keyof HistoryFiltersState, unknown>>;
   const activeFilterKeys = Array.isArray(r.activeFilterKeys)
@@ -175,19 +212,26 @@ function sanitizeHistoryFilters(raw: unknown, defaults: HistoryFiltersState): Hi
         (HISTORY_FILTER_KEYS as readonly string[]).includes(k)
       )
     : defaults.activeFilterKeys;
+  // Saved before "today" became the default: the date it holds is the old
+  // all-time default or an old window, so it takes the new default. Everything
+  // else the user set is kept. A shift drives the date, so it goes with it.
+  const legacy = r.version !== HISTORY_FILTERS_VERSION;
   return {
     status: typeof r.status === "string" ? r.status : defaults.status,
     source: typeof r.source === "string" ? r.source : defaults.source,
-    from: typeof r.from === "string" ? r.from : defaults.from,
-    to: typeof r.to === "string" ? r.to : defaults.to,
-    datePreset: pick(r.datePreset, DATE_PRESET_VALUES, defaults.datePreset),
+    from: !legacy && typeof r.from === "string" ? r.from : defaults.from,
+    to: !legacy && typeof r.to === "string" ? r.to : defaults.to,
+    datePreset: legacy
+      ? defaults.datePreset
+      : pick(r.datePreset, DATE_PRESET_VALUES, defaults.datePreset),
     unpaidOnly: typeof r.unpaidOnly === "boolean" ? r.unpaidOnly : defaults.unpaidOnly,
     productId: typeof r.productId === "string" ? r.productId : defaults.productId,
     department: pick(r.department, DEPARTMENT_VALUES, defaults.department),
     staffId: typeof r.staffId === "string" ? r.staffId : defaults.staffId,
     paymentMethod: pick(r.paymentMethod, PAYMENT_METHOD_FILTER_VALUES, defaults.paymentMethod),
-    shiftId: typeof r.shiftId === "string" ? r.shiftId : defaults.shiftId,
+    shiftId: !legacy && typeof r.shiftId === "string" ? r.shiftId : defaults.shiftId,
     activeFilterKeys,
+    version: HISTORY_FILTERS_VERSION,
   };
 }
 
@@ -324,14 +368,39 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
       openLabel: t("pos.history.shiftStillOpen"),
     });
 
+  // The dates actually queried. Recomputed when the local day changes (todayKey),
+  // so a till left open past midnight rolls "Today" over on its own instead of
+  // still showing yesterday. See resolveHistoryRange.
+  const todayKey = useTodayKey();
+  const range = useMemo(
+    () => resolveHistoryRange(datePreset, from, to),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [datePreset, from, to, todayKey]
+  );
+
+  // Picking a date range supersedes a selected shift (which drives its own window
+  // and the daily report), so the shift is cleared with it — otherwise the visible
+  // range and the report would describe different windows.
   const handlePresetChange = (preset: DateRangePreset) => {
     if (preset === "custom") {
-      patchFilters({ datePreset: preset });
+      // Seed the date inputs with what was showing. A shift's window is a full ISO
+      // datetime, which <input type="date"> can't hold — reduce it to its day.
+      const toDay = (value: string) =>
+        !value || DATE_ONLY.test(value) ? value : localDateKey(new Date(value));
+      patchFilters({
+        datePreset: "custom",
+        from: toDay(range.from),
+        to: toDay(range.to),
+        shiftId: "ALL",
+      });
       return;
     }
-    const range = resolveDateRangePreset(preset);
-    patchFilters({ datePreset: preset, from: range?.from ?? "", to: range?.to ?? "" });
+    patchFilters({ datePreset: preset, from: "", to: "", shiftId: "ALL" });
   };
+
+  // Back to the default view: today's orders on the user's clock.
+  const resetToToday = () =>
+    patchFilters({ datePreset: "today", from: "", to: "", shiftId: "ALL" });
 
   // A shift is a date-range *preset*, not a separate server filter: it resolves
   // to the session's open→close window and writes it into from/to as full ISO
@@ -341,7 +410,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   // window for free.
   const handleShiftChange = (nextShiftId: string) => {
     if (nextShiftId === "ALL") {
-      patchFilters({ shiftId: "ALL", datePreset: "all", from: "", to: "" });
+      patchFilters({ shiftId: "ALL", datePreset: "today", from: "", to: "" });
       return;
     }
     const shift = shiftOptions.find((s) => s.id === nextShiftId);
@@ -362,8 +431,8 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     q: debouncedSearch,
     status,
     source,
-    from,
-    to,
+    from: range.from,
+    to: range.to,
     unpaidOnly,
     productId,
     department,
@@ -388,10 +457,12 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
 
   // A restrictive filter left over from a previous session (persisted via
   // usePersistedState) could hide the order we were just deep-linked to —
-  // reset to defaults so it's actually findable in `orders` below.
+  // reset to defaults so it's actually findable in `orders` below. The date opens
+  // on ALL TIME, not today: the order we were sent to (the last sale, say, when
+  // nothing has sold yet today) isn't necessarily from today.
   useEffect(() => {
     if (!targetOrderId) return;
-    setFilterState(HISTORY_FILTERS_DEFAULTS);
+    setFilterState({ ...HISTORY_FILTERS_DEFAULTS, datePreset: "all" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetOrderId]);
 
@@ -426,8 +497,8 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   }, [
     status,
     source,
-    from,
-    to,
+    range.from,
+    range.to,
     unpaidOnly,
     productId,
     department,
@@ -682,6 +753,36 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
           active={unpaidOnly}
           onToggle={() => patchFilters({ unpaidOnly: !unpaidOnly })}
         />
+        {/* Always shown, never removable: the date is always applied (Today by
+            default), so it must stay visible — orders outside it are hidden, and
+            a control that could vanish would leave no way to see why. */}
+        <Select value={datePreset} onValueChange={(v) => handlePresetChange(v as DateRangePreset)}>
+          <SelectTrigger className="w-full lg:w-44" aria-label={t("pos.filters.dateRange")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DATE_RANGE_PRESETS.map((preset) => (
+              <SelectItem key={preset} value={preset}>
+                {t(`pos.history.dateRange.${preset}`)}
+              </SelectItem>
+            ))}
+            <SelectItem value="custom">{t("pos.history.dateRange.custom")}</SelectItem>
+          </SelectContent>
+        </Select>
+        {/* Suppressed while a shift drives the range: from/to then hold full
+            ISO datetimes, which a <input type="date"> can't represent — the
+            resolved window is shown as read-only text below instead. */}
+        {datePreset === "custom" && shiftId === "ALL" && (
+          <DateRangeField
+            id="history-date-range"
+            from={from}
+            to={to}
+            presets={[]}
+            className="w-full lg:w-64"
+            onChange={(nextFrom, nextTo) => patchFilters({ from: nextFrom, to: nextTo })}
+          />
+        )}
+        {datePreset !== "today" && <ResetToTodayButton onClick={resetToToday} />}
         {activeFilterKeys.includes("status") && (
           <RemovableFilter onRemove={() => removeFilter("status")}>
             <Select value={status} onValueChange={(v) => patchFilters({ status: v })}>
@@ -804,41 +905,6 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
             </Select>
           </RemovableFilter>
         )}
-        {activeFilterKeys.includes("dateRange") && (
-          <RemovableFilter onRemove={() => removeFilter("dateRange")}>
-            <Select
-              value={datePreset}
-              onValueChange={(v) => handlePresetChange(v as DateRangePreset)}
-            >
-              <SelectTrigger className="w-full lg:w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DATE_RANGE_PRESETS.map((preset) => (
-                  <SelectItem key={preset} value={preset}>
-                    {t(`pos.history.dateRange.${preset}`)}
-                  </SelectItem>
-                ))}
-                <SelectItem value="custom">{t("pos.history.dateRange.custom")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </RemovableFilter>
-        )}
-        {/* Suppressed while a shift drives the range: from/to then hold full
-            ISO datetimes, which a <input type="date"> can't represent — the
-            resolved window is shown as read-only text below instead. */}
-        {activeFilterKeys.includes("dateRange") &&
-          datePreset === "custom" &&
-          shiftId === "ALL" && (
-            <DateRangeField
-              id="history-date-range"
-              from={from}
-              to={to}
-              presets={[]}
-              className="w-full lg:w-64"
-              onChange={(nextFrom, nextTo) => patchFilters({ from: nextFrom, to: nextTo })}
-            />
-          )}
         <AddFilterMenu
           options={HISTORY_FILTER_KEYS.filter((k) => !activeFilterKeys.includes(k)).map((k) => ({
             key: k,

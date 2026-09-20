@@ -129,6 +129,23 @@ describe("POST /customers", () => {
     ]);
   });
 
+  it("accepts a phone with no name, and passes the absent name through as absent", async () => {
+    svc.create.mockResolvedValue({ id: "c9", name: "+33612345678" });
+
+    const res = await POST(json("POST", { phone: "+33612345678", name: "", email: "" }), ctx());
+
+    expect(res.status).toBe(201);
+    // "" from an untouched optional input is "not given", never a blank name.
+    expect(svc.create).toHaveBeenCalledWith(STORE, { phone: "+33612345678" });
+  });
+
+  it("refuses a body with neither a name nor a phone, on the name field", async () => {
+    const res = await POST(json("POST", { email: "a@b.co" }), ctx());
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.details[0].field).toBe("name");
+    expect(svc.create).not.toHaveBeenCalled();
+  });
+
   it("validates the body (400 with field details) and a malformed body is a 400, not a 500", async () => {
     const bad = await POST(json("POST", { name: "" }), ctx());
     expect(bad.status).toBe(400);

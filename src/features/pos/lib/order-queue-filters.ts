@@ -1,4 +1,30 @@
 import type { PosOrderDisplay } from "../types/pos.types";
+import { DATE_RANGE_PRESETS, isWithinPreset, type DateRangePreset } from "./date-range-presets";
+
+/**
+ * How far back the queue looks. The same presets History offers, minus "custom" —
+ * this is a live work queue, not a report. Always applied; see DEFAULT_QUEUE_DATE_PRESET.
+ */
+export type QueueDatePreset = Exclude<DateRangePreset, "custom">;
+
+export const QUEUE_DATE_PRESETS: readonly QueueDatePreset[] = DATE_RANGE_PRESETS;
+
+/** What everyone sees until they choose otherwise: today's orders, on their own clock. */
+export const DEFAULT_QUEUE_DATE_PRESET: QueueDatePreset = "today";
+
+/**
+ * Whether an order was placed inside the date preset's window, measured on the
+ * USER's clock (00:00 local, not UTC). Kept apart from matchesQueueFilters: it
+ * scopes which orders the page is about at all — tab counts included — rather
+ * than narrowing within them.
+ */
+export function matchesQueueDate(
+  order: PosOrderDisplay,
+  preset: QueueDatePreset,
+  now: Date = new Date()
+): boolean {
+  return isWithinPreset(order.createdAt, preset, now);
+}
 
 // "split" is the three-column master–detail layout (status rail | order list |
 // selected-order details); the other three are the original card/row/kanban views.

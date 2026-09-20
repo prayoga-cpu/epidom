@@ -248,10 +248,12 @@ export function PosShell({ store }: PosShellProps) {
             (k) => !activeFilterKeys.includes(k) && (k !== "category" || categoryNames.length > 0)
           ).map((k) => ({ key: k, label: t(`pos.filters.${k}`) }))}
           onAdd={(k) => addFilter(k as PosFilterKey)}
-          // In the bar it is as tall as the bar, like the search field beside it, so its
-          // hover tint is a flat block. h-full (the strip it sits in is a stretched flex
-          // child, so its height is definite) rather than a stretch utility.
-          className={variant === "bar" ? "h-full" : undefined}
+          // In the top bar it is a flat ghost block as tall as the bar, like the search
+          // field beside it (its "bar" variant uses h-full: the strip it sits in is a
+          // stretched flex child, so that height is definite — no stretch utility
+          // needed). The phone-width row below md keeps the dashed chip the other
+          // filter rows use.
+          variant={variant === "bar" ? "bar" : "chip"}
         />
       </div>
     </>

@@ -203,11 +203,14 @@ describe("PosShell toolbar — one bar at ≥md, its own row below", () => {
     expect(add.className).not.toContain("self-stretch");
   });
 
-  it('outside the status bar, "+ Add filter" keeps its normal 36px height', () => {
+  it('outside the status bar, "+ Add filter" is the dashed, rounded chip the other filter rows use', () => {
     renderShell(); // no slot → the inline row
     const add = screen.getByRole("button", { name: /pos\.filters\.addFilter/ });
+    expect(add.className).toContain("border-dashed");
+    expect(add.className).toContain("rounded-md");
     expect(add.className).toContain("h-9");
     expect(add.className).not.toContain("h-full");
+    expect(add.className).not.toContain("rounded-none");
   });
 
   it("the portaled controls still work (state stays in the shell)", () => {

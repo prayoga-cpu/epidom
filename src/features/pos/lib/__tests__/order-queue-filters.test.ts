@@ -7,7 +7,10 @@
 import { describe, it, expect } from "vitest";
 import {
   countOrdersBySource,
+  DEFAULT_QUEUE_DATE_PRESET,
+  matchesQueueDate,
   matchesQueueFilters,
+  QUEUE_DATE_PRESETS,
   orderSourceBucket,
   sortQueueOrders,
   toSourceTab,
@@ -191,5 +194,46 @@ describe("matchesQueueFilters — queue number search", () => {
   it("does not match a missing queue number on the literal 'null'", () => {
     expect(match(order({ queueNumber: null }), { search: "null" })).toBe(false);
     expect(match(order({ queueNumber: undefined }), { search: "#" })).toBe(false);
+  });
+});
+
+describe("matchesQueueDate — the queue's date scope", () => {
+  // Local-time constructor: the queue measures a day on the user's own clock.
+  const NOW = new Date(2026, 8, 19, 15, 0, 0);
+  const placed = (d: number, h: number, mi = 0) =>
+    order({ createdAt: new Date(2026, 8, d, h, mi).toISOString() });
+
+  it("defaults to today", () => {
+    expect(DEFAULT_QUEUE_DATE_PRESET).toBe("today");
+  });
+
+  it("offers the presets but not a custom range (it is a work queue, not a report)", () => {
+    expect(QUEUE_DATE_PRESETS).toContain("today");
+    expect(QUEUE_DATE_PRESETS).toContain("all");
+    expect(QUEUE_DATE_PRESETS as readonly string[]).not.toContain("custom");
+  });
+
+  it("today: 00:00 on the local clock is in, the minute before is not", () => {
+    expect(matchesQueueDate(placed(19, 0, 0), "today", NOW)).toBe(true);
+    expect(matchesQueueDate(placed(18, 23, 59), "today", NOW)).toBe(false);
+    expect(matchesQueueDate(placed(19, 23, 59), "today", NOW)).toBe(true);
+    expect(matchesQueueDate(placed(20, 0, 0), "today", NOW)).toBe(false);
+  });
+
+  it("today keeps an order placed in the small hours, which a UTC day would file under yesterday", () => {
+    expect(matchesQueueDate(placed(19, 1, 30), "today", NOW)).toBe(true);
+  });
+
+  it("yesterday and the ranges", () => {
+    expect(matchesQueueDate(placed(18, 12), "yesterday", NOW)).toBe(true);
+    expect(matchesQueueDate(placed(19, 12), "yesterday", NOW)).toBe(false);
+    expect(matchesQueueDate(placed(13, 12), "last7", NOW)).toBe(true);
+    expect(matchesQueueDate(placed(12, 12), "last7", NOW)).toBe(false);
+  });
+
+  it("all time never excludes", () => {
+    expect(matchesQueueDate(order({ createdAt: "2001-01-01T00:00:00.000Z" }), "all", NOW)).toBe(
+      true
+    );
   });
 });

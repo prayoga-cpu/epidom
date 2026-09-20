@@ -38,15 +38,17 @@ vi.mock("../../hooks/use-kds-settings", () => ({
 }));
 
 const display = vi.hoisted(() => ({
-  clearCustomerPhone: vi.fn(),
+  clearCustomerIntake: vi.fn(),
   markCustomerDisplayPaid: vi.fn(),
   phone: null as string | null,
+  email: "",
 }));
 vi.mock("../../hooks/use-customer-display", () => ({
-  clearCustomerPhone: display.clearCustomerPhone,
+  clearCustomerIntake: display.clearCustomerIntake,
   markCustomerDisplayPaid: display.markCustomerDisplayPaid,
-  useCustomerPhone: (select: (s: { phone: string | null; receivedAt: number }) => unknown) =>
-    select({ phone: display.phone, receivedAt: 0 }),
+  useCustomerIntake: (
+    select: (s: { phone: string | null; email: string; receivedAt: number }) => unknown
+  ) => select({ phone: display.phone, email: display.email, receivedAt: 0 }),
 }));
 
 const api = vi.hoisted(() => {
@@ -176,6 +178,7 @@ beforeEach(() => {
   seedCart();
   complete.props = [];
   display.phone = null;
+  display.email = "";
   api.post.mockResolvedValue({ orderId: "order-1", orderNumber: "#101" });
   queue.enqueueOrder.mockResolvedValue("abcdef12-0000-4000-8000-000000000000");
   setOnline(true);
@@ -291,7 +294,7 @@ describe("PosCheckoutDialog — single-method sale keeps the exact legacy payloa
 
     expect(cart().items).toHaveLength(0);
     expect(display.markCustomerDisplayPaid).toHaveBeenCalledWith("#101", 25);
-    expect(display.clearCustomerPhone).toHaveBeenCalled();
+    expect(display.clearCustomerIntake).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(analytics.trackEvent).toHaveBeenCalledWith(
       "purchase",
@@ -474,6 +477,32 @@ describe("PosCheckoutDialog — cart-owned extras in the payload", () => {
       phone: "+6281234567890",
       email: null,
     });
+  });
+
+  it("an email typed on the customer display rides on the order, and prefills the complete screen", async () => {
+    // Its presence on the order is what makes the receipt email send itself once paid.
+    display.phone = "+6281234567890";
+    display.email = "claire@example.com";
+    renderCheckout();
+    chooseMethod("publicOrder.paymentMethods.QRIS");
+    await submit();
+    expect(api.post.mock.calls[0][1]).toMatchObject({
+      customerPhone: "+6281234567890",
+      customerEmail: "claire@example.com",
+    });
+    expect(lastComplete().result.customer).toEqual({
+      name: null,
+      phone: "+6281234567890",
+      email: "claire@example.com",
+    });
+  });
+
+  it("sends no customerEmail when the customer display gave none", async () => {
+    display.phone = "+6281234567890";
+    renderCheckout();
+    chooseMethod("publicOrder.paymentMethods.QRIS");
+    await submit();
+    expect(api.post.mock.calls[0][1].customerEmail).toBeUndefined();
   });
 
   it("prefills the complete screen's send fields from the attached customer", async () => {
@@ -745,7 +774,7 @@ describe("PosCheckoutDialog — one bill of a split by items (basis)", () => {
     expect(cart().items).toHaveLength(1);
     expect(cart().items[0].quantity).toBe(2);
     expect(display.markCustomerDisplayPaid).not.toHaveBeenCalled();
-    expect(display.clearCustomerPhone).not.toHaveBeenCalled();
+    expect(display.clearCustomerIntake).not.toHaveBeenCalled();
     // Each bill is still a purchase.
     expect(analytics.trackEvent).toHaveBeenCalledWith(
       "purchase",

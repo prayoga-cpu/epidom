@@ -3,8 +3,10 @@
  *
  * Email the customer their receipt — the email counterpart of the WhatsApp
  * send-receipt route, triggered from the POS "order complete" screen and from
- * order history. Like that route it is always an explicit staff action, so
- * there is no auto-send toggle and no "already sent" guard to bypass.
+ * order history. This is the MANUAL send: always an explicit staff action, so it
+ * has no "already sent" guard to bypass and can go to any address (a resend, a
+ * corrected typo). The automatic send for an order that already carries a
+ * customer email is a separate path — see send-receipt-email-on-order.ts.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";

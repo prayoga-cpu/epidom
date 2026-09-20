@@ -95,16 +95,75 @@ export type CustomerDisplayMessage =
    * current snapshot, since broadcasts aren't replayed to late joiners. */
   | { type: "request" }
   /**
-   * The one thing that travels the other way, display -> cashier: a number
-   * the customer typed themselves so their receipt can reach them on
-   * WhatsApp. It lands in the checkout form's phone field rather than being
-   * saved anywhere directly — the cashier still sees it, and still decides
+   * Display -> cashier: a number the customer typed themselves so their
+   * receipt can reach them on WhatsApp — and, from there, so the till can tell
+   * whether they are already a member. It lands in the cashier's customer
+   * intake rather than being saved anywhere directly: the cashier window looks
+   * the number up, and the cashier still sees everything and still decides
    * whether the order is created. `null` clears a number entered by mistake.
    *
    * E.164 (e.g. "+6281234567890"), validated on the display before it is
    * sent, so the cashier's form never receives something it would reject.
    */
-  | { type: "customer-phone"; phone: string | null };
+  | { type: "customer-phone"; phone: string | null }
+  /**
+   * Display -> cashier: the optional extras a NEW customer may add after
+   * giving their number. Sent as the customer types, so the cashier's
+   * new-customer form fills in live. Empty strings mean "not given"; the email
+   * has been checked on the display, the name is only trimmed and length-capped.
+   */
+  | { type: "customer-details"; name: string; email: string }
+  /**
+   * Cashier -> display: the answer to the number above. Kept off the state
+   * snapshot on purpose — the snapshot is mirrored into localStorage, and a
+   * customer's number and first name have no business being written there.
+   */
+  | { type: "customer-status"; status: CustomerDisplayIntakeStatus };
+
+/**
+ * What the till found out about the number a customer entered.
+ *  - `existing`: already a customer of this store — greet them, ask for nothing.
+ *  - `new`: not on file — offer the optional name / email step.
+ *  - `unknown`: the till could not tell (offline, or the lookup failed) — the
+ *    display falls back to the optional step, since the cashier decides anyway.
+ */
+export type CustomerDisplayMatch = "existing" | "new" | "unknown";
+
+export interface CustomerDisplayIntakeStatus {
+  /** The number this answers. A display whose customer has since changed or
+   * removed their number ignores a status for the old one. */
+  phone: string;
+  match: CustomerDisplayMatch;
+  /**
+   * First name ONLY, and only for `existing`. The display is a screen anyone
+   * standing at the till can read, and anyone can type any number into it, so
+   * it must never receive a surname, email, points or spend for a number it
+   * merely typed — a first-name greeting is the most it is trusted with. Null
+   * when the record has no real name (it was named after the number).
+   */
+  firstName: string | null;
+}
+
+/** The first word of a customer's name, or null when the "name" is just their number. */
+export function firstNameOf(name: string | null | undefined, phone?: string | null): string | null {
+  const trimmed = name?.trim();
+  if (!trimmed) return null;
+  // A customer created from a number alone is named after it.
+  if (phone && trimmed === phone) return null;
+  if (/^\+?[\d\s().-]+$/.test(trimmed)) return null;
+  return trimmed.split(/\s+/)[0] ?? null;
+}
+
+/** Longest name / email the display will send — matches the server's own caps. */
+export const CUSTOMER_DETAILS_NAME_MAX = 100;
+export const CUSTOMER_DETAILS_EMAIL_MAX = 254;
+
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/** True for an address worth sending — used by the display to hold back a half-typed one. */
+export function isPlausibleEmail(value: string): boolean {
+  return value.length <= CUSTOMER_DETAILS_EMAIL_MAX && EMAIL_SHAPE.test(value);
+}
 
 export const EMPTY_CUSTOMER_DISPLAY_SNAPSHOT: CustomerDisplaySnapshot = {
   phase: "idle",

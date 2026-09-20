@@ -31,9 +31,9 @@ vi.mock("@/features/dashboard/profile/hooks/use-finance-settings", () => ({
   useFinanceSettings: () => ({ data: { enabledPaymentMethods: ["CASH", "QRIS"] } }),
 }));
 
-const display = vi.hoisted(() => ({ clearCustomerPhone: vi.fn() }));
+const display = vi.hoisted(() => ({ clearCustomerIntake: vi.fn() }));
 vi.mock("../../hooks/use-customer-display", () => ({
-  clearCustomerPhone: display.clearCustomerPhone,
+  clearCustomerIntake: display.clearCustomerIntake,
 }));
 
 // Checkout has its own suite. Here it is a probe: it records the props each instance gets and
@@ -330,7 +330,7 @@ describe("PosSplitBillDialog — by items", () => {
     fireEvent.click(screen.getByText("bill-done"));
     expect(cart().customer).toBeNull();
     expect(cart().tableNumber).toBe("");
-    expect(display.clearCustomerPhone).toHaveBeenCalled();
+    expect(display.clearCustomerIntake).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 

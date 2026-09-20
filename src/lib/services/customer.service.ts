@@ -143,10 +143,15 @@ export class CustomerService {
     const phone = input.phone ? await this.resolvePhone(storeId, input.phone) : null;
     if (phone) await this.assertPhoneFree(storeId, phone);
 
+    // The schema guarantees a name or a phone. A nameless customer is recorded
+    // under their number — the owner can rename them in Back Office later.
+    const name = input.name ?? phone;
+    if (!name) throw new FieldError("name", "Enter a name or a phone number");
+
     try {
       const created = await this.repo.create({
         storeId,
-        name: input.name,
+        name,
         phone,
         email: input.email ?? null,
         notes: input.notes ?? null,

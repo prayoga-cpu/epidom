@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,6 +15,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { useOnlineStatus } from "@/hooks/use-network-status";
 import type { CustomerRowDto } from "@/types/api/cashier";
 import { usePosCart } from "../hooks/use-pos-cart";
+import { useCustomerIntake } from "../hooks/use-customer-display";
 import {
   toCartCustomer,
   useCreateCustomer,
@@ -33,18 +34,28 @@ export const CUSTOMER_SEARCH_DEBOUNCE_MS = 250;
 
 // Messages are i18n keys, resolved with t() where they render — a zod schema
 // built at module scope can't call the hook.
-const newCustomerSchema = z.object({
-  name: z.string().trim().min(1, "cashierCart.customer.nameRequired").max(80),
-  phone: z.string().trim().max(30).optional(),
-  email: z
-    .string()
-    .trim()
-    .max(120)
-    .refine((v) => v === "" || z.string().email().safeParse(v).success, {
-      message: "cashierCart.customer.emailInvalid",
-    })
-    .optional(),
-});
+//
+// Phone-first: a customer is identified by their WhatsApp number, and the name
+// and email are optional extras (the customer screen asks for them, and they may
+// decline). One of name / number is still required — a record with neither
+// identifies nobody.
+const newCustomerSchema = z
+  .object({
+    name: z.string().trim().max(100),
+    phone: z.string().trim().max(30).optional(),
+    email: z
+      .string()
+      .trim()
+      .max(254)
+      .refine((v) => v === "" || z.string().email().safeParse(v).success, {
+        message: "cashierCart.customer.emailInvalid",
+      })
+      .optional(),
+  })
+  .refine((v) => v.name !== "" || !!v.phone, {
+    message: "cashierCart.customer.nameOrPhoneRequired",
+    path: ["phone"],
+  });
 type NewCustomerValues = z.infer<typeof newCustomerSchema>;
 
 /** Seed the mini-form from what the cashier already typed into search: a phone-ish
@@ -95,6 +106,21 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
     defaultValues: { name: "", phone: "", email: "" },
   });
 
+  // ── Synced with the customer screen ──────────────────────────────────────
+  // A customer who typed their number on the customer-facing screen and turned
+  // out to be new has their number (and, live, the optional name / email they go
+  // on to type) land in this same new-customer form. The cashier reviews it and
+  // taps Save & attach — nothing is saved from the customer's side.
+  const intakePhone = useCustomerIntake((s) => s.phone);
+  const intakeMatch = useCustomerIntake((s) => s.match);
+  const intakeName = useCustomerIntake((s) => s.name);
+  const intakeEmail = useCustomerIntake((s) => s.email);
+  const intakeReceivedAt = useCustomerIntake((s) => s.receivedAt);
+  const formOpenedFor = useCustomerIntake((s) => s.formOpenedFor);
+  const [fromDisplay, setFromDisplay] = useState(false);
+  /** Fields the cashier has typed in themselves — the customer's live typing never overwrites these. */
+  const touched = useRef(new Set<string>());
+
   // Never trust a balance that was persisted in localStorage (a cart survives a
   // reload — possibly days): re-read the customer on mount/resume and adopt the
   // fresh points, spend and contact details. The same customer id keeps any
@@ -126,10 +152,46 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshError]);
 
+  // A number arrived from the customer screen and isn't on file: open the form
+  // with it, once per submission. Not while someone is attached (nothing to
+  // create), and not again for a submission the cashier already dealt with.
+  useEffect(() => {
+    if (customer || !intakePhone || intakeMatch !== "new") return;
+    if (intakeReceivedAt === formOpenedFor) return;
+    useCustomerIntake.getState().markFormOpened(intakeReceivedAt);
+    setFromDisplay(true);
+    setDuplicate(false);
+    if (mode === "create") {
+      // Already filling the form in: only complete what the cashier hasn't touched.
+      if (!touched.current.has("phone")) form.setValue("phone", intakePhone);
+      return;
+    }
+    touched.current.clear();
+    form.reset({ phone: intakePhone, name: intakeName, email: intakeEmail });
+    setQuery("");
+    setMode("create");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer, intakePhone, intakeMatch, intakeReceivedAt, formOpenedFor]);
+
+  // Then follow what the customer types, field by field, for as long as the
+  // cashier hasn't taken a field over.
+  useEffect(() => {
+    if (mode !== "create" || !fromDisplay) return;
+    if (!touched.current.has("name") && form.getValues("name") !== intakeName) {
+      form.setValue("name", intakeName);
+    }
+    if (!touched.current.has("email") && form.getValues("email") !== intakeEmail) {
+      form.setValue("email", intakeEmail);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, fromDisplay, intakeName, intakeEmail]);
+
   const close = () => {
     setMode("idle");
     setQuery("");
     setDuplicate(false);
+    setFromDisplay(false);
+    touched.current.clear();
     form.reset({ name: "", phone: "", email: "" });
   };
 
@@ -139,6 +201,8 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
   };
 
   const openCreate = () => {
+    touched.current.clear();
+    setFromDisplay(false);
     form.reset(prefillFromQuery(query));
     setDuplicate(false);
     setMode("create");
@@ -147,7 +211,8 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
   const handleCreate = async (values: NewCustomerValues) => {
     try {
       const created = await createCustomer.mutateAsync({
-        name: values.name.trim(),
+        // Optional: a customer given only a number is named after it server-side.
+        name: values.name.trim() || undefined,
         phone: values.phone?.trim() || undefined,
         email: values.email?.trim() || undefined,
       });
@@ -298,24 +363,32 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
                 <span className="sr-only">{t("common.actions.cancel")}</span>
               </Button>
             </div>
-            <Field error={form.formState.errors.name?.message}>
+            {fromDisplay && (
+              <p className="text-muted-foreground px-1 text-xs">
+                {t("cashierCart.customer.fromDisplay")}
+              </p>
+            )}
+            <Field error={form.formState.errors.phone?.message}>
               <Input
-                autoFocus
-                className="h-11"
-                placeholder={t("cashierCart.customer.namePlaceholder")}
-                aria-label={t("cashierCart.customer.namePlaceholder")}
-                aria-invalid={!!form.formState.errors.name}
-                {...form.register("name")}
-              />
-            </Field>
-            <Field error={undefined}>
-              <Input
+                // Not when the customer screen opened this: it must not pull
+                // focus off whatever the cashier is in the middle of.
+                autoFocus={!fromDisplay}
                 className="h-11"
                 type="tel"
                 inputMode="tel"
-                placeholder={t("cashierCart.customer.phonePlaceholder")}
-                aria-label={t("cashierCart.customer.phonePlaceholder")}
-                {...form.register("phone")}
+                placeholder={t("cashierCart.customer.whatsappPlaceholder")}
+                aria-label={t("cashierCart.customer.whatsappPlaceholder")}
+                aria-invalid={!!form.formState.errors.phone}
+                {...form.register("phone", { onChange: () => touched.current.add("phone") })}
+              />
+            </Field>
+            <Field error={form.formState.errors.name?.message}>
+              <Input
+                className="h-11"
+                placeholder={t("cashierCart.customer.nameOptionalPlaceholder")}
+                aria-label={t("cashierCart.customer.nameOptionalPlaceholder")}
+                aria-invalid={!!form.formState.errors.name}
+                {...form.register("name", { onChange: () => touched.current.add("name") })}
               />
             </Field>
             <Field error={form.formState.errors.email?.message}>
@@ -323,10 +396,10 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
                 className="h-11"
                 type="email"
                 inputMode="email"
-                placeholder={t("cashierCart.customer.emailPlaceholder")}
-                aria-label={t("cashierCart.customer.emailPlaceholder")}
+                placeholder={t("cashierCart.customer.emailOptionalPlaceholder")}
+                aria-label={t("cashierCart.customer.emailOptionalPlaceholder")}
                 aria-invalid={!!form.formState.errors.email}
-                {...form.register("email")}
+                {...form.register("email", { onChange: () => touched.current.add("email") })}
               />
             </Field>
             <Button

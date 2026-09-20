@@ -153,6 +153,15 @@ describe("buildCheckoutPayload — customer", () => {
     // Without an attached customer the fallback is still sent.
     expect(buildCheckoutPayload(input({ fallbackPhone: "+6281" })).customerPhone).toBe("+6281");
   });
+
+  it("sends an email typed on the customer display as customerEmail, and nothing when there is none", () => {
+    expect(
+      buildCheckoutPayload(input({ fallbackEmail: " claire@example.com " })).customerEmail
+    ).toBe("claire@example.com");
+    expect(buildCheckoutPayload(input({ fallbackEmail: "" })).customerEmail).toBeUndefined();
+    expect(buildCheckoutPayload(input({ fallbackEmail: null })).customerEmail).toBeUndefined();
+    expect(buildCheckoutPayload(input()).customerEmail).toBeUndefined();
+  });
 });
 
 describe("buildCheckoutPayload — discounts are re-priced by the server, never sent as amounts", () => {

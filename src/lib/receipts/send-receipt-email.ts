@@ -3,7 +3,7 @@ import { sendReceiptEmail } from "@/lib/services/email.service";
 import { formatCurrency } from "@/lib/utils/formatting";
 import { RECEIPT_INTL_LOCALE, resolveReceiptLocale } from "./receipt-labels";
 import { isReceiptSendLimitReached, RECEIPT_SEND_LIMIT_REASON } from "./receipt-send-limit";
-import { buildReceiptData } from "./build-receipt-data";
+import { buildReceiptData, type BuiltReceipt } from "./build-receipt-data";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -16,6 +16,8 @@ interface SendReceiptEmailOptions {
   /** The caller's storeId — this function otherwise takes only an orderId and
    * has no tenant scoping of its own. Same guard as sendCustomerReceiptForOrder. */
   expectedStoreId?: string;
+  /** The receipt data when the caller has already built it, so it isn't built (and the order re-read) twice. */
+  prebuilt?: BuiltReceipt;
 }
 
 /**
@@ -39,7 +41,7 @@ export async function sendReceiptEmailForOrder(
   const recipient = email.trim();
   if (!recipient) return { sent: false, skipped: true, reason: "no_recipient_email" };
 
-  const built = await buildReceiptData(orderId);
+  const built = options.prebuilt ?? (await buildReceiptData(orderId));
   if (!built) return { sent: false, skipped: true, reason: "order_not_found" };
   if (options.expectedStoreId && built.storeId !== options.expectedStoreId) {
     return { sent: false, skipped: true, reason: "order_not_found" };
@@ -94,4 +96,41 @@ export async function sendReceiptEmailForOrder(
     .catch(() => undefined);
 
   return { sent: true };
+}
+
+/**
+ * The automatic send: fired by the `order/placed` and `order/payment.confirmed`
+ * events (see send-receipt-email-on-order.ts) for any order that carries a
+ * customer email — one the customer typed on the customer-facing screen, or
+ * their Customer record's. The address being on the order IS the consent; there
+ * is no store toggle, unlike the WhatsApp auto-send, because nothing here can
+ * reach someone who didn't hand over their address.
+ *
+ * Every skip is silent and writes no log row, so the order-history status only
+ * ever reports real attempts:
+ *  - `not_paid`: a Pay Later or still-PENDING order gets its receipt when it is
+ *    paid, not when it is placed (the paying event fires this again);
+ *  - `already_sent`: both events can fire for the same order, and a manual send
+ *    from the "order complete" screen may have got there first;
+ *  - `email_not_configured`: without a Resend key `sendReceiptEmail` reports a
+ *    simulated success, which must not be logged as a delivered receipt.
+ */
+export async function sendAutoReceiptEmailForOrder(
+  orderId: string
+): Promise<SendReceiptEmailResult> {
+  const built = await buildReceiptData(orderId);
+  if (!built) return { sent: false, skipped: true, reason: "order_not_found" };
+  if (!built.customerEmail) return { sent: false, skipped: true, reason: "no_customer_email" };
+  if (built.paymentStatus !== "PAID") return { sent: false, skipped: true, reason: "not_paid" };
+  if (!process.env.RESEND_API_KEY) {
+    return { sent: false, skipped: true, reason: "email_not_configured" };
+  }
+
+  const alreadySent = await prisma.orderReceiptSend.findFirst({
+    where: { orderId, channel: "EMAIL", status: "SENT" },
+    select: { id: true },
+  });
+  if (alreadySent) return { sent: false, skipped: true, reason: "already_sent" };
+
+  return sendReceiptEmailForOrder(orderId, built.customerEmail, { prebuilt: built });
 }

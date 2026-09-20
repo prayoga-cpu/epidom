@@ -21,11 +21,13 @@ import { useDialogSwap } from "@/components/ui/use-dialog-swap";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { useRefundOrder } from "../hooks/use-refund-order";
 import {
+  deriveEmailReceiptStatus,
   useOrderReceiptSends,
   useSendOrderReceipt,
   useSendOrderReceiptEmail,
   receiptSendRecipient,
 } from "../hooks/use-order-receipt-sends";
+import { ReceiptEmailStatus } from "./receipt-email-status";
 import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
 import { RefundDialog, type RefundConfirmData, type RefundTender } from "./refund-dialog";
 import { mapPaymentMethodLabel } from "../lib/order-status-display";
@@ -115,7 +117,11 @@ export function OrderHistoryDetailDialog({
   // stacking a second modal on top of it — see useDialogSwap.
   const swap = useDialogSwap<"markPaid" | "refund" | "cancelConfirm">(!!order);
   const [isReprinting, setIsReprinting] = useState(false);
-  const lastReceiptSend = receiptSends?.[0];
+  // The send log covers both channels. The WhatsApp line below is about WhatsApp
+  // only — it used to read "sent via WhatsApp" for an email send too — and the
+  // emailed receipt has its own status row next to its own button.
+  const lastWhatsappSend = receiptSends?.find((send) => send.channel === "WHATSAPP");
+  const emailReceiptState = deriveEmailReceiptStatus(receiptSends).state;
 
   // `Order.customerEmail` is on the wire (the history route returns every
   // scalar column) but isn't declared on OrderHistoryItem, which another agent
@@ -498,35 +504,35 @@ export function OrderHistoryDetailDialog({
                     )}
                     {sendReceipt.isPending
                       ? t("pos.history.sendingReceipt")
-                      : lastReceiptSend
+                      : lastWhatsappSend
                         ? t("pos.history.resendReceipt")
                         : t("pos.history.sendReceipt")}
                   </Button>
                 )}
-                {lastReceiptSend && (
+                {lastWhatsappSend && (
                   <span
                     className={cn(
                       "flex items-center gap-1 text-xs",
-                      lastReceiptSend.status === "SENT"
+                      lastWhatsappSend.status === "SENT"
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-destructive"
                     )}
                   >
-                    {lastReceiptSend.status === "SENT" ? (
+                    {lastWhatsappSend.status === "SENT" ? (
                       <CheckCircle2 className="h-3.5 w-3.5" />
                     ) : (
                       <XCircle className="h-3.5 w-3.5" />
                     )}
-                    {lastReceiptSend.status === "SENT"
+                    {lastWhatsappSend.status === "SENT"
                       ? t("pos.history.receiptSent")
                       : t("pos.history.receiptFailed")}{" "}
                     {/* Which address/number it went to — a store that sends
                         both email and WhatsApp receipts cannot tell the two
                         attempts apart from the status alone. */}
-                    {receiptSendRecipient(lastReceiptSend)
-                      ? `(${receiptSendRecipient(lastReceiptSend)}) `
+                    {receiptSendRecipient(lastWhatsappSend)
+                      ? `(${receiptSendRecipient(lastWhatsappSend)}) `
                       : ""}
-                    · {formatDateTimeWithTimezone(lastReceiptSend.sentAt)}
+                    · {formatDateTimeWithTimezone(lastWhatsappSend.sentAt)}
                   </span>
                 )}
               </div>
@@ -535,28 +541,34 @@ export function OrderHistoryDetailDialog({
                   the order has one — the column has existed forever and the
                   POS never wrote it, so for a walk-in this send is what fills
                   it in (see send-receipt-email.ts). */}
-              <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center">
-                <Input
-                  type="email"
-                  inputMode="email"
-                  className="h-11 flex-1"
-                  placeholder={t("cashierPayments.sendEmail.placeholder")}
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                />
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 sm:w-auto"
-                  disabled={sendReceiptEmail.isPending || !emailInput.trim()}
-                  onClick={handleSendReceiptEmail}
-                >
-                  {sendReceiptEmail.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Mail className="h-3.5 w-3.5" />
-                  )}
-                  {t("cashierPayments.sendEmail.button")}
-                </Button>
+              <div className="flex flex-col gap-2 border-t pt-3">
+                <span className="text-sm font-medium">{t("pos.receiptEmail.label")}</span>
+                <ReceiptEmailStatus sends={receiptSends} />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    type="email"
+                    inputMode="email"
+                    className="h-11 flex-1"
+                    placeholder={t("cashierPayments.sendEmail.placeholder")}
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                  />
+                  <Button
+                    variant="outline"
+                    className="h-11 gap-2 sm:w-auto"
+                    disabled={sendReceiptEmail.isPending || !emailInput.trim()}
+                    onClick={handleSendReceiptEmail}
+                  >
+                    {sendReceiptEmail.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Mail className="h-3.5 w-3.5" />
+                    )}
+                    {emailReceiptState === "sent"
+                      ? t("cashierPayments.sendEmail.resend")
+                      : t("cashierPayments.sendEmail.button")}
+                  </Button>
+                </div>
               </div>
 
               <SendReceiptWhatsApp

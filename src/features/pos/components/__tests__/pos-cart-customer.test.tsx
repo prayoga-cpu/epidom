@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { apiClient, ApiClientError } from "@/lib/api/client";
 import { PosCartCustomer, prefillFromQuery } from "../pos-cart-customer";
 import { usePosCart } from "../../hooks/use-pos-cart";
+import { useCustomerIntake } from "../../hooks/use-customer-display";
 import type { CartCustomer } from "../../types/pos.types";
 
 const get = vi.mocked(apiClient.get);
@@ -87,6 +88,7 @@ beforeEach(() => {
   get.mockReset();
   post.mockReset();
   mockApi();
+  useCustomerIntake.getState().clear();
 });
 
 describe("PosCartCustomer — empty by default", () => {
@@ -193,12 +195,41 @@ describe("PosCartCustomer — new customer, inline", () => {
     fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.newCustomer" }));
   };
 
-  it("requires a name; phone and email are optional", async () => {
+  it("needs a WhatsApp number or a name — and nothing more", async () => {
     renderRow();
     openCreate();
     fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.saveAndAttach" }));
-    expect(await screen.findByText("cashierCart.customer.nameRequired")).toBeTruthy();
+    expect(await screen.findByText("cashierCart.customer.nameOrPhoneRequired")).toBeTruthy();
     expect(post).not.toHaveBeenCalled();
+  });
+
+  it("creates a customer from a WhatsApp number alone — name and email are optional", async () => {
+    post.mockResolvedValue(row({ id: "c8", name: "+33688888888", phone: "+33688888888" }));
+    renderRow();
+    openCreate();
+    fireEvent.change(screen.getByLabelText("cashierCart.customer.whatsappPlaceholder"), {
+      target: { value: "+33688888888" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.saveAndAttach" }));
+
+    await waitFor(() => expect(cart().customer?.id).toBe("c8"));
+    // The absent name is sent as absent; the server names the record after the number.
+    expect(post).toHaveBeenCalledWith("/stores/s1/customers", {
+      name: undefined,
+      phone: "+33688888888",
+      email: undefined,
+    });
+  });
+
+  it("can still be created from a name alone (no number)", async () => {
+    post.mockResolvedValue(row({ id: "c7", name: "Walk-in Bob", phone: null }));
+    renderRow();
+    openCreate();
+    fireEvent.change(screen.getByLabelText("cashierCart.customer.nameOptionalPlaceholder"), {
+      target: { value: "Walk-in Bob" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.saveAndAttach" }));
+    await waitFor(() => expect(cart().customer?.id).toBe("c7"));
   });
 
   it("creates the customer and attaches them", async () => {
@@ -207,10 +238,10 @@ describe("PosCartCustomer — new customer, inline", () => {
     );
     renderRow();
     openCreate();
-    fireEvent.change(screen.getByLabelText("cashierCart.customer.namePlaceholder"), {
+    fireEvent.change(screen.getByLabelText("cashierCart.customer.nameOptionalPlaceholder"), {
       target: { value: "Bob" },
     });
-    fireEvent.change(screen.getByLabelText("cashierCart.customer.phonePlaceholder"), {
+    fireEvent.change(screen.getByLabelText("cashierCart.customer.whatsappPlaceholder"), {
       target: { value: "+33699999999" },
     });
     fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.saveAndAttach" }));
@@ -226,10 +257,10 @@ describe("PosCartCustomer — new customer, inline", () => {
   it("rejects a malformed email before calling the server", async () => {
     renderRow();
     openCreate();
-    fireEvent.change(screen.getByLabelText("cashierCart.customer.namePlaceholder"), {
+    fireEvent.change(screen.getByLabelText("cashierCart.customer.nameOptionalPlaceholder"), {
       target: { value: "Bob" },
     });
-    fireEvent.change(screen.getByLabelText("cashierCart.customer.emailPlaceholder"), {
+    fireEvent.change(screen.getByLabelText("cashierCart.customer.emailOptionalPlaceholder"), {
       target: { value: "not-an-email" },
     });
     fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.saveAndAttach" }));
@@ -246,10 +277,10 @@ describe("PosCartCustomer — new customer, inline", () => {
     );
     renderRow();
     openCreate();
-    fireEvent.change(screen.getByLabelText("cashierCart.customer.namePlaceholder"), {
+    fireEvent.change(screen.getByLabelText("cashierCart.customer.nameOptionalPlaceholder"), {
       target: { value: "Alicia" },
     });
-    fireEvent.change(screen.getByLabelText("cashierCart.customer.phonePlaceholder"), {
+    fireEvent.change(screen.getByLabelText("cashierCart.customer.whatsappPlaceholder"), {
       target: { value: "+33612345678" },
     });
     fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.saveAndAttach" }));
@@ -269,12 +300,127 @@ describe("PosCartCustomer — new customer, inline", () => {
     );
     renderRow();
     openCreate();
-    fireEvent.change(screen.getByLabelText("cashierCart.customer.namePlaceholder"), {
+    fireEvent.change(screen.getByLabelText("cashierCart.customer.nameOptionalPlaceholder"), {
       target: { value: "Bob" },
     });
     fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.saveAndAttach" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Boom"));
-    expect(screen.getByLabelText("cashierCart.customer.namePlaceholder")).toBeTruthy();
+    expect(screen.getByLabelText("cashierCart.customer.nameOptionalPlaceholder")).toBeTruthy();
+  });
+});
+
+describe("PosCartCustomer — synced with the customer screen", () => {
+  /** What the resolver leaves in the intake once a number turns out to be new. */
+  const numberArrives = (over: Partial<ReturnType<typeof useCustomerIntake.getState>> = {}) =>
+    act(() => {
+      useCustomerIntake.setState({
+        phone: "+33612345678",
+        match: "new",
+        name: "",
+        email: "",
+        receivedAt: 100,
+        formOpenedFor: 0,
+        ...over,
+      });
+    });
+
+  const phoneField = () =>
+    screen.getByLabelText("cashierCart.customer.whatsappPlaceholder") as HTMLInputElement;
+  const nameField = () =>
+    screen.getByLabelText("cashierCart.customer.nameOptionalPlaceholder") as HTMLInputElement;
+  const emailField = () =>
+    screen.getByLabelText("cashierCart.customer.emailOptionalPlaceholder") as HTMLInputElement;
+
+  it("opens the new-customer form with the number the customer typed on their screen", () => {
+    renderRow();
+    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+
+    numberArrives();
+
+    expect(phoneField().value).toBe("+33612345678");
+    expect(screen.getByText("cashierCart.customer.fromDisplay")).toBeTruthy();
+    // It must not pull focus off whatever the cashier is in the middle of.
+    expect(document.activeElement).not.toBe(phoneField());
+  });
+
+  it("stays out of the way when the number belongs to an existing customer or is still being checked", () => {
+    renderRow();
+    numberArrives({ match: "existing" });
+    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    numberArrives({ match: null });
+    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    numberArrives({ match: "unknown" });
+    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+  });
+
+  it("does not open over a customer who is already attached", () => {
+    cart().setCustomer(alice);
+    renderRow();
+    numberArrives();
+    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    expect(screen.getByTestId("pos-cart-customer")).toHaveTextContent("Alice Martin");
+  });
+
+  it("follows the name and email as the customer types them", () => {
+    renderRow();
+    numberArrives();
+    act(() => useCustomerIntake.getState().setDetails("Claire", ""));
+    expect(nameField().value).toBe("Claire");
+    act(() => useCustomerIntake.getState().setDetails("Claire Moreau", "claire@example.com"));
+    expect(nameField().value).toBe("Claire Moreau");
+    expect(emailField().value).toBe("claire@example.com");
+  });
+
+  it("stops overwriting a field once the cashier has typed in it themselves", () => {
+    renderRow();
+    numberArrives();
+    act(() => useCustomerIntake.getState().setDetails("Claire", ""));
+
+    fireEvent.change(nameField(), { target: { value: "Claire M." } });
+    act(() => useCustomerIntake.getState().setDetails("Claire Moreau", "claire@example.com"));
+
+    // The cashier's name stands; the field they left alone still follows the customer.
+    expect(nameField().value).toBe("Claire M.");
+    expect(emailField().value).toBe("claire@example.com");
+  });
+
+  it("saves what the customer typed — one tap from the cashier — and attaches them", async () => {
+    post.mockResolvedValue(row({ id: "c5", name: "Claire", phone: "+33612345678" }));
+    renderRow();
+    numberArrives();
+    act(() => useCustomerIntake.getState().setDetails("Claire", "claire@example.com"));
+
+    fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.saveAndAttach" }));
+
+    await waitFor(() => expect(cart().customer?.id).toBe("c5"));
+    expect(post).toHaveBeenCalledWith("/stores/s1/customers", {
+      name: "Claire",
+      phone: "+33612345678",
+      email: "claire@example.com",
+    });
+  });
+
+  it("does not spring back open after the cashier closes it, or after leaving and returning", () => {
+    const view = renderRow();
+    numberArrives();
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
+    // Cancel returns to search; close that too.
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
+    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+
+    view.unmount();
+    renderRow();
+    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+  });
+
+  it("opens again for the NEXT number the customer submits", () => {
+    renderRow();
+    numberArrives();
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
+
+    numberArrives({ phone: "+33699999999", receivedAt: 200 });
+    expect(phoneField().value).toBe("+33699999999");
   });
 });
 

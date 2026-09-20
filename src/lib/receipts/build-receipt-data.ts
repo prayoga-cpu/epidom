@@ -9,6 +9,8 @@ export interface BuiltReceipt {
   storeId: string;
   storefrontSlug: string | null;
   customerPhone: string | null;
+  /** The address the customer left (typed on the customer screen, or their Customer record's). */
+  customerEmail: string | null;
   customerName: string;
   paymentStatus: string;
   autoSendWhatsappReceipt: boolean;
@@ -154,6 +156,7 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     storeId: order.storeId,
     storefrontSlug: order.storefront?.slug ?? null,
     customerPhone: order.customerPhone,
+    customerEmail: order.customerEmail?.trim() || null,
     customerName: order.customerName,
     paymentStatus: order.paymentStatus,
     autoSendWhatsappReceipt: branding.autoSendWhatsappReceipt,

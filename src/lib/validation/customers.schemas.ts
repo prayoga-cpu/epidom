@@ -32,12 +32,21 @@ const emailField = z
 
 const createEmail = emailField.transform((v) => (v === "" ? undefined : v)).optional();
 
-export const createCustomerSchema = z.object({
-  name: nameSchema,
-  phone: optionalTrimmed(30, "Phone number is too long"),
-  email: createEmail,
-  notes: optionalTrimmed(500, "Notes are too long"),
-});
+// A customer may be created from a phone number alone — the POS captures a
+// WhatsApp number first and the name/email are optional extras the customer may
+// never give. The service then names the record after the number (Customer.name
+// is NOT NULL), so "no name" is only valid alongside a phone.
+export const createCustomerSchema = z
+  .object({
+    name: optionalTrimmed(100, "Name is too long"),
+    phone: optionalTrimmed(30, "Phone number is too long"),
+    email: createEmail,
+    notes: optionalTrimmed(500, "Notes are too long"),
+  })
+  .refine((v) => !!v.name || !!v.phone, {
+    message: "Enter a name or a phone number",
+    path: ["name"],
+  });
 
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 

@@ -25,9 +25,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  QUEUE_DATE_PRESETS,
   QUEUE_FILTER_KEYS,
   QUEUE_PAYMENT_METHODS,
   QUEUE_STATUSES,
+  type QueueDatePreset,
   type QueueDepartmentFilter,
   type QueueFilterKey,
   type QueuePaymentMethodFilter,
@@ -40,6 +42,7 @@ import { mapPaymentMethodLabel } from "../lib/order-status-display";
 import { UnpaidFilterToggle } from "./unpaid-filter-toggle";
 import { AddFilterMenu } from "./add-filter-menu";
 import { RemovableFilter } from "./removable-filter";
+import { ResetToTodayButton } from "./reset-to-today-button";
 
 interface FilterOption {
   id: string;
@@ -103,6 +106,9 @@ interface PosOrderQueueToolbarProps {
   onViewChange: (value: QueueView) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  /** Which day(s) the queue is about — always applied, today unless changed. */
+  datePreset: QueueDatePreset;
+  onDatePresetChange: (value: QueueDatePreset) => void;
 }
 
 export function PosOrderQueueToolbar({
@@ -137,6 +143,8 @@ export function PosOrderQueueToolbar({
   onViewChange,
   hasActiveFilters,
   onClearFilters,
+  datePreset,
+  onDatePresetChange,
 }: PosOrderQueueToolbarProps) {
   const { t } = useI18n();
 
@@ -208,6 +216,34 @@ export function PosOrderQueueToolbar({
             count={unpaidCount}
             className="h-8 px-2.5 text-xs"
           />
+          {/* Always shown, never removable: the date is always applied (Today by
+              default), so it stays visible — orders outside it are hidden, and a
+              control that could vanish would leave no way to see why. */}
+          <Select
+            value={datePreset}
+            onValueChange={(v) => onDatePresetChange(v as QueueDatePreset)}
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-[140px] text-xs"
+              aria-label={t("pos.filters.dateRange")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {QUEUE_DATE_PRESETS.map((preset) => (
+                <SelectItem key={preset} value={preset}>
+                  {t(`pos.history.dateRange.${preset}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {datePreset !== "today" && (
+            <ResetToTodayButton
+              onClick={() => onDatePresetChange("today")}
+              className="h-8 px-2 text-xs"
+            />
+          )}
           {activeFilterKeys.includes("type") && (
             <RemovableFilter onRemove={() => onRemoveFilter("type")}>
               <Select

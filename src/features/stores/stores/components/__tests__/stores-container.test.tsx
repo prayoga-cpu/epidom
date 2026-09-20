@@ -24,15 +24,22 @@ vi.mock("../create-store-dialog", () => ({
 const h = vi.hoisted(() => ({
   stores: { current: [] as unknown[] },
   subscription: { current: undefined as unknown },
+  error: { current: null as unknown },
 }));
 vi.mock("../../hooks/use-stores", () => ({
-  useStores: () => ({ data: h.stores.current, isLoading: false, error: null, refetch: vi.fn() }),
+  useStores: () => ({
+    data: h.stores.current,
+    isLoading: false,
+    error: h.error.current,
+    refetch: vi.fn(),
+  }),
 }));
 vi.mock("../../hooks/use-subscription-status", () => ({
   useSubscriptionStatus: () => ({ data: h.subscription.current, isLoading: false }),
 }));
 
 import { StoresContainer } from "../stores-container";
+import { UnauthorizedError } from "@/lib/api/unauthorized";
 
 const ownerStore = { id: "s1", name: "Owned Cafe", accessRole: "owner" };
 const staffStore = {
@@ -57,6 +64,7 @@ function mockProfile(profile: unknown) {
 
 beforeEach(() => {
   h.stores.current = [];
+  h.error.current = null;
   h.subscription.current = activeSub;
   originalLocation = window.location;
   Object.defineProperty(window, "location", {
@@ -148,5 +156,43 @@ describe("StoresContainer — what a linked staff login sees", () => {
     const cards = await screen.findAllByTestId("store-card");
     const byName = Object.fromEntries(cards.map((c) => [c.textContent, c.getAttribute("data-blocked")]));
     expect(byName).toEqual({ "Owned Cafe": "true", "Staffed Cafe": "false" });
+  });
+});
+
+describe("StoresContainer — a session that is no longer live", () => {
+  // What the profile call really does with a dead session: 401, not a profile.
+  function mockDeadSession() {
+    global.fetch = vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) })) as never;
+  }
+
+  it("a 401 sends the person to sign in instead of leaving a dead-end error on screen", async () => {
+    h.error.current = new UnauthorizedError();
+    mockDeadSession();
+    render(<StoresContainer />);
+
+    await waitFor(() => expect(window.location.href).toBe("/login"));
+    expect(screen.queryByText("stores.errorLoading")).toBeNull();
+    expect(screen.queryByText("Try Again")).toBeNull();
+  });
+
+  it("any other failure still shows the error with Try Again, and does not redirect", async () => {
+    h.error.current = new Error("Database is down");
+    mockProfile({ business: { stores: [{ id: "s1" }] }, staffLink: null });
+    render(<StoresContainer />);
+
+    expect(await screen.findByText("stores.errorLoading")).toBeInTheDocument();
+    expect(screen.getByText("Database is down")).toBeInTheDocument();
+    expect(screen.getByText("Try Again")).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(window.location.href).toBe("http://localhost/stores");
+  });
+
+  it("a healthy session is never redirected", async () => {
+    h.stores.current = [ownerStore];
+    mockProfile({ business: { stores: [{ id: "s1" }] }, staffLink: null });
+    render(<StoresContainer />);
+
+    expect(await screen.findByTestId("store-card")).toBeInTheDocument();
+    expect(window.location.href).toBe("http://localhost/stores");
   });
 });

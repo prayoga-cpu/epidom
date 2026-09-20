@@ -10,8 +10,10 @@ vi.mock("@/components/providers/currency-provider", () => ({
     formatPrice: (v: number, c?: string) => `${c ?? ""} ${v}`,
   }),
 }));
+// A query string a test can set — e.g. "unpaid=1", the link the unpaid alert opens.
+const url = vi.hoisted(() => ({ search: "" }));
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(url.search),
   useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock("@tanstack/react-query", () => ({
@@ -49,18 +51,33 @@ vi.mock("@/lib/hooks/use-min-width", async (importOriginal) => ({
 
 import { PosOrderQueue } from "../pos-order-queue";
 import { makeOrder } from "./order-queue-fixtures";
+import type { PosOrderDisplay } from "../../types/pos.types";
 
 const STORAGE_KEY = "epidom-pos-queue-filters-store-1";
 
-const posA = makeOrder({ id: "p1", orderNumber: "POS-A", source: "POS", queueNumber: 1 });
-const posB = makeOrder({
+// The queue only shows TODAY's orders until told otherwise, so every fixture is
+// placed today by default. Dates are built from the local clock, like the queue's
+// own — a fixed ISO string would drift out of "today" (or straddle it, in some
+// timezones) and quietly break these.
+const TODAY = new Date().toISOString();
+const YESTERDAY_NOON = new Date(
+  new Date().getFullYear(),
+  new Date().getMonth(),
+  new Date().getDate() - 1,
+  12
+).toISOString();
+const orderToday = (overrides: Partial<PosOrderDisplay> = {}) =>
+  makeOrder({ createdAt: TODAY, ...overrides });
+
+const posA = orderToday({ id: "p1", orderNumber: "POS-A", source: "POS", queueNumber: 1 });
+const posB = orderToday({
   id: "p2",
   orderNumber: "POS-B",
   source: "POS",
   queueNumber: 2,
   status: "READY",
 });
-const online = makeOrder({ id: "w1", orderNumber: "WEB-A", source: "STOREFRONT", queueNumber: 3 });
+const online = orderToday({ id: "w1", orderNumber: "WEB-A", source: "STOREFRONT", queueNumber: 3 });
 
 const persist = (state: object) => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -77,6 +94,7 @@ const visible = (text: string) => screen.queryByText(text) !== null;
 
 beforeEach(() => {
   localStorage.clear();
+  url.search = "";
   queue.orders = [posA, posB, online];
 });
 
@@ -113,9 +131,9 @@ describe("PosOrderQueue — POS / Online tabs", () => {
   it("files GoFood, GrabFood and manual orders under Online too", async () => {
     queue.orders = [
       posA,
-      makeOrder({ id: "g1", orderNumber: "GO-1", source: "GOFOOD" }),
-      makeOrder({ id: "g2", orderNumber: "GR-1", source: "GRABFOOD" }),
-      makeOrder({ id: "m1", orderNumber: "MAN-1", source: "MANUAL" }),
+      orderToday({ id: "g1", orderNumber: "GO-1", source: "GOFOOD" }),
+      orderToday({ id: "g2", orderNumber: "GR-1", source: "GRABFOOD" }),
+      orderToday({ id: "m1", orderNumber: "MAN-1", source: "MANUAL" }),
     ];
     await renderQueue();
     expect(tab(/tabOnline/)).toHaveTextContent("3");
@@ -211,5 +229,104 @@ describe("PosOrderQueue — split view", () => {
     expect(
       within(toolbar as HTMLElement).queryByText("pos.filters.source")
     ).not.toBeInTheDocument();
+  });
+});
+
+// ── Date scope: today's orders unless told otherwise ─────────────────────────
+
+describe("PosOrderQueue — date scope", () => {
+  const oldOrder = orderToday({
+    id: "old1",
+    orderNumber: "POS-OLD",
+    source: "POS",
+    queueNumber: 9,
+    paymentStatus: "PENDING",
+    createdAt: YESTERDAY_NOON,
+  });
+  const dateSelect = () => screen.getByRole("combobox", { name: "pos.filters.dateRange" });
+  const resetButton = () => screen.queryByRole("button", { name: /pos\.filters\.resetToToday/ });
+
+  beforeEach(() => {
+    queue.orders = [posA, oldOrder];
+  });
+
+  it("opens on today: an order from yesterday is not listed", async () => {
+    await renderQueue();
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.today");
+    expect(visible("POS-A")).toBe(true);
+    expect(visible("POS-OLD")).toBe(false);
+  });
+
+  it("counts only the orders in scope — no number on the page counts what the list hides", async () => {
+    await renderQueue();
+    expect(tab(/tabPos/)).toHaveTextContent("1");
+    // The unpaid toggle's badge too: the one unpaid order is yesterday's.
+    expect(screen.getByRole("button", { name: /pos\.queue\.unpaid/i })).not.toHaveTextContent("1");
+  });
+
+  it("shows older orders once the date is widened, and offers the way back", async () => {
+    persist({ version: 2, datePreset: "all", sourceFilter: "POS", view: "split" });
+    await renderQueue();
+    expect(visible("POS-A")).toBe(true);
+    expect(visible("POS-OLD")).toBe(true);
+    expect(tab(/tabPos/)).toHaveTextContent("2");
+
+    fireEvent.click(resetButton()!);
+    expect(visible("POS-OLD")).toBe(false);
+    expect(visible("POS-A")).toBe(true);
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.today");
+  });
+
+  it("has no reset button while it is already on today", async () => {
+    await renderQueue();
+    expect(resetButton()).toBeNull();
+  });
+
+  it("gives everyone the new default once — a state saved before the date existed opens on today", async () => {
+    // No `version`: what every user who ever touched a filter has saved. Read as
+    // "no date filter" it would leave them on all-time and the default would never reach them.
+    persist({ sourceFilter: "POS", view: "split", unpaidOnly: false });
+    await renderQueue();
+    expect(visible("POS-OLD")).toBe(false);
+    expect(resetButton()).toBeNull();
+  });
+
+  it("keeps a deliberate choice: All time, saved at the current version, is still All time", async () => {
+    persist({ version: 2, datePreset: "all", sourceFilter: "POS", view: "split" });
+    await renderQueue();
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.all");
+    expect(visible("POS-OLD")).toBe(true);
+  });
+
+  it("does not take a made-up saved preset at its word", async () => {
+    persist({ version: 2, datePreset: "next-century", sourceFilter: "POS", view: "split" });
+    await renderQueue();
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.today");
+  });
+
+  it("opens on All time from the unpaid alert's link, so every unpaid order is listed", async () => {
+    url.search = "unpaid=1";
+    await renderQueue();
+    expect(visible("POS-OLD")).toBe(true);
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.all");
+  });
+
+  it("leaves the date alone when other filters are cleared", async () => {
+    persist({ version: 2, datePreset: "all", sourceFilter: "POS", view: "split" });
+    await renderQueue();
+    fireEvent.change(screen.getByPlaceholderText("pos.queue.searchPlaceholder"), {
+      target: { value: "zzz" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /pos\.queue\.clearFilters/ }));
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.all");
+    expect(resetButton()).not.toBeNull();
+  });
+
+  it("shows the no-matches notice, toolbar and date control intact, when nothing is from today", async () => {
+    queue.orders = [oldOrder];
+    await renderQueue();
+    expect(screen.getByText("pos.queue.noMatches")).toBeInTheDocument();
+    // The cashier can still widen the date from here.
+    expect(dateSelect()).toBeInTheDocument();
   });
 });

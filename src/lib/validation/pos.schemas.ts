@@ -125,6 +125,11 @@ const posOrderObjectSchema = z.object({
   tableNumber: z.string().optional(),
   customerName: z.string().optional(),
   customerPhone: z.string().optional(),
+  // An address the customer typed on the customer-facing screen. Only a
+  // fallback: an attached Customer's own email wins (see pos-order-settlement).
+  // Its presence is what makes the receipt email send itself once the order is
+  // paid — see send-receipt-email-on-order.ts.
+  customerEmail: z.string().trim().email("Invalid email format").max(254).optional(),
   bankCode: z.enum(["BNI", "BRI", "MANDIRI", "PERMATA"]).optional(),
   notes: z.string().optional(),
   amountTendered: z.number().optional(),
@@ -241,6 +246,7 @@ export const createHoldOrderSchema = z.object({
   // explicit `null` / a sent value replaces it.
   customerId: z.string().cuid().nullish(),
   customerPhone: z.string().optional(),
+  customerEmail: z.string().trim().email("Invalid email format").max(254).optional(),
   presetId: z.string().cuid().nullish(),
   discountAmount: z.number().min(0).optional(),
   discountReason: z.string().max(200, "Reason is too long").optional(),

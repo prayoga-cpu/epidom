@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { nanoid } from "@/lib/utils/nanoid";
 import { usePosCart } from "../hooks/use-pos-cart";
-import { clearCustomerPhone } from "../hooks/use-customer-display";
+import { clearCustomerIntake } from "../hooks/use-customer-display";
 import { allocateSplit, splitEqually, type SplitBill } from "../lib/split-bill";
 import { getCurrencyDecimals } from "../lib/currency-decimals";
 import type { CartItem } from "../types/pos.types";
@@ -233,7 +233,7 @@ export function PosSplitBillDialog({
   const handleDone = () => {
     if (usePosCart.getState().items.length === 0) {
       usePosCart.getState().clearCart();
-      clearCustomerPhone();
+      clearCustomerIntake();
       Object.assign(session, newSplitSession());
       onOpenChange(false);
     }

@@ -213,6 +213,38 @@ describe("create", () => {
       notes: "regular",
     });
   });
+
+  it("names a customer created from a phone alone after the normalised number", async () => {
+    // The POS captures a WhatsApp number first; name and email are optional
+    // extras the customer may never give. Customer.name is NOT NULL, so the
+    // record is named after the number — the canonical one, not what was typed.
+    repo.create.mockResolvedValue(customer({ name: "+33612345678" }));
+
+    await service.create("s1", { phone: "06 12 34 56 78" });
+
+    expect(repo.create).toHaveBeenCalledWith({
+      storeId: "s1",
+      name: "+33612345678",
+      phone: "+33612345678",
+      email: null,
+      notes: null,
+    });
+  });
+
+  it("keeps a name that was given rather than overwriting it with the phone", async () => {
+    repo.create.mockResolvedValue(customer());
+
+    await service.create("s1", { name: "Ana", phone: "+33612345678" });
+
+    expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ name: "Ana" }));
+  });
+
+  it("refuses a customer with neither a name nor a phone", async () => {
+    await expect(service.create("s1", { email: "a@b.co" })).rejects.toMatchObject({
+      details: [{ field: "name" }],
+    });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
 });
 
 describe("getDetail", () => {

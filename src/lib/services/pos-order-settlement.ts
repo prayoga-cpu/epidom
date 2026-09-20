@@ -352,9 +352,12 @@ export function buildSettlementOrderData(args: {
   return {
     customerName: s.customer?.name ?? input.customerName ?? args.fallbackCustomerName ?? "Walk-in",
     customerPhone: s.customer?.phone ?? input.customerPhone,
-    // Order.customerEmail exists but was never written before — the email
-    // receipt needs it, and only a Customer record can supply one.
-    ...(s.customer?.email ? { customerEmail: s.customer.email } : {}),
+    // The email receipt needs Order.customerEmail. A Customer record's own
+    // address wins; failing that, one the customer typed on the customer-facing
+    // screen without being saved as a customer (input.customerEmail).
+    ...((s.customer?.email ?? input.customerEmail)
+      ? { customerEmail: s.customer?.email ?? input.customerEmail }
+      : {}),
     orderType: input.orderType as OrderType,
     // Only DINE_IN carries a pax count — see the schema comment on
     // Order.guestCount. Takeaway stays null rather than being coerced to 1.

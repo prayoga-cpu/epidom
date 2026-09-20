@@ -98,7 +98,12 @@ export function PosOrdersTabs({ storeId, canManageSettings }: PosOrdersTabsProps
         </TabsList>
 
         {canManageSettings && (
-          <div className="flex items-center gap-2">
+          // ml-6 = the p-6 the queue/history content below uses, so on a narrow
+          // screen — where this wraps onto its own line — it lines up with the
+          // search box and POS / Online ordering tabs instead of sitting flush
+          // against the screen edge. (At md+ it is pushed to the far end by
+          // justify-between and the margin has no visible effect.)
+          <div className="ml-6 flex items-center gap-2">
             <Power className="text-muted-foreground h-4 w-4" />
             <span className="text-muted-foreground text-sm">{t("pos.queue.activeQueueLabel")}</span>
             <Switch

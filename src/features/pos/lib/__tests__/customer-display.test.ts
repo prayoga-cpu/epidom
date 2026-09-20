@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   EMPTY_CUSTOMER_DISPLAY_SNAPSHOT,
   buildCustomerDisplayBuildingSnapshot,
+  firstNameOf,
+  isPlausibleEmail,
   parseCustomerDisplaySnapshot,
   resolveHighlight,
   toCustomerDisplayLines,
@@ -338,5 +340,65 @@ describe("customer-phone message", () => {
     expect(messages.filter((m) => m.type === "customer-phone")).toHaveLength(1);
     expect(messages.filter((m) => m.type === "state")).toHaveLength(1);
     expect(messages.filter((m) => m.type === "request")).toHaveLength(1);
+  });
+});
+
+describe("firstNameOf — the only part of a customer the display is trusted with", () => {
+  it("takes the first word of a name", () => {
+    expect(firstNameOf("Alice Martin")).toBe("Alice");
+    expect(firstNameOf("  Anne-Marie   Dupont ")).toBe("Anne-Marie");
+    expect(firstNameOf("Cher")).toBe("Cher");
+  });
+
+  it("is null when there is no real name to greet", () => {
+    expect(firstNameOf(null)).toBeNull();
+    expect(firstNameOf("")).toBeNull();
+    expect(firstNameOf("   ")).toBeNull();
+  });
+
+  it("is null for a record named after the customer's own number", () => {
+    // A customer created from a phone alone is named after it: greeting them as
+    // "+33612345678" would read the number back at whoever is standing there.
+    expect(firstNameOf("+33612345678", "+33612345678")).toBeNull();
+    expect(firstNameOf("+33 6 12 34 56 78")).toBeNull();
+    expect(firstNameOf("06.12.34.56.78")).toBeNull();
+  });
+});
+
+describe("isPlausibleEmail — what the display will send to the till", () => {
+  it("accepts an ordinary address", () => {
+    expect(isPlausibleEmail("claire@example.com")).toBe(true);
+    expect(isPlausibleEmail("c.m+shop@mail.example.co.uk")).toBe(true);
+  });
+
+  it("holds back anything unfinished or malformed", () => {
+    for (const bad of [
+      "",
+      "claire",
+      "claire@",
+      "claire@mail",
+      "claire@mail.",
+      "@mail.com",
+      "a b@c.com",
+    ]) {
+      expect(isPlausibleEmail(bad), bad).toBe(false);
+    }
+  });
+
+  it("holds back an address longer than the server accepts", () => {
+    expect(isPlausibleEmail(`${"a".repeat(250)}@b.com`)).toBe(false);
+  });
+});
+
+describe("the intake messages", () => {
+  it("the details and status messages are part of the channel contract", () => {
+    const messages: CustomerDisplayMessage[] = [
+      { type: "customer-details", name: "Claire", email: "claire@example.com" },
+      {
+        type: "customer-status",
+        status: { phone: "+33612345678", match: "existing", firstName: "Claire" },
+      },
+    ];
+    expect(messages.map((m) => m.type)).toEqual(["customer-details", "customer-status"]);
   });
 });

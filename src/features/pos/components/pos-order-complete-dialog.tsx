@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   CircleCheckBig,
@@ -27,9 +27,15 @@ import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { cn } from "@/lib/utils";
 import type { ReceiptData } from "@/lib/pwa/thermal-printer";
-import type { SendReceiptBody, SendReceiptEmailBody } from "@/types/api/cashier";
+import type { SendReceiptBody } from "@/types/api/cashier";
 import { usePrintReceipt } from "../hooks/use-print-receipt";
 import { useHasOrderPrinters, usePrintOrder, type OrderPrintInput } from "../hooks/use-print-order";
+import {
+  deriveEmailReceiptStatus,
+  useOrderReceiptSends,
+  useSendOrderReceiptEmail,
+} from "../hooks/use-order-receipt-sends";
+import { ReceiptEmailStatus } from "./receipt-email-status";
 
 export interface OrderCompleteResult {
   /** null for an order queued offline — it has no server id (and no receipt page) until it syncs. */
@@ -59,6 +65,13 @@ interface PosOrderCompleteDialogProps {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * How long this screen keeps looking for a receipt email that is sending itself.
+ * The background job runs a moment after the order is created; past this, "not
+ * sent yet" is the honest answer (the job skipped it, or mail isn't set up).
+ */
+export const AUTO_EMAIL_WAIT_MS = 15_000;
 
 /** Default calling-code country for the WhatsApp field, from the store's own market. */
 function defaultPhoneCountry(currency: string): string {
@@ -175,35 +188,62 @@ function CompleteBody({ storeId, result }: { storeId: string; result: OrderCompl
 
   const [email, setEmail] = useState(result.customer?.email ?? "");
   const [phone, setPhone] = useState<string | undefined>(result.customer?.phone ?? undefined);
-  const [sending, setSending] = useState<"email" | "whatsapp" | null>(null);
-  const [sent, setSent] = useState<{ email: boolean; whatsapp: boolean }>({
-    email: false,
-    whatsapp: false,
-  });
+  const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
+  const [whatsappSent, setWhatsappSent] = useState(false);
 
   const emailValid = EMAIL_RE.test(email.trim());
 
-  const send = async (channel: "email" | "whatsapp") => {
+  // A paid order that already carries an address (typed on the customer screen,
+  // or on their customer record) emails itself. Say so instead of showing "not
+  // sent" for the few seconds before it goes, and read the log until it lands.
+  const autoEmailTo =
+    paid && canSend && EMAIL_RE.test((result.customer?.email ?? "").trim())
+      ? (result.customer?.email ?? "").trim()
+      : null;
+  const [waitingForAuto, setWaitingForAuto] = useState(autoEmailTo !== null);
+  useEffect(() => {
+    if (!waitingForAuto) return;
+    const timer = setTimeout(() => setWaitingForAuto(false), AUTO_EMAIL_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [waitingForAuto]);
+
+  const { data: sends } = useOrderReceiptSends(storeId, result.orderId ?? undefined, {
+    pollForEmail: waitingForAuto,
+  });
+  const emailStatus = deriveEmailReceiptStatus(sends);
+  useEffect(() => {
+    if (emailStatus.state !== "not_sent") setWaitingForAuto(false);
+  }, [emailStatus.state]);
+
+  const sendReceiptEmail = useSendOrderReceiptEmail(storeId);
+  const sendingEmail = sendReceiptEmail.isPending;
+
+  const failMessage = (error: unknown) =>
+    (error instanceof ApiClientError ? error.response.error.message : null) ||
+    t("cashierCheckout.complete.sendFailed");
+
+  const sendEmail = async () => {
     if (!result.orderId) return;
-    setSending(channel);
     try {
-      if (channel === "email") {
-        const body: SendReceiptEmailBody = { email: email.trim() };
-        await apiClient.post(
-          `/stores/${storeId}/pos/orders/${result.orderId}/send-receipt-email`,
-          body
-        );
-      } else {
-        const body: SendReceiptBody = { phone };
-        await apiClient.post(`/stores/${storeId}/pos/orders/${result.orderId}/send-receipt`, body);
-      }
-      setSent((s) => ({ ...s, [channel]: true }));
+      await sendReceiptEmail.mutateAsync({ orderId: result.orderId, email: email.trim() });
       toast.success(t("cashierCheckout.complete.sentToast"));
     } catch (error) {
-      const serverMessage = error instanceof ApiClientError ? error.response.error.message : null;
-      toast.error(serverMessage || t("cashierCheckout.complete.sendFailed"));
+      toast.error(failMessage(error));
+    }
+  };
+
+  const sendWhatsapp = async () => {
+    if (!result.orderId) return;
+    setSendingWhatsapp(true);
+    try {
+      const body: SendReceiptBody = { phone };
+      await apiClient.post(`/stores/${storeId}/pos/orders/${result.orderId}/send-receipt`, body);
+      setWhatsappSent(true);
+      toast.success(t("cashierCheckout.complete.sentToast"));
+    } catch (error) {
+      toast.error(failMessage(error));
     } finally {
-      setSending(null);
+      setSendingWhatsapp(false);
     }
   };
 
@@ -269,30 +309,33 @@ function CompleteBody({ storeId, result }: { storeId: string; result: OrderCompl
             className="h-11 min-w-0 flex-1"
             value={email}
             disabled={!canSend}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setSent((s) => ({ ...s, email: false }));
-            }}
+            onChange={(e) => setEmail(e.target.value)}
           />
           <Button
             type="button"
             variant="outline"
             className="h-11 shrink-0 touch-manipulation gap-1.5"
-            disabled={!canSend || !emailValid || sending !== null || sent.email}
-            onClick={() => void send("email")}
+            disabled={!canSend || !emailValid || sendingEmail || sendingWhatsapp}
+            onClick={() => void sendEmail()}
           >
-            {sending === "email" ? (
+            {sendingEmail ? (
               <Loader2 className="size-4 animate-spin" />
-            ) : sent.email ? (
+            ) : emailStatus.state === "sent" ? (
               <Check className="size-4" />
             ) : (
               <Mail className="size-4" />
             )}
-            {sent.email
-              ? t("cashierCheckout.complete.sent")
+            {emailStatus.state === "sent"
+              ? t("cashierCheckout.complete.resendEmail")
               : t("cashierCheckout.complete.sendEmail")}
           </Button>
         </div>
+
+        {/* Whether the emailed receipt actually went out — read from the order's
+            send log, so it survives closing and reopening this screen. */}
+        {canSend && (
+          <ReceiptEmailStatus sends={sends} sendingTo={waitingForAuto ? autoEmailTo : null} />
+        )}
 
         <div className="flex items-center gap-2">
           {/* PhoneInput doesn't forward aria-label/placeholder to its <input>, so the
@@ -307,7 +350,7 @@ function CompleteBody({ storeId, result }: { storeId: string; result: OrderCompl
               value={phone ?? ""}
               onChange={(value) => {
                 setPhone(value);
-                setSent((s) => ({ ...s, whatsapp: false }));
+                setWhatsappSent(false);
               }}
               defaultCountry={defaultPhoneCountry(currency)}
               disabled={!canSend}
@@ -317,17 +360,17 @@ function CompleteBody({ storeId, result }: { storeId: string; result: OrderCompl
             type="button"
             variant="outline"
             className="h-11 shrink-0 touch-manipulation gap-1.5"
-            disabled={!canSend || !phone || sending !== null || sent.whatsapp}
-            onClick={() => void send("whatsapp")}
+            disabled={!canSend || !phone || sendingWhatsapp || sendingEmail || whatsappSent}
+            onClick={() => void sendWhatsapp()}
           >
-            {sending === "whatsapp" ? (
+            {sendingWhatsapp ? (
               <Loader2 className="size-4 animate-spin" />
-            ) : sent.whatsapp ? (
+            ) : whatsappSent ? (
               <Check className="size-4" />
             ) : (
               <MessageCircle className="size-4" />
             )}
-            {sent.whatsapp
+            {whatsappSent
               ? t("cashierCheckout.complete.sent")
               : t("cashierCheckout.complete.sendWhatsapp")}
           </Button>

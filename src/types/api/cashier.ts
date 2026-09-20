@@ -102,7 +102,8 @@ export interface CustomerDetailDto extends CustomerRowDto {
 }
 
 export interface CreateCustomerBody {
-  name: string;
+  /** May be omitted when a phone is given — the record is then named after the number. */
+  name?: string;
   phone?: string;
   email?: string;
   notes?: string;
