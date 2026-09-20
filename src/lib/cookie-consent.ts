@@ -24,6 +24,12 @@ export interface CookiePreferences {
 const COOKIE_CONSENT_KEY = "cookie-consent-preferences";
 const COOKIE_CONSENT_VERSION = "1.0.0";
 
+/** localStorage key of the saved choice; exported so other tabs' `storage` events can be matched. */
+export const COOKIE_CONSENT_STORAGE_KEY = COOKIE_CONSENT_KEY;
+
+/** Window event that asks the consent bar to reopen on its settings view. */
+export const COOKIE_CONSENT_OPEN_EVENT = "cookie-consent-open";
+
 /**
  * Get current cookie preferences from localStorage
  */
@@ -75,6 +81,21 @@ export function setCookiePreferences(preferences: Partial<CookiePreferences>): v
       preferences.language && validLanguages.includes(preferences.language)
         ? preferences.language
         : (current?.language ?? "en"); // Default to English or current language
+
+    // A language-only change (the language switcher) is not a consent choice. With
+    // no saved choice yet, keep the language in the legacy keys alone: writing the
+    // record would make hasConsentChoice() true with everything off, and a visitor
+    // who switched language before answering would be recorded as having refused
+    // without ever seeing the bar. Once a choice exists, language rides along in it.
+    const carriesChoice =
+      preferences.analytics !== undefined || preferences.marketing !== undefined;
+    if (!current && !carriesChoice) {
+      localStorage.setItem("locale", language);
+      localStorage.setItem("lang", language);
+      // Same event as a saved choice, so listeners that follow the language keep working.
+      window.dispatchEvent(new CustomEvent("cookie-consent-updated", { detail: { language } }));
+      return;
+    }
 
     const updated: CookiePreferences & { version: string } = {
       essential: true, // Always true
@@ -176,7 +197,8 @@ export function getLanguagePreference(): Locale {
 }
 
 /**
- * Set user's preferred language
+ * Set user's preferred language. Never records a consent choice: until the
+ * visitor answers the bar, hasConsentChoice() stays false.
  */
 export function setLanguagePreference(language: Locale): void {
   setCookiePreferences({ language });
@@ -189,6 +211,15 @@ export function clearCookiePreferences(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(COOKIE_CONSENT_KEY);
   window.dispatchEvent(new CustomEvent("cookie-consent-cleared"));
+}
+
+/**
+ * Reopen the consent bar on its settings view so the visitor can change or
+ * withdraw a choice made earlier. Used by the footer's "Manage cookies" button.
+ */
+export function openCookieSettings(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_OPEN_EVENT));
 }
 
 /**

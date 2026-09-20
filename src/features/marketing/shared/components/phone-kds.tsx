@@ -1,6 +1,36 @@
 "use client";
 
+import { useI18n } from "@/components/lang/i18n-provider";
+
 export function PhoneKDS() {
+  const { t } = useI18n();
+
+  // Sample tickets for the illustration. Item names read the same in every
+  // language; the source label is the only per-locale part.
+  const tickets = [
+    {
+      id: "#1042",
+      t: "02:14",
+      items: ["1 × Latte", "1 × Croffle"],
+      from: t("redesign.dashboard.kds.table4"),
+      urgent: false,
+    },
+    {
+      id: "#1041",
+      t: "04:50",
+      items: ["1 × Matcha", "1 × Cookie"],
+      from: t("redesign.dashboard.kds.igLink"),
+      urgent: true,
+    },
+    {
+      id: "#1040",
+      t: "06:32",
+      items: ["2 × Espresso"],
+      from: t("redesign.dashboard.kds.walkIn"),
+      urgent: false,
+    },
+  ];
+
   return (
     <div
       style={{
@@ -53,7 +83,7 @@ export function PhoneKDS() {
           }}
         >
           <span>9:41</span>
-          <span style={{ color: "var(--epi-gold-400)" }}>● live</span>
+          <span style={{ color: "var(--epi-gold-400)" }}>● {t("redesign.dashboard.kds.live")}</span>
         </div>
 
         <div style={{ padding: "8px 16px" }}>
@@ -65,7 +95,7 @@ export function PhoneKDS() {
               opacity: 0.4,
             }}
           >
-            Kitchen · 3 active
+            {t("redesign.dashboard.kds.kitchen").replace("{count}", String(tickets.length))}
           </div>
           <div
             style={{
@@ -75,7 +105,7 @@ export function PhoneKDS() {
               marginTop: 2,
             }}
           >
-            Tickets
+            {t("redesign.dashboard.kds.tickets")}
           </div>
         </div>
 
@@ -88,23 +118,7 @@ export function PhoneKDS() {
             flex: 1,
           }}
         >
-          {[
-            {
-              id: "#1042",
-              t: "02:14",
-              items: ["1 × Latte", "1 × Croffle"],
-              from: "Table 4",
-              urgent: false,
-            },
-            {
-              id: "#1041",
-              t: "04:50",
-              items: ["1 × Matcha", "1 × Cookie"],
-              from: "IG link · Maya",
-              urgent: true,
-            },
-            { id: "#1040", t: "06:32", items: ["2 × Espresso"], from: "Walk-in", urgent: false },
-          ].map((ticket, i) => (
+          {tickets.map((ticket, i) => (
             <div
               key={i}
               style={{
@@ -172,7 +186,7 @@ export function PhoneKDS() {
             textAlign: "center",
           }}
         >
-          Mark next ticket ready →
+          {t("redesign.dashboard.kds.markReady")}
         </div>
 
         {/* Home indicator */}

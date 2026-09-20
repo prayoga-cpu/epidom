@@ -30,6 +30,18 @@ The current public pricing for Indonesia.
 (Raised from the original Rp 99k/249k/499k+ figures — see `CHANGELOG.md` 2.24.1. Enterprise moved to
 custom/sales-assisted pricing rather than a fixed Rp 499,000+ floor.)
 
+**Single source of truth in code:** `src/lib/constants/plan-pricing.ts` holds every displayed price
+(IDR, EUR and USD, monthly and yearly) for POS and OPERATIONS. The billing UI's `PLAN_PRICE_IDR`
+imports from it, and `src/lib/constants/__tests__/plan-pricing.test.ts` fails if any locale's price
+string on `/pricing` or the home teaser differs from it. Whether the Stripe Price objects are
+actually denominated in IDR (the marketing pages also show EUR and USD) has not been verified — check
+the Stripe dashboard. Note `docs/STRATEGY.md` still quotes the older Rp 99k / 249k / 499k figures.
+
+**Plan activation without payment:** `SubscriptionService.activateFree` is FREE-only (it throws for
+anything else) and `POST /api/subscriptions/activate-free` accepts only `plan: "FREE"`. The single
+no-payment paid grant (the admin-secret demo seed) goes through
+`SubscriptionService.grantPlanWithoutPayment` — never pass a request-derived plan to it.
+
 Pricing rationale and the Indonesian SaaS benchmarks behind these numbers are in `/docs/STRATEGY.md` section 7.
 
 ### Annual discount

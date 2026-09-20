@@ -14,6 +14,7 @@
 
 import { Resend } from "resend";
 import type { FeedbackSubmittedEventData, CustomDevelopmentSubmittedEventData } from "@/lib/inngest/client";
+import { SUPPORT_EMAIL_ADDRESSES, SUPPORT_MAILTO } from "@/lib/constants/contact";
 
 // Lazy-initialized Resend client to avoid build errors when API key is not set
 let resendClient: Resend | null = null;
@@ -350,7 +351,7 @@ export async function sendAccountDeactivatedEmail(
 
     <p style="color: #888888; font-size: 13px;">
       If you didn't request this, contact us immediately at
-      <a href="mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io" style="color: #444444;">cro@prionation.io</a>.
+      <a href="${escapeHtml(SUPPORT_MAILTO)}" style="color: #444444;">${escapeHtml(SUPPORT_EMAIL_ADDRESSES[0])}</a>.
     </p>
 
     <hr style="border: none; border-top: 1px solid #eeeeee; margin: 40px 0;">
@@ -611,7 +612,11 @@ export async function sendStaffAccountInviteEmail(
   }
 }
 
-// Recipients for internal feedback notifications
+// Recipients for internal feedback notifications. Deliberately NOT the shared
+// SUPPORT_EMAIL_ADDRESSES: this is the team's private alert routing (it names
+// `founder@`, where the public inbox names `ceo@`), never shown to a customer,
+// so a future branded support address must not silently re-route it. The
+// support-email guard test allowlists exactly this array.
 const FEEDBACK_NOTIFICATION_RECIPIENTS = [
   "cro@prionation.io",
   "founder@prionation.io",

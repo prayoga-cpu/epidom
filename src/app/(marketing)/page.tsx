@@ -10,34 +10,13 @@
  * @page
  */
 
-import { generateMetadata } from "@/lib/seo";
 import { ProductStructuredData } from "@/components/seo/structured-data";
 import { LandingPageSections } from "@/features/marketing/home/components/landing-page-sections";
 import { ResumeLastVisited } from "@/features/marketing/home/components/resume-last-visited";
 import { storefrontService } from "@/lib/services";
+import { pageMetadata } from "@/features/marketing/seo/page-metadata";
 
-export const metadata = generateMetadata({
-  title: "Epidom — Online Store, Menu & POS for F&B Businesses",
-  description:
-    "Create a menu page for Instagram, accept online payments, manage your cashier — all free. For cafés, restaurants, and warungs worldwide.",
-  keywords: [
-    "free pos app",
-    "digital menu qr code",
-    "online food ordering",
-    "f&b storefront",
-    "restaurant pos cashier",
-    "qris payments",
-    "kitchen display system",
-    "epidom",
-  ],
-  canonical: "https://epidom.fr",
-  openGraph: {
-    title: "Epidom — Online Store & POS for F&B",
-    description: "Menu page, online orders, and POS cashier in one link. Free forever.",
-    url: "https://epidom.fr",
-    locale: "en_US",
-  },
-});
+export const generateMetadata = pageMetadata("home");
 
 export default async function HomePage() {
   // Real, currently-published storefront to link as a live example — never

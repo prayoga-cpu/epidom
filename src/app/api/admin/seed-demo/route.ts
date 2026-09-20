@@ -108,8 +108,9 @@ export async function POST(req: Request) {
     { timeout: 15000 }
   );
 
-  // 5. Provision free OPERATIONS subscription
-  await subscriptionService.activateFree(user.id, SubscriptionPlan.OPERATIONS);
+  // 5. Provision an OPERATIONS subscription with no payment. The x-seed-secret
+  // check above is what authorizes this; activateFree only ever grants FREE.
+  await subscriptionService.grantPlanWithoutPayment(user.id, SubscriptionPlan.OPERATIONS);
 
   return NextResponse.json({
     ok: true,

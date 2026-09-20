@@ -482,6 +482,19 @@ describe("SubscriptionService", () => {
   });
 
   describe("activateFree", () => {
+    const upsert = vi.fn();
+
+    beforeEach(() => {
+      upsert.mockReset();
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
+      // activateFree writes through the repository's client, not a repo method.
+      (mocks.subscriptionRepo as any).db = { subscription: { upsert } };
+    });
+
+    // The guard test used to pass ENTERPRISE; activateFree now refuses any
+    // non-FREE plan before it looks at the account, so it uses the real
+    // self-service plan. The ENTERPRISE variant lives under
+    // grantPlanWithoutPayment below.
     it("refuses to reactivate an account that owes an admin-quoted price", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
@@ -489,9 +502,108 @@ describe("SubscriptionService", () => {
         customPricePendingAt: new Date(),
       });
 
-      await expect(service.activateFree("user-1", SubscriptionPlan.ENTERPRISE)).rejects.toThrow(
-        "A custom price is awaiting payment on this account."
-      );
+      await expect(service.activateFree("user-1", SubscriptionPlan.FREE)).rejects.toMatchObject({
+        message: expect.stringContaining("A custom price is awaiting payment on this account."),
+        statusCode: 409,
+      });
+      expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it("provisions FREE as ACTIVE with the placeholder customer id and a lifetime period", async () => {
+      await service.activateFree("user-1", SubscriptionPlan.FREE);
+
+      expect(upsert).toHaveBeenCalledTimes(1);
+      expect(upsert).toHaveBeenCalledWith({
+        where: { userId: "user-1" },
+        update: { plan: SubscriptionPlan.FREE, status: SubscriptionStatus.ACTIVE },
+        create: {
+          userId: "user-1",
+          stripeCustomerId: "free_user-1",
+          plan: SubscriptionPlan.FREE,
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: expect.any(Date),
+          currentPeriodEnd: expect.any(Date),
+        },
+      });
+    });
+
+    it("defaults to FREE when no plan is given", async () => {
+      await service.activateFree("user-1");
+
+      expect(upsert.mock.calls[0][0].update.plan).toBe(SubscriptionPlan.FREE);
+      expect(upsert.mock.calls[0][0].create.plan).toBe(SubscriptionPlan.FREE);
+    });
+
+    it.each([SubscriptionPlan.POS, SubscriptionPlan.OPERATIONS, SubscriptionPlan.ENTERPRISE])(
+      "refuses %s and writes nothing",
+      async (plan) => {
+        await expect(service.activateFree("user-1", plan as never)).rejects.toMatchObject({
+          name: "AppError",
+          code: "FORBIDDEN",
+          statusCode: 403,
+          message: "Only the FREE plan can be activated without payment.",
+        });
+
+        expect(mocks.subscriptionRepo.findByUserId).not.toHaveBeenCalled();
+        expect(upsert).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each([null, "free", "PRO", ""])("refuses the non-enum value %j", async (plan) => {
+      await expect(service.activateFree("user-1", plan as never)).rejects.toMatchObject({
+        statusCode: 403,
+      });
+      expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it("has no flag a forwarded request body could use to unlock a paid plan", async () => {
+      // A future caller might spread untrusted input into extra arguments;
+      // activateFree ignores them and still refuses.
+      await expect(
+        (service as any).activateFree("user-1", SubscriptionPlan.ENTERPRISE, { privileged: true })
+      ).rejects.toMatchObject({ statusCode: 403 });
+      expect(upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("grantPlanWithoutPayment", () => {
+    const upsert = vi.fn();
+
+    beforeEach(() => {
+      upsert.mockReset();
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
+      (mocks.subscriptionRepo as any).db = { subscription: { upsert } };
+    });
+
+    it("provisions the requested paid plan as ACTIVE with the same upsert shape as FREE", async () => {
+      await service.grantPlanWithoutPayment("user-1", SubscriptionPlan.OPERATIONS);
+
+      expect(upsert).toHaveBeenCalledTimes(1);
+      expect(upsert).toHaveBeenCalledWith({
+        where: { userId: "user-1" },
+        update: { plan: SubscriptionPlan.OPERATIONS, status: SubscriptionStatus.ACTIVE },
+        create: {
+          userId: "user-1",
+          stripeCustomerId: "free_user-1",
+          plan: SubscriptionPlan.OPERATIONS,
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: expect.any(Date),
+          currentPeriodEnd: expect.any(Date),
+        },
+      });
+    });
+
+    it("still refuses an account that owes an admin-quoted price", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        status: SubscriptionStatus.INCOMPLETE,
+        customPricePendingAt: new Date(),
+      });
+
+      await expect(
+        service.grantPlanWithoutPayment("user-1", SubscriptionPlan.ENTERPRISE)
+      ).rejects.toThrow("A custom price is awaiting payment on this account.");
+      expect(upsert).not.toHaveBeenCalled();
     });
   });
 

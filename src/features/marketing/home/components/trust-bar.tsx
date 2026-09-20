@@ -1,56 +1,28 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "motion/react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import {
+  TRUSTED_BRANDS,
+  getConsentedBrands,
+  type TrustedBrand,
+} from "@/features/marketing/home/data/trusted-brands";
 
-const shops = [
-  { name: "Warung Sari", flag: "🇮🇩" },
-  { name: "Café Bretonne", flag: "🇫🇷" },
-  { name: "Maison Lacroix", flag: "🇫🇷" },
-  { name: "Kopi Tujuh", flag: "🇮🇩" },
-  { name: "Cookie Atelier", flag: "🇫🇷" },
-  { name: "Le Petit Bar", flag: "🇫🇷" },
-];
+// Payment and messaging channels the product really talks to (see
+// src/lib/payments and the WhatsApp ordering links). Shown as plain text
+// wordmarks on purpose: no third-party logos, no implied partnership.
+const WORKS_WITH = ["Stripe", "Xendit", "QRIS", "WhatsApp"] as const;
 
-const MARKETS = [
-  { flag: "🇫🇷", label: "France" },
-  { flag: "🇮🇩", label: "Indonesia" },
-  { flag: "🌍", label: "Worldwide" },
-];
-
-function MarqueeRow({ ariaHidden }: { ariaHidden?: boolean }) {
-  return (
-    <div className="flex shrink-0 items-center" aria-hidden={ariaHidden} style={{ gap: 56 }}>
-      {shops.map((s, i) => (
-        <span
-          key={i}
-          style={{
-            display: "inline-flex",
-            alignItems: "baseline",
-            gap: 10,
-            whiteSpace: "nowrap",
-          }}
-        >
-          <span style={{ fontSize: 15, opacity: 0.7 }}>{s.flag}</span>
-          <span
-            className="epi-script"
-            style={{
-              color: "var(--epi-cream-50)",
-              opacity: 0.75,
-              fontSize: 24,
-              letterSpacing: "0.01em",
-            }}
-          >
-            {s.name}
-          </span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-export function TrustBar() {
+export function TrustBar({ brands = TRUSTED_BRANDS }: { brands?: readonly TrustedBrand[] }) {
   const { t } = useI18n();
+  // Customer logos only ever render for brands that confirmed in writing.
+  const customers = getConsentedBrands(brands);
+  const markets = [
+    { key: "fr", flag: "🇫🇷", label: t("redesign.trust.marketFr") },
+    { key: "id", flag: "🇮🇩", label: t("redesign.trust.marketId") },
+    { key: "world", flag: "🌍", label: t("redesign.trust.marketWorld") },
+  ];
 
   return (
     <section style={{ padding: "48px 0" }}>
@@ -91,10 +63,10 @@ export function TrustBar() {
             >
               {t("redesign.trust.label")}
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              {MARKETS.map((m) => (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {markets.map((m) => (
                 <span
-                  key={m.label}
+                  key={m.key}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -117,24 +89,50 @@ export function TrustBar() {
             </div>
           </div>
 
-          {/* Marquee — track duplicated once, animated -50% for a seamless loop */}
-          <div
-            className="group relative mt-6"
-            style={{
-              maskImage:
-                "linear-gradient(90deg, transparent, black 8%, black 92%, transparent)",
-              WebkitMaskImage:
-                "linear-gradient(90deg, transparent, black 8%, black 92%, transparent)",
-            }}
+          <ul
+            aria-label={t("redesign.trust.label")}
+            className="m-0 mt-6 flex list-none flex-wrap items-baseline gap-x-10 gap-y-3 p-0 px-7"
           >
+            {WORKS_WITH.map((name) => (
+              <li
+                key={name}
+                className="epi-script text-2xl whitespace-nowrap text-[var(--epi-cream-50)] opacity-75"
+              >
+                {name}
+              </li>
+            ))}
+          </ul>
+
+          {customers.length > 0 && (
             <div
-              className="animate-marquee-half flex group-hover:[animation-play-state:paused]"
-              style={{ gap: 56, width: "max-content" }}
+              data-testid="trusted-brands"
+              className="mt-6 border-t border-white/[0.07] px-7 pt-6"
             >
-              <MarqueeRow />
-              <MarqueeRow ariaHidden />
+              <p className="m-0 text-xs tracking-[0.18em] text-[var(--epi-cream-50)] uppercase opacity-50">
+                {t("redesign.trust.customersLabel")}
+              </p>
+              <ul className="m-0 mt-4 flex list-none flex-wrap items-center gap-5 p-0">
+                {customers.map((brand) => (
+                  <li key={brand.slug}>
+                    {/* One shared circular crop so marks of different shapes and
+                        backgrounds read as a set; the white disc keeps dark
+                        marks legible on the navy card. */}
+                    <span className="relative block size-14 overflow-hidden rounded-full bg-white ring-1 ring-white/25">
+                      <Image
+                        src={brand.logo}
+                        alt={brand.name}
+                        width={56}
+                        height={56}
+                        sizes="56px"
+                        className="size-full object-cover"
+                        style={brand.zoom ? { transform: `scale(${brand.zoom})` } : undefined}
+                      />
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          )}
         </motion.div>
       </div>
     </section>

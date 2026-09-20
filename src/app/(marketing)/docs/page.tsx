@@ -1,15 +1,11 @@
 import { headers } from "next/headers";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { LOCALE_HEADER, DEFAULT_LOCALE } from "@/lib/i18n-routing";
-import { generateMetadata } from "@/lib/seo";
 import { getDocsGuides } from "@/features/marketing/docs/content";
 import { DocsList } from "@/features/marketing/docs/components/docs-list";
+import { pageMetadata } from "@/features/marketing/seo/page-metadata";
 
-export const metadata = generateMetadata({
-  title: "Docs & Help Center — EPIDOM",
-  description: "Step-by-step guides for setting up your storefront, menu, orders, and POS cashier.",
-  canonical: "https://epidom.fr/docs",
-});
+export const generateMetadata = pageMetadata("docs");
 
 export default async function DocsPage() {
   const headersList = await headers();

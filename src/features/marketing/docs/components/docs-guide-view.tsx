@@ -2,12 +2,29 @@ import Link from "next/link";
 import type { Locale } from "@/components/lang/i18n-provider";
 import type { Article } from "@/features/marketing/shared/content/article-types";
 import { ArticleBody } from "@/features/marketing/shared/content/article-body";
+import { ArticleCta } from "@/features/marketing/shared/components/article-cta";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 
-const COPY: Record<Locale, { back: string; next: string }> = {
-  fr: { back: "← Tous les guides", next: "Suivant" },
-  id: { back: "← Semua panduan", next: "Selanjutnya" },
-  en: { back: "← All guides", next: "Next" },
+const COPY: Record<Locale, { back: string; next: string; ctaTitle: string; ctaButton: string }> = {
+  fr: {
+    back: "← Tous les guides",
+    next: "Suivant",
+    // \u00a0 = non-breaking space, so the "?" never wraps onto a line of its own.
+    ctaTitle: "Prêt à essayer vous-même\u00a0?",
+    ctaButton: "Démarrer gratuitement →",
+  },
+  id: {
+    back: "← Semua panduan",
+    next: "Selanjutnya",
+    ctaTitle: "Siap mencoba sendiri?",
+    ctaButton: "Mulai gratis →",
+  },
+  en: {
+    back: "← All guides",
+    next: "Next",
+    ctaTitle: "Ready to try this yourself?",
+    ctaButton: "Start free →",
+  },
 };
 
 export function DocsGuideView({
@@ -66,6 +83,14 @@ export function DocsGuideView({
           <div className="epi-gold-rule" style={{ marginTop: 36, marginBottom: 36 }} />
 
           <ArticleBody blocks={guide.blocks} />
+
+          {/* Docs readers are mid-setup: the offer sits right after the steps, and "Next" stays below it. */}
+          <ArticleCta
+            variant="card"
+            title={copy.ctaTitle}
+            button={copy.ctaButton}
+            trackLabel="docs_article_start_free"
+          />
 
           {nextGuide && (
             <Link

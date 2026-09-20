@@ -1,4 +1,5 @@
 import type React from "react";
+import { headers } from "next/headers";
 import { Bebas_Neue } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
@@ -16,6 +17,8 @@ import { ChunkErrorReloader } from "@/components/providers/chunk-error-reloader"
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ZOOM_BOOT_SCRIPT } from "@/lib/app-zoom";
+import { resolveHtmlLang } from "@/lib/html-lang";
+import { LOCALE_HEADER } from "@/lib/i18n-routing";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
 import { Metadata, Viewport } from "next";
@@ -72,13 +75,18 @@ export const viewport: Viewport = {
 // optimisation. Unset VERCEL_ENV (local dev/build) keeps tracking as it always was.
 const TRACKING_ENABLED = !process.env.VERCEL_ENV || process.env.VERCEL_ENV === "production";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Server HTML of a fr/id marketing page must say lang="fr"/"id" — a crawler
+  // reads that before any script runs, and I18nProvider only corrects it after
+  // hydration. Other routes carry no locale header and stay "en".
+  const lang = resolveHtmlLang((await headers()).get(LOCALE_HEADER));
+
   return (
-    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang={lang} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/* Applies the device's saved UI zoom before first paint, so a 70%
             or 150% preference doesn't render at 100% and snap on hydration.

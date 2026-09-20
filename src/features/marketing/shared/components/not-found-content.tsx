@@ -14,6 +14,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 import { Container } from "./container";
 
 interface NotFoundContentProps {
@@ -22,7 +23,7 @@ interface NotFoundContentProps {
 }
 
 export function NotFoundContent({ showDashboardButton = false }: NotFoundContentProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const pathname = usePathname();
   // Extract storeId from /store/[storeId]/... pattern if present
   const storeIdMatch = pathname?.match(/\/store\/([^/]+)/);
@@ -60,7 +61,7 @@ export function NotFoundContent({ showDashboardButton = false }: NotFoundContent
                 </Button>
               </Link>
             )}
-            <Link href="/" className="flex-1 sm:flex-auto">
+            <Link href={getLocalizedPath("/", locale)} className="flex-1 sm:flex-auto">
               <Button className="w-full gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 {t("notFound.backToHome")}
@@ -73,7 +74,7 @@ export function NotFoundContent({ showDashboardButton = false }: NotFoundContent
             <p className="text-muted-foreground">
               {t("notFound.helpText")}{" "}
               <Link
-                href="/contact"
+                href={getLocalizedPath("/contact", locale)}
                 className="text-primary font-medium underline transition-colors hover:no-underline"
               >
                 {t("notFound.contactSupport")}

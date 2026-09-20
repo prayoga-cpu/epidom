@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 const CATEGORIES = [
   {
@@ -151,7 +152,7 @@ function DashIcon() {
 }
 
 export function FeatureComparison() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <section className="epi-section" style={{ paddingTop: 40 }}>
@@ -214,7 +215,7 @@ export function FeatureComparison() {
                     fontWeight: 600,
                   }}
                 >
-                  Feature
+                  {t("redesign.pricingPage.cmpFeature")}
                 </th>
                 {TIER_KEYS.map(({ key, highlight }) => (
                   <th
@@ -302,7 +303,7 @@ export function FeatureComparison() {
 
         <div style={{ textAlign: "center", marginTop: 40 }}>
           <a
-            href="/compare/delivery-commission"
+            href={getLocalizedPath("/compare/delivery-commission", locale)}
             style={{
               fontSize: 14,
               color: "var(--epi-gold-400)",

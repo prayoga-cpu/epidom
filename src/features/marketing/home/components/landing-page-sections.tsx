@@ -11,7 +11,7 @@ import {
   DashboardPreviewSection,
   UseCasesSection,
   HowToUseSection,
-  SocialProofSection,
+  CaseStudiesSection,
   PricingSection,
   FaqSection,
   ClosingCtaSection,
@@ -60,8 +60,8 @@ export function LandingPageSections({
         <HowToUseSection />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="Testimonials">
-        <SocialProofSection />
+      <SectionErrorBoundary sectionName="Case Studies">
+        <CaseStudiesSection />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Pricing Teaser">

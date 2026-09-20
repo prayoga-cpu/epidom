@@ -16,9 +16,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema, LoginInput } from "../../validation/auth.schemas";
+import { createLoginSchema, LoginInput } from "../../validation/auth.schemas";
 import { useLogin } from "../../hooks/use-auth";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { trackEvent } from "@/lib/analytics";
@@ -45,22 +45,12 @@ export function LoginForm() {
     if (oauthError && !toastShownRef.current) {
       toastShownRef.current = true;
       const messages: Record<string, string> = {
-        internal_server_error:
-          t("messages.oauthInternalError") ||
-          "Sign-in failed due to a server error. Please try again.",
-        account_not_linked:
-          t("messages.accountNotLinked") ||
-          "This Google account is not linked. Sign in with email first.",
-        state_mismatch:
-          t("messages.oauthStateMismatch") || "Login session expired. Please try again.",
-        please_restart_the_process:
-          t("messages.oauthRestart") || "Login session expired. Please try again.",
+        internal_server_error: t("messages.oauthInternalError"),
+        account_not_linked: t("messages.accountNotLinked"),
+        state_mismatch: t("messages.oauthStateMismatch"),
+        please_restart_the_process: t("messages.oauthRestart"),
       };
-      toast.error(
-        messages[oauthError] ||
-          t("messages.oauthGenericError") ||
-          "Sign-in failed. Please try again."
-      );
+      toast.error(messages[oauthError] || t("messages.oauthGenericError"));
       const cleaned = new URLSearchParams(searchParams.toString());
       cleaned.delete("error");
       router.replace(cleaned.toString() ? `/login?${cleaned.toString()}` : "/login", {
@@ -73,10 +63,7 @@ export function LoginForm() {
   useEffect(() => {
     if (registered === "true" && !toastShownRef.current) {
       toastShownRef.current = true;
-      toast.success(
-        t("auth.accountCreatedSuccess") ||
-          "Account created successfully! Please log in to continue."
-      );
+      toast.success(t("auth.accountCreatedSuccess"));
 
       // Remove the 'registered' query param to prevent toast from showing again
       // on component re-render or browser back/forward
@@ -87,8 +74,11 @@ export function LoginForm() {
     }
   }, [registered, searchParams, router]);
 
+  // Built from `t` so the validation messages follow the visitor's language.
+  const schema = useMemo(() => createLoginSchema(t), [t]);
+
   const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       email: "",
       password: "",
@@ -98,18 +88,20 @@ export function LoginForm() {
   const onSubmit = (data: LoginInput) => {
     login(data, {
       onSuccess: () => {
-        toast.success(t("messages.loginSuccess") || "Logged in successfully!");
+        toast.success(t("messages.loginSuccess"));
 
         // Use full page reload to ensure session is properly loaded
         // This prevents race condition where session might not be available yet
         // when the profile page tries to fetch user data
 
         // Redirect logic:
-        // 1. If callbackUrl exists (from middleware or manual), redirect there
-        // 2. If no callbackUrl, redirect to /stores (store selection page)
-        //    This is more appropriate for new users than /profile
-        const redirectUrl = nextUrl || "/stores";
-        window.location.href = redirectUrl;
+        // 1. If callbackUrl exists (from middleware or manual), redirect there,
+        //    but only a same-origin PATH: ?next= / ?callbackUrl= is attacker-
+        //    controlled, so an absolute URL, "//host" or "javascript:" would
+        //    otherwise send a freshly signed-in visitor off-site (open redirect)
+        // 2. Otherwise, or if it is not a safe path, redirect to /stores
+        //    (store selection page). More appropriate for new users than /profile
+        window.location.href = safeInternalPath(nextUrl) ?? "/stores";
       },
       onError: (err) => {
         const msg = err?.message || "";
@@ -171,7 +163,7 @@ export function LoginForm() {
             className="px-2"
             style={{ background: "var(--epi-navy-900)", color: "rgba(251,249,228,0.4)" }}
           >
-            Or continue with email
+            {t("auth.orContinueWithEmail")}
           </span>
         </div>
       </div>
@@ -188,7 +180,7 @@ export function LoginForm() {
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder={t("auth.emailPlaceholder") || "name@company.com"}
+                      placeholder={t("auth.emailPlaceholder")}
                       disabled={isPending}
                       autoComplete="email"
                       className="h-12 rounded-xl border-white/10 bg-white/5 text-[var(--epi-cream-50)] transition-all placeholder:text-[rgba(251,249,228,0.35)] focus:border-[var(--epi-gold-500)] focus:bg-white/8"
@@ -238,7 +230,7 @@ export function LoginForm() {
             style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}
             disabled={isPending}
           >
-            {isPending ? t("messages.loggingIn") || "Logging in..." : t("auth.loginButton")}
+            {isPending ? t("messages.loggingIn") : t("auth.loginButton")}
           </Button>
         </form>
       </Form>
@@ -247,11 +239,8 @@ export function LoginForm() {
         <div className="mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">{t("auth.verifyEmail.notice") || "Email not verified"}</p>
-              <p className="mt-1 text-xs">
-                {t("auth.verifyEmail.checkYourEmail") ||
-                  "Please verify your email before signing in."}
-              </p>
+              <p className="font-medium">{t("auth.verifyEmail.notice")}</p>
+              <p className="mt-1 text-xs">{t("auth.verifyEmail.checkYourEmail")}</p>
             </div>
             <div className="ml-4">
               <button
@@ -280,9 +269,9 @@ export function LoginForm() {
                 disabled={isResending || resendSuccess}
               >
                 {isResending
-                  ? t("auth.verifyEmail.resending") || "Sending..."
+                  ? t("auth.verifyEmail.resending")
                   : resendSuccess
-                    ? t("auth.verifyEmail.resendSuccess") || "Sent"
+                    ? t("auth.verifyEmail.resendSuccess")
                     : t("auth.verifyEmail.resendButton")}
               </button>
             </div>

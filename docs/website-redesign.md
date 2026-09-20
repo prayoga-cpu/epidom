@@ -1,5 +1,10 @@
 # Epidom, Website Redesign Brief, Page by Page
 
+> **Status, 2026-09-21: implemented (v2.97.0 → v2.99.0, uncommitted on `epidom-revamp`).** About eight
+> claims in this brief were wrong when checked against the code, and several important issues were
+> missing. **Read the [Implementation log](#implementation-log-2026-09-21) at the bottom before acting on
+> anything below.** The body of the brief is left as written, for the record.
+
 Companion to the codebase-derived sitemap brief (13 Sep 2026). That document is the "before" picture. This one is the "do this" direction, page by page, built from four competitor references, real, current, fetched the day this brief was written: squareup.com, mokapos.com, sundayapp.com, pos.toasttab.com.
 
 Every recommendation here ties back to a finding already in the source brief. Nothing invented, nothing generic.
@@ -221,3 +226,95 @@ Bundle these into the same pass regardless of which pages get visual attention:
 - The comparison pages' sourcing discipline, dated, verified footnotes per claim.
 - The technical SEO foundation, structured data, hreflang, canonical handling are all solid. It's specifically the sitemap/robots layer that's missing, not the on-page work.
 - Cookie-consent-gated analytics is genuinely privacy-respectful and appropriate for a France-primary product, even accounting for the undercounting tradeoff noted above.
+
+---
+
+## Implementation log, 2026-09-21
+
+Built on `epidom-revamp`, **uncommitted**, as CHANGELOG 2.97.0 (fix), 2.98.0 (feat) and 2.99.0 (ux). Before
+building, every claim above was checked against the code. Verification: `tsc --incremental false` clean;
+full vitest 352 files / 5,404 tests (baseline 294 / 3,905); eight independent read-only reviewers, then
+nine fix groups, then a re-run; headless Chromium and curl against the dev server. Operator to-dos live in
+`STATUS.md`.
+
+### What this brief got wrong
+
+| The brief says | The code says | What was done |
+| --- | --- | --- |
+| No `sitemap.xml` / `robots.xml` exists (P0) | `src/app/sitemap.ts` and `robots.ts` exist (Next metadata routes, since 2026-08-10, hreflang-aware) | Nothing to build. Made `lastModified` honest instead |
+| 6 of 7 compare pages are single-locale, so English visitors get Indonesian or French | Each has its market locale **plus English**, and falls back to English. Deliberate | No translations written. Fixed canonical / hreflang for the fallback case |
+| Blog CTA is not locale-aware | It was (inline fr / id / en copy map) | Only added a byline and NBSP typography |
+| The changelog is the one page skipping i18n | Privacy, cookie, GDPR, press, status, partners, careers also had zero `t()` calls | All translated |
+| `/payments` is indexable | It was `noindex`; its checkout call was real; only the sales form was fake | Deleted, 308 to `/pricing` |
+| "5 real customer photos" | Brand **logos**; nobody has confirmed they are customers or consented (Laura Todd is a registered mark) | Built as data-driven, shipped **empty** |
+| Header `waitlist` mode is a ready-made lever | It posts name / email / company to a third-party server with a personal Gmail receiver | Removed |
+| `PLAN_PRICE_IDR` is the single source of truth | A private constant duplicated in two files, IDR-only | New `src/lib/constants/plan-pricing.ts` + drift test |
+| Closing CTA email "doesn't persist on abandon" | Worse: the sign-up form ignored `?email=` entirely | Prefill added, handed over via `sessionStorage` (not the URL, which reached analytics) |
+| Consent-gated analytics is privacy-respectful; technical SEO is solid | `gtag.js` / `fbevents.js` loaded before consent, a `<noscript>` pixel ignored it, no way to withdraw; canonical contradicted hreflang on every page; titles English on French pages; `<html lang="en">` everywhere | All fixed (real consent, locale-aware metadata, `<html lang>`) |
+
+### What the brief missed (found during verification)
+
+- **Security:** `POST /api/subscriptions/activate-free` let any signed-in user grant themselves a paid plan
+  (fixed, see below); email login followed an unvalidated `?next=` (fixed).
+- **Billing bug, NOT fixed (decision needed):** "Switch plan → Free" on `/pricing` flips the local row to
+  FREE but never cancels the Stripe subscription. A legacy `new_year_2025` promo route (`/api/subscriptions/setup`
+  + the webhook) still grants free POS that never lapses.
+- French `/pricing` showed English for the whole trial promo (6 missing keys); the plan-change dialog was
+  hardcoded English; the French trial banner said "no card"; the Operations button said "Start free trial".
+- Fabricated named testimonials and outcome statistics in the homepage use-cases section (not only the
+  trust bar); false feature claims (menu-photo OCR, "Official WhatsApp API", reports emailed at midnight,
+  merchant WhatsApp pings that no code sends); unmeasured "5-minute setup" claims.
+- Privacy and cookie pages: a second false claim ("no advertising cookies"), a missing processor
+  (Cloudflare R2 nightly backups), and an understated Google Analytics disclosure (in-app URLs, till sale
+  details).
+
+### Done, tier by tier
+
+- **Tier 1:** homepage (unsourced proof removed; four verifiable facts; honest trust bar; case-study, team and
+  logo sections ready but hidden until real), pricing (own FAQ, one "Most popular", French, dialog i18n and
+  focus handling, single price source), About (placeholders removed, honest team block), Contact (WhatsApp
+  primary, form removed).
+- **Tier 2:** compare pages: canonical / hreflang / og:locale follow the locale actually served.
+- **Tier 3:** blog byline + CTA, docs end-of-article CTA, services (shares the fixed CTA), changelog chrome translated.
+- **Tier 4:** partners (supplier application path), careers / press CTAs, build-with-us untouched, status translated.
+- **Tier 5:** privacy, cookie policy and GDPR rewritten and translated on one shared template (Terms / Refund moved
+  onto it); the false claims removed; French Terms section 11 backfilled.
+- **Tier 6:** `/payments` deleted, permanent redirects in all locales.
+- **Cross-cutting:** sitemap dates honest; the `BUTTON_MODE` waitlist removed; support contact centralised in
+  `src/lib/constants/contact.ts` with a guard test; consent made real (Manage cookies, no vendor request before
+  consent, withdrawal); locale-aware metadata on all 15 marketing pages.
+
+### Deliberately not done
+
+- The homepage CTA still goes email → `/register` (this is a free, self-serve product; a WhatsApp CTA there would
+  remove the signup path). Nothing persists an abandoned email: that is a consent / GDPR decision.
+- `/contact` has no form and no backend, only WhatsApp and email. A persisted form needs a model and a migration.
+- Consent-independent analytics was not built (a legal call). Build With Us was left alone.
+- Content that only the operator can supply: customer-logo consent, case studies, team photos, real numbers, the
+  old-vs-new screenshot, press assets, real support hours.
+
+### Production abuse check for the `activate-free` hole (read-only SQL; run against PRODUCTION)
+
+The hole is closed in this change set but is open in production until it deploys. Treat it as exploited until
+these come back clean. A legitimate paid customer always has a `stripeSubscriptionId` and a `cus_` id, so any
+row from query A is not a Stripe-paying customer. Rule out accounts you upgraded by hand (Back Office set-plan)
+or sold off-Stripe, row by row; whatever is left is suspect.
+
+```sql
+-- A: the direct fingerprint (paid plan on a free_ stub id; excludes the demo account)
+SELECT s."userId", u.email, u.name, s.plan, s.status, s."stripeCustomerId", s."stripeSubscriptionId", s."createdAt", s."updatedAt",
+  EXISTS (SELECT 1 FROM action_logs a WHERE a."actionType" = 'admin.user.set_plan' AND a."targetId" = s."userId") AS admin_set_plan_logged
+FROM subscriptions s JOIN "user" u ON u.id = s."userId"
+WHERE starts_with(s."stripeCustomerId", 'free_') AND s.plan <> 'FREE' AND lower(u.email) <> 'demo@epidom.fr'
+ORDER BY s."updatedAt" DESC;
+
+-- B: wider net (someone who already had a real Stripe customer id, e.g. an abandoned checkout)
+SELECT s."userId", u.email, s.plan, s.status, s."stripeCustomerId", s."stripeSubscriptionId", s."updatedAt"
+FROM subscriptions s JOIN "user" u ON u.id = s."userId"
+WHERE s.plan <> 'FREE' AND s."stripeSubscriptionId" IS NULL AND NOT starts_with(s."stripeCustomerId", 'admin_') AND lower(u.email) <> 'demo@epidom.fr'
+ORDER BY s."updatedAt" DESC;
+```
+
+`admin_set_plan_logged = false` means "unknown", not "clean" (the audit trail only covers the period since it
+shipped). The route's own audit rows (`billing.plan.activate_free`) record who called it and when, but not
+which plan was requested.

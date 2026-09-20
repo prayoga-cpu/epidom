@@ -23,22 +23,17 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
+import { PLAN_PRICE_IDR } from "@/lib/constants/plan-pricing";
 import { isLifetimePeriod, formatCurrency } from "@/lib/utils/formatting";
 import { getApiErrorMessage } from "@/lib/utils/api-error";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { BetaPlanSwitcher } from "./beta-plan-switcher";
 
-// Epidom's SaaS subscription is billed in IDR. Kept in sync with the public
-// /pricing page's monthly rate (redesign.pricingPage.t2price_mo/t3price_mo —
-// Rp 229k / Rp 459k, i.e. $14.99 / $29.99 at the charm-priced USD rate).
-// docs/BILLING.md's Rp 99k/249k table predates a since-applied price raise
-// and is stale; the live /pricing copy is the source of truth. Every display
-// currency is derived from this IDR base via useCurrency(), the same
-// IDR->userCurrency conversion the rest of the dashboard already relies on.
-const PLAN_PRICE_IDR: Record<string, number> = {
-  POS: 229000,
-  OPERATIONS: 459000,
-};
+// Epidom's SaaS subscription is billed in IDR; the monthly IDR price per plan
+// lives in src/lib/constants/plan-pricing.ts, the single source the public
+// /pricing page is tested against. Every display currency is derived from that
+// IDR base via useCurrency(), the same IDR->userCurrency conversion the rest
+// of the dashboard already relies on.
 
 export function BillingContainer() {
   const { t, formatDate } = useI18n();

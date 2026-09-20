@@ -59,7 +59,6 @@ const LOCALIZED_MARKETING_PATHS = new Set([
   "/pricing",
   "/about",
   "/services",
-  "/payments",
   "/contact",
   "/partners",
   "/careers",
@@ -75,6 +74,29 @@ const LOCALIZED_MARKETING_PATHS = new Set([
   "/cookie-policy",
   "/refund-policy",
 ]);
+
+/**
+ * Deleted marketing pages, mapped to the page that took over their job (both
+ * unprefixed base paths). Answered with a permanent redirect before anything
+ * else in the proxy runs, so a bookmark, an old email or a search result lands
+ * somewhere useful — not on a 404, and not on the login wall (a path this file
+ * doesn't recognise is treated as a protected one).
+ *
+ * `/payments` was a second, orphaned checkout page that nothing linked to. The
+ * real purchase flow is /pricing -> plan confirm dialog, so that is where old
+ * links go. The old `?plan=` query described a form that no longer exists and
+ * is dropped.
+ *
+ * Why here and not `redirects()` in next.config.ts: a config redirect passes
+ * the request's query string through to the destination and cannot strip it
+ * (see prepareDestination in next/dist/shared/lib/router/utils/prepare-
+ * destination.js), and this file already owns the /id and /en prefix handling,
+ * so all three locales come out of one rule.
+ *
+ * A loop is impossible as long as no target is itself a key here; the test in
+ * src/__tests__/proxy-retired-paths.test.ts follows the redirect chain.
+ */
+const RETIRED_MARKETING_PATHS: ReadonlyMap<string, string> = new Map([["/payments", "/pricing"]]);
 
 /**
  * Marketing pages the resume-redirect must never fire on, because the app
@@ -144,6 +166,21 @@ export default async function proxy(req: NextRequest) {
   // unprefixed market, see docs/STRATEGY.md §3) up front, so the public-route
   // check below matches on the unprefixed path regardless of locale prefix.
   const { locale, basePath } = stripLocalePrefix(path);
+
+  // A deleted marketing page goes to its replacement first — ahead of the
+  // resume-redirect below, which would otherwise bounce a signed-in returning
+  // visitor to their last app page instead. The answer depends only on the
+  // path (never on a cookie), so unlike the redirects below it is safe for a
+  // browser or CDN to keep, and it is answered for prefetches too.
+  const replacement = RETIRED_MARKETING_PATHS.get(
+    basePath.length > 1 ? basePath.replace(/\/+$/, "") : basePath
+  );
+  if (replacement) {
+    // Built from scratch (not cloned from req.nextUrl) so nothing of the old
+    // URL — its query string, a trailing slash — carries over.
+    return NextResponse.redirect(new URL(getLocalizedPath(replacement, locale), req.url), 308);
+  }
+
   // /compare/*, /blog/*, /docs/* are open-ended sets of pages (comparison
   // pages, blog posts, docs guides) — prefix-matched so a new one doesn't
   // require a proxy change, unlike the fixed single-page routes above.
@@ -229,7 +266,6 @@ export default async function proxy(req: NextRequest) {
     "/services",
     "/pricing",
     "/contact",
-    "/payments",
     "/about",
     "/partners",
     "/careers",

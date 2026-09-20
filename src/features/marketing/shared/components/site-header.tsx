@@ -4,7 +4,6 @@ import { memo, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from "@/components/ui/sheet";
-import { WaitlistDialog } from "@/features/marketing/shared/components/waitlist-dialog";
 import { usePathname, useRouter } from "next/navigation";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -14,13 +13,6 @@ import { useSession, signOut } from "@/lib/auth-client";
 import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
 import { trackEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
-
-/**
- * BUTTON MODE SELECTION
- * - "waitlist"        → Always show "Join Waitlist"
- * - "login-my-stores" → Login (unauthenticated) or My Stores (authenticated)
- */
-const BUTTON_MODE = "login-my-stores" as "waitlist" | "login-my-stores";
 
 interface SiteHeaderProps {
   showNav?: boolean;
@@ -54,7 +46,8 @@ export const SiteHeader = memo(function SiteHeader({
   // navigation.config.ts hrefs are locale-agnostic ("/pricing") — only the
   // "landing" variant (marketing site) participates in URL-based locale
   // routing, "authenticated" (in-app shell) never does.
-  const localizeHref = (href: string) => (variant === "landing" ? getLocalizedPath(href, locale) : href);
+  const localizeHref = (href: string) =>
+    variant === "landing" ? getLocalizedPath(href, locale) : href;
 
   const handleLogin = () => router.push("/login");
   const handleStartFree = () => {
@@ -122,7 +115,6 @@ export const SiteHeader = memo(function SiteHeader({
 
   /* ── Desktop CTA button ── */
   const DesktopCTA = () => {
-    if (BUTTON_MODE === "waitlist") return <WaitlistDialog />;
     if (showLogout && session?.user) {
       return (
         <button
@@ -175,7 +167,11 @@ export const SiteHeader = memo(function SiteHeader({
   };
 
   return (
-    <nav className="epi-floating-nav backdrop-blur-xs" role="navigation" aria-label="Main header">
+    <nav
+      className="epi-floating-nav backdrop-blur-xs"
+      role="navigation"
+      aria-label={t("common.nav.mainHeader")}
+    >
       <div className="flex min-w-0 items-center gap-2">
         {backHref && (
           <Link
@@ -193,7 +189,7 @@ export const SiteHeader = memo(function SiteHeader({
       {showNav && (
         <ul
           className="epi-nav-items hidden items-center gap-6 lg:flex"
-          aria-label="Main navigation"
+          aria-label={t("common.nav.navTitle")}
         >
           {navigationItems.map(renderDesktopNavLink)}
         </ul>
@@ -261,7 +257,10 @@ export const SiteHeader = memo(function SiteHeader({
                 </SheetClose>
               </div>
 
-              <nav aria-label="Mobile" className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
+              <nav
+                aria-label={t("common.nav.mobileMenu")}
+                className="min-h-0 flex-1 overflow-y-auto px-4 py-6"
+              >
                 {showNav && (
                   <div>
                     <div
@@ -278,13 +277,7 @@ export const SiteHeader = memo(function SiteHeader({
               <div className="p-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
-                    {BUTTON_MODE === "waitlist" ? (
-                      <SheetClose asChild>
-                        <div>
-                          <WaitlistDialog variant="sidebar" />
-                        </div>
-                      </SheetClose>
-                    ) : showLogout && session?.user ? (
+                    {showLogout && session?.user ? (
                       <button
                         onClick={handleLogout}
                         className="w-full cursor-pointer rounded-full py-3 text-sm font-medium tracking-widest uppercase"

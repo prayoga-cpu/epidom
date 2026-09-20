@@ -9,6 +9,46 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.99.0] - 2026-09-20 · ux
+
+The website now speaks French, Indonesian and English everywhere it should — legal pages included — and tells search engines the truth about which language each page is in.
+
+- **Privacy, Cookie and GDPR pages — rewritten and translated.** They were English-only. They now exist in French, Indonesian and English, on the same layout as the Terms and Refund pages, and describe what Epidom really does: which providers handle your data (payments, email, hosting, nightly backups, analytics, messaging), what is collected — including staff attendance photos and location — how long it is kept, and how to use your rights. The old "EU servers (Frankfurt)" and "Data Protection Officer" claims are gone, and the French Terms now include the account-deactivation and data-retention clause.
+- **Partners, Careers, Press, Status and the public Changelog are translated.** Changelog dates follow your language, a note says release notes are written in English, and "Back to Home" keeps you in your language.
+- **Search results and link previews match the page language.** Titles, descriptions and share cards on the marketing pages appear in French, Indonesian or English instead of always English. The pricing snippet shows the price in your currency, the home snippet no longer calls the cashier free (the storefront is free forever; the POS has a 14-day trial), and the server-rendered page now declares its language.
+- **Each language version points search engines at itself.** /id and /en pages are no longer treated as copies of the French page, French blog posts and guides no longer advertise English and Indonesian versions that don't exist, comparison pages say which language they really serve, and two unsupported claims (a founding year, a site-search box) are gone from the structured data.
+- **Sitemap dates are real.** Articles report their publication date; pages with no known date report none instead of the moment the sitemap was built.
+- **The old /payments page now redirects to /pricing** in every language.
+- **Removed the unused waitlist form,** which sent visitor details to a third-party server.
+- **Plan prices and the support contact are each defined in one place,** with tests that fail if a translated price or a hardcoded support address drifts.
+- **Footer copyright, "Infrastructured by", screen-reader labels and the 404 page links follow your language.** The account deactivation and reactivation settings are translated into French, and attendance address lookups now identify themselves with the real support inbox.
+
+## [2.98.0] - 2026-09-20 · feat
+
+Every step from reading to signing up now has a clearer next step, and the site is ready for real customer proof — without publishing anything that isn't true.
+
+- **Pricing has its own FAQ.** What happens after the 14-day trial, changing plan or cancelling, and refunds — with a link to the refund policy — instead of the homepage FAQ repeated.
+- **Docs guides end with a "Start free" card, and blog posts have a byline.** The card links to sign-up in French, Indonesian and English. Posts show "Epidom Team" with the date and reading time; a named author with a photo can be added per post later. Both sign-up buttons record a click.
+- **Partners: a supplier application path.** Coffee roasters, frozen-food distributors and bakery suppliers pick what they supply and open a prefilled WhatsApp message (or email us).
+- **Careers and Press have real buttons** — "tell us about yourself" and "Media inquiries" — instead of email addresses to copy by hand.
+- **The home trust bar shows what Epidom works with** (Stripe, Xendit/QRIS, WhatsApp) instead of shop names.
+- **Ready for real proof, invisible until it is real.** Customer logos, case studies and team cards are now data-driven sections that stay hidden until real, sourced and consented entries are added. The About page shows an honest "small product team" block instead of placeholder avatars and a numbers card.
+
+## [2.97.0] - 2026-09-20 · fix
+
+Trust and correctness first: the site stops claiming things it can't back up, French visitors get French where they were getting English, contact actually reaches us, and cookie choices are real.
+
+- **Tighter plan activation.** The free-plan activation now only ever activates the Free plan, and the service behind it refuses anything else.
+- **Signing in only follows links inside Epidom.** A crafted `?next=` link can no longer send you to another site after you log in.
+- **Your email stays out of the page address.** The sign-up box on the home, services and pricing pages used to put what you typed into the URL, where analytics and server logs could see it. It now carries it to the sign-up form privately, keeps your place when you flip between Log in and Create account, no longer claims a "magic link" is on its way, and stacks on phones so the French button no longer squeezes the field.
+- **Sign-up and login forms are fully French and Indonesian** — the "or continue with email" divider, the buttons and every validation message. Passwords must be at least 8 characters on sign-up (what the server always required); signing in no longer checks length.
+- **Pricing in French, and honest.** The trial badge, note and button are translated; the trial banner no longer says "no card" (a card is required, and the trial is POS-only); French feature lists match the real plans; the Free card no longer lists POS and KDS; the plan-change dialog and its errors are translated in all three languages; only POS is marked "Most popular"; the Operations button no longer says "Start free trial"; and customers already on a paid plan are no longer offered the trial.
+- **The pricing sign-up path remembers your plan.** A signed-out visitor who picks a plan goes straight to sign-up and comes back to the pricing page (POS reopens the free-trial dialog), and the plan-change dialog works from the keyboard — focus moves in, Tab stays inside, Escape closes.
+- **Unverified numbers, testimonials and claims removed.** "500+ businesses", "20+ countries", "10k orders a day", a 4.9 rating, made-up customer quotes with outcome statistics, and invented shop names are gone; the hero shows four real product facts instead. The home, services and About pages no longer promise menu-photo import, an official WhatsApp API, WhatsApp pings, daily reports emailed at midnight, or "5-minute setup" — they say what Epidom actually does.
+- **Contact reaches us.** WhatsApp is now the main way, with a message already written for you (France and Indonesia numbers, matched to your language). The contact form, which never sent anything, is gone, and so are an unsourced "under 4 hours" reply time and Indonesia-only support hours.
+- **Cookie choices are real.** A "Manage cookies" button in the footer lets you change or withdraw your choice at any time. Google Analytics and the Meta Pixel are not loaded at all until you accept them; withdrawing stops them and deletes their cookies; the Meta image fallback, which could not honour consent, is removed; switching language no longer counts as refusing cookies; and the banner says plainly what Accept turns on and links to the Cookie Policy.
+- **The Cookie Policy no longer says things that were false** ("self-hosted analytics", "no third-party trackers", "no advertising cookies"). It lists what actually runs, including that, if you accept analytics, Google Analytics also receives in-app page addresses, some in-app actions and the details of a sale rung up at the till.
+
 ## [2.96.0] - 2026-09-20 · feat
 
 Zoom is now available everywhere — on the till as well as in the Back Office, on a phone as well as on a desktop — and it no longer pushes a phone's layout out of shape.

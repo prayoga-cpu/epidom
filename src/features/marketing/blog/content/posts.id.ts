@@ -1,6 +1,6 @@
-import type { Article } from "@/features/marketing/shared/content/article-types";
+import type { BlogPost } from "./types";
 
-export const idPosts: Article[] = [
+export const idPosts: BlogPost[] = [
   {
     slug: "cara-mengurangi-komisi-gofood-grabfood",
     locale: "id",

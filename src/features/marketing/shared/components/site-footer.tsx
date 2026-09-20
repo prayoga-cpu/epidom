@@ -3,7 +3,13 @@
 import { memo } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
+import {
+  SUPPORT_EMAIL_DISPLAY,
+  SUPPORT_MAILTO,
+  getWhatsAppOptions,
+  whatsappHref,
+} from "@/lib/constants/contact";
+import { openCookieSettings } from "@/lib/cookie-consent";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { APP_VERSION } from "@/lib/version";
 import { Container } from "./container";
@@ -37,7 +43,6 @@ const SOCIAL = [
 
 export const SiteFooter = memo(function SiteFooter() {
   const { t, locale } = useI18n();
-  const year = new Date().getFullYear();
   const waOptions = getWhatsAppOptions(locale);
 
   return (
@@ -159,6 +164,19 @@ export const SiteFooter = memo(function SiteFooter() {
               { label: t("footer.linkCookies"), href: getLocalizedPath("/cookie-policy", locale) },
               { label: t("footer.linkGdpr"), href: getLocalizedPath("/gdpr", locale) },
             ]}
+            extra={
+              // Withdrawing consent has to be as easy as giving it: this reopens
+              // the consent bar on the visitor's saved choice, from any page.
+              // min-h-11 (44px) is the touch target; -my-2 keeps the column rhythm.
+              <button
+                type="button"
+                onClick={openCookieSettings}
+                style={linkStyle}
+                className="-my-2 inline-flex min-h-11 cursor-pointer items-center text-left hover:text-[rgba(251,249,228,0.9)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--epi-gold-500)]"
+              >
+                {t("footer.manageCookies")}
+              </button>
+            }
           />
 
           {/* Contact */}
@@ -188,11 +206,11 @@ export const SiteFooter = memo(function SiteFooter() {
               <li>
                 <ContactRow icon={<MailIcon />}>
                   <Link
-                    href="mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io"
+                    href={SUPPORT_MAILTO}
                     style={linkStyle}
                     className="hover:text-[rgba(251,249,228,0.9)]"
                   >
-                    cro@prionation.io, ceo@prionation.io, consult@prionation.io
+                    {SUPPORT_EMAIL_DISPLAY}
                   </Link>
                 </ContactRow>
               </li>
@@ -255,7 +273,7 @@ export const SiteFooter = memo(function SiteFooter() {
             }}
           >
             <span style={{ fontSize: 11, letterSpacing: "0.1em", color: "rgba(255,255,255,0.32)" }}>
-              Infrastructured by
+              {t("footer.infrastructuredBy")}
             </span>
             <Link
               href="https://prionation.io"
@@ -295,7 +313,7 @@ export const SiteFooter = memo(function SiteFooter() {
           }}
         >
           <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-            {`© ${year} Epidom. All rights reserved.`}
+            {t("footer.rights")}
             <Link
               href={getLocalizedPath("/changelog", locale)}
               style={{ ...linkStyle, fontSize: 12 }}
@@ -337,9 +355,12 @@ const linkStyle: React.CSSProperties = {
 function FooterCol({
   heading,
   links,
+  extra,
 }: {
   heading: string;
   links: { label: string; href: string }[];
+  /** A last list item that is an action rather than a link. */
+  extra?: React.ReactNode;
 }) {
   return (
     <div>
@@ -372,6 +393,7 @@ function FooterCol({
             </Link>
           </li>
         ))}
+        {extra && <li>{extra}</li>}
       </ul>
     </div>
   );

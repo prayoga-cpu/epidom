@@ -26,3 +26,31 @@ export function getWhatsAppOptions(
   if (locale === "en") return [WHATSAPP_NUMBERS.fr, WHATSAPP_NUMBERS.id];
   return [WHATSAPP_NUMBERS.fr];
 }
+
+/**
+ * The public support inbox — the ONE place these addresses are written down.
+ * Today it is the Prionation studio's shared inbox (a mailto with several
+ * recipients). Pages, transactional emails and structured data all read it from
+ * here, so moving to a branded address (support@epidom.fr, say) is a one-line
+ * change once that mailbox and its sending domain actually exist — until then,
+ * pointing the site at an address that bounces would lose every message.
+ */
+export const SUPPORT_EMAIL_ADDRESSES = [
+  "cro@prionation.io",
+  "ceo@prionation.io",
+  "consult@prionation.io",
+] as const;
+
+/** For places that accept exactly one address (JSON-LD contactPoint, headers). */
+export const SUPPORT_EMAIL_PRIMARY: (typeof SUPPORT_EMAIL_ADDRESSES)[number] = "consult@prionation.io";
+
+/** "a, b, c" — for visible text. */
+export const SUPPORT_EMAIL_DISPLAY = SUPPORT_EMAIL_ADDRESSES.join(", ");
+
+/** `mailto:` href addressed to every support recipient, with an optional subject. */
+export function supportMailto(subject?: string): string {
+  const base = `mailto:${SUPPORT_EMAIL_ADDRESSES.join(",")}`;
+  return subject ? `${base}?subject=${encodeURIComponent(subject)}` : base;
+}
+
+export const SUPPORT_MAILTO = supportMailto();

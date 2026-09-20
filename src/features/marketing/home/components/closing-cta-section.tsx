@@ -4,19 +4,26 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { trackConversion } from "@/lib/analytics";
+import { stashPrefillEmail } from "@/features/auth/register/lib/prefill-handoff";
 
 export function ClosingCtaSection() {
   const { t } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  // True from the submit until /register has loaded. Nothing is emailed here: the
+  // visitor is only being sent to the sign-up page, and the message must say so.
+  const [redirecting, setRedirecting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
-      setSent(true);
+      setRedirecting(true);
       trackConversion("email_capture", { event_label: "closing_cta" });
-      router.push(`/register?email=${encodeURIComponent(email)}`);
+      // The address goes to the sign-up form through sessionStorage, NOT the URL:
+      // GA4 and the Meta Pixel receive the full page URL (for visitors who
+      // consented), and it would also sit in browser history and server logs.
+      stashPrefillEmail(email);
+      router.push("/register");
     }
   };
 
@@ -80,20 +87,15 @@ export function ClosingCtaSection() {
               {t("redesign.cta.script")}
             </p>
 
-            {!sent ? (
+            {!redirecting ? (
+              // Stacked (input above a full-width button, both 48px tall) below sm, the
+              // pill (input and button side by side inside one rounded shell) from sm up.
+              // A side-by-side row is what squeezed the field to ~44px at 375px in French,
+              // where the nowrap button label alone is ~195px wide. Layout is classes on
+              // purpose: an inline `display` or `padding` would beat the sm: overrides.
               <form
                 onSubmit={handleSubmit}
-                style={{
-                  marginTop: 40,
-                  display: "flex",
-                  gap: 10,
-                  maxWidth: 520,
-                  margin: "40px auto 0",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  borderRadius: 999,
-                  padding: 6,
-                }}
+                className="sm:focus-within:border-epi-gold-500 mx-auto mt-10 flex max-w-[520px] flex-col gap-3 sm:flex-row sm:gap-2.5 sm:rounded-full sm:border sm:border-white/[0.14] sm:bg-white/[0.04] sm:p-1.5"
               >
                 <input
                   type="email"
@@ -101,41 +103,18 @@ export function ClosingCtaSection() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={t("redesign.cta.placeholder")}
-                  style={{
-                    flex: 1,
-                    background: "transparent",
-                    border: "none",
-                    outline: "none",
-                    color: "var(--epi-cream-50)",
-                    fontSize: 15,
-                    padding: "0 22px",
-                    fontFamily: "var(--epi-font-body)",
-                    minWidth: 0,
-                  }}
+                  className="text-epi-cream-50 focus-visible:border-epi-gold-500 h-12 w-full min-w-0 rounded-full border border-white/[0.14] bg-white/[0.04] px-5 [font-family:var(--epi-font-body)] text-base outline-none sm:h-auto sm:flex-1 sm:border-0 sm:bg-transparent sm:px-[22px] sm:text-[15px]"
                 />
                 <button
                   type="submit"
-                  className="cursor-pointer transition-all hover:-translate-y-px"
-                  style={{
-                    padding: "12px 24px",
-                    borderRadius: 999,
-                    background: "var(--epi-gold-500)",
-                    color: "var(--epi-navy-900)",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    border: "none",
-                    fontFamily: "var(--epi-font-body)",
-                    whiteSpace: "nowrap",
-                  }}
+                  className="bg-epi-gold-500 text-epi-navy-900 h-12 w-full cursor-pointer rounded-full px-4 [font-family:var(--epi-font-body)] text-sm font-medium tracking-[0.06em] whitespace-nowrap uppercase transition-all hover:-translate-y-px sm:h-auto sm:w-auto sm:px-6 sm:py-3"
                 >
                   {t("redesign.cta.button")}
                 </button>
               </form>
             ) : (
-              <div style={{ marginTop: 40, color: "var(--epi-gold-300)", fontSize: 16 }}>
-                {t("redesign.cta.sent").replace("{email}", email)}
+              <div role="status" className="text-epi-gold-300 mt-10 text-base">
+                {t("redesign.cta.sent")}
               </div>
             )}
 

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PhoneMenu } from "@/features/marketing/shared/components/phone-menu";
 import { PhoneKDS } from "@/features/marketing/shared/components/phone-kds";
 import { PAYMENT_METHODS } from "@/features/marketing/shared/content/payment-methods";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 export function FeatureLadderSection() {
   const { t, locale } = useI18n();
@@ -373,7 +374,7 @@ export function FeatureLadderSection() {
 
         <div style={{ textAlign: "center", marginTop: 36 }}>
           <button
-            onClick={() => router.push("/services")}
+            onClick={() => router.push(getLocalizedPath("/services", locale))}
             className="cursor-pointer transition-all hover:-translate-y-px"
             style={{
               background: "transparent",

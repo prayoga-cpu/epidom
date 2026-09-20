@@ -1,27 +1,38 @@
 "use client";
+
+import { useI18n } from "@/components/lang/i18n-provider";
 import {
+  PlaceholderCta,
   PlaceholderPage,
   PlaceholderSection,
 } from "@/features/marketing/shared/components/placeholder-page";
+import { trackConversion } from "@/lib/analytics";
+import { SUPPORT_EMAIL_DISPLAY, supportMailto } from "@/lib/constants/contact";
+
 export function CareersClient() {
+  const { t } = useI18n();
+
   return (
     <PlaceholderPage
-      eyebrow="Careers"
-      title="Build the future of F&B ops."
-      body="Epidom is built by Prionation's product team, working as a small, focused pod rather than a large fixed org. We don't have a running req list — but we're always glad to hear from people who want in."
+      eyebrow={t("careers.eyebrow")}
+      title={t("careers.title")}
+      body={t("careers.body")}
+      actions={
+        <PlaceholderCta
+          href={supportMailto(t("careers.emailSubject"))}
+          onClick={() => trackConversion("contact_email", { event_label: "careers" })}
+        >
+          {t("careers.cta")}
+        </PlaceholderCta>
+      }
     >
       <PlaceholderSection
-        title="How we work"
-        items={[
-          "A small pod of AI product engineers, based in Bali and Paris, remote-friendly",
-          "No open roles posted right now — reach out anyway if Epidom's mission fits what you're looking for",
-        ]}
+        title={t("careers.how.title")}
+        items={[t("careers.how.team"), t("careers.how.noRoles")]}
       />
       <PlaceholderSection
-        title="Apply"
-        items={[
-          "Send your CV and a short note to cro@prionation.io, ceo@prionation.io, or consult@prionation.io",
-        ]}
+        title={t("careers.apply.title")}
+        items={[t("careers.apply.send").replace("{emails}", SUPPORT_EMAIL_DISPLAY)]}
       />
     </PlaceholderPage>
   );

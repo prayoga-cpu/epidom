@@ -2,10 +2,13 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useRouter } from "next/navigation";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 export function PricingSection() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
+  // The marketing site is prefix-routed: an unprefixed "/pricing" is the French page.
+  const pricingPath = getLocalizedPath("/pricing", locale);
 
   const tiers = [
     {
@@ -22,7 +25,9 @@ export function PricingSection() {
       price: t("redesign.pricingTeaser.t2price"),
       period: t("redesign.pricingTeaser.t2period"),
       desc: t("redesign.pricingTeaser.t2desc"),
-      highlight: false,
+      // POS is the flagship plan on /pricing (the only card with the "most
+      // popular" mark and the trial promo), so it gets the teaser's emphasis too.
+      highlight: true,
     },
     {
       tag: t("redesign.pricingTeaser.t3tag"),
@@ -30,7 +35,7 @@ export function PricingSection() {
       price: t("redesign.pricingTeaser.t3price"),
       period: t("redesign.pricingTeaser.t3period"),
       desc: t("redesign.pricingTeaser.t3desc"),
-      highlight: true,
+      highlight: false,
     },
     {
       tag: t("redesign.pricingTeaser.t4tag"),
@@ -90,7 +95,7 @@ export function PricingSection() {
             </p>
           </div>
           <button
-            onClick={() => router.push("/pricing")}
+            onClick={() => router.push(pricingPath)}
             className="cursor-pointer transition-all hover:-translate-y-px"
             style={{
               background: "transparent",
@@ -114,7 +119,7 @@ export function PricingSection() {
           {tiers.map((tier, i) => (
             <div
               key={i}
-              onClick={() => router.push("/pricing")}
+              onClick={() => router.push(pricingPath)}
               className="cursor-pointer transition-all hover:-translate-y-1"
               style={{
                 padding: "22px 20px",

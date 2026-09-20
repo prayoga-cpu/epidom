@@ -103,113 +103,34 @@ export function UseCasesSection() {
             }}
           />
 
-          <div className="relative grid grid-cols-1 items-center gap-8 p-8 lg:grid-cols-[1.3fr_1fr] lg:gap-12 lg:p-14">
-            {/* Left */}
-            <div>
-              <h3
-                className="epi-display"
-                style={{
-                  fontSize: "clamp(36px, 4.2vw, 64px)",
-                  margin: 0,
-                  lineHeight: 0.95,
-                  maxWidth: 540,
-                  color: "var(--epi-cream-50)",
-                }}
-              >
-                {t(`redesign.useCases.${uc}_headline` as const)}
-              </h3>
-              <p
-                style={{
-                  color: "var(--epi-cream-50)",
-                  opacity: 0.72,
-                  fontSize: 16,
-                  lineHeight: 1.6,
-                  marginTop: 20,
-                  maxWidth: 520,
-                }}
-              >
-                {t(`redesign.useCases.${uc}_body` as const)}
-              </p>
-              <div style={{ display: "flex", gap: 40, marginTop: 40, flexWrap: "wrap" }}>
-                {[
-                  {
-                    v: t(`redesign.useCases.${uc}_stat1v` as const),
-                    l: t(`redesign.useCases.${uc}_stat1l` as const),
-                  },
-                  {
-                    v: t(`redesign.useCases.${uc}_stat2v` as const),
-                    l: t(`redesign.useCases.${uc}_stat2l` as const),
-                  },
-                ].map((s, i) => (
-                  <div key={i}>
-                    <div
-                      className="epi-display"
-                      style={{
-                        fontSize: "clamp(36px, 8vw, 56px)",
-                        color: "var(--epi-gold-400)",
-                        letterSpacing: "0.02em",
-                        lineHeight: 1,
-                      }}
-                    >
-                      {s.v}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        letterSpacing: "0.18em",
-                        textTransform: "uppercase",
-                        color: "var(--epi-cream-50)",
-                        opacity: 0.4,
-                        marginTop: 8,
-                      }}
-                    >
-                      {s.l}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right — quote card */}
-            <div
+          {/* One centred column: the tabs and heading above are centred too, so the
+              panel reads as a single message per vertical. There are deliberately
+              no testimonials or outcome stats here: none were ever sourced. */}
+          <div className="relative mx-auto max-w-3xl px-6 py-12 text-center sm:px-10 lg:px-14 lg:py-16">
+            <h3
+              className="epi-display"
               style={{
-                padding: "24px 20px",
-                borderRadius: 22,
-                background: "rgba(245,244,220,0.06)",
-                border: "1px solid rgba(245,244,220,0.18)",
-                backdropFilter: "blur(12px)",
+                fontSize: "clamp(36px, 4.2vw, 64px)",
+                margin: 0,
+                lineHeight: 0.95,
+                color: "var(--epi-cream-50)",
               }}
             >
-              <div
-                className="epi-display"
-                style={{
-                  fontSize: 50,
-                  color: "var(--epi-gold-300)",
-                  lineHeight: 0.6,
-                  marginBottom: 14,
-                }}
-              >
-                &ldquo;
-              </div>
-              <p
-                className="epi-script"
-                style={{ fontSize: 22, color: "var(--epi-cream-50)", lineHeight: 1.35 }}
-              >
-                {t(`redesign.useCases.${uc}_quote` as const)}
-              </p>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--epi-cream-50)",
-                  opacity: 0.5,
-                  marginTop: 20,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                }}
-              >
-                {t(`redesign.useCases.${uc}_by` as const)}
-              </div>
-            </div>
+              {t(`redesign.useCases.${uc}_headline` as const)}
+            </h3>
+            <p
+              style={{
+                color: "var(--epi-cream-50)",
+                opacity: 0.72,
+                fontSize: 16,
+                lineHeight: 1.6,
+                marginTop: 20,
+                marginInline: "auto",
+                maxWidth: 560,
+              }}
+            >
+              {t(`redesign.useCases.${uc}_body` as const)}
+            </p>
           </div>
         </div>
       </div>

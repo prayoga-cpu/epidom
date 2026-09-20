@@ -1,28 +1,30 @@
 "use client";
+
+import { useI18n } from "@/components/lang/i18n-provider";
 import {
   PlaceholderPage,
   PlaceholderSection,
 } from "@/features/marketing/shared/components/placeholder-page";
+
 export function StatusClient() {
+  const { t } = useI18n();
+
   return (
     <PlaceholderPage
-      eyebrow="System Status"
-      title="All systems operational."
-      body="Current status of Epidom's core services, updated manually by the team. No active incidents to report."
+      eyebrow={t("status.eyebrow")}
+      title={t("status.title")}
+      body={t("status.body")}
     >
       <PlaceholderSection
-        title="Services"
+        title={t("status.services.title")}
         items={[
-          "API & Core Platform — operational",
-          "Storefront & QR Menu — operational",
-          "Payment Processing (Stripe / Xendit) — operational",
-          "WhatsApp Notifications — operational",
+          t("status.services.api"),
+          t("status.services.storefront"),
+          t("status.services.payments"),
+          t("status.services.whatsapp"),
         ]}
       />
-      <PlaceholderSection
-        title="Report an issue"
-        items={["See the Contact page — we respond within 24 hours on business days"]}
-      />
+      <PlaceholderSection title={t("status.report.title")} items={[t("status.report.body")]} />
     </PlaceholderPage>
   );
 }

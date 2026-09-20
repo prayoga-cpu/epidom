@@ -1,43 +1,33 @@
 import Link from "next/link";
 import type { Locale } from "@/components/lang/i18n-provider";
-import type { Article } from "@/features/marketing/shared/content/article-types";
+import type { BlogPost } from "@/features/marketing/blog/content/types";
 import { ArticleBody } from "@/features/marketing/shared/content/article-body";
+import { ArticleCta } from "@/features/marketing/shared/components/article-cta";
+import { BlogByline } from "@/features/marketing/blog/components/blog-byline";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 
-const COPY: Record<Locale, { back: string; ctaTitle: string; ctaBody: string; ctaButton: string; readLabel: (m: number) => string }> = {
+const COPY: Record<Locale, { back: string; ctaTitle: string; ctaBody: string; ctaButton: string }> = {
   fr: {
     back: "← Retour au journal",
-    ctaTitle: "Prêt à essayer ?",
-    ctaBody: "Cinq minutes. Sans carte. Votre premier lien est gratuit pour toujours.",
+    ctaTitle: "Prêt à essayer ?",
+    ctaBody: "Sans carte. Votre premier lien est gratuit pour toujours.",
     ctaButton: "Démarrer gratuitement →",
-    readLabel: (m) => `${m} min de lecture`,
   },
   id: {
     back: "← Kembali ke blog",
     ctaTitle: "Siap mencoba?",
-    ctaBody: "Lima menit. Tanpa kartu. Link pertamamu gratis selamanya.",
+    ctaBody: "Tanpa kartu. Link pertamamu gratis selamanya.",
     ctaButton: "Mulai gratis →",
-    readLabel: (m) => `${m} menit baca`,
   },
   en: {
     back: "← Back to journal",
     ctaTitle: "Ready to try it?",
-    ctaBody: "Five minutes. No card. Your first link is free forever.",
+    ctaBody: "No card. Your first link is free forever.",
     ctaButton: "Start free →",
-    readLabel: (m) => `${m} min read`,
   },
 };
 
-function formatDate(iso: string, locale: Locale): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString(locale === "id" ? "id-ID" : locale === "fr" ? "fr-FR" : "en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-export function BlogPostView({ locale, post }: { locale: Locale; post: Article }) {
+export function BlogPostView({ locale, post }: { locale: Locale; post: BlogPost }) {
   const copy = COPY[locale];
 
   return (
@@ -67,7 +57,7 @@ export function BlogPostView({ locale, post }: { locale: Locale; post: Article }
               marginBottom: 16,
             }}
           >
-            {post.category} · {formatDate(post.date, locale)} · {copy.readLabel(post.readMinutes)}
+            {post.category}
           </div>
 
           <h1
@@ -95,49 +85,26 @@ export function BlogPostView({ locale, post }: { locale: Locale; post: Article }
             {post.description}
           </p>
 
+          <BlogByline
+            locale={locale}
+            author={post.author}
+            date={post.date}
+            readMinutes={post.readMinutes}
+          />
+
           <div className="epi-gold-rule" style={{ marginTop: 40, marginBottom: 40 }} />
 
           <ArticleBody blocks={post.blocks} />
         </div>
       </article>
 
-      <section
-        style={{
-          padding: "100px 24px",
-          textAlign: "center",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-          background: "linear-gradient(180deg, transparent, rgba(217,174,59,0.04))",
-        }}
-      >
-        <h2
-          className="epi-display"
-          style={{
-            fontSize: "clamp(28px, 4.5vw, 48px)",
-            margin: "0 0 16px",
-            color: "var(--epi-cream-50)",
-          }}
-        >
-          {copy.ctaTitle}
-        </h2>
-        <p style={{ fontSize: 16, color: "rgba(251,249,228,0.55)", marginBottom: 32 }}>{copy.ctaBody}</p>
-        <a
-          href="/register"
-          style={{
-            display: "inline-flex",
-            padding: "16px 36px",
-            borderRadius: 999,
-            background: "var(--epi-gold-500)",
-            color: "var(--epi-navy-900)",
-            fontSize: 15,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            textDecoration: "none",
-            boxShadow: "0 12px 32px -10px rgba(217,174,59,0.65)",
-          }}
-        >
-          {copy.ctaButton}
-        </a>
-      </section>
+      <ArticleCta
+        variant="section"
+        title={copy.ctaTitle}
+        body={copy.ctaBody}
+        button={copy.ctaButton}
+        trackLabel="blog_article_start_free"
+      />
     </div>
   );
 }
