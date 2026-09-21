@@ -487,6 +487,33 @@ storage):
   A reset discards whatever the dev branch accumulated and pulls a fresh
   copy of prod data — don't rely on anything written to it surviving.
 
+**A reset also removes every migration that is committed on a feature branch
+but not on production yet.** The public preview (`dev.epidom.fr`, tracking
+`epidom-revamp`) then fails with `The column … does not exist in the current
+database` until something re-applies them — first seen on `staff_members.userId`
+(`/stores`). The preview build's first step is `prisma migrate deploy`, so the
+workflow's last step redeploys that branch through a Vercel **Deploy Hook**
+(GitHub secret `VERCEL_DEV_DEPLOY_HOOK_URL`) and the build puts the migrations
+back. It fires only after the reset has finished: Neon's `last_reset_at` has
+moved and no operation on the branch is still in flight. Things to know:
+
+- The hook is bound to **one git branch** — the one `dev.epidom.fr` tracks
+  (Vercel → Domains). Point the domain at another branch and you must create a
+  hook for that branch and update the secret. A hook for a deleted or renamed
+  branch cannot rebuild the preview, so if it stays broken after a reset,
+  check Vercel → Deployments first.
+- Scheduled workflows run from **`main`'s copy** of the file. To test a change
+  first, use Run workflow → "Use workflow from" the feature branch (this really
+  resets the dev database).
+- With the secret missing the run fails red **before** resetting anything (the
+  dev database just keeps yesterday's data), rather than resetting and then
+  leaving the preview broken. Once the reset has succeeded the redeploy always
+  fires, even if waiting on Neon errored.
+- Local `.env` points at the same branch, so after a reset run
+  `pnpm prisma migrate deploy` before working locally. Once a branch's
+  migrations reach production (merge to `main`), the reset carries them and
+  none of this is needed for that branch.
+
 Data only ever flows `main` → `development`. Schema changes flow the other
 way: run `prisma migrate dev` locally (against `development`), commit the
 migration file, merge to `main` — the Vercel production build already runs
