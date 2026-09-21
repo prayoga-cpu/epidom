@@ -4,11 +4,29 @@ name: Reset Dev DB Branch
 # (copy-on-write, seconds not minutes). Keeps dev data fresh without ever
 # writing to production, and keeps prod isolated from whatever dev is doing.
 # Manual runs: Actions tab → "Reset Dev DB Branch" → Run workflow.
+#
+# A reset also discards every migration that is committed on a feature branch
+# but not on production yet, so the public preview (dev.epidom.fr) would fail
+# with "column ... does not exist" until something re-applies them. The preview
+# build's first step is `prisma migrate deploy` (package.json "build"), so the
+# last step redeploys the preview branch through a Vercel Deploy Hook and that
+# build puts the migrations back on the fresh copy.
+#
+# The hook is bound to ONE git branch: the one dev.epidom.fr tracks (Vercel →
+# Domains). If the domain is ever pointed at another branch, create a hook for
+# that branch and update the VERCEL_DEV_DEPLOY_HOOK_URL secret.
+# Scheduled runs use this file as it exists on `main`. See docs/DATABASE.md.
 
 on:
   schedule:
-    - cron: "0 19 * * *" # 19:00 UTC = 02:00 WIB
+    - cron: "0 19 * * *" # 19:00 UTC = 02:00 WIB (GitHub often starts it 2-3 h late)
   workflow_dispatch: {}
+
+# A manual click during the nightly run would otherwise have two runs waiting
+# on, then redeploying after, each other's reset.
+concurrency:
+  group: reset-dev-db
+  cancel-in-progress: false
 
 env:
   NEON_PROJECT_ID: square-sound-94138774
@@ -18,10 +36,88 @@ jobs:
   reset:
     name: Reset development branch to production
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
+      # Checked BEFORE anything is reset: without the secret, a reset would drop
+      # the migrations that are not on production yet and nothing would redeploy
+      # the preview to put them back. Failing here leaves the dev database
+      # untouched (it just keeps yesterday's data).
+      - name: Check the preview redeploy hook is configured
+        env:
+          VERCEL_DEV_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEV_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "${VERCEL_DEV_DEPLOY_HOOK_URL}" ]; then
+            echo "::error::VERCEL_DEV_DEPLOY_HOOK_URL is not set, so the dev branch was NOT reset: a reset drops migrations that are not on production yet and nothing would redeploy the preview to re-apply them. Add the secret (see docs/DATABASE.md)."
+            exit 1
+          fi
+
+      - name: Note when the branch was last reset
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          set -euo pipefail
+          last=$(curl -fsS \
+            "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches/${NEON_DEV_BRANCH_ID}" \
+            -H "Authorization: Bearer ${NEON_API_KEY}" | jq -r '.branch.last_reset_at // ""')
+          echo "LAST_RESET_BEFORE=${last}" >> "$GITHUB_ENV"
+          echo "Last reset before this run: ${last:-never}"
+
       - name: Call Neon reset_to_parent API
+        id: reset
         run: |
           curl -f -s -X POST \
             "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches/${NEON_DEV_BRANCH_ID}/reset_to_parent" \
             -H "Authorization: Bearer ${{ secrets.NEON_API_KEY }}" \
             -H "Content-Type: application/json"
+
+      # The API call returns before the reset is done. Redeploying too early
+      # would run `migrate deploy` on the old data and the reset would then wipe
+      # it. `last_reset_at` moves when the reset starts, so also require that no
+      # operation on the branch is still in flight, on two polls in a row.
+      - name: Wait for the reset to finish
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          set -euo pipefail
+          api="https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}"
+          get() { curl -fsS --retry 3 --retry-all-errors --max-time 20 "${api}$1" -H "Authorization: Bearer ${NEON_API_KEY}"; }
+          settled=0
+          deadline=$((SECONDS + 300))
+          while [ "${SECONDS}" -lt "${deadline}" ]; do
+            branch=$(get "/branches/${NEON_DEV_BRANCH_ID}")
+            last=$(jq -r '.branch.last_reset_at // ""' <<<"${branch}")
+            state=$(jq -r '.branch.current_state' <<<"${branch}")
+            busy=$(get "/operations?limit=50" | jq --arg id "${NEON_DEV_BRANCH_ID}" \
+              '[.operations[] | select(.branch_id == $id and (.status | IN("scheduling", "running", "cancelling")))] | length')
+            if [ "${last}" != "${LAST_RESET_BEFORE}" ] && [ "${state}" = "ready" ] && [ "${busy}" = "0" ]; then
+              settled=$((settled + 1))
+              if [ "${settled}" -ge 2 ]; then
+                echo "Reset finished: last_reset_at ${LAST_RESET_BEFORE:-never} -> ${last}"
+                exit 0
+              fi
+            else
+              settled=0
+            fi
+            echo "Waiting for the reset: last_reset_at=${last:-none} state=${state} in-flight operations=${busy}"
+            sleep 5
+          done
+          echo "::error::The Neon reset did not settle within 5 minutes."
+          exit 1
+
+      # Runs even when the wait step failed (say a Neon API error while
+      # polling): the reset has already happened, so the migrations are already
+      # gone and the preview needs the rebuild regardless. If the database were
+      # somehow not ready, the build's `migrate deploy` fails loudly instead.
+      - name: Redeploy the preview to re-apply unshipped migrations
+        if: ${{ !cancelled() && steps.reset.outcome == 'success' }}
+        env:
+          VERCEL_DEV_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEV_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS --retry 3 --retry-all-errors --max-time 20 -o /dev/null -w '%{http_code}' \
+            -X POST "${VERCEL_DEV_DEPLOY_HOOK_URL}")
+          echo "Vercel deploy hook responded HTTP ${code}"
+          case "${code}" in
+            2??) ;;
+            *) echo "::error::The Vercel deploy hook did not answer 2xx, so the preview was not redeployed."; exit 1 ;;
+          esac

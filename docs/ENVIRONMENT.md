@@ -353,6 +353,15 @@ rationale and setup.
 `DATABASE_URL`/`DIRECT_URL` into `.env` for local work — that defeats the
 whole point of the split.
 
+**GitHub Actions secrets** (repo → Settings → Security and quality → Secrets and
+variables → Actions) used by `.github/workflows/reset-dev-db.yml`:
+
+- `NEON_API_KEY` — resets the `development` branch and reads its reset status.
+- `VERCEL_DEV_DEPLOY_HOOK_URL` — a Vercel Deploy Hook (Project Settings → Git →
+  Deploy Hooks) for the branch `dev.epidom.fr` tracks. The workflow POSTs to it
+  after each reset so the preview rebuilds and re-applies migrations that are
+  not on production yet. See `docs/DATABASE.md`.
+
 ---
 
 ## Database backup (Cloudflare R2)
