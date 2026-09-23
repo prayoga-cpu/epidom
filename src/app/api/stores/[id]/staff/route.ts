@@ -16,7 +16,40 @@ function sanitizeAllowedPages(pages: string[] | undefined): string[] | undefined
 export const dynamic = "force-dynamic";
 
 export const GET = withApiHandler(
-  async (_req, { storeId }) => {
+  async (_req, { storeId, access }) => {
+    // A linked staff account (its own login) reaches this route only to fill
+    // the PIN picker — and the picker for THEM is just themselves. It must
+    // not receive a coworker's contact details, pay rate, or PIN status, so
+    // it gets its own row, minimal fields only (what StoreAccessGate uses).
+    if (access?.accessType === "staff") {
+      const me = await prisma.staffMember.findFirst({
+        where: { id: access.staffMemberId, storeId, isActive: true },
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          customRoleLabel: true,
+          allowedPages: true,
+          isActive: true,
+          pin: true,
+        },
+      });
+      const staff = me
+        ? [
+            {
+              id: me.id,
+              name: me.name,
+              role: me.role,
+              customRoleLabel: me.customRoleLabel,
+              allowedPages: me.allowedPages,
+              isActive: me.isActive,
+              hasPin: me.pin !== null,
+            },
+          ]
+        : [];
+      return NextResponse.json(createSuccessResponse({ staff }));
+    }
+
     const staff = await prisma.staffMember.findMany({
       where: { storeId },
       select: {
@@ -32,17 +65,38 @@ export const GET = withApiHandler(
         inviteStatus: true,
         payType: true,
         payRate: true,
+        contractType: true,
         createdAt: true,
         updatedAt: true,
         pin: true,
+        userId: true,
       },
       orderBy: { name: "asc" },
     });
 
-    const staffResponse = staff.map(({ pin, payRate, ...s }) => ({
+    // Sign-in invites still waiting to be claimed. Derived, not stored on the
+    // row: `inviteStatus` is exactly the field that says "accepted" the moment
+    // a PIN email was merely SENT, and a second status string on StaffMember
+    // would invite the same confusion.
+    const pendingInvites = await prisma.staffInvite.findMany({
+      where: {
+        storeId,
+        staffMemberId: { in: staff.map((s) => s.id) },
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { staffMemberId: true },
+    });
+    const pendingIds = new Set(pendingInvites.map((i) => i.staffMemberId));
+
+    // userId is a Better Auth account id — the client only needs to know
+    // whether one is linked, not which.
+    const staffResponse = staff.map(({ pin, payRate, userId, ...s }) => ({
       ...s,
       hasPin: pin !== null,
       payRate: payRate !== null ? Number(payRate) : null,
+      hasLinkedAccount: userId !== null,
+      hasPendingAccountInvite: userId === null && pendingIds.has(s.id),
     }));
 
     return NextResponse.json(createSuccessResponse({ staff: staffResponse }));

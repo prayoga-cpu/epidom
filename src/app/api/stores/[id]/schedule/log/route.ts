@@ -11,10 +11,15 @@ const VALID_TYPES: UnifiedLogType[] = ["CLOCK_IN", "CLOCK_OUT", "ABSENCE", "CASH
 /**
  * GET /api/stores/[id]/schedule/log?from&to&staffId?&type?
  *
- * The Schedule page's manager-facing Log tab — merges attendance clock
- * events and till cash open/close into one chronological, filterable list.
- * Manager/owner only, same trust boundary as the old /attendance audit
- * route this absorbs.
+ * The manager-facing chronological log behind two Back Office pages: the
+ * Schedule page's attendance log (CLOCK_IN, CLOCK_OUT, ABSENCE) and the Shifts
+ * page's cash log (CASH_IN, CASH_OUT — a till's opening/closing count and every
+ * cash movement). They are separate pages on purpose: who was on the clock and
+ * what was in the drawer are different questions. Each asks for its own kind.
+ *
+ * `type` is one type or a comma-separated list; omitted means every kind, for
+ * callers that predate the split. Manager/owner only, same trust boundary as the
+ * old /attendance audit route this absorbs.
  */
 export const GET = withApiHandler(
   async (request, { storeId }) => {
@@ -25,11 +30,13 @@ export const GET = withApiHandler(
     const staffId = searchParams.get("staffId") || undefined;
     const from = searchParams.get("from");
     const to = searchParams.get("to");
-    const typeParam = searchParams.get("type");
-    const types =
-      typeParam && VALID_TYPES.includes(typeParam as UnifiedLogType)
-        ? [typeParam as UnifiedLogType]
-        : undefined;
+    // Unknown entries are dropped; if none survive it is "no filter", not "match
+    // nothing" — same as the single-type behaviour this replaced.
+    const requested = (searchParams.get("type") ?? "")
+      .split(",")
+      .map((type) => type.trim())
+      .filter((type): type is UnifiedLogType => VALID_TYPES.includes(type as UnifiedLogType));
+    const types = requested.length > 0 ? requested : undefined;
 
     const fromDate = from ? new Date(from) : undefined;
     const toDate = to ? new Date(to) : undefined;

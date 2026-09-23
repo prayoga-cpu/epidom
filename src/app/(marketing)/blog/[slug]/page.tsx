@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import type { Metadata } from "next";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { LOCALE_HEADER, DEFAULT_LOCALE, getLocalizedPath } from "@/lib/i18n-routing";
-import { generateMetadata as buildMetadata } from "@/lib/seo";
+import { buildLocalizedMetadata } from "@/lib/seo";
 import { getBlogPost } from "@/features/marketing/blog/content";
 import { BlogPostView } from "@/features/marketing/blog/components/blog-post-view";
 import { BlogPostingStructuredData } from "@/components/seo/structured-data";
@@ -25,12 +25,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!post) return { title: "Not found | Epidom" };
 
-  const canonical = `https://epidom.fr${getLocalizedPath(`/blog/${slug}`, locale)}`;
-  return buildMetadata({
+  // Posts are written per locale and their slugs differ (getBlogPost has no
+  // cross-locale fallback), so an article exists at exactly one URL. Authored in
+  // [locale] only: hreflang claims that URL and nothing else, instead of the
+  // /id and /en siblings that would 404.
+  return buildLocalizedMetadata({
+    basePath: `/blog/${slug}`,
+    locale,
     title: `${post.title} — EPIDOM`,
     description: post.description,
-    canonical,
-    openGraph: { title: post.title, description: post.description, url: canonical },
+    ogTitle: post.title,
+    authoredLocales: [locale],
   });
 }
 

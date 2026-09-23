@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getAllDashboardNavItems } from "@/config/navigation.config";
+import { getAllAppNavItems } from "@/config/navigation.config";
 import { LAST_VISITED_COOKIE, normalizeDefaultLanding } from "@/lib/last-visited";
+import { getLinkedStaffForUser, linkedStaffLandingPath } from "@/lib/auth/staff-link";
 
 /**
  * Store launcher. Every entry point that has to name a destination *before*
@@ -25,14 +26,16 @@ export const metadata: Metadata = {
 };
 
 /**
- * The sections the launcher is willing to build a URL for — the dashboard nav
- * items themselves, so a page added to (or removed from) the sidebar can
- * never leave `/go/*` pointing at a route that doesn't exist. Anything else
- * (`/go/junk`, a section deleted in a refactor, a shortcut from an old
- * installed manifest) falls back to the user's default landing rather than
- * assembling a 404.
+ * The sections the launcher is willing to build a URL for — every app nav
+ * item's href (dashboardNavigation AND POS Mode's own routes — see
+ * getAllAppNavItems' doc comment; the manifest's own /go/pos and
+ * /go/pos/orders shortcuts specifically depend on the POS Mode half), so a
+ * page added to (or removed from) either can never leave `/go/*` pointing
+ * at a route that doesn't exist. Anything else (`/go/junk`, a section
+ * deleted in a refactor, a shortcut from an old installed manifest) falls
+ * back to the user's default landing rather than assembling a 404.
  */
-const LAUNCHABLE_SECTIONS = new Set(getAllDashboardNavItems().map((item) => item.href));
+const LAUNCHABLE_SECTIONS = new Set(getAllAppNavItems().map((item) => item.href));
 
 /** Pulls `{storeId}` out of a `/store/{storeId}/...` path, if that's what this is. */
 function storeIdFromPath(pathname: string): string | null {
@@ -75,6 +78,16 @@ export default async function StoreLauncherPage({
 
   const stores = owner?.business?.stores ?? [];
   if (stores.length === 0) {
+    // No store of their own. A login linked to a staff profile has exactly one
+    // store it can enter — the one it works at, POS Mode only — so it goes
+    // straight there: the requested POS page if their grants cover it, else
+    // their first reachable one. A back-office-only role has nowhere to land,
+    // and /stores (which never redirects back here) is where that's explained.
+    const staffLink = await getLinkedStaffForUser(session.user.id);
+    if (staffLink) {
+      redirect(linkedStaffLandingPath(staffLink, requestedSection) ?? "/stores");
+    }
+
     // No business yet, or a business with no outlets — /stores is the create
     // flow, and it's also where a support-recovered account starts over.
     redirect("/stores");

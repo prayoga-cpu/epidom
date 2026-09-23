@@ -104,6 +104,21 @@ export function OrderHistoryPrintView({
     }
   };
 
+  /**
+   * How the bill was paid. Same rule as the History table: name the tenders
+   * when there are several (Order.paymentMethod is the literal "SPLIT" then,
+   * which tells a manager nothing), otherwise the single method label.
+   */
+  const mapOrderPaymentMethod = (order: OrderHistoryItem) => {
+    const tenders = order.payments ?? [];
+    if (tenders.length > 1) {
+      return Array.from(new Set(tenders.map((p) => mapPaymentMethodLabel(t, p.method)))).join(
+        " + "
+      );
+    }
+    return mapPaymentMethodLabel(t, order.paymentMethod);
+  };
+
   const filterChips: string[] = [];
   if (filters.status && filters.status !== "ALL") {
     filterChips.push(`${t("pos.history.colStatus")}: ${mapStatusLabel(filters.status)}`);
@@ -142,6 +157,11 @@ export function OrderHistoryPrintView({
   const storeLocation = [store.city, store.country].filter(Boolean).join(", ");
 
   return (
+    // vh here, deliberately, not dvh: the spec's "dvh, never vh" rule
+    // (docs/dashboard-revamp.md) targets dialog/sheet/drawer heights, where
+    // mobile browser chrome hiding/showing changes the visible viewport
+    // underneath the user. This is a chrome-free print root, not one of
+    // those — print/PDF rendering has no browser chrome to shift.
     <div className="print-report min-h-[calc(100vh/var(--app-zoom,1))] bg-white text-black print:bg-white">
       {/* Diagonal watermark — repeats behind the content, very low opacity so it never
           interferes with reading the table. Fixed so it also appears on every printed page. */}
@@ -222,6 +242,10 @@ export function OrderHistoryPrintView({
               <th className="py-2 pr-2 font-semibold">{t("pos.history.colCustomer")}</th>
               <th className="py-2 pr-2 font-semibold">{t("pos.history.colItems")}</th>
               <th className="py-2 pr-2 text-right font-semibold">{t("pos.history.colTotal")}</th>
+              {/* How they paid, next to whether they paid — a printed report
+                  that showed only the status could not answer "how much came
+                  in as cash", which is the question it gets used for. */}
+              <th className="py-2 pr-2 font-semibold">{t("pos.history.colPaymentMethod")}</th>
               <th className="py-2 pr-2 font-semibold">{t("pos.history.colPayment")}</th>
               <th className="py-2 pl-2 font-semibold">{t("pos.history.colStatus")}</th>
             </tr>
@@ -239,6 +263,7 @@ export function OrderHistoryPrintView({
                 <td className="py-1.5 pr-2 text-right font-semibold whitespace-nowrap">
                   {formatPrice(Number(order.total))}
                 </td>
+                <td className="py-1.5 pr-2">{mapOrderPaymentMethod(order)}</td>
                 <td className="py-1.5 pr-2 whitespace-nowrap">
                   {mapPaymentLabel(order.paymentStatus)}
                 </td>

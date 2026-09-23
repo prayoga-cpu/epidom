@@ -1,37 +1,77 @@
 import { z } from "zod";
 
-/**
- * Login form validation schema
- */
-export const loginSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .min(6, "Password must be at least 6 characters"),
-});
+/** The `t` from `useI18n()`. A bare function type, so this file needs no React. */
+export type Translate = (key: string) => string;
 
-export type LoginInput = z.infer<typeof loginSchema>;
+// The numbers live here so a rule and the sentence that explains it cannot drift apart.
+export const NAME_MIN_LENGTH = 2;
+// 8 is Better Auth's own floor (`minPasswordLength` defaults to 8 and src/lib/auth.ts
+// sets no override). Any lower number here lets a 6-7 character password clear the
+// form only for the server to refuse it with an untranslated message.
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MAX_LENGTH = 100;
+
+/**
+ * The messages are built per call because zod bakes a message in when the schema is
+ * created. A form builds its schema with `useMemo(() => createXSchema(t), [t])`, so the
+ * text it shows follows the visitor's language (same pattern as the customer form).
+ */
+function emailRule(t: Translate) {
+  return z
+    .string()
+    .min(1, t("auth.validation.emailRequired"))
+    .email(t("auth.validation.emailInvalid"));
+}
+
+/**
+ * Login form validation schema.
+ *
+ * Sign-in only asks for a password. Strength rules belong to creating one: a length
+ * floor here would block an account whose password predates today's minimum with a
+ * "too short" message instead of letting the server answer "wrong password".
+ */
+export function createLoginSchema(t: Translate) {
+  return z.object({
+    email: emailRule(t),
+    password: z.string().min(1, t("auth.validation.passwordRequired")),
+  });
+}
+
+export type LoginInput = z.infer<ReturnType<typeof createLoginSchema>>;
 
 /**
  * Registration form validation schema
  */
-export const registerSchema = z
-  .object({
-    name: z.string().min(1, "Name is required").min(2, "Name must be at least 2 characters"),
-    email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
-    password: z
-      .string()
-      .min(1, "Password is required")
-      .min(6, "Password must be at least 6 characters")
-      .max(100, "Password must be less than 100 characters"),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-    businessName: z.string().optional(),
-    address: z.string().optional(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+export function createRegisterSchema(t: Translate) {
+  return z
+    .object({
+      name: z
+        .string()
+        .min(1, t("auth.validation.nameRequired"))
+        .min(
+          NAME_MIN_LENGTH,
+          t("auth.validation.nameTooShort").replace("{min}", String(NAME_MIN_LENGTH))
+        ),
+      email: emailRule(t),
+      password: z
+        .string()
+        .min(1, t("auth.validation.passwordRequired"))
+        .min(
+          PASSWORD_MIN_LENGTH,
+          t("auth.validation.passwordTooShort").replace("{min}", String(PASSWORD_MIN_LENGTH))
+        )
+        .max(
+          PASSWORD_MAX_LENGTH,
+          t("auth.validation.passwordTooLong").replace("{max}", String(PASSWORD_MAX_LENGTH))
+        ),
+      confirmPassword: z.string().min(1, t("auth.validation.confirmPasswordRequired")),
+      businessName: z.string().optional(),
+      address: z.string().optional(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t("messages.passwordsDoNotMatch"),
+      path: ["confirmPassword"],
+    });
+}
 
-export type RegisterInput = z.infer<typeof registerSchema>;
+export type RegisterInput = z.infer<ReturnType<typeof createRegisterSchema>>;

@@ -25,22 +25,10 @@ export function StructuredData({ type, data }: StructuredDataProps) {
 // Google Rich Results policy violation and a trust liability, not a growth
 // lever (see AGENTS.md "graceful degradation" — dummy data is fine for
 // unimplemented app features, not for facts asserted to search engines).
+// The same goes for capabilities: no SearchAction while the site has no /search
+// page, and no foundingDate until there is a date to point to.
 export function WebsiteStructuredData() {
-  return (
-    <StructuredData
-      type="website"
-      data={{
-        potentialAction: {
-          "@type": "SearchAction",
-          target: {
-            "@type": "EntryPoint",
-            urlTemplate: "https://epidom.fr/search?q={search_term_string}",
-          },
-          "query-input": "required name=search_term_string",
-        },
-      }}
-    />
-  );
+  return <StructuredData type="website" />;
 }
 
 export function OrganizationStructuredData() {

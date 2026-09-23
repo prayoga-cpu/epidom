@@ -49,6 +49,13 @@ export const FEATURE_MIN_PLAN = {
   // Staff rosters, clock-in/out attendance and POS till sessions: the
   // Schedule page and the dashboard's Live Operations card.
   staffOperations: "OPERATIONS",
+  // Cart-line discounts in POS Mode — see PosModeUpgradeBanner.
+  discounts: "OPERATIONS",
+  // Discount presets, coupons and loyalty points (POS cart + the Data page's
+  // Promotions tab). Attaching a plain customer to a sale stays at POS tier —
+  // only the promotion mechanics are gated. Unlike `discounts`, the server
+  // enforces this one on its routes too.
+  loyaltyAndPromotions: "OPERATIONS",
   finance: "ENTERPRISE",
 } satisfies Record<string, PlanTier>;
 

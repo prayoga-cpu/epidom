@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { setRequestId } from "./lib/request-context";
+import { sessionCookieNames } from "./lib/auth/cookies";
 import {
   DEFAULT_LOCALE,
   LOCALE_HEADER,
-  LOCALE_REDIRECT_COOKIE,
   LOCALE_PREF_COOKIE,
   stripLocalePrefix,
   getLocalizedPath,
@@ -59,7 +59,6 @@ const LOCALIZED_MARKETING_PATHS = new Set([
   "/pricing",
   "/about",
   "/services",
-  "/payments",
   "/contact",
   "/partners",
   "/careers",
@@ -75,6 +74,29 @@ const LOCALIZED_MARKETING_PATHS = new Set([
   "/cookie-policy",
   "/refund-policy",
 ]);
+
+/**
+ * Deleted marketing pages, mapped to the page that took over their job (both
+ * unprefixed base paths). Answered with a permanent redirect before anything
+ * else in the proxy runs, so a bookmark, an old email or a search result lands
+ * somewhere useful — not on a 404, and not on the login wall (a path this file
+ * doesn't recognise is treated as a protected one).
+ *
+ * `/payments` was a second, orphaned checkout page that nothing linked to. The
+ * real purchase flow is /pricing -> plan confirm dialog, so that is where old
+ * links go. The old `?plan=` query described a form that no longer exists and
+ * is dropped.
+ *
+ * Why here and not `redirects()` in next.config.ts: a config redirect passes
+ * the request's query string through to the destination and cannot strip it
+ * (see prepareDestination in next/dist/shared/lib/router/utils/prepare-
+ * destination.js), and this file already owns the /id and /en prefix handling,
+ * so all three locales come out of one rule.
+ *
+ * A loop is impossible as long as no target is itself a key here; the test in
+ * src/__tests__/proxy-retired-paths.test.ts follows the redirect chain.
+ */
+const RETIRED_MARKETING_PATHS: ReadonlyMap<string, string> = new Map([["/payments", "/pricing"]]);
 
 /**
  * Marketing pages the resume-redirect must never fire on, because the app
@@ -144,6 +166,21 @@ export default async function proxy(req: NextRequest) {
   // unprefixed market, see docs/STRATEGY.md §3) up front, so the public-route
   // check below matches on the unprefixed path regardless of locale prefix.
   const { locale, basePath } = stripLocalePrefix(path);
+
+  // A deleted marketing page goes to its replacement first — ahead of the
+  // resume-redirect below, which would otherwise bounce a signed-in returning
+  // visitor to their last app page instead. The answer depends only on the
+  // path (never on a cookie), so unlike the redirects below it is safe for a
+  // browser or CDN to keep, and it is answered for prefetches too.
+  const replacement = RETIRED_MARKETING_PATHS.get(
+    basePath.length > 1 ? basePath.replace(/\/+$/, "") : basePath
+  );
+  if (replacement) {
+    // Built from scratch (not cloned from req.nextUrl) so nothing of the old
+    // URL — its query string, a trailing slash — carries over.
+    return NextResponse.redirect(new URL(getLocalizedPath(replacement, locale), req.url), 308);
+  }
+
   // /compare/*, /blog/*, /docs/* are open-ended sets of pages (comparison
   // pages, blog posts, docs guides) — prefix-matched so a new one doesn't
   // require a proxy change, unlike the fixed single-page routes above.
@@ -158,9 +195,11 @@ export default async function proxy(req: NextRequest) {
   // prefix. This only ever checks presence (the Edge runtime can't verify a
   // session against the DB) — used below to gate the resume-redirect, and
   // further down to gate protected-route access.
+  const [plainSessionCookieName, secureSessionCookieName] = sessionCookieNames(
+    process.env.VERCEL_ENV
+  );
   const sessionCookie =
-    req.cookies.get("better-auth.session_token") ||
-    req.cookies.get("__Secure-better-auth.session_token");
+    req.cookies.get(plainSessionCookieName) || req.cookies.get(secureSessionCookieName);
 
   // Resume a signed-in returning visitor straight to their last app page
   // instead of showing marketing content — checked here, before any
@@ -227,7 +266,6 @@ export default async function proxy(req: NextRequest) {
     "/services",
     "/pricing",
     "/contact",
-    "/payments",
     "/about",
     "/partners",
     "/careers",
@@ -250,6 +288,15 @@ export default async function proxy(req: NextRequest) {
     "/onboarding", // Card validation step
     "/forgot-password",
     "/reset-password",
+    // Emailed store-ownership invite. Public on purpose: a recipient with no
+    // account (or not signed in) must SEE what they're being handed and get
+    // sign-in / sign-up options with the link preserved, rather than being
+    // bounced to a bare /login. The token in the URL is the credential; the
+    // page and its API routes enforce everything else themselves.
+    "/transfer-ownership",
+    // Emailed staff sign-in invite — same reasoning as above: the invitee has
+    // no session yet, and the page/API routes verify the token themselves.
+    "/staff-invite",
   ];
 
   // Check if current path is a public route — matched against basePath so
@@ -304,29 +351,23 @@ export default async function proxy(req: NextRequest) {
         }
       }
 
-      // First-time visitor on the unprefixed (fr) site: offer to switch to
-      // /en or /id based on browser language, once. Never for crawlers —
-      // they must always see the canonical fr content at "/" (Google's own
-      // guidance against language/geo auto-redirects breaking crawlability
-      // — see isLikelyBot) — and never a second time for the same visitor
-      // (LOCALE_REDIRECT_COOKIE), so it doesn't fight someone who
-      // deliberately navigates back to the French pages afterwards.
-      const alreadyDecided = req.cookies.has(LOCALE_REDIRECT_COOKIE);
-      const cookieOpts = { maxAge: 60 * 60 * 24 * 365, path: "/" };
-      if (!alreadyDecided && !isLikelyBot(req.headers.get("user-agent"))) {
+      // No explicit pick recorded yet: always follow the browser's device
+      // language on the unprefixed (fr) site, on every visit — not just the
+      // first — so a visitor whose OS/browser language changes (or who
+      // simply never opened LangSwitcher) keeps landing on the language
+      // their device currently reports. Never for crawlers — they must
+      // always see the canonical fr content at "/" (Google's own guidance
+      // against language/geo auto-redirects breaking crawlability — see
+      // isLikelyBot). This stops the moment they pick a language via
+      // LangSwitcher, which records that choice in LOCALE_PREF_COOKIE above
+      // and takes over permanently.
+      if (!isLikelyBot(req.headers.get("user-agent"))) {
         const detected = detectLocaleFromAcceptLanguage(req.headers.get("accept-language"));
         if (detected !== DEFAULT_LOCALE) {
           const redirectUrl = req.nextUrl.clone();
           redirectUrl.pathname = getLocalizedPath(basePath, detected);
-          const redirectResponse = NextResponse.redirect(redirectUrl);
-          redirectResponse.cookies.set(LOCALE_REDIRECT_COOKIE, "1", cookieOpts);
-          return redirectResponse;
+          return NextResponse.redirect(redirectUrl);
         }
-        // Detected fr (or nothing useful) — stay, but remember the
-        // decision so we don't re-parse Accept-Language on every request.
-        const frResponse = NextResponse.next({ request: { headers: localizedRequestHeaders } });
-        frResponse.cookies.set(LOCALE_REDIRECT_COOKIE, "1", cookieOpts);
-        return frResponse;
       }
       // fr has no prefix, so the path already resolves to the right route.
       return NextResponse.next({ request: { headers: localizedRequestHeaders } });

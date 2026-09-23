@@ -204,7 +204,7 @@ export function Topbar() {
               <SheetContent
                 side="right"
                 navigation
-                className="h-[calc(100dvh/var(--app-zoom,1))] w-[min(280px,85vw)] p-0"
+                className="h-[calc(100dvh/var(--app-zoom,1))] w-[min(280px,calc(85vw/var(--app-zoom,1)))] p-0"
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 onTouchStart={handleDrawerTouchStart}
                 onTouchMove={handleDrawerTouchMove}

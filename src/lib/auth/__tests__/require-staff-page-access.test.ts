@@ -1,0 +1,174 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const mockGetActiveStaffSession = vi.fn();
+vi.mock("@/lib/staff-session", () => ({
+  getActiveStaffSession: () => mockGetActiveStaffSession(),
+}));
+
+const mockGetStoreViewer = vi.fn();
+vi.mock("../store-viewer", () => ({
+  getStoreViewer: (...a: unknown[]) => mockGetStoreViewer(...a),
+}));
+
+const mockRedirect = vi.fn((url: string) => {
+  throw new Error(`REDIRECT:${url}`);
+});
+vi.mock("next/navigation", () => ({
+  redirect: (url: string) => mockRedirect(url),
+}));
+
+import { requireStaffPageAccess } from "../require-staff-page-access";
+
+function session(
+  overrides: Partial<{ storeId: string; role: string; allowedPages: string[]; staffMemberId: string }> = {}
+) {
+  return {
+    storeId: "store-1",
+    staffMemberId: "staff-1",
+    name: "Test",
+    role: "CASHIER",
+    allowedPages: [],
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  mockGetActiveStaffSession.mockReset();
+  mockRedirect.mockClear();
+  // Every pre-existing case below is the store's OWNER (with or without a PIN
+  // persona layered on) — the situation this guard was written for.
+  mockGetStoreViewer.mockReset();
+  mockGetStoreViewer.mockResolvedValue({ kind: "owner" });
+});
+
+describe("requireStaffPageAccess", () => {
+  it("no active staff session — the real owner is browsing, always unrestricted", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(null);
+    await expect(requireStaffPageAccess("store-1", "/finance")).resolves.toBeUndefined();
+  });
+
+  it("session for a different store — unrestricted here", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(session({ storeId: "store-2" }));
+    await expect(requireStaffPageAccess("store-1", "/finance")).resolves.toBeUndefined();
+  });
+
+  it("OWNER-role StaffMember row — unrestricted regardless of allowedPages", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(session({ role: "OWNER", allowedPages: [] }));
+    await expect(requireStaffPageAccess("store-1", "/finance")).resolves.toBeUndefined();
+  });
+
+  it("single page: granted — no redirect", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/pos"] }));
+    await expect(requireStaffPageAccess("store-1", "/pos")).resolves.toBeUndefined();
+  });
+
+  it("single page: not granted — redirects to the fallback", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/pos"] }));
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+
+  // New behavior — a route now serving two grants (e.g. /storefront covering
+  // both "/storefront" and the retired standalone "/menu" permission).
+  it("array of pages: granted via ANY one of them — no redirect", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/menu"] }));
+    await expect(
+      requireStaffPageAccess("store-1", ["/menu", "/storefront"])
+    ).resolves.toBeUndefined();
+  });
+
+  it("array of pages: granted via the other one — no redirect", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/storefront"] }));
+    await expect(
+      requireStaffPageAccess("store-1", ["/menu", "/storefront"])
+    ).resolves.toBeUndefined();
+  });
+
+  it("array of pages: granted via neither — redirects", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/pos"] }));
+    await expect(requireStaffPageAccess("store-1", ["/menu", "/storefront"])).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+
+  it("no allowed pages at all — falls back to /pos, not /dashboard (staff can't reach either, but /pos is the safe one)", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: [] }));
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+
+  it("/pos is granted but isn't allowedPages[0] — still prefers /pos over the array order", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(
+      session({ allowedPages: ["/pos/kds", "/pos/schedule", "/pos"] })
+    );
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+
+  it("Kitchen (no /pos grant at all): falls back to their actual first allowed page", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(
+      session({ role: "KITCHEN", allowedPages: ["/pos/kds", "/pos/schedule"] })
+    );
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos/kds"
+    );
+  });
+});
+
+
+describe("requireStaffPageAccess — a linked staff account is never the owner", () => {
+  const linked = { kind: "staff", staffMemberId: "staff-1" };
+
+  it("no PIN persona yet: nothing renders (NOT the owner's 'no session = unrestricted')", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(null);
+    await expect(requireStaffPageAccess("store-1", "/pos")).rejects.toThrow("REDIRECT:/stores");
+  });
+
+  it("a leftover PIN persona for a DIFFERENT staffer on this browser does not count", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(
+      session({ staffMemberId: "someone-else", allowedPages: ["/pos"] })
+    );
+    await expect(requireStaffPageAccess("store-1", "/pos")).rejects.toThrow("REDIRECT:/stores");
+  });
+
+  it("a persona for a different store does not count", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(session({ storeId: "store-2", allowedPages: ["/pos"] }));
+    await expect(requireStaffPageAccess("store-1", "/pos")).rejects.toThrow("REDIRECT:/stores");
+  });
+
+  it("their own persona with the page granted: allowed", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/pos", "/tables"] }));
+    await expect(requireStaffPageAccess("store-1", "/tables")).resolves.toBeUndefined();
+  });
+
+  it("their own persona without the page: redirected to a page they do have", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/pos"] }));
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+
+  it("never takes the owner shortcut for a persona whose role reads OWNER", async () => {
+    mockGetStoreViewer.mockResolvedValue(linked);
+    mockGetActiveStaffSession.mockResolvedValue(session({ role: "OWNER", allowedPages: ["/pos"] }));
+    await expect(requireStaffPageAccess("store-1", "/finance")).rejects.toThrow(
+      "REDIRECT:/store/store-1/pos"
+    );
+  });
+});
+
+describe("requireStaffPageAccess — no relationship to the store", () => {
+  it("fails closed", async () => {
+    mockGetStoreViewer.mockResolvedValue({ kind: "none" });
+    mockGetActiveStaffSession.mockResolvedValue(null);
+    await expect(requireStaffPageAccess("store-1", "/pos")).rejects.toThrow("REDIRECT:/stores");
+  });
+});

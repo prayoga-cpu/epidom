@@ -1,10 +1,8 @@
-import { generateMetadata } from "@/lib/seo";
-import { CookiePolicyClient } from "./client";
-export const metadata = generateMetadata({
-  title: "Cookie Policy — EPIDOM",
-  description: "How and why Epidom uses cookies on its website.",
-  canonical: "https://epidom.fr/cookie-policy",
-});
+import { legalMetadata } from "@/features/marketing/legal/metadata";
+import { CookiePolicyContent } from "@/features/marketing/legal/components/cookie-policy-content";
+
+export const generateMetadata = legalMetadata("cookie-policy");
+
 export default function CookiePolicyPage() {
-  return <CookiePolicyClient />;
+  return <CookiePolicyContent />;
 }

@@ -1,6 +1,6 @@
-import type { Article } from "@/features/marketing/shared/content/article-types";
+import type { BlogPost } from "./types";
 
-export const enPosts: Article[] = [
+export const enPosts: BlogPost[] = [
   {
     slug: "reduce-delivery-app-commission-dependency",
     locale: "en",

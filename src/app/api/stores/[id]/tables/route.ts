@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
+import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
 import { ACTIVE_POS_STATUSES } from "@/lib/constants/order-status";
@@ -19,7 +19,7 @@ const updateTableSchema = z.object({
 });
 
 /** GET /api/stores/[id]/tables */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
   const session = await getSession();
   if (!session?.user?.id)
@@ -27,8 +27,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       status: 401,
     });
 
-  const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (v instanceof NextResponse) return v;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, req);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const v = storeAccess.store;
 
   const tables = await prisma.table.findMany({
     where: { storeId },
@@ -56,8 +57,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       status: 401,
     });
 
-  const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (v instanceof NextResponse) return v;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, req);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const v = storeAccess.store;
 
   const body = await req.json();
   const parsed = createTableSchema.safeParse(body);

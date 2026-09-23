@@ -9,11 +9,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2, Mail, CheckCircle2 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { safeInternalPath } from "@/lib/safe-redirect";
 
 function VerifyEmailContent() {
   const { t } = useI18n();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
+  const next = safeInternalPath(searchParams.get("next"));
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
 
@@ -24,7 +26,7 @@ function VerifyEmailContent() {
     try {
       const { error } = await authClient.sendVerificationEmail({
         email,
-        callbackURL: "/onboarding",
+        callbackURL: next ?? "/onboarding",
       });
 
       if (error) {

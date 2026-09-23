@@ -6,26 +6,24 @@ import { prisma } from "@/lib/prisma";
 import { createHmac, timingSafeEqual } from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/services/email.service";
 import { isAdminEmail } from "@/lib/admin";
+import {
+  previewAuthCookiePrefix,
+  resolveCrossSubDomainCookies,
+  sessionCookieNames,
+} from "@/lib/auth/cookies";
 
 /**
  * In production, share auth cookies (incl. the OAuth `state` cookie) across the
  * apex + www of the real domain, so a www <-> apex hop during the Google OAuth
- * round-trip doesn't drop the state cookie (the "state_mismatch" error).
- * Skipped for localhost and *.vercel.app (where a custom cookie domain would
- * break cookies entirely).
+ * round-trip doesn't drop the state cookie (the "state_mismatch" error). A
+ * preview on a sibling subdomain (dev.epidom.fr) stays host-only and uses its
+ * own cookie prefix. See src/lib/auth/cookies.ts.
  */
-function getCrossSubDomainCookies(): { enabled: boolean; domain: string } | undefined {
-  if (process.env.NODE_ENV !== "production") return undefined;
-  try {
-    const host = new URL(process.env.NEXT_PUBLIC_APP_URL || "").hostname;
-    if (!host || host === "localhost" || host.endsWith(".vercel.app")) return undefined;
-    const parts = host.split(".");
-    const root = parts.length >= 2 ? parts.slice(-2).join(".") : host;
-    return { enabled: true, domain: `.${root}` };
-  } catch {
-    return undefined;
-  }
-}
+const crossSubDomainCookies = resolveCrossSubDomainCookies(
+  process.env.NEXT_PUBLIC_APP_URL,
+  process.env.NODE_ENV
+);
+const previewCookiePrefix = previewAuthCookiePrefix(process.env.VERCEL_ENV);
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET,
@@ -45,7 +43,8 @@ export const auth = betterAuth({
   }),
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
-    ...(getCrossSubDomainCookies() ? { crossSubDomainCookies: getCrossSubDomainCookies() } : {}),
+    ...(previewCookiePrefix ? { cookiePrefix: previewCookiePrefix } : {}),
+    ...(crossSubDomainCookies ? { crossSubDomainCookies } : {}),
   },
   onAPIError: {
     // Redirect OAuth errors to the login page instead of Better Auth's raw HTML error page
@@ -229,10 +228,12 @@ export const getSessionResult = cache(async function getSessionResult(): Promise
   try {
     const cookieStore = await cookies();
 
-    // Get the session token from cookie (check both standard and secure names)
+    // Get the session token from cookie (check both standard and secure names).
+    // The names come from the same module as Better Auth's cookie prefix, so a
+    // preview reads its own cookie and never production's `.epidom.fr` one.
+    const [plainCookieName, secureCookieName] = sessionCookieNames(process.env.VERCEL_ENV);
     const sessionTokenCookie =
-      cookieStore.get("better-auth.session_token")?.value ||
-      cookieStore.get("__Secure-better-auth.session_token")?.value;
+      cookieStore.get(plainCookieName)?.value || cookieStore.get(secureCookieName)?.value;
 
     if (!sessionTokenCookie) {
       return { session: null, unavailable: false };

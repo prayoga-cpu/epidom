@@ -7,27 +7,36 @@ import { usePosOrders } from "../hooks/use-pos-orders";
 import { usePosStaffList } from "../hooks/use-pos-staff-list";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { useKdsSettings } from "../hooks/use-kds-settings";
+import { useTodayKey } from "../hooks/use-today-key";
 import { useCustomProductsSettings } from "@/features/dashboard/data/custom-products/hooks/use-custom-products-settings";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { PosOrderCard } from "./pos-order-card";
 import { PosOrderRow } from "./pos-order-row";
 import { PosOrderBoard } from "./pos-order-board";
 import { PosOrderQueueToolbar } from "./pos-order-queue-toolbar";
+import { PosOrderSourceTabs } from "./pos-order-source-tabs";
+import { PosOrderSplitView } from "./pos-order-split-view";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchX, UtensilsCrossed, Power } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  countOrdersBySource,
+  matchesQueueDate,
   matchesQueueFilters,
   sortQueueOrders,
+  toSourceTab,
+  DEFAULT_QUEUE_DATE_PRESET,
+  QUEUE_DATE_PRESETS,
   QUEUE_STATUSES,
   QUEUE_FILTER_KEYS,
   QUEUE_PAYMENT_METHODS,
+  type QueueDatePreset,
   type QueueDepartmentFilter,
   type QueueFilterKey,
   type QueuePaymentMethodFilter,
   type QueueSortBy,
-  type QueueSourceFilter,
+  type QueueSourceTab,
   type QueueStatusFilter,
   type QueueTypeFilter,
   type QueueView,
@@ -41,7 +50,9 @@ interface PosOrderQueueProps {
 interface QueueFiltersState {
   view: QueueView;
   statusFilter: QueueStatusFilter;
-  sourceFilter: QueueSourceFilter;
+  // The POS / Online tab. Never "All": a persisted "ALL" from before the tabs
+  // existed is read as POS (see toSourceTab).
+  sourceFilter: QueueSourceTab;
   typeFilter: QueueTypeFilter;
   unpaidOnly: boolean;
   sortBy: QueueSortBy;
@@ -49,16 +60,30 @@ interface QueueFiltersState {
   departmentFilter: QueueDepartmentFilter;
   staffFilter: string;
   paymentMethodFilter: QueuePaymentMethodFilter;
+  // Which orders the page is about, by the day they were placed (on the user's own
+  // clock). Always applied and always shown — today unless changed. It is a PRESET,
+  // never stored dates, so "today" can't go stale overnight.
+  datePreset: QueueDatePreset;
   // Which of the optional filter dropdowns are currently shown — everything
-  // except search/unpaid is hidden until the cashier explicitly adds it via
+  // except search/unpaid/date is hidden until the cashier explicitly adds it via
   // "+ Add filter", Notion-style, to keep the default toolbar uncluttered.
   activeFilterKeys: QueueFilterKey[];
+  /** Shape of the saved state — see QUEUE_FILTERS_VERSION. */
+  version: number;
 }
 
+/**
+ * Bumped when the saved shape's meaning changes. 2 = the date defaults to TODAY
+ * (there was no date filter before). usePersistedState can't tell a saved default
+ * from a deliberate choice, so the version is how a state saved before the date
+ * existed is told apart from one where the user picked "All time" on purpose.
+ */
+const QUEUE_FILTERS_VERSION = 2;
+
 const QUEUE_FILTERS_DEFAULTS: QueueFiltersState = {
-  view: "grid",
+  view: "split",
   statusFilter: "ALL",
-  sourceFilter: "ALL",
+  sourceFilter: "POS",
   typeFilter: "ALL",
   unpaidOnly: false,
   sortBy: "newest",
@@ -66,12 +91,13 @@ const QUEUE_FILTERS_DEFAULTS: QueueFiltersState = {
   departmentFilter: "ALL",
   staffFilter: "ALL",
   paymentMethodFilter: "ALL",
+  datePreset: DEFAULT_QUEUE_DATE_PRESET,
   activeFilterKeys: [],
+  version: QUEUE_FILTERS_VERSION,
 };
 
-const VIEWS: QueueView[] = ["grid", "compact", "board"];
+const VIEWS: QueueView[] = ["split", "grid", "compact", "board"];
 const STATUS_FILTERS: QueueStatusFilter[] = ["ALL", ...QUEUE_STATUSES];
-const SOURCE_FILTERS: QueueSourceFilter[] = ["ALL", "POS", "ONLINE"];
 const TYPE_FILTERS: QueueTypeFilter[] = ["ALL", "DINE_IN", "TAKEAWAY", "DELIVERY"];
 const SORT_BYS: QueueSortBy[] = ["newest", "oldest", "total-desc", "total-asc"];
 const DEPARTMENT_FILTERS: QueueDepartmentFilter[] = ["ALL", "KITCHEN", "BAR", "CUSTOM"];
@@ -80,7 +106,6 @@ const PAYMENT_METHOD_FILTERS: QueuePaymentMethodFilter[] = ["ALL", ...QUEUE_PAYM
 // The reset applied to a filter's own value when it's removed from view —
 // hiding a filter also clears it, so it can never keep narrowing results silently.
 const QUEUE_FILTER_RESET: Record<QueueFilterKey, Partial<QueueFiltersState>> = {
-  source: { sourceFilter: "ALL" },
   type: { typeFilter: "ALL" },
   department: { departmentFilter: "ALL" },
   product: { productFilter: "ALL" },
@@ -103,7 +128,7 @@ function sanitizeQueueFilters(raw: unknown, defaults: QueueFiltersState): QueueF
   return {
     view: pick(r.view, VIEWS, defaults.view),
     statusFilter: pick(r.statusFilter, STATUS_FILTERS, defaults.statusFilter),
-    sourceFilter: pick(r.sourceFilter, SOURCE_FILTERS, defaults.sourceFilter),
+    sourceFilter: toSourceTab(r.sourceFilter),
     typeFilter: pick(r.typeFilter, TYPE_FILTERS, defaults.typeFilter),
     unpaidOnly: typeof r.unpaidOnly === "boolean" ? r.unpaidOnly : defaults.unpaidOnly,
     sortBy: pick(r.sortBy, SORT_BYS, defaults.sortBy),
@@ -115,7 +140,14 @@ function sanitizeQueueFilters(raw: unknown, defaults: QueueFiltersState): QueueF
       PAYMENT_METHOD_FILTERS,
       defaults.paymentMethodFilter
     ),
+    // Saved before the date existed: it takes the default (today) rather than
+    // reading as "no date filter", so everyone gets the new default once.
+    datePreset:
+      r.version === QUEUE_FILTERS_VERSION
+        ? pick(r.datePreset, QUEUE_DATE_PRESETS as QueueDatePreset[], defaults.datePreset)
+        : defaults.datePreset,
     activeFilterKeys,
+    version: QUEUE_FILTERS_VERSION,
   };
 }
 
@@ -140,10 +172,18 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   // Forces statusFilter back to "ALL" too: unpaid orders can sit in any
   // status (Pending, Confirmed, Held, ...), so a stale non-ALL status tile
   // left selected from a prior visit would silently hide some of them.
+  // The date goes to "All time" for the same reason: the unpaid alert counts every
+  // unpaid order whatever day it is from, so a today-only list would show fewer
+  // rows than the alert promised.
   const searchParams = useSearchParams();
   useEffect(() => {
     if (searchParams.get("unpaid") === "1") {
-      setFilters((prev) => ({ ...prev, unpaidOnly: true, statusFilter: "ALL" }));
+      setFilters((prev) => ({
+        ...prev,
+        unpaidOnly: true,
+        statusFilter: "ALL",
+        datePreset: "all",
+      }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -158,6 +198,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     departmentFilter,
     staffFilter,
     paymentMethodFilter,
+    datePreset,
     activeFilterKeys,
   } = filters;
   // search is deliberately excluded from persistence — a stale free-text
@@ -208,9 +249,21 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
 
   const allOrders = (orders ?? []) as PosOrderDisplay[];
 
+  // The orders this page is about: those placed inside the date scope (today by
+  // default), on the user's own clock. Everything below — the list, the status
+  // tiles, the POS / Online counts and the unpaid count — is built from THESE, so
+  // no number on the page counts orders the list hides. todayKey re-runs it when
+  // the local day changes, so a till left open past midnight rolls over by itself.
+  const todayKey = useTodayKey();
+  const scopedOrders = useMemo(
+    () => allOrders.filter((o) => matchesQueueDate(o, datePreset)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allOrders, datePreset, todayKey]
+  );
+
   const productOptions = useMemo(() => {
     const map = new Map<string, string>();
-    for (const o of allOrders) {
+    for (const o of scopedOrders) {
       for (const i of o.items) {
         if (i.menuItemId && !map.has(i.menuItemId)) {
           map.set(i.menuItemId, i.menuItem?.name ?? i.name);
@@ -220,7 +273,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     return Array.from(map.entries())
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allOrders]);
+  }, [scopedOrders]);
 
   // isActive lookup only, so a since-deactivated staff member (still valid
   // to filter by — their past orders didn't disappear) can be labeled
@@ -229,20 +282,26 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   const staffOptions = useMemo(() => {
     const activeById = new Map((staffRoster ?? []).map((s) => [s.id, s.isActive]));
     const map = new Map<string, string>();
-    for (const o of allOrders) {
+    for (const o of scopedOrders) {
       if (o.shift?.staffMember) map.set(o.shift.staffMember.id, o.shift.staffMember.name);
     }
     return Array.from(map.entries())
       .map(([id, name]) => ({ id, name, isActive: activeById.get(id) ?? true }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allOrders, staffRoster]);
+  }, [scopedOrders, staffRoster]);
+
+  // Badge counts on the POS / Online tabs: every open order in the date scope,
+  // whatever the OTHER filters say — the tab is "how many are waiting there",
+  // not "how many match". The date is the scope of the page rather than a filter
+  // on it, so an order the list hides for being from another day isn't counted.
+  const sourceCounts = useMemo(() => countOrdersBySource(scopedOrders), [scopedOrders]);
 
   // Source/type/search filters apply everywhere; the status filter is a hard
   // filter in grid/compact views but only highlights a column in board view
   // (which keeps every status visible), so it's applied separately below.
   const preStatusOrders = useMemo(
     () =>
-      allOrders.filter((o) =>
+      scopedOrders.filter((o) =>
         matchesQueueFilters(o, {
           sourceFilter,
           typeFilter,
@@ -255,7 +314,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
         })
       ),
     [
-      allOrders,
+      scopedOrders,
       sourceFilter,
       typeFilter,
       search,
@@ -268,8 +327,8 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   );
 
   const unpaidCount = useMemo(
-    () => allOrders.filter((o) => o.paymentStatus === "PENDING").length,
-    [allOrders]
+    () => scopedOrders.filter((o) => o.paymentStatus === "PENDING").length,
+    [scopedOrders]
   );
 
   const statusCounts = useMemo(() => {
@@ -294,7 +353,6 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
 
   const hasActiveFilters =
     statusFilter !== "ALL" ||
-    sourceFilter !== "ALL" ||
     typeFilter !== "ALL" ||
     unpaidOnly ||
     productFilter !== "ALL" ||
@@ -307,7 +365,6 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
     setFilters((prev) => ({
       ...prev,
       statusFilter: "ALL",
-      sourceFilter: "ALL",
       typeFilter: "ALL",
       unpaidOnly: false,
       productFilter: "ALL",
@@ -334,7 +391,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
   // no orders right now; explain why instead of the generic empty state.
   if (!activeQueueEnabled) {
     return (
-      <div className="text-muted-foreground flex h-[60vh] flex-col items-center justify-center gap-3 p-6 text-center">
+      <div className="text-muted-foreground flex h-[calc(60dvh/var(--app-zoom,1))] flex-col items-center justify-center gap-3 p-6 text-center">
         <div className="bg-muted rounded-full p-6">
           <Power className="h-10 w-10 opacity-40" />
         </div>
@@ -346,7 +403,7 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
 
   if (allOrders.length === 0) {
     return (
-      <div className="text-muted-foreground flex h-[60vh] flex-col items-center justify-center text-center">
+      <div className="text-muted-foreground flex h-[calc(60dvh/var(--app-zoom,1))] flex-col items-center justify-center text-center">
         <div className="bg-muted mb-4 rounded-full p-6">
           <UtensilsCrossed className="h-10 w-10 opacity-50" />
         </div>
@@ -358,14 +415,27 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
 
   const noResults = view === "board" ? boardOrders.length === 0 : visibleOrders.length === 0;
 
+  const noMatches = (
+    <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
+      <SearchX className="h-8 w-8 opacity-50" />
+      <p className="text-foreground font-medium">{t("pos.queue.noMatches")}</p>
+      <p className="text-sm">{t("pos.queue.noMatchesDesc")}</p>
+    </div>
+  );
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-6">
+      <PosOrderSourceTabs
+        value={sourceFilter}
+        onChange={(v) => patchFilters({ sourceFilter: v })}
+        counts={sourceCounts}
+      />
+
       <PosOrderQueueToolbar
         statusCounts={statusCounts}
         statusFilter={statusFilter}
         onStatusFilterChange={(v) => patchFilters({ statusFilter: v })}
-        sourceFilter={sourceFilter}
-        onSourceFilterChange={(v) => patchFilters({ sourceFilter: v })}
+        showStatusTiles={view !== "split"}
         typeFilter={typeFilter}
         onTypeFilterChange={(v) => patchFilters({ typeFilter: v })}
         departmentFilter={departmentFilter}
@@ -397,14 +467,25 @@ export function PosOrderQueue({ storeId }: PosOrderQueueProps) {
         onViewChange={(v) => patchFilters({ view: v })}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={clearFilters}
+        datePreset={datePreset}
+        onDatePresetChange={(v) => patchFilters({ datePreset: v })}
       />
 
-      {noResults ? (
-        <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <SearchX className="h-8 w-8 opacity-50" />
-          <p className="text-foreground font-medium">{t("pos.queue.noMatches")}</p>
-          <p className="text-sm">{t("pos.queue.noMatchesDesc")}</p>
-        </div>
+      {view === "split" ? (
+        // Rendered even with nothing to list: the rail has to stay so the cashier
+        // can pick another status, and the source tabs above stay too. The
+        // no-matches notice sits in the list column instead of replacing the view.
+        <PosOrderSplitView
+          orders={visibleOrders}
+          storeId={storeId}
+          statusCounts={statusCounts}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(v) => patchFilters({ statusFilter: v })}
+          onUpdateStatus={handleUpdateStatus}
+          emptyState={noMatches}
+        />
+      ) : noResults ? (
+        noMatches
       ) : view === "board" ? (
         <PosOrderBoard
           orders={boardOrders}

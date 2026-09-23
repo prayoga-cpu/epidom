@@ -8,6 +8,8 @@
  * §7) — this only produces a short text label, never a rendered map.
  */
 
+import { SUPPORT_EMAIL_PRIMARY } from "@/lib/constants/contact";
+
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse";
 
 /** Reverse-geocodes a lat/lng into a short human-readable label, or `null` on any failure. */
@@ -22,7 +24,7 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     const response = await fetch(url.toString(), {
       headers: {
         // Required by Nominatim's usage policy — identifies the caller.
-        "User-Agent": "epidom-app/1.0 (attendance-clock-in; contact: support@epidom.fr)",
+        "User-Agent": `epidom-app/1.0 (attendance-clock-in; contact: ${SUPPORT_EMAIL_PRIMARY})`,
         Accept: "application/json",
       },
       signal: AbortSignal.timeout(3000),

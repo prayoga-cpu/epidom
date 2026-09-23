@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { usePosCart } from "./use-pos-cart";
+import { useResumeOrderIntoCart } from "./use-resume-order";
 import { toast } from "sonner";
 import type { PosOrderDisplay } from "../types/pos.types";
 
@@ -16,6 +17,7 @@ export function useOrderQueueActions(
   const { confirm, confirmDialog } = useConfirm();
   const router = useRouter();
   const cart = usePosCart();
+  const resumeIntoCart = useResumeOrderIntoCart(storeId);
 
   const handleCancel = async () => {
     const ok = await confirm({
@@ -37,22 +39,9 @@ export function useOrderQueueActions(
       if (!ok) return;
     }
 
-    const mapped = order.items.map((item) => ({
-      id: item.id,
-      menuItemId: item.menuItemId ?? "",
-      name: item.menuItem?.name ?? item.name,
-      // Number(...) defensively: these should already be plain numbers from
-      // the API, but a Prisma Decimal that slips through unconverted
-      // serializes as a *string*, which would silently turn every total
-      // calculation downstream into string concatenation instead of addition.
-      unitPrice: Number(item.unitPrice),
-      quantity: Number(item.quantity),
-      modifiers: item.selectedOptions ?? [],
-      notes: item.notes ?? undefined,
-      lineTotal: Number(item.total),
-    }));
-
-    cart.hydrateFromOrder(mapped, order.id);
+    // Lines, order type, pax, table, customer and the held discount all come
+    // back together — see resumeOrderIntoCart for what is restored and why.
+    await resumeIntoCart(order);
     toast.success(t("pos.orderCard.resumeSuccess"));
     router.push(`/store/${storeId}/pos`);
   };

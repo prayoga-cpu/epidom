@@ -293,15 +293,20 @@ escalation channel.
 
 ## 8. Blockers — resolve before Layer 3 merges
 
-- **Data residency.** `src/app/(marketing)/gdpr/client.tsx:35` states *"Data is stored in EU-region
-  servers (Frankfurt)"*. Both Neon branches are in **`ap-southeast-1`** (Singapore) — verified via
-  the Neon API endpoint hostnames. With France primary since 2026-08-10, adding a **second PII store**
-  under a false residency statement is not shippable. **This is a live compliance exposure today,
-  independent of this feature.** Fix the copy or move the region.
-- **Retention vs published Terms.** Terms `section11` (en, id) promises data is *"permanently and
+- **Data residency.** *Update 2026-09-21:* the false *"Data is stored in EU-region servers
+  (Frankfurt)"* line (formerly `src/app/(marketing)/gdpr/client.tsx:35`) was **removed** in the
+  website redesign — the rewritten privacy / GDPR pages (`src/features/marketing/legal/`) say only
+  that some providers process data outside the EU/EEA and name **no region**. The underlying fact
+  is unchanged: both Neon branches are in **`ap-southeast-1`** (Singapore) — verified via the Neon
+  API endpoint hostnames. With France primary since 2026-08-10, adding a **second PII store**
+  without a residency decision is not shippable. Decide: state Singapore explicitly on the pages
+  (`gdpr.s5`, `privacy.s5`) or move the region.
+- **Retention vs published Terms.** Terms `section11` promises data is *"permanently and
   irreversibly deleted"* after 365 days; snapshots and scrubbed log rows are designed to outlive
-  that. `fr.ts` has **zero** occurrences of `section11` — the French Terms have no retention clause
-  at all. Draft the replacement clause in three locales; that copy is a shipping prerequisite.
+  that. *Update 2026-09-21:* `fr.ts` now carries `section11` (a faithful translation of the en
+  text, added in the website redesign), so the French Terms are no longer silent — but the clause
+  itself still needs the replacement wording this feature requires in all three locales; that copy
+  remains a shipping prerequisite.
 - **Legal hold vs erasure.** A `lockedAt` snapshot survives the GDPR shredder, so a subject's
   erasure request is refused by a code path with no written legal basis. Needs a written position.
 

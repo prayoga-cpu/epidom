@@ -11,8 +11,9 @@ interface MenuManagerProps {
 
 /**
  * Fetches the store's storefront (for its menu categories/items) and renders
- * MenuEditor. Shared by the Storefront "Menu" tab and the standalone POS+
- * "/menu" page so both surfaces edit the exact same MenuItem/MenuCategory data.
+ * MenuEditor. Used by Storefront's "Menu" tab — the standalone "/menu" page
+ * that used to render this same component directly is now a redirect into
+ * that tab (?tab=menu), not a second consumer (docs/back-office-revamp.md).
  */
 export function MenuManager({ storeId }: MenuManagerProps) {
   const {

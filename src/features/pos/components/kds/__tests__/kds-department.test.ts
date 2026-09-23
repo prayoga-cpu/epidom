@@ -46,3 +46,43 @@ describe("itemDepartment", () => {
     ).toBe("KITCHEN");
   });
 });
+
+/**
+ * A POS Custom Item has no MenuItem at all, so its prep area lives on the
+ * OrderItem row. "No prep area" must mean no ticket — the line is already
+ * created SERVED, so a ticket nobody can ever close would jam the board.
+ */
+describe("itemDepartment — lines with no MenuItem", () => {
+  function customItem(
+    overrides: Partial<PosOrderItemDisplay> = {}
+  ): PosOrderItemDisplay {
+    return {
+      id: "item-2",
+      menuItemId: null,
+      name: "Corkage",
+      quantity: 1,
+      unitPrice: 50000,
+      total: 50000,
+      status: "SERVED",
+      isCustom: true,
+      department: null,
+      menuItem: null,
+      ...overrides,
+    };
+  }
+
+  it("routes a Custom Item by its own department", () => {
+    expect(itemDepartment(customItem({ department: "BAR", status: "PENDING" }))).toBe("BAR");
+    expect(itemDepartment(customItem({ department: "KITCHEN", status: "PENDING" }))).toBe("KITCHEN");
+  });
+
+  it("gives a Custom Item with no department no KDS ticket at all", () => {
+    expect(itemDepartment(customItem())).toBeNull();
+  });
+
+  it("still defaults a NON-custom line with no MenuItem to Kitchen", () => {
+    // Legacy/manual rows (menuItemId null, isCustom false) must not silently
+    // disappear from both stations.
+    expect(itemDepartment(customItem({ isCustom: false, status: "PENDING" }))).toBe("KITCHEN");
+  });
+});

@@ -3,26 +3,41 @@ import { businessService } from "@/lib/services";
 import { createStoreSchema } from "@/lib/validation/business.schemas";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { getLinkedStaffForUser, linkedStaffLandingPath } from "@/lib/auth/staff-link";
 
 /**
  * GET /api/stores
  *
- * Get all stores for the current user's business.
+ * Every store the current account can enter: the ones its business owns, plus
+ * the one it is linked to as a staff member (at most one). Each row says which
+ * — `accessRole` — because a staff row must not offer owner actions (edit,
+ * delete, Back Office) and points straight at the POS page they can reach.
  */
 export const GET = withApiHandler(
   async (request, { userId }) => {
-    // Get user's business first
     const business = await businessService.getBusinessByUserId(userId);
+    const owned = business ? await businessService.getStoresByBusinessId(business.id) : [];
+    const ownedRows = owned.map((store) => ({ ...store, accessRole: "owner" as const }));
 
-    // If no business exists, return empty stores array (allows empty state UI to show)
-    if (!business) {
-      return NextResponse.json(createSuccessResponse([]));
+    const link = await getLinkedStaffForUser(userId);
+    // Owner access outranks staff access to the same store (someone linked as
+    // staff who later became the owner through a transfer) — never list it twice.
+    if (!link || owned.some((store) => store.id === link.storeId)) {
+      return NextResponse.json(createSuccessResponse(ownedRows));
     }
 
-    // Get all stores for the business
-    const stores = await businessService.getStoresByBusinessId(business.id);
-
-    return NextResponse.json(createSuccessResponse(stores));
+    return NextResponse.json(
+      createSuccessResponse([
+        ...ownedRows,
+        {
+          ...link.store,
+          accessRole: "staff" as const,
+          // Null = their role has no POS page (a back-office-only role): the
+          // card renders but has nowhere to go.
+          staffHomePath: linkedStaffLandingPath(link),
+        },
+      ])
+    );
   },
   {
     rateLimitEndpoint: "/api/stores",

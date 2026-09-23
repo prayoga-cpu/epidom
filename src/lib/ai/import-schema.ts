@@ -25,6 +25,7 @@ export type MaterialField = z.infer<typeof MaterialFields>;
  */
 export const ProductFields = z.enum([
   "sku",
+  "barcode", // Optional scan code (EAN/UPC), unique per store
   "name",
   "description",
   "category",

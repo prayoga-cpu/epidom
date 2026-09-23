@@ -16,6 +16,7 @@ import {
   Users,
   Loader2,
   CheckCircle2,
+  Star,
 } from "lucide-react";
 import { getPremiumTheme } from "@/lib/utils/color";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
@@ -68,7 +69,11 @@ interface PublicProfileProps {
     gofoodUrl: string | null;
     grabfoodUrl: string | null;
     shopeefoodUrl: string | null;
+    // Already resolved server-side: a hand-entered link, else derived from the
+    // Google Place ID (see resolveGoogleLinks).
     googleMapsUrl: string | null;
+    // Null while Google Reviews is unconnected or paused.
+    googleReviewUrl: string | null;
     customLinks: any;
     openingHours: any;
     acceptsOrders: boolean;
@@ -165,6 +170,21 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
     "--store-theme-light": `color-mix(in srgb, ${safeTheme} 15%, transparent)`,
     "--store-theme-gradient": `linear-gradient(135deg, ${safeTheme}, color-mix(in srgb, ${safeTheme} 40%, black))`,
   } as React.CSSProperties;
+
+  // Opens Google's own review form — Google offers no way to post a review on
+  // a customer's behalf, so the tap is all we can measure.
+  const reviewCta = storefront.googleReviewUrl ? (
+    <a
+      href={storefront.googleReviewUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => trackEvent(storefront.slug, "REVIEW_CLICK")}
+      className="border-border bg-card hover:bg-muted text-foreground flex w-full items-center justify-center gap-2 rounded-xl border px-6 py-3.5 text-sm font-semibold shadow-sm transition active:scale-[0.98]"
+    >
+      <Star className="size-4 fill-amber-400 text-amber-400" />
+      <span>{t("publicProfile.reviewCta")}</span>
+    </a>
+  ) : null;
 
   return (
     <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] flex-col" style={themeStyle}>
@@ -285,6 +305,7 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
                     <span>{t("publicProfile.reserveTable")}</span>
                   </button>
                 )}
+                {reviewCta}
               </div>
             </div>
 
@@ -310,6 +331,7 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
                     <span>{t("publicProfile.reserveTable")}</span>
                   </button>
                 )}
+                {reviewCta}
               </div>
 
               {/* Delivery apps */}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
+import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { getActiveStaffSession } from "@/lib/staff-session";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
@@ -13,7 +13,7 @@ const updateKdsSettingsSchema = z.object({
 /**
  * GET /api/stores/[id]/pos/kds/settings
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
 
   const session = await getSession();
@@ -23,8 +23,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     });
   }
 
-  const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (verification instanceof NextResponse) return verification;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, request);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const verification = storeAccess.store;
 
   return NextResponse.json(
     createSuccessResponse({ kitchenDisplayEnabled: verification.kitchenDisplayEnabled })
@@ -46,8 +47,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
   }
 
-  const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (verification instanceof NextResponse) return verification;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, request);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const verification = storeAccess.store;
 
   const staffSession = await getActiveStaffSession();
   if (staffSession && staffSession.storeId === storeId && staffSession.role !== "OWNER") {

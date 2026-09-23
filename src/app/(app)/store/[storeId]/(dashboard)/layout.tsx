@@ -13,6 +13,8 @@ import { RouteLoadingIndicator } from "@/components/navigation/route-loading-ind
 import { AlertsPrefetch } from "@/features/dashboard/alerts/components/alerts-prefetch";
 import { StoreAccessGate } from "@/features/dashboard/shared/store-access-gate";
 import { subscriptionRepository } from "@/lib/repositories/subscription.repository";
+import { verifyStoreAccess } from "@/lib/utils/store-verification";
+import { linkedStaffHomePath } from "@/lib/auth/staff-home";
 
 export const metadata: Metadata = {
   title: "Epidom — Dashboard",
@@ -44,7 +46,7 @@ export default async function Layout({
   // offer, so skip straight to the dashboard as Owner instead of an
   // always-the-same-answer click every time the store is opened.
   //
-  // The ownership lookup rides along in the same Promise.all rather than
+  // The access lookup rides along in the same Promise.all rather than
   // gating it — it costs nothing extra in wall-clock time, and it's the one
   // place that can kill the whole stale-store class of 404s at the root: a
   // bookmark, a resumed lastVisitedUrl cookie, a shared link, or a store that
@@ -53,21 +55,25 @@ export default async function Layout({
   // theirs. `userId` is required for it to mean anything — a Prisma relation
   // filter with an undefined field is simply dropped, which would match every
   // store on the platform.
-  const [subscription, staffCount, ownedStore] = await Promise.all([
+  const [subscription, staffCount, access] = await Promise.all([
     userId ? subscriptionRepository.findByUserId(userId) : Promise.resolve(null),
     prisma.staffMember.count({ where: { storeId, isActive: true, role: { not: "OWNER" } } }),
-    userId
-      ? prisma.store.findFirst({
-          where: { id: storeId, business: { userId } },
-          select: { id: true },
-        })
-      : Promise.resolve(null),
+    userId ? verifyStoreAccess(storeId, userId).catch(() => null) : Promise.resolve(null),
   ]);
   if (!userId) {
     redirect("/login");
   }
-  if (!ownedStore) {
+  if (!access) {
     redirect("/stores");
+  }
+  // Back Office is the store OWNER's shell. A linked staff account (its own
+  // login, StaffMember.userId) works in POS Mode only for now — the ~100
+  // Back Office API routes have no answer yet to "may a Cashier do this?"
+  // (see src/lib/auth/staff-principal-policy.ts), and every page below this
+  // layout is written for an owner. Send them to their POS home instead of
+  // rendering any of it.
+  if (access.accessType === "staff") {
+    redirect(await linkedStaffHomePath(storeId, access.staffMemberId));
   }
   const bypassAccessGate =
     subscription?.plan === "FREE" || subscription?.plan === "POS" || staffCount === 0;

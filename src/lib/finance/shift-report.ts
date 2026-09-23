@@ -22,10 +22,23 @@ import type { CashOnHandBreakdown } from "./cash-drawer";
  * PaymentMethodGroupInput in report-aggregation.ts. */
 export type DecimalLike = number | string | { toString(): string };
 
+/** One tender of a bill (`OrderPayment`). See ShiftReportOrderInput.payments. */
+export interface ShiftReportTenderInput {
+  method: string;
+  amount: DecimalLike;
+}
+
 export interface ShiftReportOrderInput {
   status: string;
   orderType: string;
   paymentMethod: string;
+  /**
+   * Per-tender breakdown, when the order has one. Every order from release
+   * 2.88.0 on writes a row per tender; older ones have none and are attributed
+   * to `paymentMethod` for their whole `total`, exactly as before. Absent or
+   * empty means legacy, never "paid nothing".
+   */
+  payments?: ShiftReportTenderInput[];
   guestCount: number | null;
   subtotal: DecimalLike;
   discountAmount: DecimalLike;
@@ -222,12 +235,28 @@ export function aggregateShiftReport({
   // ---- By payment method -------------------------------------------------
   // Reshaped into the `groupBy` form buildPaymentMethodRows already consumes,
   // so the percentage/sort logic stays in one place (report-aggregation.ts).
+  //
+  // A bill settled with two or more tenders carries `paymentMethod: "SPLIT"`,
+  // which is a label, not a way anyone paid. Attributing it by its tenders
+  // puts each part under the method that actually took the money — so the
+  // column still sums to sales.total, and no row ever reads "SPLIT". Orders
+  // with no tender rows (everything placed before 2.88.0) keep the old
+  // whole-order attribution.
   const paymentBuckets = new Map<string, { total: number; count: number }>();
-  for (const order of orders) {
-    const bucket = paymentBuckets.get(order.paymentMethod) ?? { total: 0, count: 0 };
-    bucket.total += Number(order.total);
+  const addPayment = (method: string, amount: number) => {
+    const bucket = paymentBuckets.get(method) ?? { total: 0, count: 0 };
+    bucket.total += amount;
+    // Counted per tender: on a split bill, each method genuinely settled one
+    // payment, so the counts can exceed the invoice count.
     bucket.count += 1;
-    paymentBuckets.set(order.paymentMethod, bucket);
+    paymentBuckets.set(method, bucket);
+  };
+  for (const order of orders) {
+    if (order.payments && order.payments.length > 0) {
+      for (const tender of order.payments) addPayment(tender.method, Number(tender.amount));
+    } else {
+      addPayment(order.paymentMethod, Number(order.total));
+    }
   }
   const byPaymentMethod = buildPaymentMethodRows(
     Array.from(paymentBuckets.entries()).map(([paymentMethod, b]) => ({

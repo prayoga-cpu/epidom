@@ -57,8 +57,16 @@ export const updateStaffSchema = z.object({
   sendPinEmail: z.boolean().optional(),
   // Optional pay rate for labor-cost reporting — many roles are genuinely
   // off-system payroll, so NONE (the default) means "unknown," not zero.
-  payType: z.enum(["HOURLY", "MONTHLY", "NONE"]).optional(),
+  payType: z.enum(["HOURLY", "MONTHLY", "SALES", "NONE"]).optional(),
   payRate: z.number().min(0).optional().nullable(),
+  // Employment type shown on the "Contract" card — purely descriptive, see
+  // ContractType's own schema comment.
+  contractType: z.enum(["FREELANCE", "PART_TIME", "FULL_TIME", "CONTRACT"]).optional().nullable(),
+}).refine((v) => !(v.payType === "SALES" && v.payRate != null && v.payRate > 100), {
+  // SALES stores a commission percentage in payRate, not a currency amount —
+  // the input's HTML `max` doesn't stop a click-to-save, so it's enforced here.
+  message: "A sales commission can't exceed 100%",
+  path: ["payRate"],
 });
 export type UpdateStaffInput = z.infer<typeof updateStaffSchema>;
 
@@ -85,6 +93,29 @@ export const openShiftSchema = z.object({
   openingCash: z.number().min(0),
 });
 export type OpenShiftInput = z.infer<typeof openShiftSchema>;
+
+/**
+ * GET /stores/[id]/shifts query. `take` is CLAMPED to the route's ceiling, not
+ * rejected — the Shift page's "Show more" widens its request by 10 each tap and
+ * must keep working past 100. Anything else malformed is a 400: `take=abc` used to
+ * reach Prisma as NaN and 500, and a mistyped `status` used to be ignored, so the
+ * "open shift" read could quietly return a closed one.
+ */
+export const listShiftsQuerySchema = z.object({
+  take: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .transform((n) => Math.min(n, 100))
+    .default(20),
+  skip: z.coerce.number().int().min(0).default(0),
+  status: z.enum(["open", "closed"]).optional(),
+  staffId: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
+});
+export type ListShiftsQuery = z.infer<typeof listShiftsQuerySchema>;
 
 export const closeShiftSchema = z.object({
   closingCash: z.number().min(0),

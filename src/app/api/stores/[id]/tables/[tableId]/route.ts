@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
+import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { z } from "zod";
 import { ACTIVE_POS_STATUSES } from "@/lib/constants/order-status";
@@ -25,7 +25,7 @@ const updateTableSchema = z.object({
 
 /** GET /api/stores/[id]/tables/[tableId] */
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string; tableId: string }> }
 ) {
   const { id: storeId, tableId } = await params;
@@ -35,8 +35,9 @@ export async function GET(
       status: 401,
     });
 
-  const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (v instanceof NextResponse) return v;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, req);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const v = storeAccess.store;
 
   const table = await prisma.table.findFirst({ where: { id: tableId, storeId } });
   if (!table)
@@ -59,8 +60,9 @@ export async function PATCH(
       status: 401,
     });
 
-  const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (v instanceof NextResponse) return v;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, req);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const v = storeAccess.store;
 
   const body = await req.json();
   const parsed = updateTableSchema.safeParse(body);
@@ -115,7 +117,7 @@ export async function PATCH(
 
 /** DELETE /api/stores/[id]/tables/[tableId] */
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string; tableId: string }> }
 ) {
   const { id: storeId, tableId } = await params;
@@ -125,8 +127,9 @@ export async function DELETE(
       status: 401,
     });
 
-  const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (v instanceof NextResponse) return v;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, req);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const v = storeAccess.store;
 
   const existing = await prisma.table.findFirst({ where: { id: tableId, storeId } });
   if (!existing)

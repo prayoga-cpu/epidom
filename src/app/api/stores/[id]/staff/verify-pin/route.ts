@@ -63,9 +63,12 @@ export const POST = withApiHandler(
       }
     }
 
-    // Look up open shift for this staff member
+    // The store's open shift, whoever opened it — the till is shared by every
+    // persona (see POST /shifts), so a cashier signing in mid-day joins the shift
+    // the owner started instead of ringing sales up against none.
     const openShift = await prisma.shift.findFirst({
-      where: { storeId, staffMemberId: staff.id, closedAt: null },
+      where: { storeId, closedAt: null },
+      orderBy: { openedAt: "desc" },
       select: { id: true },
     });
 

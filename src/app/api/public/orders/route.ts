@@ -8,6 +8,7 @@ import {
   draftShortfallBatchesForConfirmedOrder,
 } from "@/lib/services/pos-order-builder";
 import { resolveInitialOrderItemStatus } from "@/lib/services/order-status.helpers";
+import { allocateQueueNumber } from "@/lib/services/order-queue-number";
 import { inngest } from "@/lib/inngest/client";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
@@ -149,9 +150,15 @@ export async function POST(request: Request) {
 
     // Create the order in a transaction
     const order = await prisma.$transaction(async (tx) => {
+      // The business is already loaded above, so no extra timezone lookup.
+      const queueNumber = await allocateQueueNumber(tx, {
+        storeId: storefront.storeId,
+        timezone: storefront.store.business.timezone,
+      });
       const created = await tx.order.create({
         data: {
           orderNumber,
+          queueNumber,
           storeId: storefront.storeId,
           storefrontId: storefront.id,
           customerName: input.customerName,

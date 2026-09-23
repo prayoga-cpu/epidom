@@ -1,11 +1,9 @@
-import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { OwnerDashboardClient } from "@/features/dashboard/owner/components/owner-dashboard-client";
 
-export default async function OwnerPage() {
-  const session = await getSession();
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-  return <OwnerDashboardClient />;
+// Owner now lives inside the store-scoped shell at
+// /store/{storeId}/owner (see (dashboard)/owner/) — this bare route stays
+// only so existing bookmarks/shared links don't dead-end. /go/* resolves
+// the signed-in user's store server-side and redirects into the real page.
+export default function OwnerPage() {
+  redirect("/go/owner");
 }

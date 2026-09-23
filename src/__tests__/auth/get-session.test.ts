@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 // vi.mock is hoisted — no external variables allowed in factories.
@@ -131,6 +131,76 @@ describe("getSession", () => {
   it("returns null and does not throw when cookies() throws", async () => {
     vi.mocked(cookies).mockRejectedValue(new Error("headers unavailable") as never);
     expect(await getSession()).toBeNull();
+  });
+});
+
+// dev.epidom.fr is a public preview on the same registrable domain as production,
+// whose Better Auth cookie is Domain=.epidom.fr and therefore also reaches the
+// preview. The preview has its own cookie prefix so the two never read each
+// other's session — and Better Auth's handler (first same-named cookie) and this
+// reader (last same-named cookie) can no longer disagree about who is signed in.
+describe("getSession on a Vercel preview", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function storeWith(byName: Record<string, string>) {
+    return {
+      get: vi.fn((name: string) => (name in byName ? { value: byName[name] } : undefined)),
+    };
+  }
+
+  it("reads the preview's own prefixed session cookie", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.mocked(cookies).mockResolvedValue(
+      storeWith({ "__Secure-epidom-preview.session_token": "preview-token" }) as never
+    );
+    vi.mocked(prisma.session.findUnique).mockResolvedValue({
+      ...BASE_SESSION,
+      token: "preview-token",
+    } as never);
+
+    const result = await getSession();
+
+    expect(result?.session.id).toBe("sess-1");
+    expect(prisma.session.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores production's session cookie, even though the browser sends it", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.mocked(cookies).mockResolvedValue(
+      storeWith({
+        "better-auth.session_token": "prod-token",
+        "__Secure-better-auth.session_token": "prod-token",
+      }) as never
+    );
+    vi.mocked(prisma.session.findUnique).mockResolvedValue(BASE_SESSION as never);
+
+    expect(await getSession()).toBeNull();
+    expect(prisma.session.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("leaves production reading the unprefixed cookie it always has", async () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.mocked(cookies).mockResolvedValue(
+      storeWith({ "__Secure-better-auth.session_token": "prod-token" }) as never
+    );
+    vi.mocked(prisma.session.findUnique).mockResolvedValue({
+      ...BASE_SESSION,
+      token: "prod-token",
+    } as never);
+
+    expect((await getSession())?.session.id).toBe("sess-1");
+  });
+
+  it("does not read the preview cookie on production", async () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.mocked(cookies).mockResolvedValue(
+      storeWith({ "__Secure-epidom-preview.session_token": "preview-token" }) as never
+    );
+
+    expect(await getSession()).toBeNull();
+    expect(prisma.session.findUnique).not.toHaveBeenCalled();
   });
 });
 

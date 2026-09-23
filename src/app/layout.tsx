@@ -1,4 +1,5 @@
 import type React from "react";
+import { headers } from "next/headers";
 import { Bebas_Neue } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
@@ -11,10 +12,13 @@ import { GoogleAnalyticsConsentBridge } from "@/components/analytics/google-anal
 import { WebVitalsReporter } from "@/components/analytics/web-vitals-reporter";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { PwaProvider } from "@/components/providers/pwa-provider";
+import { AppZoomSync } from "@/components/providers/app-zoom-sync";
 import { ChunkErrorReloader } from "@/components/providers/chunk-error-reloader";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ZOOM_BOOT_SCRIPT } from "@/lib/app-zoom";
+import { resolveHtmlLang } from "@/lib/html-lang";
+import { LOCALE_HEADER } from "@/lib/i18n-routing";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
 import { Metadata, Viewport } from "next";
@@ -65,20 +69,31 @@ export const viewport: Viewport = {
   themeColor: "#18181b",
 };
 
-export default function RootLayout({
+// GA4 and Meta Pixel carry hardcoded production IDs. A Vercel preview (dev.epidom.fr)
+// is public and shares the .epidom.fr cookie domain, so mounting them there would feed
+// every tester's clicks, sign-ups and checkouts into production's analytics and ad
+// optimisation. Unset VERCEL_ENV (local dev/build) keeps tracking as it always was.
+const TRACKING_ENABLED = !process.env.VERCEL_ENV || process.env.VERCEL_ENV === "production";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Server HTML of a fr/id marketing page must say lang="fr"/"id" — a crawler
+  // reads that before any script runs, and I18nProvider only corrects it after
+  // hydration. Other routes carry no locale header and stay "en".
+  const lang = resolveHtmlLang((await headers()).get(LOCALE_HEADER));
+
   return (
-    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang={lang} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/* Applies the device's saved UI zoom before first paint, so a 70%
             or 150% preference doesn't render at 100% and snap on hydration.
             See src/lib/app-zoom.ts. */}
         <script dangerouslySetInnerHTML={{ __html: ZOOM_BOOT_SCRIPT }} />
-        <MetaPixelScript />
-        <MetaPixelConsentBridge />
+        {TRACKING_ENABLED && <MetaPixelScript />}
+        {TRACKING_ENABLED && <MetaPixelConsentBridge />}
       </head>
       <body
         className={`font-sans ${bebasNeue.variable} ${GeistSans.variable} ${GeistMono.variable}`}
@@ -88,12 +103,13 @@ export default function RootLayout({
           <ErrorBoundary>
             <QueryProvider>
               <PwaProvider />
+              <AppZoomSync />
               <ChunkErrorReloader />
               <section>
                 {children}
                 <ConditionalAnalytics />
-                <GoogleAnalyticsScript />
-                <GoogleAnalyticsConsentBridge />
+                {TRACKING_ENABLED && <GoogleAnalyticsScript />}
+                {TRACKING_ENABLED && <GoogleAnalyticsConsentBridge />}
                 <WebVitalsReporter />
               </section>
             </QueryProvider>

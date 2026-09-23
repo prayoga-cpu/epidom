@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withApiHandler } from "@/lib/api-handler";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { buildOrderHistoryWhere } from "@/lib/services/order-history-query";
-import { buildPaymentMethodRows } from "@/lib/finance/report-aggregation";
+import { buildTenderPaymentMethodRows } from "@/lib/finance/report-aggregation";
 
 /**
  * GET /api/stores/[id]/orders/payment-totals
@@ -60,16 +60,40 @@ export const GET = withApiHandler(
       paymentMethod,
     });
 
-    const grouped = await prisma.order.groupBy({
-      by: ["paymentMethod"],
-      where,
-      _sum: { total: true },
-      _count: { id: true },
-    });
+    // Tenders for orders that have them, whole-order method for the ones that
+    // predate OrderPayment — same union as finance/by-payment-method, over the
+    // History tab's own `where` so the tiles keep agreeing with the table.
+    // A split bill contributes its cash part to CASH and its card part to the
+    // card, instead of its whole total to a "SPLIT" tile.
+    //
+    // Note the tender groupBy is NOT narrowed to the paymentMethod filter: a
+    // split bill that matched a CASH filter is listed in the table at its full
+    // total, so its other tenders have to be tiled too or the tiles would stop
+    // summing to what the table shows — which is this endpoint's whole reason
+    // for existing.
+    const [tenderGroups, legacyGroups, totalOrders] = await Promise.all([
+      prisma.orderPayment.groupBy({
+        by: ["method"],
+        where: { order: where },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      prisma.order.groupBy({
+        by: ["paymentMethod"],
+        where: { ...where, payments: { none: {} } },
+        _sum: { total: true },
+        _count: { id: true },
+      }),
+      // DISTINCT orders, counted directly. Summing the per-method column
+      // instead would count a cash+card bill twice and print a "total orders"
+      // larger than the number of rows in the table underneath it — each
+      // method row counts PAYMENTS, which is the right figure for that row and
+      // the wrong one for a total.
+      prisma.order.count({ where }),
+    ]);
 
-    const methods = buildPaymentMethodRows(grouped);
+    const methods = buildTenderPaymentMethodRows(tenderGroups, legacyGroups);
     const totalRevenue = Math.round(methods.reduce((sum, m) => sum + m.revenue, 0) * 100) / 100;
-    const totalOrders = methods.reduce((sum, m) => sum + m.orderCount, 0);
 
     return NextResponse.json(createSuccessResponse({ methods, totalRevenue, totalOrders }));
   },

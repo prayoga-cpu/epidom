@@ -4,37 +4,20 @@
  * Conditional Analytics Component
  *
  * Only loads analytics if user has given consent.
- * Reactively loads/unloads analytics based on consent changes without page reload.
- * Best practice: No page reload needed - analytics loads immediately after consent.
+ * Reactively loads/unloads analytics based on consent changes without page reload:
+ * accepting mounts it, withdrawing (Manage cookies in the footer) unmounts it.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { hasAnalyticsConsent } from "@/lib/cookie-consent";
+import { useConsentSync } from "./use-consent-sync";
 
 export function ConditionalAnalytics() {
   const [shouldLoad, setShouldLoad] = useState(false);
 
-  useEffect(() => {
-    // Check consent on mount
-    const checkConsent = () => {
-      setShouldLoad(hasAnalyticsConsent());
-    };
-
-    // Initial check
-    checkConsent();
-
-    // Listen for consent changes (reactive - no reload needed)
-    const handleConsentUpdate = () => {
-      checkConsent();
-    };
-
-    window.addEventListener("cookie-consent-updated", handleConsentUpdate);
-
-    return () => {
-      window.removeEventListener("cookie-consent-updated", handleConsentUpdate);
-    };
-  }, []);
+  // On mount, and on every change of the saved choice (this tab or another one).
+  useConsentSync(useCallback(() => setShouldLoad(hasAnalyticsConsent()), []));
 
   // Only render Analytics component if user has consented
   // Vercel Analytics is lightweight and can be mounted/unmounted dynamically

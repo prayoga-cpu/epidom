@@ -2,7 +2,11 @@
  * Analytics Utility
  *
  * Helper functions for tracking events with cookie consent checking.
- * Only tracks if user has given consent for analytics or marketing cookies.
+ * Events are DROPPED when the matching consent is missing, never queued for a
+ * later flush: the stubs behind window.gtag / window.fbq queue their calls until
+ * the vendor script loads, so a call made without consent would otherwise be
+ * sent as soon as the visitor accepted later. Google Analytics events need
+ * analytics consent; Meta Pixel events need marketing consent.
  */
 
 import { hasAnalyticsConsent, hasMarketingConsent } from "./cookie-consent";
@@ -19,8 +23,10 @@ declare global {
 }
 
 /**
- * Track event with consent checking
- * Only tracks if user has given consent for analytics or marketing
+ * Track a Google Analytics event.
+ * Dropped unless the visitor has granted analytics consent: gtag.js is only
+ * loaded on that consent, and until it loads the stub queues calls and would
+ * flush them later.
  */
 export function trackEvent(
   eventName: string,
@@ -31,8 +37,7 @@ export function trackEvent(
     [key: string]: any;
   }
 ): void {
-  // Check if user has consented to analytics or marketing
-  if (!hasAnalyticsConsent() && !hasMarketingConsent()) {
+  if (!hasAnalyticsConsent()) {
     return;
   }
 
@@ -46,7 +51,9 @@ export function trackEvent(
 }
 
 /**
- * Track conversion event (marketing category)
+ * Track conversion event (marketing category). It is a Google Analytics event
+ * too, so it needs marketing AND analytics consent: without the first it is
+ * dropped here, without the second trackEvent() drops it.
  */
 export function trackConversion(
   eventName: string,

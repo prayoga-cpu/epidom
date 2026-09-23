@@ -50,9 +50,10 @@ interface EditFeesAndTaxesDialogProps {
 }
 
 // Every method except PAY_LATER, which keeps its own dedicated toggle above
-// the fee table and is never part of the enable/disable list below.
+// the fee table and is never part of the enable/disable list below, and SPLIT,
+// which isn't a rail a cashier can pick — it only labels a multi-tender bill.
 const PAYMENT_METHODS = (Object.keys(PAYMENT_FEE_DEFAULTS) as PaymentMethod[]).filter(
-  (m) => m !== "PAY_LATER"
+  (m) => m !== "PAY_LATER" && m !== "SPLIT"
 );
 
 const CURRENCY_OPTIONS: ComboboxOption[] = CURRENCIES.map((c) => ({

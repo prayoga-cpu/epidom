@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { storefrontService } from "@/lib/services";
 import { OrderStatusClient } from "@/features/storefront/components/order-status-client";
+import { resolveGoogleLinks } from "@/lib/utils/google-review";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -48,6 +49,7 @@ export default async function OrderStatusPage({ params }: PageProps) {
         displayName: storefront.displayName,
         themeColor: storefront.themeColor,
         whatsappNumber: storefront.whatsappNumber,
+        googleReviewUrl: resolveGoogleLinks(storefront).reviewUrl,
       }}
       order={{
         id: order.id,

@@ -1,6 +1,6 @@
-import type { Article } from "@/features/marketing/shared/content/article-types";
+import type { BlogPost } from "./types";
 
-export const frPosts: Article[] = [
+export const frPosts: BlogPost[] = [
   {
     slug: "reduire-commission-deliveroo-uber-eats",
     locale: "fr",

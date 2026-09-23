@@ -93,6 +93,8 @@ export const POST = withApiHandler(
     const product = await productService.createProduct({
       storeId: storeId!,
       sku: validatedData.sku,
+      // Optional scan code; a duplicate is a 409 on the `barcode` field.
+      barcode: validatedData.barcode,
       name: validatedData.name,
       description: validatedData.description,
       category: validatedData.category,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useUser } from "@/lib/auth-client";
@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { trackEvent, trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 import { getLocalizedPath } from "@/lib/i18n-routing";
+import { BoldText } from "./bold-text";
 
 const TIERS = [
   { idx: 0, key: "t1", highlight: false, promo: false, plan: "FREE" },
@@ -17,10 +18,16 @@ const TIERS = [
   { idx: 3, key: "t4", highlight: false, promo: false, plan: "ENTERPRISE" },
 ] as const;
 
-const FEAT_COUNTS = [6, 6, 8, 7] as const;
+// Free lists 5 features: it has no POS or KDS (the till is gated to the POS plan),
+// so the old sixth line "POS + KDS" was wrong and is gone from the locales.
+const FEAT_COUNTS = [5, 6, 8, 7] as const;
 
 const FREE_PRICES = new Set(["$0", "0 €", "Rp 0", "€0"]);
 const CUSTOM_PRICES = new Set(["Custom", "Sur devis", "Kustom"]);
+
+// What Tab can land on inside the confirm dialog.
+const FOCUSABLE =
+  'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function PricingCards({
   yearly,
@@ -43,21 +50,108 @@ export function PricingCards({
   const [isActivating, setIsActivating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const sectionRef = useRef<HTMLElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // The CTA that opened the dialog, so focus goes back to it on close.
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const isOpen = confirming !== null;
+
+  // The 14-day trial is POS-only and first-time-only, and the checkout route
+  // decides it server-side (it ignores the flag sent from here). This is the
+  // client-side floor: never offer a trial to someone already on a paid plan.
+  // A visitor who once subscribed and lapsed back to FREE still reads as
+  // eligible here; only the server knows their Stripe history.
+  const trialEligible = !currentPlan || currentPlan === "FREE";
+  // A dialog opened while the plan was still loading shows the trial copy until
+  // the plan arrives, so eligibility is applied at render, not only at open.
+  const dialogTrial = !!confirming?.trial && trialEligible;
+
   useEffect(() => {
     if (!userLoading && user && typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get("trial") === "true") {
+        window.history.replaceState({}, "", window.location.pathname);
+        // Already on POS: there is nothing to start or switch to.
+        if (currentPlan === "POS") return;
         setErrorMsg(null);
+        // No click opened this one; hand focus back to the POS card's CTA.
+        triggerRef.current =
+          sectionRef.current?.querySelector<HTMLElement>('[data-plan="POS"] button') ?? null;
         setConfirming({
           key: "t2",
           plan: "POS",
           name: t("redesign.pricingPage.t2name") as string,
           trial: true,
         });
-        window.history.replaceState({}, "", window.location.pathname);
       }
     }
-  }, [user, userLoading, t]);
+  }, [user, userLoading, t, currentPlan]);
+
+  // Focus moves into the dialog when it opens and back to the CTA that opened it
+  // when it closes.
+  useEffect(() => {
+    if (!isOpen) return;
+    const dialog = dialogRef.current;
+    (dialog?.querySelector<HTMLElement>(FOCUSABLE) ?? dialog)?.focus();
+    return () => {
+      const trigger = triggerRef.current;
+      if (trigger?.isConnected) trigger.focus();
+    };
+  }, [isOpen]);
+
+  // Escape closes (unless a request is in flight, like the backdrop and Cancel);
+  // Tab cycles inside the dialog. Listening on the document rather than on the
+  // dialog keeps the trap working when focus is on <body>, which is where it
+  // lands when the focused button is disabled during an activation.
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      if (e.key === "Escape") {
+        if (!isActivating) {
+          e.preventDefault();
+          setConfirming(null);
+        }
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const items = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (items.length === 0) {
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (!dialog.contains(active)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && (active === first || active === dialog)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, isActivating]);
+
+  /**
+   * Where a visitor who is not signed in goes to sign up. The sign-up form (and
+   * the verify-email flow after it) reads `next`, not `callbackURL`, so the
+   * pricing page and trial intent ride in `next`, encoded so the "?" inside it
+   * does not split the value. FREE has no intent to keep.
+   */
+  function registerHref(plan: string, trial?: boolean) {
+    if (plan === "FREE") return "/register";
+    const back =
+      getLocalizedPath("/pricing", locale) + (plan === "POS" && trial ? "?trial=true" : "");
+    return `/register?next=${encodeURIComponent(back)}`;
+  }
 
   function getPrice(tierKey: string) {
     const mo = t(`redesign.pricingPage.${tierKey}price_mo` as const);
@@ -81,23 +175,34 @@ export function PricingCards({
       : t("redesign.pricingPage.billedMonthly");
   }
 
-  function handleCta(tierKey: string, plan: string, trial?: boolean) {
+  function handleCta(tierKey: string, plan: string, trial?: boolean, trigger?: HTMLElement | null) {
     if (plan === currentPlan) return;
     trackEvent("cta_click", { event_category: "engagement", event_label: `pricing_${tierKey}` });
     if (tierKey === "t4") {
-      trackConversion("contact_whatsapp", { event_label: "pricing_enterprise" });
       const waOptions = getWhatsAppOptions(locale);
       if (waOptions.length === 1) {
+        trackConversion("contact_whatsapp", { event_label: "pricing_enterprise" });
         window.open(whatsappHref(waOptions[0].number), "_blank");
       } else {
         // Worldwide (en): more than one real number to choose from — send
         // to the contact page, which lists each market's WhatsApp option,
-        // rather than guessing which one this visitor wants.
+        // rather than guessing which one this visitor wants. No WhatsApp has
+        // opened yet, so no contact_whatsapp here: the contact page fires it
+        // when the visitor actually picks a number (the cta_click above still
+        // records this click).
         router.push(getLocalizedPath("/contact", locale));
       }
       return;
     }
+    // Once auth has resolved with nobody signed in there is no subscription to
+    // "switch": skip the confirm dialog (its wording assumes an existing plan and
+    // its checkout call would only 401) and go to sign-up carrying the intent.
+    if (!userLoading && !user) {
+      window.location.href = registerHref(plan, trial);
+      return;
+    }
     const name = t(`redesign.pricingPage.${tierKey}name` as const);
+    triggerRef.current = trigger ?? null;
     setErrorMsg(null);
     setConfirming({ key: tierKey, plan, name, trial });
   }
@@ -113,11 +218,13 @@ export function PricingCards({
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: confirming.plan, trial: confirming.trial, yearly }),
+        body: JSON.stringify({ plan: confirming.plan, trial: dialogTrial || undefined, yearly }),
       });
 
       if (res.status === 401) {
-        window.location.href = "/register";
+        // The session lapsed after the dialog opened: same sign-up hand-off as a
+        // signed-out click, so the plan intent survives.
+        window.location.href = registerHref(confirming.plan, dialogTrial);
         return;
       }
 
@@ -128,7 +235,7 @@ export function PricingCards({
             trackConversion("begin_checkout", {
               event_label: confirming.plan,
               plan: confirming.plan,
-              trial: confirming.trial ?? false,
+              trial: dialogTrial,
               billing_interval: yearly ? "yearly" : "monthly",
             });
             // Standard Meta event for entering a paid checkout flow — lets
@@ -137,15 +244,12 @@ export function PricingCards({
             // immediate-pay checkouts for campaign reporting.
             trackMetaPixelEvent("InitiateCheckout", {
               content_name: confirming.plan,
-              content_category: confirming.trial ? "trial" : "paid",
+              content_category: dialogTrial ? "trial" : "paid",
             });
             window.location.href = result.data.url;
             setConfirming(null);
           } else {
-            setErrorMsg(
-              result?.error?.message ||
-                "Failed to initiate checkout. Please check Stripe configuration."
-            );
+            setErrorMsg(result?.error?.message || t("redesign.pricingPage.errCheckoutStart"));
             setIsActivating(false);
           }
         } else {
@@ -160,16 +264,18 @@ export function PricingCards({
         }
       } else {
         const errorData = await res.json().catch(() => null);
-        setErrorMsg(
-          errorData?.error?.message || "An error occurred during checkout. Please try again."
-        );
+        setErrorMsg(errorData?.error?.message || t("redesign.pricingPage.errCheckout"));
         setIsActivating(false);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || "A network error occurred. Please try again.");
+    } catch {
+      setErrorMsg(t("redesign.pricingPage.errNetwork"));
       setIsActivating(false);
     }
   }
+
+  // The trial promo (animated glow, badge, note, CTA) only for a visitor who can
+  // still start a trial; otherwise POS is a plain highlighted plan.
+  const tiers = TIERS.map((tier) => ({ ...tier, trialOffer: tier.promo && trialEligible }));
 
   return (
     <>
@@ -188,24 +294,25 @@ export function PricingCards({
           .epi-promo-card, .epi-promo-badge { animation: none !important; }
         }
       `}</style>
-      <section id="plans" style={{ padding: "40px 0 80px", scrollMarginTop: 20 }}>
+      <section id="plans" ref={sectionRef} style={{ padding: "40px 0 80px", scrollMarginTop: 20 }}>
         <div className="epi-container">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 14 }}>
-            {TIERS.map(({ idx, key, highlight, promo, plan }) => (
+            {tiers.map(({ idx, key, highlight, trialOffer, plan }) => (
               <div
                 key={key}
-                className={promo ? "epi-promo-card" : undefined}
+                data-plan={plan}
+                className={trialOffer ? "epi-promo-card" : undefined}
                 style={{
                   position: "relative",
                   padding: 30,
                   borderRadius: 24,
-                  background: promo
+                  background: trialOffer
                     ? "linear-gradient(160deg, rgba(217,174,59,0.26), rgba(217,174,59,0.05))"
                     : highlight
                       ? "linear-gradient(160deg, rgba(217,174,59,0.18), rgba(217,174,59,0.04))"
                       : "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
                   border: "1px solid",
-                  borderColor: promo
+                  borderColor: trialOffer
                     ? "var(--epi-gold-500)"
                     : highlight
                       ? "rgba(217,174,59,0.45)"
@@ -215,7 +322,7 @@ export function PricingCards({
                   gap: 20,
                 }}
               >
-                {promo ? (
+                {trialOffer ? (
                   <div
                     className="epi-promo-badge"
                     style={{
@@ -263,15 +370,44 @@ export function PricingCards({
                 <div>
                   <div
                     style={{
-                      fontSize: 10,
-                      letterSpacing: "0.16em",
-                      textTransform: "uppercase",
-                      color: "var(--epi-cream-50)",
-                      opacity: 0.4,
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      gap: 8,
                       marginBottom: 10,
                     }}
                   >
-                    {t(`redesign.pricingPage.${key}tag` as const)}
+                    <span
+                      style={{
+                        fontSize: 10,
+                        letterSpacing: "0.16em",
+                        textTransform: "uppercase",
+                        color: "var(--epi-cream-50)",
+                        opacity: 0.4,
+                      }}
+                    >
+                      {t(`redesign.pricingPage.${key}tag` as const)}
+                    </span>
+                    {/* The one "most popular" mark on the page. On the POS card the ribbon
+                        above is taken by the trial badge, so the mark sits beside the tag. */}
+                    {trialOffer && highlight && (
+                      <span
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: 999,
+                          background: "rgba(217,174,59,0.16)",
+                          border: "1px solid rgba(217,174,59,0.45)",
+                          color: "var(--epi-gold-300)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {t("redesign.pricingPage.mostPopular")}
+                      </span>
+                    )}
                   </div>
                   <div
                     className="epi-display"
@@ -316,7 +452,7 @@ export function PricingCards({
                     </span>
                     {!isCustom(getPrice(key)) && !isFree(getPrice(key)) && (
                       <span style={{ color: "var(--epi-cream-50)", opacity: 0.5, fontSize: 13 }}>
-                        /mo
+                        {t("redesign.pricingPage.perMonthShort")}
                       </span>
                     )}
                   </div>
@@ -330,7 +466,7 @@ export function PricingCards({
                   >
                     {getBilling(key)}
                   </div>
-                  {promo && (
+                  {trialOffer && (
                     <div
                       style={{
                         marginTop: 10,
@@ -345,37 +481,40 @@ export function PricingCards({
                         fontWeight: 600,
                       }}
                     >
-                      🎁 {t("redesign.pricingPage.promoTrialNote")}
+                      🎁{" "}
+                      {yearly
+                        ? t("redesign.pricingPage.promoTrialNoteYearly")
+                        : t("redesign.pricingPage.promoTrialNote")}
                     </div>
                   )}
                 </div>
 
                 <button
-                  onClick={() => handleCta(key, plan, promo || undefined)}
+                  onClick={(e) => handleCta(key, plan, trialOffer || undefined, e.currentTarget)}
                   disabled={isActivating || plan === currentPlan}
                   className="cursor-pointer transition-all hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
                   style={{
                     width: "100%",
                     padding: "14px 0",
                     borderRadius: 999,
-                    background: promo || highlight ? "var(--epi-gold-500)" : "transparent",
-                    color: promo || highlight ? "var(--epi-navy-900)" : "var(--epi-cream-50)",
-                    border: `1px solid ${promo || highlight ? "transparent" : "rgba(255,255,255,0.18)"}`,
+                    background: highlight ? "var(--epi-gold-500)" : "transparent",
+                    color: highlight ? "var(--epi-navy-900)" : "var(--epi-cream-50)",
+                    border: `1px solid ${highlight ? "transparent" : "rgba(255,255,255,0.18)"}`,
                     fontSize: 14,
-                    fontWeight: promo ? 700 : 500,
+                    fontWeight: trialOffer ? 700 : 500,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
                     fontFamily: "var(--epi-font-body)",
                   }}
                 >
                   {plan === currentPlan
-                    ? "Current Plan"
-                    : promo
+                    ? t("redesign.pricingPage.currentPlanCta")
+                    : trialOffer
                       ? t("redesign.pricingPage.startTrialCta")
                       : currentPlan === "FREE" && plan === "OPERATIONS"
-                        ? "Upgrade Plan"
+                        ? t("redesign.pricingPage.upgradeCta")
                         : currentPlan && key !== "t4"
-                          ? "Switch Plan"
+                          ? t("redesign.pricingPage.switchPlanCta")
                           : t(`redesign.pricingPage.${key}cta` as const)}
                 </button>
 
@@ -429,64 +568,66 @@ export function PricingCards({
             ))}
           </div>
 
-          {/* Trial bar */}
-          <div
-            style={{
-              marginTop: 32,
-              padding: "20px 28px",
-              borderRadius: 16,
-              background: "rgba(91,136,178,0.10)",
-              border: "1px solid rgba(91,136,178,0.30)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 24,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <div
-                className="epi-display"
-                style={{ fontSize: 22, letterSpacing: "0.04em", color: "var(--epi-cream-50)" }}
-              >
-                {t("redesign.pricingPage.trialBar")}
-              </div>
-              <div
-                style={{ color: "var(--epi-cream-50)", opacity: 0.6, fontSize: 14, marginTop: 4 }}
-              >
-                {t("redesign.pricingPage.trialBarSub")}
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                if (user) {
-                  handleCta("t2", "POS", true);
-                } else {
-                  trackEvent("cta_click", {
-                    event_category: "engagement",
-                    event_label: "pricing_trial_bar",
-                  });
-                  window.location.href = "/register?callbackURL=/pricing?trial=true";
-                }
-              }}
-              className="cursor-pointer transition-all hover:-translate-y-px"
+          {/* Trial bar: hidden for a current paid plan, which can't start the trial. */}
+          {trialEligible && (
+            <div
               style={{
-                padding: "12px 28px",
-                borderRadius: 999,
-                background: "var(--epi-cream-50)",
-                color: "var(--epi-navy-900)",
-                fontSize: 14,
-                fontWeight: 500,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                border: "none",
-                fontFamily: "var(--epi-font-body)",
-                whiteSpace: "nowrap",
+                marginTop: 32,
+                padding: "20px 28px",
+                borderRadius: 16,
+                background: "rgba(91,136,178,0.10)",
+                border: "1px solid rgba(91,136,178,0.30)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 24,
+                flexWrap: "wrap",
               }}
             >
-              {t("redesign.pricingPage.trialBarCta")}
-            </button>
-          </div>
+              <div>
+                <div
+                  className="epi-display"
+                  style={{ fontSize: 22, letterSpacing: "0.04em", color: "var(--epi-cream-50)" }}
+                >
+                  {t("redesign.pricingPage.trialBar")}
+                </div>
+                <div
+                  style={{ color: "var(--epi-cream-50)", opacity: 0.6, fontSize: 14, marginTop: 4 }}
+                >
+                  {t("redesign.pricingPage.trialBarSub")}
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  if (!userLoading && !user) {
+                    trackEvent("cta_click", {
+                      event_category: "engagement",
+                      event_label: "pricing_trial_bar",
+                    });
+                    window.location.href = registerHref("POS", true);
+                  } else {
+                    handleCta("t2", "POS", true, e.currentTarget);
+                  }
+                }}
+                className="cursor-pointer transition-all hover:-translate-y-px"
+                style={{
+                  padding: "12px 28px",
+                  borderRadius: 999,
+                  background: "var(--epi-cream-50)",
+                  color: "var(--epi-navy-900)",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  border: "none",
+                  fontFamily: "var(--epi-font-body)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t("redesign.pricingPage.trialBarCta")}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -506,14 +647,26 @@ export function PricingCards({
           onClick={() => !isActivating && setConfirming(null)}
         >
           <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pricing-confirm-title"
+            // Focusable so focus has somewhere to sit when both buttons are disabled
+            // mid-request; the ring is off because it is only ever a fallback.
+            tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
             style={{
+              outline: "none",
               background: "var(--epi-navy-800, #0f1f38)",
               border: "1px solid rgba(255,255,255,0.12)",
               borderRadius: 20,
               padding: "36px 32px",
               maxWidth: 420,
               width: "90%",
+              // dvh, not vh: iOS Safari's vh ignores the address bar, which would push
+              // the buttons off-screen on a short phone in landscape.
+              maxHeight: "calc(90dvh / var(--app-zoom, 1))",
+              overflowY: "auto",
               display: "flex",
               flexDirection: "column",
               gap: 20,
@@ -530,15 +683,18 @@ export function PricingCards({
                   marginBottom: 8,
                 }}
               >
-                Confirm Plan Change
+                {t("redesign.pricingPage.dlgEyebrow")}
               </div>
               <div
+                id="pricing-confirm-title"
                 className="epi-display"
                 style={{ fontSize: 28, color: "var(--epi-cream-50)", letterSpacing: "0.04em" }}
               >
-                {confirming.trial
-                  ? `Start ${confirming.name} free trial`
-                  : `Switch to ${confirming.name}`}
+                {t(
+                  dialogTrial
+                    ? "redesign.pricingPage.dlgTrialTitle"
+                    : "redesign.pricingPage.dlgSwitchTitle"
+                ).replace("{name}", confirming.name)}
               </div>
               <p
                 style={{
@@ -549,28 +705,13 @@ export function PricingCards({
                   lineHeight: 1.6,
                 }}
               >
-                {confirming.trial ? (
-                  <>
-                    You&apos;ll add a card but{" "}
-                    <strong style={{ color: "var(--epi-cream-50)", opacity: 1 }}>
-                      won&apos;t be charged for 14 days
-                    </strong>
-                    . After the trial your{" "}
-                    <strong style={{ color: "var(--epi-cream-50)", opacity: 1 }}>
-                      {confirming.name}
-                    </strong>{" "}
-                    plan renews automatically — cancel anytime from billing settings before then to
-                    avoid charges.
-                  </>
-                ) : (
-                  <>
-                    Your subscription will be updated to the{" "}
-                    <strong style={{ color: "var(--epi-cream-50)", opacity: 1 }}>
-                      {confirming.name}
-                    </strong>{" "}
-                    plan immediately. You can change this anytime from your billing settings.
-                  </>
-                )}
+                <BoldText
+                  text={t(
+                    dialogTrial
+                      ? "redesign.pricingPage.dlgTrialBody"
+                      : "redesign.pricingPage.dlgSwitchBody"
+                  ).replace("{name}", confirming.name)}
+                />
               </p>
               {errorMsg && (
                 <div
@@ -626,7 +767,7 @@ export function PricingCards({
                   opacity: isActivating ? 0.5 : 1,
                 }}
               >
-                Cancel
+                {t("redesign.pricingPage.dlgCancel")}
               </button>
               <button
                 onClick={confirmActivate}
@@ -647,7 +788,9 @@ export function PricingCards({
                   opacity: isActivating ? 0.6 : 1,
                 }}
               >
-                {isActivating ? "Activating…" : "Confirm"}
+                {isActivating
+                  ? t("redesign.pricingPage.dlgActivating")
+                  : t("redesign.pricingPage.dlgConfirm")}
               </button>
             </div>
           </div>

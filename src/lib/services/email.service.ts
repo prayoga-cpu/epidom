@@ -14,6 +14,7 @@
 
 import { Resend } from "resend";
 import type { FeedbackSubmittedEventData, CustomDevelopmentSubmittedEventData } from "@/lib/inngest/client";
+import { SUPPORT_EMAIL_ADDRESSES, SUPPORT_MAILTO } from "@/lib/constants/contact";
 
 // Lazy-initialized Resend client to avoid build errors when API key is not set
 let resendClient: Resend | null = null;
@@ -350,7 +351,7 @@ export async function sendAccountDeactivatedEmail(
 
     <p style="color: #888888; font-size: 13px;">
       If you didn't request this, contact us immediately at
-      <a href="mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io" style="color: #444444;">cro@prionation.io</a>.
+      <a href="${escapeHtml(SUPPORT_MAILTO)}" style="color: #444444;">${escapeHtml(SUPPORT_EMAIL_ADDRESSES[0])}</a>.
     </p>
 
     <hr style="border: none; border-top: 1px solid #eeeeee; margin: 40px 0;">
@@ -489,7 +490,133 @@ export async function sendOwnerPinResetOtpEmail(
   }
 }
 
-// Recipients for internal feedback notifications
+/**
+ * Send a store ownership transfer invite — the recipient (who may not have
+ * an Epidom account yet) clicks through to accept and take over the store.
+ */
+export async function sendStoreOwnershipTransferEmail(
+  toEmail: string,
+  storeName: string,
+  fromName: string | null,
+  acceptUrl: string
+): Promise<SendEmailResult> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🔑 [DEV] Store Ownership Transfer Email");
+    console.log("To:", toEmail);
+    console.log("Store:", storeName);
+    console.log("Accept URL:", acceptUrl);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  // Two forms on purpose: the subject is plain text (escaping would show a
+  // literal "&amp;" for "Tom & Jerry"), the HTML body is not.
+  const fromText = fromName || "The current owner";
+  const from = escapeHtml(fromText);
+  const store = escapeHtml(storeName);
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: toEmail,
+      subject: `${fromText} wants to transfer "${storeName}" to you on ${APP_NAME}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #444;">Hi,</h2>
+  <p><strong>${from}</strong> wants to transfer ownership of the store <strong>${store}</strong> on <strong>${APP_NAME}</strong> to you (${escapeHtml(toEmail)}).</p>
+  <p>Accepting gives you full owner access to this store — its data, staff, and settings — and the current owner will no longer have access to it.</p>
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${acceptUrl}" style="display: inline-block; background: #444; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold;">Review &amp; Accept Transfer</a>
+  </div>
+  <p style="color: #888; font-size: 13px;">If you don't have an ${APP_NAME} account yet, you'll be asked to create one with this same email address first. This link expires in 7 days. If you weren't expecting this, you can safely ignore this email — nothing changes until it's accepted.</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+/**
+ * Invite a staff member to claim (or create) their own Epidom sign-in, linked
+ * to their StaffMember row. Deliberately separate from sendStaffPinEmail: that
+ * one delivers a PIN and says nothing about an account. This one carries a
+ * single-use, expiring claim link (StaffInvite.token) and — unlike the PIN
+ * email — the caller awaits its result, so "invite sent" is only ever reported
+ * on confirmed delivery.
+ *
+ * staffName and storeName are owner-typed free text landing inside an email
+ * that carries a security-relevant link, so both are HTML-escaped.
+ */
+export async function sendStaffAccountInviteEmail(
+  toEmail: string,
+  staffName: string,
+  storeName: string,
+  inviteUrl: string
+): Promise<SendEmailResult> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🔗 [DEV] Staff Account Invite Email");
+    console.log("To:", toEmail);
+    console.log("Store:", storeName);
+    console.log("Invite URL:", inviteUrl);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const name = escapeHtml(staffName);
+  const store = escapeHtml(storeName);
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: toEmail,
+      subject: `Set up your ${APP_NAME} sign-in for ${storeName}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #444;">Hi ${name},</h2>
+  <p>You've been added as a staff member at <strong>${store}</strong> on <strong>${APP_NAME}</strong>. You can now sign in with your own account and go straight to the store.</p>
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${inviteUrl}" style="display: inline-block; background: #444; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold;">Set Up My Sign-In</a>
+  </div>
+  <p style="color: #888; font-size: 13px;">This link is for ${escapeHtml(toEmail)} only, can be used once, and expires in 7 days. If you already have an ${APP_NAME} account with this email, you'll be asked to sign in to it; otherwise you'll choose a password. You'll still enter your staff PIN at the store.</p>
+  <p style="color: #888; font-size: 13px;">If you weren't expecting this, you can safely ignore this email — nothing changes until the link is used.</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+// Recipients for internal feedback notifications. Deliberately NOT the shared
+// SUPPORT_EMAIL_ADDRESSES: this is the team's private alert routing (it names
+// `founder@`, where the public inbox names `ceo@`), never shown to a customer,
+// so a future branded support address must not silently re-route it. The
+// support-email guard test allowlists exactly this array.
 const FEEDBACK_NOTIFICATION_RECIPIENTS = [
   "cro@prionation.io",
   "founder@prionation.io",
@@ -818,6 +945,137 @@ export async function sendSupplierOrderEmail(
     return { success: true, messageId: data?.id };
   } catch (error) {
     console.error("[Email] Supplier order email error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Customer-facing receipt email copy, per locale.
+ *
+ * Deliberately not routed through `useI18n()`/`src/locales`: this module runs
+ * server-side with no React context, and the recipient's language is the
+ * store's business locale, not whatever the cashier's dashboard is set to.
+ * Same reasoning as receipt-labels.ts, which owns the printed receipt's
+ * vocabulary — but the copy is different (a chat/email greeting, not a label
+ * on a 32-column till roll), so it is not shared with it.
+ */
+const RECEIPT_EMAIL_COPY: Record<
+  "en" | "fr" | "id",
+  {
+    subject: (orderNumber: string, storeName: string) => string;
+    greeting: string;
+    intro: (storeName: string) => string;
+    totalLabel: string;
+    orderLabel: string;
+    cta: string;
+    footer: string;
+  }
+> = {
+  en: {
+    subject: (orderNumber, storeName) => `Your receipt ${orderNumber} from ${storeName}`,
+    greeting: "Hello,",
+    intro: (storeName) => `Thank you for your visit to <strong>${storeName}</strong>.`,
+    totalLabel: "Total",
+    orderLabel: "Receipt",
+    cta: "View receipt",
+    footer: "This receipt stays available at the link above.",
+  },
+  fr: {
+    subject: (orderNumber, storeName) => `Votre reçu ${orderNumber} — ${storeName}`,
+    greeting: "Bonjour,",
+    intro: (storeName) => `Merci pour votre visite chez <strong>${storeName}</strong>.`,
+    totalLabel: "Total",
+    orderLabel: "Reçu",
+    cta: "Voir le reçu",
+    footer: "Ce reçu reste consultable via le lien ci-dessus.",
+  },
+  id: {
+    subject: (orderNumber, storeName) => `Struk ${orderNumber} dari ${storeName}`,
+    greeting: "Halo,",
+    intro: (storeName) => `Terima kasih sudah mampir ke <strong>${storeName}</strong>.`,
+    totalLabel: "Total",
+    orderLabel: "Struk",
+    cta: "Lihat struk",
+    footer: "Struk ini tetap bisa dibuka lewat tautan di atas.",
+  },
+};
+
+/**
+ * Email a customer their receipt — the email counterpart of the WhatsApp
+ * receipt (send-customer-receipt.ts), linking to the same public
+ * `/r/[orderId]` page rather than attaching a PDF: that page is already the
+ * canonical rendering, it reprints, and a link survives an email client that
+ * strips attachments.
+ *
+ * Same dev/no-key short-circuit as the rest of this module — without
+ * RESEND_API_KEY it reports success with `messageId: "dev-mode"` so local POS
+ * work isn't blocked on an email provider (AGENTS.md §6, graceful degradation).
+ */
+export async function sendReceiptEmail(payload: {
+  to: string;
+  storeName: string;
+  orderNumber: string;
+  /** Already formatted in the store's display currency — never converted here. */
+  totalFormatted: string;
+  receiptUrl: string;
+  locale?: "en" | "fr" | "id";
+}): Promise<SendEmailResult> {
+  const copy = RECEIPT_EMAIL_COPY[payload.locale ?? "id"] ?? RECEIPT_EMAIL_COPY.id;
+  const subject = copy.subject(payload.orderNumber, payload.storeName);
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🧾 [DEV] Receipt Email");
+    console.log("To:", payload.to);
+    console.log("Subject:", subject);
+    console.log("URL:", payload.receiptUrl);
+    console.log("");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const html = `
+    <div style="font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111827">
+      <h2 style="font-size:18px;margin:0 0 16px">${escapeHtml(payload.storeName)}</h2>
+      <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 8px">${escapeHtml(copy.greeting)}</p>
+      <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 20px">${copy.intro(escapeHtml(payload.storeName))}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;border:1px solid #e5e7eb;border-radius:8px">
+        <tr>
+          <td style="padding:10px 14px;color:#6b7280">${escapeHtml(copy.orderLabel)}</td>
+          <td style="padding:10px 14px;text-align:right"><strong>${escapeHtml(payload.orderNumber)}</strong></td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;color:#6b7280;border-top:1px solid #e5e7eb">${escapeHtml(copy.totalLabel)}</td>
+          <td style="padding:10px 14px;text-align:right;border-top:1px solid #e5e7eb"><strong>${escapeHtml(payload.totalFormatted)}</strong></td>
+        </tr>
+      </table>
+      <p style="margin:24px 0">
+        <a href="${escapeHtml(payload.receiptUrl)}" style="background:#111827;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;font-size:14px;display:inline-block">${escapeHtml(copy.cta)}</a>
+      </p>
+      <p style="color:#6b7280;font-size:12px;line-height:1.6;margin:0">${escapeHtml(copy.footer)}</p>
+    </div>`;
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: payload.to,
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send receipt email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("[Email] Receipt email error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

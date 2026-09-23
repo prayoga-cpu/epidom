@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { openShiftSchema } from "@/lib/validation/operations.schemas";
+import { listShiftsQuerySchema, openShiftSchema } from "@/lib/validation/operations.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { toDecimal } from "@/lib/utils/types.server";
@@ -10,12 +10,30 @@ export const dynamic = "force-dynamic";
 
 export const GET = withApiHandler(
   async (request, { storeId }) => {
-    const { searchParams } = new URL(request.url);
-    const take = Math.min(Number(searchParams.get("take") ?? "20"), 100);
-    const skip = Number(searchParams.get("skip") ?? "0");
-    const staffId = searchParams.get("staffId") || undefined;
+    const parsed = listShiftsQuerySchema.safeParse(
+      Object.fromEntries(new URL(request.url).searchParams)
+    );
+    if (!parsed.success) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "Invalid query",
+          parsed.error.flatten()
+        ),
+        { status: 400 }
+      );
+    }
+    // "open" is the store's live till, "closed" is history; omitted is both. Filtered in
+    // SQL rather than by the caller scanning `take` rows: the newest row is usually a
+    // closed shift, which would hide an open one behind it.
+    const { take, skip, status, staffId } = parsed.data;
 
-    const where = { storeId, ...(staffId && { staffMemberId: staffId }) };
+    const where = {
+      storeId,
+      ...(staffId && { staffMemberId: staffId }),
+      ...(status === "open" && { closedAt: null }),
+      ...(status === "closed" && { closedAt: { not: null } }),
+    };
 
     const [shifts, total] = await Promise.all([
       prisma.shift.findMany({
@@ -68,13 +86,16 @@ export const POST = withApiHandler(
       );
     }
 
-    // Only one open shift per staff member at a time
+    // Only one open shift per STORE at a time. The till is the shop's drawer, not
+    // a person's: every persona on every device signed in to the store shares it
+    // (see useActiveShift), so a second one opened by another staff member would
+    // be a second drawer nobody else can see, with sales split between the two.
     const openShift = await prisma.shift.findFirst({
-      where: { storeId, staffMemberId: staffId, closedAt: null },
+      where: { storeId, closedAt: null },
     });
     if (openShift) {
       return NextResponse.json(
-        createErrorResponse(ApiErrorCode.CONFLICT, "Staff member already has an open shift"),
+        createErrorResponse(ApiErrorCode.CONFLICT, "This store already has an open shift"),
         { status: 409 }
       );
     }

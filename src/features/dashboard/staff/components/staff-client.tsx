@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -33,8 +34,19 @@ import { createStaffSchema, type CreateStaffInput } from "@/lib/validation/opera
 import { phoneSchema, optionalEmailSchema } from "@/lib/validation/common.schemas";
 import type { ZodType } from "zod";
 import { apiClient, ApiClientError } from "@/lib/api/client";
-import { UserRound, Plus, Pencil, UserX, Crown, Mail, Loader2 } from "lucide-react";
+import {
+  UserRound,
+  Plus,
+  Pencil,
+  UserX,
+  Crown,
+  Mail,
+  Loader2,
+  ChevronDown,
+  ShieldCheck,
+} from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { StaffRole } from "@prisma/client";
 import {
   STAFF_ROLE_LABEL_KEYS,
@@ -43,7 +55,12 @@ import {
 import { useOwnerPinStatus } from "@/features/dashboard/shared/hooks/use-owner-pin";
 import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
 import { PageAccessChecklist } from "./page-access-checklist";
-import { ROLE_DEFAULT_PAGES } from "@/config/staff-permissions.config";
+import {
+  ROLE_DEFAULT_PAGES,
+  STAFF_ROLE_TEMPLATES,
+  isBaseRoleTemplate,
+} from "@/config/staff-permissions.config";
+import { getStaffInviteUi } from "@/features/dashboard/shared/lib/staff-invite-ui";
 
 interface StaffMember {
   id: string;
@@ -56,8 +73,14 @@ interface StaffMember {
   allowedPages: string[];
   isActive: boolean;
   inviteStatus: string | null;
-  payType: "HOURLY" | "MONTHLY" | "NONE";
+  payType: "HOURLY" | "MONTHLY" | "SALES" | "NONE";
   payRate: number | null;
+  contractType: "FREELANCE" | "PART_TIME" | "FULL_TIME" | "CONTRACT" | null;
+  /** A real Epidom sign-in is linked to this member (their emailed invite was
+   * claimed, which is what verifies the email). Derived server-side. */
+  hasLinkedAccount?: boolean;
+  /** A sign-in invite was sent and hasn't been claimed or expired yet. */
+  hasPendingAccountInvite?: boolean;
   createdAt: string;
 }
 
@@ -72,8 +95,10 @@ interface StaffClientProps {
   storeTimeZoneLabel: string;
 }
 
-const ROLES_FOR_SELECT: StaffRole[] = ["MANAGER", "CASHIER", "KITCHEN"];
-const CUSTOM_ROLE_VALUE = "CUSTOM";
+/** Sentinel Select value for the OWNER row's locked, unchangeable role —
+ * OWNER isn't itself one of STAFF_ROLE_TEMPLATES (an owner's own access
+ * can't be edited via a job-title template), so it needs its own value. */
+const OWNER_TEMPLATE_VALUE = "OWNER";
 
 // Mirrors the backend `usernameSchema` character set (lowercase letters,
 // numbers, underscore, dot) so invalid characters never reach submit —
@@ -104,7 +129,8 @@ const STAFF_FIELD_LABELS: Record<string, string> = {
   role: "Role",
   customRoleLabel: "Custom role label",
   pin: "PIN",
-  payRate: "Pay Rate",
+  payRate: "Rate",
+  contractType: "Contract type",
 };
 
 // The API's 400 response message is a generic "Validation failed" — the
@@ -127,6 +153,68 @@ function describeStaffError(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
+/** The real-sign-in status of a staff member — deliberately separate from the
+ * `inviteStatus` badges beside it, which only ever meant "a PIN email was sent". */
+function AccountBadge({
+  member,
+  t,
+}: {
+  member: Pick<StaffMember, "hasLinkedAccount" | "hasPendingAccountInvite">;
+  t: (key: string) => string;
+}) {
+  if (member.hasLinkedAccount) {
+    return (
+      <Badge variant="outline" className="gap-1 border-emerald-400 text-emerald-600">
+        <ShieldCheck className="h-3 w-3" aria-hidden />
+        {t("pages.staffAccountLinked")}
+      </Badge>
+    );
+  }
+  if (member.hasPendingAccountInvite) {
+    return (
+      <Badge variant="outline" className="border-amber-400 text-amber-600">
+        {t("pages.staffAccountInvitePending")}
+      </Badge>
+    );
+  }
+  return null;
+}
+
+/** Contact Details and Contract are both fully optional, and most staff
+ * rows never fill them in — a new staffer starts these collapsed (nothing
+ * to show yet, click to open and fill), while editing an existing one
+ * starts expanded only when it already has something in it (see the two
+ * call sites' `defaultOpen`/`open` wiring). */
+function CollapsibleCard({
+  title,
+  open,
+  onOpenChange,
+  children,
+}: {
+  title: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border p-3">
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+        aria-expanded={open}
+      >
+        {title}
+        <ChevronDown
+          className={cn("text-muted-foreground h-4 w-4 shrink-0 transition-transform", open && "rotate-180")}
+          aria-hidden
+        />
+      </button>
+      {open && <div className="mt-3 space-y-3">{children}</div>}
+    </div>
+  );
+}
+
 export function StaffClient({
   storeId,
   currentUserId,
@@ -141,6 +229,8 @@ export function StaffClient({
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [addCustomRoleActive, setAddCustomRoleActive] = useState(false);
+  const [addTemplateId, setAddTemplateId] = useState("cashier");
+  const [addContactOpen, setAddContactOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
   const [setPinOpen, setSetPinOpen] = useState(false);
   const { data: pinStatus } = useOwnerPinStatus();
@@ -153,14 +243,24 @@ export function StaffClient({
   const [editRole, setEditRole] = useState<StaffRole>("CASHIER");
   const [editCustomRoleLabel, setEditCustomRoleLabel] = useState("");
   const [editCustomRoleActive, setEditCustomRoleActive] = useState(false);
-  const [editPayType, setEditPayType] = useState<"HOURLY" | "MONTHLY" | "NONE">("NONE");
+  const [editTemplateId, setEditTemplateId] = useState("cashier");
+  const [editPayType, setEditPayType] = useState<"HOURLY" | "MONTHLY" | "SALES" | "NONE">("NONE");
   const [editPayRate, setEditPayRate] = useState("");
+  const [editContractType, setEditContractType] = useState<
+    "FREELANCE" | "PART_TIME" | "FULL_TIME" | "CONTRACT" | ""
+  >("");
   const [editAllowedPages, setEditAllowedPages] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
   const [editPin, setEditPin] = useState("");
   const [editSendPin, setEditSendPin] = useState(false);
   const [editRemovePin, setEditRemovePin] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
+  // Both cards start collapsed for a staffer with nothing in them yet — see
+  // openEdit below for the "expand if already filled in" initialization,
+  // and the Add dialog's own addContactOpen/addContractOpen (always false,
+  // a brand-new staff member never has anything to show yet).
+  const [editContactOpen, setEditContactOpen] = useState(false);
+  const [editContractOpen, setEditContractOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["staff", storeId],
@@ -172,6 +272,10 @@ export function StaffClient({
   const roleLabel = (r: StaffRole) => t(STAFF_ROLE_LABEL_KEYS[r]);
   const displayRoleLabel = (member: Pick<StaffMember, "role" | "customRoleLabel">) =>
     staffRoleLabel(member, t);
+  const editTemplate = STAFF_ROLE_TEMPLATES.find((tpl) => tpl.id === editTemplateId);
+  // editTarget is a snapshot taken when the dialog opened; the live row from
+  // the query is what knows an invite was just sent or claimed.
+  const liveEditTarget = editTarget ? (staff.find((m) => m.id === editTarget.id) ?? editTarget) : null;
 
   const {
     register,
@@ -195,6 +299,7 @@ export function StaffClient({
   const watchSendInvite = watch("sendInvite" as never);
   const watchRole = watch("role");
   const watchAllowedPages = watch("allowedPages" as never) as string[] | undefined;
+  const addTemplate = STAFF_ROLE_TEMPLATES.find((tpl) => tpl.id === addTemplateId);
 
   // Re-validates as-you-type instead of only on submit — reacting to `watch`
   // (rather than triggering inline from the input's onChange) so this always
@@ -220,6 +325,19 @@ export function StaffClient({
     onError: (err: Error) => toast.error(describeStaffError(err, t("pages.staffAddFailed"))),
   });
 
+  // Owner-only, and it emails a link that grants a real sign-in to this
+  // store — so the server awaits delivery and only reports success when the
+  // mail provider accepted it (unlike the fire-and-forget PIN email).
+  const inviteMutation = useMutation({
+    mutationFn: (staffId: string) =>
+      apiClient.post(`/stores/${storeId}/staff/${staffId}/invite`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
+      toast.success(t("pages.staffInviteSentToast"));
+    },
+    onError: (err: Error) => toast.error(describeStaffError(err, t("pages.staffInviteFailedToast"))),
+  });
+
   const deactivateMutation = useMutation({
     mutationFn: (staffId: string) => apiClient.delete(`/stores/${storeId}/staff/${staffId}`),
     onSuccess: () => {
@@ -237,9 +355,38 @@ export function StaffClient({
     setEditWhatsapp(member.whatsapp ?? "");
     setEditRole(member.role);
     setEditCustomRoleLabel(member.customRoleLabel ?? "");
-    setEditCustomRoleActive(!!member.customRoleLabel?.trim());
+    // Best-effort only — this drives which template the merged Role
+    // dropdown shows pre-selected, not the actual stored permissions
+    // (role/customRoleLabel/allowedPages, set independently above/below). A
+    // custom label that exactly matches one of this role's named templates
+    // (in the CURRENT locale) selects that template with the checkbox off;
+    // any other label — hand-typed, or saved under a since-changed locale —
+    // falls back to the role's base template with "Use custom label" on, so
+    // what's actually stored isn't silently discarded.
+    const namedMatch = STAFF_ROLE_TEMPLATES.find(
+      (tpl) =>
+        tpl.role === member.role &&
+        !isBaseRoleTemplate(tpl.id) &&
+        t(tpl.labelKey) === member.customRoleLabel
+    );
+    if (namedMatch) {
+      setEditTemplateId(namedMatch.id);
+      setEditCustomRoleActive(false);
+    } else {
+      const baseMatch = STAFF_ROLE_TEMPLATES.find(
+        (tpl) => tpl.role === member.role && isBaseRoleTemplate(tpl.id)
+      );
+      setEditTemplateId(baseMatch?.id ?? "cashier");
+      setEditCustomRoleActive(!!member.customRoleLabel?.trim());
+    }
     setEditPayType(member.payType);
     setEditPayRate(member.payRate != null ? String(member.payRate) : "");
+    setEditContractType(member.contractType ?? "");
+    // Optional cards open by default only when there's already something in
+    // them — an empty one stays a one-line collapsed header until the owner
+    // chooses to fill it in.
+    setEditContactOpen(!!(member.email || member.whatsapp));
+    setEditContractOpen(member.payType !== "NONE" || !!member.contractType);
     setEditAllowedPages(
       member.allowedPages.length > 0 ? member.allowedPages : ROLE_DEFAULT_PAGES[member.role]
     );
@@ -285,6 +432,7 @@ export function StaffClient({
         isActive: editIsActive,
         payType: editPayType,
         payRate: editPayType === "NONE" || editPayRate.trim() === "" ? null : Number(editPayRate),
+        contractType: editContractType === "" ? null : editContractType,
       };
       if (editRemovePin) {
         body.pin = "";
@@ -332,12 +480,18 @@ export function StaffClient({
         {t("pages.staffSecurityNotice").replace("{time}", storeTimeZoneLabel)}
       </div>
 
-      {/* Owner account row */}
+      {/* Owner account row — the one persona StaffRole.OWNER and
+          requireStaffPageAccess/requireOwnerOnly already treat as fully
+          unrestricted (see sidebar.tsx's staffAllowedPages, "role-based, not
+          ID-based"). The hint line makes that existing behavior explicit
+          rather than implicit, so it isn't mistaken for a regular staff row
+          that merely happens to carry the OWNER role (e.g. a seeded one). */}
       <div className="bg-muted/30 flex items-center gap-3 rounded-lg border px-4 py-3">
         <Crown className="h-4 w-4 shrink-0 text-amber-500" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">{currentUserName}</p>
           {currentUserEmail && <p className="text-muted-foreground text-xs">{currentUserEmail}</p>}
+          <p className="text-muted-foreground mt-0.5 text-xs">{t("pages.staffOwnerMasterHint")}</p>
         </div>
         <Badge variant="outline" className="border-amber-400 text-amber-600">
           {t("pages.staffRoleOwner")}
@@ -386,6 +540,7 @@ export function StaffClient({
                     {t("pages.staffInvited")}
                   </Badge>
                 )}
+                <AccountBadge member={member} t={t} />
               </div>
               <div className="flex gap-2">
                 <Button
@@ -482,6 +637,7 @@ export function StaffClient({
                             {t("pages.staffInvited")}
                           </Badge>
                         )}
+                        <AccountBadge member={member} t={t} />
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -535,6 +691,7 @@ export function StaffClient({
           if (!open) {
             reset();
             setAddCustomRoleActive(false);
+            setAddContactOpen(false);
           }
         }}
       >
@@ -601,36 +758,61 @@ export function StaffClient({
             <div className="space-y-1">
               <Label>{t("pages.staffRole")}</Label>
               <Select
-                value={addCustomRoleActive ? CUSTOM_ROLE_VALUE : watchRole}
+                value={addTemplateId}
                 onValueChange={(v) => {
-                  if (v === CUSTOM_ROLE_VALUE) {
-                    setAddCustomRoleActive(true);
-                    return;
+                  setAddTemplateId(v);
+                  const template = STAFF_ROLE_TEMPLATES.find((tpl) => tpl.id === v);
+                  if (!template) return;
+                  setValue("role", template.role);
+                  setValue("allowedPages" as never, template.allowedPages as never);
+                  // A custom label already typed in stays untouched (it's an
+                  // intentional override); otherwise the new template's own
+                  // name is what should display.
+                  if (!addCustomRoleActive) {
+                    setValue(
+                      "customRoleLabel" as never,
+                      (isBaseRoleTemplate(v) ? "" : t(template.labelKey)) as never
+                    );
                   }
-                  setAddCustomRoleActive(false);
-                  setValue("customRoleLabel" as never, "" as never);
-                  setValue("role", v as StaffRole);
-                  setValue("allowedPages" as never, ROLE_DEFAULT_PAGES[v as StaffRole] as never);
                 }}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES_FOR_SELECT.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {roleLabel(r)}
+                  {STAFF_ROLE_TEMPLATES.map((tpl) => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      {t(tpl.labelKey)}
                     </SelectItem>
                   ))}
-                  <SelectItem value={CUSTOM_ROLE_VALUE}>
-                    {t("pages.staffRoleCustomOption")}
-                  </SelectItem>
                 </SelectContent>
               </Select>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm select-none">
+                <input
+                  type="checkbox"
+                  className="rounded"
+                  checked={addCustomRoleActive}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setAddCustomRoleActive(next);
+                    if (!next) {
+                      // Falls back to the selected template's own name
+                      // instead of leaving whatever was typed behind.
+                      setValue(
+                        "customRoleLabel" as never,
+                        (!isBaseRoleTemplate(addTemplateId) && addTemplate
+                          ? t(addTemplate.labelKey)
+                          : "") as never
+                      );
+                    }
+                  }}
+                />
+                {t("pages.staffUseCustomLabel")}
+              </label>
               {addCustomRoleActive && (
                 <Input
                   id="add-custom-role"
-                  className="mt-2"
+                  className="mt-1"
                   autoFocus
                   placeholder={t("pages.staffCustomRoleLabelPlaceholder")}
                   {...register("customRoleLabel" as never)}
@@ -641,6 +823,12 @@ export function StaffClient({
               role={watchRole}
               value={watchAllowedPages ?? []}
               onChange={(pages) => setValue("allowedPages" as never, pages as never)}
+              templatePages={addTemplate?.allowedPages}
+              templateLabel={
+                !isBaseRoleTemplate(addTemplateId) && addTemplate
+                  ? t(addTemplate.labelKey)
+                  : undefined
+              }
             />
             <div className="space-y-1">
               <Label htmlFor="pin">
@@ -658,11 +846,16 @@ export function StaffClient({
               {errors.pin && <p className="text-destructive text-xs">{errors.pin.message}</p>}
             </div>
 
-            <div className="space-y-3 rounded-lg border p-3">
-              <p className="text-muted-foreground text-xs font-semibold">
-                {t("pages.staffContactDetails")}{" "}
-                <span className="font-normal">{t("pages.staffOptional")}</span>
-              </p>
+            <CollapsibleCard
+              open={addContactOpen}
+              onOpenChange={setAddContactOpen}
+              title={
+                <p className="text-muted-foreground text-xs font-semibold">
+                  {t("pages.staffContactDetails")}{" "}
+                  <span className="font-normal">{t("pages.staffOptional")}</span>
+                </p>
+              }
+            >
               <div className="space-y-1">
                 <Label htmlFor="add-email">{t("tables.email")}</Label>
                 <Input
@@ -694,7 +887,7 @@ export function StaffClient({
                   <p className="text-destructive text-xs">{errors.whatsapp.message as string}</p>
                 )}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {watchEmail && (
               <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
@@ -754,16 +947,19 @@ export function StaffClient({
               <div className="space-y-1">
                 <Label>{t("pages.staffRole")}</Label>
                 <Select
-                  value={editCustomRoleActive ? CUSTOM_ROLE_VALUE : editRole}
+                  value={editTarget.role === "OWNER" ? OWNER_TEMPLATE_VALUE : editTemplateId}
                   onValueChange={(v) => {
-                    if (v === CUSTOM_ROLE_VALUE) {
-                      setEditCustomRoleActive(true);
-                      return;
+                    setEditTemplateId(v);
+                    const template = STAFF_ROLE_TEMPLATES.find((tpl) => tpl.id === v);
+                    if (!template) return;
+                    setEditRole(template.role);
+                    setEditAllowedPages(template.allowedPages);
+                    // A custom label already typed in stays untouched (it's
+                    // an intentional override); otherwise the new
+                    // template's own name is what should display.
+                    if (!editCustomRoleActive) {
+                      setEditCustomRoleLabel(isBaseRoleTemplate(v) ? "" : t(template.labelKey));
                     }
-                    setEditCustomRoleActive(false);
-                    setEditCustomRoleLabel("");
-                    setEditRole(v as StaffRole);
-                    setEditAllowedPages(ROLE_DEFAULT_PAGES[v as StaffRole]);
                   }}
                   disabled={editTarget.role === "OWNER"}
                 >
@@ -771,19 +967,14 @@ export function StaffClient({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(editTarget.role === "OWNER"
-                      ? (["OWNER", ...ROLES_FOR_SELECT] as StaffRole[])
-                      : ROLES_FOR_SELECT
-                    ).map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {roleLabel(r)}
+                    {editTarget.role === "OWNER" && (
+                      <SelectItem value={OWNER_TEMPLATE_VALUE}>{roleLabel("OWNER")}</SelectItem>
+                    )}
+                    {STAFF_ROLE_TEMPLATES.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id}>
+                        {t(tpl.labelKey)}
                       </SelectItem>
                     ))}
-                    {editTarget.role !== "OWNER" && (
-                      <SelectItem value={CUSTOM_ROLE_VALUE}>
-                        {t("pages.staffRoleCustomOption")}
-                      </SelectItem>
-                    )}
                   </SelectContent>
                 </Select>
                 {editTarget.role === "OWNER" && (
@@ -791,9 +982,32 @@ export function StaffClient({
                     {t("pages.staffOwnerRoleLocked")}
                   </p>
                 )}
+                {editTarget.role !== "OWNER" && (
+                  <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm select-none">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={editCustomRoleActive}
+                      onChange={(e) => {
+                        const next = e.target.checked;
+                        setEditCustomRoleActive(next);
+                        if (!next) {
+                          // Falls back to the selected template's own name
+                          // instead of leaving whatever was typed behind.
+                          setEditCustomRoleLabel(
+                            !isBaseRoleTemplate(editTemplateId) && editTemplate
+                              ? t(editTemplate.labelKey)
+                              : ""
+                          );
+                        }
+                      }}
+                    />
+                    {t("pages.staffUseCustomLabel")}
+                  </label>
+                )}
                 {editCustomRoleActive && (
                   <Input
-                    className="mt-2"
+                    className="mt-1"
                     autoFocus
                     value={editCustomRoleLabel}
                     onChange={(e) => setEditCustomRoleLabel(e.target.value)}
@@ -802,78 +1016,184 @@ export function StaffClient({
                 )}
               </div>
 
-              <div className="space-y-3 rounded-lg border p-3">
-                <p className="text-muted-foreground text-xs font-semibold">
-                  {t("pages.staffContactDetails")}{" "}
-                  <span className="font-normal">{t("pages.staffOptional")}</span>
-                </p>
-                <div className="space-y-1">
-                  <Label>{t("tables.email")}</Label>
-                  <Input
-                    type="email"
-                    value={editEmail}
-                    onChange={(e) => setEditEmail(formatEmailInput(e.target.value))}
-                    placeholder={t("pages.staffEmailPlaceholder")}
-                  />
-                  {editEmailError && <p className="text-destructive text-xs">{editEmailError}</p>}
-                </div>
-                <div className="space-y-1">
-                  <Label>{t("pages.staffWhatsappNumber")}</Label>
-                  <PhoneInput
-                    defaultCountry="ID"
-                    value={editWhatsapp}
-                    onChange={(value) => setEditWhatsapp(value ?? "")}
-                    placeholder={t("pages.staffWhatsappPlaceholder")}
-                  />
-                  {editWhatsappError && (
-                    <p className="text-destructive text-xs">{editWhatsappError}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3 rounded-lg border p-3">
-                <p className="text-muted-foreground text-xs font-semibold">
-                  {t("pages.staffPayRate")}{" "}
-                  <span className="font-normal">{t("pages.staffOptional")}</span>
-                </p>
-                <div className="space-y-1">
-                  <Label>{t("pages.staffPayType")}</Label>
-                  <Select
-                    value={editPayType}
-                    onValueChange={(v) => setEditPayType(v as "HOURLY" | "MONTHLY" | "NONE")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NONE">{t("pages.staffPayTypeNone")}</SelectItem>
-                      <SelectItem value="HOURLY">{t("pages.staffPayTypeHourly")}</SelectItem>
-                      <SelectItem value="MONTHLY">{t("pages.staffPayTypeMonthly")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {editPayType !== "NONE" && (
+              {/* Contact Details and Pay Rate don't apply to the owner's own
+                  StaffMember row — that contact info is the account's own
+                  Profile (this dialog's editEmail/editWhatsapp would just be
+                  a redundant, driftable copy of it), and an owner isn't paid
+                  as staff. */}
+              {editTarget.role !== "OWNER" && (
+                <CollapsibleCard
+                  open={editContactOpen}
+                  onOpenChange={setEditContactOpen}
+                  title={
+                    <p className="text-muted-foreground text-xs font-semibold">
+                      {t("pages.staffContactDetails")}{" "}
+                      <span className="font-normal">{t("pages.staffOptional")}</span>
+                    </p>
+                  }
+                >
                   <div className="space-y-1">
-                    <Label>
-                      {editPayType === "HOURLY"
-                        ? t("pages.staffPayRateHourly")
-                        : t("pages.staffPayRateMonthly")}
-                    </Label>
+                    <Label>{t("tables.email")}</Label>
                     <Input
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      value={editPayRate}
-                      onChange={(e) => setEditPayRate(e.target.value)}
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(formatEmailInput(e.target.value))}
+                      placeholder={t("pages.staffEmailPlaceholder")}
                     />
+                    {editEmailError && <p className="text-destructive text-xs">{editEmailError}</p>}
                   </div>
-                )}
-              </div>
+                  <div className="space-y-1">
+                    <Label>{t("pages.staffWhatsappNumber")}</Label>
+                    <PhoneInput
+                      defaultCountry="ID"
+                      value={editWhatsapp}
+                      onChange={(value) => setEditWhatsapp(value ?? "")}
+                      placeholder={t("pages.staffWhatsappPlaceholder")}
+                    />
+                    {editWhatsappError && (
+                      <p className="text-destructive text-xs">{editWhatsappError}</p>
+                    )}
+                  </div>
+
+                  {/* Real sign-in for this staff member. `hasLinkedAccount`
+                      is the "email verified" signal: it's only ever set by
+                      claiming the emailed link (or signing in to the account
+                      that owns this exact address), never by merely sending
+                      one. */}
+                  <div className="space-y-2 rounded-md border border-dashed p-3">
+                    <p className="text-xs font-semibold">{t("pages.staffSignInAccount")}</p>
+                    {liveEditTarget?.hasLinkedAccount ? (
+                      <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        {t("pages.staffAccountLinkedHint")}
+                      </p>
+                    ) : (
+                      (() => {
+                        const invite = getStaffInviteUi({
+                          email: editEmail,
+                          savedEmail: editTarget.email,
+                          emailError: editEmailError,
+                          isActive: !!liveEditTarget?.isActive,
+                          allowedPages: editAllowedPages,
+                          hasPendingInvite: !!liveEditTarget?.hasPendingAccountInvite,
+                        });
+                        const HINT_KEYS = {
+                          needEmail: "pages.staffInviteHintNeedEmail",
+                          saveFirst: "pages.staffInviteHintSaveFirst",
+                          posOnly: "pages.staffInviteHintPosOnly",
+                          pending: "pages.staffInviteHintPending",
+                          default: "pages.staffInviteHintDefault",
+                        } as const;
+                        return (
+                          <>
+                            <p className="text-muted-foreground text-xs">
+                              {t(HINT_KEYS[invite.hint])}
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-10"
+                              disabled={!invite.canSend || inviteMutation.isPending}
+                              onClick={() => inviteMutation.mutate(editTarget.id)}
+                            >
+                              {inviteMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                              ) : (
+                                <Mail className="h-4 w-4" aria-hidden />
+                              )}
+                              {invite.isResend
+                                ? t("pages.staffResendSignInInvite")
+                                : t("pages.staffSendSignInInvite")}
+                            </Button>
+                          </>
+                        );
+                      })()
+                    )}
+                  </div>
+                </CollapsibleCard>
+              )}
+
+              {editTarget.role !== "OWNER" && (
+                <CollapsibleCard
+                  open={editContractOpen}
+                  onOpenChange={setEditContractOpen}
+                  title={
+                    <p className="text-muted-foreground text-xs font-semibold">
+                      {t("pages.staffContractTitle")}{" "}
+                      <span className="font-normal">{t("pages.staffOptional")}</span>
+                    </p>
+                  }
+                >
+                  <div className="space-y-1">
+                    <Label>{t("pages.staffContractType")}</Label>
+                    <Select
+                      value={editContractType || undefined}
+                      onValueChange={(v) =>
+                        setEditContractType(v as "FREELANCE" | "PART_TIME" | "FULL_TIME" | "CONTRACT")
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("pages.staffContractTypeNotSet")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="FREELANCE">{t("pages.staffContractTypeFreelance")}</SelectItem>
+                        <SelectItem value="PART_TIME">{t("pages.staffContractTypePartTime")}</SelectItem>
+                        <SelectItem value="FULL_TIME">{t("pages.staffContractTypeFullTime")}</SelectItem>
+                        <SelectItem value="CONTRACT">{t("pages.staffContractTypeContract")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t("pages.staffPayType")}</Label>
+                    <Select
+                      value={editPayType}
+                      onValueChange={(v) => setEditPayType(v as "HOURLY" | "MONTHLY" | "SALES" | "NONE")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NONE">{t("pages.staffPayTypeNone")}</SelectItem>
+                        <SelectItem value="HOURLY">{t("pages.staffPayTypeHourly")}</SelectItem>
+                        <SelectItem value="MONTHLY">{t("pages.staffPayTypeMonthly")}</SelectItem>
+                        <SelectItem value="SALES">{t("pages.staffPayTypeSales")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {editPayType !== "NONE" && (
+                    <div className="space-y-1">
+                      <Label>
+                        {editPayType === "HOURLY"
+                          ? t("pages.staffPayRateHourly")
+                          : editPayType === "MONTHLY"
+                            ? t("pages.staffPayRateMonthly")
+                            : t("pages.staffPayRateSales")}
+                      </Label>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={editPayType === "SALES" ? 100 : undefined}
+                        value={editPayRate}
+                        onChange={(e) => setEditPayRate(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </CollapsibleCard>
+              )}
 
               <PageAccessChecklist
                 role={editRole}
                 value={editAllowedPages}
                 onChange={setEditAllowedPages}
+                templatePages={editTemplate?.allowedPages}
+                templateLabel={
+                  !isBaseRoleTemplate(editTemplateId) && editTemplate
+                    ? t(editTemplate.labelKey)
+                    : undefined
+                }
+                master={editTarget.role === "OWNER"}
               />
 
               <div className="space-y-1">
@@ -902,48 +1222,83 @@ export function StaffClient({
                 )}
               </div>
 
-              <div className="space-y-1">
-                <Label>
-                  {t("pages.staffNewPin")}{" "}
-                  <span className="text-muted-foreground text-xs">
-                    {t("pages.staffKeepCurrentPin")}
-                  </span>
-                </Label>
-                <Input
-                  type="password"
-                  maxLength={4}
-                  inputMode="numeric"
-                  placeholder={t("pages.staffPinPlaceholder")}
-                  value={editPin}
-                  onChange={(e) => setEditPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  disabled={editRemovePin}
-                />
-                {editPin.length > 0 && editPin.length < 4 && (
-                  <p className="text-destructive mt-1 text-xs">{t("pages.staffPinLengthError")}</p>
-                )}
-              </div>
-              <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
-                <input
-                  type="checkbox"
-                  className="rounded"
-                  checked={editRemovePin}
-                  onChange={(e) => {
-                    setEditRemovePin(e.target.checked);
-                    if (e.target.checked) setEditPin("");
-                  }}
-                />
-                {t("pages.staffRemovePin")}
-              </label>
-              {editPin.length === 4 && editEmail && (
-                <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
-                  <input
-                    type="checkbox"
-                    className="rounded"
-                    checked={editSendPin}
-                    onChange={(e) => setEditSendPin(e.target.checked)}
-                  />
-                  {t("pages.staffSendNewPinTo").replace("{email}", editEmail)}
-                </label>
+              {editTarget.role === "OWNER" ? (
+                // This row's own `pin` field is a different, unrelated PIN
+                // from the real Owner PIN (useOwnerPinStatus/SetOwnerPinDialog)
+                // that actually gates "Continue as Owner" — role OWNER rows
+                // are filtered out of the staff PIN picker entirely (see
+                // activeStaff above), so editing it here would do nothing.
+                // The real Owner PIN already has its own email-OTP recovery
+                // (request-otp) and lives on the Profile page, not here.
+                <div className="space-y-1 rounded-lg border p-3">
+                  <p className="text-muted-foreground text-xs">
+                    {t("pages.staffOwnerPinManagedElsewhere")}
+                  </p>
+                  <Button asChild variant="link" size="sm" className="h-auto p-0 text-xs">
+                    <Link href={`/store/${storeId}/profile`}>{t("pages.staffOwnerManageInProfile")}</Link>
+                  </Button>
+                  {/* Ownership itself can't be edited from a staff row either:
+                      it moves the whole store to another account, which is a
+                      verified, emailed handoff that lives in Profile. */}
+                  <div className="mt-2 space-y-1 border-t pt-2">
+                    <p className="text-muted-foreground text-xs">
+                      {t("pages.staffOwnerTransferHint")}
+                    </p>
+                    <Button asChild variant="link" size="sm" className="h-auto px-0 py-2 text-xs">
+                      <Link href={`/store/${storeId}/profile#transfer-ownership`}>
+                        {t("pages.staffOwnerTransferLink")}
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <Label>
+                      {t("pages.staffNewPin")}{" "}
+                      <span className="text-muted-foreground text-xs">
+                        {t("pages.staffKeepCurrentPin")}
+                      </span>
+                    </Label>
+                    <Input
+                      type="password"
+                      maxLength={4}
+                      inputMode="numeric"
+                      placeholder={t("pages.staffPinPlaceholder")}
+                      value={editPin}
+                      onChange={(e) => setEditPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                      disabled={editRemovePin}
+                    />
+                    {editPin.length > 0 && editPin.length < 4 && (
+                      <p className="text-destructive mt-1 text-xs">
+                        {t("pages.staffPinLengthError")}
+                      </p>
+                    )}
+                  </div>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={editRemovePin}
+                      onChange={(e) => {
+                        setEditRemovePin(e.target.checked);
+                        if (e.target.checked) setEditPin("");
+                      }}
+                    />
+                    {t("pages.staffRemovePin")}
+                  </label>
+                  {editPin.length === 4 && editEmail && (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={editSendPin}
+                        onChange={(e) => setEditSendPin(e.target.checked)}
+                      />
+                      {t("pages.staffSendNewPinTo").replace("{email}", editEmail)}
+                    </label>
+                  )}
+                </>
               )}
             </div>
           </FormDialogLayout>

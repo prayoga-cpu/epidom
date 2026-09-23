@@ -1,0 +1,265 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  Monitor,
+  KeyRound,
+  CalendarClock,
+  Wallet,
+  ExternalLink,
+  LayoutDashboard,
+  ArrowRight,
+  Store,
+  RefreshCw,
+  LogOut,
+} from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { useI18n } from "@/components/lang/i18n-provider";
+import { useCustomerDisplaySettings } from "@/features/pos/hooks/use-customer-display-settings";
+import { openCustomerDisplay } from "@/features/pos/lib/open-customer-display";
+import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
+import { useAccountSwitcher } from "@/features/dashboard/shared/hooks/use-account-switcher";
+import { canManageShift } from "@/features/pos/lib/shift-access";
+import { LAST_VISITED_BACK_OFFICE_COOKIE, isBackOfficeAppPath } from "@/lib/last-visited";
+import { PosModePreferences } from "./pos-mode-preferences";
+import { PosModeStoreSwitcher } from "./pos-mode-store-switcher";
+
+interface PosModeOverflowMenuProps {
+  storeId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /**
+   * This browser is signed in as a staff member's OWN Epidom account (not the
+   * owner's account with a PIN persona on top). Their account is theirs: no
+   * Back Office to return to, nobody else to switch to, and "Owner account"
+   * isn't what they'd be logging out of.
+   */
+  linkedStaff?: boolean;
+}
+
+/**
+ * Low-frequency POS Mode actions that don't earn permanent tab-bar real
+ * estate (spec: customer display trigger + clock in/out). Dialog, not Sheet
+ * — same fixed-height reasoning as PosMobileCart's own comment: a bottom
+ * Sheet never gets a truly definite height through this nested flex/scroll
+ * chain, Dialog does.
+ */
+export function PosModeOverflowMenu({
+  storeId,
+  open,
+  onOpenChange,
+  linkedStaff = false,
+}: PosModeOverflowMenuProps) {
+  const { t } = useI18n();
+  const displayEnabled = useCustomerDisplaySettings((state) => state.enabled);
+  const setDisplayEnabled = useCustomerDisplaySettings((state) => state.setEnabled);
+  const [clockOpen, setClockOpen] = useState(false);
+
+  const {
+    posSession,
+    actingAsStaff,
+    hasSwitchableStaff,
+    handleSwitchAccount,
+    handleReturnToPicker,
+    handleOwnerAccountLogout,
+  } = useAccountSwitcher(storeId);
+
+  // The one deliberate way back into Back Office from this shell
+  // (docs/back-office-revamp.md) — Owner/Manager only. Cashier/Kitchen never
+  // see this: their allowedPages has no Back Office pages to land on, and
+  // showing them a link into a shell they'd immediately be redirected out of
+  // would be a dead end, not a shortcut. Same for a linked staff account, even
+  // a Manager: staff logins are POS Mode only for now, so Back Office would
+  // just redirect them straight back here.
+  const canReachBackOffice =
+    !linkedStaff && (posSession.staffRole === "OWNER" || posSession.staffRole === "MANAGER");
+
+  // Whether this device's real account session has a store list to go to — a
+  // staff PIN persona is scoped to the store it logged into and has none. A
+  // linked staff account is the exception: it IS the account, so the list is
+  // its own. Gates "Back to Stores" and the store switcher alike.
+  const hasAccountStoreList = !actingAsStaff || linkedStaff;
+
+  // Resumes the last Back Office section actually visited (Finance, Staff,
+  // whatever was open before switching into POS Mode) instead of always
+  // dropping back onto /dashboard — mirrors the same resume behavior already
+  // used app-wide (src/lib/last-visited.ts), scoped to non-POS pages only so
+  // it can't just point right back at this same shell.
+  const [backOfficeHref, setBackOfficeHref] = useState(`/store/${storeId}/dashboard`);
+  useEffect(() => {
+    try {
+      const last = localStorage.getItem(LAST_VISITED_BACK_OFFICE_COOKIE);
+      if (last && last.startsWith(`/store/${storeId}/`) && isBackOfficeAppPath(last)) {
+        setBackOfficeHref(last);
+      }
+    } catch {
+      // Ignore blocked storage — falls back to the default /dashboard landing.
+    }
+  }, [storeId]);
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[calc(85dvh/var(--app-zoom,1))] overflow-y-auto rounded-3xl sm:max-w-sm">
+          <DialogTitle>{t("common.actions.more")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("common.actions.more")}</DialogDescription>
+
+          <div className="space-y-4">
+            <div className="space-y-2 rounded-xl border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Monitor
+                    className={displayEnabled ? "size-5 shrink-0 text-emerald-500" : "size-5 shrink-0"}
+                    aria-hidden
+                  />
+                  <span className="text-sm font-medium">{t("pos.customerDisplay.enable")}</span>
+                </div>
+                <Switch checked={displayEnabled} onCheckedChange={setDisplayEnabled} />
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-11 w-full gap-1.5"
+                disabled={!displayEnabled}
+                onClick={() => openCustomerDisplay(storeId)}
+              >
+                <ExternalLink className="size-4" aria-hidden />
+                {t("pos.customerDisplay.openWindow")}
+              </Button>
+            </div>
+
+            {/* Clock in/out — a timesheet action for the persona already
+                active. Deliberately its own row, not grouped with the
+                "who is this device" actions below — different question,
+                different answer. */}
+            <Button
+              variant="outline"
+              className="h-11 w-full justify-start gap-2"
+              onClick={() => {
+                onOpenChange(false);
+                setClockOpen(true);
+              }}
+            >
+              <KeyRound className="size-4" aria-hidden />
+              {t("clockInOut.dialogTitle")}
+            </Button>
+
+            {/* Open / watch / finish the till. Only for a persona that runs a
+                register — the same rule the status bar's shift label follows. */}
+            {canManageShift({
+              staffRole: posSession.staffRole,
+              allowedPages: posSession.allowedPages,
+            }) && (
+              <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
+                <Link href={`/store/${storeId}/pos/shift`} onClick={() => onOpenChange(false)}>
+                  <Wallet className="size-4" aria-hidden />
+                  {t("pos.shift.title")}
+                </Link>
+              </Button>
+            )}
+
+            <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
+              <Link href={`/store/${storeId}/pos/schedule`} onClick={() => onOpenChange(false)}>
+                <CalendarClock className="size-4" aria-hidden />
+                {t("pages.scheduleMyScheduleTitle")}
+              </Link>
+            </Button>
+
+            {canReachBackOffice && (
+              <Link
+                href={backOfficeHref}
+                onClick={() => onOpenChange(false)}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-11 items-center justify-between gap-2 rounded-md px-3 text-sm font-medium transition active:scale-[0.98]"
+              >
+                <span className="flex items-center gap-2">
+                  <LayoutDashboard className="size-4 shrink-0" aria-hidden />
+                  {t("nav.backOffice")}
+                </span>
+                <ArrowRight className="size-4 shrink-0" aria-hidden />
+              </Link>
+            )}
+
+            {/* Device preferences (language, light/dark) — every persona, since
+                they belong to the tablet, not to whoever is signed in. */}
+            <PosModePreferences />
+
+            {/* Who's using this device — switching or logging out, not
+                clocking in/out. Same actions, same reload/cache-clearing
+                behavior as Back Office's NavUser dropdown
+                (useAccountSwitcher), now reachable without leaving POS
+                Mode first. */}
+            <div className="space-y-2 border-t pt-4">
+              <p className="text-muted-foreground px-1 text-xs font-medium tracking-wide uppercase">
+                {posSession.staffName}
+                {posSession.staffRole ? ` · ${posSession.staffRole}` : ""}
+              </p>
+
+              {/* A linked account can only ever be itself — the server refuses
+                  any other persona for it — so there's nobody to switch to. */}
+              {!linkedStaff && (actingAsStaff || hasSwitchableStaff) && (
+                <Button
+                  variant="outline"
+                  className="h-11 w-full justify-start gap-2"
+                  onClick={() => {
+                    onOpenChange(false);
+                    handleSwitchAccount();
+                  }}
+                >
+                  <RefreshCw className="size-4" aria-hidden />
+                  {t("nav.switchAccount")}
+                </Button>
+              )}
+
+              {actingAsStaff && (
+                <Button
+                  variant="outline"
+                  className="h-11 w-full justify-start gap-2"
+                  onClick={() => {
+                    onOpenChange(false);
+                    handleReturnToPicker();
+                  }}
+                >
+                  <LogOut className="size-4" aria-hidden />
+                  {t("nav.logoutStaffSession")}
+                </Button>
+              )}
+
+              {/* Tied to the real, underlying account session — a staff PIN
+                  persona has no store list of its own, same gate nav-user.tsx
+                  uses for this same action in Back Office. */}
+              {hasAccountStoreList && (
+                <PosModeStoreSwitcher storeId={storeId} onNavigate={() => onOpenChange(false)} />
+              )}
+
+              {hasAccountStoreList && (
+                <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
+                  <Link href="/stores" onClick={() => onOpenChange(false)}>
+                    <Store className="size-4" aria-hidden />
+                    {t("nav.backToStores")}
+                  </Link>
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive h-11 w-full justify-start gap-2"
+                onClick={() => {
+                  onOpenChange(false);
+                  handleOwnerAccountLogout();
+                }}
+              >
+                <LogOut className="size-4" aria-hidden />
+                {linkedStaff ? t("nav.logoutAccount") : t("nav.logoutOwnerAccount")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ClockInOutDialog open={clockOpen} onOpenChange={setClockOpen} storeId={storeId} />
+    </>
+  );
+}

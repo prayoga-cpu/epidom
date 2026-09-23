@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -20,11 +20,21 @@ import { useConfirm } from "@/components/ui/use-confirm";
 import { useDialogSwap } from "@/components/ui/use-dialog-swap";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { useRefundOrder } from "../hooks/use-refund-order";
-import { useOrderReceiptSends, useSendOrderReceipt } from "../hooks/use-order-receipt-sends";
+import {
+  deriveEmailReceiptStatus,
+  useOrderReceiptSends,
+  useSendOrderReceipt,
+  useSendOrderReceiptEmail,
+  receiptSendRecipient,
+} from "../hooks/use-order-receipt-sends";
+import { ReceiptEmailStatus } from "./receipt-email-status";
 import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
-import { RefundDialog, type RefundConfirmData } from "./refund-dialog";
+import { RefundDialog, type RefundConfirmData, type RefundTender } from "./refund-dialog";
+import { mapPaymentMethodLabel } from "../lib/order-status-display";
+import { formatQueueNumber } from "../lib/queue-number";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ExternalLink, Send, CheckCircle2, XCircle, Loader2, Printer } from "lucide-react";
+import { ExternalLink, Send, CheckCircle2, XCircle, Loader2, Printer, Mail } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import {
   isBluetoothSupported,
@@ -101,11 +111,26 @@ export function OrderHistoryDetailDialog({
   const refundOrder = useRefundOrder(storeId);
   const { data: receiptSends } = useOrderReceiptSends(storeId, order?.id);
   const sendReceipt = useSendOrderReceipt(storeId);
+  const sendReceiptEmail = useSendOrderReceiptEmail(storeId);
+  const [emailInput, setEmailInput] = useState("");
   // Mark-paid / refund / cancel-confirm each replace this dialog instead of
   // stacking a second modal on top of it — see useDialogSwap.
   const swap = useDialogSwap<"markPaid" | "refund" | "cancelConfirm">(!!order);
   const [isReprinting, setIsReprinting] = useState(false);
-  const lastReceiptSend = receiptSends?.[0];
+  // The send log covers both channels. The WhatsApp line below is about WhatsApp
+  // only — it used to read "sent via WhatsApp" for an email send too — and the
+  // emailed receipt has its own status row next to its own button.
+  const lastWhatsappSend = receiptSends?.find((send) => send.channel === "WHATSAPP");
+  const emailReceiptState = deriveEmailReceiptStatus(receiptSends).state;
+
+  // `Order.customerEmail` is on the wire (the history route returns every
+  // scalar column) but isn't declared on OrderHistoryItem, which another agent
+  // owns — read structurally rather than widening a shared type from here.
+  const orderCustomerEmail = (order as { customerEmail?: string | null } | null)?.customerEmail;
+  useEffect(() => {
+    setEmailInput(orderCustomerEmail ?? "");
+    // Re-prefill per order, not per keystroke: retyping is the point of the field.
+  }, [order?.id, orderCustomerEmail]);
 
   const handleReprint = async () => {
     if (!order) return;
@@ -141,7 +166,7 @@ export function OrderHistoryDetailDialog({
   const handleSendReceipt = async () => {
     if (!order) return;
     try {
-      const result = await sendReceipt.mutateAsync(order.id);
+      const result = await sendReceipt.mutateAsync({ orderId: order.id });
       const data = (result as any)?.data ?? result;
       if (data?.sent) {
         toast.success(t("pos.history.receiptSendSuccess"));
@@ -150,6 +175,18 @@ export function OrderHistoryDetailDialog({
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("pos.history.receiptSendFailed"));
+    }
+  };
+
+  const handleSendReceiptEmail = async () => {
+    if (!order) return;
+    const email = emailInput.trim();
+    if (!email) return;
+    try {
+      await sendReceiptEmail.mutateAsync({ orderId: order.id, email });
+      toast.success(t("cashierPayments.sendEmail.success"));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("cashierPayments.sendEmail.failed"));
     }
   };
 
@@ -193,10 +230,10 @@ export function OrderHistoryDetailDialog({
     }
   };
 
-  const handleRefund = async ({ amount, reason }: RefundConfirmData) => {
+  const handleRefund = async ({ amount, reason, tenderId }: RefundConfirmData) => {
     if (!order) return;
     try {
-      await refundOrder.mutateAsync({ orderId: order.id, amount, reason });
+      await refundOrder.mutateAsync({ orderId: order.id, amount, reason, tenderId });
       toast.success(t("pos.refund.success"));
       swap.close();
     } catch (error) {
@@ -254,6 +291,20 @@ export function OrderHistoryDetailDialog({
     ? Math.max(0, Number(order.total) - Number(order.refundAmount ?? 0))
     : 0;
 
+  // How the bill was actually settled. Empty for orders placed before
+  // multi-tender (there is no backfill) — those fall back to the single
+  // paymentMethod line, which is all this dialog ever showed. "OTHER" alone
+  // means nothing to anyone, so the cashier's typed note is the label.
+  const tenders: RefundTender[] = (order?.payments ?? []).map((payment) => ({
+    id: payment.id,
+    method:
+      payment.method === "OTHER" && payment.note
+        ? payment.note
+        : mapPaymentMethodLabel(t, payment.method),
+    amount: payment.amount,
+    refundedAmount: payment.refundedAmount,
+  }));
+
   return (
     <>
       <Dialog open={swap.baseOpen} onOpenChange={onOpenChange}>
@@ -264,6 +315,11 @@ export function OrderHistoryDetailDialog({
                 <DialogTitle className="flex flex-wrap items-center gap-2">
                   {t("pos.history.detailTitle")}
                   <span className="font-mono">{order.orderNumber}</span>
+                  {order.queueNumber != null && (
+                    <span className="bg-muted rounded-md px-2 py-0.5 text-sm font-bold tabular-nums">
+                      {formatQueueNumber(order.queueNumber)}
+                    </span>
+                  )}
                 </DialogTitle>
                 <DialogDescription>{formatDateTimeWithTimezone(order.orderDate)}</DialogDescription>
               </DialogHeader>
@@ -347,6 +403,53 @@ export function OrderHistoryDetailDialog({
                 )}
               </div>
 
+              {/* How it was paid. This dialog never showed the method at all
+                  before — which was survivable when there was exactly one, and
+                  is not now that a bill can be settled several ways. Legacy
+                  orders (no tender rows) still get a single line, from
+                  Order.paymentMethod. */}
+              <div className="flex flex-col gap-1 border-t pt-3 text-sm">
+                <p className="text-muted-foreground text-xs font-semibold uppercase">
+                  {t("cashierPayments.tenders.title")}
+                </p>
+                {tenders.length > 0 ? (
+                  tenders.map((tender, index) => {
+                    const row = order.payments?.[index];
+                    return (
+                      <div key={tender.id} className="flex flex-col gap-0.5">
+                        <div className="flex justify-between gap-4">
+                          <span>{tender.method}</span>
+                          <span className="font-medium">{formatPrice(tender.amount)}</span>
+                        </div>
+                        {row?.amountTendered != null && (
+                          <div className="text-muted-foreground flex justify-between gap-4 pl-3 text-xs">
+                            <span>{t("cashierPayments.tenders.tendered")}</span>
+                            <span>{formatPrice(row.amountTendered)}</span>
+                          </div>
+                        )}
+                        {row?.change != null && row.change > 0 && (
+                          <div className="text-muted-foreground flex justify-between gap-4 pl-3 text-xs">
+                            <span>{t("cashierPayments.tenders.change")}</span>
+                            <span>{formatPrice(row.change)}</span>
+                          </div>
+                        )}
+                        {tender.refundedAmount > 0 && (
+                          <div className="text-destructive flex justify-between gap-4 pl-3 text-xs">
+                            <span>{t("pos.refund.refunded")}</span>
+                            <span>-{formatPrice(tender.refundedAmount)}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex justify-between gap-4">
+                    <span>{mapPaymentMethodLabel(t, order.paymentMethod)}</span>
+                    <span className="font-medium">{formatPrice(Number(order.total))}</span>
+                  </div>
+                )}
+              </div>
+
               {order.paymentNote && (
                 <div className="text-sm">
                   <p className="text-muted-foreground text-xs font-semibold uppercase">
@@ -401,31 +504,71 @@ export function OrderHistoryDetailDialog({
                     )}
                     {sendReceipt.isPending
                       ? t("pos.history.sendingReceipt")
-                      : lastReceiptSend
+                      : lastWhatsappSend
                         ? t("pos.history.resendReceipt")
                         : t("pos.history.sendReceipt")}
                   </Button>
                 )}
-                {lastReceiptSend && (
+                {lastWhatsappSend && (
                   <span
                     className={cn(
                       "flex items-center gap-1 text-xs",
-                      lastReceiptSend.status === "SENT"
+                      lastWhatsappSend.status === "SENT"
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-destructive"
                     )}
                   >
-                    {lastReceiptSend.status === "SENT" ? (
+                    {lastWhatsappSend.status === "SENT" ? (
                       <CheckCircle2 className="h-3.5 w-3.5" />
                     ) : (
                       <XCircle className="h-3.5 w-3.5" />
                     )}
-                    {lastReceiptSend.status === "SENT"
+                    {lastWhatsappSend.status === "SENT"
                       ? t("pos.history.receiptSent")
                       : t("pos.history.receiptFailed")}{" "}
-                    · {formatDateTimeWithTimezone(lastReceiptSend.sentAt)}
+                    {/* Which address/number it went to — a store that sends
+                        both email and WhatsApp receipts cannot tell the two
+                        attempts apart from the status alone. */}
+                    {receiptSendRecipient(lastWhatsappSend)
+                      ? `(${receiptSendRecipient(lastWhatsappSend)}) `
+                      : ""}
+                    · {formatDateTimeWithTimezone(lastWhatsappSend.sentAt)}
                   </span>
                 )}
+              </div>
+
+              {/* Email the receipt. Prefilled from Order.customerEmail when
+                  the order has one — the column has existed forever and the
+                  POS never wrote it, so for a walk-in this send is what fills
+                  it in (see send-receipt-email.ts). */}
+              <div className="flex flex-col gap-2 border-t pt-3">
+                <span className="text-sm font-medium">{t("pos.receiptEmail.label")}</span>
+                <ReceiptEmailStatus sends={receiptSends} />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    type="email"
+                    inputMode="email"
+                    className="h-11 flex-1"
+                    placeholder={t("cashierPayments.sendEmail.placeholder")}
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                  />
+                  <Button
+                    variant="outline"
+                    className="h-11 gap-2 sm:w-auto"
+                    disabled={sendReceiptEmail.isPending || !emailInput.trim()}
+                    onClick={handleSendReceiptEmail}
+                  >
+                    {sendReceiptEmail.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Mail className="h-3.5 w-3.5" />
+                    )}
+                    {emailReceiptState === "sent"
+                      ? t("cashierPayments.sendEmail.resend")
+                      : t("cashierPayments.sendEmail.button")}
+                  </Button>
+                </div>
               </div>
 
               <SendReceiptWhatsApp
@@ -499,6 +642,7 @@ export function OrderHistoryDetailDialog({
         isSubmitting={refundOrder.isPending}
         orderNumber={order?.orderNumber}
         remainingAmount={remainingRefundable}
+        payments={tenders}
       />
     </>
   );

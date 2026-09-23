@@ -54,6 +54,10 @@ model User {
   customDevelopmentRequests CustomDevelopmentRequest[]
   business                  Business?
   subscription              Subscription?
+  // The StaffMember row this User is linked to as staff (if any) —
+  // distinct from `business`, which is what this User owns. A User can
+  // hold both at once (owns their own store, also works a shift elsewhere).
+  staffMember               StaffMember?
 
   @@map("user")
 }
@@ -160,6 +164,7 @@ model Store {
   aggregatorEmails               AggregatorEmail[]
   financeSettings                StoreFinanceSettings?
   staffSessions                  StaffSession[]
+  staffInvites                   StaffInvite[]
   wasteEntries                   WasteEntry[]
   pushSubscriptions              PushSubscription[]
   receiptSettings                StoreReceiptSettings?
@@ -209,8 +214,14 @@ model Store {
   standardWorkMinutesPerDay      Int                    @default(480)
   scheduleShifts                 ScheduleShift[]
   staffSchedules                 StaffSchedule[]
+  scheduleImages                 ScheduleImage[]
   attendanceRecords              AttendanceRecord[]
   cashMovements                  CashMovement[]
+  customers                      Customer[]
+  discountPresets                DiscountPreset[]
+  coupons                        Coupon[]
+  loyaltySettings                StoreLoyaltySettings?
+  orderQueueCounters             OrderQueueCounter[]
 
   @@index([businessId])
   @@map("stores")
@@ -353,6 +364,12 @@ model Subscription {
 model Product {
   id                String               @id @default(cuid())
   sku               String
+  // Optional scannable code (EAN/UPC/any text a scanner emits). The POS search
+  // box matches it exactly, so a keyboard-wedge barcode scanner (types the
+  // digits, then Enter) drops the item straight into the cart. Distinct from
+  // `sku`, which is the merchant's own required internal code. Unique per store
+  // when set — Postgres permits any number of NULLs under the constraint.
+  barcode           String?
   name              String
   description       String?
   category          String?
@@ -423,6 +440,7 @@ model Product {
   wasteEntries      WasteEntry[]
 
   @@unique([storeId, sku])
+  @@unique([storeId, barcode])
   @@index([storeId])
   @@index([category])
   @@index([department])
@@ -842,6 +860,22 @@ model Order {
   // computeOrderCharges() in src/lib/finance/order-charges.ts.
   discountAmount     Decimal            @default(0) @db.Decimal(10, 2)
   discountReason     String?
+  // Optional link to a Customer record (POS "Add customer"). customerName /
+  // customerPhone above stay the frozen snapshot shown on receipts, exactly as
+  // before — this only adds the join for lifetime-spend and loyalty points.
+  customerId         String?
+  // The Coupon redeemed on this order, if any. The discount it produced is
+  // already frozen into discountAmount/discountReason; this is the audit link
+  // (and what a cancel/refund reverses usage against).
+  couponId           String?
+  // Loyalty points burned on this order (their value is inside discountAmount)
+  // and points credited for it. pointsEarned doubles as the idempotency guard
+  // for the earn step — see loyalty.service.ts.
+  pointsRedeemed     Int                @default(0)
+  pointsEarned       Int                @default(0)
+  // Shared by every Order created from one "Split bill by items" action, so
+  // the bills can be grouped in history. Null for ordinary orders.
+  splitGroupId       String?
   // Staff-initiated refund (POS order history "Issue Refund" action) — never
   // written automatically. Does not reverse stock: in F&B a refund does not
   // mean the food returns to inventory.
@@ -861,6 +895,13 @@ model Order {
   // Nullable and unique — Postgres permits many NULLs, so every online order is
   // unaffected. The queue entry's own id is the key.
   clientRequestId    String?            @unique
+  // Call-out number shown on the orders list: #1, #2, … per store per
+  // store-local day (Business.timezone), handed out by allocateQueueNumber()
+  // (src/lib/services/order-queue-number.ts) when the row is created. Bills
+  // from one split share their group's number. Null on orders that predate it
+  // and on aggregator email imports (the platform's own code is the ticket
+  // there). Nullable with no default so old snapshots still restore.
+  queueNumber        Int?
   notes              String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -897,8 +938,13 @@ model Order {
   shift              Shift?             @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   stockMovements     StockMovement[]
   receiptSends       OrderReceiptSend[]
+  payments           OrderPayment[]
+  customer           Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  coupon             Coupon?            @relation(fields: [couponId], references: [id], onDelete: SetNull)
 
   @@index([storeId])
+  @@index([customerId])
+  @@index([splitGroupId])
   @@index([status])
   @@index([orderDate])
   @@index([dueDate])
@@ -934,6 +980,15 @@ model OrderItem {
   // so stock-deduction has a stable record of exactly what extra material to
   // subtract even if the option is later changed.
   selectedOptions    Json?
+  // POS "Custom Item" — an ad-hoc line the cashier typed (name + price) that has
+  // no MenuItem/Product behind it. Not to be confused with Product.productLine
+  // = CUSTOM (the store's optional second product line): unrelated feature.
+  isCustom           Boolean          @default(false)
+  // Which prep area a line with no MenuItem prints to (KITCHEN / BAR). Null for
+  // every ordinary line — those derive it from menuItem.department — and null
+  // for a Custom Item means "no prep area" (it starts SERVED, see
+  // resolveInitialOrderItemStatus).
+  department         Department?
   // Frozen Material.unitCost at the moment deductStockForOrder() recorded this
   // item's SALE StockMovement — same idea as WasteEntry.unitCostSnapshot, so
   // historical COGS/margin reports don't silently drift if ingredient prices
@@ -978,7 +1033,9 @@ model OrderReceiptSend {
   id              String                 @id @default(cuid())
   orderId         String
   channel         String                 @default("WHATSAPP")
-  recipientPhone  String
+  // Exactly one of recipientPhone (WHATSAPP) / recipientEmail (EMAIL) is set.
+  recipientPhone  String?
+  recipientEmail  String?
   status          OrderReceiptSendStatus
   fonnteMessageId String?
   errorMessage    String?
@@ -992,6 +1049,180 @@ model OrderReceiptSend {
 enum OrderReceiptSendStatus {
   SENT
   FAILED
+}
+
+// One row per store per store-local day; `last` is the highest Order.queueNumber
+// issued so far. Bumped with a single INSERT … ON CONFLICT DO UPDATE inside the
+// order-creating transaction, so two tills can never be handed the same number
+// and a rolled-back order gives its number back (no gaps).
+model OrderQueueCounter {
+  storeId String
+  // Store-local "YYYY-MM-DD" — a string, not a DateTime, so it can't drift with
+  // the server's own timezone.
+  day     String
+  last    Int    @default(0)
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, day])
+  @@map("order_queue_counters")
+}
+
+/// One tender of a paid Order. Written for EVERY new order (an ordinary
+/// single-method order gets one row), so readers can rely on it going forward;
+/// orders created before it have no rows, and every reader falls back to
+/// Order.paymentMethod / Order.total for those — there is deliberately no
+/// backfill. `amount` is what was applied to the bill and never includes cash
+/// change (that lives in `change`), so summing `amount` over an order's rows
+/// always reproduces Order.total. `refundedAmount` attributes a refund to the
+/// tender that actually gave the money back (cash refunds leave the drawer).
+model OrderPayment {
+  id             String        @id @default(cuid())
+  orderId        String
+  method         PaymentMethod
+  amount         Decimal       @db.Decimal(10, 2)
+  amountTendered Decimal?      @db.Decimal(10, 2)
+  change         Decimal?      @db.Decimal(10, 2)
+  // The cashier-typed label when method is OTHER.
+  note           String?
+  refundedAmount Decimal       @default(0) @db.Decimal(10, 2)
+  createdAt      DateTime      @default(now())
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([method])
+  @@map("order_payments")
+}
+
+enum DiscountType {
+  // value is 0–100.
+  PERCENT
+  // value is a LITERAL amount in the store's display currency — never
+  // IDR-converted, same rule as MenuItem.price and Order money.
+  FIXED
+}
+
+enum LoyaltyEntryType {
+  EARN
+  REDEEM
+  ADJUST
+  REVERSAL
+}
+
+/// A store's own customer record (POS "Add customer" / Back Office Customers).
+/// Deliberately holds NO cached spend/visit totals: lifetime spend, order count
+/// and last visit are aggregated from Order at read time, because Order is an
+/// immutable ledger and a cached figure silently drifts on refund/cancel. Only
+/// `points` is cached, and it is backed by the LoyaltyEntry ledger.
+model Customer {
+  id             String         @id @default(cuid())
+  storeId        String
+  name           String
+  // Normalized (E.164-ish) by the service before write. Unique per store when
+  // set; a customer with no phone is still allowed (walk-in with a name).
+  phone          String?
+  email          String?
+  notes          String?
+  points         Int            @default(0)
+  // Set the first time this customer earns points — "Loyalty member since".
+  memberSince    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  store          Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orders         Order[]
+  loyaltyEntries LoyaltyEntry[]
+
+  @@unique([storeId, phone])
+  @@index([storeId, name])
+  @@index([storeId, createdAt])
+  @@map("customers")
+}
+
+/// Ledger behind Customer.points. `points` is signed (EARN +, REDEEM −,
+/// REVERSAL either way, ADJUST either way). `orderId` is a plain reference, not
+/// a relation: orders are never hard-deleted and the customer cascade already
+/// covers store deletion.
+model LoyaltyEntry {
+  id         String           @id @default(cuid())
+  customerId String
+  orderId    String?
+  type       LoyaltyEntryType
+  points     Int
+  note       String?
+  createdAt  DateTime         @default(now())
+  customer   Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@index([orderId])
+  @@map("loyalty_entries")
+}
+
+/// A named, reusable discount the cashier can tap at POS ("Member", "Free",
+/// "Promo 17 Agustus"). Soft-deleted via isActive — past orders only ever
+/// froze the resulting amount + a reason string, never a foreign key.
+model DiscountPreset {
+  id        String       @id @default(cuid())
+  storeId   String
+  name      String
+  type      DiscountType
+  value     Decimal      @db.Decimal(10, 2)
+  isActive  Boolean      @default(true)
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  store     Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, isActive])
+  @@map("discount_presets")
+}
+
+/// A code the cashier types at POS. `usedCount` is bumped inside the order
+/// transaction with a conditional update (usedCount < maxUses) so two tills
+/// can't both redeem the last use. Soft-deleted via isActive.
+model Coupon {
+  id          String       @id @default(cuid())
+  storeId     String
+  // Stored uppercase; matched case-insensitively.
+  code        String
+  name        String?
+  type        DiscountType
+  value       Decimal      @db.Decimal(10, 2)
+  // Literal amount in the store's display currency (never IDR-converted).
+  minSubtotal Decimal?     @db.Decimal(10, 2)
+  maxUses     Int?
+  usedCount   Int          @default(0)
+  validFrom   DateTime?
+  validUntil  DateTime?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orders      Order[]
+
+  @@unique([storeId, code])
+  @@index([storeId, isActive])
+  @@map("coupons")
+}
+
+/// Per-store loyalty-points configuration — same 1:1 shape as
+/// StoreReceiptSettings (the GET resolves defaults and never returns null).
+/// Kept off StoreFinanceSettings on purpose: that row resolves through
+/// Business sync and updateFinanceSettings() throws for a synced store, whereas
+/// loyalty is always a per-store decision.
+model StoreLoyaltySettings {
+  id              String   @id @default(cuid())
+  storeId         String   @unique
+  enabled         Boolean  @default(false)
+  // Literal amount in the store's display currency that earns ONE point
+  // (never IDR-converted). 0 while unset; the service requires > 0 to enable.
+  spendPerPoint   Decimal  @default(0) @db.Decimal(12, 2)
+  // Literal value, in the same currency, of ONE point when redeemed.
+  pointValue      Decimal  @default(0) @db.Decimal(12, 4)
+  minRedeemPoints Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("store_loyalty_settings")
 }
 
 model Alert {
@@ -1243,6 +1474,12 @@ enum PaymentMethod {
   // Free-text fallback for anything not covered above — the actual label
   // the cashier typed is stored in Order.paymentNote.
   OTHER
+  // Set on Order.paymentMethod ONLY when the bill was paid with two or more
+  // tenders (equal split, or a mix such as cash + card). The per-tender
+  // breakdown lives in OrderPayment. Never selectable as a tender itself, never
+  // part of a store's enabledPaymentMethods, and has no processing-fee rate of
+  // its own — the fee is summed per tender. Single-tender orders are untouched.
+  SPLIT
 }
 
 /// Which payment rails a store/business's fee table and POS checkout offer
@@ -1393,7 +1630,18 @@ enum StockMode {
 enum PayType {
   HOURLY
   MONTHLY
+  SALES
   NONE
+}
+
+/// The "Contract" card's employment-type detail — purely descriptive
+/// (labor-cost math still runs off `payType`/`payRate` alone), same
+/// no-computed-consequence spirit as `customRoleLabel`.
+enum ContractType {
+  FREELANCE
+  PART_TIME
+  FULL_TIME
+  CONTRACT
 }
 
 enum BillingInterval {
@@ -1425,16 +1673,37 @@ model StaffMember {
   pin               String? // bcrypt hash — optional
   // Optional pay rate for labor-cost reporting — hours come from
   // AttendanceRecord/Shift timestamps, cost is hours × payRate for HOURLY,
-  // or a flat payRate/period for MONTHLY. NONE (default) means no rate is
-  // set (many roles are genuinely off-system payroll); reports must treat
-  // NONE as "unknown," not zero.
+  // a flat payRate/period for MONTHLY, or a payRate% of sales for SALES.
+  // NONE (default) means no rate is set (many roles are genuinely
+  // off-system payroll); reports must treat NONE as "unknown," not zero.
   payType           PayType            @default(NONE)
   payRate           Decimal?           @db.Decimal(12, 2)
+  // Employment type shown on the "Contract" card — purely descriptive,
+  // doesn't feed into any cost calculation (see ContractType's own comment).
+  contractType      ContractType?
   isActive          Boolean            @default(true)
   inviteStatus      String? // "pending" | "accepted" | null
+  // The real Epidom account this staff member can sign in as, once claimed
+  // via the invite-to-sign-in flow (src/app/api/staff-invite/[token]/complete).
+  // Nullable — most rows stay PIN-only forever. @unique caps this at one
+  // linked StaffMember per User platform-wide for v1 (see the plan's "Out of
+  // scope" — lifting this later needs its own multi-store-staff design
+  // pass), enforced here rather than left to UI convention, so a second
+  // claim attempt by the same User fails loudly (P2002) instead of quietly
+  // double-linking. onDelete: SetNull — purging a User account should
+  // unlink this row, not cascade-delete its PIN/attendance/shift history.
+  userId            String?            @unique
+  // Set the moment the claim actually completes (new password set, or an
+  // existing account's session matched the invite email) — this is the "did
+  // someone confirm ownership of THIS StaffMember row's email" claim,
+  // deliberately distinct from User.emailVerified (that account's own,
+  // unrelated Better Auth signup verification).
+  userLinkedAt      DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  staffInvites      StaffInvite[]
   shifts            Shift[]
   sessions          StaffSession[]
   staffSchedules    StaffSchedule[]
@@ -1444,6 +1713,39 @@ model StaffMember {
   @@unique([storeId, username])
   @@index([storeId])
   @@map("staff_members")
+}
+
+/// A single-use, time-limited token letting a StaffMember's contact email
+/// claim (or create) a real Epidom account login — see
+/// docs/staff-account-login.md / the plan this was built from. Deliberately
+/// its own table rather than reusing better-auth's own Verification model:
+/// that one is scoped to better-auth's internal flows (its own email-verify,
+/// its own password-reset) on User.email, and its row shape has no room for
+/// storeId/staffMemberId. Same reasoning already applied to keep
+/// StaffSession fully separate from better-auth's Session.
+model StaffInvite {
+  id              String      @id @default(cuid())
+  storeId         String
+  staffMemberId   String
+  // Snapshot of the target email at send time — StaffMember.email is
+  // mutable (an owner can edit it after sending), and re-deriving from the
+  // live row at click time could silently point an already-delivered link
+  // at a different mailbox than the one that actually received it.
+  email           String
+  // 32 bytes of CSPRNG randomness, base64url — same construction as
+  // StaffSession.token and better-auth's own Session.token. Never a cuid or
+  // other sequential id used as a bearer secret.
+  token           String      @unique
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  invitedByUserId String
+  createdAt       DateTime    @default(now())
+  store           Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember     StaffMember @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([staffMemberId])
+  @@map("staff_invites")
 }
 
 /// A server-verified "this browser is currently operating as this staff
@@ -1639,6 +1941,32 @@ model StaffSchedule {
   @@map("staff_schedules")
 }
 
+// The other way to publish a roster: a photo or screenshot of a schedule that
+// lives outside Epidom, uploaded by a manager and shown to EVERY staff member on
+// My Schedule for the dates it covers. Independent of StaffSchedule — a store
+// may use named blocks, an image, or both; staff see whatever exists.
+//
+// Covers an inclusive date range (same `@db.Date` semantics as
+// StaffSchedule.date, and the same range the roster grid publishes over).
+// Unique on that range so re-uploading for the same dates replaces the image
+// instead of stacking duplicates; different ranges may overlap.
+model ScheduleImage {
+  id        String   @id @default(cuid())
+  storeId   String
+  // A Vercel Blob URL produced by /api/upload — never a caller-supplied host.
+  imageUrl  String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, startDate, endDate])
+  @@index([storeId, endDate])
+  @@map("schedule_images")
+}
+
 // One clock event (clock-in, clock-out, or a reported absence). No DB-level
 // "one open clock-in" constraint, same precedent as Shift — enforced at the
 // app layer. Corrections never edit/delete a record — see the manager
@@ -1787,6 +2115,16 @@ model Storefront {
   grabfoodUrl    String?
   shopeefoodUrl  String?
   googleMapsUrl  String?
+  // Google review integration. Google has no API for posting a review on a
+  // customer's behalf, so this only stores what's needed to deep-link into
+  // Google's own review form (the customer signs in with their Google
+  // account there). Set from Back Office → Storefront → Google Reviews, which
+  // accepts a review link or a Place ID and normalizes it to these fields
+  // server-side — never write them from a raw client value.
+  googlePlaceId       String?
+  googleReviewUrl     String?
+  // Pauses the "Review us on Google" prompts without losing the connection.
+  googleReviewEnabled Boolean @default(true)
   customLinks    Json?
 
   isPublished         Boolean @default(false)
@@ -1813,6 +2151,7 @@ enum StorefrontEventType {
   MENU_VIEW // /[slug]/menu page load
   ITEM_VIEW // /[slug]/menu/[itemId] page load
   WHATSAPP_CLICK // click on the WhatsApp/"chat" CTA
+  REVIEW_CLICK // tap on the "Review us on Google" CTA (profile or order page)
 }
 
 model StorefrontEvent {

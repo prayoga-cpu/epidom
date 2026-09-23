@@ -7,7 +7,7 @@ export { WhatYouGetSection } from "./what-you-get-section";
 export { HowToUseSection } from "./how-to-use-section";
 export { DashboardPreviewSection } from "./dashboard-preview-section";
 export { UseCasesSection } from "./use-cases-section";
-export { SocialProofSection } from "./social-proof-section";
+export { CaseStudiesSection } from "./case-studies-section";
 export { PricingSection } from "./pricing-section";
 export { FaqSection } from "./faq-section";
 export { ClosingCtaSection } from "./closing-cta-section";

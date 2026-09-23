@@ -2,6 +2,7 @@ import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
 import { sendOrderNotification } from "@/lib/inngest/functions/order-notification";
 import { sendCustomerReceiptOnOrder } from "@/lib/inngest/functions/send-customer-receipt";
+import { sendReceiptEmailOnOrder } from "@/lib/inngest/functions/send-receipt-email-on-order";
 import { parseAggregatorEmail } from "@/lib/inngest/functions/parse-aggregator-email";
 import { sendFeedbackNotification } from "@/lib/inngest/functions/feedback-notification";
 import { sendCustomDevelopmentNotification } from "@/lib/inngest/functions/custom-development-notification";
@@ -23,6 +24,7 @@ export const { GET, POST, PUT } = serve({
   functions: [
     sendOrderNotification,
     sendCustomerReceiptOnOrder,
+    sendReceiptEmailOnOrder,
     parseAggregatorEmail,
     sendFeedbackNotification,
     sendCustomDevelopmentNotification,

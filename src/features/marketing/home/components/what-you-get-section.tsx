@@ -2,9 +2,10 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useRouter } from "next/navigation";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 export function WhatYouGetSection() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
 
   const features = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
@@ -58,7 +59,7 @@ export function WhatYouGetSection() {
             </p>
           </div>
           <button
-            onClick={() => router.push("/services")}
+            onClick={() => router.push(getLocalizedPath("/services", locale))}
             className="cursor-pointer transition-all hover:-translate-y-px"
             style={{
               background: "transparent",

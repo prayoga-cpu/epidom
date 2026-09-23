@@ -1,5 +1,6 @@
+import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { prisma } from "@/lib/prisma";
 import { ACTIVE_POS_QUEUE_FILTER } from "@/lib/constants/order-status";
 import { serializePosOrders } from "@/lib/server/serialize";
@@ -14,7 +15,7 @@ import { serializePosOrders } from "@/lib/server/serialize";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
 
   const session = await getSession();
@@ -22,11 +23,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return new Response("Unauthorized", { status: 401 });
   }
 
-  try {
-    await verifyStoreOwnership(storeId, session.user.id);
-  } catch {
-    return new Response("Forbidden", { status: 403 });
-  }
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, request);
+  if (storeAccess instanceof NextResponse) return storeAccess;
 
   const encoder = new TextEncoder();
 

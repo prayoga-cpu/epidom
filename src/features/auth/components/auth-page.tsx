@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -9,9 +9,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { EpidomLogo } from "@/features/marketing/shared/components/epidom-logo";
 import { LoginForm } from "../login/components/login-form";
 import { RegisterForm } from "../register/components/register-form";
+import { authModeHref, type AuthMode } from "../lib/auth-mode-href";
 import { AuthVisual } from "./auth-visual";
-
-type AuthMode = "login" | "register";
 
 function AuthFormSkeleton() {
   return (
@@ -41,16 +40,19 @@ function AuthFormSkeleton() {
  * matching `initialMode`) so every existing link to either URL keeps working;
  * switching modes here is an instant client-side toggle (shallow route replace
  * so the URL still reflects the mode, matches back/forward, and survives a refresh).
+ * The query string rides along, so `?next=` and `?callbackUrl=` survive a flip. `?email=`
+ * does not: it is personal data and never belongs in a URL (see authModeHref).
  */
 export function AuthPage({ initialMode }: { initialMode: AuthMode }) {
   const { t } = useI18n();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>(initialMode);
 
   const switchMode = (next: AuthMode) => {
     if (next === mode) return;
     setMode(next);
-    router.replace(next === "login" ? "/login" : "/register", { scroll: false });
+    router.replace(authModeHref(next, searchParams), { scroll: false });
   };
 
   return (
@@ -103,7 +105,7 @@ export function AuthPage({ initialMode }: { initialMode: AuthMode }) {
 
         <div className="mt-8 w-full shrink-0 text-center">
           <p className="text-xs" style={{ color: "rgba(251,249,228,0.4)" }}>
-            © 2025 Epidom. All rights reserved.
+            {t("auth.copyright").replace("{year}", String(new Date().getFullYear()))}
           </p>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
+import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
 
@@ -19,7 +19,7 @@ import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
  * department alongside Kitchen/Bar. Excluded entirely when the store hasn't
  * enabled the feature.
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: storeId } = await params;
 
   const session = await getSession();
@@ -29,8 +29,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     });
   }
 
-  const verification = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (verification instanceof NextResponse) return verification;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, request);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const verification = storeAccess.store;
 
   try {
     const storefront = await prisma.storefront.findUnique({
@@ -67,6 +68,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         product: {
           select: {
             productLine: true,
+            // Scannable code for the POS search box / barcode scanner. Surfaced
+            // as a top-level `barcode` below (a menu item with no Product has
+            // none), not left nested under `product`.
+            barcode: true,
             // Drives the POS "counted" chip. Deliberately labelled "counted",
             // never "available": it is the finished-goods balance, and a
             // BATCH_PRODUCED item at 0 counted is still perfectly sellable —
@@ -114,6 +119,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         return {
           ...i,
           price: Number(i.price),
+          // PosMenuItem.barcode — offline menu mirror persists it automatically.
+          barcode: i.product?.barcode ?? null,
           ...counted,
           ...(isCustom && { department: "CUSTOM" as const, isAvailable: true }),
         };

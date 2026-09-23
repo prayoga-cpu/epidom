@@ -42,6 +42,10 @@ export const PAYMENT_FEE_DEFAULTS: Record<PaymentMethod, PaymentFeeRate> = {
   GOOGLE_PAY: { percent: 0.029, flat: 2000 },
   // Unknown by definition — merchant should override if it carries a fee.
   OTHER: { percent: 0, flat: 0 },
+  // Not a rail: a bill paid with two or more tenders. It never carries a fee of
+  // its own — the processing fee is summed per tender (see order-payments.ts),
+  // each at its own method's rate. Present only to satisfy Record<PaymentMethod>.
+  SPLIT: { percent: 0, flat: 0 },
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -61,6 +65,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   APPLE_PAY: "Apple Pay",
   GOOGLE_PAY: "Google Pay",
   OTHER: "Other",
+  SPLIT: "Split payment",
 };
 
 /** Mirrors the schema-level default for a brand-new finance-settings row. */

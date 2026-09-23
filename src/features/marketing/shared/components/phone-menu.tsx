@@ -22,8 +22,8 @@ const CONTENT: Record<
   }
 > = {
   fr: {
-    shopName: "CAFÉ BRETONNE",
-    tagline: "Café de spécialité · Rennes",
+    shopName: "VOTRE CAFÉ",
+    tagline: "Café de spécialité · Votre ville",
     categories: ["Café", "Thé", "Pâtisserie", "Snacks"],
     items: [
       { n: "Latte Vanille", d: "Origine unique · option avoine", p: "4,50 €", c: "#7a4f2f" },
@@ -36,8 +36,8 @@ const CONTENT: Record<
     payLabel: "Payer CB →",
   },
   id: {
-    shopName: "WARUNG SARI",
-    tagline: "Specialty coffee · Bandung",
+    shopName: "KAFE ANDA",
+    tagline: "Kopi spesialti · Kota Anda",
     categories: ["Coffee", "Tea", "Pastry", "Snacks"],
     items: [
       { n: "Vanilla Latte", d: "Single origin · oat option", p: "Rp 38k", c: "#7a4f2f" },
@@ -50,8 +50,8 @@ const CONTENT: Record<
     payLabel: "Pay QRIS →",
   },
   en: {
-    shopName: "THE GRIND HOUSE",
-    tagline: "Specialty coffee · Worldwide",
+    shopName: "YOUR CAFÉ",
+    tagline: "Specialty coffee · Your city",
     categories: ["Coffee", "Tea", "Pastry", "Snacks"],
     items: [
       { n: "Vanilla Latte", d: "Single origin · oat option", p: "$4.50", c: "#7a4f2f" },

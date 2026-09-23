@@ -35,6 +35,11 @@ const REPORT_ORDER_SELECT = {
   refundAmount: true,
   total: true,
   orderDate: true,
+  // Per-tender breakdown, so the payment-method block attributes a split bill
+  // to the methods that actually took the money instead of printing "SPLIT".
+  // Empty for orders placed before multi-tender — the aggregator falls back to
+  // paymentMethod/total for those.
+  payments: { select: { method: true, amount: true } },
   items: {
     select: {
       name: true,

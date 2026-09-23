@@ -60,11 +60,26 @@ export function channelFilter(source: string | null): Prisma.OrderWhereInput {
 }
 
 /**
- * `Order` where-clause fragment for the payment-method filter
- * (Order.paymentMethod). Whole-order-level, same applicability as
- * channelFilter.
+ * `Order` where-clause fragment for the payment-method filter.
+ *
+ * Matches either the whole-order `paymentMethod` (single-tender and every
+ * order placed before `OrderPayment` existed) OR any one of the order's
+ * tenders — so filtering by CASH returns a bill that was settled half in cash
+ * and half by card, whose `paymentMethod` is the literal "SPLIT".
+ *
+ * SPLIT is itself a legal value here and means "bills settled with two or more
+ * tenders": no tender is ever SPLIT, so only the first branch can match. It is
+ * deliberately kept OUT of the UI filter lists (QUEUE_PAYMENT_METHODS,
+ * order-history-tab's PAYMENT_METHOD_VALUES) — a cashier picking a payment
+ * method means an actual way of paying — but a hand-written query string still
+ * does something sensible instead of nothing.
  */
 export function paymentMethodFilter(method: string | null): Prisma.OrderWhereInput {
   if (!method) return {};
-  return { paymentMethod: method as PaymentMethod };
+  return {
+    OR: [
+      { paymentMethod: method as PaymentMethod },
+      { payments: { some: { method: method as PaymentMethod } } },
+    ],
+  };
 }

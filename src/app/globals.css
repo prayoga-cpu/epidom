@@ -776,40 +776,47 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
 
 :root {
   --radius: 0.625rem;
+  /* Light mode = cream surfaces + the SAME navy palette dark mode is built from
+     (--epi-navy-*), in place of the neutral greys shadcn ships with — so both
+     themes read as navy, cream and gold. Solids come straight from the palette.
+     The muted text stays SOLID (a translucent tone would vanish on a navy fill);
+     borders are navy mixed with transparent so they sit right on cream, white
+     and muted surfaces alike. Every token here is overridden in `.dark` below,
+     so none of this reaches dark mode. */
   --background: #fbf9e4;
-  --foreground: oklch(0.145 0 0);
+  --foreground: var(--epi-navy-900); /* #060F1B — navy ink, not neutral black */
   --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: var(--epi-navy-900);
   --popover: #ffffff;
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.35 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --popover-foreground: var(--epi-navy-900);
+  --primary: var(--epi-navy-800); /* #0E1F38 — was neutral grey oklch(0.35 0 0) */
+  --primary-foreground: var(--epi-cream-50); /* #FBF9E4 — the cream dark mode text uses */
+  --secondary: color-mix(in srgb, var(--epi-navy-800) 8%, #ffffff);
+  --secondary-foreground: var(--epi-navy-800);
   --muted: #eee9c4;
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: color-mix(in srgb, var(--epi-navy-800) 68%, #ffffff); /* ≈ #5B6678, ≥4.8:1 on every light surface */
   --accent: #f5f4dc;
-  --accent-foreground: oklch(0.205 0 0);
+  --accent-foreground: var(--epi-navy-800);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: color-mix(in srgb, var(--epi-navy-800) 12%, transparent);
+  --input: color-mix(in srgb, var(--epi-navy-800) 12%, transparent);
+  --ring: var(--epi-navy-500); /* #2A5A8C */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --chart-grid: oklch(0.556 0 0 / 0.1);
-  --chart-axis: oklch(0.556 0 0 / 0.18);
+  --chart-grid: color-mix(in srgb, var(--epi-navy-800) 10%, transparent);
+  --chart-axis: color-mix(in srgb, var(--epi-navy-800) 18%, transparent);
   --chart-line: var(--epi-gold-500);
   --sidebar: #f5f4dc;
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-foreground: var(--epi-navy-900);
+  --sidebar-primary: var(--epi-navy-800);
+  --sidebar-primary-foreground: var(--epi-cream-50);
+  --sidebar-accent: color-mix(in srgb, var(--epi-navy-800) 8%, #ffffff);
+  --sidebar-accent-foreground: var(--epi-navy-800);
+  --sidebar-border: color-mix(in srgb, var(--epi-navy-800) 12%, transparent);
+  --sidebar-ring: var(--epi-navy-500);
 
   /* Design Tokens */
   --color-brand-primary: #444444;

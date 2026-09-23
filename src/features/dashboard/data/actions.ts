@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ENTITY_UNIQUE_FIELDS } from "@/lib/ai/import-schema";
 import { storefrontService } from "@/lib/services/storefront.service";
+import { parseImportedBarcode } from "@/lib/utils/barcode";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -385,6 +386,10 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
       try {
         const name = String(item.name).trim();
         const sku = item.sku || undefined;
+        // Optional scan code (a spreadsheet often hands it over as a NUMBER; a
+        // blank cell means "none"). Held to the same rule as the product form.
+        const { barcode, error: barcodeError } = parseImportedBarcode(item.barcode);
+        if (barcodeError) throw new Error(barcodeError);
 
         // Check for existing product by Name (primary match) or SKU (secondary)
         // We verify storeId and Insensitive Name match
@@ -404,9 +409,27 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
           });
         }
 
+        // Barcode is unique per store. A collision must FAIL THIS ROW with a
+        // readable reason instead of surfacing Prisma's raw P2002 text (or, worse,
+        // silently dropping the code and importing a product a scanner can't find).
+        if (barcode) {
+          const taken = await prisma.product.findFirst({
+            where: {
+              storeId,
+              barcode,
+              ...(existingProduct && { id: { not: existingProduct.id } }),
+            },
+            select: { id: true },
+          });
+          if (taken) throw new Error(`Barcode "${barcode}" is already used by another product`);
+        }
+
         const productData = {
           name,
           sku,
+          // Left out (not nulled) when absent, so re-importing a sheet without the
+          // column never wipes barcodes already set on existing products.
+          ...(barcode && { barcode }),
           description: item.description || undefined,
           category: item.category || undefined,
           unit: item.unit || "pcs",

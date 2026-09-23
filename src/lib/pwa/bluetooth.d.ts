@@ -19,6 +19,9 @@ interface BluetoothRemoteGATTServer {
 }
 
 interface BluetoothDevice extends EventTarget {
+  /** Stable per origin + physical device — how two roles are recognised as one printer. */
+  id: string;
+  name?: string;
   gatt?: BluetoothRemoteGATTServer;
 }
 

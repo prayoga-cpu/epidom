@@ -38,11 +38,16 @@ export function useRegister() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: async (data: RegisterInput) => {
+    // `callbackURL` is where the emailed verification link lands after
+    // auto-sign-in — set when signup was started from a deep link that must
+    // survive it (e.g. accepting a store transfer). Caller is responsible for
+    // passing only a validated internal path (see safeInternalPath).
+    mutationFn: async (data: RegisterInput & { callbackURL?: string }) => {
       const { data: session, error } = await authClient.signUp.email({
         email: data.email,
         password: data.password,
         name: data.name,
+        ...(data.callbackURL ? { callbackURL: data.callbackURL } : {}),
       });
 
       if (error) {
@@ -50,7 +55,7 @@ export function useRegister() {
       }
 
       // Return email for redirect
-      return { session, email: data.email };
+      return { session, email: data.email, callbackURL: data.callbackURL };
     },
     onSuccess: (data) => {
       // Standard Meta event — lets Meta optimize ad campaigns against actual
@@ -66,8 +71,10 @@ export function useRegister() {
       // so it also feeds Google Ads conversion tracking if/when linked.
       trackConversion("sign_up", { event_label: "email", method: "email" });
 
-      // Redirect to verify-email-sent page with email parameter
-      router.push(`/verify-email-sent?email=${encodeURIComponent(data.email)}`);
+      // Redirect to verify-email-sent page with email parameter (and the
+      // deep link to resume after verification, if there is one)
+      const next = data.callbackURL ? `&next=${encodeURIComponent(data.callbackURL)}` : "";
+      router.push(`/verify-email-sent?email=${encodeURIComponent(data.email)}${next}`);
     },
   });
 }

@@ -77,7 +77,19 @@ describe("paymentMethodFilter", () => {
     expect(paymentMethodFilter(null)).toEqual({});
   });
 
-  it("matches a specific payment method", () => {
-    expect(paymentMethodFilter("QRIS")).toEqual({ paymentMethod: "QRIS" });
+  it("matches the whole-order method OR any single tender", () => {
+    // A bill settled cash + card carries paymentMethod "SPLIT", so matching
+    // only the order-level column would hide it from every method filter.
+    expect(paymentMethodFilter("QRIS")).toEqual({
+      OR: [{ paymentMethod: "QRIS" }, { payments: { some: { method: "QRIS" } } }],
+    });
+  });
+
+  it("accepts SPLIT, which selects multi-tender bills", () => {
+    // No tender is ever SPLIT, so only the first branch can match — that is
+    // exactly "orders paid with two or more tenders". The UI never offers it.
+    expect(paymentMethodFilter("SPLIT")).toEqual({
+      OR: [{ paymentMethod: "SPLIT" }, { payments: { some: { method: "SPLIT" } } }],
+    });
   });
 });

@@ -19,19 +19,21 @@ import {
   Search,
   X,
   LayoutGrid,
+  LayoutPanelLeft,
   Rows3,
   Kanban,
   type LucideIcon,
 } from "lucide-react";
 import {
+  QUEUE_DATE_PRESETS,
   QUEUE_FILTER_KEYS,
   QUEUE_PAYMENT_METHODS,
   QUEUE_STATUSES,
+  type QueueDatePreset,
   type QueueDepartmentFilter,
   type QueueFilterKey,
   type QueuePaymentMethodFilter,
   type QueueSortBy,
-  type QueueSourceFilter,
   type QueueStatusFilter,
   type QueueTypeFilter,
   type QueueView,
@@ -40,6 +42,7 @@ import { mapPaymentMethodLabel } from "../lib/order-status-display";
 import { UnpaidFilterToggle } from "./unpaid-filter-toggle";
 import { AddFilterMenu } from "./add-filter-menu";
 import { RemovableFilter } from "./removable-filter";
+import { ResetToTodayButton } from "./reset-to-today-button";
 
 interface FilterOption {
   id: string;
@@ -49,7 +52,8 @@ interface FilterOption {
   isActive?: boolean;
 }
 
-const STATUS_META: Record<
+// Shared with the split view's status rail so a status looks the same in both.
+export const STATUS_META: Record<
   Exclude<QueueStatusFilter, "ALL">,
   { icon: LucideIcon; color: string; ring: string }
 > = {
@@ -60,6 +64,7 @@ const STATUS_META: Record<
 };
 
 const VIEW_OPTIONS: { key: QueueView; icon: LucideIcon }[] = [
+  { key: "split", icon: LayoutPanelLeft },
   { key: "grid", icon: LayoutGrid },
   { key: "compact", icon: Rows3 },
   { key: "board", icon: Kanban },
@@ -69,8 +74,11 @@ interface PosOrderQueueToolbarProps {
   statusCounts: Record<string, number>;
   statusFilter: QueueStatusFilter;
   onStatusFilterChange: (value: QueueStatusFilter) => void;
-  sourceFilter: QueueSourceFilter;
-  onSourceFilterChange: (value: QueueSourceFilter) => void;
+  /**
+   * The big status tiles. The split view has its own status rail, so it turns
+   * these off rather than showing the same counts twice. Defaults to shown.
+   */
+  showStatusTiles?: boolean;
   typeFilter: QueueTypeFilter;
   onTypeFilterChange: (value: QueueTypeFilter) => void;
   departmentFilter: QueueDepartmentFilter;
@@ -98,14 +106,16 @@ interface PosOrderQueueToolbarProps {
   onViewChange: (value: QueueView) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  /** Which day(s) the queue is about — always applied, today unless changed. */
+  datePreset: QueueDatePreset;
+  onDatePresetChange: (value: QueueDatePreset) => void;
 }
 
 export function PosOrderQueueToolbar({
   statusCounts,
   statusFilter,
   onStatusFilterChange,
-  sourceFilter,
-  onSourceFilterChange,
+  showStatusTiles = true,
   typeFilter,
   onTypeFilterChange,
   departmentFilter,
@@ -133,6 +143,8 @@ export function PosOrderQueueToolbar({
   onViewChange,
   hasActiveFilters,
   onClearFilters,
+  datePreset,
+  onDatePresetChange,
 }: PosOrderQueueToolbarProps) {
   const { t } = useI18n();
 
@@ -144,49 +156,52 @@ export function PosOrderQueueToolbar({
   return (
     <div className="flex flex-col gap-3">
       {/* Status tiles — click to filter; click again to clear */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-        <button
-          type="button"
-          onClick={() => onStatusFilterChange("ALL")}
-          className={cn(
-            "border-border bg-card rounded-lg border p-2.5 text-left transition-all hover:border-foreground/20",
-            statusFilter === "ALL" && "ring-primary/50 ring-2 ring-offset-2 ring-offset-background"
-          )}
-        >
-          <div className="mb-1 flex items-center justify-between">
-            <p className="text-muted-foreground text-xs">{t("pos.queue.all")}</p>
-            <Inbox className="text-muted-foreground h-3.5 w-3.5" />
-          </div>
-          <p className="text-foreground text-lg font-bold">{statusCounts.ALL ?? 0}</p>
-        </button>
-        {QUEUE_STATUSES.map((status) => {
-          const meta = STATUS_META[status];
-          const Icon = meta.icon;
-          const active = statusFilter === status;
-          return (
-            <button
-              key={status}
-              type="button"
-              onClick={() => onStatusFilterChange(active ? "ALL" : status)}
-              className={cn(
-                "border-border bg-card rounded-lg border p-2.5 text-left transition-all hover:border-foreground/20",
-                active && `ring-2 ring-offset-2 ring-offset-background ${meta.ring}`
-              )}
-            >
-              <div className="mb-1 flex items-center justify-between">
-                <p className="text-muted-foreground truncate text-xs">{mapStatusLabel(status)}</p>
-                <Icon className={cn("h-3.5 w-3.5 shrink-0", meta.color)} />
-              </div>
-              <p className="text-foreground text-lg font-bold">{statusCounts[status] ?? 0}</p>
-            </button>
-          );
-        })}
-      </div>
+      {showStatusTiles && (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          <button
+            type="button"
+            onClick={() => onStatusFilterChange("ALL")}
+            className={cn(
+              "border-border bg-card hover:border-foreground/20 rounded-lg border p-2.5 text-left transition-all",
+              statusFilter === "ALL" &&
+                "ring-primary/50 ring-offset-background ring-2 ring-offset-2"
+            )}
+          >
+            <div className="mb-1 flex items-center justify-between">
+              <p className="text-muted-foreground text-xs">{t("pos.queue.all")}</p>
+              <Inbox className="text-muted-foreground h-3.5 w-3.5" />
+            </div>
+            <p className="text-foreground text-lg font-bold">{statusCounts.ALL ?? 0}</p>
+          </button>
+          {QUEUE_STATUSES.map((status) => {
+            const meta = STATUS_META[status];
+            const Icon = meta.icon;
+            const active = statusFilter === status;
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => onStatusFilterChange(active ? "ALL" : status)}
+                className={cn(
+                  "border-border bg-card hover:border-foreground/20 rounded-lg border p-2.5 text-left transition-all",
+                  active && `ring-offset-background ring-2 ring-offset-2 ${meta.ring}`
+                )}
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-muted-foreground truncate text-xs">{mapStatusLabel(status)}</p>
+                  <Icon className={cn("h-3.5 w-3.5 shrink-0", meta.color)} />
+                </div>
+                <p className="text-foreground text-lg font-bold">{statusCounts[status] ?? 0}</p>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Search, filters, sort, view switcher */}
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-2">
-          <div className="relative min-w-[180px] max-w-xs flex-1">
+          <div className="relative max-w-xs min-w-[180px] flex-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
             <Input
               value={search}
@@ -201,22 +216,33 @@ export function PosOrderQueueToolbar({
             count={unpaidCount}
             className="h-8 px-2.5 text-xs"
           />
-          {activeFilterKeys.includes("source") && (
-            <RemovableFilter onRemove={() => onRemoveFilter("source")}>
-              <Select
-                value={sourceFilter}
-                onValueChange={(v) => onSourceFilterChange(v as QueueSourceFilter)}
-              >
-                <SelectTrigger size="sm" className="w-[140px] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">{t("pos.queue.filterAllSources")}</SelectItem>
-                  <SelectItem value="POS">{t("pos.source.walkIn")}</SelectItem>
-                  <SelectItem value="ONLINE">{t("pos.source.online")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </RemovableFilter>
+          {/* Always shown, never removable: the date is always applied (Today by
+              default), so it stays visible — orders outside it are hidden, and a
+              control that could vanish would leave no way to see why. */}
+          <Select
+            value={datePreset}
+            onValueChange={(v) => onDatePresetChange(v as QueueDatePreset)}
+          >
+            <SelectTrigger
+              size="sm"
+              className="w-[140px] text-xs"
+              aria-label={t("pos.filters.dateRange")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {QUEUE_DATE_PRESETS.map((preset) => (
+                <SelectItem key={preset} value={preset}>
+                  {t(`pos.history.dateRange.${preset}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {datePreset !== "today" && (
+            <ResetToTodayButton
+              onClick={() => onDatePresetChange("today")}
+              className="h-8 px-2 text-xs"
+            />
           )}
           {activeFilterKeys.includes("type") && (
             <RemovableFilter onRemove={() => onRemoveFilter("type")}>

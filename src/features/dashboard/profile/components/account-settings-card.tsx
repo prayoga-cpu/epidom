@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { signOut } from "@/lib/auth-client";
+import { SUPPORT_MAILTO } from "@/lib/constants/contact";
 import { useOwnerPinStatus } from "@/features/dashboard/shared/hooks/use-owner-pin";
 import { SetOwnerPinDialog } from "@/features/dashboard/shared/set-owner-pin-dialog";
 import { useConfirm } from "@/components/ui/use-confirm";
@@ -293,7 +294,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                         {t("profile.accountSettings.pastGracePeriodDescription")}
                       </p>
                       <Button variant="outline" className="gap-2" asChild>
-                        <a href="mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io">
+                        <a href={SUPPORT_MAILTO}>
                           <Mail className="h-4 w-4" />
                           {t("profile.accountSettings.contactSupportToRecover")}
                         </a>

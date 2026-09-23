@@ -2,6 +2,13 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useEffect } from "react";
 
+/**
+ * The `staffId` PosStaffGate / StoreAccessGate log the account owner in as when
+ * no staff persona was picked. It is a label, not a `StaffMember` id, so nothing
+ * that needs a real staff row (a till session, say) can use it directly.
+ */
+export const OWNER_PERSONA_ID = "owner";
+
 export interface PosSessionState {
   storeId: string | null;
   staffId: string | null;
@@ -19,6 +26,18 @@ export interface PosSessionState {
    * than the once-a-day gate everywhere else) — see PIN_REVERIFY_MS there.
    */
   pinVerifiedAt: number | null;
+  /**
+   * True while the "Switch Account" picker is showing on top of an
+   * otherwise still-active session — deliberately NOT persisted (see
+   * `partialize` below): reopening the app later should never resume
+   * mid-switch. Lets StoreAccessGate/PosStaffGate show the picker without
+   * clearing the current session first, so backing out of it (or the picker
+   * itself failing to load) needs no PIN re-entry — only an actual
+   * successful login()/logout() call ends it.
+   */
+  pickerOpen: boolean;
+  openPicker: () => void;
+  closePicker: () => void;
   login: (params: {
     storeId: string;
     staffId: string;
@@ -28,7 +47,8 @@ export interface PosSessionState {
     allowedPages?: string[] | null;
   }) => void;
   logout: () => void;
-  setShiftId: (shiftId: string) => void;
+  /** Null once the persona's till is closed, so later sales don't attach to it. */
+  setShiftId: (shiftId: string | null) => void;
   /** Refreshes pinVerifiedAt after a lightweight re-verification (no identity/page changes). */
   touchPinVerified: () => void;
   /**
@@ -52,6 +72,7 @@ export const usePosSession = create<PosSessionState>()(
       isActive: false,
       loginDate: null,
       pinVerifiedAt: null,
+      pickerOpen: false,
 
       login: ({ storeId, staffId, staffName, staffRole, shiftId, allowedPages }) =>
         set({
@@ -64,6 +85,10 @@ export const usePosSession = create<PosSessionState>()(
           isActive: true,
           loginDate: new Date().toDateString(),
           pinVerifiedAt: Date.now(),
+          // Any successful "become this persona" naturally dismisses the
+          // picker, whichever call site got there — no need for every caller
+          // to remember to close it separately.
+          pickerOpen: false,
         }),
 
       logout: () =>
@@ -77,7 +102,11 @@ export const usePosSession = create<PosSessionState>()(
           isActive: false,
           loginDate: null,
           pinVerifiedAt: null,
+          pickerOpen: false,
         }),
+
+      openPicker: () => set({ pickerOpen: true }),
+      closePicker: () => set({ pickerOpen: false }),
 
       setShiftId: (shiftId) => set({ shiftId }),
 
@@ -101,7 +130,14 @@ export const usePosSession = create<PosSessionState>()(
           return {};
         }),
     }),
-    { name: "epidom-pos-session" }
+    {
+      name: "epidom-pos-session",
+      // pickerOpen is UI-only, mid-action state — persisting it would mean a
+      // tab closed mid-"Switch Account" reopens straight into the picker
+      // (or, worse, a picker with no session under it to fall back on if the
+      // rest of the persisted state doesn't round-trip the same way).
+      partialize: ({ pickerOpen: _pickerOpen, ...rest }) => rest,
+    }
   )
 );
 

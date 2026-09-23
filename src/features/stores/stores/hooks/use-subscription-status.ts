@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 
 /**
  * Subscription plan type
@@ -52,10 +53,22 @@ export interface SubscriptionStatusResponse {
  * @returns Subscription status data with loading and error states
  */
 export function useSubscriptionStatus() {
+  // Inside a store, the plan that applies is the STORE'S (its owner's) — which
+  // for the owner is their own subscription, and for a linked staff account
+  // (no subscription of its own) is the only correct answer. Outside a store
+  // (/stores, pricing, ...) there is no store to scope to and the account's
+  // own subscription is what's meant, as before.
+  const params = useParams<{ storeId?: string }>();
+  const storeId = params?.storeId;
+
   return useQuery<SubscriptionStatusResponse>({
-    queryKey: ["subscription-status"],
+    queryKey: ["subscription-status", storeId ?? null],
     queryFn: async () => {
-      const response = await fetch("/api/subscriptions/status");
+      const response = await fetch(
+        storeId
+          ? `/api/subscriptions/status?storeId=${encodeURIComponent(storeId)}`
+          : "/api/subscriptions/status"
+      );
 
       if (!response.ok) {
         if (response.status === 401) {

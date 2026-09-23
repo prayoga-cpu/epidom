@@ -6,6 +6,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { PosDashboard } from "@/features/marketing/shared/components/pos-dashboard";
 import { PhoneMenu } from "@/features/marketing/shared/components/phone-menu";
 import { trackEvent } from "@/lib/analytics";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 // Entrance choreography: pill, then each headline line, then lede/CTAs —
 // each child starts as the previous one is still finishing, matching the
@@ -25,7 +26,7 @@ export function HeroSection({
   exampleStorefrontSlug?: string | null;
 }) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <section
@@ -171,7 +172,7 @@ export function HeroSection({
                     event_category: "engagement",
                     event_label: "hero_see_product",
                   });
-                  router.push("/services");
+                  router.push(getLocalizedPath("/services", locale));
                 }}
                 className="cursor-pointer transition-all hover:-translate-y-px"
                 style={{
@@ -224,25 +225,21 @@ export function HeroSection({
               </motion.a>
             )}
 
-            {/* Proof stats */}
+            {/* Product facts: each one is checkable in the pricing and locale code, not a usage claim.
+                Two columns on a phone and in the narrow desktop column, four equal columns
+                wherever there is room, so no fact is ever left alone on a second row
+                (French labels are the longest and used to orphan the fourth). */}
             <motion.div
               variants={fadeUp}
-              style={{
-                display: "flex",
-                gap: 36,
-                marginTop: 44,
-                paddingTop: 28,
-                borderTop: "1px solid rgba(255,255,255,0.10)",
-                flexWrap: "wrap",
-              }}
+              className="mt-11 grid grid-cols-2 gap-x-6 gap-y-7 border-t border-white/10 pt-7 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4"
             >
               {[
-                { v: t("redesign.hero.proof1Val"), l: t("redesign.hero.proof1Label") },
-                { v: t("redesign.hero.proof2Val"), l: t("redesign.hero.proof2Label") },
-                { v: t("redesign.hero.proof3Val"), l: t("redesign.hero.proof3Label") },
-                { v: t("redesign.hero.proof4Val"), l: t("redesign.hero.proof4Label") },
+                { v: t("redesign.hero.fact1Val"), l: t("redesign.hero.fact1Label") },
+                { v: t("redesign.hero.fact2Val"), l: t("redesign.hero.fact2Label") },
+                { v: t("redesign.hero.fact3Val"), l: t("redesign.hero.fact3Label") },
+                { v: t("redesign.hero.fact4Val"), l: t("redesign.hero.fact4Label") },
               ].map((p, i) => (
-                <div key={i} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div key={i} className="flex min-w-0 flex-col gap-1">
                   <div
                     className="epi-display"
                     style={{ fontSize: 36, color: "var(--epi-cream-50)", letterSpacing: "0.02em" }}

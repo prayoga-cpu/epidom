@@ -14,11 +14,22 @@ import { ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
+import { isUnauthorizedError } from "@/lib/api/unauthorized";
+import type { PlanTier } from "@/lib/plans/entitlements";
 
 export function StoresContainer() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const { data: stores, isLoading, error, refetch } = useStores();
+  // The account has no live session — it expired or was revoked while this page
+  // was open (the proxy only checks that a session cookie exists, and the layout
+  // only guards a fresh load). Signing in is the only way forward, so go there
+  // rather than park on a "Try Again" that can never work. Hard navigation, for
+  // the same reason as the onboarding redirect below.
+  const unauthorized = isUnauthorizedError(error);
+  useEffect(() => {
+    if (unauthorized) window.location.href = "/login";
+  }, [unauthorized]);
   const { data: subscriptionStatus, isLoading: isLoadingSubscription } = useSubscriptionStatus();
   const [isActivating, setIsActivating] = useState(false);
   const { data: session } = useSession();
@@ -27,6 +38,9 @@ export function StoresContainer() {
   // Email check only (no DB isAdmin flag) — same simplification the old
   // top-nav Admin badge used; this card replaces that badge.
   const isAdmin = mounted && isAdminEmail(session?.user?.email);
+  // A linked staff login: every store it can see is one it works at, so there
+  // is no plan of its own to upgrade and no store of its own to create here.
+  const isStaffOnly = !!stores?.length && stores.every((store) => store.accessRole === "staff");
 
   async function handleActivateFree() {
     setIsActivating(true);
@@ -59,9 +73,11 @@ export function StoresContainer() {
           const subscription = profile.subscription;
 
           // Redirect to onboarding only if the user has no business set up at all
-          // (subscription is always active now via free plan provisioning)
+          // (subscription is always active now via free plan provisioning) — and
+          // isn't a linked staff login: staff have no business by design, and
+          // onboarding is the owner's merchant setup, not theirs.
           const hasStore = business?.stores?.length > 0;
-          if (!business || !hasStore) {
+          if ((!business || !hasStore) && !profile.staffLink) {
             // Hard navigation, not router.replace(): a soft/client navigation here
             // can replay a stale cached "redirect to /login" from an earlier
             // unauthenticated visit to /onboarding (Next.js client router cache),
@@ -86,11 +102,13 @@ export function StoresContainer() {
     // - Mobile: w-full (matches button's w-full)
     // - Desktop: fixed width that approximates button's content-based width (w-auto)
     // Text "Subscribe to Create Store" + ArrowRight icon + padding ≈ 200px (sm) to 220px (md)
-    if (isLoadingSubscription) {
+    if (isLoadingSubscription || isLoading) {
       return (
         <Skeleton className="h-9 w-full rounded-full sm:h-10 sm:w-[200px] md:h-11 md:w-[220px]" />
       );
     }
+
+    if (isStaffOnly) return null;
 
     const hasSubscription = subscriptionStatus?.hasSubscription ?? false;
     const subscription = subscriptionStatus?.subscription;
@@ -192,7 +210,7 @@ export function StoresContainer() {
           )}
 
           {/* Error State */}
-          {error && !isLoading && (
+          {error && !isLoading && !unauthorized && (
             <div className="animate-slide-up-delayed flex min-h-[calc((100vh-250px)/var(--app-zoom,1))] items-center justify-center px-4 py-8 text-center sm:min-h-[calc((100vh-300px)/var(--app-zoom,1))] sm:py-12 md:py-16">
               <div className="w-full max-w-md">
                 <AlertCircle className="text-destructive mx-auto mb-4 h-10 w-10 sm:h-12 sm:w-12" />
@@ -253,8 +271,22 @@ export function StoresContainer() {
                     // Only set blocked if subscription status is loaded (not undefined)
                     // This prevents showing blocked state during loading
                     const isBlocked = subscriptionStatus !== undefined && !hasActiveSubscription;
+                    // One subscription per business, so every store under it
+                    // shares the same plan — cheap to compute here rather
+                    // than a per-card query.
+                    const currentPlan: PlanTier =
+                      (subscriptionStatus?.subscription?.plan as PlanTier) ?? "FREE";
 
-                    return <StoreCard key={store.id} store={store} isBlocked={isBlocked} />;
+                    return (
+                      <StoreCard
+                        key={store.id}
+                        store={store}
+                        // The plan that gates a staff card is the OWNER's, which
+                        // the POS layout enforces on entry — never this account's.
+                        isBlocked={store.accessRole === "staff" ? false : isBlocked}
+                        currentPlan={currentPlan}
+                      />
+                    );
                   })}
               {!isLoadingSubscription && isAdmin && <AdminCard />}
             </div>

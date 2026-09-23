@@ -83,6 +83,24 @@ export function handleApiError(error: unknown, options: ErrorHandlerOptions): Ne
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
 
+    // Prisma dumps the full failed invocation into the message on a schema
+    // mismatch (e.g. "Invalid `prisma.staffMember.findFirst()` invocation:
+    // The column ... does not exist"). That phrasing collides with the
+    // "not found" pattern below, which would silently turn a real database
+    // error into a 404 and skip the logger.error() call further down —
+    // exactly the case that hid the nightly dev-DB-reset breakage. Route it
+    // to the database-error branch instead, before the generic check runs.
+    if (message.startsWith("invalid `prisma.") || message.includes("invocation:")) {
+      logger.error(`Database schema error at ${endpoint}`, error, context);
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.DATABASE_ERROR,
+          customMessages.database || "A database error occurred. Please try again shortly."
+        ),
+        { status: 503 }
+      );
+    }
+
     // Check for specific error patterns
     if (message.includes("not found") || message.includes("does not exist")) {
       return NextResponse.json(

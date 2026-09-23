@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -17,7 +19,7 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { DateRangeField } from "@/components/ui/date-range-field";
-import { Store, TrendingUp, ShoppingCart, Clock, Percent } from "lucide-react";
+import { Store, TrendingUp, ShoppingCart, Clock, Percent, ArrowRight } from "lucide-react";
 
 interface StoreMetric {
   storeId: string;
@@ -70,7 +72,10 @@ export function OwnerDashboardClient() {
   const [from, setFrom] = useState(startOfMonth());
   const [to, setTo] = useState(today());
 
-  const { data, isLoading, error } = useQuery({
+  // No client-side 403/locked handling needed — (dashboard)/owner/layout.tsx
+  // already gates ENTERPRISE server-side before this ever mounts, same as
+  // FinanceClient (which has no such branch either).
+  const { data, isLoading } = useQuery({
     queryKey: ["owner-summary", from, to],
     queryFn: () =>
       // No `/api` prefix here: apiClient is constructed with baseURL "/api"
@@ -81,25 +86,16 @@ export function OwnerDashboardClient() {
     retry: false,
   });
 
-  const isEnterpriseLocked = (error as any)?.status === 403;
-
   return (
-    <div className="min-h-[calc((100vh-64px)/var(--app-zoom,1))] space-y-6 p-4 sm:p-6 lg:p-8">
+    // min-h (not p-*): PageShell's own scroll wrapper already supplies
+    // padding (p-2 md:p-6) — this page no longer renders standalone.
+    // Offset sized to this page's own header+date-range row, matching
+    // FinanceClient's identical min-h/offset pattern one level up.
+    <div className="min-h-[calc((100vh-150px)/var(--app-zoom,1))] space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("pages.ownerTitle")}</h1>
         <p className="text-muted-foreground text-sm">{t("pages.ownerDesc")}</p>
       </div>
-
-      {isEnterpriseLocked && (
-        <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
-          <CardContent className="pt-6">
-            <p className="font-medium text-orange-700 dark:text-orange-300">
-              {t("pages.enterpriseRequired")}
-            </p>
-            <p className="text-muted-foreground mt-1 text-sm">{t("pages.upgradeToEnterprise")}</p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Date range */}
       <div className="flex flex-wrap gap-4">
@@ -194,12 +190,15 @@ export function OwnerDashboardClient() {
                     <TableHead className="text-right">{t("pages.financeMargin")}</TableHead>
                     <TableHead className="text-right">{t("pages.ownerOrders")}</TableHead>
                     <TableHead className="text-right">{t("pages.ownerPending")}</TableHead>
+                    <TableHead className="w-11">
+                      <span className="sr-only">{t("pages.financeTitle")}</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
+                      <TableCell colSpan={8} className="text-muted-foreground py-8 text-center">
                         {t("common.loading")}
                       </TableCell>
                     </TableRow>
@@ -222,6 +221,24 @@ export function OwnerDashboardClient() {
                           ) : (
                             <span className="text-muted-foreground">0</span>
                           )}
+                        </TableCell>
+                        {/* Drill-down to this store's own Finance page — the
+                            cross-store rollup's counterpart to the
+                            single-store detail, closing the gap where this
+                            table used to have no way to go from "rollup" to
+                            "outlet." */}
+                        <TableCell className="p-0 text-right">
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon"
+                            className="size-11"
+                            aria-label={`${t("pages.financeTitle")} — ${store.name}`}
+                          >
+                            <Link href={`/store/${store.storeId}/finance`}>
+                              <ArrowRight className="size-4" aria-hidden />
+                            </Link>
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

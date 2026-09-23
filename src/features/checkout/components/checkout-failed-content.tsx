@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
+import { SUPPORT_MAILTO } from "@/lib/constants/contact";
 import { AlertCircle, Home } from "lucide-react";
 
 export function CheckoutFailedContent() {
@@ -39,7 +40,7 @@ export function CheckoutFailedContent() {
   };
 
   const handleContact = () => {
-    window.location.href = "mailto:cro@prionation.io,ceo@prionation.io,consult@prionation.io";
+    window.location.href = SUPPORT_MAILTO;
   };
 
   return (
@@ -76,7 +77,7 @@ export function CheckoutFailedContent() {
             {sessionId && (
               <div className="border-destructive/10 border-t pt-4">
                 <p className="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
-                  ID Sesi
+                  {t("checkout.failed.sessionId")}
                 </p>
                 <p className="text-muted-foreground font-mono text-sm break-all select-all">
                   {sessionId}

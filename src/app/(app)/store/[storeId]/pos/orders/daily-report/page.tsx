@@ -42,9 +42,13 @@ export default async function DailyReportPage({ params, searchParams }: PageProp
   // Same gate as the Order History page this report is an export of — the
   // report is whole-store revenue, and a KITCHEN persona's default pages are
   // only /pos/kds and /schedule. Every role that can open or close a till
-  // (OWNER/MANAGER/CASHIER — see POS_CAPABLE_ROLES in my-schedule-list.tsx)
-  // has /pos/orders, so the shift-close "View report" link still works.
-  await requireStaffPageAccess(storeId, "/pos/orders");
+  // (OWNER/MANAGER/CASHIER — see SHIFT_CAPABLE_ROLES in features/pos/lib/
+  // shift-access.ts) has /pos/orders by default, so the Shift page's report
+  // links still work. /shifts is the other way in: the Back Office Shifts page links
+  // every shift to this report, and a persona granted that page (the Admin job
+  // template has /shifts but no /pos/orders) must not be bounced to the dashboard
+  // by its own "Open report" link.
+  await requireStaffPageAccess(storeId, ["/pos/orders", "/shifts"]);
 
   // Called directly rather than through /api/.../reports/shift-report — same
   // service either way, so the page and the thermal print can't disagree, and

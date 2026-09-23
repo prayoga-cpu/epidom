@@ -9,6 +9,8 @@ export interface BuiltReceipt {
   storeId: string;
   storefrontSlug: string | null;
   customerPhone: string | null;
+  /** The address the customer left (typed on the customer screen, or their Customer record's). */
+  customerEmail: string | null;
   customerName: string;
   paymentStatus: string;
   autoSendWhatsappReceipt: boolean;
@@ -35,6 +37,10 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     where: { id: orderId },
     include: {
       items: { include: { menuItem: { select: { name: true } } } },
+      // How the bill was actually settled. Empty for orders placed before
+      // multi-tender (no backfill) — those fall back to Order.paymentMethod
+      // below, exactly as this builder always did.
+      payments: { orderBy: { createdAt: "asc" } },
       table: { select: { label: true } },
       storefront: { select: { slug: true } },
       store: {
@@ -76,6 +82,33 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     };
   });
 
+  // "OTHER" alone tells the customer nothing — the tender's own note is the
+  // label the cashier typed for it (Order.paymentNote is the order-level
+  // equivalent, used for the single-method fallback below).
+  const tenders: NonNullable<ReceiptData["payments"]> = order.payments.map((payment) => ({
+    method: payment.method === "OTHER" && payment.note ? payment.note : payment.method,
+    amount: Number(payment.amount),
+    amountTendered: payment.amountTendered == null ? undefined : Number(payment.amountTendered),
+    change: payment.change == null ? undefined : Number(payment.change),
+  }));
+
+  // Cash handed over / change given back. This page used to have no answer at
+  // all — it always printed a bare "Paid via CASH" — because the figures only
+  // existed in the checkout dialog's in-memory receipt. They are persisted per
+  // tender now, so a reprint or the customer's own /r/[orderId] link shows
+  // what the paper receipt showed. Summed across cash tenders so a bill split
+  // between two cash payments still reconciles.
+  const cashTenders = order.payments.filter((p) => p.method === "CASH");
+  const amountTendered = cashTenders.reduce(
+    (sum, p) => (p.amountTendered == null ? sum : sum + Number(p.amountTendered)),
+    0
+  );
+  const change = cashTenders.reduce(
+    (sum, p) => (p.change == null ? sum : sum + Number(p.change)),
+    0
+  );
+  const hasCashTendered = cashTenders.some((p) => p.amountTendered != null);
+
   const receipt: ReceiptData = {
     storeName: branding.storeName,
     currency,
@@ -108,6 +141,11 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
       order.paymentMethod === "OTHER" && order.paymentNote
         ? order.paymentNote
         : order.paymentMethod,
+    // Only set when the order actually has tender rows; an empty array would
+    // read as "settled with nothing" to the renderers.
+    payments: tenders.length > 0 ? tenders : undefined,
+    amountTendered: hasCashTendered ? amountTendered : undefined,
+    change: hasCashTendered ? change : undefined,
     tableLabel: order.tableNumber ?? order.table?.label ?? undefined,
     notes: order.notes ?? undefined,
   };
@@ -118,6 +156,7 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     storeId: order.storeId,
     storefrontSlug: order.storefront?.slug ?? null,
     customerPhone: order.customerPhone,
+    customerEmail: order.customerEmail?.trim() || null,
     customerName: order.customerName,
     paymentStatus: order.paymentStatus,
     autoSendWhatsappReceipt: branding.autoSendWhatsappReceipt,

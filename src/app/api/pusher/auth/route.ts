@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getActiveStaffSession } from "@/lib/staff-session";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { getStoreViewer } from "@/lib/auth/store-viewer";
 import { getPusherServer, isRealtimeConfigured } from "@/lib/realtime/pusher-server";
 import { storeDataChannel, storePresenceChannel } from "@/lib/realtime/channels";
 import { pusherAuthSchema } from "@/lib/validation/realtime.schemas";
@@ -80,6 +81,13 @@ async function resolveIdentity(
 ): Promise<{ id: string; name: string; role: string } | null> {
   const staff = await getActiveStaffSession();
   if (staff && staff.storeId === storeId) {
+    // A linked staff account (its own login) may only ever be its OWN
+    // persona. A different staffer's leftover PIN session on the same browser
+    // must not authorize realtime channels for it.
+    const viewer = await getStoreViewer(storeId);
+    if (viewer.kind === "staff" && viewer.staffMemberId !== staff.staffMemberId) {
+      return null;
+    }
     return { id: staff.staffMemberId, name: staff.name, role: staff.role };
   }
 

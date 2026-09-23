@@ -38,7 +38,7 @@ const CONTENT: Record<
 > = {
   fr: {
     ownerName: "Camille",
-    shopName: "Café Bretonne",
+    shopName: "Votre café",
     dateLabel: "Lun · 22 mai",
     navItems: ["Tableau de bord", "Commandes", "Menu", "Caisse", "Cuisine", "Stock", "Équipe", "Rapports"],
     planLabel: "Forfait · Opérations",
@@ -68,7 +68,7 @@ const CONTENT: Record<
   },
   id: {
     ownerName: "Sari",
-    shopName: "Warung Sari",
+    shopName: "Kafe Anda",
     dateLabel: "Sen · 22 Mei",
     navItems: ["Dashboard", "Pesanan", "Menu", "Kasir", "Dapur", "Stok", "Staf", "Laporan"],
     planLabel: "Paket · Operations",
@@ -98,7 +98,7 @@ const CONTENT: Record<
   },
   en: {
     ownerName: "Alex",
-    shopName: "The Grind House",
+    shopName: "Your café",
     dateLabel: "Mon · May 22",
     navItems: ["Dashboard", "Orders", "Menu", "POS", "Kitchen", "Stock", "Staff", "Reports"],
     planLabel: "Plan · Operations",

@@ -1,13 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { getLocalizedPath } from "@/lib/i18n-routing";
+import { resolveLocalizedText } from "@/features/marketing/home/data/localized-text";
+import { TEAM_MEMBERS, type TeamMember } from "@/features/marketing/about/data/team";
 
-const STATS = ["stat1", "stat2", "stat3", "stat4"] as const;
 const VALUES = ["v1", "v2", "v3"] as const;
 
-export function AboutPageClient() {
+export function AboutPageClient({ team = TEAM_MEMBERS }: { team?: readonly TeamMember[] }) {
   const { t, locale } = useI18n();
   const router = useRouter();
 
@@ -85,14 +87,10 @@ export function AboutPageClient() {
         </div>
       </section>
 
-      {/* ── Story + Numbers ── */}
+      {/* ── Story ── */}
       <section style={{ padding: "80px 0 100px" }}>
-        <div
-          className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[1fr_420px] lg:gap-20"
-          style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px" }}
-        >
-          {/* Story text */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+        <div style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px" }}>
+          <div className="flex max-w-[720px] flex-col gap-7">
             {[t("about.p1"), t("about.p2"), t("about.p3")].map((para, i) => (
               <p
                 key={i}
@@ -106,72 +104,6 @@ export function AboutPageClient() {
                 {para}
               </p>
             ))}
-          </div>
-
-          {/* Numbers card */}
-          <div
-            style={{
-              borderRadius: 20,
-              border: "1px solid rgba(217,174,59,0.18)",
-              background: "linear-gradient(160deg, rgba(217,174,59,0.06), rgba(255,255,255,0.02))",
-              padding: "32px 36px",
-              position: "sticky",
-              top: 100,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: "var(--epi-gold-500)",
-                fontWeight: 700,
-                marginBottom: 28,
-              }}
-            >
-              {t("about.numbersLabel")}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {STATS.map((s, i) => (
-                <div key={s}>
-                  {i > 0 && (
-                    <div
-                      style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "18px 0" }}
-                    />
-                  )}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 20,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 11,
-                        letterSpacing: "0.14em",
-                        textTransform: "uppercase",
-                        color: "rgba(251,249,228,0.45)",
-                      }}
-                    >
-                      {t(`about.${s}label` as Parameters<typeof t>[0])}
-                    </span>
-                    <span
-                      className="epi-display"
-                      style={{
-                        fontSize: 32,
-                        letterSpacing: "0.02em",
-                        color: "var(--epi-cream-50)",
-                        lineHeight: 1,
-                      }}
-                    >
-                      {t(`about.${s}value` as Parameters<typeof t>[0])}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
@@ -234,11 +166,8 @@ export function AboutPageClient() {
 
       {/* ── Team ── */}
       <section style={{ padding: "80px 0", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-        <div
-          className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20"
-          style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px" }}
-        >
-          <div>
+        <div style={{ maxWidth: 1120, margin: "0 auto", padding: "0 24px" }}>
+          <div className="max-w-[720px]">
             <div className="epi-eyebrow" style={{ marginBottom: 18, color: "var(--epi-gold-500)" }}>
               {t("about.teamEyebrow")}
             </div>
@@ -262,7 +191,8 @@ export function AboutPageClient() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                marginTop: 20,
+                minHeight: 44,
+                marginTop: 12,
                 fontSize: 14,
                 color: "var(--epi-gold-400)",
                 textDecoration: "none",
@@ -273,37 +203,37 @@ export function AboutPageClient() {
             </a>
           </div>
 
-          {/* Avatar grid placeholder */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-            {Array.from({ length: 6 }, (_, i) => (
-              <div
-                key={i}
-                style={{
-                  aspectRatio: "1",
-                  borderRadius: 16,
-                  background: `linear-gradient(135deg, rgba(217,174,59,${0.06 + i * 0.02}), rgba(255,255,255,0.03))`,
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="rgba(217,174,59,0.35)"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+          {/* Real people only: renders nothing until data/team.ts has entries. */}
+          {team.length > 0 && (
+            <ul
+              data-testid="team-members"
+              className="m-0 mt-12 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {team.map((member) => (
+                <li
+                  key={member.slug}
+                  className="flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4"
                 >
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </div>
-            ))}
-          </div>
+                  <Image
+                    src={member.photo}
+                    alt={member.name}
+                    width={88}
+                    height={88}
+                    sizes="88px"
+                    className="size-22 shrink-0 rounded-xl object-cover"
+                  />
+                  <div className="min-w-0">
+                    <div className="text-base font-bold text-[var(--epi-cream-50)]">
+                      {member.name}
+                    </div>
+                    <div className="mt-0.5 text-sm text-[rgba(251,249,228,0.6)]">
+                      {resolveLocalizedText(member.role, locale)}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 

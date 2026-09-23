@@ -113,6 +113,17 @@ const nextConfig: NextConfig = {
         { key: "Cache-Control", value: "no-store, max-age=0" },
       ],
     },
+    {
+      // dev.epidom.fr is a public Vercel preview (branch epidom-revamp) serving a
+      // nightly clone of production. Vercel adds its own noindex only on *.vercel.app
+      // preview URLs, not once a custom domain is bound to a branch, so keep search
+      // engines out here. Matched on the explicit host and evaluated per request: it
+      // can never reach epidom.fr, even if a preview build were ever promoted. Left
+      // crawlable on purpose (no robots.txt Disallow) so Google can actually see it.
+      source: "/:path*",
+      has: [{ type: "host", value: "dev\\.epidom\\.fr" }],
+      headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
+    },
   ],
 };
 

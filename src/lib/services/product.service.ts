@@ -1,4 +1,4 @@
-import { Product, Department, ProductLine, StockMode } from "@prisma/client";
+import { Product, Department, ProductLine, StockMode, Prisma } from "@prisma/client";
 import {
   productRepository,
   ProductWithRelations,
@@ -7,9 +7,37 @@ import {
 import { arrayToCSV } from "../utils/csv-export";
 import { prisma } from "@/lib/prisma";
 import { storefrontService } from "./storefront.service";
-import type { CategoryDeleteMode, ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
+import type {
+  CategoryDeleteMode,
+  ProductOptionGroupInput,
+} from "@/lib/validation/inventory.schemas";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
+import { FieldConflictError } from "@/lib/errors/field-error";
+
+/**
+ * The barcode collision, reported as a 409 pinned to the `barcode` field so the
+ * product dialogs show it under the input (applyServerFieldErrors) rather than
+ * in a generic toast. Deliberately NOT the plain `Error("... already exists")`
+ * the SKU/name checks throw: those only reach the client as a message string.
+ */
+function barcodeTakenError(barcode: string): FieldConflictError {
+  return new FieldConflictError(
+    "barcode",
+    `Barcode "${barcode}" is already used by another product in this store`
+  );
+}
+
+/** A P2002 on the (storeId, barcode) unique index — the race the pre-check cannot close. */
+function isBarcodeUniqueViolation(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+    return false;
+  }
+  const target = error.meta?.target;
+  return Array.isArray(target)
+    ? target.includes("barcode")
+    : String(target ?? "").includes("barcode");
+}
 
 /**
  * Product Service
@@ -48,6 +76,8 @@ export class ProductService {
   async createProduct(data: {
     storeId: string;
     sku: string;
+    /** Optional scan code, unique per store; null/empty means none. */
+    barcode?: string | null;
     name: string;
     description?: string;
     category?: string;
@@ -74,6 +104,12 @@ export class ProductService {
       throw new Error(`Product with SKU "${data.sku}" already exists in this store`);
     }
 
+    // Validate barcode uniqueness within store (optional field: only when set)
+    if (data.barcode) {
+      const barcodeExists = await productRepository.existsByBarcode(data.storeId, data.barcode);
+      if (barcodeExists) throw barcodeTakenError(data.barcode);
+    }
+
     // Validate product name uniqueness within store
     const nameExists = await productRepository.existsByName(data.storeId, data.name);
     if (nameExists) {
@@ -86,27 +122,38 @@ export class ProductService {
     }
 
     // Create product first
-    const product = await productRepository.create({
-      sku: data.sku,
-      name: data.name,
-      description: data.description,
-      category: data.category,
-      department: data.department ?? "KITCHEN",
-      productLine: data.productLine ?? "STANDARD",
-      costPrice: data.costPrice,
-      sellingPrice: data.sellingPrice,
-      currentStock: data.currentStock ?? 0,
-      stockMode: data.stockMode ?? StockMode.BATCH_PRODUCED,
-      unit: data.unit ?? "piece",
-      minStock: data.minStock ?? 0,
-      maxStock: data.maxStock ?? 1000,
-      productionTime: data.productionTime,
-      shelfLife: data.shelfLife,
+    let product: ProductWithRelations;
+    try {
+      product = await productRepository.create({
+        sku: data.sku,
+        // Only written when set: a null/absent barcode keeps the column NULL,
+        // which the unique index treats as "no barcode" (any number allowed).
+        ...(data.barcode ? { barcode: data.barcode } : {}),
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        department: data.department ?? "KITCHEN",
+        productLine: data.productLine ?? "STANDARD",
+        costPrice: data.costPrice,
+        sellingPrice: data.sellingPrice,
+        currentStock: data.currentStock ?? 0,
+        stockMode: data.stockMode ?? StockMode.BATCH_PRODUCED,
+        unit: data.unit ?? "piece",
+        minStock: data.minStock ?? 0,
+        maxStock: data.maxStock ?? 1000,
+        productionTime: data.productionTime,
+        shelfLife: data.shelfLife,
 
-      store: {
-        connect: { id: data.storeId },
-      },
-    });
+        store: {
+          connect: { id: data.storeId },
+        },
+      });
+    } catch (error) {
+      // Two admins saving the same barcode at once both pass the check above;
+      // the unique index is the real guard and its violation is the same 409.
+      if (data.barcode && isBarcodeUniqueViolation(error)) throw barcodeTakenError(data.barcode);
+      throw error;
+    }
 
     // If user selected an existing menu item, link it instead of creating a new one
     if (data.linkedMenuItemId && data.linkedMenuItemId !== "none") {
@@ -169,6 +216,8 @@ export class ProductService {
     storeId: string,
     data: {
       sku?: string;
+      /** undefined = leave alone, null = clear, string = set. */
+      barcode?: string | null;
       name?: string;
       description?: string;
       category?: string;
@@ -207,6 +256,16 @@ export class ProductService {
       }
     }
 
+    // Same for the barcode: only a NEW, non-empty value can collide (null clears it).
+    if (data.barcode && data.barcode !== currentProduct.barcode) {
+      const barcodeExists = await productRepository.existsByBarcode(
+        storeId,
+        data.barcode,
+        productId
+      );
+      if (barcodeExists) throw barcodeTakenError(data.barcode);
+    }
+
     // If name is being updated and is different from current name, validate uniqueness within store
     if (data.name && data.name !== currentProduct.name) {
       const nameExists = await productRepository.existsByName(storeId, data.name, productId);
@@ -223,23 +282,31 @@ export class ProductService {
     }
 
     // Update basic product fields
-    const updatedProduct = await productRepository.update(productId, {
-      ...(data.sku && { sku: data.sku }),
-      ...(data.name && { name: data.name }),
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.category !== undefined && { category: data.category }),
-      ...(data.department !== undefined && { department: data.department }),
-      ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
-      ...(data.sellingPrice !== undefined && { sellingPrice: data.sellingPrice }),
-      ...(data.currentStock !== undefined && { currentStock: data.currentStock }),
-      ...(data.stockMode !== undefined && { stockMode: data.stockMode }),
-      ...(data.costPriceManual !== undefined && { costPriceManual: data.costPriceManual }),
-      ...(data.unit && { unit: data.unit }),
-      ...(data.minStock !== undefined && { minStock: data.minStock }),
-      ...(data.maxStock !== undefined && { maxStock: data.maxStock }),
-      ...(data.productionTime !== undefined && { productionTime: data.productionTime }),
-      ...(data.shelfLife !== undefined && { shelfLife: data.shelfLife }),
-    });
+    let updatedProduct: ProductWithRelations;
+    try {
+      updatedProduct = await productRepository.update(productId, {
+        ...(data.sku && { sku: data.sku }),
+        // `!== undefined`, not truthiness: null is a real instruction (clear it).
+        ...(data.barcode !== undefined && { barcode: data.barcode }),
+        ...(data.name && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.category !== undefined && { category: data.category }),
+        ...(data.department !== undefined && { department: data.department }),
+        ...(data.costPrice !== undefined && { costPrice: data.costPrice }),
+        ...(data.sellingPrice !== undefined && { sellingPrice: data.sellingPrice }),
+        ...(data.currentStock !== undefined && { currentStock: data.currentStock }),
+        ...(data.stockMode !== undefined && { stockMode: data.stockMode }),
+        ...(data.costPriceManual !== undefined && { costPriceManual: data.costPriceManual }),
+        ...(data.unit && { unit: data.unit }),
+        ...(data.minStock !== undefined && { minStock: data.minStock }),
+        ...(data.maxStock !== undefined && { maxStock: data.maxStock }),
+        ...(data.productionTime !== undefined && { productionTime: data.productionTime }),
+        ...(data.shelfLife !== undefined && { shelfLife: data.shelfLife }),
+      });
+    } catch (error) {
+      if (data.barcode && isBarcodeUniqueViolation(error)) throw barcodeTakenError(data.barcode);
+      throw error;
+    }
 
     // Keep any storefront menu item(s) linked to this product (MenuItem.productId)
     // in sync automatically — a linked MenuItem is what customers/POS actually see,
@@ -391,6 +458,7 @@ export class ProductService {
     // CSV headers
     const headers = [
       "SKU",
+      "Barcode",
       "Name",
       "Category",
       "Description",
@@ -409,6 +477,7 @@ export class ProductService {
     // CSV column extractors
     const columns = [
       (product: Product) => product.sku,
+      (product: Product) => product.barcode || "",
       (product: Product) => product.name,
       (product: Product) => product.category || "",
       (product: Product) => product.description || "",

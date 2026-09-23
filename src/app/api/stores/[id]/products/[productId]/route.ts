@@ -50,6 +50,8 @@ export const PATCH = withApiHandler(
     // Update product via service
     const product = await productService.updateProduct(productId, storeId!, {
       sku: validatedData.sku,
+      // undefined leaves it alone, null clears it (the schema turns "" into null).
+      barcode: validatedData.barcode,
       name: validatedData.name,
       description: validatedData.description,
       category: validatedData.category,

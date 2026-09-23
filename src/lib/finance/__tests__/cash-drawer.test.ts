@@ -14,6 +14,8 @@ import {
   sumCashOnHand,
   signedCashAmount,
   isCollectedCashOrder,
+  cashCollectedFromOrder,
+  cashRefundedFromOrder,
   hasCashActivity,
   CASH_MOVEMENT_DIRECTION,
   INBOUND_CASH_MOVEMENT_TYPES,
@@ -274,6 +276,173 @@ describe("unlinked cash sales", () => {
     ]);
     expect(total.unlinkedCashSales).toBe(15);
     expect(hasCashActivity(compute({ unlinkedSalesOrders: [order({ total: 10 })] }), 0)).toBe(true);
+  });
+});
+
+/**
+ * Multi-tender (release 2.88.0). The failure mode these guard against is
+ * silent and expensive: a bill settled cash + card either contributes its
+ * WHOLE total to the drawer (inventing the card money as notes) or nothing at
+ * all (its paymentMethod is the literal "SPLIT", which matches no cash test) —
+ * both print a false variance at close.
+ */
+describe("split-payment orders", () => {
+  const split = (over: Partial<CashOnHandOrderInput> = {}) =>
+    order({
+      paymentMethod: "SPLIT",
+      total: 100,
+      payments: [
+        { method: "CASH", amount: 40, refundedAmount: 0 },
+        { method: "STRIPE_CARD", amount: 60, refundedAmount: 0 },
+      ],
+      ...over,
+    });
+
+  it("counts a split bill's cash tender, not its total and not zero", () => {
+    expect(cashCollectedFromOrder(split())).toBe(40);
+    expect(compute({ salesOrders: [split()] }).cashSales).toBe(40);
+  });
+
+  it("recognises a split bill as having collected cash at all", () => {
+    // paymentMethod is "SPLIT" — the pre-tender check would have said no.
+    expect(isCollectedCashOrder(split())).toBe(true);
+  });
+
+  it("ignores a split bill with no cash tender", () => {
+    const cardOnly = split({
+      payments: [
+        { method: "STRIPE_CARD", amount: 60, refundedAmount: 0 },
+        { method: "QRIS", amount: 40, refundedAmount: 0 },
+      ],
+    });
+    expect(isCollectedCashOrder(cardOnly)).toBe(false);
+    expect(cashCollectedFromOrder(cardOnly)).toBe(0);
+  });
+
+  it("sums several cash tenders on one bill", () => {
+    const twoCash = split({
+      payments: [
+        { method: "CASH", amount: 30, refundedAmount: 0 },
+        { method: "CASH", amount: 25, refundedAmount: 0 },
+        { method: "QRIS", amount: 45, refundedAmount: 0 },
+      ],
+    });
+    expect(cashCollectedFromOrder(twoCash)).toBe(55);
+  });
+
+  it("still applies the collected-cash gate to a split bill", () => {
+    expect(cashCollectedFromOrder(split({ paymentStatus: "PENDING" }))).toBe(0);
+    expect(cashCollectedFromOrder(split({ status: "CANCELLED" }))).toBe(0);
+  });
+
+  it("refunds only what came off the CASH tender", () => {
+    // 60 refunded on the card: no notes left the drawer.
+    const cardRefund = split({
+      refundAmount: 60,
+      payments: [
+        { method: "CASH", amount: 40, refundedAmount: 0 },
+        { method: "STRIPE_CARD", amount: 60, refundedAmount: 60 },
+      ],
+    });
+    expect(cashRefundedFromOrder(cardRefund)).toBe(0);
+    expect(compute({ refundedOrders: [cardRefund] }).cashRefunds).toBe(0);
+
+    // 15 refunded in cash out of a 40 cash tender.
+    const cashRefund = split({
+      refundAmount: 15,
+      payments: [
+        { method: "CASH", amount: 40, refundedAmount: 15 },
+        { method: "STRIPE_CARD", amount: 60, refundedAmount: 0 },
+      ],
+    });
+    expect(cashRefundedFromOrder(cashRefund)).toBe(15);
+    expect(compute({ refundedOrders: [cashRefund] }).cashRefunds).toBe(15);
+  });
+
+  it("does not fall back to the order-level refundAmount when tenders exist", () => {
+    // The whole point: order.refundAmount is 60 but none of it was cash.
+    const result = compute({
+      openingCash: 100,
+      salesOrders: [split()],
+      refundedOrders: [
+        split({
+          refundAmount: 60,
+          payments: [
+            { method: "CASH", amount: 40, refundedAmount: 0 },
+            { method: "STRIPE_CARD", amount: 60, refundedAmount: 60 },
+          ],
+        }),
+      ],
+    });
+    expect(result.cashSales).toBe(40);
+    expect(result.cashRefunds).toBe(0);
+    expect(result.expectedCash).toBe(140);
+  });
+
+  it("counts a single-tender CASH order exactly as the legacy path does", () => {
+    const withRow = order({
+      total: 100,
+      payments: [{ method: "CASH", amount: 100, refundedAmount: 0 }],
+    });
+    expect(cashCollectedFromOrder(withRow)).toBe(cashCollectedFromOrder(order({ total: 100 })));
+  });
+
+  it("mixes legacy and multi-tender orders in one window", () => {
+    // A till that ran across the release boundary: old orders have no rows,
+    // new ones do, and both have to land in the same expected figure.
+    const result = compute({
+      openingCash: 50,
+      salesOrders: [
+        order({ total: 20 }), // legacy CASH, no rows
+        order({ paymentMethod: "QRIS", total: 999 }), // legacy non-cash
+        split(), // 40 of 100 in cash
+        order({
+          paymentMethod: "CASH",
+          total: 30,
+          payments: [{ method: "CASH", amount: 30, refundedAmount: 0 }],
+        }),
+      ],
+      refundedOrders: [
+        order({ refundAmount: 5 }), // legacy cash refund
+      ],
+    });
+    expect(result.cashSales).toBe(90);
+    expect(result.cashRefunds).toBe(5);
+    expect(result.expectedCash).toBe(135);
+  });
+
+  it("accepts Decimal-like tender amounts", () => {
+    const decimal = (v: string) => ({ toString: () => v });
+    const withDecimals = split({
+      payments: [
+        { method: "CASH", amount: decimal("40.55"), refundedAmount: decimal("0.55") },
+        { method: "QRIS", amount: decimal("59.45"), refundedAmount: 0 },
+      ],
+    });
+    expect(cashCollectedFromOrder(withDecimals)).toBe(40.55);
+    expect(cashRefundedFromOrder(withDecimals)).toBe(0.55);
+  });
+
+  it("falls back to the whole order whenever no tender row exists", () => {
+    // Two real cases that never write an OrderPayment: a zero-total order
+    // (100% discount / fully redeemed with points) and a PAY_LATER order
+    // settled later via Mark as Paid with no explicit method. Both must read
+    // through the legacy path rather than being mistaken for "paid nothing".
+    const freeOrder = order({ paymentMethod: "CASH", total: 0 });
+    expect(isCollectedCashOrder(freeOrder)).toBe(true);
+    expect(cashCollectedFromOrder(freeOrder)).toBe(0);
+
+    const markedPaid = order({ paymentMethod: "CASH", total: 45 });
+    expect(cashCollectedFromOrder(markedPaid)).toBe(45);
+    expect(compute({ salesOrders: [freeOrder, markedPaid] }).cashSales).toBe(45);
+  });
+
+  it("treats a missing refundedAmount on a tender as nothing refunded", () => {
+    const noRefundField = split({
+      payments: [{ method: "CASH", amount: 100 }],
+      refundAmount: 25,
+    });
+    expect(cashRefundedFromOrder(noRefundField)).toBe(0);
   });
 });
 

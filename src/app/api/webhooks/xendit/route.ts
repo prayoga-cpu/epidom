@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseXenditWebhook, type XenditWebhookPayload } from "@/lib/payments/providers/xendit";
 import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
+import { earnPointsForOrder } from "@/lib/services/loyalty.service";
 import { inngest } from "@/lib/inngest/client";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
@@ -70,6 +71,26 @@ export async function POST(request: Request) {
             providerRef,
           },
         });
+      }
+
+      // Loyalty points are credited on the PAID transition, wherever it
+      // happens — here, at POS checkout, or via "Mark as Paid".
+      //
+      // DELIBERATELY OUTSIDE the `paymentStatus !== "PAID"` guard above: that
+      // guard exists to fire the Inngest event exactly once, and an earn that
+      // failed transiently on the first delivery would never be retried if it
+      // lived inside it — Xendit's retry would see PAID and skip straight past.
+      // earnPointsForOrder is idempotent on its own (it claims
+      // Order.pointsEarned), so re-running it on every retry credits once and
+      // completes a previously-swallowed failure.
+      //
+      // Never fails the webhook: an uncredited point is recoverable on the
+      // next retry, whereas a 500 here makes Xendit replay the whole payload
+      // including the stock deduction below.
+      try {
+        await earnPointsForOrder(orderId);
+      } catch (err) {
+        console.error("[XENDIT_WEBHOOK] Loyalty earn failed:", err);
       }
 
       // Only the DELIVERED case ever deducts stock outside the normal KDS

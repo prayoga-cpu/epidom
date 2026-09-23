@@ -1,17 +1,9 @@
 "use client";
 import type React from "react";
-import { usePathname } from "next/navigation";
 import { Sidebar } from "@/features/dashboard/shared/sidebar";
 import { Topbar } from "@/features/dashboard/shared/topbar";
 import { UpgradeGateProvider } from "@/features/billing/upgrade/upgrade-modal";
 import { OfflineSyncProvider } from "@/features/dashboard/shared/offline-sync-provider";
-import { cn } from "@/lib/utils";
-
-// Matches only the POS cashier screen itself (/store/{id}/pos), not its
-// siblings (/pos/orders, /pos/kds) — the one page in the dashboard that
-// wants to fill the viewport exactly, edge to edge, with no breathing room
-// below it, instead of the padded/scrollable treatment every other page gets.
-const POS_CASHIER_PATH = /^\/store\/[^/]+\/pos\/?$/;
 
 /**
  * PageShell Component
@@ -22,9 +14,6 @@ const POS_CASHIER_PATH = /^\/store\/[^/]+\/pos\/?$/;
  * Note: SessionProvider is now in root layout (app/layout.tsx)
  */
 export function PageShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isPosCashier = POS_CASHIER_PATH.test(pathname ?? "");
-
   return (
     <OfflineSyncProvider>
       <div className="page-transition-container flex h-[calc(100vh/var(--app-zoom,1))] w-full flex-col overflow-hidden">
@@ -73,21 +62,8 @@ export function PageShell({ children }: { children: React.ReactNode }) {
                   div's* fixed bottom edge instead of to wherever the content
                   actually ends, which (with default overflow: visible) sits
                   past that edge — so the padding ends up hidden behind the
-                  overflow instead of trailing it.
-
-                  POS Cashier is the one page that wants the opposite: it
-                  fills the viewport exactly, edge to edge, and manages its
-                  own internal scroll regions (menu grid, cart) instead of
-                  scrolling as a whole — h-full (not min-h-full) hands its
-                  root flex-1 (flex-basis 0) a genuinely *definite* height to
-                  size against, and pb-0 (not p-*'s default bottom) drops the
-                  trailing gap this same div gives every other page. */}
-                <div
-                  className={cn(
-                    "flex flex-col p-2 md:p-6",
-                    isPosCashier ? "h-full pb-0 md:pb-0" : "min-h-full"
-                  )}
-                >
+                  overflow instead of trailing it. */}
+                <div className="flex min-h-full flex-col p-2 md:p-6">
                   <UpgradeGateProvider>{children}</UpgradeGateProvider>
                 </div>
               </div>

@@ -7,6 +7,19 @@
 
 export const LAST_VISITED_COOKIE = "epidom:lastVisitedUrl";
 export const REMEMBER_PREF_COOKIE = "epidom:rememberLastVisited";
+/** Separate from LAST_VISITED_COOKIE because that one is legitimately
+ * overwritten by POS Mode pages too (RESUMABLE_STORE_SECTIONS includes
+ * /pos/*) — on its own it can't answer "where was I in Back Office" while
+ * the device is currently sitting in POS Mode. Used by PosModeOverflowMenu's
+ * "Back Office" shortcut to resume the last section instead of always
+ * landing on /dashboard. */
+export const LAST_VISITED_BACK_OFFICE_COOKIE = "epidom:lastVisitedBackOffice";
+/** The POS Mode mirror of LAST_VISITED_BACK_OFFICE_COOKIE — the last POS
+ * section (till, orders, KDS, this store's schedule) visited in THIS store.
+ * Used by the /stores card's POS shortcut, so re-opening a store's till
+ * drops back onto whatever screen was last open there instead of always the
+ * bare register. */
+export const LAST_VISITED_POS_COOKIE = "epidom:lastVisitedPos";
 
 /** Rejects anything that isn't a same-origin path, so a tampered cookie
  * value can never turn this into an open redirect (e.g. "//evil.com" or
@@ -40,14 +53,17 @@ const RESUMABLE_STORE_SECTIONS = new Set([
   "/billing",
   "/changelog",
   "/custom-development",
+  "/customers",
   "/dashboard",
   "/data",
   "/finance",
   "/management",
-  "/menu",
+  "/owner",
   "/pos",
   "/pos/kds",
   "/pos/orders",
+  "/pos/schedule",
+  "/pos/shift",
   "/production",
   "/profile",
   "/schedule",
@@ -63,7 +79,6 @@ const RESUMABLE_STORE_SECTIONS = new Set([
  * keep resolving from a months-old cookie.
  */
 const RESUMABLE_ROOT_PATHS = new Set([
-  "/profile",
   "/stores",
   "/owner",
   "/admin",
@@ -123,6 +138,59 @@ export function isResumableAppPath(value: string): boolean {
   }
 
   return RESUMABLE_ROOT_PATHS.has(`/${segments.join("/")}`);
+}
+
+/**
+ * POS Mode's own sections — mirrors posModeNavItems in navigation.config.ts
+ * (not imported from it: same Edge-bundle-size reasoning as
+ * RESUMABLE_STORE_SECTIONS above). Notably includes "/tables" — it's a POS
+ * Mode route (src/app/(app)/store/[storeId]/(pos-mode)/tables/) despite its
+ * URL not being nested under /pos, so a naive `startsWith("/pos")` check
+ * would wrongly classify it as Back Office.
+ */
+const POS_MODE_SECTIONS = new Set([
+  "/pos",
+  "/pos/orders",
+  "/pos/kds",
+  "/pos/schedule",
+  // Not in posModeNavItems (it rides on the "/pos" grant, see shift-access.ts),
+  // but a real POS Mode route all the same.
+  "/pos/shift",
+  "/tables",
+]);
+
+/**
+ * Whether `value` is a Back Office (non-POS) page inside a store — the
+ * narrower check backing LAST_VISITED_BACK_OFFICE_COOKIE. A bare
+ * "/store/{id}" also counts (it redirects to the user's default landing,
+ * which is itself a valid Back Office resume target in every case except
+ * "pos" — and that combination is vanishingly rare to have saved here, since
+ * reaching this function at all means the tracker just observed a real
+ * Back Office pathname).
+ */
+export function isBackOfficeAppPath(value: string): boolean {
+  if (!isResumableAppPath(value)) return false;
+  const pathname = value.split(/[?#]/)[0];
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] !== "store") return false;
+  const section = `/${segments.slice(2).join("/")}`;
+  return !POS_MODE_SECTIONS.has(section);
+}
+
+/**
+ * The inverse of isBackOfficeAppPath, backing LAST_VISITED_POS_COOKIE — a
+ * store-scoped POS Mode page (till, orders, KDS, tables, this store's own
+ * schedule view). Same as isBackOfficeAppPath, callers still need their own
+ * `startsWith("/store/{id}/")` check for the specific store in question —
+ * this only answers "is this a POS Mode path," not "in which store."
+ */
+export function isPosAppPath(value: string): boolean {
+  if (!isResumableAppPath(value)) return false;
+  const pathname = value.split(/[?#]/)[0];
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] !== "store") return false;
+  const section = `/${segments.slice(2).join("/")}`;
+  return POS_MODE_SECTIONS.has(section);
 }
 
 /**

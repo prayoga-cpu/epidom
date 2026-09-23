@@ -6,6 +6,7 @@
  */
 
 import type { SubscriptionStatus } from "@prisma/client";
+import { PLAN_PRICE_IDR } from "@/lib/constants/plan-pricing";
 
 /**
  * Get status badge color classes
@@ -56,19 +57,10 @@ export function getStatusLabel(
   return t(key) || status || "";
 }
 
-/**
- * Epidom's SaaS subscription is billed in IDR. Kept in sync with the public
- * /pricing page's monthly rate (redesign.pricingPage.t2price_mo/t3price_mo —
- * Rp 229k / Rp 459k, i.e. $14.99 / $29.99 at the charm-priced USD rate);
- * docs/BILLING.md's Rp 99k/249k table predates a since-applied price raise
- * and is stale. Every other display currency is derived from this IDR base
- * via useCurrency()'s live exchange rate, so this works for all ~140
- * currencies the app supports rather than a hardcoded few.
- */
-const PLAN_PRICE_IDR: Record<string, number> = {
-  POS: 229000,
-  OPERATIONS: 459000,
-};
+// Epidom's SaaS subscription is billed in IDR; the monthly IDR price per plan
+// lives in src/lib/constants/plan-pricing.ts. Every other display currency is
+// derived from that IDR base via useCurrency()'s live exchange rate, so this
+// works for all ~140 currencies the app supports rather than a hardcoded few.
 
 /**
  * Plan details type

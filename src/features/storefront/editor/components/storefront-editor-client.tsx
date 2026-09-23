@@ -2,24 +2,48 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { storefrontApi } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StorefrontSettings } from "./storefront-settings";
 import { MenuManager } from "./menu-manager";
 import { StorefrontAnalytics } from "./storefront-analytics";
+import { StorefrontReviews } from "./storefront-reviews";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { planHasFeature, upgradeHrefFor, type PlanTier } from "@/lib/plans/entitlements";
+import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 
 interface StorefrontEditorClientProps {
   storeId: string;
 }
 
+const VALID_TABS = ["settings", "menu", "reviews", "analytics"] as const;
+type StorefrontTab = (typeof VALID_TABS)[number];
+
 export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps) {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState("settings");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // ?tab= sync (mirrors finance-client.tsx's own useSearchParams/useRouter
+  // idiom): the retired standalone /menu page now redirects here with
+  // ?tab=menu, so a bookmark/shared link into "the menu editor" still lands
+  // on the right tab instead of always resetting to Settings.
+  const tabParam = searchParams.get("tab");
+  const initialTab: StorefrontTab = (VALID_TABS as readonly string[]).includes(tabParam ?? "")
+    ? (tabParam as StorefrontTab)
+    : "settings";
+  const [activeTab, setActiveTab] = useState<StorefrontTab>(initialTab);
+
+  const setTab = (tab: string) => {
+    setActiveTab(tab as StorefrontTab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const {
     data: storefront,
@@ -35,6 +59,20 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
   // Below POS, the storefront's menu is display-only — no online ordering/POS
   // selling — so it's framed as "Store Menu" rather than "Menu".
   const hasPos = planHasFeature(currentPlan, "posAccess");
+
+  // A staff persona granted only "/menu" (not "/storefront") — the narrower
+  // permission the retired standalone /menu page used to enforce — sees just
+  // the menu editor here, no Settings/Analytics tabs, matching that old
+  // page's behavior exactly. Role-based unrestricted check mirrors
+  // sidebar.tsx's own staffAllowedPages pattern.
+  const posSession = usePosSession();
+  const isMenuOnlyStaff =
+    posSession.isActive &&
+    posSession.storeId === storeId &&
+    posSession.staffRole !== "OWNER" &&
+    posSession.allowedPages !== null &&
+    posSession.allowedPages.includes("/menu") &&
+    !posSession.allowedPages.includes("/storefront");
 
   if (isLoading) {
     return (
@@ -52,6 +90,19 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
     );
   }
 
+  if (isMenuOnlyStaff) {
+    return (
+      <div className="flex flex-col gap-2 sm:gap-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {hasPos ? t("storefront.editor.tabs.menu") : t("storefront.editor.tabs.storeMenu")}
+          </h1>
+        </div>
+        <MenuManager storeId={storeId} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2 sm:gap-6">
       <div>
@@ -59,7 +110,7 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
         <p className="text-muted-foreground mt-1">{t("storefront.editor.subtitle")}</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-2 sm:space-y-6">
+      <Tabs value={activeTab} onValueChange={setTab} className="space-y-2 sm:space-y-6">
         <TabsList className="border-border bg-muted/30 w-full overflow-x-auto border p-1 sm:inline-flex sm:w-auto">
           <TabsTrigger
             value="settings"
@@ -72,6 +123,12 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
             className="data-[state=active]:bg-card shrink-0 data-[state=active]:text-[var(--epi-gold-400)]"
           >
             {hasPos ? t("storefront.editor.tabs.menu") : t("storefront.editor.tabs.storeMenu")}
+          </TabsTrigger>
+          <TabsTrigger
+            value="reviews"
+            className="data-[state=active]:bg-card shrink-0 data-[state=active]:text-[var(--epi-gold-400)]"
+          >
+            {t("storefront.editor.tabs.reviews")}
           </TabsTrigger>
           <TabsTrigger
             value="analytics"
@@ -102,6 +159,10 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
             </div>
           )}
           <MenuManager storeId={storeId} />
+        </TabsContent>
+
+        <TabsContent value="reviews" className="m-0">
+          <StorefrontReviews storeId={storeId} storefront={storefront} onSaved={() => refetch()} />
         </TabsContent>
 
         <TabsContent value="analytics" className="m-0">

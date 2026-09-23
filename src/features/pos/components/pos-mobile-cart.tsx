@@ -31,9 +31,12 @@ export function PosMobileCart({ store, open, onOpenChange }: PosMobileCartProps)
           every other dialog fixed this session. */}
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden rounded-3xl p-0 md:hidden"
+          className="flex max-h-[calc(92dvh/var(--app-zoom,1))] flex-col overflow-hidden rounded-3xl p-0 md:hidden"
           showCloseButton={false}
         >
+          {/* 92dvh (was 85): the panel now carries a header, the customer row and
+              a taller footer (totals, quick row, Save/Print, Charge), so the
+              lines' scroller needs every pixel it can get on a phone. */}
           {/* Radix requires a DialogTitle (and warns without a Description)
               for screen readers even when the dialog has its own visible
               header — PosCart's header is a plain div, not a DialogTitle,

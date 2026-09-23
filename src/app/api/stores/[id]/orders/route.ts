@@ -73,6 +73,23 @@ export const GET = withApiHandler(
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         include: {
           table: { select: { label: true } },
+          // Per-tender breakdown. `include` already returns every scalar
+          // column (customerId, splitGroupId, pointsRedeemed, pointsEarned
+          // included), but a relation has to be asked for explicitly — and
+          // without it the history dialog cannot show how a split bill was
+          // actually settled, nor which tender a refund should come off.
+          payments: {
+            select: {
+              id: true,
+              method: true,
+              amount: true,
+              amountTendered: true,
+              change: true,
+              note: true,
+              refundedAmount: true,
+            },
+            orderBy: { createdAt: "asc" },
+          },
           items: {
             select: {
               id: true,
@@ -92,9 +109,34 @@ export const GET = withApiHandler(
     const orders = hasMore ? rows.slice(0, take) : rows;
     const nextCursor = hasMore ? orders[orders.length - 1].id : null;
 
-    return NextResponse.json(
-      createSuccessResponse({ orders: serializePosOrders(orders), nextCursor, totalCount })
-    );
+    // serializePosOrder only knows the Order's own Decimal columns, and a
+    // Decimal left untouched serialises as a *string* (Decimal.toJSON()),
+    // which the client would then string-concatenate instead of adding. The
+    // tender rows get the same number treatment here — see OrderPaymentDto.
+    const serialized = serializePosOrders(orders).map((order) => ({
+      ...order,
+      payments: (order.payments ?? []).map(
+        (payment: {
+          id: string;
+          method: string;
+          amount: unknown;
+          amountTendered: unknown;
+          change: unknown;
+          note: string | null;
+          refundedAmount: unknown;
+        }) => ({
+          id: payment.id,
+          method: payment.method,
+          amount: Number(payment.amount),
+          amountTendered: payment.amountTendered == null ? null : Number(payment.amountTendered),
+          change: payment.change == null ? null : Number(payment.change),
+          note: payment.note,
+          refundedAmount: Number(payment.refundedAmount),
+        })
+      ),
+    }));
+
+    return NextResponse.json(createSuccessResponse({ orders: serialized, nextCursor, totalCount }));
   },
   { rateLimitEndpoint: "/api/stores/[id]/orders", requireStoreAuth: true }
 );

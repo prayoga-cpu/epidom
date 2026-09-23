@@ -5,12 +5,13 @@
  * QRIS, GoPay, ...). Query params: from, to, staffId, shiftId, channel
  */
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { shiftFilter, channelFilter } from "@/lib/finance/report-filters";
-import { buildPaymentMethodRows } from "@/lib/finance/report-aggregation";
+import { buildTenderPaymentMethodRows } from "@/lib/finance/report-aggregation";
 
 export const dynamic = "force-dynamic";
 
@@ -25,20 +26,36 @@ export const GET = withApiHandler(
     const shiftWhere = shiftFilter(searchParams);
     const channelWhere = channelFilter(searchParams.get("channel"));
 
-    const grouped = await prisma.order.groupBy({
-      by: ["paymentMethod"],
-      where: {
-        storeId,
-        status: { notIn: NON_REVENUE_STATUSES },
-        orderDate: { gte: from, lte: to },
-        ...shiftWhere,
-        ...channelWhere,
-      },
-      _sum: { total: true },
-      _count: { id: true },
-    });
+    const orderWhere: Prisma.OrderWhereInput = {
+      storeId,
+      status: { notIn: NON_REVENUE_STATUSES },
+      orderDate: { gte: from, lte: to },
+      ...shiftWhere,
+      ...channelWhere,
+    };
 
-    const methods = buildPaymentMethodRows(grouped);
+    // Two groupBys over the SAME order filter, unioned: tenders for every
+    // order that has them (so a cash+card bill lands under CASH and the card,
+    // not under a meaningless "SPLIT" row), and the whole-order method for
+    // orders placed before OrderPayment existed, which have no rows and are
+    // never backfilled. The sets are disjoint — an order either has rows or it
+    // does not — so nothing is counted twice.
+    const [tenderGroups, legacyGroups] = await Promise.all([
+      prisma.orderPayment.groupBy({
+        by: ["method"],
+        where: { order: orderWhere },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      prisma.order.groupBy({
+        by: ["paymentMethod"],
+        where: { ...orderWhere, payments: { none: {} } },
+        _sum: { total: true },
+        _count: { id: true },
+      }),
+    ]);
+
+    const methods = buildTenderPaymentMethodRows(tenderGroups, legacyGroups);
 
     return NextResponse.json(
       createSuccessResponse({ from: from.toISOString(), to: to.toISOString(), methods })

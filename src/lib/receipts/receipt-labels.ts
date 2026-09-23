@@ -39,6 +39,16 @@ interface ReceiptLabels {
   notes: string;
   defaultFooter: string;
   poweredByTitle: string;
+  /**
+   * Title of a PROVISIONAL print — the "Print Bill" the cashier hands over
+   * before payment (`ReceiptData.documentType: "bill"`). Deliberately the word
+   * each market's waitstaff actually uses: "l'addition" in France, "nota
+   * sementara" in Indonesia.
+   */
+  billTitle: string;
+  /** Replaces the thank-you footer on a bill, so it can never pass for proof
+   * of payment. Must survive toPrinterAscii — no accents that matter. */
+  billNotice: string;
 }
 
 export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
@@ -60,6 +70,8 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     notes: "Catatan",
     defaultFooter: "Terima kasih!\nSilakan datang kembali",
     poweredByTitle: "Cafe & Restaurant System",
+    billTitle: "NOTA SEMENTARA",
+    billNotice: "Ini bukan bukti pembayaran",
   },
   en: {
     billNo: "Bill No.",
@@ -79,6 +91,8 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     notes: "Notes",
     defaultFooter: "Thank you!\nPlease come again",
     poweredByTitle: "Cafe & Restaurant System",
+    billTitle: "BILL",
+    billNotice: "This is not a receipt",
   },
   fr: {
     billNo: "N° de facture",
@@ -98,6 +112,8 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     notes: "Remarques",
     defaultFooter: "Merci !\nÀ bientôt",
     poweredByTitle: "Cafe & Restaurant System",
+    billTitle: "ADDITION",
+    billNotice: "Ceci n'est pas un reçu",
   },
 };
 
@@ -322,6 +338,65 @@ export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
     takeaway: "A emporter",
     deliveryType: "Livraison",
     noData: "Aucune transaction",
+  },
+};
+
+interface TicketLabels {
+  /** Heading of a ticket that carries more than one prep area (one printer
+   * serving Kitchen AND Bar). */
+  orderTicket: string;
+  kitchen: string;
+  bar: string;
+  orderNo: string;
+  type: string;
+  /** Who the bill is for — a walk-in's name or the attached customer. */
+  customer: string;
+  /** Marks a second copy, so the pass does not cook the same order twice. */
+  reprint: string;
+  testTitle: string;
+  testBody: string;
+}
+
+/**
+ * Vocabulary of the kitchen / bar order ticket and the item label — what the
+ * captain's copy says instead of the customer's receipt. Deliberately ASCII
+ * (no accents that matter): it goes through toPrinterAscii like everything else.
+ * The order-type and cashier words are shared with the receipt / shift report
+ * (SHIFT_REPORT_LABELS.dineIn, RECEIPT_LABELS.cashier) rather than repeated.
+ */
+export const TICKET_LABELS: Record<ReceiptLocale, TicketLabels> = {
+  id: {
+    orderTicket: "PESANAN",
+    kitchen: "DAPUR",
+    bar: "BAR",
+    orderNo: "Pesanan",
+    type: "Tipe",
+    customer: "Pelanggan",
+    reprint: "CETAK ULANG",
+    testTitle: "TES PRINTER",
+    testBody: "Printer terhubung dengan baik.",
+  },
+  en: {
+    orderTicket: "ORDER",
+    kitchen: "KITCHEN",
+    bar: "BAR",
+    orderNo: "Order",
+    type: "Type",
+    customer: "Customer",
+    reprint: "REPRINT",
+    testTitle: "PRINTER TEST",
+    testBody: "Printer connected and working.",
+  },
+  fr: {
+    orderTicket: "COMMANDE",
+    kitchen: "CUISINE",
+    bar: "BAR",
+    orderNo: "Commande",
+    type: "Type",
+    customer: "Client",
+    reprint: "REIMPRESSION",
+    testTitle: "TEST IMPRIMANTE",
+    testBody: "Imprimante connectee.",
   },
 };
 

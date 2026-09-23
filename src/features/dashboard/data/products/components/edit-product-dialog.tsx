@@ -62,6 +62,8 @@ import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useSkuAvailability } from "@/hooks/use-sku-availability";
 import { applyServerFieldErrors } from "@/lib/utils/form-server-errors";
+import { BARCODE_MAX_LENGTH, BARCODE_PATTERN } from "@/lib/validation/inventory.schemas";
+import { BarcodeField } from "./barcode-field";
 import { OptionGroupsEditor } from "@/components/shared/option-groups-editor";
 import type { ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
 
@@ -99,6 +101,16 @@ function createProductSchema(t: (key: string) => string) {
   return z.object({
     name: z.string().min(2, t("common.validation.productNameMin")),
     sku: z.string().min(1, "SKU is required").max(50, "SKU is too long"),
+    // Optional scan code. Empty clears it; the server enforces per-store
+    // uniqueness and reports a clash back onto this field.
+    barcode: z
+      .string()
+      .max(BARCODE_MAX_LENGTH, t("promotions.product.barcodeInvalid"))
+      .refine(
+        (v) => !v.trim() || BARCODE_PATTERN.test(v.trim()),
+        t("promotions.product.barcodeInvalid")
+      )
+      .optional(),
     description: z.string().optional(),
     category: z.string().min(1, t("common.validation.categoryRequired")),
     department: z.enum(["KITCHEN", "BAR"]),
@@ -208,6 +220,7 @@ export function EditProductDialog({
     defaultValues: {
       name: "",
       sku: "",
+      barcode: "",
       description: "",
       category: "",
       department: "KITCHEN",
@@ -266,6 +279,7 @@ export function EditProductDialog({
       form.reset({
         name: product.name || "",
         sku: product.sku || "",
+        barcode: product.barcode || "",
         description: product.description || "",
         category: product.category || "",
         // Product.department is drawn from the shared Department enum but,
@@ -459,6 +473,9 @@ export function EditProductDialog({
       // Map form fields to API schema
       const apiData = {
         sku: data.sku || product.sku,
+        // null (an emptied field) CLEARS the stored barcode; the server skips
+        // the uniqueness check when the value is unchanged.
+        barcode: data.barcode?.trim() || null,
         name: data.name,
         description: data.description,
         category: data.category,
@@ -573,7 +590,7 @@ export function EditProductDialog({
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem className="space-y-0.5">
+                    <FormItem className="space-y-0.5 sm:col-span-2">
                       <FormLabel className="text-sm">{t("data.products.form.name")} *</FormLabel>
                       <FormControl>
                         <Input placeholder={t("data.products.form.namePlaceholder")} {...field} />
@@ -616,6 +633,8 @@ export function EditProductDialog({
                     </FormItem>
                   )}
                 />
+
+                <BarcodeField control={form.control} />
               </div>
 
               <FormField

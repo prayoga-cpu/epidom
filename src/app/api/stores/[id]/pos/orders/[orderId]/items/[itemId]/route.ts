@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSessionApi } from "@/lib/auth/require-session";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnershipWithResponse } from "@/lib/utils/store-verification";
+import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { updateOrderItemStatusSchema } from "@/lib/validation/pos.schemas";
 import { productionBatchService } from "@/lib/services/production-batch.service";
@@ -22,8 +22,9 @@ export async function PATCH(
   const session = await requireSessionApi();
   if (session instanceof NextResponse) return session;
 
-  const v = await verifyStoreOwnershipWithResponse(storeId, session.user.id);
-  if (v instanceof NextResponse) return v;
+  const storeAccess = await verifyStoreAccessWithResponse(storeId, session.user.id, req);
+  if (storeAccess instanceof NextResponse) return storeAccess;
+  const v = storeAccess.store;
 
   const body = await req.json();
   const parsed = updateOrderItemStatusSchema.safeParse(body);

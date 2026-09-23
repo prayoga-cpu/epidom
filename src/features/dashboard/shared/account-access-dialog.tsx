@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { getAllDashboardNavItems } from "@/config/navigation.config";
+import { getAllAppNavItems } from "@/config/navigation.config";
 
 interface AccountAccessDialogProps {
   open: boolean;
@@ -32,7 +32,11 @@ export function AccountAccessDialog({
   allowedPages,
 }: AccountAccessDialogProps) {
   const { t } = useI18n();
-  const navItems = getAllDashboardNavItems();
+  // getAllAppNavItems (not getAllDashboardNavItems): a Cashier/Kitchen
+  // persona's allowedPages includes POS Mode routes (/pos, /pos/schedule,
+  // ...), which have no dashboardNavigation entry — without this, their
+  // "what can I see right now" list below would silently render empty.
+  const navItems = getAllAppNavItems();
   const pages = allowedPages ?? navItems.map((item) => item.href);
 
   return (

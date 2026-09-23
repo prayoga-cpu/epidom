@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { verifyStoreAccess } from "@/lib/utils/store-verification";
 import { requirePlan } from "@/lib/auth/require-plan";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import countryNames from "react-phone-number-input/locale/en.json";
@@ -46,7 +46,7 @@ export default async function PosCustomerDisplayPage({
     redirect("/login");
   }
 
-  const store = await verifyStoreOwnership(storeId, session.user.id);
+  const { store } = await verifyStoreAccess(storeId, session.user.id);
   await requirePlan(storeId, "POS");
   await requireStaffPageAccess(storeId, "/pos");
 

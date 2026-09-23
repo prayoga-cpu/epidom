@@ -13,7 +13,8 @@ import { NextResponse } from "next/server";
 import { type Session } from "@/lib/auth";
 import { requireSessionApi } from "@/lib/auth/require-session";
 import { checkRateLimitByUser } from "@/lib/middleware/rate-limit";
-import { verifyStoreOwnership } from "@/lib/utils/store-verification";
+import { verifyStoreAccess, type StoreAccess } from "@/lib/utils/store-verification";
+import { authorizeStaffPrincipal } from "@/lib/auth/staff-principal-policy";
 import { handleApiError } from "@/lib/utils/api-error-handler";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { buildRequestMeta } from "@/lib/audit/request-meta";
@@ -30,6 +31,14 @@ export type ApiContext = {
   session: NonNullable<Session>;
   userId: string;
   storeId?: string;
+  /**
+   * Set whenever `requireStoreAuth` is. `accessType` is "owner" for the
+   * store's owner and "staff" for a linked staff account that the
+   * default-deny policy (src/lib/auth/staff-principal-policy.ts) already
+   * admitted for THIS route. Handlers that return per-person data must branch
+   * on it — a staff principal may only ever see/act as `staffMemberId`.
+   */
+  access?: StoreAccess;
 };
 
 /**
@@ -42,7 +51,14 @@ type ApiHandler = (request: Request, context: ApiContext) => Promise<Response>;
  */
 interface HandlerOptions {
   rateLimitEndpoint?: string; // Endpoint identifier for rate limiter
-  requireStoreAuth?: boolean; // Whether to verify store ownership
+  /**
+   * Verifies the caller may reach this store: its OWNER, or a linked staff
+   * account (StaffMember.userId) — and a staff account is then held to the
+   * default-deny allow-list in src/lib/auth/staff-principal-policy.ts, so a
+   * route that isn't listed there is still owner-only. Owner-only routes need
+   * no extra flag; just don't add them to that table.
+   */
+  requireStoreAuth?: boolean;
   allowDeactivated?: boolean; // Allow deactivated accounts to hit this route (e.g. account-settings)
   /**
    * Skip audit trail capture for this route. Use only for high-volume,
@@ -136,6 +152,7 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
       // Store Ownership Verification (Optional)
       // ========================================
       let storeId: string | undefined;
+      let access: StoreAccess | undefined;
 
       if (options.requireStoreAuth) {
         storeId = resolvedParams.id || resolvedParams.storeId;
@@ -144,7 +161,15 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
           throw new Error("Store ID not found in route parameters");
         }
 
-        await verifyStoreOwnership(storeId, session.user.id);
+        access = await verifyStoreAccess(storeId, session.user.id);
+        if (access.accessType === "staff") {
+          const denied = await authorizeStaffPrincipal({
+            storeId,
+            staffMemberId: access.staffMemberId,
+            request,
+          });
+          if (denied) return denied;
+        }
       }
 
       // ========================================
@@ -156,6 +181,7 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
           session: session as NonNullable<Session>,
           userId: session.user.id,
           storeId,
+          access,
         });
       }
 
@@ -178,6 +204,7 @@ export const withApiHandler = (handler: ApiHandler, options: HandlerOptions = {}
             session: session as NonNullable<Session>,
             userId: session.user.id,
             storeId,
+            access,
           });
         } catch (error) {
           // Record the failed attempt before the error handler rewrites it, so

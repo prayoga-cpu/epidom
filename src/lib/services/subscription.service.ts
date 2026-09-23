@@ -334,12 +334,34 @@ export class SubscriptionService {
    * Provision a free subscription for a user, bypassing Stripe.
    * Used for default plan on registration and offline/free tiers.
    * Uses "free_<userId>" as a placeholder stripeCustomerId (guaranteed unique).
+   *
+   * FREE only, by type and at runtime. There is no payment step and the plan
+   * gates read plan + status alone, so any other tier would be a free upgrade.
+   * A caller that forwards an untrusted plan here therefore gets a refusal, not
+   * a paid grant; the deliberate paid grant is `grantPlanWithoutPayment`, which
+   * has no flag a request could smuggle in.
    */
   async activateFree(
     userId: string,
-    plan: SubscriptionPlan = SubscriptionPlan.FREE
+    plan: typeof SubscriptionPlan.FREE = SubscriptionPlan.FREE
   ): Promise<void> {
-    // Self-service free provisioning must not undo an admin-quoted suspension —
+    if (plan !== SubscriptionPlan.FREE) {
+      throw new AppError(
+        "Only the FREE plan can be activated without payment.",
+        ApiErrorCode.FORBIDDEN,
+        403
+      );
+    }
+    await this.grantPlanWithoutPayment(userId, plan);
+  }
+
+  /**
+   * Provision ANY plan as ACTIVE with no payment: for trusted server-side
+   * callers only (demo seeding behind a shared secret). Never pass it a value
+   * that came from a request body; self-service paths use `activateFree`.
+   */
+  async grantPlanWithoutPayment(userId: string, plan: SubscriptionPlan): Promise<void> {
+    // Provisioning without payment must not undo an admin-quoted suspension —
     // that would flip the account back to ACTIVE without the price being paid.
     const existing = await this.subscriptionRepo.findByUserId(userId);
     if (existing?.customPricePendingAt) {
