@@ -11,6 +11,8 @@ vi.mock("@/features/dashboard/shared/hooks/use-current-store", () => ({
 vi.mock("@/features/pos/components/pos-printer-menu", () => ({
   PosPrinterMenu: () => <button aria-label="printer" />,
 }));
+const nav = vi.hoisted(() => ({ pathname: "/store/store-1/pos" }));
+vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname }));
 // Has its own test (pos-mode-shift-chip.test.tsx); it needs a query client this
 // file's bar-layout assertions have no reason to set up.
 vi.mock("../pos-mode-shift-chip", () => ({ PosModeShiftChip: () => null }));
@@ -21,7 +23,10 @@ import { PosModeToolbarSlotContext } from "../pos-mode-toolbar-slot";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 
 // The shell also mounts these; they are irrelevant to the bar.
-vi.mock("../pos-mode-tab-bar", () => ({ PosModeTabBar: () => null }));
+vi.mock("../pos-mode-tab-bar", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../pos-mode-tab-bar")>()),
+  PosModeTabBar: () => null,
+}));
 vi.mock("../pos-mode-overflow-menu", () => ({ PosModeOverflowMenu: () => null }));
 vi.mock("../pos-mode-upgrade-banner", () => ({
   PosModeUpgradeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -29,6 +34,7 @@ vi.mock("../pos-mode-upgrade-banner", () => ({
 }));
 
 beforeEach(() => {
+  nav.pathname = "/store/store-1/pos";
   localStorage.clear();
   usePosSession.setState({
     isActive: true,
@@ -99,6 +105,23 @@ describe("PosModeStatusBar — switch user", () => {
     usePosSession.setState({ isActive: false, staffName: null, staffRole: null });
     render(<PosModeStatusBar storeId="store-1" />);
     expect(screen.queryByRole("button", { name: /switchUser/ })).toBeNull();
+  });
+});
+
+describe("PosModeStatusBar — printers", () => {
+  it.each(["/pos", "/pos/orders", "/pos/kds", "/tables"])(
+    "offers the printer menu on the POS System (%s)",
+    (path) => {
+      nav.pathname = `/store/store-1${path}`;
+      render(<PosModeStatusBar storeId="store-1" />);
+      expect(screen.getByRole("button", { name: "printer" })).toBeInTheDocument();
+    }
+  );
+
+  it("leaves it off the Operational page — Hardware settings still reaches the printers", () => {
+    nav.pathname = "/store/store-1/pos/operational";
+    render(<PosModeStatusBar storeId="store-1" />);
+    expect(screen.queryByRole("button", { name: "printer" })).toBeNull();
   });
 });
 

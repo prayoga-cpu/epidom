@@ -9,6 +9,7 @@ import {
   isPlausibleEmail,
 } from "../lib/customer-display";
 import { PosCustomerDisplayKeyboard, type KeyboardLayout } from "./pos-customer-display-keyboard";
+import { TypedText } from "./typed-text";
 
 /**
  * The optional third step of the customer's number entry: a new customer may
@@ -63,7 +64,9 @@ export function PosCustomerDisplayDetails({
         {label} · {t("pos.customerDisplay.detailsOptional")}
       </span>
       <span className="w-full truncate text-lg font-semibold sm:text-xl">
-        {value || <span className="opacity-35">{placeholder}</span>}
+        {/* Mounted even while empty, so the very first letter pops in too. */}
+        <TypedText value={value} />
+        {!value && <span className="opacity-35">{placeholder}</span>}
         {active === id && <Caret />}
       </span>
     </button>

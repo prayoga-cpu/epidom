@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, RotateCw } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { marketLabelKey } from "@/lib/finance/market-label";
 import { useFinanceSettings } from "../hooks/use-finance-settings";
 import { EditFeesAndTaxesDialog } from "./edit-fees-and-taxes-dialog";
 
@@ -38,17 +39,6 @@ export function FeesAndTaxesCard({
   const enabledMethodCount = settings
     ? settings.enabledPaymentMethods.length + (settings.payLaterEnabled ? 1 : 0)
     : 0;
-
-  const marketLabel = (market?: string) => {
-    switch (market) {
-      case "FRANCE":
-        return t("profile.feesAndTaxes.market.france");
-      case "INTERNATIONAL":
-        return t("profile.feesAndTaxes.market.international");
-      default:
-        return t("profile.feesAndTaxes.market.indonesia");
-    }
-  };
 
   return (
     <>
@@ -112,7 +102,9 @@ export function FeesAndTaxesCard({
                 <p className="text-muted-foreground text-sm font-medium">
                   {t("profile.feesAndTaxes.market.title")}
                 </p>
-                <span className="text-base font-semibold">{marketLabel(settings.market)}</span>
+                <span className="text-base font-semibold">
+                  {t(marketLabelKey(settings.market))}
+                </span>
               </div>
 
               <div className="space-y-1">

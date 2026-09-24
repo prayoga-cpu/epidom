@@ -6,12 +6,12 @@ import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
 
 /**
- * Locale hygiene for the "soft pages" namespaces (partners, careers, press,
- * status and the public changelog chrome). t() silently falls back to English
+ * Locale hygiene for the "soft pages" namespaces (partners, careers, press
+ * and the public changelog chrome). t() silently falls back to English
  * when a key is missing, so an omission in fr or id never fails loudly — this is
  * the loud version.
  */
-const NAMESPACES = ["partners", "careers", "press", "status", "changelogPage"] as const;
+const NAMESPACES = ["partners", "careers", "press", "changelogPage"] as const;
 
 type Tree = { [key: string]: string | Tree };
 
@@ -103,7 +103,6 @@ describe.each(NAMESPACES)("locale namespace %s", (namespace) => {
       "id.changelogPage.tagInfra",
       "fr.changelogPage.tagUx",
       "id.changelogPage.tagUx",
-      "fr.status.services.title", // "Services"
       "id.partners.integrations.xendit", // brand names and "(Indonesia)"
     ]);
     for (const locale of ["fr", "id"] as const) {
@@ -129,7 +128,6 @@ describe("soft pages source files", () => {
     "src/app/(marketing)/partners/supplier-application.tsx",
     "src/app/(marketing)/careers/client.tsx",
     "src/app/(marketing)/press/client.tsx",
-    "src/app/(marketing)/status/client.tsx",
     "src/features/marketing/changelog/changelog-view.tsx",
   ];
 

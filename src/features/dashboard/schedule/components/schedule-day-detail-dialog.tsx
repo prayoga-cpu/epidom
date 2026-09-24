@@ -3,7 +3,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { CalendarOff } from "lucide-react";
+import { format } from "date-fns";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { parseLocalISO } from "@/lib/utils/date-range";
 import type { StaffScheduleEntry } from "./staff-schedule-cell-dialog";
 
 interface DayDetailEntry extends StaffScheduleEntry {
@@ -16,6 +18,8 @@ interface ScheduleDayDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   dateKey: string;
   entries: DayDetailEntry[];
+  /** Staff-facing view: hides entry notes and the Draft/Published badge. */
+  hideManagerDetails?: boolean;
 }
 
 /** Read-only day-at-a-glance view — the week grid's cells are too cramped to show department/notes at once. */
@@ -24,14 +28,17 @@ export function ScheduleDayDetailDialog({
   onOpenChange,
   dateKey,
   entries,
+  hideManagerDetails = false,
 }: ScheduleDayDetailDialogProps) {
-  const { t } = useI18n();
+  const { t, dateLocale } = useI18n();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] max-w-md flex-col overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{dateKey}</DialogTitle>
+          <DialogTitle>
+            {format(parseLocalISO(dateKey), "EEEE d MMM yyyy", { locale: dateLocale })}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="min-h-0 space-y-2">
@@ -59,13 +66,17 @@ export function ScheduleDayDetailDialog({
                       {t("pages.scheduleDepartment")}: {entry.department}
                     </p>
                   )}
-                  {entry.notes && <p className="text-muted-foreground mt-1 text-xs">{entry.notes}</p>}
+                  {!hideManagerDetails && entry.notes && (
+                    <p className="text-muted-foreground mt-1 text-xs">{entry.notes}</p>
+                  )}
                 </div>
-                <Badge variant={entry.status === "PUBLISHED" ? "default" : "secondary"}>
-                  {entry.status === "PUBLISHED"
-                    ? t("pages.schedulePublishedBadge")
-                    : t("pages.scheduleDraftBadge")}
-                </Badge>
+                {!hideManagerDetails && (
+                  <Badge variant={entry.status === "PUBLISHED" ? "default" : "secondary"}>
+                    {entry.status === "PUBLISHED"
+                      ? t("pages.schedulePublishedBadge")
+                      : t("pages.scheduleDraftBadge")}
+                  </Badge>
+                )}
               </div>
             ))
           )}

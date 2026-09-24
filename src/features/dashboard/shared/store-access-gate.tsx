@@ -3,8 +3,9 @@
 import { useState, useCallback, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Delete, Loader2, UserRound, ArrowLeft, KeyRound, ShieldCheck } from "lucide-react";
+import { Loader2, UserRound, ArrowLeft, KeyRound, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PinPad } from "@/components/ui/pin-pad";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
@@ -49,8 +50,6 @@ interface StoreAccessGateProps {
   forcePicker?: boolean;
   children: ReactNode;
 }
-
-const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"] as const;
 
 /**
  * Marks the persona that's already logged in on this device, when the picker was
@@ -399,49 +398,13 @@ export function StoreAccessGate({
               </p>
             </div>
 
-            <div
-              className={cn(
-                "mt-6 flex justify-center gap-4 sm:mt-8",
-                shake && "animate-[shake_0.4s_ease]"
-              )}
-            >
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "h-3 w-3 rounded-full border-2 transition-all sm:h-4 sm:w-4",
-                    i < pin.length
-                      ? "border-primary bg-primary"
-                      : "border-muted-foreground/30 bg-transparent"
-                  )}
-                />
-              ))}
-            </div>
-
-            <div className="mt-6 grid w-full max-w-[240px] grid-cols-3 gap-2 sm:mt-8 sm:gap-3">
-              {PAD_KEYS.map((key, idx) => {
-                if (key === "") return <div key={idx} />;
-                return (
-                  <Button
-                    key={idx}
-                    variant={key === "del" ? "outline" : "secondary"}
-                    className="h-12 text-base font-semibold sm:h-14 sm:text-lg"
-                    onClick={() => handleKey(key)}
-                    disabled={isVerifying}
-                  >
-                    {key === "del" ? (
-                      isVerifying ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <Delete className="h-5 w-5" />
-                      )
-                    ) : (
-                      key
-                    )}
-                  </Button>
-                );
-              })}
-            </div>
+            <PinPad
+              className="mt-6 flex w-full flex-col items-center sm:mt-8"
+              value={pin}
+              onKey={handleKey}
+              disabled={isVerifying}
+              shake={shake}
+            />
 
             <p className="text-muted-foreground mt-4 text-center text-xs sm:mt-6">
               {t("pages.storeAccessGateForgotPinHint")}
@@ -462,16 +425,6 @@ export function StoreAccessGate({
         description={t("pages.storeAccessGateSetOwnerPinDesc")}
         onSuccess={handleOwnerConfirmed}
       />
-
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-8px); }
-          40% { transform: translateX(8px); }
-          60% { transform: translateX(-8px); }
-          80% { transform: translateX(4px); }
-        }
-      `}</style>
     </div>
   );
 }

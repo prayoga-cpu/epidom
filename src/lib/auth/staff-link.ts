@@ -1,6 +1,17 @@
-import type { StaffRole } from "@prisma/client";
+import type { Prisma, StaffRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { pickStaffLandingPage, resolveStaffAllowedPages } from "@/config/staff-permissions.config";
+
+/**
+ * What counts as a real staff member: an ACTIVE StaffMember row that is not the
+ * OWNER row. Removing a staffer only deactivates the row, and only some stores
+ * have an OWNER row, so both filters are needed. The login link below and the
+ * Your Stores staff count both use this, so they cannot drift apart.
+ */
+export const ACTIVE_STAFF_WHERE = {
+  isActive: true,
+  role: { not: "OWNER" as const },
+} satisfies Prisma.StaffMemberWhereInput;
 
 /**
  * What "this login account is staff at a store" means, in one place: an ACTIVE
@@ -9,7 +20,7 @@ import { pickStaffLandingPage, resolveStaffAllowedPages } from "@/config/staff-p
  * somewhere" and "may enter that store" cannot drift apart.
  */
 export function linkedStaffWhere(userId: string) {
-  return { userId, isActive: true, role: { not: "OWNER" as const } };
+  return { userId, ...ACTIVE_STAFF_WHERE };
 }
 
 /**

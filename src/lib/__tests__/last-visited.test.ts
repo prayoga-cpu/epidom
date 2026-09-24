@@ -67,6 +67,13 @@ describe("isPosAppPath", () => {
     expect(isPosAppPath("/store/cljabc12345/tables")).toBe(true);
   });
 
+  it("counts the Operational page (shift, schedule, clock) as POS Mode, whatever its tab", () => {
+    expect(isPosAppPath("/store/cljabc12345/pos/operational")).toBe(true);
+    expect(isPosAppPath("/store/cljabc12345/pos/operational?tab=clock")).toBe(true);
+    expect(isBackOfficeAppPath("/store/cljabc12345/pos/operational")).toBe(false);
+    expect(isResumableAppPath("/store/cljabc12345/pos/operational?tab=shift")).toBe(true);
+  });
+
   it("rejects Back Office pages — this is the whole reason it's separate from isBackOfficeAppPath", () => {
     expect(isPosAppPath("/store/cljabc12345/finance")).toBe(false);
     expect(isPosAppPath("/store/cljabc12345/staff")).toBe(false);

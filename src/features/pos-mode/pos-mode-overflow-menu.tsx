@@ -6,9 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Monitor,
-  KeyRound,
-  CalendarClock,
-  Wallet,
+  MonitorSmartphone,
+  ClipboardList,
   ExternalLink,
   LayoutDashboard,
   Store,
@@ -20,6 +19,7 @@ import {
   CheckCircle2,
   CloudUpload,
   WifiOff,
+  Cable,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
@@ -30,16 +30,17 @@ import { useUser } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useCustomerDisplaySettings } from "@/features/pos/hooks/use-customer-display-settings";
 import { openCustomerDisplay } from "@/features/pos/lib/open-customer-display";
-import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
+import { HardwareSettingsDialog } from "@/features/pos/components/hardware-settings-dialog";
 import { FeedbackDialog } from "@/features/dashboard/feedback/components/feedback-dialog";
 import { useAccountSwitcher } from "@/features/dashboard/shared/hooks/use-account-switcher";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { useOfflineSyncContext } from "@/features/dashboard/shared/offline-sync-provider";
 import { STAFF_ROLE_LABEL_KEYS } from "@/features/dashboard/shared/lib/staff-role-label";
-import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
+import { EpidomLockup } from "@/features/marketing/shared/components/epidom-logo";
 import { canManageShift } from "@/features/pos/lib/shift-access";
 import { LAST_VISITED_BACK_OFFICE_COOKIE, isBackOfficeAppPath } from "@/lib/last-visited";
 import { PosModePreferences } from "./pos-mode-preferences";
+import { isPosTabPath, usePosTabs } from "./pos-mode-tab-bar";
 import { PosModeStoreSwitcher } from "./pos-mode-store-switcher";
 
 interface PosModeOverflowMenuProps {
@@ -63,7 +64,7 @@ interface MenuRowProps {
   disabled?: boolean;
   /** The page this row links to is the one on screen. */
   active?: boolean;
-  tone?: "default" | "primary" | "destructive";
+  tone?: "default" | "destructive";
 }
 
 /**
@@ -83,7 +84,6 @@ function MenuRow({
   const className = cn(
     "relative flex min-h-12 w-full items-center gap-3 px-3 text-left text-sm font-medium transition-colors hover:bg-accent active:bg-accent disabled:pointer-events-none disabled:opacity-50",
     active && "bg-primary/10 text-primary hover:bg-primary/10",
-    tone === "primary" && "text-primary",
     tone === "destructive" && "text-destructive"
   );
   const content = (
@@ -95,11 +95,7 @@ function MenuRow({
       <span
         className={cn(
           "flex size-8 shrink-0 items-center justify-center rounded-lg",
-          active || tone === "primary"
-            ? "bg-primary/15"
-            : tone === "destructive"
-              ? "bg-destructive/10"
-              : "bg-muted"
+          active ? "bg-primary/15" : tone === "destructive" ? "bg-destructive/10" : "bg-muted"
         )}
         aria-hidden
       >
@@ -138,15 +134,17 @@ function MenuGroup({ children }: { children: React.ReactNode }) {
 
 /**
  * The POS Mode "More" drawer, opened by the Epidom button at the right end of
- * the status bar: everything that doesn't earn permanent tab-bar space
- * (customer display, clock in/out, shift, schedule, feedback, Back Office,
- * device preferences, who's using the till).
+ * the status bar. It is where POS Mode's two spaces are picked — the POS
+ * System (the four-tab till) and the Operational page (shift, schedule, clock
+ * in/out) — and holds everything else that doesn't earn permanent tab-bar
+ * space (customer display, hardware settings, feedback, Back Office, device
+ * preferences, who's using the till).
  *
  * A right-hand Sheet laid out like a till's side menu: a navy brand header
- * with the signed-in profile, a Sync sales button, rows with chevrons, and the
- * sync state in a strip along the bottom. The sheet is pinned to the viewport
+ * with the signed-in profile, a Sync sales button with the sync state right
+ * under it, and rows with chevrons. The sheet is pinned to the viewport
  * with an explicit height (divided by --app-zoom, like every viewport unit
- * here), so the middle can scroll while the header and strip stay put — the
+ * here), so the middle can scroll while the header stays put — the
  * definite height a bottom Sheet never got through this shell's flex chain,
  * which is why this was a Dialog before.
  */
@@ -163,8 +161,8 @@ export function PosModeOverflowMenu({
   const { isOnline, isSyncing, pendingCount, syncNow } = useOfflineSyncContext();
   const displayEnabled = useCustomerDisplaySettings((state) => state.enabled);
   const setDisplayEnabled = useCustomerDisplaySettings((state) => state.setEnabled);
-  const [clockOpen, setClockOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [hardwareOpen, setHardwareOpen] = useState(false);
 
   const {
     posSession,
@@ -224,8 +222,21 @@ export function PosModeOverflowMenu({
 
   const close = () => onOpenChange(false);
   const hrefFor = (path: string) => `/store/${storeId}${path}`;
-  const shiftHref = hrefFor("/pos/shift");
-  const scheduleHref = hrefFor("/pos/schedule");
+
+  // The two spaces of POS Mode. POS System is the four-tab till (cashier, orders,
+  // kitchen & bar, tables) and leads to the first tab this persona's bar shows —
+  // a kitchen persona lands on Kitchen & Bar, not a /pos it would be bounced
+  // from. Operational is Shift, My Schedule and Clock In / Out, off the tab bar.
+  const posTabs = usePosTabs(storeId);
+  const posSystemHref = posTabs[0] ? hrefFor(posTabs[0].href) : null;
+  const operationalHref = hrefFor("/pos/operational");
+  // Mirrors the page's own tab rules (resolveOperationalTabs): every persona on
+  // the owner's device clocks in there, so only a linked staff account with
+  // neither a till nor the "/pos/schedule" grant has nothing to open.
+  const showOperational =
+    !linkedStaff ||
+    canManageShift({ staffRole: posSession.staffRole, allowedPages: posSession.allowedPages }) ||
+    (posSession.allowedPages?.includes("/pos/schedule") ?? true);
 
   // The strip along the bottom: the same three states the POS offline banner
   // reports, plus the all-clear it stays hidden for.
@@ -271,15 +282,7 @@ export function PosModeOverflowMenu({
             style={{ background: "var(--epi-navy-850)", color: "var(--epi-cream-50)" }}
           >
             <div className="flex items-center gap-2.5">
-              <EpidomMark size={34} />
-              {/* Inline, as in EpidomLogo: .epi-display is unlayered CSS, so it would
-                  beat a tracking-* utility on letter-spacing. */}
-              <span
-                className="epi-display"
-                style={{ fontSize: 24, letterSpacing: "0.10em", lineHeight: 1, marginTop: 2 }}
-              >
-                Epidom
-              </span>
+              <EpidomLockup size={30} />
               <SheetClose className="-mr-1 ml-auto flex size-10 items-center justify-center rounded-full opacity-80 transition hover:bg-white/10 hover:opacity-100">
                 <X className="size-5" aria-hidden />
                 <span className="sr-only">{t("common.actions.close")}</span>
@@ -326,18 +329,32 @@ export function PosModeOverflowMenu({
           </div>
 
           {/* Rounded panel tucked up under the header's profile card. */}
-          <div className="bg-background relative -mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-t-3xl px-3 pt-4 pb-4">
-            {/* Sends any sales queued while offline and refreshes this device's
-                offline copy of the menu and orders — the till's "sync" button. */}
-            <button
-              type="button"
-              onClick={() => void syncNow()}
-              disabled={isSyncing || !isOnline}
-              className="border-primary/40 text-primary hover:bg-primary/10 flex h-11 w-full items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50"
-            >
-              <RefreshCw className={cn("size-4", isSyncing && "animate-spin")} aria-hidden />
-              {isSyncing ? t("pages.posOfflineSyncing") : t("pages.posSyncSales")}
-            </button>
+          <div className="bg-background relative -mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-t-3xl px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {/* The till's "sync" button with its state fused under it as one control:
+                offline, sales waiting, or all synced. */}
+            <div className="border-primary/40 overflow-hidden rounded-xl border">
+              {/* Sends any sales queued while offline and refreshes this device's
+                  offline copy of the menu and orders. */}
+              <button
+                type="button"
+                onClick={() => void syncNow()}
+                disabled={isSyncing || !isOnline}
+                className="text-primary hover:bg-primary/10 flex h-11 w-full items-center justify-center gap-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50"
+              >
+                <RefreshCw className={cn("size-4", isSyncing && "animate-spin")} aria-hidden />
+                {isSyncing ? t("pages.posOfflineSyncing") : t("pages.posSyncSales")}
+              </button>
+              <div
+                role="status"
+                className={cn(
+                  "flex items-center justify-center gap-1 px-3 py-1 text-[10px] leading-4 font-medium",
+                  syncStatus.className
+                )}
+              >
+                <SyncStatusIcon className="size-3 shrink-0" aria-hidden />
+                <span className="truncate">{syncStatus.label}</span>
+              </div>
+            </div>
 
             <MenuGroup>
               {canReachBackOffice && (
@@ -346,45 +363,86 @@ export function PosModeOverflowMenu({
                   label={t("nav.backOffice")}
                   href={backOfficeHref}
                   onClick={close}
-                  tone="primary"
                 />
               )}
 
-              {/* Open / watch / finish the till. Only for a persona that runs a
-                  register — the same rule the status bar's shift label follows. */}
-              {canManageShift({
-                staffRole: posSession.staffRole,
-                allowedPages: posSession.allowedPages,
-              }) && (
+              {posSystemHref && (
                 <MenuRow
-                  icon={Wallet}
-                  label={t("pos.shift.title")}
-                  href={shiftHref}
+                  icon={MonitorSmartphone}
+                  label={t("nav.posSystem")}
+                  href={posSystemHref}
                   onClick={close}
-                  active={pathname === shiftHref}
+                  active={isPosTabPath(pathname, storeId)}
                 />
               )}
 
-              <MenuRow
-                icon={CalendarClock}
-                label={t("pages.scheduleMyScheduleTitle")}
-                href={scheduleHref}
-                onClick={close}
-                active={pathname === scheduleHref}
-              />
+              {showOperational && (
+                <MenuRow
+                  icon={ClipboardList}
+                  label={t("nav.posOperational")}
+                  href={operationalHref}
+                  onClick={close}
+                  active={pathname === operationalHref}
+                />
+              )}
+            </MenuGroup>
 
-              {/* Clock in/out — a timesheet action for the persona already
-                  active. Not grouped with the "who is this device" actions at
-                  the bottom — different question, different answer. */}
+            <MenuGroup>
+              {/* One row: the switch, and the open-window button just left of it.
+                  The button sits BETWEEN two labels rather than inside one — a
+                  button inside the label would join the switch's name, and a tap
+                  on it while disabled (pointer-events: none) would fall through
+                  to the label and switch the display on. */}
+              <div className="flex min-h-12 items-center gap-1 pr-1 pl-3">
+                <label
+                  htmlFor="pos-customer-display"
+                  className="flex min-h-12 min-w-0 flex-1 cursor-pointer items-center gap-3"
+                >
+                  <span
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                      displayEnabled ? "bg-emerald-500/15 text-emerald-500" : "bg-muted"
+                    )}
+                    aria-hidden
+                  >
+                    <Monitor className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {t("pos.customerDisplay.enable")}
+                  </span>
+                </label>
+                {/* Synchronous on purpose: window.open needs the tap's user activation. */}
+                <button
+                  type="button"
+                  onClick={() => openCustomerDisplay(storeId)}
+                  disabled={!displayEnabled}
+                  aria-label={t("pos.customerDisplay.openWindow")}
+                  title={t("pos.customerDisplay.openWindow")}
+                  className="text-muted-foreground hover:bg-accent hover:text-foreground flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
+                >
+                  <ExternalLink className="size-4" aria-hidden />
+                </button>
+                {/* Its own label so the ~18px switch still gets a 48px target. */}
+                <label
+                  htmlFor="pos-customer-display"
+                  className="flex h-12 min-w-11 cursor-pointer items-center justify-center"
+                >
+                  <Switch
+                    id="pos-customer-display"
+                    checked={displayEnabled}
+                    onCheckedChange={setDisplayEnabled}
+                  />
+                </label>
+              </div>
+
               <MenuRow
-                icon={KeyRound}
-                label={t("clockInOut.dialogTitle")}
+                icon={Cable}
+                label={t("pos.hardware.title")}
                 onClick={() => {
                   close();
-                  setClockOpen(true);
+                  setHardwareOpen(true);
                 }}
               />
-
               <MenuRow
                 icon={Bug}
                 label={t("feedback.buttonLabel")}
@@ -392,38 +450,6 @@ export function PosModeOverflowMenu({
                   close();
                   setFeedbackOpen(true);
                 }}
-              />
-            </MenuGroup>
-
-            <MenuGroup>
-              {/* A <label>, so the whole 48px row flips the ~18px Switch. */}
-              <label
-                htmlFor="pos-customer-display"
-                className="flex min-h-12 cursor-pointer items-center gap-3 px-3"
-              >
-                <span
-                  className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                    displayEnabled ? "bg-emerald-500/15 text-emerald-500" : "bg-muted"
-                  )}
-                  aria-hidden
-                >
-                  <Monitor className="size-4" />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {t("pos.customerDisplay.enable")}
-                </span>
-                <Switch
-                  id="pos-customer-display"
-                  checked={displayEnabled}
-                  onCheckedChange={setDisplayEnabled}
-                />
-              </label>
-              <MenuRow
-                icon={ExternalLink}
-                label={t("pos.customerDisplay.openWindow")}
-                onClick={() => openCustomerDisplay(storeId)}
-                disabled={!displayEnabled}
               />
             </MenuGroup>
 
@@ -485,21 +511,15 @@ export function PosModeOverflowMenu({
               />
             </MenuGroup>
           </div>
-
-          <div
-            role="status"
-            className={cn("shrink-0 pb-[env(safe-area-inset-bottom)]", syncStatus.className)}
-          >
-            <p className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium">
-              <SyncStatusIcon className="size-4 shrink-0" aria-hidden />
-              <span className="truncate">{syncStatus.label}</span>
-            </p>
-          </div>
         </SheetContent>
       </Sheet>
 
-      <ClockInOutDialog open={clockOpen} onOpenChange={setClockOpen} storeId={storeId} />
       <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+      <HardwareSettingsDialog
+        storeId={storeId}
+        open={hardwareOpen}
+        onOpenChange={setHardwareOpen}
+      />
     </>
   );
 }

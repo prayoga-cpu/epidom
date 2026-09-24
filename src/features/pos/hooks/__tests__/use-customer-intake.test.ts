@@ -12,9 +12,12 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 const net = vi.hoisted(() => ({ online: true }));
 vi.mock("@/hooks/use-network-status", () => ({ useOnlineStatus: () => net.online }));
 
-vi.mock("@/lib/api/client", () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }));
+vi.mock("@/lib/api/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/client")>();
+  return { ...actual, apiClient: { get: vi.fn(), post: vi.fn() } };
+});
 
-import { apiClient } from "@/lib/api/client";
+import { apiClient, ApiClientError } from "@/lib/api/client";
 import {
   clearCustomerIntake,
   useCustomerDisplayPublisher,
@@ -27,6 +30,7 @@ import { usePosCart } from "../use-pos-cart";
 import type { CartCustomer } from "../../types/pos.types";
 
 const get = vi.mocked(apiClient.get);
+const post = vi.mocked(apiClient.post);
 const cart = () => usePosCart.getState();
 const intake = () => useCustomerIntake.getState();
 
@@ -100,6 +104,7 @@ beforeEach(() => {
   localStorage.clear();
   net.online = true;
   get.mockReset();
+  post.mockReset();
   cart().clearCart();
   clearCustomerIntake();
   useCustomerDisplaySettings.setState({ enabled: true });
@@ -164,6 +169,9 @@ describe("useCustomerIntake — the store", () => {
       match: null,
       receivedAt: 0,
       formOpenedFor: 0,
+      submittedFor: 0,
+      takenOverFor: 0,
+      autoSave: "idle",
     });
   });
 });
@@ -397,6 +405,187 @@ describe("the cashier saves the new customer while the display waits", () => {
 
     await waitFor(() => expect(windows.display.result.current.status?.match).toBe("existing"));
     expect(windows.display.result.current.status?.firstName).toBeNull();
+  });
+});
+
+describe("the customer finishes on the display — the till saves them", () => {
+  const submit = async (
+    display: ReturnType<typeof mountWindows>["display"],
+    name = "",
+    email = ""
+  ) => {
+    await act(async () => {
+      display.result.current.submitDetails(name, email);
+    });
+  };
+
+  /** A new number, answered, then Done on the display. */
+  const newCustomerFinishes = async (name = "Claire Moreau", email = "claire@example.com") => {
+    serveCustomers([]);
+    const windows = mountWindows();
+    await sendPhone(windows.display, PHONE);
+    await waitFor(() => expect(intake().match).toBe("new"));
+    await submit(windows.display, name, email);
+    return windows;
+  };
+
+  const created = (over: Record<string, unknown> = {}) =>
+    member({ id: "c7", name: "Claire Moreau", email: "claire@example.com", points: 0, ...over });
+
+  it("saves a new customer with what they typed and attaches them — no Save from the cashier", async () => {
+    post.mockResolvedValue(created() as never);
+    const windows = await newCustomerFinishes();
+
+    await waitFor(() => expect(cart().customer?.id).toBe("c7"));
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledWith("/stores/s1/customers", {
+      name: "Claire Moreau",
+      phone: PHONE,
+      email: "claire@example.com",
+    });
+    expect(intake().autoSave).toBe("saved");
+    // ...and the display is told they are a customer now.
+    await waitFor(() => expect(windows.display.result.current.status?.match).toBe("existing"));
+    expect(windows.display.result.current.status?.firstName).toBe("Claire");
+  });
+
+  it("Skip saves the number alone — the server names the record after it", async () => {
+    post.mockResolvedValue(created({ name: PHONE, email: null }) as never);
+    await newCustomerFinishes("", "");
+
+    await waitFor(() => expect(cart().customer?.id).toBe("c7"));
+    expect(post).toHaveBeenCalledWith("/stores/s1/customers", {
+      name: undefined,
+      phone: PHONE,
+      email: undefined,
+    });
+  });
+
+  it("does not take the submission on trust: an invalid email is dropped, not saved", async () => {
+    post.mockResolvedValue(created({ email: null }) as never);
+    await newCustomerFinishes("Claire", "not-an-email");
+
+    await waitFor(() => expect(post).toHaveBeenCalled());
+    expect(post.mock.calls[0][1]).toMatchObject({ name: "Claire", email: undefined });
+  });
+
+  it("nothing is saved while the customer is still typing — only once they finish", async () => {
+    serveCustomers([]);
+    const windows = mountWindows();
+    await sendPhone(windows.display, PHONE);
+    await waitFor(() => expect(intake().match).toBe("new"));
+
+    act(() => windows.display.result.current.sendDetails("Claire", ""));
+
+    expect(post).not.toHaveBeenCalled();
+    expect(intake().autoSave).toBe("idle");
+  });
+
+  it("a customer who finishes before the lookup answers is saved when it does", async () => {
+    let answerLookup: (value: unknown) => void = () => {};
+    get.mockReturnValue(new Promise((resolve) => (answerLookup = resolve)) as never);
+    post.mockResolvedValue(created() as never);
+    const windows = mountWindows();
+    await sendPhone(windows.display, PHONE);
+    await submit(windows.display, "Claire Moreau", "claire@example.com");
+    expect(post).not.toHaveBeenCalled();
+
+    await act(async () => {
+      answerLookup({ customers: [], nextCursor: null, totalCount: 0 });
+    });
+
+    await waitFor(() => expect(cart().customer?.id).toBe("c7"));
+  });
+
+  it("saves each submission once, however often the resolver re-renders", async () => {
+    post.mockResolvedValue(created() as never);
+    const windows = await newCustomerFinishes();
+    await waitFor(() => expect(cart().customer?.id).toBe("c7"));
+
+    windows.cashier.rerender();
+    await submit(windows.display, "Claire Moreau", "claire@example.com");
+
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it("never over a customer the cashier already put on the sale", async () => {
+    cart().setCustomer(asCartCustomer());
+    await newCustomerFinishes();
+
+    expect(post).not.toHaveBeenCalled();
+    expect(cart().customer?.id).toBe("c2");
+  });
+
+  it("leaves a form the cashier took over for the cashier to save", async () => {
+    serveCustomers([]);
+    const windows = mountWindows();
+    await sendPhone(windows.display, PHONE);
+    await waitFor(() => expect(intake().match).toBe("new"));
+
+    act(() => intake().markTakenOver(intake().receivedAt));
+    await submit(windows.display, "Claire", "");
+
+    expect(post).not.toHaveBeenCalled();
+    expect(cart().customer).toBeNull();
+  });
+
+  it("a number the till could not check is not saved blind", async () => {
+    get.mockRejectedValue(new Error("boom"));
+    const windows = mountWindows();
+    await sendPhone(windows.display, PHONE);
+    await waitFor(() => expect(intake().match).toBe("unknown"));
+
+    await submit(windows.display, "Claire", "");
+
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("a number saved meanwhile elsewhere (409) attaches that record instead of failing", async () => {
+    post.mockRejectedValue(
+      new ApiClientError(
+        { success: false, error: { code: "CONFLICT", message: "Phone already used" } } as never,
+        409
+      )
+    );
+    // Not on file when the number was checked; on file by the time the save lands.
+    get
+      .mockResolvedValueOnce({ customers: [], nextCursor: null, totalCount: 0 } as never)
+      .mockResolvedValue({
+        customers: [member({ id: "c8", name: "Claire M." })],
+        nextCursor: null,
+        totalCount: 1,
+      } as never);
+    const windows = mountWindows();
+    await sendPhone(windows.display, PHONE);
+    await waitFor(() => expect(intake().match).toBe("new"));
+    await submit(windows.display, "Claire", "");
+
+    await waitFor(() => expect(cart().customer?.id).toBe("c8"));
+    expect(intake().autoSave).toBe("saved");
+  });
+
+  it("a failed save attaches nothing and says so — the prepared form is still there", async () => {
+    post.mockRejectedValue(new Error("network down"));
+    await newCustomerFinishes();
+
+    await waitFor(() => expect(intake().autoSave).toBe("failed"));
+    expect(cart().customer).toBeNull();
+  });
+
+  it("a save that lands after the order was placed is not attached to the next sale", async () => {
+    let finishSave: (value: unknown) => void = () => {};
+    post.mockReturnValue(new Promise((resolve) => (finishSave = resolve)) as never);
+    await newCustomerFinishes();
+    await waitFor(() => expect(intake().autoSave).toBe("saving"));
+
+    // Checkout clears the intake for the next customer.
+    act(() => clearCustomerIntake());
+    await act(async () => {
+      finishSave(created());
+    });
+
+    expect(cart().customer).toBeNull();
+    expect(intake().autoSave).toBe("idle");
   });
 });
 

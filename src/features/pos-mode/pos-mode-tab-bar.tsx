@@ -12,24 +12,30 @@ interface PosModeTabBarProps {
   storeId: string;
 }
 
-const TABS = [
+/** The POS System screen: these four routes, switched by this bar. */
+export const POS_TABS = [
   { href: "/pos", labelKey: "nav.pos", icon: Monitor },
   { href: "/pos/orders", labelKey: "nav.posOrders", icon: UtensilsCrossed },
   { href: "/pos/kds", labelKey: "nav.posKds", icon: ChefHat, kdsOnly: true },
   { href: "/tables", labelKey: "nav.posTables", icon: Grid2X2 },
 ] as const;
 
+export type PosTab = (typeof POS_TABS)[number];
+
+/** Whether `pathname` is one of the POS System's tab routes (null-safe). */
+export function isPosTabPath(pathname: string | null, storeId: string): boolean {
+  if (!pathname) return false;
+  return POS_TABS.some((tab) => pathname === `/store/${storeId}${tab.href}`);
+}
+
 /**
- * Bottom tab bar — a cashier's thumb reaches the bottom of a tablet screen;
- * a left rail costs 230px this shell doesn't have to sacrifice (see
- * docs/dashboard-revamp.md). Dapur hides entirely when the store has
- * kitchenDisplayEnabled off, mirroring sidebar.tsx's own allowedPages
- * filtering for a staff PIN persona with restricted page access. The "More"
- * menu lives in the status bar (PosModeStatusBar), not here.
+ * The tabs this device's persona sees — shared by the bar and the More
+ * drawer's POS System row, so the row always leads to a tab the bar would
+ * show. Kitchen & Bar hides when the store has its kitchen display off; a
+ * staff PIN persona with restricted page access sees only what it's granted
+ * (sidebar.tsx filters the Back Office rail the same way).
  */
-export function PosModeTabBar({ storeId }: PosModeTabBarProps) {
-  const { t } = useI18n();
-  const pathname = usePathname();
+export function usePosTabs(storeId: string): PosTab[] {
   const posSession = usePosSession();
   const { data: kdsSettings } = useKdsSettings(storeId);
   const kitchenDisplayEnabled = kdsSettings?.kitchenDisplayEnabled ?? true;
@@ -39,16 +45,34 @@ export function PosModeTabBar({ storeId }: PosModeTabBarProps) {
       ? posSession.allowedPages
       : null;
 
-  const visibleTabs = TABS.filter((tab) => {
+  return POS_TABS.filter((tab) => {
     if ("kdsOnly" in tab && tab.kdsOnly && !kitchenDisplayEnabled) return false;
     if (staffAllowedPages && !staffAllowedPages.includes(tab.href)) return false;
     return true;
   });
+}
+
+/**
+ * Bottom tab bar — a cashier's thumb reaches the bottom of a tablet screen;
+ * a left rail costs 230px this shell doesn't have to sacrifice (see
+ * docs/dashboard-revamp.md). Dapur hides entirely when the store has
+ * kitchenDisplayEnabled off, mirroring sidebar.tsx's own allowedPages
+ * filtering for a staff PIN persona with restricted page access. The "More"
+ * menu lives in the status bar (PosModeStatusBar), not here.
+ *
+ * Shown on the POS System routes only — PosModeShell leaves it off the
+ * Operational page (Shift, My Schedule, Clock In / Out), which the drawer
+ * links to instead.
+ */
+export function PosModeTabBar({ storeId }: PosModeTabBarProps) {
+  const { t } = useI18n();
+  const pathname = usePathname();
+  const visibleTabs = usePosTabs(storeId);
 
   return (
     <nav
       className="bg-background flex h-14 shrink-0 items-stretch border-t pb-[env(safe-area-inset-bottom)]"
-      aria-label={t("nav.pos")}
+      aria-label={t("nav.posSystem")}
     >
       {visibleTabs.map((tab) => {
         const fullHref = `/store/${storeId}${tab.href}`;

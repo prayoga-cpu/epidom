@@ -5,9 +5,20 @@ vi.mock("@/lib/prisma", () => ({
   prisma: { staffMember: { findFirst: (...a: unknown[]) => staffFindFirst(...a) } },
 }));
 
-import { getLinkedStaffForUser, linkedStaffLandingPath, linkedStaffWhere } from "../staff-link";
+import {
+  ACTIVE_STAFF_WHERE,
+  getLinkedStaffForUser,
+  linkedStaffLandingPath,
+  linkedStaffWhere,
+} from "../staff-link";
 
 beforeEach(() => staffFindFirst.mockReset());
+
+describe("ACTIVE_STAFF_WHERE", () => {
+  it("is 'active, and never the OWNER row' — the rule the store list's staff count shares", () => {
+    expect(ACTIVE_STAFF_WHERE).toEqual({ isActive: true, role: { not: "OWNER" } });
+  });
+});
 
 describe("linkedStaffWhere", () => {
   it("is 'active, and never the OWNER row' — the same predicate the store wall uses", () => {
@@ -16,6 +27,10 @@ describe("linkedStaffWhere", () => {
       isActive: true,
       role: { not: "OWNER" },
     });
+  });
+
+  it("is built from ACTIVE_STAFF_WHERE, so the two rules cannot drift apart", () => {
+    expect(linkedStaffWhere("u1")).toEqual({ userId: "u1", ...ACTIVE_STAFF_WHERE });
   });
 });
 

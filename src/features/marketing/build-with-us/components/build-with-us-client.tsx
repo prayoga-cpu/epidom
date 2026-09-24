@@ -4,8 +4,7 @@ import { motion } from "motion/react";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { PrionationLogoFull } from "@/features/marketing/shared/components/prionation-logo-full";
 import { trackEvent } from "@/lib/analytics";
-
-const PRIONATION_BOOKING_URL = "https://www.prionation.io/en#engage?tab=meet";
+import { PRIONATION_BOOKING_URL } from "@/lib/constants/contact";
 
 const COPY: Record<
   Locale,

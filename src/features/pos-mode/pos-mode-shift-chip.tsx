@@ -9,7 +9,7 @@ import { useActiveShift } from "@/features/pos/hooks/use-active-shift";
  * The status bar's shift label: green with the start time while the persona's
  * till is open, amber "No shift" when it isn't — a cashier should never find out
  * at close that the day's sales weren't going against a drawer. Tapping it opens
- * the Shift page either way.
+ * the Operational page on its Shift tab either way.
  *
  * Renders nothing for a persona that can't hold a till (kitchen), and nothing
  * while the answer is unknown, so it can't claim "No shift" about a shift it
@@ -32,7 +32,7 @@ export function PosModeShiftChip({ storeId }: { storeId: string }) {
 
   return (
     <Link
-      href={`/store/${storeId}/pos/shift`}
+      href={`/store/${storeId}/pos/operational?tab=shift`}
       title={title}
       aria-label={title}
       className={cn(

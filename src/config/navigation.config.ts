@@ -23,6 +23,7 @@ import {
   Building2,
   ContactRound,
   Wallet,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
 
@@ -150,7 +151,7 @@ export const dashboardNavigation: NavSection[] = [
       },
       {
         // The manager's read-back of every till session. Attendance stays under
-        // Schedule; opening and finishing a shift is POS Mode's /pos/shift.
+        // Schedule; opening and finishing a shift is POS Mode's Operational page.
         href: "/shifts",
         labelKey: "nav.shifts",
         icon: Wallet,
@@ -226,6 +227,11 @@ export const landingNavigation: NavItem[] = [
     href: "/pricing",
     labelKey: "common.nav.pricing",
     icon: CreditCard,
+  },
+  {
+    href: "/compare",
+    labelKey: "common.nav.compare",
+    icon: Scale,
   },
   {
     href: "/contact",

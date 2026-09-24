@@ -124,6 +124,29 @@ describe("proxy: the deleted /payments page", () => {
   });
 });
 
+describe("proxy: the deleted /status page", () => {
+  it.each([
+    ["/status", "/contact"],
+    ["/id/status", "/id/contact"],
+    ["/en/status", "/en/contact"],
+    ["/en/status/", "/en/contact"],
+  ])("%s permanently redirects (308) to %s", async (from, to) => {
+    const res = await proxy(request(from));
+
+    expect(res.status).toBe(308);
+    const location = new URL(res.headers.get("location") as string);
+    expect(location.origin).toBe(ORIGIN);
+    expect(location.pathname).toBe(to);
+    expect(location.search).toBe("");
+  });
+
+  it("wins over the resume-redirect for a returning signed-in visitor", async () => {
+    const res = await proxy(request("/status", { cookies: SIGNED_IN_WITH_RESUME }));
+    expect(res.status).toBe(308);
+    expect(new URL(res.headers.get("location") as string).pathname).toBe("/contact");
+  });
+});
+
 describe("proxy: retired-path redirects never loop", () => {
   const VISITORS: Array<[string, Parameters<typeof request>[1]]> = [
     ["anonymous", {}],
@@ -149,6 +172,20 @@ describe("proxy: retired-path redirects never loop", () => {
       expect(hops.length).toBeLessThanOrEqual(2);
       expect(hops.map((h) => h.to).join(" ")).not.toContain("payments");
       expect(finalPath).toMatch(/^(\/id|\/en)?\/pricing$/);
+    }
+  );
+
+  it.each(VISITORS)(
+    "%s: /status goes to Contact first and never comes back to /status",
+    async (_who, opts) => {
+      // Where it finally settles is Contact's business (a signed-in visitor
+      // with a remembered page is resumed from there, as from any marketing
+      // page); what matters here is the permanent hop and no loop.
+      const { hops } = await follow("/status", opts);
+
+      expect(hops[0].status).toBe(308);
+      expect(hops[0].to).toMatch(/^(\/id|\/en)?\/contact$/);
+      expect(hops.map((h) => h.to).join(" ")).not.toContain("status");
     }
   );
 

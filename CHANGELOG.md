@@ -9,6 +9,40 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.1.0] - 2026-09-25 · feat
+
+POS Mode gets its two spaces, the store list gets each store's own look and numbers, and the till gets a little friendlier.
+
+- **POS System and Operational.** The More menu now opens POS Mode's two spaces. POS System is the till with its four tabs (Cashier, Orders, Kitchen & Bar, Tables). Operational puts your shift, your schedule, the team's schedule and clocking in on one page, without the bottom tabs.
+- **Team Schedule in POS Mode.** Owners and managers see the week's roster and schedule photos published in the Back Office, read-only, with previous and next week. Drafts never show.
+- **Clock in and out on the page.** Clocking in is a tab of Operational instead of a pop-up, with Back buttons on every step.
+- **Hardware settings.** Printers and the barcode scanner for this device, in one place from the More menu. You can test your scanner from any POS screen.
+- **A tidier More menu.** The sync state sits right under Sync sales, the customer display's open-window button sits beside its switch, Send feedback moved down, and the printer button only shows on the till screens.
+- **New customers save themselves.** When a new customer finishes on the customer display, the till saves them and adds them to the sale. The cashier no longer taps Save.
+- **Typing feedback on every on-screen keypad.** Keys press and ripple on the PIN pads and on the customer display's keyboard and number pad, and typed characters pop in.
+- **Your Stores, redone.** Each card shows the store's storefront cover, logo and colour, its slogan, currency, total revenue, customers, staff and market. Tapping a store asks whether to open the POS System or the Back Office, picking up where you left off. The POS Cashier shortcut on the card is gone.
+- **Signed-in pages stay in the app.** On Your Stores and Profile the logo no longer leads to the website and the back arrow is gone. Log out to see the website.
+- **More French.** Clocking in, My Schedule, the Team Schedule and the More menu's account options are now in French.
+
+## [3.0.0] - 2026-09-24 · feat
+
+Epidom 3. Version 3 starts now that the dashboard revamp from the last 2.x releases is complete: the till and the Back Office are now two separate spaces. Apart from the website and logo changes at the end of this list, this update adds nothing new.
+
+- **POS Mode is for the counter.** Cashiers and kitchen staff get the till, orders, the kitchen and bar display, the customer screen, tables and clocking in, with large buttons and no management pages in the way.
+- **The Back Office is for running the business.** Owners and managers get stock, the menu, staff and schedules, finance, the storefront and settings, grouped by task. Enterprise stores can see all their outlets side by side without leaving the Back Office.
+- **The till is rebuilt.** It has a live receipt-style bill, customers and loyalty points, discounts, split and merged bills, online delivery orders, up to four printers and a screen facing the customer.
+- **One shift for the whole store.** Every cashier and device shares it, and past shifts are kept in a shift history.
+- **Staff sign in with their own account** and go straight to their store's till.
+- **The website is available in English, French and Indonesian** on every page, including the legal pages.
+- **Compare is in the website's top menu**, between Pricing and Contact, and stays highlighted on each comparison page. On laptop screens the menu no longer runs under the logo or squeezes the Try Epidom button onto three lines.
+- **Meet us.** A new button at the bottom of every website page opens Prionation's booking page, where you can set up a meeting with the team.
+- **Our address is now Canggu, Bali** at the bottom of every website page, in every language.
+- **A new logo.** The grocery-bag icon and the ÉPIDOM wordmark replace the old square icon and lettering on the website, the sign-in page, the Back Office top bar and the till's menu. Printed reports, the customer screen and staff invitations show the new wordmark.
+- **Start Trial.** The button at the top right of the website now says Start Trial instead of Try Epidom.
+- **The Status page is gone.** It was never connected to live monitoring. Old links to it now open the Contact page, where you can report a problem.
+- **The Features page describes Epidom 3.** It opens on the three spaces (the storefront, POS Mode and the Back Office) and now covers what the last releases added: customers and loyalty points, the customer screen, up to four printers, one shift for the whole store, rosters and clock-in, supplier orders and the stock log. Each feature names the plan it needs. Claims the product doesn't back up are gone: allergen and nutrition labels, tax-authority exports (FEC), auto-translated menus, next-day payouts, story-ready product cards and reorder alerts by WhatsApp. The sample bills, recipes and reports now show euros in French, rupiah in Indonesian and dollars in English.
+- **Footer tidy-up.** "Build Your Own" now reads "Build your app", and the Prionation credit shows its name without the icon.
+
 ## [2.104.0] - 2026-09-24 · ux
 
 The Stock page shows items as cards you can lay out three ways, and an item's details open in a pop-up.

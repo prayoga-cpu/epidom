@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import {
+  PRIONATION_BOOKING_URL,
   SUPPORT_EMAIL_DISPLAY,
   SUPPORT_MAILTO,
   WHATSAPP_NUMBERS,
@@ -52,6 +53,16 @@ describe("SiteFooter contact column", () => {
       expect(screen.getByRole("link", { name }).getAttribute("href")).toBe(href);
     }
     expect(screen.queryAllByRole("link", { name: /^WhatsApp/ })).toHaveLength(expected.length);
+  });
+});
+
+describe("SiteFooter Meet us", () => {
+  it("opens Prionation's booking page in a new tab", () => {
+    render(<SiteFooter />);
+    const link = screen.getByRole("link", { name: "footer.meetUs" });
+    expect(link.getAttribute("href")).toBe(PRIONATION_BOOKING_URL);
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
   });
 });
 

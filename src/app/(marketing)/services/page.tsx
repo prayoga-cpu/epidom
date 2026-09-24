@@ -1,4 +1,5 @@
 import { HeroSection } from "@/features/marketing/services/components/hero-section";
+import { SpacesSection } from "@/features/marketing/services/components/spaces-section";
 import { FeaturesShowcaseSection } from "@/features/marketing/services/components/features-showcase-section";
 import { ClosingCtaSection } from "@/features/marketing/home/components/closing-cta-section";
 import { pageMetadata } from "@/features/marketing/seo/page-metadata";
@@ -9,6 +10,7 @@ export default function ServicesPage() {
   return (
     <main className="w-full overflow-x-hidden">
       <HeroSection />
+      <SpacesSection />
       <FeaturesShowcaseSection />
       <ClosingCtaSection />
     </main>

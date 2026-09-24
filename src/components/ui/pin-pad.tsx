@@ -3,6 +3,7 @@
 import { Delete, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { onKeyPointerDown } from "@/lib/utils/key-press";
 
 const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"] as const;
 
@@ -12,12 +13,17 @@ interface PinPadProps {
   disabled?: boolean;
   shake?: boolean;
   length?: number;
+  className?: string;
 }
 
-/** Digit dots + numeric keypad shared by every PIN-entry flow (staff login, owner PIN). */
-export function PinPad({ value, onKey, disabled, shake, length = 4 }: PinPadProps) {
+/**
+ * Digit dots + numeric keypad shared by every PIN-entry flow (staff login in
+ * the POS and the Back Office, the PIN re-check, owner PIN, clock-in). Keys
+ * play the shared press animation and each dot pops as it fills.
+ */
+export function PinPad({ value, onKey, disabled, shake, length = 4, className }: PinPadProps) {
   return (
-    <div>
+    <div className={className}>
       <div className={cn("flex justify-center gap-4", shake && "animate-[shake_0.4s_ease]")}>
         {Array.from({ length }).map((_, i) => (
           <div
@@ -25,7 +31,7 @@ export function PinPad({ value, onKey, disabled, shake, length = 4 }: PinPadProp
             className={cn(
               "h-3 w-3 rounded-full border-2 transition-all sm:h-4 sm:w-4",
               i < value.length
-                ? "border-primary bg-primary"
+                ? "border-primary bg-primary pin-dot-filled"
                 : "border-muted-foreground/30 bg-transparent"
             )}
           />
@@ -40,7 +46,8 @@ export function PinPad({ value, onKey, disabled, shake, length = 4 }: PinPadProp
               key={idx}
               type="button"
               variant={key === "del" ? "outline" : "secondary"}
-              className="h-12 text-base font-semibold sm:h-14 sm:text-lg"
+              className="relative h-12 overflow-hidden text-base font-semibold sm:h-14 sm:text-lg"
+              onPointerDown={onKeyPointerDown}
               onClick={() => onKey(key)}
               disabled={disabled}
             >
@@ -51,7 +58,7 @@ export function PinPad({ value, onKey, disabled, shake, length = 4 }: PinPadProp
                   <Delete className="h-5 w-5" />
                 )
               ) : (
-                key
+                <span>{key}</span>
               )}
             </Button>
           );

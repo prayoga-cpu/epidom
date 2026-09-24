@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EpidomWordmark } from "@/features/marketing/shared/components/epidom-logo";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { apiClient, ApiClientError } from "@/lib/api/client";
 import { authClient, signOut, useUser } from "@/lib/auth-client";
@@ -370,7 +371,9 @@ export function StaffInviteClaimForm({ token }: { token: string | null }) {
           <CardTitle className="text-2xl font-bold tracking-tight">
             {t("pages.staffInviteClaimTitle")}
           </CardTitle>
-          <CardDescription>EPIDOM</CardDescription>
+          <CardDescription>
+            <EpidomWordmark height={14} />
+          </CardDescription>
         </CardHeader>
         {body}
       </Card>

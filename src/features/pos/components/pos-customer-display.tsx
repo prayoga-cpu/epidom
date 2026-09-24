@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Check, Maximize2, Minimize2, MessageCircle, MonitorOff, ShoppingBag } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
+import { EpidomMark, EpidomWordmark } from "@/features/marketing/shared/components/epidom-logo";
 import { getContrastingInk, getPremiumTheme } from "@/lib/utils/color";
 import { cn } from "@/lib/utils";
 import {
@@ -49,6 +49,7 @@ export function PosCustomerDisplay({
     askedAt,
     sendPhone,
     sendDetails,
+    submitDetails,
   } = useCustomerIntakeChannel(storeId);
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
@@ -261,10 +262,9 @@ export function PosCustomerDisplay({
               ) : (
                 <div className="flex flex-col items-center gap-4 opacity-85">
                   <EpidomMark size={104} />
-                  {/* No size/tracking utilities: .epi-display is declared
-                      unlayered in globals.css, so it outranks anything
-                      Tailwind emits into @layer utilities on this element. */}
-                  <p className="epi-display opacity-70">EPIDOM</p>
+                  <div className="opacity-70">
+                    <EpidomWordmark height={28} />
+                  </div>
                 </div>
               )}
             </div>
@@ -395,6 +395,7 @@ export function PosCustomerDisplay({
           sendPhone(phone);
         }}
         onSubmitDetails={sendDetails}
+        onFinishDetails={submitDetails}
       />
     </div>
   );

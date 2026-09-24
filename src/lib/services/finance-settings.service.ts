@@ -62,11 +62,25 @@ function buildFeeRates(overrides: PaymentFeeOverrides | null): typeof PAYMENT_FE
   return feeRates;
 }
 
-function resolveRow(row: FinanceSettingsRow | null) {
-  const overrides = row ? parseOverrides(row.processingFeeOverrides) : null;
+/**
+ * The currency and market a finance-settings row resolves to: IDR / INDONESIA
+ * when there is no row. This is the only copy of those defaults. resolveRow
+ * uses it, and so does the store overview, which reads many stores' rows in
+ * one query instead of calling getFinanceSettings once per store.
+ */
+export function resolveCurrencyAndMarket(
+  row: { currency: string; market: PaymentMarket } | null | undefined
+): { currency: string; market: PaymentMarket } {
   return {
     currency: row?.currency ?? "IDR",
     market: row?.market ?? PaymentMarket.INDONESIA,
+  };
+}
+
+function resolveRow(row: FinanceSettingsRow | null) {
+  const overrides = row ? parseOverrides(row.processingFeeOverrides) : null;
+  return {
+    ...resolveCurrencyAndMarket(row),
     enabledPaymentMethods: row?.enabledPaymentMethods ?? DEFAULT_ENABLED_PAYMENT_METHODS,
     taxEnabled: row?.taxEnabled ?? false,
     taxRate: row ? Number(row.taxRate) : 0,

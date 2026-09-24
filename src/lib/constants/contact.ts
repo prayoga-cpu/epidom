@@ -54,3 +54,9 @@ export function supportMailto(subject?: string): string {
 }
 
 export const SUPPORT_MAILTO = supportMailto();
+
+/**
+ * Prionation's "Meet us" booking page. The calendar lives on prionation.io;
+ * Epidom only links to it (Build With Us, the site footer).
+ */
+export const PRIONATION_BOOKING_URL = "https://www.prionation.io/en#engage?tab=meet";

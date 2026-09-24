@@ -29,7 +29,6 @@ export type MarketingMetaPage =
   | "partners"
   | "careers"
   | "press"
-  | "status"
   | "changelog"
   | "compare"
   | "compare-delivery-commission"
@@ -294,25 +293,6 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         title: "Pers — EPIDOM",
         description:
           "Media kit dan kontak pers untuk jurnalis yang meliput Epidom: fakta dasar, aset atas permintaan, dan cara menghubungi kami.",
-      },
-    },
-  },
-
-  status: {
-    path: "/status",
-    copy: {
-      en: {
-        title: "Status — EPIDOM",
-        description: "Current status of Epidom's core services, updated manually by the team.",
-      },
-      fr: {
-        title: "État du système — EPIDOM",
-        description:
-          "État actuel des services principaux d'Epidom, mis à jour manuellement par l'équipe.",
-      },
-      id: {
-        title: "Status Sistem — EPIDOM",
-        description: "Status terkini layanan inti Epidom, diperbarui manual oleh tim.",
       },
     },
   },

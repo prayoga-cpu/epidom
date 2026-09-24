@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StoreCard } from "./store-card";
 import { AdminCard } from "./admin-card";
 import { CreateStoreDialog } from "./create-store-dialog";
 import { useStores } from "../hooks/use-stores";
+import { useStoreOverviews } from "../hooks/use-store-overviews";
 import { useSubscriptionStatus } from "../hooks/use-subscription-status";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Store, Loader2 } from "lucide-react";
@@ -30,6 +31,14 @@ export function StoresContainer() {
   useEffect(() => {
     if (unauthorized) window.location.href = "/login";
   }, [unauthorized]);
+  // Branding and summary for the cards. Fetched alongside the list, never
+  // waited on: the cards render from useStores and fill in when this lands,
+  // and if it fails they simply go without.
+  const { data: overviews, isLoading: overviewsLoading } = useStoreOverviews(!unauthorized);
+  const overviewById = useMemo(
+    () => new Map((overviews ?? []).map((overview) => [overview.storeId, overview])),
+    [overviews]
+  );
   const { data: subscriptionStatus, isLoading: isLoadingSubscription } = useSubscriptionStatus();
   const [isActivating, setIsActivating] = useState(false);
   const { data: session } = useSession();
@@ -201,7 +210,7 @@ export function StoresContainer() {
             <div className="animate-slide-up-delayed grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:gap-6">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="space-y-2 sm:space-y-3">
-                  <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+                  <Skeleton className="aspect-video w-full rounded-xl" />
                   <Skeleton className="h-5 w-3/4 sm:h-6" />
                   <Skeleton className="h-4 w-1/2" />
                 </div>
@@ -257,7 +266,7 @@ export function StoresContainer() {
               {isLoadingSubscription
                 ? [...Array(stores.length)].map((_, i) => (
                     <div key={`skeleton-${i}`} className="space-y-2 sm:space-y-3">
-                      <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+                      <Skeleton className="aspect-video w-full rounded-xl" />
                       <Skeleton className="h-5 w-3/4 sm:h-6" />
                       <Skeleton className="h-4 w-1/2" />
                     </div>
@@ -285,6 +294,8 @@ export function StoresContainer() {
                         // the POS layout enforces on entry — never this account's.
                         isBlocked={store.accessRole === "staff" ? false : isBlocked}
                         currentPlan={currentPlan}
+                        overview={overviewById.get(store.id) ?? null}
+                        overviewLoading={overviewsLoading}
                       />
                     );
                   })}

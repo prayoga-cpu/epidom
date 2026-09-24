@@ -86,6 +86,8 @@ Print/display routes (Section 6.6) stay attached to whichever shell generates th
 
 **Tab bar items:** Kasir (`/pos`), Antrian (`/pos/orders`), Dapur (`/pos/kds`, hidden entirely if `kitchenDisplayEnabled` is off), Meja (`/tables`), and an overflow `⋯` for the customer display trigger and clock in/out, both low-frequency actions that don't deserve permanent tab-bar real estate.
 
+> **As built (2026-09-24):** the overflow is the status bar's More drawer, and it picks between POS Mode's two spaces. **POS System** is the four tabs above (the row leads to the first tab the persona's bar shows). **Operational** (`/pos/operational`) is the till Shift, My Schedule and Clock In / Out as tabs of one page, shown without the tab bar. `/pos/shift` and `/pos/schedule` redirect there with `?tab=`. It is a route, not a permission: each tab keeps its old grant (`/pos` + a till role for Shift, `/pos/schedule` for the schedule and, on a linked account, the clock). The drawer also holds the customer display switch (with its open-window button) and **Hardware settings** (printers and barcode scanner on this device).
+
 **What's deliberately absent:** no hamburger menu, no global search, no store switcher, no language switcher, no theme toggle. A cashier mid-shift doesn't need any of them, and each one removed is one less thing competing for a 44px touch target on a screen that's already busy.
 
 **Staff PIN gate:** stays exactly as documented, a shared device serving multiple personas without separate logins. This lives above the shell, not inside it, first thing rendered, before either Kasir or Dapur loads.
@@ -132,7 +134,7 @@ Desktop (≥1280px)                          Mobile (<1280px)
 
 Cashier and Kitchen both need clock in/out per Section 4's access matrix, but the roster-builder is Manager-only. Splitting cleanly means:
 
-- **POS Mode gets a light "my shift" view**, current status, clock in/out, nothing else. Reachable from the tab-bar overflow.
+- **POS Mode gets a light "my shift" view**, current status, clock in/out, nothing else. Reachable from the tab-bar overflow. *(As built: the My Schedule and Clock In / Out tabs of the Operational page, `/pos/operational`.)*
 - **Back Office keeps the full `/schedule`**, draft/publish roster states, absence tracking, overtime computation.
 
 Don't ship one `/schedule` page and try to make it context-aware based on role, that reintroduces exactly the "one generic dashboard user" problem Section 12 warns against. Two views, sharing the same underlying clock-in/out data, cleanly separated.

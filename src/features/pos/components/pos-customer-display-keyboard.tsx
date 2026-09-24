@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowBigUp, Delete } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
+import { onKeyPointerDown } from "@/lib/utils/key-press";
 
 /**
  * On-screen keyboard for the customer-facing screen — the text sibling of the
@@ -16,7 +17,9 @@ import { cn } from "@/lib/utils";
  * key for anything else) and offers ' - . for the names that need them; `email`
  * stays lowercase, adds a digits row, and gives @ . - _ and a .com shortcut.
  * Styled with the display's own `--cfd-*` variables so it sits on the brand
- * ground rather than the dashboard's dark theme.
+ * ground rather than the dashboard's dark theme. Every key plays the shared
+ * press animation (src/lib/utils/key-press.ts), and the field shows each
+ * character popping in (TypedText).
  */
 
 export type KeyboardLayout = "name" | "email";
@@ -37,8 +40,9 @@ const ROW_3 = "zxcvbnm".split("");
 const GROW = { 1: "flex-1", 2: "flex-[2]", 3: "flex-[3]", 5: "flex-[5]" } as const;
 type Grow = keyof typeof GROW;
 
+// `relative overflow-hidden` holds the press ripple (see playKeyPress).
 const KEY_BASE =
-  "flex h-11 min-w-0 touch-manipulation items-center justify-center rounded-xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] text-base font-semibold transition-opacity active:opacity-60 sm:h-12 sm:text-lg";
+  "relative flex h-11 min-w-0 touch-manipulation items-center justify-center overflow-hidden rounded-xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] text-base font-semibold transition-opacity active:opacity-60 sm:h-12 sm:text-lg";
 
 export function PosCustomerDisplayKeyboard({
   layout,
@@ -77,11 +81,13 @@ export function PosCustomerDisplayKeyboard({
     <button
       key={letter}
       type="button"
+      onPointerDown={onKeyPointerDown}
       aria-label={letter}
       onClick={() => pressLetter(letter)}
       className={cn(KEY_BASE, GROW[1])}
     >
-      {upper ? letter.toUpperCase() : letter}
+      {/* An element, not a bare string: see playKeyPress. */}
+      <span>{upper ? letter.toUpperCase() : letter}</span>
     </button>
   );
 
@@ -89,11 +95,12 @@ export function PosCustomerDisplayKeyboard({
     <button
       key={digit}
       type="button"
+      onPointerDown={onKeyPointerDown}
       aria-label={digit}
       onClick={() => append(digit)}
       className={cn(KEY_BASE, GROW[1])}
     >
-      {digit}
+      <span>{digit}</span>
     </button>
   );
 
@@ -101,11 +108,12 @@ export function PosCustomerDisplayKeyboard({
     <button
       key={symbol}
       type="button"
+      onPointerDown={onKeyPointerDown}
       aria-label={symbol}
       onClick={() => append(symbol)}
       className={cn(KEY_BASE, GROW[grow])}
     >
-      {symbol}
+      <span>{symbol}</span>
     </button>
   );
 
@@ -120,6 +128,7 @@ export function PosCustomerDisplayKeyboard({
         {isName ? (
           <button
             type="button"
+            onPointerDown={onKeyPointerDown}
             aria-label={t("pos.customerDisplay.keyboardShift")}
             aria-pressed={shift}
             onClick={() => setShift((s) => !s)}
@@ -133,6 +142,7 @@ export function PosCustomerDisplayKeyboard({
         {ROW_3.map(letterKey)}
         <button
           type="button"
+          onPointerDown={onKeyPointerDown}
           aria-label={t("common.actions.delete")}
           onClick={backspace}
           className={cn(KEY_BASE, "flex-[1.5]")}
@@ -148,11 +158,12 @@ export function PosCustomerDisplayKeyboard({
             {symbolKey("-")}
             <button
               type="button"
+              onPointerDown={onKeyPointerDown}
               aria-label={t("pos.customerDisplay.keyboardSpace")}
               onClick={pressSpace}
               className={cn(KEY_BASE, GROW[5], "text-sm font-medium opacity-90")}
             >
-              {t("pos.customerDisplay.keyboardSpace")}
+              <span>{t("pos.customerDisplay.keyboardSpace")}</span>
             </button>
             {symbolKey(".")}
           </>

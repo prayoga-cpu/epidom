@@ -88,12 +88,16 @@ export function useCustomerDetail(storeId: string, customerId: string | null, en
 }
 
 /** POS quick-create. A duplicate phone in the store comes back as a 409 ApiClientError. */
+export function createCustomer(storeId: string, body: CreateCustomerBody) {
+  return apiClient.post<CustomerRowDto>(`/stores/${storeId}/customers`, body);
+}
+
+/** createCustomer for the cashier's form, refreshing the picker's search after. */
 export function useCreateCustomer(storeId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: CreateCustomerBody) =>
-      apiClient.post<CustomerRowDto>(`/stores/${storeId}/customers`, body),
+    mutationFn: (body: CreateCustomerBody) => createCustomer(storeId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pos", "customers", storeId, "search"] });
     },

@@ -144,7 +144,11 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
   // Pre-select the current page by matching the pathname (minus the store prefix)
   // against the longest nav item href
   const defaultPage = useMemo(() => {
-    const path = (pathname ?? "").replace(/^\/store\/[^/]+/, "");
+    const path = (pathname ?? "")
+      .replace(/^\/store\/[^/]+/, "")
+      // POS Mode's Operational page is a route, not a nav item: file it under the
+      // "/pos/schedule" grant it opens on, not the Cashier its prefix would match.
+      .replace(/^\/pos\/operational/, "/pos/schedule");
     const match = [...getAllAppNavItems()]
       .sort((a, b) => b.href.length - a.href.length)
       .find((item) => path.startsWith(item.href));

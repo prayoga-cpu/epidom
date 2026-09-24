@@ -20,7 +20,7 @@ vi.mock("@/features/pos/hooks/use-kds-settings", () => ({
   useKdsSettings: () => mockKdsSettings(),
 }));
 
-import { PosModeTabBar } from "../pos-mode-tab-bar";
+import { PosModeTabBar, isPosTabPath } from "../pos-mode-tab-bar";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -129,5 +129,22 @@ describe("PosModeTabBar kitchen-display toggle", () => {
   it("shows Dapur when kitchenDisplayEnabled is true", () => {
     renderTabBar({ allowedPages: null, kitchenDisplayEnabled: true });
     expect(tabHrefs()).toContain("/store/store-1/pos/kds");
+  });
+});
+
+describe("PosModeTabBar — the POS System's four routes", () => {
+  it("is named for the POS System, not its first tab", () => {
+    renderTabBar({ allowedPages: null });
+    expect(screen.getByRole("navigation", { name: "nav.posSystem" })).toBeInTheDocument();
+  });
+
+  it("isPosTabPath knows exactly the four tab routes, for this store", () => {
+    expect(isPosTabPath("/store/store-1/pos", "store-1")).toBe(true);
+    expect(isPosTabPath("/store/store-1/pos/orders", "store-1")).toBe(true);
+    expect(isPosTabPath("/store/store-1/pos/kds", "store-1")).toBe(true);
+    expect(isPosTabPath("/store/store-1/tables", "store-1")).toBe(true);
+    expect(isPosTabPath("/store/store-1/pos/operational", "store-1")).toBe(false);
+    expect(isPosTabPath("/store/store-2/pos", "store-1")).toBe(false);
+    expect(isPosTabPath(null, "store-1")).toBe(false);
   });
 });

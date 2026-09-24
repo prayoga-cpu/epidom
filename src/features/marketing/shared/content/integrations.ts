@@ -9,9 +9,29 @@ import type { Locale } from "@/components/lang/i18n-provider";
  * Dymo, Google Sheets, QuickBooks) — removed rather than guessed at.
  * Also market-specific: QRIS/GoPay/OVO/DANA are Indonesia-only rails,
  * wrong to show on a France/worldwide page.
+ * Google Reviews is the storefront's review button (2.91.0): a deep link into
+ * Google's own review form, not an API integration.
  */
 export const INTEGRATIONS: Record<Locale, string[]> = {
-  fr: ["Stripe", "Visa", "Mastercard", "Apple Pay", "Google Pay", "WhatsApp", "Imprimante ESC/POS"],
-  id: ["QRIS", "GoPay", "OVO", "DANA", "Stripe", "WhatsApp", "Printer ESC/POS"],
-  en: ["Stripe", "Visa", "Mastercard", "Apple Pay", "Google Pay", "WhatsApp", "ESC/POS Printer"],
+  fr: [
+    "Stripe",
+    "Visa",
+    "Mastercard",
+    "Apple Pay",
+    "Google Pay",
+    "WhatsApp",
+    "Google Reviews",
+    "Imprimante ESC/POS",
+  ],
+  id: ["QRIS", "GoPay", "OVO", "DANA", "Stripe", "WhatsApp", "Google Reviews", "Printer ESC/POS"],
+  en: [
+    "Stripe",
+    "Visa",
+    "Mastercard",
+    "Apple Pay",
+    "Google Pay",
+    "WhatsApp",
+    "Google Reviews",
+    "ESC/POS Printer",
+  ],
 };

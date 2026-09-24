@@ -98,6 +98,7 @@ describe("StoreAccessGate — Switch Account picker (pickerOpen)", () => {
     `/store/${STORE_ID}/pos/orders`,
     `/store/${STORE_ID}/pos/kds`,
     `/store/${STORE_ID}/pos/schedule`,
+    `/store/${STORE_ID}/pos/operational`,
     // /tables is a POS Mode route despite not being nested under /pos.
     `/store/${STORE_ID}/tables`,
   ])("from POS Mode (%s): cancel says 'POS', not 'Back Office'", (path) => {

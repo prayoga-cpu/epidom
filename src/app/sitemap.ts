@@ -35,13 +35,11 @@ const BASE_URL = "https://epidom.fr";
 // here nor on its documented exclusion list.
 // Auth-gated (app), API, and legal-boilerplate routes (privacy/terms/gdpr/
 // cookie-policy/refund-policy) are intentionally excluded — low search value,
-// not worth crawl budget. So is /status: a status board the team updates by
-// hand has no search value of its own. It stays crawlable (robots.txt allows
-// it) and linked from the footer, just not advertised here.
-// /payments is not listed either: that URL is retired and 308-redirects to
-// /pricing, and a redirecting URL doesn't belong in a sitemap (it also stays
-// out of robots.txt's disallow list on purpose, so a crawler can still reach
-// the redirect and drop the old address).
+// not worth crawl budget.
+// /payments and /status are not listed either: those URLs are retired and
+// 308-redirect (to /pricing and /contact), and a redirecting URL doesn't belong
+// in a sitemap (they also stay out of robots.txt's disallow list on purpose, so
+// a crawler can still reach the redirect and drop the old address).
 //
 // No `lastModified` on purpose. These pages have no content date to report, and
 // stamping them with "now" makes every URL look freshly changed on every

@@ -1,49 +1,57 @@
 "use client";
 
+import type { CSSProperties, ReactNode } from "react";
 import { useI18n, type Locale } from "@/components/lang/i18n-provider";
 import { PhoneMenu } from "@/features/marketing/shared/components/phone-menu";
 import { PhoneKDS } from "@/features/marketing/shared/components/phone-kds";
 import { PAYMENT_METHODS } from "@/features/marketing/shared/content/payment-methods";
 import { INTEGRATIONS } from "@/features/marketing/shared/content/integrations";
+import { SHOWCASE_SAMPLES } from "../content/showcase-samples";
+import { CheckMark, PlanPill } from "./plan-pill";
 
-const ORDER_VISUAL_COPY: Record<
-  Locale,
-  { who: string; amount: string; settled: string; fee: string }
-> = {
-  fr: {
-    who: "Hugo · commande #1041",
-    amount: "4,80 € · payé par carte",
-    settled: "Versé sur votre compte · jour ouvré suivant",
-    fee: "Frais de traitement",
-  },
-  id: {
-    who: "Maya · order #1041",
-    amount: "Rp 56,000 · paid via QRIS",
-    settled: "Settled to your bank · next business day",
-    fee: "−0.7% fee",
-  },
-  en: {
-    who: "Jordan · order #1041",
-    amount: "$5.60 · paid by card",
-    settled: "Settled to your bank · next business day",
-    fee: "Processing fee",
-  },
+type T = (k: string) => string;
+
+const mockCard: CSSProperties = {
+  padding: 28,
+  borderRadius: 22,
+  background: "rgba(255,255,255,0.03)",
+  border: "1px solid rgba(255,255,255,0.08)",
 };
 
-function OrderVisual({ t, locale }: { t: (k: string) => string; locale: Locale }) {
-  const copy = ORDER_VISUAL_COPY[locale];
+const splitRow: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "baseline",
+  gap: 12,
+};
+
+function MockEyebrow({ children }: { children: ReactNode }) {
   return (
-    <div
+    <div className="epi-eyebrow" style={{ marginBottom: 14, color: "rgba(251,249,228,0.4)" }}>
+      {children}
+    </div>
+  );
+}
+
+function Amount({ children, gold = false }: { children: ReactNode; gold?: boolean }) {
+  return (
+    <span
       style={{
-        padding: 28,
-        borderRadius: 22,
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        color: gold ? "var(--epi-gold-400)" : "var(--epi-cream-50)",
+        fontVariantNumeric: "tabular-nums",
+        whiteSpace: "nowrap",
       }}
     >
-      <div className="epi-eyebrow" style={{ marginBottom: 14, color: "rgba(251,249,228,0.4)" }}>
-        {t("redesign.servicesPage.checkoutSim")}
-      </div>
+      {children}
+    </span>
+  );
+}
+
+function OrderVisual({ t, locale }: { t: T; locale: Locale }) {
+  const copy = SHOWCASE_SAMPLES[locale].order;
+  return (
+    <div style={mockCard}>
+      <MockEyebrow>{t("redesign.servicesPage.checkoutSim")}</MockEyebrow>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
         {PAYMENT_METHODS[locale].map((p, i) => (
           <div
@@ -73,9 +81,10 @@ function OrderVisual({ t, locale }: { t: (k: string) => string; locale: Locale }
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: 12,
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div
             style={{
               fontSize: 11,
@@ -94,58 +103,357 @@ function OrderVisual({ t, locale }: { t: (k: string) => string; locale: Locale }
           style={{
             padding: "8px 14px",
             borderRadius: 999,
-            background: "#25D366",
-            color: "white",
+            background: "rgba(37,211,102,0.16)",
+            border: "1px solid rgba(37,211,102,0.4)",
+            color: "#7ee2a4",
             fontSize: 11,
             letterSpacing: "0.10em",
             textTransform: "uppercase",
             fontWeight: 600,
+            whiteSpace: "nowrap",
           }}
         >
-          → WhatsApp ✓
+          {copy.paid}
         </div>
       </div>
       <div
         style={{
+          ...splitRow,
           marginTop: 8,
           padding: "12px 14px",
           borderRadius: 10,
           background: "rgba(255,255,255,0.03)",
           fontSize: 13,
-          color: "var(--epi-cream-50)",
-          opacity: 0.6,
-          display: "flex",
-          justifyContent: "space-between",
         }}
       >
-        <span>{copy.settled}</span>
-        <span style={{ color: "var(--epi-gold-400)" }}>{copy.fee}</span>
+        <span style={{ color: "var(--epi-cream-50)", opacity: 0.6 }}>{copy.lands}</span>
+        <span
+          className="epi-display"
+          style={{ color: "var(--epi-gold-400)", fontSize: 18, letterSpacing: "0.04em" }}
+        >
+          {copy.queue}
+        </span>
       </div>
     </div>
   );
 }
 
-function RecipeVisual({ t }: { t: (k: string) => string }) {
+function TillVisual({ t, locale }: { t: T; locale: Locale }) {
+  const till = SHOWCASE_SAMPLES[locale].till;
+  const button: CSSProperties = {
+    padding: "11px 12px",
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 600,
+    textAlign: "center",
+    whiteSpace: "nowrap",
+  };
   return (
-    <div
-      style={{
-        padding: 28,
-        borderRadius: 22,
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
+    <div style={mockCard}>
+      <MockEyebrow>{t("redesign.servicesPage.tillSim")}</MockEyebrow>
+      <div
+        style={{
+          padding: "18px 18px 14px",
+          borderRadius: 14,
+          background: "var(--epi-cream-50)",
+          color: "var(--epi-navy-900)",
+          fontSize: 13,
+        }}
+      >
+        <div
+          style={{ ...splitRow, paddingBottom: 10, borderBottom: "1px dashed rgba(6,15,27,0.25)" }}
+        >
+          <span style={{ opacity: 0.7, minWidth: 0 }}>{till.context}</span>
+          <span className="epi-display" style={{ fontSize: 18, letterSpacing: "0.04em" }}>
+            {till.queue}
+          </span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px 0" }}>
+          {till.lines.map((line) => (
+            <div key={line.name} style={splitRow}>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ opacity: 0.55 }}>{line.qty} × </span>
+                {line.name}
+              </span>
+              <span style={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                {line.price}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            paddingTop: 10,
+            borderTop: "1px dashed rgba(6,15,27,0.25)",
+          }}
+        >
+          <div style={{ ...splitRow, opacity: 0.7 }}>
+            <span>{till.subtotal[0]}</span>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>{till.subtotal[1]}</span>
+          </div>
+          <div style={{ ...splitRow, color: "var(--epi-gold-700)" }}>
+            <span style={{ minWidth: 0 }}>{till.coupon[0]}</span>
+            <span style={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+              {till.coupon[1]}
+            </span>
+          </div>
+          <div style={{ ...splitRow, fontSize: 16, fontWeight: 700, marginTop: 4 }}>
+            <span>{till.total[0]}</span>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>{till.total[1]}</span>
+          </div>
+        </div>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "auto auto 1fr",
+          gap: 8,
+          marginTop: 12,
+        }}
+      >
+        <div
+          style={{
+            ...button,
+            border: "1px solid rgba(255,255,255,0.14)",
+            color: "var(--epi-cream-50)",
+          }}
+        >
+          {till.save}
+        </div>
+        <div
+          style={{
+            ...button,
+            border: "1px solid rgba(255,255,255,0.14)",
+            color: "var(--epi-cream-50)",
+          }}
+        >
+          {till.split}
+        </div>
+        <div style={{ ...button, background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}>
+          {till.charge}
+        </div>
+      </div>
+      <div
+        style={{
+          marginTop: 10,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 12,
+          color: "var(--epi-cream-50)",
+          opacity: 0.55,
+        }}
+      >
+        <span
+          style={{ width: 8, height: 8, borderRadius: 99, background: "#25D366", flexShrink: 0 }}
+        />
+        {till.synced}
+      </div>
+    </div>
+  );
+}
+
+function CustomerVisual({ t, locale }: { t: T; locale: Locale }) {
+  const customer = SHOWCASE_SAMPLES[locale].customer;
+  return (
+    <div style={mockCard}>
+      <MockEyebrow>{t("redesign.servicesPage.customerSim")}</MockEyebrow>
+      <div
+        style={{
+          padding: "14px 16px",
+          borderRadius: 12,
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.10)",
+        }}
+      >
+        <div style={{ fontSize: 11, color: "var(--epi-cream-50)", opacity: 0.5 }}>
+          {customer.phoneLabel}
+        </div>
+        <div
+          style={{
+            fontSize: 20,
+            color: "var(--epi-cream-50)",
+            letterSpacing: "0.04em",
+            marginTop: 4,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {customer.phone}
+        </div>
+      </div>
+      <div
+        style={{
+          marginTop: 12,
+          padding: 20,
+          borderRadius: 14,
+          background: "linear-gradient(140deg, rgba(217,174,59,0.22), rgba(217,174,59,0.06))",
+          border: "1px solid rgba(217,174,59,0.32)",
+        }}
+      >
+        <div
+          className="epi-display"
+          style={{
+            fontSize: 26,
+            letterSpacing: "0.03em",
+            color: "var(--epi-cream-50)",
+            lineHeight: 1.05,
+          }}
+        >
+          {customer.greeting}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+          {customer.stats.map((stat) => (
+            <span
+              key={stat}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 999,
+                background: "rgba(6,15,27,0.35)",
+                color: "var(--epi-gold-300)",
+                fontSize: 12,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {stat}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div
+        style={{
+          ...splitRow,
+          alignItems: "center",
+          marginTop: 8,
+          padding: "12px 14px",
+          borderRadius: 10,
+          background: "rgba(255,255,255,0.03)",
+          fontSize: 13,
+        }}
+      >
+        <span style={{ color: "var(--epi-cream-50)", opacity: 0.6, minWidth: 0 }}>
+          {customer.receipt}
+        </span>
+        <span style={{ color: "#7ee2a4", whiteSpace: "nowrap" }}>{customer.receiptStatus}</span>
+      </div>
+    </div>
+  );
+}
+
+function ShiftVisual({ t, locale }: { t: T; locale: Locale }) {
+  const shift = SHOWCASE_SAMPLES[locale].shift;
+  const line: CSSProperties = {
+    ...splitRow,
+    padding: "9px 0",
+    borderBottom: "1px dashed rgba(255,255,255,0.06)",
+    fontSize: 13,
+  };
+  return (
+    <div style={mockCard}>
+      <MockEyebrow>{t("redesign.servicesPage.shiftSim")}</MockEyebrow>
+      <div
+        className="epi-display"
+        style={{ fontSize: 28, letterSpacing: "0.04em", color: "var(--epi-cream-50)" }}
+      >
+        {shift.title}
+      </div>
+      <div style={{ fontSize: 12, color: "var(--epi-cream-50)", opacity: 0.45, marginTop: 4 }}>
+        {shift.started}
+      </div>
+      <div style={{ marginTop: 14 }}>
+        {[...shift.lines, shift.expected].map(([label, value], i) => (
+          <div key={label} style={{ ...line, fontWeight: i === shift.lines.length ? 600 : 400 }}>
+            <span style={{ color: "var(--epi-cream-50)", opacity: 0.7 }}>{label}</span>
+            <Amount>{value}</Amount>
+          </div>
+        ))}
+        <div style={{ ...line, borderBottom: "none" }}>
+          <span style={{ color: "var(--epi-cream-50)", opacity: 0.7 }}>{shift.counted[0]}</span>
+          <Amount gold>{shift.counted[1]}</Amount>
+        </div>
+      </div>
+      <div
+        style={{
+          ...splitRow,
+          alignItems: "center",
+          marginTop: 6,
+          padding: "12px 14px",
+          borderRadius: 10,
+          background: "rgba(37,211,102,0.10)",
+          border: "1px solid rgba(37,211,102,0.30)",
+          fontSize: 13,
+        }}
+      >
+        <span style={{ color: "var(--epi-cream-50)" }}>
+          {shift.difference[0]} · <Amount>{shift.difference[1]}</Amount>
+        </span>
+        <span style={{ color: "#7ee2a4", fontWeight: 600 }}>{shift.balanced} ✓</span>
+      </div>
+      <div
+        style={{
+          marginTop: 14,
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 12,
+        }}
+      >
+        <span style={{ color: "var(--epi-cream-50)", opacity: 0.45 }}>{shift.clockedIn}</span>
+        {shift.staff.map((person) => (
+          <span
+            key={person.name}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 10px 4px 4px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.05)",
+              color: "var(--epi-cream-50)",
+            }}
+          >
+            <span
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 99,
+                background: "linear-gradient(140deg, var(--epi-gold-400), var(--epi-gold-700))",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 10,
+                color: "var(--epi-navy-900)",
+                fontWeight: 700,
+              }}
+            >
+              {person.name[0]}
+            </span>
+            {person.name} · {person.time}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecipeVisual({ t, locale }: { t: T; locale: Locale }) {
+  const recipe = SHOWCASE_SAMPLES[locale].recipe;
+  return (
+    <div style={mockCard}>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
+          gap: 12,
           marginBottom: 18,
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div className="epi-eyebrow" style={{ color: "rgba(251,249,228,0.4)" }}>
-            Recipe
+            {recipe.label}
           </div>
           <div
             className="epi-display"
@@ -156,7 +464,7 @@ function RecipeVisual({ t }: { t: (k: string) => string }) {
               marginTop: 6,
             }}
           >
-            {t("redesign.servicesPage.recipeName")}
+            {recipe.name}
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -167,9 +475,10 @@ function RecipeVisual({ t }: { t: (k: string) => string }) {
               color: "var(--epi-gold-400)",
               letterSpacing: "0.02em",
               lineHeight: 1,
+              whiteSpace: "nowrap",
             }}
           >
-            Rp 6.2k
+            {recipe.cost}
           </div>
           <div
             style={{
@@ -180,78 +489,70 @@ function RecipeVisual({ t }: { t: (k: string) => string }) {
               textTransform: "uppercase",
             }}
           >
-            {t("redesign.servicesPage.recipeCost")}
+            {recipe.costLabel}
           </div>
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {[
-          { i: "Flour", q: "54 g", c: "Rp 0.7k" },
-          { i: "Butter", q: "32 g", c: "Rp 2.1k" },
-          { i: "Brown sugar", q: "28 g", c: "Rp 0.4k" },
-          { i: "Dark choc 70%", q: "20 g", c: "Rp 1.8k" },
-          { i: "Egg", q: "0.5", c: "Rp 0.8k" },
-          { i: "Packaging", q: "1", c: "Rp 0.4k" },
-        ].map((r, i) => (
+        {recipe.ingredients.map((r, i) => (
           <div
-            key={i}
+            key={r.name}
             style={{
-              display: "flex",
-              justifyContent: "space-between",
+              display: "grid",
+              gridTemplateColumns: "1fr auto auto",
+              gap: 16,
               fontSize: 13,
               padding: "8px 0",
-              borderBottom: i < 5 ? "1px dashed rgba(255,255,255,0.06)" : "none",
+              borderBottom:
+                i < recipe.ingredients.length - 1 ? "1px dashed rgba(255,255,255,0.06)" : "none",
             }}
           >
-            <span style={{ color: "var(--epi-cream-50)" }}>{r.i}</span>
-            <span style={{ color: "var(--epi-cream-50)", opacity: 0.5 }}>{r.q}</span>
-            <span style={{ color: "var(--epi-gold-400)", fontVariantNumeric: "tabular-nums" }}>
-              {r.c}
-            </span>
+            <span style={{ color: "var(--epi-cream-50)" }}>{r.name}</span>
+            <span style={{ color: "var(--epi-cream-50)", opacity: 0.5 }}>{r.qty}</span>
+            <Amount gold>{r.cost}</Amount>
           </div>
         ))}
       </div>
       <div
         style={{
+          ...splitRow,
+          alignItems: "center",
           marginTop: 18,
           padding: 14,
           borderRadius: 10,
           background: "rgba(217,174,59,0.08)",
           border: "1px solid rgba(217,174,59,0.24)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
           fontSize: 13,
         }}
       >
-        <span style={{ color: "var(--epi-gold-300)" }}>
-          {t("redesign.servicesPage.recipeMargin")}
-        </span>
+        <span style={{ color: "var(--epi-gold-300)" }}>{recipe.margin}</span>
         <span
           className="epi-display"
-          style={{ fontSize: 18, letterSpacing: "0.06em", color: "var(--epi-gold-300)" }}
+          style={{
+            fontSize: 18,
+            letterSpacing: "0.06em",
+            color: "var(--epi-gold-300)",
+            whiteSpace: "nowrap",
+          }}
         >
-          +Rp 11.8k
+          {recipe.profit}
         </span>
+      </div>
+      <div style={{ marginTop: 10, fontSize: 12, color: "var(--epi-cream-50)", opacity: 0.4 }}>
+        {t("redesign.servicesPage.recipeSim")}
       </div>
     </div>
   );
 }
 
-function ReportVisual({ t }: { t: (k: string) => string }) {
+function ReportVisual({ t, locale }: { t: T; locale: Locale }) {
+  const report = SHOWCASE_SAMPLES[locale].report;
   return (
-    <div
-      style={{
-        padding: 28,
-        borderRadius: 22,
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
-        <div>
+    <div style={mockCard} data-testid="services-report-mockup">
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
+        <div style={{ minWidth: 0 }}>
           <div className="epi-eyebrow" style={{ color: "rgba(251,249,228,0.4)" }}>
-            {t("redesign.servicesPage.plLabel")}
+            {report.label}
           </div>
           <div
             className="epi-display"
@@ -262,46 +563,38 @@ function ReportVisual({ t }: { t: (k: string) => string }) {
               marginTop: 6,
             }}
           >
-            {t("redesign.servicesPage.plMargin")}
+            {report.headline}
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div
             className="epi-display"
-            style={{ fontSize: 32, color: "var(--epi-gold-400)", lineHeight: 1 }}
+            style={{
+              fontSize: 32,
+              color: "var(--epi-gold-400)",
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+            }}
           >
-            +4.8%
+            {report.delta}
           </div>
           <div style={{ fontSize: 11, color: "var(--epi-cream-50)", opacity: 0.4 }}>
-            {t("redesign.servicesPage.plVs")}
+            {report.vs}
           </div>
         </div>
       </div>
-      {[
-        ["Revenue", "Rp 124.5M", true],
-        ["COGS", "Rp 42.1M", false],
-        ["Staff cost", "Rp 28.8M", false],
-        ["Net profit", "Rp 42.6M", true],
-      ].map(([label, val, gold], i) => (
+      {report.rows.map((row) => (
         <div
-          key={i}
+          key={row.label}
           style={{
-            display: "flex",
-            justifyContent: "space-between",
+            ...splitRow,
             padding: "12px 0",
             borderBottom: "1px solid rgba(255,255,255,0.06)",
             fontSize: 14,
           }}
         >
-          <span style={{ color: "var(--epi-cream-50)", opacity: 0.7 }}>{label as string}</span>
-          <span
-            style={{
-              color: gold ? "var(--epi-gold-400)" : "var(--epi-cream-50)",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {val as string}
-          </span>
+          <span style={{ color: "var(--epi-cream-50)", opacity: 0.7 }}>{row.label}</span>
+          <Amount gold={row.gold}>{row.value}</Amount>
         </div>
       ))}
       <div
@@ -321,34 +614,55 @@ function ReportVisual({ t }: { t: (k: string) => string }) {
   );
 }
 
+function PhoneFrame({ children }: { children: ReactNode }) {
+  return <div style={{ display: "grid", placeItems: "center" }}>{children}</div>;
+}
+
 const FEATURE_ROWS = [
   { key: "r1", side: "menu" },
   { key: "r2", side: "order" },
-  { key: "r3", side: "pos" },
-  { key: "r4", side: "recipe" },
-  { key: "r5", side: "report" },
+  { key: "r3", side: "till" },
+  { key: "r4", side: "customer" },
+  { key: "r5", side: "kitchen" },
+  { key: "r6", side: "shift" },
+  { key: "r7", side: "recipe" },
+  { key: "r8", side: "report" },
 ] as const;
+
+type Side = (typeof FEATURE_ROWS)[number]["side"];
+
+const MORE_TILES = ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8"] as const;
 
 export function FeaturesShowcaseSection() {
   const { t, locale } = useI18n();
 
-  function getVisual(side: string) {
-    if (side === "menu")
-      return (
-        <div style={{ display: "grid", placeItems: "center" }}>
-          <PhoneMenu />
-        </div>
-      );
-    if (side === "order") return <OrderVisual t={t} locale={locale} />;
-    if (side === "pos")
-      return (
-        <div style={{ display: "grid", placeItems: "center" }}>
-          <PhoneKDS />
-        </div>
-      );
-    if (side === "recipe") return <RecipeVisual t={t} />;
-    if (side === "report") return <ReportVisual t={t} />;
-    return null;
+  function getVisual(side: Side) {
+    switch (side) {
+      case "menu":
+        return (
+          <PhoneFrame>
+            <PhoneMenu />
+          </PhoneFrame>
+        );
+      case "order":
+        return <OrderVisual t={t} locale={locale} />;
+      case "till":
+        return <TillVisual t={t} locale={locale} />;
+      case "customer":
+        return <CustomerVisual t={t} locale={locale} />;
+      case "kitchen":
+        return (
+          <PhoneFrame>
+            <PhoneKDS />
+          </PhoneFrame>
+        );
+      case "shift":
+        return <ShiftVisual t={t} locale={locale} />;
+      case "recipe":
+        return <RecipeVisual t={t} locale={locale} />;
+      case "report":
+        return <ReportVisual t={t} locale={locale} />;
+    }
   }
 
   return (
@@ -368,8 +682,17 @@ export function FeaturesShowcaseSection() {
               }}
             >
               <div style={{ order: i % 2 === 0 ? 1 : 2 }}>
-                <div className="epi-eyebrow" style={{ marginBottom: 14 }}>
-                  {t(`redesign.servicesPage.${key}eyebrow` as const)}
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: 12,
+                    marginBottom: 14,
+                  }}
+                >
+                  <div className="epi-eyebrow">{t(`redesign.servicesPage.${key}eyebrow`)}</div>
+                  <PlanPill label={t(`redesign.servicesPage.${key}plan`)} />
                 </div>
                 <h3
                   className="epi-display"
@@ -380,7 +703,7 @@ export function FeaturesShowcaseSection() {
                     color: "var(--epi-cream-50)",
                   }}
                 >
-                  {t(`redesign.servicesPage.${key}title` as const)}
+                  {t(`redesign.servicesPage.${key}title`)}
                 </h3>
                 <p
                   style={{
@@ -391,7 +714,7 @@ export function FeaturesShowcaseSection() {
                     marginTop: 20,
                   }}
                 >
-                  {t(`redesign.servicesPage.${key}body` as const)}
+                  {t(`redesign.servicesPage.${key}body`)}
                 </p>
                 <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 10 }}>
                   {[1, 2, 3, 4].map((n) => (
@@ -403,25 +726,90 @@ export function FeaturesShowcaseSection() {
                         gap: 14,
                         color: "var(--epi-cream-50)",
                         fontSize: 14,
+                        lineHeight: 1.4,
                       }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <circle cx="8" cy="8" r="7" fill="rgba(217,174,59,0.16)" />
-                        <path
-                          d="M5 8l2 2 4-4"
-                          stroke="var(--epi-gold-400)"
-                          strokeWidth="1.6"
-                          fill="none"
-                        />
-                      </svg>
-                      {t(`redesign.servicesPage.${key}b${n}` as const)}
+                      <CheckMark />
+                      {t(`redesign.servicesPage.${key}b${n}`)}
                     </div>
                   ))}
                 </div>
               </div>
-              <div style={{ order: i % 2 === 0 ? 2 : 1 }}>{getVisual(side)}</div>
+              <div style={{ order: i % 2 === 0 ? 2 : 1, minWidth: 0 }}>{getVisual(side)}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* And also: the smaller features that don't need a row of their own */}
+      <section className="epi-section epi-section--tight">
+        <div className="epi-container">
+          <div style={{ textAlign: "center", maxWidth: 720, margin: "0 auto", marginBottom: 40 }}>
+            <div className="epi-eyebrow" style={{ marginBottom: 16 }}>
+              {t("redesign.servicesPage.moreEyebrow")}
+            </div>
+            <h2
+              className="epi-display"
+              style={{
+                fontSize: "clamp(36px, 4.5vw, 64px)",
+                margin: 0,
+                lineHeight: 0.95,
+                color: "var(--epi-cream-50)",
+              }}
+            >
+              {t("redesign.servicesPage.moreTitle")}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {MORE_TILES.map((key) => (
+              <div
+                key={key}
+                style={{
+                  padding: 22,
+                  borderRadius: 16,
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "var(--epi-font-display)",
+                      fontSize: 20,
+                      letterSpacing: "0.04em",
+                      color: "var(--epi-cream-50)",
+                    }}
+                  >
+                    {t(`redesign.servicesPage.${key}title`)}
+                  </div>
+                  <PlanPill label={t(`redesign.servicesPage.${key}plan`)} />
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "var(--epi-cream-50)",
+                    opacity: 0.62,
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {t(`redesign.servicesPage.${key}body`)}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -446,7 +834,7 @@ export function FeaturesShowcaseSection() {
               {t("redesign.servicesPage.intTitle2")}
             </h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5" style={{ gap: 14 }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4" style={{ gap: 14 }}>
             {INTEGRATIONS[locale].map((name, i) => (
               <div
                 key={i}

@@ -447,6 +447,68 @@ describe("PosCartCustomer — synced with the customer screen", () => {
     expect(reviewButton()).toBeNull();
   });
 
+  it("gets out of the way once the till saves the customer's submission and attaches them", () => {
+    renderRow();
+    numberArrives();
+    openReview();
+    expect(phoneField()).toBeTruthy();
+
+    // What useCustomerIntakeResolver does when the customer presses Done.
+    act(() => {
+      cart().setCustomer({ ...alice, id: "c5", name: "Claire Moreau" });
+      useCustomerIntake.getState().setAutoSave("saved");
+    });
+
+    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    expect(screen.getByTestId("pos-cart-customer")).toHaveTextContent("Claire Moreau");
+
+    // Detached again: back to a plain search, not the stale form.
+    fireEvent.click(screen.getByRole("button", { name: "cashierCart.customerDialog.remove" }));
+    expect(screen.getByRole("searchbox")).toBeTruthy();
+  });
+
+  it("typing in the customer's form takes it over — the till leaves it for the cashier to save", () => {
+    renderRow();
+    numberArrives();
+    openReview();
+    expect(useCustomerIntake.getState().takenOverFor).toBe(0);
+
+    fireEvent.change(nameField(), { target: { value: "Claire M." } });
+
+    expect(useCustomerIntake.getState().takenOverFor).toBe(100);
+  });
+
+  it("dismissing the customer's form is a no to saving it", () => {
+    renderRow();
+    numberArrives();
+    openReview();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
+
+    expect(useCustomerIntake.getState().takenOverFor).toBe(100);
+  });
+
+  it("closing the dialog while the customer is still typing does NOT stop the save", () => {
+    renderRow();
+    numberArrives();
+    openReview();
+
+    fireEvent.click(screen.getByRole("button", { name: "cashierCart.customerDialog.done" }));
+
+    expect(useCustomerIntake.getState().takenOverFor).toBe(0);
+  });
+
+  it("the cashier's own new-customer form never touches the customer screen's submission", () => {
+    renderRow();
+    act(() => useCustomerIntake.setState({ receivedAt: 100 }));
+    fireEvent.click(screen.getByRole("button", { name: /Add Customer/ }));
+    fireEvent.click(screen.getByRole("button", { name: /cashierCart\.customer\.newCustomer/ }));
+
+    fireEvent.change(nameField(), { target: { value: "Walk-in" } });
+
+    expect(useCustomerIntake.getState().takenOverFor).toBe(0);
+  });
+
   it("asks again for the NEXT number the customer submits", () => {
     renderRow();
     numberArrives();
@@ -708,6 +770,40 @@ describe("PosCartCustomer — the customer display, from the dialog", () => {
       useCustomerIntake.setState({ phone: "+33612345678", match: "new", receivedAt: 5 });
     });
     expect(screen.getByRole("status").textContent).toBe("cashierCart.customerDisplay.isNew");
+  });
+
+  it("says when the till is saving the new customer, has saved them, or could not", () => {
+    useCustomerDisplaySettings.getState().setEnabled(true);
+    renderRow();
+    openDialog();
+    const status = () => screen.getByRole("status").textContent;
+
+    act(() => {
+      useCustomerIntake.setState({ phone: "+33612345678", match: "new", receivedAt: 5 });
+    });
+    expect(status()).toBe("cashierCart.customerDisplay.isNew");
+
+    act(() => useCustomerIntake.getState().setAutoSave("saving"));
+    expect(status()).toBe("cashierCart.customerDisplay.saving");
+    act(() => useCustomerIntake.getState().setAutoSave("failed"));
+    expect(status()).toBe("cashierCart.customerDisplay.saveFailed");
+    act(() => useCustomerIntake.getState().setAutoSave("saved"));
+    expect(status()).toBe("cashierCart.customerDisplay.saved");
+  });
+
+  it("tells the cashier to save it themselves once they took the form over", () => {
+    useCustomerDisplaySettings.getState().setEnabled(true);
+    renderRow();
+    openDialog();
+    act(() => {
+      useCustomerIntake.setState({
+        phone: "+33612345678",
+        match: "new",
+        receivedAt: 5,
+        takenOverFor: 5,
+      });
+    });
+    expect(screen.getByRole("status").textContent).toBe("cashierCart.customerDisplay.isNewManual");
   });
 
   it("does not offer to ask once a customer is on the sale", () => {

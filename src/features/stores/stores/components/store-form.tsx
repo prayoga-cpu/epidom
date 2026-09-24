@@ -158,6 +158,8 @@ export function StoreForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>{t("stores.storeImage") || "Store Image"}</FormLabel>
+              {/* The storefront's cover image outranks this one on the /stores card. */}
+              <p className="text-muted-foreground text-xs">{t("stores.storeImageHint")}</p>
               <FormControl>
                 <div className="space-y-2">
                   {imagePreviewUrl ? (

@@ -151,12 +151,7 @@ describe("sitemap vs the marketing PAGES table", () => {
   // PAGES paths that are deliberately absent from the sitemap, and why. Adding a
   // page to PAGES without listing it in sitemap.ts fails the test below until it
   // is either listed there or given a reason here.
-  const NOT_IN_SITEMAP: Record<string, string> = {
-    // A status board the team edits by hand: nothing to rank for. Still crawlable
-    // (robots.txt allows it) and linked from the footer; same call as the legal
-    // pages, which are also left out. See the comment above STATIC_ROUTES.
-    "/status": "hand-updated status board, no search value",
-  };
+  const NOT_IN_SITEMAP: Record<string, string> = {};
 
   const pagePaths = Object.values(PAGES).map((page) => page.path);
 

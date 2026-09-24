@@ -61,7 +61,9 @@ const RESUMABLE_STORE_SECTIONS = new Set([
   "/owner",
   "/pos",
   "/pos/kds",
+  "/pos/operational",
   "/pos/orders",
+  // Redirect stubs now (into /pos/operational), kept so old cookies still land.
   "/pos/schedule",
   "/pos/shift",
   "/production",
@@ -152,9 +154,12 @@ const POS_MODE_SECTIONS = new Set([
   "/pos",
   "/pos/orders",
   "/pos/kds",
+  // Shift, My Schedule and Clock In / Out as one page. Not in posModeNavItems:
+  // it rides on the "/pos" and "/pos/schedule" grants, so it is a route, not a
+  // permission of its own.
+  "/pos/operational",
+  // Both now redirect into /pos/operational; kept so old cookies still resolve.
   "/pos/schedule",
-  // Not in posModeNavItems (it rides on the "/pos" grant, see shift-access.ts),
-  // but a real POS Mode route all the same.
   "/pos/shift",
   "/tables",
 ]);

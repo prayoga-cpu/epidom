@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowRightLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EpidomWordmark } from "@/features/marketing/shared/components/epidom-logo";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { apiClient, ApiClientError } from "@/lib/api/client";
 import { signOut, useUser } from "@/lib/auth-client";
@@ -193,7 +194,9 @@ export function AcceptTransferClient({ token }: { token: string | null }) {
           <CardTitle className="text-2xl font-bold tracking-tight">
             {t("pages.storeTransferAcceptTitle")}
           </CardTitle>
-          <CardDescription>EPIDOM</CardDescription>
+          <CardDescription>
+            <EpidomWordmark height={14} />
+          </CardDescription>
         </CardHeader>
         {body}
       </Card>

@@ -35,6 +35,7 @@ interface Props {
 const onClose = vi.fn();
 const onSubmitPhone = vi.fn();
 const onSubmitDetails = vi.fn();
+const onFinishDetails = vi.fn();
 
 const ui = ({ open = true, submitted = null, status = null }: Props = {}) => (
   <PosCustomerDisplayPhone
@@ -45,6 +46,7 @@ const ui = ({ open = true, submitted = null, status = null }: Props = {}) => (
     status={status}
     onSubmitPhone={onSubmitPhone}
     onSubmitDetails={onSubmitDetails}
+    onFinishDetails={onFinishDetails}
   />
 );
 
@@ -52,6 +54,14 @@ const answer = (match: CustomerDisplayIntakeStatus["match"], firstName: string |
   ({ phone: PHONE, match, firstName }) satisfies CustomerDisplayIntakeStatus;
 
 const tap = (label: string) => fireEvent.click(screen.getByRole("button", { name: label }));
+
+/** A field's text. What was just typed sits in its own span (it pops in), so match the whole run. */
+const typedMatcher = (text: string) => (_: string, el: Element | null) =>
+  el?.getAttribute("data-slot") === "typed-text" && el.textContent === text;
+const typed = (text: string) => screen.getByText(typedMatcher(text));
+const queryTyped = (text: string) => screen.queryByText(typedMatcher(text));
+/** The characters currently popping in, if any. */
+const poppingIn = () => document.querySelector(".key-typed-in")?.textContent ?? null;
 const tapAll = (keys: string) => [...keys].forEach((k) => tap(k));
 
 /** Enter the number 6 12 34 56 78 on the pad and confirm it. */
@@ -73,6 +83,7 @@ beforeEach(() => {
   onClose.mockClear();
   onSubmitPhone.mockClear();
   onSubmitDetails.mockClear();
+  onFinishDetails.mockClear();
 });
 
 afterEach(() => {
@@ -193,7 +204,7 @@ describe("step 3b — typing the details", () => {
     tapAll("claire");
 
     // Auto-capitalised first letter.
-    expect(screen.getByText("Claire")).toBeInTheDocument();
+    expect(typed("Claire")).toBeInTheDocument();
     // Not sent on every keystroke...
     expect(onSubmitDetails).not.toHaveBeenCalled();
     act(() => {
@@ -208,13 +219,13 @@ describe("step 3b — typing the details", () => {
     tapAll("anne");
     tap("pos.customerDisplay.keyboardSpace");
     tapAll("lee");
-    expect(screen.getByText("Anne Lee")).toBeInTheDocument();
+    expect(typed("Anne Lee")).toBeInTheDocument();
 
     tap("pos.customerDisplay.keyboardShift");
     tap("x");
-    expect(screen.getByText("Anne LeeX")).toBeInTheDocument();
+    expect(typed("Anne LeeX")).toBeInTheDocument();
     tap("x");
-    expect(screen.getByText("Anne LeeXx")).toBeInTheDocument();
+    expect(typed("Anne LeeXx")).toBeInTheDocument();
   });
 
   it("never types a leading or doubled space", () => {
@@ -224,7 +235,7 @@ describe("step 3b — typing the details", () => {
     tap("pos.customerDisplay.keyboardSpace");
     tap("pos.customerDisplay.keyboardSpace");
     tapAll("bo");
-    expect(screen.getByText("Jo Bo")).toBeInTheDocument();
+    expect(typed("Jo Bo")).toBeInTheDocument();
   });
 
   it("types an email on its own lowercase layout, with @ . and .com keys", () => {
@@ -239,7 +250,7 @@ describe("step 3b — typing the details", () => {
     tapAll("mail");
     tap(".com");
 
-    expect(screen.getByText("claire@mail.com")).toBeInTheDocument();
+    expect(typed("claire@mail.com")).toBeInTheDocument();
     // Digits row is on the email layout only.
     expect(screen.getByRole("button", { name: "9" })).toBeInTheDocument();
   });
@@ -278,23 +289,36 @@ describe("step 3b — typing the details", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("pos.customerDisplay.detailsEmailInvalid");
   });
 
-  it("Done sends what is typed straight away, without waiting out the pause, and closes", () => {
+  it("Done sends what is typed straight away, marks it final for the till to save, and closes", () => {
     renderAnswered(answer("new"));
     tapAll("claire");
 
     tap("pos.customerDisplay.detailsDone");
 
     expect(onSubmitDetails).toHaveBeenCalledWith("Claire", "");
+    expect(onFinishDetails).toHaveBeenCalledWith("Claire", "");
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("with nothing typed the button is Skip, and skipping sends nothing more", () => {
+  it("with nothing typed the button is Skip, and skipping still finishes — with no details", () => {
     renderAnswered(answer("new"));
     expect(screen.queryByRole("button", { name: "pos.customerDisplay.detailsDone" })).toBeNull();
 
     tap("pos.customerDisplay.detailsSkip");
 
     expect(onSubmitDetails).not.toHaveBeenCalled();
+    // A number alone is still a customer worth saving.
+    expect(onFinishDetails).toHaveBeenCalledWith("", "");
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("closing with ✕ is not finishing — the till does not save anyone for it", () => {
+    renderAnswered(answer("new"));
+    tapAll("claire");
+
+    tap("common.actions.close");
+
+    expect(onFinishDetails).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -302,7 +326,44 @@ describe("step 3b — typing the details", () => {
     renderAnswered(answer("new"));
     tapAll("claire");
     tap("common.actions.delete");
-    expect(screen.getByText("Clair")).toBeInTheDocument();
+    expect(typed("Clair")).toBeInTheDocument();
+  });
+});
+
+describe("typing animation", () => {
+  it("pops in what was just typed on the keyboard — and nothing on a backspace", () => {
+    renderAnswered(answer("new"));
+    // Nothing typed yet: nothing popping.
+    expect(poppingIn()).toBeNull();
+
+    tapAll("cl");
+    expect(poppingIn()).toBe("l");
+    expect(typed("Cl")).toBeInTheDocument();
+
+    tap("common.actions.delete");
+    expect(poppingIn()).toBeNull();
+    expect(typed("C")).toBeInTheDocument();
+  });
+
+  it("pops in a multi-character key as one", () => {
+    renderAnswered(answer("new"));
+    fireEvent.click(
+      screen.getByRole("button", { name: /pos\.customerDisplay\.detailsEmailLabel/ })
+    );
+    tapAll("a");
+    tap("@");
+    tapAll("b");
+    tap(".com");
+    expect(poppingIn()).toBe(".com");
+  });
+
+  it("pops in each digit on the number pad", () => {
+    render(ui());
+    tap("6");
+    expect(poppingIn()).toBe("6");
+    tap("1");
+    expect(poppingIn()).toBe("1");
+    expect(typed("61")).toBeInTheDocument();
   });
 });
 
@@ -318,6 +379,6 @@ describe("reopening", () => {
     expect(
       screen.getByRole("button", { name: "pos.customerDisplay.phoneConfirm" })
     ).toBeInTheDocument();
-    expect(screen.queryByText("Claire")).toBeNull();
+    expect(queryTyped("Claire")).toBeNull();
   });
 });

@@ -358,7 +358,9 @@ export function FinishShiftScreen({ storeId, shift, onBack, onEnded }: FinishShi
         </div>
       </div>
 
-      <footer className="bg-background shrink-0 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-6">
+      {/* No bottom safe-area padding of its own: the POS Operational page, its
+          only host, pads for the home indicator once for the whole page. */}
+      <footer className="bg-background shrink-0 border-t p-3 md:px-6">
         <div className="mx-auto w-full max-w-4xl space-y-1.5">
           {report && counted === undefined && (
             <p className="text-muted-foreground text-center text-xs">

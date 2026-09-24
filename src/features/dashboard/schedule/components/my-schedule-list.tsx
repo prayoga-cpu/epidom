@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,11 +19,11 @@ import { DateRangeField } from "@/components/ui/date-range-field";
 import { apiClient } from "@/lib/api/client";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { format } from "date-fns";
 import { todayLocalISO, addDaysLocalISO, parseLocalISO } from "@/lib/utils/date-range";
 import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
 import type { StaffScheduleEntry } from "./staff-schedule-cell-dialog";
 import type { ScheduleImageRow } from "./schedule-image-panel";
+import { ScheduleImageCards } from "./schedule-image-cards";
 
 interface MySchedule extends StaffScheduleEntry {
   scheduleShift: { name: string; startTime: string; endTime: string; color: string | null } | null;
@@ -39,7 +40,28 @@ interface UnifiedLogRow {
   amount: number | null;
 }
 
-export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; staffMemberId: string }) {
+interface MyScheduleListProps {
+  storeId: string;
+  staffMemberId: string;
+  /**
+   * Inside POS Mode's Operational page, whose tab already names it: no page
+   * heading of its own. Back Office /schedule leaves this off.
+   */
+  embedded?: boolean;
+  /**
+   * What the Clock In / Out button does instead of opening its own dialog —
+   * the Operational page switches to its Clock tab. Embedded without it, the
+   * button is left out (there is no clock to offer this persona there).
+   */
+  onClockInOut?: () => void;
+}
+
+export function MyScheduleList({
+  storeId,
+  staffMemberId,
+  embedded = false,
+  onClockInOut,
+}: MyScheduleListProps) {
   const { t, formatDateTime, dateLocale } = useI18n();
   // History amounts (a till's float, a cash movement) are Shift/CashMovement-
   // derived and already literal in the store's own currency. The bare one-arg
@@ -51,16 +73,24 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
 
   const [clockDialogOpen, setClockDialogOpen] = useState(false);
 
+  // PUBLISHED only: a draft is the manager's work in progress and must never
+  // reach staff. The server already forces this for a non-manager persona, but
+  // a manager/owner persona looking at their own roster would otherwise get
+  // their drafts too. "published" in the key keeps this cache apart from any
+  // unfiltered read of the same prefix.
   const { data, isLoading } = useQuery({
-    queryKey: ["staff-schedules", storeId, "mine", staffMemberId],
+    queryKey: ["staff-schedules", storeId, "mine", staffMemberId, "published"],
     queryFn: () =>
       apiClient.get<{ schedules: MySchedule[] }>(`/stores/${storeId}/staff-schedules`, {
         staffId: staffMemberId,
         from: todayLocalISO(),
+        status: "PUBLISHED",
       }),
   });
-  const upcoming = (data?.schedules ?? []).filter((s) => s.date >= todayLocalISO());
   const today = todayLocalISO();
+  // `date` arrives as the full ISO timestamp of a @db.Date column
+  // ("2026-09-25T00:00:00.000Z"): only its first 10 characters are the day.
+  const upcoming = (data?.schedules ?? []).filter((s) => s.date.slice(0, 10) >= today);
 
   // The manager's other way to publish a roster: a picture. The same for the whole
   // team (nothing per-person to filter), so it needs no staffId. `from: today` keeps
@@ -119,46 +149,32 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">{t("pages.scheduleMyScheduleTitle")}</h1>
-        {/* h-10 overrides size="sm"'s 32px: this is the cashier's primary
-            control surface on an iPad, and AGENTS.md sets a 40px floor for
-            anything tappable. Till controls (open/finish a shift, cash in/out)
-            live on the Shift page now — this page is the roster and the clock. */}
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" className="h-10" onClick={() => setClockDialogOpen(true)}>
-            <LogIn className="mr-2 h-4 w-4" />
-            {t("pages.scheduleClockInOut")}
-          </Button>
+      {(!embedded || onClockInOut) && (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          {!embedded && (
+            <h1 className="text-2xl font-bold tracking-tight">
+              {t("pages.scheduleMyScheduleTitle")}
+            </h1>
+          )}
+          {/* h-10 overrides size="sm"'s 32px: this is the cashier's primary
+              control surface on an iPad, and AGENTS.md sets a 40px floor for
+              anything tappable. Till controls (open/finish a shift, cash in/out)
+              live on the Shift page now — this page is the roster and the clock.
+              Embedded there is no heading to its left, so it is pushed right. */}
+          <div className={embedded ? "ml-auto flex flex-wrap gap-2" : "flex flex-wrap gap-2"}>
+            <Button
+              size="sm"
+              className="h-10"
+              onClick={() => (onClockInOut ? onClockInOut() : setClockDialogOpen(true))}
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              {t("pages.scheduleClockInOut")}
+            </Button>
+          </div>
         </div>
-      </div>
-
-      {images.length > 0 && (
-        <section aria-label={t("pages.scheduleImageTitle")} className="space-y-3">
-          {images.map((image) => (
-            <Card key={image.id}>
-              <CardContent className="space-y-2 py-3">
-                <p className="text-sm font-semibold">
-                  {/* Locale-formatted like the rest of the app, not the raw 2026-09-14 keys. */}
-                  {format(parseLocalISO(image.startDate), "d MMM yyyy", { locale: dateLocale })} –{" "}
-                  {format(parseLocalISO(image.endDate), "d MMM yyyy", { locale: dateLocale })}
-                </p>
-                {/* The roster as the manager uploaded it. Tap opens it full size,
-                    where a phone can pinch-zoom the small print. */}
-                <a href={image.imageUrl} target="_blank" rel="noopener noreferrer" className="block">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={image.imageUrl}
-                    alt={t("pages.scheduleImageAlt")}
-                    className="mx-auto max-h-[calc(75dvh/var(--app-zoom,1))] w-auto max-w-full rounded-lg border object-contain"
-                  />
-                </a>
-                {image.note && <p className="text-muted-foreground text-xs">{image.note}</p>}
-              </CardContent>
-            </Card>
-          ))}
-        </section>
       )}
+
+      <ScheduleImageCards images={images} />
 
       {isLoading ? (
         <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
@@ -169,35 +185,39 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
         )
       ) : (
         <div className="space-y-2">
-          {upcoming.map((entry) => (
-            <Card key={entry.id} className={entry.date === today ? "border-primary/50" : undefined}>
-              <CardContent className="flex items-center justify-between gap-3 py-3">
-                <div>
-                  <p className="flex items-center gap-2 text-sm font-semibold">
-                    {entry.date}
-                    {entry.date === today && (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-[9px]">
-                        {t("pages.scheduleToday")}
-                      </Badge>
+          {upcoming.map((entry) => {
+            const dateKey = entry.date.slice(0, 10);
+            const isToday = dateKey === today;
+            return (
+              <Card key={entry.id} className={isToday ? "border-primary/50" : undefined}>
+                <CardContent className="flex items-center justify-between gap-3 py-3">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-semibold">
+                      {format(parseLocalISO(dateKey), "EEE d MMM yyyy", { locale: dateLocale })}
+                      {isToday && (
+                        <Badge variant="secondary" className="px-1.5 py-0 text-[9px]">
+                          {t("pages.scheduleToday")}
+                        </Badge>
+                      )}
+                    </p>
+                    {entry.isDayOff ? (
+                      <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                        <CalendarOff className="h-3.5 w-3.5" />
+                        {t("pages.scheduleDayOffOn")}
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">
+                        {entry.scheduleShift
+                          ? `${entry.scheduleShift.name} (${entry.scheduleShift.startTime}–${entry.scheduleShift.endTime})`
+                          : `${entry.customStartTime}–${entry.customEndTime}`}
+                      </p>
                     )}
-                  </p>
-                  {entry.isDayOff ? (
-                    <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                      <CalendarOff className="h-3.5 w-3.5" />
-                      {t("pages.scheduleDayOffOn")}
-                    </p>
-                  ) : (
-                    <p className="text-muted-foreground text-xs">
-                      {entry.scheduleShift
-                        ? `${entry.scheduleShift.name} (${entry.scheduleShift.startTime}–${entry.scheduleShift.endTime})`
-                        : `${entry.customStartTime}–${entry.customEndTime}`}
-                    </p>
-                  )}
-                </div>
-                {entry.department && <Badge variant="secondary">{entry.department}</Badge>}
-              </CardContent>
-            </Card>
-          ))}
+                  </div>
+                  {entry.department && <Badge variant="secondary">{entry.department}</Badge>}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -296,7 +316,13 @@ export function MyScheduleList({ storeId, staffMemberId }: { storeId: string; st
         )}
       </div>
 
-      <ClockInOutDialog open={clockDialogOpen} onOpenChange={setClockDialogOpen} storeId={storeId} />
+      {!onClockInOut && (
+        <ClockInOutDialog
+          open={clockDialogOpen}
+          onOpenChange={setClockDialogOpen}
+          storeId={storeId}
+        />
+      )}
     </div>
   );
 }

@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 import { create } from "zustand";
 import { useOnlineStatus } from "@/hooks/use-network-status";
+import { ApiClientError } from "@/lib/api/client";
 import { usePosCart } from "./use-pos-cart";
 import { useCustomerDisplaySettings } from "./use-customer-display-settings";
-import { findCustomerByPhone, toCartCustomer } from "./use-customers";
+import { createCustomer, findCustomerByPhone, toCartCustomer } from "./use-customers";
 import {
   CUSTOMER_DETAILS_NAME_MAX,
   CUSTOMER_DISPLAY_PAID_MS,
@@ -57,16 +58,20 @@ export function markCustomerDisplayPaid(orderNumber: string, total: number): voi
   useCustomerDisplayPaid.getState().markPaid(orderNumber, total);
 }
 
+/** The cashier window saving a new customer the display submitted. */
+export type CustomerAutoSave = "idle" | "saving" | "saved" | "failed";
+
 /**
  * What the customer has told the till from the customer-facing screen — their
  * WhatsApp number, and, if the number turned out to be new, an optional name and
  * email — waiting to be picked up by the cashier's customer row and by checkout.
  *
- * Deliberately only a suggestion: it prefills the cashier's new-customer form
- * and the order's contact fields and nothing else. The customer display can't
- * create an order, can't change a total, and can't write to the database — the
- * cashier still reviews the details and still confirms. Not persisted, and
- * cleared once the order is placed so the next customer never inherits it.
+ * The customer display itself can't create an order, can't change a total, and
+ * can't write to the database. What it sends lands here; the cashier's window
+ * acts on it — attaching a returning customer, and saving a new one once they
+ * press Done (useCustomerIntakeResolver) — and the cashier still sees it all
+ * and still confirms the sale. Not persisted, and cleared once the order is
+ * placed so the next customer never inherits it.
  */
 interface CustomerIntakeState {
   /** E.164, or null when nothing is pending. */
@@ -84,11 +89,32 @@ interface CustomerIntakeState {
    * rather than in the component so leaving the POS page and coming back doesn't
    * re-open a form the cashier already dealt with. */
   formOpenedFor: number;
+  /** The `receivedAt` the customer pressed Done (or Skip) for — their details are final. */
+  submittedFor: number;
+  /** The `receivedAt` whose new-customer form the cashier took over (typed in it, or
+   * dismissed it): theirs to save by hand, so it is not saved for them. */
+  takenOverFor: number;
+  /** Saving the submitted new customer; `idle` until a submission is being saved. */
+  autoSave: CustomerAutoSave;
   setPhone: (phone: string | null) => void;
   setDetails: (name: string, email: string) => void;
+  /** The customer finished: set the details one last time and mark them final. */
+  submitDetails: (name: string, email: string) => void;
   setMatch: (match: CustomerDisplayMatch | null) => void;
   markFormOpened: (receivedAt: number) => void;
+  markTakenOver: (receivedAt: number) => void;
+  setAutoSave: (autoSave: CustomerAutoSave) => void;
   clear: () => void;
+}
+
+function cleanDetails(name: unknown, email: unknown): { name: string; email: string } {
+  const cleanEmail = String(email ?? "").trim();
+  return {
+    name: String(name ?? "")
+      .trim()
+      .slice(0, CUSTOMER_DETAILS_NAME_MAX),
+    email: isPlausibleEmail(cleanEmail) ? cleanEmail : "",
+  };
 }
 
 const EMPTY_INTAKE = {
@@ -98,6 +124,9 @@ const EMPTY_INTAKE = {
   match: null,
   receivedAt: 0,
   formOpenedFor: 0,
+  submittedFor: 0,
+  takenOverFor: 0,
+  autoSave: "idle",
 } as const;
 
 export const useCustomerIntake = create<CustomerIntakeState>()((set, get) => ({
@@ -111,20 +140,20 @@ export const useCustomerIntake = create<CustomerIntakeState>()((set, get) => ({
     set({
       phone,
       receivedAt: Math.max(Date.now(), current.receivedAt + 1),
+      // A new submission: whatever the last one's save did is not about this one.
+      autoSave: "idle",
       ...(sameNumber ? {} : { name: "", email: "", match: null }),
     });
   },
   // Re-validated here as well as on the display: this arrives over a channel
-  // and lands in a form the cashier is about to save, so it is not taken on trust.
-  setDetails: (name, email) =>
-    set({
-      name: String(name ?? "")
-        .trim()
-        .slice(0, CUSTOMER_DETAILS_NAME_MAX),
-      email: isPlausibleEmail(String(email ?? "").trim()) ? String(email).trim() : "",
-    }),
+  // and lands in a customer record about to be saved, so it is not taken on trust.
+  setDetails: (name, email) => set(cleanDetails(name, email)),
+  submitDetails: (name, email) =>
+    set({ ...cleanDetails(name, email), submittedFor: get().receivedAt }),
   setMatch: (match) => set({ match }),
   markFormOpened: (receivedAt) => set({ formOpenedFor: receivedAt }),
+  markTakenOver: (receivedAt) => set({ takenOverFor: receivedAt }),
+  setAutoSave: (autoSave) => set({ autoSave }),
   clear: () => set({ ...EMPTY_INTAKE }),
 }));
 
@@ -192,11 +221,14 @@ export function useCustomerDisplayPublisher(storeId: string): void {
         return;
       }
       // Straight into a store the cashier's customer row and checkout read —
-      // never written to the cart or the server from here.
+      // never written to the cart or the server from here (the resolver below
+      // decides what to do with it).
       if (event.data?.type === "customer-phone") {
         useCustomerIntake.getState().setPhone(event.data.phone);
       } else if (event.data?.type === "customer-details") {
         useCustomerIntake.getState().setDetails(event.data.name, event.data.email);
+      } else if (event.data?.type === "customer-submit") {
+        useCustomerIntake.getState().submitDetails(event.data.name, event.data.email);
       }
     };
 
@@ -353,7 +385,10 @@ function releaseAutoAttach(attachedId: MutableRefObject<string | null>): void {
  *    overwritten, and a customer correcting a mistyped number swaps the match
  *    rather than stacking one on the other;
  *  - a number nobody owns is reported as `new`, which is what makes the
- *    cashier's new-customer form open with it (see PosCartCustomer);
+ *    cashier's new-customer form open with it (see PosCartCustomer); once the
+ *    customer presses Done on the display they are saved as a customer and
+ *    attached here, so the cashier never has to press Save — under the same
+ *    empty-sale rule, and not if the cashier took that form over themselves;
  *  - a lookup that cannot run (offline, or it failed) is `unknown` — reported,
  *    never guessed at.
  * The same channel carries the result back so the display can react to it.
@@ -363,6 +398,8 @@ export function useCustomerIntakeResolver(storeId: string): void {
   const phone = useCustomerIntake((state) => state.phone);
   const receivedAt = useCustomerIntake((state) => state.receivedAt);
   const match = useCustomerIntake((state) => state.match);
+  const submittedFor = useCustomerIntake((state) => state.submittedFor);
+  const takenOverFor = useCustomerIntake((state) => state.takenOverFor);
   const cartCustomerPhone = usePosCart((state) => state.customer?.phone ?? null);
   const cartCustomerName = usePosCart((state) => state.customer?.name ?? null);
   const online = useOnlineStatus();
@@ -371,6 +408,8 @@ export function useCustomerIntakeResolver(storeId: string): void {
   /** The member this flow attached to the sale, so it can be detached again. */
   const autoAttachedRef = useRef<string | null>(null);
   const lastPhoneRef = useRef<string | null>(null);
+  /** The submission already saved (or being saved), so each is saved once. */
+  const savedForRef = useRef(0);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") return;
@@ -434,6 +473,59 @@ export function useCustomerIntakeResolver(storeId: string): void {
       cancelled = true;
     };
   }, [phone, receivedAt, online, storeId, report]);
+
+  // The customer pressed Done on the display and their number is new: save them
+  // and attach them to the sale, instead of leaving the form for the cashier to
+  // save. Waits for BOTH — a customer quick enough to finish before the lookup
+  // answers is saved when it does. Never over the cashier's own pick (the sale
+  // must be empty), once per submission, and not for a form the cashier took
+  // over: that one is theirs to save.
+  useEffect(() => {
+    if (!phone || match !== "new" || !online) return;
+    if (submittedFor !== receivedAt || takenOverFor === receivedAt) return;
+    if (savedForRef.current === receivedAt) return;
+    savedForRef.current = receivedAt;
+    // Someone is already on the sale: the cashier chose them, leave it be.
+    if (usePosCart.getState().customer) return;
+
+    const intake = useCustomerIntake.getState();
+    intake.setAutoSave("saving");
+    // Deliberately not cancelled on re-run — attaching flips `match`, which
+    // re-runs this. Instead the answer is dropped if it is no longer about this
+    // submission: the customer changed their number, or the order was placed.
+    const stillCurrent = () => useCustomerIntake.getState().receivedAt === receivedAt;
+
+    createCustomer(storeId, {
+      // Optional: a customer given only a number is named after it server-side.
+      name: intake.name || undefined,
+      phone,
+      email: intake.email || undefined,
+    })
+      .catch(async (error: unknown) => {
+        // Saved a moment ago from elsewhere (another till, the cashier's own
+        // form): attach that record rather than fail.
+        if (error instanceof ApiClientError && error.status === 409) {
+          const member = await findCustomerByPhone(storeId, phone);
+          if (member) return member;
+        }
+        throw error;
+      })
+      .then(
+        (saved) => {
+          if (!stillCurrent()) return;
+          const cart = usePosCart.getState();
+          if (!cart.customer) {
+            cart.setCustomer(toCartCustomer(saved));
+            autoAttachedRef.current = saved.id;
+          }
+          useCustomerIntake.getState().setAutoSave("saved");
+        },
+        () => {
+          // The prepared form is still there for the cashier to save by hand.
+          if (stillCurrent()) useCustomerIntake.getState().setAutoSave("failed");
+        }
+      );
+  }, [phone, match, receivedAt, submittedFor, takenOverFor, online, storeId]);
 
   // The cashier saved the new customer (or picked them) while the display was
   // still waiting on the optional step: the number now belongs to a customer, so
@@ -534,6 +626,8 @@ export function useCustomerIntakeChannel(storeId: string): {
   askedAt: number;
   sendPhone: (phone: string | null) => void;
   sendDetails: (name: string, email: string) => void;
+  /** The customer pressed Done (or Skip): the details are final, and a new customer gets saved. */
+  submitDetails: (name: string, email: string) => void;
 } {
   const [status, setStatus] = useState<CustomerDisplayIntakeStatus | null>(null);
   const [askedAt, setAskedAt] = useState(0);
@@ -563,7 +657,11 @@ export function useCustomerIntakeChannel(storeId: string): {
     channelRef.current?.postMessage({ type: "customer-details", name, email });
   }, []);
 
-  return { status, askedAt, sendPhone, sendDetails };
+  const submitDetails = useCallback((name: string, email: string) => {
+    channelRef.current?.postMessage({ type: "customer-submit", name, email });
+  }, []);
+
+  return { status, askedAt, sendPhone, sendDetails, submitDetails };
 }
 
 /**

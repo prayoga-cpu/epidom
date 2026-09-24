@@ -67,7 +67,6 @@ const LOCALIZED_MARKETING_PATHS = new Set([
   "/docs",
   "/build-with-us",
   "/changelog",
-  "/status",
   "/terms",
   "/privacy",
   "/gdpr",
@@ -87,6 +86,10 @@ const LOCALIZED_MARKETING_PATHS = new Set([
  * links go. The old `?plan=` query described a form that no longer exists and
  * is dropped.
  *
+ * `/status` was a hand-updated "all systems operational" board with no monitor
+ * behind it. Its only actionable part was "report an issue", which is the
+ * Contact page's job, so that is where old links go.
+ *
  * Why here and not `redirects()` in next.config.ts: a config redirect passes
  * the request's query string through to the destination and cannot strip it
  * (see prepareDestination in next/dist/shared/lib/router/utils/prepare-
@@ -96,7 +99,10 @@ const LOCALIZED_MARKETING_PATHS = new Set([
  * A loop is impossible as long as no target is itself a key here; the test in
  * src/__tests__/proxy-retired-paths.test.ts follows the redirect chain.
  */
-const RETIRED_MARKETING_PATHS: ReadonlyMap<string, string> = new Map([["/payments", "/pricing"]]);
+const RETIRED_MARKETING_PATHS: ReadonlyMap<string, string> = new Map([
+  ["/payments", "/pricing"],
+  ["/status", "/contact"],
+]);
 
 /**
  * Marketing pages the resume-redirect must never fire on, because the app
@@ -274,7 +280,6 @@ export default async function proxy(req: NextRequest) {
     "/docs", // /docs/* guides too, via startsWith
     "/build-with-us",
     "/changelog",
-    "/status",
     "/compare", // /compare/* comparison pages
     "/terms",
     "/privacy",

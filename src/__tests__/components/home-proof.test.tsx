@@ -545,10 +545,13 @@ describe("FeaturesShowcaseSection report mockup", () => {
     mockLocale.value = loc;
     const { container } = render(<FeaturesShowcaseSection />);
     const shown = container.textContent ?? "";
+    // Receipts and supplier orders really do go out by e-mail (2.95.0, 2.103.0),
+    // so the section may say "par e-mail"; only the report is never e-mailed.
+    const report = screen.getByTestId("services-report-mockup").textContent ?? "";
 
     expect(shown).not.toMatch(/\S+@\S+\.\S+/);
     expect(shown).not.toContain("23:59");
-    expect(shown).not.toMatch(/emailed|envoyé à\s*:|dikirim ke\s*:|diemail|par e-mail|inbox/i);
-    expect(shown).toContain(text(loc, "redesign.servicesPage.plSettled"));
+    expect(report).not.toMatch(/emailed|envoyé à\s*:|dikirim ke\s*:|diemail|par e-mail|inbox/i);
+    expect(report).toContain(text(loc, "redesign.servicesPage.plSettled"));
   });
 });

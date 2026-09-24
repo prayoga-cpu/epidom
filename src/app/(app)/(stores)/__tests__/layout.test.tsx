@@ -13,7 +13,13 @@ vi.mock("@/components/lang/i18n-provider", () => ({
   I18nProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("@/features/marketing/shared/components/site-header", () => ({
-  SiteHeader: () => <header data-testid="site-header" />,
+  SiteHeader: (props: { backHref?: string; variant?: string }) => (
+    <header
+      data-testid="site-header"
+      data-variant={props.variant}
+      data-back={props.backHref ?? ""}
+    />
+  ),
 }));
 
 import StoresLayout from "../layout";
@@ -42,5 +48,14 @@ describe("(stores) layout — who may see Your Stores", () => {
     render(await StoresLayout({ children: <p>your stores</p> }));
     expect(screen.getByText("your stores")).toBeInTheDocument();
     expect(screen.getByTestId("site-header")).toBeInTheDocument();
+  });
+
+  it("offers no way back to the marketing site — that is what logging out is for", async () => {
+    h.session = { user: { id: "u1", deactivatedAt: null } };
+    render(await StoresLayout({ children: null }));
+    const header = screen.getByTestId("site-header");
+    expect(header).toHaveAttribute("data-back", "");
+    // The authenticated header renders its logo as branding, not a home link.
+    expect(header).toHaveAttribute("data-variant", "authenticated");
   });
 });

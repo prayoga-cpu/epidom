@@ -43,10 +43,10 @@ beforeEach(() => {
 });
 
 describe("SiteHeader call-to-action", () => {
-  it("signed out: one 'try Epidom' button on desktop, and the same one in the mobile menu", () => {
+  it("signed out: one 'start trial' button on desktop, and the same one in the mobile menu", () => {
     render(<SiteHeader />);
 
-    const desktop = screen.getByRole("button", { name: /nav\.tryEpidom/ });
+    const desktop = screen.getByRole("button", { name: /nav\.startTrial/ });
     fireEvent.click(desktop);
     expect(h.trackEvent).toHaveBeenCalledWith("cta_click", {
       event_category: "engagement",
@@ -56,7 +56,7 @@ describe("SiteHeader call-to-action", () => {
 
     h.push.mockClear();
     const sheet = within(openMobileMenu());
-    fireEvent.click(sheet.getByRole("button", { name: /nav\.tryEpidom/ }));
+    fireEvent.click(sheet.getByRole("button", { name: /nav\.startTrial/ }));
     expect(h.push).toHaveBeenLastCalledWith("/register");
   });
 
@@ -64,7 +64,7 @@ describe("SiteHeader call-to-action", () => {
     h.session = SIGNED_IN;
     render(<SiteHeader />);
 
-    expect(screen.queryByRole("button", { name: /nav\.tryEpidom/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /nav\.startTrial/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /common\.nav\.stores/ }));
     expect(h.push).toHaveBeenLastCalledWith("/stores");
 
@@ -90,9 +90,9 @@ describe("SiteHeader call-to-action", () => {
     expect(h.signOut).toHaveBeenCalledTimes(2);
   });
 
-  it("showLogout means nothing while signed out: still the 'try Epidom' button", () => {
+  it("showLogout means nothing while signed out: still the 'start trial' button", () => {
     render(<SiteHeader showLogout />);
-    expect(screen.getByRole("button", { name: /nav\.tryEpidom/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /nav\.startTrial/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "common.actions.logout" })).toBeNull();
   });
 });
@@ -135,6 +135,38 @@ describe("SiteHeader navigation", () => {
     expect(container.querySelector("a")?.getAttribute("href")).toBe(
       locale === "fr" ? "/" : `/${locale}`
     );
+  });
+
+  it("signed in (Your Stores, Profile): the logo is plain branding, not a way back to the website", () => {
+    const { container } = render(<SiteHeader variant="authenticated" showLogout />);
+    const home = [...container.querySelectorAll("a")].filter((a) =>
+      ["/", "/en", "/id"].includes(a.getAttribute("href") ?? "")
+    );
+    expect(home).toHaveLength(0);
+    expect(screen.queryByLabelText("common.actions.back")).toBeNull();
+  });
+
+  it.each([
+    ["fr", "/compare"],
+    ["id", "/id/compare"],
+    ["en", "/en/compare"],
+  ] as const)("%s: links to the Compare section (%s)", (locale, href) => {
+    h.locale = locale;
+    render(<SiteHeader />);
+    expect(screen.getByRole("link", { name: "common.nav.compare" }).getAttribute("href")).toBe(
+      href
+    );
+  });
+
+  it("marks Compare as the current section on a comparison sub-page, and not Home", () => {
+    h.path = "/compare/moka";
+    render(<SiteHeader />);
+    expect(
+      screen.getByRole("link", { name: "common.nav.compare" }).getAttribute("aria-current")
+    ).toBe("page");
+    expect(
+      screen.getByRole("link", { name: "common.nav.home" }).getAttribute("aria-current")
+    ).toBeNull();
   });
 
   it("never links to the retired /payments page", () => {

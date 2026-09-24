@@ -27,8 +27,9 @@ export const metadata: Metadata = {
 };
 
 // POS Mode: bottom-tab-bar shell for Cashier/Kitchen (docs/dashboard-revamp.md).
-// Mirrors (dashboard)/layout.tsx's session/ownership/gate structure so /pos,
-// /pos/orders, /pos/kds, /tables and /pos/schedule all share one gate chain
+// Mirrors (dashboard)/layout.tsx's session/ownership/gate structure so the POS
+// System (/pos, /pos/orders, /pos/kds, /tables) and the Operational page
+// (/pos/operational — shift, schedule, clock in/out) all share one gate chain
 // instead of each route re-deriving it — see PosStaffGate below for why it
 // wraps PosModeShell rather than sitting inside it.
 export default async function PosModeLayout({

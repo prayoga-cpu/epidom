@@ -58,7 +58,6 @@ interface PrinterSettingsDialogProps {
  */
 export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDialogProps) {
   const { t } = useI18n();
-  const supported = isBluetoothSupported();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -71,17 +70,34 @@ export function PrinterSettingsDialog({ open, onOpenChange }: PrinterSettingsDia
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
-          {!supported && (
-            <p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
-              {t("pos.print.bluetoothUnsupported")}
-            </p>
-          )}
-          {PRINTER_ROLES.map((role) => (
-            <PrinterRoleCard key={role} role={role} supported={supported} />
-          ))}
+          <PrinterSettingsPanel />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * The printer cards themselves — this dialog's body, and the Printers tab of
+ * Hardware settings. Everything lives in the per-device printer store, so the
+ * two surfaces always agree. Fragment on purpose: the caller's container spaces
+ * the cards.
+ */
+export function PrinterSettingsPanel() {
+  const { t } = useI18n();
+  const supported = isBluetoothSupported();
+
+  return (
+    <>
+      {!supported && (
+        <p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
+          {t("pos.print.bluetoothUnsupported")}
+        </p>
+      )}
+      {PRINTER_ROLES.map((role) => (
+        <PrinterRoleCard key={role} role={role} supported={supported} />
+      ))}
+    </>
   );
 }
 

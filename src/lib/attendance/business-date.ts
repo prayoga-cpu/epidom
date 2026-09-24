@@ -47,3 +47,10 @@ export function addDaysToDateKey(key: string, days: number): string {
   const d = new Date(Date.UTC(year, month - 1, day + days));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
+
+/** The Monday on or before a "YYYY-MM-DD" key (roster weeks run Mon–Sun), as "YYYY-MM-DD". */
+export function mondayOfDateKey(dateKey: string): string {
+  const day = new Date(`${dateKey}T00:00:00Z`).getUTCDay(); // 0=Sun..6=Sat
+  const offset = (day + 6) % 7; // days since Monday
+  return addDaysToDateKey(dateKey, -offset);
+}

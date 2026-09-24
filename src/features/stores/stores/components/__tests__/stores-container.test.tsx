@@ -10,8 +10,24 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("@/lib/auth-client", () => ({ useSession: () => ({ data: null }) }));
 vi.mock("@/lib/admin", () => ({ isAdminEmail: () => false }));
 vi.mock("../store-card", () => ({
-  StoreCard: ({ store, isBlocked }: { store: { name: string }; isBlocked: boolean }) => (
-    <div data-testid="store-card" data-blocked={String(isBlocked)}>
+  StoreCard: ({
+    store,
+    isBlocked,
+    overview,
+    overviewLoading,
+  }: {
+    store: { name: string };
+    isBlocked: boolean;
+    overview: { storeId: string; tagline: string | null } | null;
+    overviewLoading: boolean;
+  }) => (
+    <div
+      data-testid="store-card"
+      data-blocked={String(isBlocked)}
+      data-overview-store={overview?.storeId ?? "none"}
+      data-overview-tagline={overview?.tagline ?? ""}
+      data-overview-loading={String(overviewLoading)}
+    >
       {store.name}
     </div>
   ),
@@ -25,6 +41,11 @@ const h = vi.hoisted(() => ({
   stores: { current: [] as unknown[] },
   subscription: { current: undefined as unknown },
   error: { current: null as unknown },
+  overviews: {
+    current: undefined as unknown[] | undefined,
+    loading: false,
+    enabled: [] as boolean[],
+  },
 }));
 vi.mock("../../hooks/use-stores", () => ({
   useStores: () => ({
@@ -36,6 +57,14 @@ vi.mock("../../hooks/use-stores", () => ({
 }));
 vi.mock("../../hooks/use-subscription-status", () => ({
   useSubscriptionStatus: () => ({ data: h.subscription.current, isLoading: false }),
+}));
+// Mocked on its own: the real hook calls useQuery, which the react-query mock
+// above does not provide.
+vi.mock("../../hooks/use-store-overviews", () => ({
+  useStoreOverviews: (enabled: boolean) => {
+    h.overviews.enabled.push(enabled);
+    return { data: h.overviews.current, isLoading: h.overviews.loading };
+  },
 }));
 
 import { StoresContainer } from "../stores-container";
@@ -66,6 +95,9 @@ beforeEach(() => {
   h.stores.current = [];
   h.error.current = null;
   h.subscription.current = activeSub;
+  h.overviews.current = undefined;
+  h.overviews.loading = false;
+  h.overviews.enabled = [];
   originalLocation = window.location;
   Object.defineProperty(window, "location", {
     configurable: true,
@@ -194,5 +226,54 @@ describe("StoresContainer — a session that is no longer live", () => {
 
     expect(await screen.findByTestId("store-card")).toBeInTheDocument();
     expect(window.location.href).toBe("http://localhost/stores");
+  });
+});
+
+describe("StoresContainer — the card overviews (branding + summary)", () => {
+  it("hands each card its own overview row, matched by store id", async () => {
+    h.stores.current = [ownerStore, staffStore];
+    h.overviews.current = [
+      { storeId: "s2", tagline: "Staff slogan" },
+      { storeId: "s1", tagline: "Owner slogan" },
+    ];
+    mockProfile({ business: { stores: [{ id: "s1" }] }, staffLink: null });
+    render(<StoresContainer />);
+
+    const cards = await screen.findAllByTestId("store-card");
+    const byName = Object.fromEntries(
+      cards.map((c) => [c.textContent, c.getAttribute("data-overview-tagline")])
+    );
+    expect(byName).toEqual({ "Owned Cafe": "Owner slogan", "Staffed Cafe": "Staff slogan" });
+  });
+
+  it("while the overview loads the cards still render, flagged as loading", async () => {
+    h.stores.current = [ownerStore];
+    h.overviews.loading = true;
+    mockProfile({ business: { stores: [{ id: "s1" }] }, staffLink: null });
+    render(<StoresContainer />);
+
+    const card = await screen.findByTestId("store-card");
+    expect(card).toHaveAttribute("data-overview-store", "none");
+    expect(card).toHaveAttribute("data-overview-loading", "true");
+  });
+
+  it("a card with no overview row (or a failed overview) gets null, not a crash", async () => {
+    h.stores.current = [ownerStore];
+    h.overviews.current = [{ storeId: "someone-else", tagline: null }];
+    mockProfile({ business: { stores: [{ id: "s1" }] }, staffLink: null });
+    render(<StoresContainer />);
+
+    const card = await screen.findByTestId("store-card");
+    expect(card).toHaveAttribute("data-overview-store", "none");
+    expect(card).toHaveAttribute("data-overview-loading", "false");
+  });
+
+  it("does not fetch the overview once the session is known to be dead", async () => {
+    h.error.current = new UnauthorizedError();
+    global.fetch = vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) })) as never;
+    render(<StoresContainer />);
+
+    await waitFor(() => expect(window.location.href).toBe("/login"));
+    expect(h.overviews.enabled.at(-1)).toBe(false);
   });
 });

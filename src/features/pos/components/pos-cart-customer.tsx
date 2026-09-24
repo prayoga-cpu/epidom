@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, Search, UserPlus, UserRound, Users, X } from "lucide-react";
@@ -135,17 +136,32 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
   // ── Synced with the customer screen ──────────────────────────────────────
   // A customer who typed their number on the customer-facing screen and turned
   // out to be new has their number (and, live, the optional name / email they go
-  // on to type) land in this same new-customer form. The cashier reviews it and
-  // taps Save & attach — nothing is saved from the customer's side.
+  // on to type) land in this same new-customer form, so the cashier can watch it
+  // fill in. When the customer presses Done the till saves and attaches them on
+  // its own (useCustomerIntakeResolver) — no Save tap needed. Typing in the form
+  // or dismissing it takes it over: then it is the cashier's to save.
   const intakePhone = useCustomerIntake((s) => s.phone);
   const intakeMatch = useCustomerIntake((s) => s.match);
   const intakeName = useCustomerIntake((s) => s.name);
   const intakeEmail = useCustomerIntake((s) => s.email);
   const intakeReceivedAt = useCustomerIntake((s) => s.receivedAt);
   const formOpenedFor = useCustomerIntake((s) => s.formOpenedFor);
+  const autoSave = useCustomerIntake((s) => s.autoSave);
   const [fromDisplay, setFromDisplay] = useState(false);
   /** Fields the cashier has typed in themselves — the customer's live typing never overwrites these. */
   const touched = useRef(new Set<string>());
+  const queryClient = useQueryClient();
+
+  /** The customer screen's form is the cashier's now: the till won't save it for them. */
+  const takeOverFromDisplay = () => {
+    const intake = useCustomerIntake.getState();
+    intake.markTakenOver(intake.receivedAt);
+  };
+  /** The cashier typed in a field. On the customer screen's form, that takes it over. */
+  const touch = (field: string) => {
+    touched.current.add(field);
+    if (fromDisplay) takeOverFromDisplay();
+  };
 
   // Never trust a balance that was persisted in localStorage (a cart survives a
   // reload — possibly days): re-read the customer on mount/resume and adopt the
@@ -201,6 +217,20 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
     setMode("create");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customer, intakePhone, intakeMatch, intakeReceivedAt, formOpenedFor]);
+
+  // The till saved the customer screen's submission and attached them: the form
+  // that was waiting for it is done with (and must not reappear on detach).
+  useEffect(() => {
+    if (customer && mode === "create") resetCustomerSection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer]);
+
+  // A customer saved behind the picker's back must show up in its next search.
+  useEffect(() => {
+    if (autoSave === "saved") {
+      queryClient.invalidateQueries({ queryKey: ["pos", "customers", storeId, "search"] });
+    }
+  }, [autoSave, queryClient, storeId]);
 
   // Then follow what the customer types, field by field, for as long as the
   // cashier hasn't taken a field over.
@@ -475,7 +505,11 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
                     variant="ghost"
                     size="icon"
                     className="h-11 w-11 shrink-0 touch-manipulation"
-                    onClick={() => setMode("search")}
+                    onClick={() => {
+                      // Dismissing the customer screen's form is a "no" to saving it.
+                      if (fromDisplay) takeOverFromDisplay();
+                      setMode("search");
+                    }}
                   >
                     <X className="h-4 w-4" />
                     <span className="sr-only">{t("common.actions.cancel")}</span>
@@ -497,7 +531,7 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
                     placeholder={t("cashierCart.customer.whatsappPlaceholder")}
                     aria-label={t("cashierCart.customer.whatsappPlaceholder")}
                     aria-invalid={!!form.formState.errors.phone}
-                    {...form.register("phone", { onChange: () => touched.current.add("phone") })}
+                    {...form.register("phone", { onChange: () => touch("phone") })}
                   />
                 </Field>
                 <Field error={form.formState.errors.name?.message}>
@@ -506,7 +540,7 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
                     placeholder={t("cashierCart.customer.nameOptionalPlaceholder")}
                     aria-label={t("cashierCart.customer.nameOptionalPlaceholder")}
                     aria-invalid={!!form.formState.errors.name}
-                    {...form.register("name", { onChange: () => touched.current.add("name") })}
+                    {...form.register("name", { onChange: () => touch("name") })}
                   />
                 </Field>
                 <Field error={form.formState.errors.email?.message}>
@@ -517,7 +551,7 @@ export function PosCartCustomer({ storeId }: PosCartCustomerProps) {
                     placeholder={t("cashierCart.customer.emailOptionalPlaceholder")}
                     aria-label={t("cashierCart.customer.emailOptionalPlaceholder")}
                     aria-invalid={!!form.formState.errors.email}
-                    {...form.register("email", { onChange: () => touched.current.add("email") })}
+                    {...form.register("email", { onChange: () => touch("email") })}
                   />
                 </Field>
                 <Button

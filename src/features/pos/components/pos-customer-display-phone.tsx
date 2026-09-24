@@ -23,8 +23,10 @@ import flags from "react-phone-number-input/flags";
 import countryNames from "react-phone-number-input/locale/en.json";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
+import { onKeyPointerDown } from "@/lib/utils/key-press";
 import { isPlausibleEmail, type CustomerDisplayIntakeStatus } from "../lib/customer-display";
 import { PosCustomerDisplayDetails } from "./pos-customer-display-details";
+import { TypedText } from "./typed-text";
 
 /**
  * The customer's whole "get your receipt / join us" entry, on the customer-facing
@@ -32,7 +34,8 @@ import { PosCustomerDisplayDetails } from "./pos-customer-display-details";
  *  1. their WhatsApp number, on a keyboard-free pad;
  *  2. the till looks the number up — a returning customer is greeted and is done;
  *  3. a number nobody owns yet gets an optional name and email step, so a brand
- *     new customer can leave those too without ever touching the till.
+ *     new customer can leave those too without ever touching the till — and
+ *     pressing Done (or Skip) there has the till save them as a customer.
  *
  * Deliberately NOT the app's `PhoneInput` / Radix `Dialog`: this renders on a
  * screen the customer touches, on the store's own brand colour, and it must
@@ -69,6 +72,8 @@ interface PosCustomerDisplayPhoneProps {
   onSubmitPhone: (phone: string | null) => void;
   /** Receives the optional name / email as they are typed (email only once it is valid). */
   onSubmitDetails: (name: string, email: string) => void;
+  /** Done (or Skip) on the optional step: the details are final — the till saves the new customer. */
+  onFinishDetails: (name: string, email: string) => void;
 }
 
 function FlagFor({ country }: { country: string }) {
@@ -89,6 +94,7 @@ export function PosCustomerDisplayPhone({
   status,
   onSubmitPhone,
   onSubmitDetails,
+  onFinishDetails,
 }: PosCustomerDisplayPhoneProps) {
   const { t } = useI18n();
   const [country, setCountry] = useState<string>(defaultCountry);
@@ -380,8 +386,11 @@ export function PosCustomerDisplayPhone({
                     disabled={email !== "" && !isPlausibleEmail(email)}
                     onClick={() => {
                       const cleanEmail = isPlausibleEmail(email) ? email : "";
-                      // Anything still inside the debounce window goes out now.
+                      // Anything still inside the debounce window goes out now
+                      // (a till window from an older release only hears this)...
                       if (name.trim() || cleanEmail) onSubmitDetails(name.trim(), cleanEmail);
+                      // ...then the final word, which has the till save them.
+                      onFinishDetails(name.trim(), cleanEmail);
                       onClose();
                     }}
                     className="flex min-h-12 flex-1 touch-manipulation items-center justify-center gap-2 rounded-2xl bg-[color:var(--cfd-ink)] px-4 text-base font-semibold text-[color:var(--cfd-on-ink)] transition-opacity disabled:opacity-35"
@@ -415,7 +424,9 @@ export function PosCustomerDisplayPhone({
                       <span className="text-base font-semibold tabular-nums">+{dial}</span>
                     </button>
                     <div className="min-w-0 flex-1 truncate py-2 text-2xl font-semibold tabular-nums sm:text-3xl">
-                      {digits || (
+                      {/* Mounted even while empty, so the first digit pops in too. */}
+                      <TypedText value={digits} />
+                      {!digits && (
                         <span className="opacity-40">
                           {t("pos.customerDisplay.phonePlaceholder")}
                         </span>
@@ -431,11 +442,12 @@ export function PosCustomerDisplayPhone({
                         <button
                           key={idx}
                           type="button"
+                          onPointerDown={onKeyPointerDown}
                           onClick={() => handleKey(key)}
                           aria-label={key === "del" ? t("common.actions.delete") : key}
-                          className="flex h-14 touch-manipulation items-center justify-center rounded-2xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] text-xl font-semibold tabular-nums transition-opacity active:opacity-60 sm:h-16 sm:text-2xl"
+                          className="relative flex h-14 touch-manipulation items-center justify-center overflow-hidden rounded-2xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] text-xl font-semibold tabular-nums transition-opacity active:opacity-60 sm:h-16 sm:text-2xl"
                         >
-                          {key === "del" ? <Delete className="h-6 w-6" /> : key}
+                          {key === "del" ? <Delete className="h-6 w-6" /> : <span>{key}</span>}
                         </button>
                       )
                     )}

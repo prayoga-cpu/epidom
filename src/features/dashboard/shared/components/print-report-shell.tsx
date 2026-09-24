@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
+import { EpidomMark, EpidomWordmark } from "@/features/marketing/shared/components/epidom-logo";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 
@@ -77,8 +77,8 @@ export function PrintReportShell({
         <div className="mb-6 flex items-start justify-between border-b-2 border-black pb-4">
           <div className="flex items-center gap-3">
             <EpidomMark size={36} />
-            <div>
-              <p className="text-lg font-bold tracking-wide text-black">EPIDOM</p>
+            <div className="text-black">
+              <EpidomWordmark height={20} style={{ display: "block", marginBottom: 4 }} />
               <p className="text-sm text-gray-800">{title}</p>
             </div>
           </div>

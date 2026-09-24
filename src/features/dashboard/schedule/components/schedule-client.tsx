@@ -4,23 +4,23 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRangeField } from "@/components/ui/date-range-field";
-import { ChevronLeft, ChevronRight, Settings2, Send, Plus, CalendarOff, Printer, Layers } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2, Send, Printer, Layers } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { todayLocalISO, parseLocalISO } from "@/lib/utils/date-range";
-import { addDaysToDateKey } from "@/lib/attendance/business-date";
+import { addDaysToDateKey, mondayOfDateKey } from "@/lib/attendance/business-date";
 import { MyScheduleList } from "./my-schedule-list";
 import { ScheduleShiftBlocksDialog, type ScheduleShiftOption } from "./schedule-shift-blocks-dialog";
-import { StaffScheduleCellDialog, type StaffScheduleEntry } from "./staff-schedule-cell-dialog";
+import { StaffScheduleCellDialog } from "./staff-schedule-cell-dialog";
 import { ScheduleDayDetailDialog } from "./schedule-day-detail-dialog";
 import { ScheduleGridFilters } from "./schedule-grid-filters";
 import { ApplyShiftTemplateDialog } from "./apply-shift-template-dialog";
 import { ScheduleLog } from "./schedule-log";
 import { ScheduleImagePanel } from "./schedule-image-panel";
+import { ScheduleWeekGrid, type ScheduleWeekGridEntry } from "./schedule-week-grid";
 import type { StaffRole } from "@prisma/client";
 
 // How the roster is kept: named shift blocks in the grid, or a photo/screenshot of
@@ -34,18 +34,13 @@ const VIEW_STORAGE_KEY = "epidom-schedule-view";
 // normal roster cycle.
 const MIN_RANGE_DAYS = 7;
 
-const ROLE_ORDER: StaffRole[] = ["OWNER", "MANAGER", "CASHIER", "KITCHEN"];
-
 interface StaffOption {
   id: string;
   name: string;
   role: StaffRole;
 }
 
-interface ScheduleRow extends StaffScheduleEntry {
-  staffMember: { id: string; name: string };
-  scheduleShift: { name: string; startTime: string; endTime: string; color: string | null } | null;
-}
+type ScheduleRow = ScheduleWeekGridEntry;
 
 interface ScheduleClientProps {
   storeId: string;
@@ -54,21 +49,19 @@ interface ScheduleClientProps {
   viewerStaffMemberId: string | null;
 }
 
-function mondayOf(dateKey: string): string {
-  const day = new Date(`${dateKey}T00:00:00Z`).getUTCDay(); // 0=Sun..6=Sat
-  const offset = (day + 6) % 7; // days since Monday
-  return addDaysToDateKey(dateKey, -offset);
-}
-
 export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId }: ScheduleClientProps) {
   const { t, intlLocale, dateLocale } = useI18n();
   const queryClient = useQueryClient();
+  // Day keys are formatted as UTC midnight, so the weekday must be read in UTC
+  // too — in the viewer's zone a viewer west of UTC gets the previous day.
   const weekdayFormatter = useMemo(
-    () => new Intl.DateTimeFormat(intlLocale, { weekday: "short" }),
+    () => new Intl.DateTimeFormat(intlLocale, { weekday: "short", timeZone: "UTC" }),
     [intlLocale]
   );
-  const [rangeFrom, setRangeFrom] = useState(() => mondayOf(todayLocalISO()));
-  const [rangeTo, setRangeTo] = useState(() => addDaysToDateKey(mondayOf(todayLocalISO()), 6));
+  const [rangeFrom, setRangeFrom] = useState(() => mondayOfDateKey(todayLocalISO()));
+  const [rangeTo, setRangeTo] = useState(() =>
+    addDaysToDateKey(mondayOfDateKey(todayLocalISO()), 6)
+  );
   const [blocksDialogOpen, setBlocksDialogOpen] = useState(false);
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
   // `entryId` absent means "add a new shift for this staff/day" — a day can
@@ -116,7 +109,8 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
     }
     return days;
   }, [rangeFrom, rangeTo]);
-  const isDefaultRange = rangeFrom === mondayOf(today) && rangeTo === addDaysToDateKey(mondayOf(today), 6);
+  const isDefaultRange =
+    rangeFrom === mondayOfDateKey(today) && rangeTo === addDaysToDateKey(mondayOfDateKey(today), 6);
 
   const shiftRange = (days: number) => {
     setRangeFrom(addDaysToDateKey(rangeFrom, days));
@@ -124,7 +118,7 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
   };
 
   const resetToDefaultRange = () => {
-    const start = mondayOf(today);
+    const start = mondayOfDateKey(today);
     setRangeFrom(start);
     setRangeTo(addDaysToDateKey(start, 6));
   };
@@ -163,19 +157,14 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
       (s) => s.staffMember.id === staffMemberId && s.date.slice(0, 10) === dateKey
     );
 
-  const entriesFor = (staffMemberId: string, dateKey: string) =>
-    allEntriesFor(staffMemberId, dateKey).filter(matchesBlockFilter);
-
   const entriesForDay = (dateKey: string) =>
     (schedulesData?.schedules ?? []).filter((s) => s.date.slice(0, 10) === dateKey && matchesBlockFilter(s));
 
-  const visibleStaff = useMemo(() => {
-    const base = staffFilter.length === 0 ? staff : staff.filter((s) => staffFilter.includes(s.id));
-    return [...base].sort((a, b) => {
-      const roleDiff = ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role);
-      return roleDiff !== 0 ? roleDiff : a.name.localeCompare(b.name);
-    });
-  }, [staff, staffFilter]);
+  // Row order (role, then name) is the grid's job.
+  const visibleStaff = useMemo(
+    () => (staffFilter.length === 0 ? staff : staff.filter((s) => staffFilter.includes(s.id))),
+    [staff, staffFilter]
+  );
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["staff-schedules", storeId] });
@@ -309,111 +298,19 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
         onBlockFilterChange={setBlockFilter}
       />
 
-      <div className="-mx-4 overflow-x-auto sm:mx-0">
-        <table
-          className="w-full border-collapse text-sm"
-          style={{ minWidth: Math.max(840, 140 + rangeDays.length * 100) }}
-        >
-          <thead>
-            <tr>
-              <th className="text-muted-foreground w-32 border-b p-2 text-left">
-                {t("pages.staff") ?? "Staff"}
-              </th>
-              {rangeDays.map((day) => (
-                <th key={day} className="text-muted-foreground border-b p-2 text-left font-medium">
-                  <button
-                    type="button"
-                    className={`hover:text-foreground flex flex-col hover:underline ${day === today ? "text-primary font-semibold" : ""}`}
-                    onClick={() => setDayDetail(day)}
-                  >
-                    <span className="text-[10px] tracking-wide uppercase">
-                      {weekdayFormatter.format(new Date(`${day}T00:00:00Z`))}
-                    </span>
-                    <span>{day.slice(5)}</span>
-                  </button>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visibleStaff.map((member) => (
-              <tr key={member.id} className="border-b last:border-0">
-                <td className="p-2 align-top font-medium">{member.name}</td>
-                {rangeDays.map((day) => {
-                  const entries = entriesFor(member.id, day);
-                  // A cell can look empty under an active block filter while
-                  // it actually holds a hidden, non-matching entry — shown as
-                  // a dot so "add" here reads as "clear the filter to see
-                  // what's already there" rather than a true empty slot.
-                  const hasHiddenEntry = entries.length === 0 && allEntriesFor(member.id, day).length > 0;
-                  return (
-                    <td key={day} className="hover:bg-muted/40 min-w-[100px] p-2 align-top">
-                      <div className="flex flex-col gap-1">
-                        {entries.map((entry) => (
-                          <button
-                            key={entry.id}
-                            type="button"
-                            className="flex flex-col items-start rounded-md border px-2 py-1 text-left text-xs"
-                            style={{
-                              borderColor: entry.isDayOff
-                                ? undefined
-                                : (entry.scheduleShift?.color ?? undefined),
-                              backgroundColor: entry.isDayOff
-                                ? undefined
-                                : entry.scheduleShift?.color
-                                  ? `${entry.scheduleShift.color}1a`
-                                  : undefined,
-                            }}
-                            onClick={() =>
-                              setCell({ staffMemberId: member.id, dateKey: day, entryId: entry.id })
-                            }
-                          >
-                            {entry.isDayOff ? (
-                              <span className="text-muted-foreground flex items-center gap-1 font-medium">
-                                <CalendarOff className="h-3 w-3" />
-                                {t("pages.scheduleDayOffOn")}
-                              </span>
-                            ) : (
-                              <span className="font-medium">
-                                {entry.scheduleShift
-                                  ? entry.scheduleShift.name
-                                  : `${entry.customStartTime}–${entry.customEndTime}`}
-                              </span>
-                            )}
-                            {!entry.isDayOff && (
-                              <Badge
-                                variant={entry.status === "PUBLISHED" ? "default" : "secondary"}
-                                className="mt-0.5 px-1 py-0 text-[9px]"
-                              >
-                                {entry.status === "PUBLISHED"
-                                  ? t("pages.schedulePublishedBadge")
-                                  : t("pages.scheduleDraftBadge")}
-                              </Badge>
-                            )}
-                          </button>
-                        ))}
-                        {hasHiddenEntry ? (
-                          <span className="bg-muted-foreground/30 h-1.5 w-1.5 rounded-full" />
-                        ) : (
-                          <button
-                            type="button"
-                            title={t("pages.scheduleAddShift")}
-                            aria-label={t("pages.scheduleAddShift")}
-                            className="text-muted-foreground/50 hover:text-foreground hover:border-foreground/40 flex h-8 w-full items-center justify-center rounded-md border border-dashed"
-                            onClick={() => setCell({ staffMemberId: member.id, dateKey: day })}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ScheduleWeekGrid
+        days={rangeDays}
+        staff={visibleStaff}
+        entries={rangeSchedules}
+        today={today}
+        showStatus
+        matches={matchesBlockFilter}
+        onDayClick={setDayDetail}
+        onEntryClick={(staffMemberId, dateKey, entryId) =>
+          setCell({ staffMemberId, dateKey, entryId })
+        }
+        onAddClick={(staffMemberId, dateKey) => setCell({ staffMemberId, dateKey })}
+      />
       {isLoading && <p className="text-muted-foreground text-sm">{t("common.loading")}</p>}
       </>
       )}

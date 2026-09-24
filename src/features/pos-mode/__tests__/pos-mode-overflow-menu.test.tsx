@@ -5,15 +5,22 @@ vi.mock("@/components/lang/i18n-provider", () => ({
   useI18n: () => ({ t: (k: string) => k }),
 }));
 
+const display = vi.hoisted(() => ({ enabled: false, setEnabled: vi.fn() }));
 vi.mock("@/features/pos/hooks/use-customer-display-settings", () => ({
-  useCustomerDisplaySettings: (selector: (s: any) => any) =>
-    selector({ enabled: false, setEnabled: vi.fn() }),
+  useCustomerDisplaySettings: (selector: (s: any) => any) => selector(display),
 }));
-vi.mock("@/features/pos/lib/open-customer-display", () => ({
-  openCustomerDisplay: vi.fn(),
+const openCustomerDisplay = vi.hoisted(() => vi.fn());
+vi.mock("@/features/pos/lib/open-customer-display", () => ({ openCustomerDisplay }));
+vi.mock("@/features/pos/components/hardware-settings-dialog", () => ({
+  HardwareSettingsDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="hardware-dialog" /> : null,
 }));
-vi.mock("@/features/dashboard/shared/clock-in-out-dialog", () => ({
-  ClockInOutDialog: () => null,
+// The tab bar's own suite covers which tabs a persona gets; here only what the
+// POS System row does with them matters.
+const mockTabs = vi.hoisted(() => vi.fn(() => [{ href: "/pos" }, { href: "/pos/orders" }]));
+vi.mock("../pos-mode-tab-bar", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../pos-mode-tab-bar")>()),
+  usePosTabs: () => mockTabs(),
 }));
 vi.mock("@/features/dashboard/feedback/components/feedback-dialog", () => ({
   FeedbackDialog: ({ open }: { open: boolean }) =>
@@ -88,15 +95,9 @@ function renderMenu(props: { linkedStaff?: boolean } = {}) {
   );
 }
 
-describe("PosModeOverflowMenu — account switcher (distinct from Clock In/Out)", () => {
+describe("PosModeOverflowMenu — account switcher", () => {
   beforeEach(() => {
     localStorage.clear();
-  });
-
-  it("Clock In/Out is always present, regardless of persona", () => {
-    mockSwitcher.mockReturnValue(baseSwitcher());
-    renderMenu();
-    expect(screen.getByText("clockInOut.dialogTitle")).toBeInTheDocument();
   });
 
   it("Send feedback closes the menu and opens the feedback dialog", () => {
@@ -143,6 +144,16 @@ describe("PosModeOverflowMenu — account switcher (distinct from Clock In/Out)"
     );
     renderMenu();
     expect(screen.queryByText("nav.backOffice")).toBeNull();
+  });
+
+  it("Back Office is an ordinary row — not highlighted like the page on screen", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({ posSession: { staffName: "Owner", staffRole: "OWNER" } })
+    );
+    renderMenu();
+    const row = screen.getByText("nav.backOffice").closest("a")!;
+    expect(row.className).not.toContain("text-primary");
+    expect(row).not.toHaveAttribute("aria-current");
   });
 
   it("Back Office link shows for MANAGER", () => {
@@ -284,37 +295,63 @@ describe("PosModeOverflowMenu — a linked staff account (signed in as themselve
   });
 });
 
-describe("PosModeOverflowMenu — Shift link", () => {
+describe("PosModeOverflowMenu — POS System and Operational", () => {
   beforeEach(() => {
     localStorage.clear();
+    mockTabs.mockReturnValue([{ href: "/pos" }, { href: "/pos/orders" }]);
+    mockPathname.mockReturnValue("/store/store-001/pos");
   });
 
-  it("a cashier with the POS page gets a link to the Shift page", () => {
+  const link = (label: string) => screen.getByText(label).closest("a");
+
+  it("offers the two spaces of POS Mode, in place of the old Shift / My Schedule / Clock rows", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    renderMenu();
+    expect(link("nav.posSystem")).toHaveAttribute("href", "/store/store-001/pos");
+    expect(link("nav.posOperational")).toHaveAttribute("href", "/store/store-001/pos/operational");
+    expect(screen.queryByText("pos.shift.title")).toBeNull();
+    expect(screen.queryByText("pages.scheduleMyScheduleTitle")).toBeNull();
+    expect(screen.queryByText("clockInOut.dialogTitle")).toBeNull();
+  });
+
+  it("POS System leads to the first tab the persona's bar shows — kitchen lands on Kitchen & Bar", () => {
+    mockTabs.mockReturnValue([{ href: "/pos/kds" }]);
     mockSwitcher.mockReturnValue(
       baseSwitcher({
-        posSession: {
-          staffName: "Sam",
-          staffRole: "CASHIER",
-          allowedPages: ["/pos", "/pos/orders"],
-        },
+        posSession: { staffName: "Kim", staffRole: "KITCHEN", allowedPages: ["/pos/kds"] },
       })
     );
     renderMenu();
-    const link = screen.getByText("pos.shift.title").closest("a");
-    expect(link).toHaveAttribute("href", "/store/store-001/pos/shift");
+    expect(link("nav.posSystem")).toHaveAttribute("href", "/store/store-001/pos/kds");
   });
 
-  it("the owner persona (unrestricted) gets it too", () => {
+  it("POS System is left out for a persona with no POS tab at all", () => {
+    mockTabs.mockReturnValue([]);
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    renderMenu();
+    expect(screen.queryByText("nav.posSystem")).toBeNull();
+  });
+
+  it("Operational is there for every persona on the owner's device — they all clock in there", () => {
     mockSwitcher.mockReturnValue(
       baseSwitcher({
-        posSession: { staffName: "Owner", staffRole: "OWNER", allowedPages: null },
+        posSession: { staffName: "Kim", staffRole: "KITCHEN", allowedPages: ["/pos/kds"] },
       })
     );
     renderMenu();
-    expect(screen.getByText("pos.shift.title")).toBeInTheDocument();
+    expect(screen.getByText("nav.posOperational")).toBeInTheDocument();
   });
 
-  it("kitchen holds no till, so no Shift link — but My Schedule stays", () => {
+  it("a linked account sees Operational only with a till or the schedule grant", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({
+        posSession: { staffName: "Kim", staffRole: "KITCHEN", allowedPages: ["/pos/kds"] },
+      })
+    );
+    const first = renderMenu({ linkedStaff: true });
+    expect(screen.queryByText("nav.posOperational")).toBeNull();
+    first.unmount();
+
     mockSwitcher.mockReturnValue(
       baseSwitcher({
         posSession: {
@@ -324,23 +361,94 @@ describe("PosModeOverflowMenu — Shift link", () => {
         },
       })
     );
-    renderMenu();
-    expect(screen.queryByText("pos.shift.title")).toBeNull();
-    expect(screen.getByText("pages.scheduleMyScheduleTitle")).toBeInTheDocument();
-  });
+    const second = renderMenu({ linkedStaff: true });
+    expect(screen.getByText("nav.posOperational")).toBeInTheDocument();
+    second.unmount();
 
-  it("a floor-only persona without the POS page has no till either", () => {
     mockSwitcher.mockReturnValue(
       baseSwitcher({
-        posSession: {
-          staffName: "Hana",
-          staffRole: "CASHIER",
-          allowedPages: ["/tables", "/pos/schedule"],
-        },
+        posSession: { staffName: "Sam", staffRole: "CASHIER", allowedPages: ["/pos"] },
       })
     );
+    renderMenu({ linkedStaff: true });
+    expect(screen.getByText("nav.posOperational")).toBeInTheDocument();
+  });
+
+  it("marks the space on screen: Operational on its page, POS System on any of its four tabs", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    mockPathname.mockReturnValue("/store/store-001/pos/operational");
+    const first = renderMenu();
+    expect(link("nav.posOperational")).toHaveAttribute("aria-current", "page");
+    expect(link("nav.posSystem")).not.toHaveAttribute("aria-current");
+    first.unmount();
+
+    for (const path of ["/pos", "/pos/orders", "/pos/kds", "/tables"]) {
+      mockPathname.mockReturnValue(`/store/store-001${path}`);
+      const view = renderMenu();
+      expect(link("nav.posSystem")).toHaveAttribute("aria-current", "page");
+      expect(link("nav.posOperational")).not.toHaveAttribute("aria-current");
+      view.unmount();
+    }
+  });
+});
+
+describe("PosModeOverflowMenu — customer display and hardware", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    display.enabled = false;
+    display.setEnabled.mockReset();
+    openCustomerDisplay.mockReset();
+    mockSwitcher.mockReturnValue(baseSwitcher());
+  });
+
+  const openWindow = () =>
+    screen.getByRole("button", { name: "pos.customerDisplay.openWindow" }) as HTMLButtonElement;
+
+  it("is one row: the open-window button sits just left of the switch", () => {
     renderMenu();
-    expect(screen.queryByText("pos.shift.title")).toBeNull();
+    const toggle = screen.getByRole("switch", { name: "pos.customerDisplay.enable" });
+    // Its own name only — the button beside it is not part of the switch's label.
+    expect(toggle).toBeInTheDocument();
+    expect(
+      openWindow().compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    // No second row for it any more.
+    expect(screen.queryAllByText(/pos\.customerDisplay\.openWindow/)).toHaveLength(0);
+  });
+
+  it("can't open the window while the display is off", () => {
+    renderMenu();
+    expect(openWindow()).toBeDisabled();
+  });
+
+  it("opens the window when on — without flipping the switch", () => {
+    display.enabled = true;
+    renderMenu();
+    fireEvent.click(openWindow());
+    expect(openCustomerDisplay).toHaveBeenCalledWith("store-001");
+    expect(display.setEnabled).not.toHaveBeenCalled();
+  });
+
+  it("the switch still turns the display on", () => {
+    renderMenu();
+    fireEvent.click(screen.getByRole("switch", { name: "pos.customerDisplay.enable" }));
+    expect(display.setEnabled).toHaveBeenCalledWith(true);
+  });
+
+  it("Send feedback sits right below Hardware settings", () => {
+    renderMenu();
+    const hardware = screen.getByRole("button", { name: /pos\.hardware\.title/ });
+    const feedback = screen.getByRole("button", { name: /feedback\.buttonLabel/ });
+    expect(hardware.nextElementSibling).toBe(feedback);
+  });
+
+  it("Hardware settings closes the drawer and opens its dialog", () => {
+    const onOpenChange = vi.fn();
+    render(<PosModeOverflowMenu storeId="store-001" open={true} onOpenChange={onOpenChange} />);
+    expect(screen.queryByTestId("hardware-dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /pos\.hardware\.title/ }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.getByTestId("hardware-dialog")).toBeInTheDocument();
   });
 });
 
@@ -454,7 +562,7 @@ describe("PosModeOverflowMenu — the drawer", () => {
     expect(screen.getByRole("button", { name: /pages\.posSyncSales/ })).toBeDisabled();
   });
 
-  it("the bottom strip reports the sync state", () => {
+  it("reports the sync state right under the Sync sales button", () => {
     mockSwitcher.mockReturnValue(baseSwitcher());
     mockSync.mockReturnValue({
       isOnline: true,
@@ -463,7 +571,12 @@ describe("PosModeOverflowMenu — the drawer", () => {
       syncNow: vi.fn(),
     });
     const { unmount } = renderMenu();
-    expect(screen.getByRole("status")).toHaveTextContent("pages.posAllSalesSynced");
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("pages.posAllSalesSynced");
+    // Directly after the button, not a strip at the bottom of the drawer.
+    expect(screen.getByRole("button", { name: /pages\.posSyncSales/ }).nextElementSibling).toBe(
+      status
+    );
     unmount();
 
     mockSync.mockReturnValue({
@@ -484,16 +597,5 @@ describe("PosModeOverflowMenu — the drawer", () => {
     });
     renderMenu();
     expect(screen.getByRole("status")).toHaveTextContent("pages.posOfflineMessageNoPending");
-  });
-
-  it("marks the row for the page on screen", () => {
-    mockSwitcher.mockReturnValue(baseSwitcher());
-    mockPathname.mockReturnValue("/store/store-001/pos/schedule");
-    renderMenu();
-    expect(screen.getByText("pages.scheduleMyScheduleTitle").closest("a")).toHaveAttribute(
-      "aria-current",
-      "page"
-    );
-    mockPathname.mockReturnValue("/store/store-001/pos");
   });
 });

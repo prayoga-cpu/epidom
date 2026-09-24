@@ -39,7 +39,7 @@ describe("PosModeShiftChip", () => {
     render(<PosModeShiftChip storeId="store-1" />);
 
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/store/store-1/pos/shift");
+    expect(link).toHaveAttribute("href", "/store/store-1/pos/operational?tab=shift");
     expect(link).toHaveTextContent("pos.shift.chipLabel");
     expect(link).toHaveTextContent("T(2026-09-11T11:00:00.000Z)");
     expect(link.className).toContain("emerald");
@@ -58,7 +58,7 @@ describe("PosModeShiftChip", () => {
     render(<PosModeShiftChip storeId="store-1" />);
 
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/store/store-1/pos/shift");
+    expect(link).toHaveAttribute("href", "/store/store-1/pos/operational?tab=shift");
     expect(link).toHaveTextContent("pos.shift.chipNone");
     expect(link.className).toContain("amber");
   });

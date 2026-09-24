@@ -48,6 +48,10 @@ export const SiteHeader = memo(function SiteHeader({
   // routing, "authenticated" (in-app shell) never does.
   const localizeHref = (href: string) =>
     variant === "landing" ? getLocalizedPath(href, locale) : href;
+  // A section's sub-pages count too (/compare/moka lights up Compare). The
+  // home link is exact-only, or it would match every page.
+  const isActiveHref = (item: NavItem, href: string) =>
+    pathname === href || (item.href !== "/" && pathname.startsWith(`${href}/`));
 
   const handleLogin = () => router.push("/login");
   const handleStartFree = () => {
@@ -62,7 +66,7 @@ export const SiteHeader = memo(function SiteHeader({
 
   const renderDesktopNavLink = (item: NavItem) => {
     const href = localizeHref(item.href);
-    const isActive = pathname === href;
+    const isActive = isActiveHref(item, href);
     return (
       <li key={item.href}>
         <Link
@@ -91,7 +95,7 @@ export const SiteHeader = memo(function SiteHeader({
 
   const renderMobileNavLink = (item: NavItem) => {
     const href = localizeHref(item.href);
-    const isActive = pathname === href;
+    const isActive = isActiveHref(item, href);
     const Icon = item.icon;
     return (
       <li key={item.href}>
@@ -161,7 +165,7 @@ export const SiteHeader = memo(function SiteHeader({
           boxShadow: "0 8px 24px -10px rgba(217,174,59,0.6)",
         }}
       >
-        {t("nav.tryEpidom")} →
+        {t("nav.startTrial")} →
       </button>
     );
   };
@@ -182,13 +186,15 @@ export const SiteHeader = memo(function SiteHeader({
             <ArrowLeft className="h-4 w-4 text-[var(--epi-cream-50)]" />
           </Link>
         )}
-        <EpidomLogo href={localizeHref("/")} size={30} />
+        {/* Signed in (the store list, profile), the marketing homepage is only for
+            someone who has logged out — the logo is branding here, not a link. */}
+        <EpidomLogo href={variant === "authenticated" ? null : localizeHref("/")} size={30} />
       </div>
 
       {/* Desktop nav links */}
       {showNav && (
         <ul
-          className="epi-nav-items hidden items-center gap-6 lg:flex"
+          className="epi-nav-items hidden items-center gap-2 lg:flex"
           aria-label={t("common.nav.navTitle")}
         >
           {navigationItems.map(renderDesktopNavLink)}
@@ -246,7 +252,10 @@ export const SiteHeader = memo(function SiteHeader({
                 className="flex items-center justify-between p-6"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
               >
-                <EpidomLogo href={localizeHref("/")} size={24} />
+                <EpidomLogo
+                  href={variant === "authenticated" ? null : localizeHref("/")}
+                  size={24}
+                />
                 <SheetClose asChild>
                   <button
                     className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full hover:bg-white/10"
@@ -308,7 +317,7 @@ export const SiteHeader = memo(function SiteHeader({
                             color: "var(--epi-navy-900)",
                           }}
                         >
-                          {t("nav.tryEpidom")} →
+                          {t("nav.startTrial")} →
                         </button>
                       </SheetClose>
                     )}

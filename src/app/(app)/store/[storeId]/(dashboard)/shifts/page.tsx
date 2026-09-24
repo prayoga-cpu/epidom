@@ -6,7 +6,7 @@ import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 // The manager's shift report: every till session, its opening cash and how the
 // drawer closed. Separate from Schedule (rosters and attendance) on purpose —
-// opening and finishing a till happens on POS Mode's Shift page (/pos/shift);
+// opening and finishing a till happens on POS Mode's Operational page (Shift tab);
 // this is the read-back.
 export default async function ShiftsPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, Wifi, WifiOff, UserCircle2 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
@@ -8,6 +9,7 @@ import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { PosPrinterMenu } from "@/features/pos/components/pos-printer-menu";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { PosModeShiftChip } from "./pos-mode-shift-chip";
+import { isPosTabPath } from "./pos-mode-tab-bar";
 
 interface PosModeStatusBarProps {
   storeId: string;
@@ -36,6 +38,10 @@ export function PosModeStatusBar({
   const { t } = useI18n();
   const { store } = useCurrentStore();
   const { staffName, openPicker } = usePosSession();
+  // Printers belong to the POS System (the till, orders, kitchen & bar,
+  // tables); elsewhere — the Operational page — the quick menu is just noise.
+  // Hardware settings in the More drawer still reaches them from anywhere.
+  const onPosSystem = isPosTabPath(usePathname(), storeId);
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -108,7 +114,7 @@ export function PosModeStatusBar({
           controls don't fit, and the name truncates instead of pushing the More
           button off-screen. The printer and More buttons keep their width. */}
       <div className="ml-auto flex min-w-0 gap-2">
-        <PosPrinterMenu storeId={storeId} />
+        {onPosSystem && <PosPrinterMenu storeId={storeId} />}
         {/* No gap inside: the staff badge and the More button read as one block. */}
         <div className="flex min-w-0">
           {staffName && (

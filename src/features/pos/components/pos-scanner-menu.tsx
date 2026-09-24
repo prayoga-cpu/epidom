@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { ScanBarcode } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -23,12 +23,21 @@ const SPEED_LABEL_KEYS: Record<PosScannerSpeed, string> = {
 };
 
 type TestResult =
-  | { kind: "scan"; code: string; slowestGapMs: number; itemName: string | null }
+  | {
+      kind: "scan";
+      code: string;
+      slowestGapMs: number;
+      itemName: string | null;
+      /** False when there was no menu to check the code against. */
+      menuChecked: boolean;
+    }
   | { kind: "typed"; slowestGapMs: number };
+
+type MenuCategories = Array<{ items: Array<{ name: string; barcode?: string | null }> }>;
 
 interface PosScannerMenuProps {
   /** The menu a tested code is looked up in — the same lookup a real scan uses. */
-  categories: Array<{ items: Array<{ name: string; barcode?: string | null }> }>;
+  categories: MenuCategories;
   /** Extra classes for the trigger button — the status-bar layout squares and stretches it. */
   className?: string;
 }
@@ -49,55 +58,10 @@ interface PosScannerMenuProps {
  */
 export function PosScannerMenu({ categories, className }: PosScannerMenuProps) {
   const { t } = useI18n();
-  const enabled = usePosScannerSettings((s) => s.enabled);
-  const speed = usePosScannerSettings((s) => s.speed);
-  const setEnabled = usePosScannerSettings((s) => s.setEnabled);
-  const setSpeed = usePosScannerSettings((s) => s.setSpeed);
-  const maxGapMs = SCANNER_SPEED_GAP_MS[speed];
-
-  const [value, setValue] = useState("");
-  const [result, setResult] = useState<TestResult | null>(null);
-  const detector = useMemo(() => new ScanDetector({ maxGapMs }), [maxGapMs]);
-  const burst = useRef({ last: 0, slowest: 0 });
-
   const label = t("cashierCheckout.scan.focus");
 
-  const handleTestKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const at = e.timeStamp;
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const code = detector.feed("Enter", at);
-      const slowestGapMs = Math.round(burst.current.slowest);
-      burst.current = { last: 0, slowest: 0 };
-      setValue("");
-      if (!code) {
-        setResult({ kind: "typed", slowestGapMs });
-        return;
-      }
-      const item = findItemByBarcode(categories, code);
-      setResult({ kind: "scan", code, slowestGapMs, itemName: item?.name ?? null });
-      return;
-    }
-    // Modifiers and navigation keys are not part of a code (same rule as ScanDetector).
-    if (e.key.length !== 1) return;
-    if (burst.current.last) {
-      burst.current.slowest = Math.max(burst.current.slowest, at - burst.current.last);
-    }
-    burst.current.last = at;
-    detector.feed(e.key, at);
-  };
-
-  const handleOpenChange = (open: boolean) => {
-    if (open) return;
-    // A stale verdict from the last visit would read as this visit's result.
-    setValue("");
-    setResult(null);
-    detector.reset();
-    burst.current = { last: 0, slowest: 0 };
-  };
-
   return (
-    <Popover onOpenChange={handleOpenChange}>
+    <Popover>
       <PopoverTrigger asChild>
         {/* Sits inside the search box's right edge as one control. A full 40px
             square (the box's own height) so it stays a real tap target. */}
@@ -116,115 +80,223 @@ export function PosScannerMenu({ categories, className }: PosScannerMenuProps) {
         </Button>
       </PopoverTrigger>
 
+      {/* The panel unmounts with the popover, so a stale verdict from the last
+          visit never reads as this visit's result. */}
       <PopoverContent
         align="end"
         aria-label={t("cashierCheckout.scan.title")}
-        className="max-h-[calc(85dvh/var(--app-zoom,1))] w-80 space-y-4 overflow-y-auto"
+        className="max-h-[calc(85dvh/var(--app-zoom,1))] w-80 overflow-y-auto"
       >
-        <div className="space-y-2">
-          <p className="text-sm font-semibold">{t("cashierCheckout.scan.testTitle")}</p>
-          <p className="text-muted-foreground text-xs">{t("cashierCheckout.scan.testPrompt")}</p>
-          {/* inputMode="none": a hardware scanner needs no on-screen keyboard, and
-              this field takes focus the moment the panel opens. */}
-          <Input
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleTestKeyDown}
-            inputMode="none"
-            autoComplete="off"
-            spellCheck={false}
-            className="h-10 font-mono"
-            placeholder={t("cashierCheckout.scan.testPlaceholder")}
-            aria-label={t("cashierCheckout.scan.testTitle")}
-          />
-          <div role="status" aria-live="polite" className="min-h-10 text-sm">
-            {result?.kind === "scan" && (
-              <div
-                className={cn(
-                  "rounded-md border px-3 py-2",
-                  result.itemName
-                    ? "border-emerald-500/40 bg-emerald-500/10"
-                    : "border-amber-500/40 bg-amber-500/10"
-                )}
-              >
-                <p className="font-medium">
-                  {result.itemName
-                    ? t("cashierCheckout.scan.testMatch").replace("{name}", result.itemName)
-                    : t("cashierCheckout.scan.testNoMatch")}
-                </p>
-                <p className="text-muted-foreground mt-0.5 font-mono text-xs break-all">
-                  {t("cashierCheckout.scan.testDetail")
-                    .replace("{code}", result.code)
-                    .replace("{gap}", String(result.slowestGapMs))}
-                </p>
-              </div>
-            )}
-            {result?.kind === "typed" && (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2">
-                <p className="font-medium">{t("cashierCheckout.scan.testTyped")}</p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  {t("cashierCheckout.scan.testTypedDetail")
-                    .replace("{gap}", String(result.slowestGapMs))
-                    .replace("{limit}", String(maxGapMs))}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-3 border-t pt-3">
-          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            {t("cashierCheckout.scan.settingsTitle")}
-          </p>
-
-          {/* A <label>, not just a row beside the Switch: the Switch alone is only
-              ~18px tall, so the whole 44px row is what makes this tappable. */}
-          <label
-            htmlFor="pos-scan-anywhere"
-            className="flex min-h-11 cursor-pointer items-center justify-between gap-3"
-          >
-            <span className="min-w-0">
-              <span className="block text-sm font-medium">
-                {t("cashierCheckout.scan.settingEnabled")}
-              </span>
-              <span className="text-muted-foreground block text-xs">
-                {t("cashierCheckout.scan.settingEnabledDesc")}
-              </span>
-            </span>
-            <Switch id="pos-scan-anywhere" checked={enabled} onCheckedChange={setEnabled} />
-          </label>
-
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium">{t("cashierCheckout.scan.speedLabel")}</p>
-            <div
-              role="group"
-              aria-label={t("cashierCheckout.scan.speedLabel")}
-              className="bg-muted flex gap-0.5 rounded-lg p-0.5"
-            >
-              {POS_SCANNER_SPEEDS.map((option) => {
-                const active = option === speed;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setSpeed(option)}
-                    className={cn(
-                      "h-10 flex-1 rounded-md px-2 text-xs font-semibold transition active:scale-[0.97]",
-                      active
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {t(SPEED_LABEL_KEYS[option])}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-muted-foreground text-xs">{t("cashierCheckout.scan.speedDesc")}</p>
-          </div>
-        </div>
+        <ScannerSettingsPanel categories={categories} />
       </PopoverContent>
     </Popover>
+  );
+}
+
+interface ScannerSettingsPanelProps {
+  /**
+   * The menu a tested code is looked up in. `null` when this device has no menu
+   * to hand (Hardware settings opened away from the Cashier before the menu was
+   * ever loaded) — the test then says the scanner works without claiming the
+   * code is or isn't on the menu.
+   */
+  categories: MenuCategories | null;
+  /**
+   * Where the panel is shown. `device` (Hardware settings, reachable from any
+   * POS screen) says the scan-anywhere switch applies to the Cashier screen,
+   * since that is the only screen listening for scans.
+   */
+  context?: "cashier" | "device";
+}
+
+/**
+ * The scanner's test field and settings — the body of the search box's scan
+ * popover, and the Barcode scanner tab of Hardware settings.
+ *
+ * Holds its own test state, so unmounting it (closing the popover, leaving the
+ * tab) clears the last verdict. The test field takes focus on mount: in a
+ * dialog, a scanner's closing Enter would otherwise "click" whatever control
+ * had focus — the switch, a speed button.
+ */
+export function ScannerSettingsPanel({
+  categories,
+  context = "cashier",
+}: ScannerSettingsPanelProps) {
+  const { t } = useI18n();
+  const enabled = usePosScannerSettings((s) => s.enabled);
+  const speed = usePosScannerSettings((s) => s.speed);
+  const setEnabled = usePosScannerSettings((s) => s.setEnabled);
+  const setSpeed = usePosScannerSettings((s) => s.setSpeed);
+  const maxGapMs = SCANNER_SPEED_GAP_MS[speed];
+  // Unique per mount: the popover and Hardware settings can each render one.
+  const switchId = useId();
+
+  const [value, setValue] = useState("");
+  const [result, setResult] = useState<TestResult | null>(null);
+  const detector = useMemo(() => new ScanDetector({ maxGapMs }), [maxGapMs]);
+  const burst = useRef({ last: 0, slowest: 0 });
+  const testInput = useRef<HTMLInputElement>(null);
+
+  // Focus the test field once the panel is up — a frame late on purpose: opened
+  // by tapping a tab, the browser hands focus to that tab AFTER React has
+  // mounted this, so an autoFocus would be taken straight back.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => testInput.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const handleTestKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const at = e.timeStamp;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const code = detector.feed("Enter", at);
+      const slowestGapMs = Math.round(burst.current.slowest);
+      burst.current = { last: 0, slowest: 0 };
+      setValue("");
+      if (!code) {
+        setResult({ kind: "typed", slowestGapMs });
+        return;
+      }
+      if (!categories) {
+        setResult({ kind: "scan", code, slowestGapMs, itemName: null, menuChecked: false });
+        return;
+      }
+      const item = findItemByBarcode(categories, code);
+      setResult({
+        kind: "scan",
+        code,
+        slowestGapMs,
+        itemName: item?.name ?? null,
+        menuChecked: true,
+      });
+      return;
+    }
+    // Modifiers and navigation keys are not part of a code (same rule as ScanDetector).
+    if (e.key.length !== 1) return;
+    if (burst.current.last) {
+      burst.current.slowest = Math.max(burst.current.slowest, at - burst.current.last);
+    }
+    burst.current.last = at;
+    detector.feed(e.key, at);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">{t("cashierCheckout.scan.testTitle")}</p>
+        <p className="text-muted-foreground text-xs">{t("cashierCheckout.scan.testPrompt")}</p>
+        {/* inputMode="none": a hardware scanner needs no on-screen keyboard, and
+            this field takes focus the moment the panel opens. */}
+        <Input
+          ref={testInput}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleTestKeyDown}
+          inputMode="none"
+          autoComplete="off"
+          spellCheck={false}
+          className="h-10 font-mono"
+          placeholder={t("cashierCheckout.scan.testPlaceholder")}
+          aria-label={t("cashierCheckout.scan.testTitle")}
+        />
+        <div role="status" aria-live="polite" className="min-h-10 text-sm">
+          {result?.kind === "scan" && (
+            <div
+              className={cn(
+                "rounded-md border px-3 py-2",
+                result.itemName || !result.menuChecked
+                  ? "border-emerald-500/40 bg-emerald-500/10"
+                  : "border-amber-500/40 bg-amber-500/10"
+              )}
+            >
+              <p className="font-medium">
+                {!result.menuChecked
+                  ? t("cashierCheckout.scan.testWorks")
+                  : result.itemName
+                    ? t("cashierCheckout.scan.testMatch").replace("{name}", result.itemName)
+                    : t("cashierCheckout.scan.testNoMatch")}
+              </p>
+              <p className="text-muted-foreground mt-0.5 font-mono text-xs break-all">
+                {t("cashierCheckout.scan.testDetail")
+                  .replace("{code}", result.code)
+                  .replace("{gap}", String(result.slowestGapMs))}
+              </p>
+              {!result.menuChecked && (
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {t("cashierCheckout.scan.testMenuUnknown")}
+                </p>
+              )}
+            </div>
+          )}
+          {result?.kind === "typed" && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+              <p className="font-medium">{t("cashierCheckout.scan.testTyped")}</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                {t("cashierCheckout.scan.testTypedDetail")
+                  .replace("{gap}", String(result.slowestGapMs))
+                  .replace("{limit}", String(maxGapMs))}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-3 border-t pt-3">
+        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          {t("cashierCheckout.scan.settingsTitle")}
+        </p>
+
+        {/* A <label>, not just a row beside the Switch: the Switch alone is only
+            ~18px tall, so the whole 44px row is what makes this tappable. */}
+        <label
+          htmlFor={switchId}
+          className="flex min-h-11 cursor-pointer items-center justify-between gap-3"
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-medium">
+              {t(
+                context === "device"
+                  ? "cashierCheckout.scan.settingEnabledCashier"
+                  : "cashierCheckout.scan.settingEnabled"
+              )}
+            </span>
+            <span className="text-muted-foreground block text-xs">
+              {t("cashierCheckout.scan.settingEnabledDesc")}
+            </span>
+          </span>
+          <Switch id={switchId} checked={enabled} onCheckedChange={setEnabled} />
+        </label>
+
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium">{t("cashierCheckout.scan.speedLabel")}</p>
+          <div
+            role="group"
+            aria-label={t("cashierCheckout.scan.speedLabel")}
+            className="bg-muted flex gap-0.5 rounded-lg p-0.5"
+          >
+            {POS_SCANNER_SPEEDS.map((option) => {
+              const active = option === speed;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setSpeed(option)}
+                  className={cn(
+                    "h-10 flex-1 rounded-md px-2 text-xs font-semibold transition active:scale-[0.97]",
+                    active
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t(SPEED_LABEL_KEYS[option])}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-muted-foreground text-xs">{t("cashierCheckout.scan.speedDesc")}</p>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type React from "react";
+import { usePathname } from "next/navigation";
 import { PosModeStatusBar } from "./pos-mode-status-bar";
 import { PosModeTabBar } from "./pos-mode-tab-bar";
 import { PosModeOverflowMenu } from "./pos-mode-overflow-menu";
@@ -21,9 +22,17 @@ interface PosModeShellProps {
  * PageShell, not a responsive variant of it (docs/dashboard-revamp.md).
  * src/features/pos/ (the cashier/order/kds/tables feature module) is
  * wrapped here, not rewritten.
+ *
+ * The tab bar belongs to the POS System (cashier, orders, kitchen & bar,
+ * tables). The Operational page (Shift, My Schedule, Clock In / Out) keeps the
+ * status bar — its shift chip keeps the session's till in sync on every route —
+ * but not the tab bar; the drawer's POS System row leads back.
  */
 export function PosModeShell({ storeId, children, linkedStaff = false }: PosModeShellProps) {
   const [overflowOpen, setOverflowOpen] = useState(false);
+  // Null outside a router (some tests): keep the bar, the old behaviour.
+  const pathname = usePathname();
+  const onOperational = pathname?.startsWith(`/store/${storeId}/pos/operational`) ?? false;
   // The status bar's toolbar slot, handed to children through context so /pos can
   // portal its search + filters into the bar instead of drawing a second row.
   // Held as state (set by a ref callback), not a ref: consumers must re-render
@@ -46,7 +55,7 @@ export function PosModeShell({ storeId, children, linkedStaff = false }: PosMode
             {children}
           </main>
 
-          <PosModeTabBar storeId={storeId} />
+          {!onOperational && <PosModeTabBar storeId={storeId} />}
         </div>
       </PosModeToolbarSlotContext.Provider>
 

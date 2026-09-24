@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { storefrontApi } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StorefrontSettings } from "./storefront-settings";
@@ -15,6 +15,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { planHasFeature, upgradeHrefFor, type PlanTier } from "@/lib/plans/entitlements";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
+import { storeKeys } from "@/features/stores/stores/hooks/use-stores";
 
 interface StorefrontEditorClientProps {
   storeId: string;
@@ -45,6 +46,7 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  const queryClient = useQueryClient();
   const {
     data: storefront,
     isLoading,
@@ -142,7 +144,12 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
           <StorefrontSettings
             storeId={storeId}
             initialData={storefront}
-            onSuccess={() => refetch()}
+            onSuccess={() => {
+              refetch();
+              // The Your Stores cards show this storefront's logo, cover, colour
+              // and slogan (GET /api/stores/overview, keyed under ["stores"]).
+              queryClient.invalidateQueries({ queryKey: storeKeys.all });
+            }}
           />
         </TabsContent>
 

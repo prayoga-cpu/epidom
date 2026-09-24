@@ -99,8 +99,10 @@ export type CustomerDisplayMessage =
    * receipt can reach them on WhatsApp — and, from there, so the till can tell
    * whether they are already a member. It lands in the cashier's customer
    * intake rather than being saved anywhere directly: the cashier window looks
-   * the number up, and the cashier still sees everything and still decides
-   * whether the order is created. `null` clears a number entered by mistake.
+   * the number up (and saves a new customer only once they finish, see
+   * `customer-submit`), and the cashier still sees everything and still
+   * decides whether the order is created. `null` clears a number entered by
+   * mistake.
    *
    * E.164 (e.g. "+6281234567890"), validated on the display before it is
    * sent, so the cashier's form never receives something it would reject.
@@ -114,6 +116,15 @@ export type CustomerDisplayMessage =
    */
   | { type: "customer-details"; name: string; email: string }
   /**
+   * Display -> cashier: the customer pressed Done (or Skip) on that optional
+   * step, so what they typed is final. Carries the details one last time — the
+   * debounced `customer-details` may not have gone out yet — and is what lets
+   * the cashier window save a NEW customer and attach them to the sale without
+   * the cashier pressing Save (see useCustomerIntakeResolver). Same trust as
+   * `customer-details`: re-validated on arrival.
+   */
+  | { type: "customer-submit"; name: string; email: string }
+  /**
    * Cashier -> display: the answer to the number above. Kept off the state
    * snapshot on purpose — the snapshot is mirrored into localStorage, and a
    * customer's number and first name have no business being written there.
@@ -123,8 +134,9 @@ export type CustomerDisplayMessage =
    * Cashier -> display: "please enter your details" — opens the number pad (and,
    * for a new customer, the optional name / email step) on the customer's
    * screen, exactly as if they had tapped its WhatsApp button themselves.
-   * Carries nothing: what the customer types comes back as the two messages
-   * above, and the cashier still reviews and saves it.
+   * Carries nothing: what the customer types comes back as the messages
+   * above — a returning customer is attached by the lookup, a new one is saved
+   * once they press Done.
    */
   | { type: "ask-details" };
 
