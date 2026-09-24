@@ -20,6 +20,7 @@ import {
   useCustomerDisplayPublisher,
   useCustomerIntake,
   useCustomerIntakeChannel,
+  askCustomerForDetails,
 } from "../use-customer-display";
 import { useCustomerDisplaySettings } from "../use-customer-display-settings";
 import { usePosCart } from "../use-pos-cart";
@@ -186,6 +187,34 @@ describe("display -> cashier: the number and the optional details", () => {
     await sendPhone(windows.display, PHONE);
     await sendPhone(windows.display, null);
     expect(intake().phone).toBeNull();
+  });
+});
+
+describe("cashier -> display: asking for the customer's details", () => {
+  it("reaches the display window, and only as a nudge (it carries no data)", () => {
+    const windows = mountWindows();
+    expect(windows.display.result.current.askedAt).toBe(0);
+
+    act(() => askCustomerForDetails("s1"));
+
+    expect(windows.display.result.current.askedAt).toBeGreaterThan(0);
+    expect(intake().phone).toBeNull();
+  });
+
+  it("each ask is a fresh one, so asking twice re-opens the pad", () => {
+    const windows = mountWindows();
+    act(() => askCustomerForDetails("s1"));
+    const first = windows.display.result.current.askedAt;
+    vi.spyOn(Date, "now").mockReturnValue(first + 1000);
+    act(() => askCustomerForDetails("s1"));
+    expect(windows.display.result.current.askedAt).toBe(first + 1000);
+    vi.restoreAllMocks();
+  });
+
+  it("never reaches another store's display", () => {
+    const other = renderHook(() => useCustomerIntakeChannel("s2"));
+    act(() => askCustomerForDetails("s1"));
+    expect(other.result.current.askedAt).toBe(0);
   });
 });
 

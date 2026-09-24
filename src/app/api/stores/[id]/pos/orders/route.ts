@@ -220,7 +220,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
               // rather than silently creating a second order.
               clientRequestId: input.clientRequestId ?? null,
               shiftId,
-              source: "POS",
+              // `source` comes from orderData: POS, or the delivery platform.
             },
             include: {
               items: true,
@@ -232,9 +232,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           // already being delivered immediately (no dine-in service period to
           // track). updateMany so the write is store-scoped: `update` by id alone
           // would let a forged tableId flip another tenant's table.
-          if (input.tableId && input.orderType === "DINE_IN" && !immediatelyDelivered) {
+          if (settlement.tableId && !immediatelyDelivered) {
             await tx.table.updateMany({
-              where: { id: input.tableId, storeId },
+              where: { id: settlement.tableId, storeId },
               data: { status: "OCCUPIED" },
             });
           }

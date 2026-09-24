@@ -87,11 +87,24 @@ export const PATCH = withApiHandler(
       // Use transaction to update stock and order status together
       const receivedAt = new Date();
 
-      await prisma.$transaction(async (tx) => {
+      const claimed = await prisma.$transaction(async (tx) => {
+        // Claim the transition first, conditionally. Receiving is one tap, so
+        // a double tap (or two devices) sends two requests that both read the
+        // order as not-yet-received above. Only the one whose update matches
+        // goes on to add stock. The other adds nothing.
+        const claim = await tx.supplierOrder.updateMany({
+          where: { id: orderId, storeId, status: { not: "RECEIVED" } },
+          data: {
+            status,
+            expectedDate: expectedDate ? new Date(expectedDate) : undefined,
+            receivedDate: receivedDate ? new Date(receivedDate) : receivedAt,
+            notes: notes !== undefined ? notes : undefined,
+          },
+        });
+        if (claim.count === 0) return false;
+
         // Update material stock for each item
         for (const item of existingOrder.items) {
-          const newStock = item.material.currentStock.add(item.quantity);
-
           // Carry the DLC agreed on the order line onto the material, so
           // receiving a delivery is the only place the merchant has to type
           // it. Material.expirationDate holds a single next-expiry date (not
@@ -110,12 +123,15 @@ export const PATCH = withApiHandler(
             !!item.expiryDate &&
             (!currentExpiry || currentExpiry < receivedAt || item.expiryDate < currentExpiry);
 
-          await tx.material.update({
+          // increment, not "stock read above + quantity": a till sale that
+          // moved this material since that read would otherwise be overwritten.
+          const updated = await tx.material.update({
             where: { id: item.materialId },
             data: {
-              currentStock: newStock,
+              currentStock: { increment: item.quantity },
               ...(shouldTakeExpiry && { expirationDate: item.expiryDate }),
             },
+            select: { currentStock: true },
           });
 
           // Create stock movement record
@@ -125,23 +141,21 @@ export const PATCH = withApiHandler(
               type: "PURCHASE",
               quantity: item.quantity,
               unit: item.unit,
-              balanceAfter: newStock,
+              balanceAfter: updated.currentStock,
               notes: `Supplier order ${existingOrder.orderNumber} received`,
             },
           });
         }
 
-        // Update order
-        await tx.supplierOrder.update({
-          where: { id: orderId },
-          data: {
-            status,
-            expectedDate: expectedDate ? new Date(expectedDate) : undefined,
-            receivedDate: receivedDate ? new Date(receivedDate) : new Date(),
-            notes: notes !== undefined ? notes : undefined,
-          },
-        });
+        return true;
       });
+
+      if (!claimed) {
+        return NextResponse.json(
+          createErrorResponse(ApiErrorCode.CONFLICT, "This order was already received"),
+          { status: 409 }
+        );
+      }
 
       // Receiving a delivery is the single most common way stock goes UP, and
       // it moved every material on the order — tell the other open views to

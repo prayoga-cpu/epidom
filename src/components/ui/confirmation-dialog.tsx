@@ -23,6 +23,11 @@ interface ConfirmationDialogProps {
   onConfirm: () => void | Promise<void>;
   variant?: "default" | "destructive";
   loading?: boolean;
+  /**
+   * Classes for both the backdrop and the dialog. Pass a z-index above z-[70]
+   * when confirming from inside a Sheet, or the dialog opens underneath it.
+   */
+  layerClassName?: string;
 }
 
 export function ConfirmationDialog({
@@ -35,6 +40,7 @@ export function ConfirmationDialog({
   onConfirm,
   variant = "default",
   loading = false,
+  layerClassName,
 }: ConfirmationDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -58,7 +64,7 @@ export function ConfirmationDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className={layerClassName} overlayClassName={layerClassName}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>

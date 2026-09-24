@@ -52,7 +52,7 @@ const stockAdjustmentSchema = z.object({
     .number()
     .positive("Quantity must be positive")
     .min(0.001, "Quantity must be at least 0.001"),
-  reason: z.string().min(1, "Please provide a reason"),
+  reason: z.string().optional(),
   notes: z.string().optional(),
   referenceId: z.string().optional(),
 });
@@ -63,22 +63,38 @@ interface StockAdjustmentDialogProps {
   itemId?: string;
   itemType?: "material" | "product";
   trigger?: React.ReactNode;
+  /** Controlled mode — no trigger is rendered; the parent owns `open`. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function StockAdjustmentDialog({
   itemId,
   itemType = "material",
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: StockAdjustmentDialogProps) {
   const { t } = useI18n();
   const { toast } = useToast();
   const params = useParams();
   const storeId = params?.storeId as string;
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch materials
-  const { data: materialsData } = useMaterials(storeId);
+  // The Stock page's own query (same params, so the same cache entry): the
+  // API's defaults load only the 50 newest materials, and an older one picked
+  // on the Stock page would never be found here, so saving silently did nothing.
+  const { data: materialsData } = useMaterials(storeId, {
+    sortBy: "name",
+    sortOrder: "asc",
+    skip: 0,
+    take: 100,
+  });
   const adjustStockMutation = useStockAdjustment(storeId);
 
   const form = useForm<StockAdjustmentFormData>({
@@ -149,7 +165,7 @@ export function StockAdjustmentDialog({
         materialId: selectedItem.id,
         adjustmentType: isIncrease ? "IN" : "OUT",
         quantity: adjustmentQuantity,
-        reason: data.reason,
+        reason: data.reason || undefined,
         notes: data.notes || undefined,
         referenceId: data.referenceId || undefined,
       });
@@ -175,14 +191,16 @@ export function StockAdjustmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm">
-            <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
-            {t("management.editStock.adjustStock")}
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button variant="outline" size="sm">
+              <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
+              {t("management.editStock.adjustStock")}
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <FormDialogLayout
         title={t("management.editStock.adjustmentDialog.title")}
         description={t("management.editStock.adjustmentDialog.description")}
@@ -255,11 +273,9 @@ export function StockAdjustmentDialog({
                       : t("management.editStock.selectProduct")}{" "}
                     *
                   </FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={!!itemId}
-                  >
+                  {/* Controlled: the dialog stays mounted between items, and an
+                      uncontrolled Select kept showing the previous item's name. */}
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!!itemId}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue
@@ -365,7 +381,7 @@ export function StockAdjustmentDialog({
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("management.editStock.reason")} *</FormLabel>
+                  <FormLabel>{t("management.editStock.reason")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>

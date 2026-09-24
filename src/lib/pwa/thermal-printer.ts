@@ -15,6 +15,7 @@ import {
   RECEIPT_LABELS,
   RECEIPT_POWERED_BY_URL,
   SHIFT_REPORT_LABELS,
+  saleTypeLabel,
   resolveReceiptLocale,
   type ReceiptLocale,
 } from "@/lib/receipts/receipt-labels";
@@ -569,12 +570,7 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   if (report.byOrderType.length > 0) {
     heading(labels.byOrderTypeHeading);
     for (const bucket of report.byOrderType) {
-      const typeLabel =
-        bucket.orderType === "DINE_IN"
-          ? labels.dineIn
-          : bucket.orderType === "TAKEAWAY"
-            ? labels.takeaway
-            : labels.deliveryType;
+      const typeLabel = saleTypeLabel(labels, bucket.orderType, bucket.platform);
       row(`${typeLabel} (${bucket.orderCount})`, money(bucket.total));
     }
     line(divider);

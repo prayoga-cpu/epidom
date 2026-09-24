@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { Prisma, type OrderStatus, type OrderType, type PaymentMethod } from "@prisma/client";
+import {
+  Prisma,
+  type OrderSource,
+  type OrderStatus,
+  type OrderType,
+  type PaymentMethod,
+} from "@prisma/client";
+import type { PosOnlinePlatform } from "@/config/aggregator.config";
 import { prisma } from "@/lib/prisma";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import type { CreatePosOrderInput } from "@/lib/validation/pos.schemas";
@@ -115,6 +122,8 @@ export interface PosSettlement {
   warnings: string[];
   /** True when the request carried a clientRequestId (offline replay). */
   tolerant: boolean;
+  /** input.tableId once checked to be one of this store's tables — see resolveStoreTableId. */
+  tableId: string | null;
 }
 
 /**
@@ -174,6 +183,8 @@ export async function buildPosSettlement(args: {
       warnings.push("Customer not found; the sale was recorded without it");
     }
   }
+
+  const tableId = await resolveStoreTableId(storeId, input.tableId, input.orderType);
 
   const discount = await resolveOrderDiscount({
     storeId,
@@ -291,7 +302,28 @@ export async function buildPosSettlement(args: {
     immediatelyDelivered: settledStatus === "DELIVERED",
     warnings,
     tolerant,
+    tableId,
   };
+}
+
+/**
+ * The registered table a sale is seated at, if it really is one of THIS store's
+ * tables. Order.tableId is a plain foreign key, so an unchecked id would link
+ * the order to another tenant's table. Only a dine-in sale sits at a table. A
+ * table deleted since the bill was rung up (an offline replay, a saved bill)
+ * just loses the link — its label is still in Order.tableNumber.
+ */
+export async function resolveStoreTableId(
+  storeId: string,
+  tableId: string | undefined,
+  orderType: string
+): Promise<string | null> {
+  if (!tableId || orderType !== "DINE_IN") return null;
+  const table = await prisma.table.findFirst({
+    where: { id: tableId, storeId },
+    select: { id: true },
+  });
+  return table?.id ?? null;
 }
 
 /** Order lines as Prisma nested-create rows. Shared with the hold route. */
@@ -321,6 +353,16 @@ export function buildOrderItemCreateData(items: BuiltOrderItem[]) {
 function composeOrderNotes(notes: string | undefined, warnings: string[]): string | undefined {
   if (!warnings.length) return notes;
   return [notes?.trim(), ...warnings].filter(Boolean).join(" · ");
+}
+
+/**
+ * Order.source for a sale rung up at the till: the delivery platform when the
+ * cashier keyed in an online order ("Others" → GoFood, Uber Eats, …), POS
+ * otherwise. Finalize rewrites it too, so switching a saved bill between Dine
+ * In and a platform before charging it moves the sale to the right channel.
+ */
+export function posOrderSource(input: { onlinePlatform?: PosOnlinePlatform }): OrderSource {
+  return input.onlinePlatform ?? "POS";
 }
 
 /**
@@ -359,12 +401,15 @@ export function buildSettlementOrderData(args: {
       ? { customerEmail: s.customer?.email ?? input.customerEmail }
       : {}),
     orderType: input.orderType as OrderType,
+    source: posOrderSource(input),
     // Only DINE_IN carries a pax count — see the schema comment on
     // Order.guestCount. Takeaway stays null rather than being coerced to 1.
     guestCount:
       input.orderType === "DINE_IN" ? (input.guestCount ?? args.existingGuestCount ?? null) : null,
     tableNumber: input.tableNumber,
-    tableId: input.tableId,
+    // `undefined` (not null) when there is no valid table: on finalize that
+    // keeps whatever the saved bill recorded, the same as tableNumber above.
+    tableId: s.tableId ?? undefined,
     paymentMethod: s.paymentMethod,
     paymentStatus: s.paymentStatus,
     paymentNote: input.paymentNote,

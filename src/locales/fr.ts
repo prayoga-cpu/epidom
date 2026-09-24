@@ -158,6 +158,8 @@ export const fr = {
     departmentBarDetailed: "Bar / Boisson",
     departmentBoth: "Les deux",
     departmentBothDetailed: "Les deux (Cuisine & Bar)",
+    departmentPosHint:
+      "Définit l'onglet de la caisse : les articles « Cuisine / Nourriture » apparaissent sous Nourriture, les articles « Bar / Boisson » sous Boissons. Détermine aussi si l'article part sur le ticket cuisine ou bar.",
     departmentUnassigned: "Non assigné",
     recipe: "Recette",
     price: "Prix",
@@ -1193,6 +1195,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     posOfflineSyncPending: "{count} commandes hors ligne en attente de synchronisation",
     posOfflineSyncing: "Synchronisation...",
     posOfflineSyncNow: "Synchroniser Maintenant",
+    posSyncSales: "Synchroniser les ventes",
+    posAllSalesSynced: "Toutes les ventes sont synchronisées",
     entityPreviewCostPerBatch: "Coût par Lot",
     entityPreviewSupplierLabel: "Fournisseur",
     entityPreviewHideDetails: "Masquer les Détails",
@@ -1348,7 +1352,9 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     unpaidAlertSingular: "{count} commande impayée — appuyez pour voir",
     unpaidAlertPlural: "{count} commandes impayées — appuyez pour voir",
     source: { walkIn: "Sur place", online: "En ligne", manual: "Manuel" },
+    onlinePlatform: { other: "Autre plateforme" },
     cart: {
+      open: "Ouvrir le panier",
       empty: "Panier vide",
       emptyDesc: "Appuyez sur un article du menu pour l'ajouter à la commande",
       subtotal: "Sous-total",
@@ -1632,6 +1638,15 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       unavailable: "Indisponible",
       counted: "{count} comptés",
       customProducts: "Produits Personnalisés",
+      food: "Nourriture",
+      drink: "Boissons",
+      departments: "Nourriture ou boissons",
+      categories: "Catégories",
+      itemCount: "{count} articles",
+      noFoodItems:
+        "Aucun article à manger pour l'instant. Dans le Back-Office, réglez le Département de l'article sur « Cuisine / Nourriture » pour l'afficher ici.",
+      noDrinkItems:
+        "Aucune boisson pour l'instant. Dans le Back-Office, réglez le Département de l'article sur « Bar / Boisson » pour l'afficher ici.",
     },
     connection: {
       online: "Connecté",
@@ -2945,8 +2960,9 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
 
     // Create Order Dialog
     createOrderDialog: {
-      title: "Créer un Rappel de Commande",
-      description: "Créer un rappel pour commander des matières premières auprès du fournisseur",
+      title: "Créer une Commande",
+      description:
+        "Commandez des matières premières à un fournisseur. Elle attend dans « En attente de livraison » jusqu'à ce que vous appuyiez sur Reçue.",
       supplier: "Fournisseur",
       selectSupplier: "Sélectionner le fournisseur",
       suppliersForMaterial: "Fournisseurs de cette matière",
@@ -2969,10 +2985,10 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       priority: "Priorité",
       notes: "Notes",
       notesPlaceholder: "Ajoutez des instructions spéciales ou des notes...",
-      notesHint: "Notes optionnelles pour ce rappel de commande",
+      notesHint: "Notes optionnelles pour cette commande",
       submit: "Créer Commande",
       createdTitle: "Commande créée",
-      createdDescription: "Imprimez le bon de commande ou envoyez-le au fournisseur",
+      createdDescription: "Elle est maintenant dans « En attente de livraison ». Appuyez sur Reçue à son arrivée.",
       printQuote: "Imprimer le bon de commande",
       printQuoteHint:
         "Le bon s'ouvre dans un nouvel onglet avec les coordonnées de votre établissement et les totaux, prêt à imprimer ou à enregistrer en PDF.",
@@ -3468,6 +3484,24 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     production: "Production",
     history: "Historique",
     stock: "Stock",
+    // Stock page tabs: Item | Delivery Order (History is the round button beside them)
+    item: "Articles",
+    deliveryOrder: "Commandes fournisseurs",
+    log: "Journal",
+    // The Log tab: every stock movement, newest first
+    movementLog: {
+      types: {
+        PURCHASE: "Livraison",
+        PRODUCTION_IN: "Produit",
+        PRODUCTION_OUT: "Utilisé en production",
+        SALE: "Vente",
+        ADJUSTMENT: "Ajustement",
+        WASTE: "Perte",
+        RETURN: "Retour",
+      },
+      balanceAfter: "Solde {balance}",
+      loadMore: "Charger plus",
+    },
     // Delivery Tab
     delivery: {
       title: "Livraisons Fournisseurs",
@@ -3481,6 +3515,65 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         "Les marchandises doivent être livrées avec une date limite de consommation (DLC) au moins égale à celle indiquée sur chaque ligne.",
       signatureStore: "Pour l'établissement — date & signature",
       signatureSupplier: "Pour le fournisseur — date & signature",
+      sendToSupplier: "Envoyer au fournisseur",
+      send: "Envoyer",
+      viaEmail: "E-mail",
+      viaWhatsapp: "WhatsApp",
+      viaBoth: "E-mail et WhatsApp",
+      noEmailOnFile: "aucun e-mail enregistré",
+      noPhoneOnFile: "aucun téléphone enregistré",
+      sendEmailSuccess: "Envoyée au fournisseur par e-mail",
+      sendEmailFailed: "Échec de l'envoi de l'e-mail",
+      sendWhatsappSuccess: "Envoyée au fournisseur par WhatsApp",
+      sendWhatsappFailed: "Échec de l'envoi du message WhatsApp",
+      sendFailed: "Échec de l'envoi",
+      // Commandes & Livraisons : créer la commande, puis appuyer sur Reçue à l'arrivée.
+      openOrders: {
+        title: "En attente de livraison",
+        empty: "Aucune livraison attendue",
+        emptyDescription:
+          "Créez une commande : elle attend ici jusqu'à ce que vous appuyiez sur Reçue.",
+        expected: "Prévue le {date}",
+        moreItems: "+{count} autres",
+        received: "Reçue",
+        moreActions: "Autres actions",
+        edit: "Modifier la date ou les notes",
+        print: "Imprimer la commande",
+        cancel: "Annuler la commande",
+      },
+      timing: {
+        noDate: "Commandée",
+        arrivesTomorrow: "Arrive demain",
+        arrivesInDays: "Arrive dans {days} jours",
+        dueToday: "Attendue aujourd'hui",
+        lateOneDay: "En retard d'1 jour",
+        lateDays: "En retard de {days} jours",
+      },
+      confirmReceived: {
+        title: "Cette commande est-elle arrivée ?",
+        addsToStock: "Oui ajoute au stock :",
+        expires: "DLC {date}",
+        notYetHint:
+          "Pas encore arrivée ? Appuyez sur Pas encore. Elle reste dans la liste et passe en retard d'elle-même une fois la date prévue dépassée.",
+        notYet: "Pas encore",
+        confirm: "Oui, reçue",
+        success: "Reçue. Stock mis à jour.",
+        failed: "Impossible de marquer la commande comme reçue",
+      },
+      confirmCancel: {
+        title: "Annuler cette commande ?",
+        description:
+          "À utiliser quand la commande n'arrivera jamais. Rien n'est ajouté au stock.",
+        keep: "La garder",
+        confirm: "Annuler la commande",
+        success: "Commande annulée",
+        failed: "Impossible d'annuler la commande",
+      },
+      history: {
+        title: "Historique des livraisons",
+        show: "Afficher",
+        hide: "Masquer",
+      },
       filters: {
         status: "Statut",
         allStatuses: "Tous les Statuts",
@@ -3493,7 +3586,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       },
       status: {
         pending: "En Attente",
-        inTransit: "En Transit",
+        inTransit: "Commandée",
         received: "Reçu",
         cancelled: "Annulé",
       },
@@ -3656,6 +3749,12 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     editStock: {
       title: "Gestion des Stocks",
       description: "Gérer les niveaux d'inventaire et enregistrer les ajustements de stock",
+      view: {
+        label: "Affichage des articles",
+        grid: "Grille",
+        columns: "Colonnes",
+        list: "Liste",
+      },
       status: "Statut",
       unit: "Unité",
       reasonRequired: "Veuillez sélectionner une raison.",
@@ -5675,7 +5774,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       paxCount: "{count} couverts",
       paxCountOne: "1 couvert",
       tableShort: "Table {table}",
-      paxTableLabel: "Couverts et table",
+      others: "Autres",
+      onlineOrderFrom: "Commande en ligne via",
     },
     customer: {
       add: "Ajouter un client",
@@ -5703,6 +5803,32 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       gone: "Ce client n'existe plus et a été retiré de la vente.",
       points: "{count} pts",
       lifetimeSpend: "Total dépensé {amount}",
+      reviewFromDisplay: "Nouveau client saisi sur l'écran client — touchez pour vérifier",
+    },
+    customerDialog: {
+      title: "Couverts et client",
+      titleNoGuests: "Client",
+      customerHeading: "Client (facultatif)",
+      done: "Terminé",
+      remove: "Retirer",
+    },
+    table: {
+      none: "Sans table",
+      custom: "Autre",
+      customOption: "Autre (à saisir)…",
+      customPlaceholder: "Nom ou numéro de table",
+      seats: "{count} places",
+      loadFailed: "Impossible de charger vos tables. Saisissez la table.",
+    },
+    customerDisplay: {
+      details:
+        "Laissez le client saisir ses coordonnées sur l'écran client : son numéro WhatsApp, puis son nom et son e-mail s'il est nouveau. Un client connu est ajouté à la vente automatiquement ; un nouveau client remplit le formulaire ci-dessous, que vous enregistrez.",
+      ask: "Demander ses coordonnées",
+      waiting: "En attente du numéro du client…",
+      checking: "Le client a saisi {phone}. Vérification…",
+      matched: "{phone} est déjà client et a été ajouté à cette vente.",
+      isNew: "{phone} est un nouveau client. Vérifiez le formulaire ci-dessous, puis enregistrez.",
+      unknown: "Le client a saisi {phone}. Vérification impossible pour le moment.",
     },
     item: {
       custom: "Libre",

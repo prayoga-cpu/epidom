@@ -64,6 +64,7 @@ import {
   type CheckoutPayment,
 } from "../lib/checkout-payload";
 import { getCurrencyDecimals } from "../lib/currency-decimals";
+import { saleTypeText } from "../lib/order-channel";
 import type { CartItem, DraftTender } from "../types/pos.types";
 import type { PaymentMethod } from "@prisma/client";
 
@@ -324,7 +325,7 @@ export function PosCheckoutDialog({
   const guests = basis ? basis.guestCount : cart.guestCount;
   const customerLabel = cart.customer?.name || cart.customer?.phone || displayPhone || null;
   const summary = [
-    cart.orderType === "DINE_IN" ? t("pos.checkout.dineIn") : t("pos.checkout.takeaway"),
+    saleTypeText(t, cart.orderType, cart.onlinePlatform),
     cart.orderType === "DINE_IN" && guests
       ? t("cashierCheckout.summary.pax").replace("{count}", String(guests))
       : null,
@@ -498,8 +499,10 @@ export function PosCheckoutDialog({
       const payload = buildCheckoutPayload({
         items: priced.items,
         orderType: cart.orderType,
+        onlinePlatform: cart.onlinePlatform,
         guestCount: basis ? (basis.guestCount ?? null) : cart.guestCount,
         tableNumber: cart.tableNumber,
+        tableId: cart.tableId,
         customer: cart.customer,
         fallbackPhone: displayPhone,
         fallbackEmail: displayEmail,
@@ -557,6 +560,7 @@ export function PosCheckoutDialog({
             orderNumber: args.orderNumber,
             queueNumber: server?.queueNumber ?? null,
             orderType: cart.orderType,
+            platform: cart.onlinePlatform,
             tableLabel: cart.tableNumber || undefined,
             guestCount: guests ?? null,
             cashierName,

@@ -14,6 +14,7 @@
  * into showing different totals for the same shift.
  */
 
+import { isOnlinePlatformSource } from "@/config/aggregator.config";
 import { bucketItemsByCategory, buildPaymentMethodRows } from "./report-aggregation";
 import type { CashOnHandBreakdown } from "./cash-drawer";
 
@@ -31,6 +32,9 @@ export interface ShiftReportTenderInput {
 export interface ShiftReportOrderInput {
   status: string;
   orderType: string;
+  /** Order.source. A delivery platform (GoFood, Uber Eats, …) gets its own
+   * sale-type row; anything else is bucketed by orderType alone. */
+  source?: string;
   paymentMethod: string;
   /**
    * Per-tender breakdown, when the order has one. Every order from release
@@ -115,7 +119,17 @@ export interface ShiftReportData {
   };
   invoices: { count: number; averagePerInvoice: number };
   cancellations: { invoiceCount: number; itemCount: number; total: number };
-  byOrderType: Array<{ orderType: string; orderCount: number; total: number }>;
+  /**
+   * One row per sale type. Online-platform orders are split out by platform
+   * (`platform` set, e.g. GOFOOD): finance reconciles each platform's payout
+   * separately, so "Delivery" as one lump would be useless to them.
+   */
+  byOrderType: Array<{
+    orderType: string;
+    platform: string | null;
+    orderCount: number;
+    total: number;
+  }>;
   /** Null when no order in the window recorded a pax count — the report omits
    * the whole block rather than printing zeros for a store that never tracks
    * guests. See Order.guestCount. */
@@ -201,15 +215,25 @@ export function aggregateShiftReport({
   };
 
   // ---- By sale type ------------------------------------------------------
-  const typeBuckets = new Map<string, { orderCount: number; total: number }>();
+  const typeBuckets = new Map<
+    string,
+    { orderType: string; platform: string | null; orderCount: number; total: number }
+  >();
   for (const order of orders) {
-    const bucket = typeBuckets.get(order.orderType) ?? { orderCount: 0, total: 0 };
+    const platform = isOnlinePlatformSource(order.source) ? order.source : null;
+    const key = platform ? `${order.orderType}:${platform}` : order.orderType;
+    const bucket = typeBuckets.get(key) ?? {
+      orderType: order.orderType,
+      platform,
+      orderCount: 0,
+      total: 0,
+    };
     bucket.orderCount += 1;
     bucket.total += Number(order.total);
-    typeBuckets.set(order.orderType, bucket);
+    typeBuckets.set(key, bucket);
   }
-  const byOrderType = Array.from(typeBuckets.entries())
-    .map(([orderType, b]) => ({ orderType, orderCount: b.orderCount, total: round2(b.total) }))
+  const byOrderType = Array.from(typeBuckets.values())
+    .map((b) => ({ ...b, total: round2(b.total) }))
     .sort((a, b) => b.total - a.total);
 
   // ---- By guest ----------------------------------------------------------

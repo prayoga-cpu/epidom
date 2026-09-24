@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -65,20 +65,40 @@ const bulkAdjustmentSchema = z.object({
           .positive("Quantity must be positive")
           .min(0.001, "Quantity must be at least 0.001"),
         adjustmentType: z.nativeEnum(AdjustmentType),
-        reason: z.string().min(1, "Reason is required when not using global reason").optional(),
+        reason: z.string().optional(),
         currentStock: z.number(),
         unit: z.string(),
       })
     )
     .min(1, "At least one item is required"),
   useSameReason: z.boolean(),
-  globalReason: z.string().min(1, "Reason is required when using same reason").optional(),
+  globalReason: z.string().optional(),
   globalAdjustmentType: z.nativeEnum(AdjustmentType),
   referenceId: z.string().optional(),
   notes: z.string().optional(),
 });
 
 type BulkAdjustmentFormData = z.infer<typeof bulkAdjustmentSchema>;
+
+function bulkDefaultValues(selectedItems: StockItem[]): BulkAdjustmentFormData {
+  return {
+    items: selectedItems.map((item) => ({
+      itemId: item.id,
+      itemName: item.name,
+      itemType: item.type,
+      quantity: 1,
+      adjustmentType: AdjustmentType.IN,
+      reason: "",
+      currentStock: item.currentStock,
+      unit: item.unit,
+    })),
+    useSameReason: true,
+    globalReason: "",
+    globalAdjustmentType: AdjustmentType.IN,
+    referenceId: "",
+    notes: "",
+  };
+}
 
 interface BulkAdjustmentDialogProps {
   selectedItems: StockItem[];
@@ -106,24 +126,17 @@ export function BulkAdjustmentDialog({
 
   const form = useForm<BulkAdjustmentFormData>({
     resolver: zodResolver(bulkAdjustmentSchema),
-    defaultValues: {
-      items: selectedItems.map((item) => ({
-        itemId: item.id,
-        itemName: item.name,
-        itemType: item.type,
-        quantity: 1,
-        adjustmentType: AdjustmentType.IN,
-        reason: "",
-        currentStock: item.currentStock,
-        unit: item.unit,
-      })),
-      useSameReason: true,
-      globalReason: "",
-      globalAdjustmentType: AdjustmentType.IN,
-      referenceId: "",
-      notes: "",
-    },
+    defaultValues: bulkDefaultValues(selectedItems),
   });
+
+  // useForm reads defaultValues once, at mount, and this dialog is mounted
+  // before anything is selected, so the items are loaded each time it opens.
+  // Only on opening: a data refetch while it is open must not wipe the form.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open && !wasOpen.current) form.reset(bulkDefaultValues(selectedItems));
+    wasOpen.current = open;
+  }, [open, selectedItems, form]);
 
   const { fields, remove } = useFieldArray({
     control: form.control,
@@ -158,24 +171,9 @@ export function BulkAdjustmentDialog({
 
   const onSubmit = async (data: BulkAdjustmentFormData) => {
     try {
-      // Determine reason for each item
-      const globalReason = data.useSameReason ? data.globalReason : undefined;
-      if (data.useSameReason && !globalReason) {
-        toast({
-          variant: "destructive",
-          title: t("common.error"),
-          description: t("management.editStock.reasonRequired"),
-        });
-        return;
-      }
-
-      // Process all adjustments
+      // Process all adjustments. The reason is optional: blank sends none.
       const adjustments = data.items.map((item) => {
-        const reason = data.useSameReason ? globalReason! : item.reason;
-        if (!reason) {
-          throw new Error(`Reason is required for ${item.itemName}`);
-        }
-
+        const reason = (data.useSameReason ? data.globalReason : item.reason) || undefined;
         const isIncrease = item.adjustmentType === AdjustmentType.IN;
 
         return {
@@ -183,7 +181,7 @@ export function BulkAdjustmentDialog({
           productId: item.itemType === "product" ? item.itemId : undefined,
           adjustmentType: isIncrease ? ("IN" as const) : ("OUT" as const),
           quantity: item.quantity,
-          reason: reason,
+          reason,
           notes: data.notes || undefined,
           referenceId: data.referenceId || undefined,
         };

@@ -698,6 +698,9 @@ export function EditProductDialog({
                         <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormDescription className="text-xs">
+                      {t("common.departmentPosHint")}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

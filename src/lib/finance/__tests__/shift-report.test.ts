@@ -139,8 +139,39 @@ describe("aggregateShiftReport — by sale type", () => {
     });
 
     expect(report.byOrderType).toEqual([
-      { orderType: "TAKEAWAY", orderCount: 1, total: 300 },
-      { orderType: "DINE_IN", orderCount: 2, total: 150 },
+      { orderType: "TAKEAWAY", platform: null, orderCount: 1, total: 300 },
+      { orderType: "DINE_IN", platform: null, orderCount: 2, total: 150 },
+    ]);
+  });
+
+  it("gives each delivery platform its own row, so finance can reconcile each payout", () => {
+    const report = aggregateShiftReport({
+      orders: [
+        order({ orderType: "DINE_IN", source: "POS", total: 100 }),
+        order({ orderType: "DELIVERY", source: "GOFOOD", total: 80 }),
+        order({ orderType: "DELIVERY", source: "GRABFOOD", total: 60 }),
+        order({ orderType: "DELIVERY", source: "GOFOOD", total: 40 }),
+      ],
+      cancelledOrders: [],
+      window: WINDOW,
+    });
+
+    expect(report.byOrderType).toEqual([
+      { orderType: "DELIVERY", platform: "GOFOOD", orderCount: 2, total: 120 },
+      { orderType: "DINE_IN", platform: null, orderCount: 1, total: 100 },
+      { orderType: "DELIVERY", platform: "GRABFOOD", orderCount: 1, total: 60 },
+    ]);
+  });
+
+  it("keeps a storefront delivery (not a platform) as plain Delivery", () => {
+    const report = aggregateShiftReport({
+      orders: [order({ orderType: "DELIVERY", source: "STOREFRONT", total: 50 })],
+      cancelledOrders: [],
+      window: WINDOW,
+    });
+
+    expect(report.byOrderType).toEqual([
+      { orderType: "DELIVERY", platform: null, orderCount: 1, total: 50 },
     ]);
   });
 });

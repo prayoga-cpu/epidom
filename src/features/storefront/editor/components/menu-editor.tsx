@@ -802,6 +802,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                   <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-muted-foreground text-xs">{t("common.departmentPosHint")}</p>
             </div>
 
             <div className="space-y-2">
@@ -949,6 +950,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                   <SelectItem value="BAR">{t("common.departmentBarDetailed")}</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-muted-foreground text-xs">{t("common.departmentPosHint")}</p>
             </div>
 
             {/* Category and Modifiers are only meaningful for manually-added

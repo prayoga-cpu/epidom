@@ -11,6 +11,7 @@ import { PosHoldDialog, type HoldDialogDefaults } from "../pos-hold-dialog";
 
 const defaults = (over: Partial<HoldDialogDefaults> = {}): HoldDialogDefaults => ({
   orderType: "DINE_IN",
+  onlinePlatform: null,
   guestCount: 3,
   tableNumber: "A1",
   customerName: null,
@@ -71,6 +72,11 @@ describe("PosHoldDialog — Save Bill", () => {
   it("takeaway shows no pax", () => {
     renderDialog({ defaults: defaults({ orderType: "TAKEAWAY" }) });
     expect(screen.getByTestId("hold-summary").textContent).toBe("Take Away");
+  });
+
+  it("an online-platform bill names the platform, with no pax", () => {
+    renderDialog({ defaults: defaults({ orderType: "DELIVERY", onlinePlatform: "GOFOOD" }) });
+    expect(screen.getByTestId("hold-summary").textContent).toBe("GoFood");
   });
 
   it("saves with nothing typed — everything is optional and inherited from the cart", async () => {

@@ -176,8 +176,9 @@ export interface PosMenuItem {
   // line (see Product.productLine) — never the real stored DB value, which
   // stays inert Kitchen. Overridden server-side in /api/stores/[id]/pos/menu
   // so it can be filtered like a genuine third department alongside
-  // Kitchen/Bar in PosDepartmentBar/PosItemGrid.
-  department?: "KITCHEN" | "BAR" | "CUSTOM" | null;
+  // Kitchen/Bar in PosDepartmentBar/PosItemGrid. BOTH is a real stored value
+  // (made in the kitchen and the bar), listed under both the Food and Drink tabs.
+  department?: "KITCHEN" | "BAR" | "BOTH" | "CUSTOM" | null;
   // Scannable code from the linked Product (optional). Items with no Product
   // have none. Matched exactly by the POS search box / barcode scanner.
   barcode?: string | null;

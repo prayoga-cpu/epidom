@@ -1507,6 +1507,18 @@ enum OrderSource {
   GRABFOOD
   SHOPEEFOOD
   TOKOPEDIA
+  // Online delivery platforms outside Indonesia (France, US/worldwide). No
+  // email import exists for these: they only arrive through the till's
+  // "Others" order type, where the cashier keys in the platform's order by hand.
+  // The Indonesian ones above can arrive that way too. See
+  // POS_ONLINE_PLATFORMS in aggregator.config.ts.
+  UBER_EATS
+  DELIVEROO
+  JUST_EAT
+  DOORDASH
+  GRUBHUB
+  // A delivery platform the list doesn't name.
+  OTHER_ONLINE
 }
 
 // Phase 3: Table management

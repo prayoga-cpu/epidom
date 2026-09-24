@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Monitor,
   KeyRound,
@@ -9,19 +11,32 @@ import {
   Wallet,
   ExternalLink,
   LayoutDashboard,
-  ArrowRight,
   Store,
   RefreshCw,
   LogOut,
+  Bug,
+  ChevronRight,
+  X,
+  CheckCircle2,
+  CloudUpload,
+  WifiOff,
+  type LucideIcon,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { useUser } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 import { useCustomerDisplaySettings } from "@/features/pos/hooks/use-customer-display-settings";
 import { openCustomerDisplay } from "@/features/pos/lib/open-customer-display";
 import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialog";
+import { FeedbackDialog } from "@/features/dashboard/feedback/components/feedback-dialog";
 import { useAccountSwitcher } from "@/features/dashboard/shared/hooks/use-account-switcher";
+import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
+import { useOfflineSyncContext } from "@/features/dashboard/shared/offline-sync-provider";
+import { STAFF_ROLE_LABEL_KEYS } from "@/features/dashboard/shared/lib/staff-role-label";
+import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { canManageShift } from "@/features/pos/lib/shift-access";
 import { LAST_VISITED_BACK_OFFICE_COOKIE, isBackOfficeAppPath } from "@/lib/last-visited";
 import { PosModePreferences } from "./pos-mode-preferences";
@@ -40,12 +55,100 @@ interface PosModeOverflowMenuProps {
   linkedStaff?: boolean;
 }
 
+interface MenuRowProps {
+  icon: LucideIcon;
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  /** The page this row links to is the one on screen. */
+  active?: boolean;
+  tone?: "default" | "primary" | "destructive";
+}
+
 /**
- * Low-frequency POS Mode actions that don't earn permanent tab-bar real
- * estate (spec: customer display trigger + clock in/out). Dialog, not Sheet
- * — same fixed-height reasoning as PosMobileCart's own comment: a bottom
- * Sheet never gets a truly definite height through this nested flex/scroll
- * chain, Dialog does.
+ * One line of the drawer: icon tile, label, chevron. A Link when it goes
+ * somewhere, a button when it does something. 48px tall — over the 44px
+ * touch floor with room for the tile.
+ */
+function MenuRow({
+  icon: Icon,
+  label,
+  href,
+  onClick,
+  disabled = false,
+  active = false,
+  tone = "default",
+}: MenuRowProps) {
+  const className = cn(
+    "relative flex min-h-12 w-full items-center gap-3 px-3 text-left text-sm font-medium transition-colors hover:bg-accent active:bg-accent disabled:pointer-events-none disabled:opacity-50",
+    active && "bg-primary/10 text-primary hover:bg-primary/10",
+    tone === "primary" && "text-primary",
+    tone === "destructive" && "text-destructive"
+  );
+  const content = (
+    <>
+      {/* The accent bar on the current page's row, as in a nav drawer. */}
+      {active && (
+        <span className="bg-primary absolute inset-y-2 left-0 w-1 rounded-r-full" aria-hidden />
+      )}
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-lg",
+          active || tone === "primary"
+            ? "bg-primary/15"
+            : tone === "destructive"
+              ? "bg-destructive/10"
+              : "bg-muted"
+        )}
+        aria-hidden
+      >
+        <Icon className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {tone !== "destructive" && (
+        <ChevronRight className="text-muted-foreground size-4 shrink-0" aria-hidden />
+      )}
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        onClick={onClick}
+        aria-current={active ? "page" : undefined}
+        className={className}
+      >
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} className={className}>
+      {content}
+    </button>
+  );
+}
+
+/** A bordered card of rows, split by hairlines. */
+function MenuGroup({ children }: { children: React.ReactNode }) {
+  return <div className="divide-y overflow-hidden rounded-xl border">{children}</div>;
+}
+
+/**
+ * The POS Mode "More" drawer, opened by the Epidom button at the right end of
+ * the status bar: everything that doesn't earn permanent tab-bar space
+ * (customer display, clock in/out, shift, schedule, feedback, Back Office,
+ * device preferences, who's using the till).
+ *
+ * A right-hand Sheet laid out like a till's side menu: a navy brand header
+ * with the signed-in profile, a Sync sales button, rows with chevrons, and the
+ * sync state in a strip along the bottom. The sheet is pinned to the viewport
+ * with an explicit height (divided by --app-zoom, like every viewport unit
+ * here), so the middle can scroll while the header and strip stay put — the
+ * definite height a bottom Sheet never got through this shell's flex chain,
+ * which is why this was a Dialog before.
  */
 export function PosModeOverflowMenu({
   storeId,
@@ -54,9 +157,14 @@ export function PosModeOverflowMenu({
   linkedStaff = false,
 }: PosModeOverflowMenuProps) {
   const { t } = useI18n();
+  const pathname = usePathname();
+  const { user } = useUser();
+  const { store } = useCurrentStore();
+  const { isOnline, isSyncing, pendingCount, syncNow } = useOfflineSyncContext();
   const displayEnabled = useCustomerDisplaySettings((state) => state.enabled);
   const setDisplayEnabled = useCustomerDisplaySettings((state) => state.setEnabled);
   const [clockOpen, setClockOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const {
     posSession,
@@ -100,166 +208,298 @@ export function PosModeOverflowMenu({
     }
   }, [storeId]);
 
+  // Who the till is speaking as: the PIN persona when there is one, else the
+  // signed-in account itself (an owner on a plan with no staff picker).
+  const profileName = posSession.staffName ?? user?.name ?? user?.email ?? "";
+  const profileRole = posSession.staffRole ?? (linkedStaff ? null : "OWNER");
+  const roleLabel =
+    profileRole && profileRole in STAFF_ROLE_LABEL_KEYS
+      ? t(STAFF_ROLE_LABEL_KEYS[profileRole as keyof typeof STAFF_ROLE_LABEL_KEYS])
+      : profileRole;
+  // The account's own photo and email only when the account IS the person on
+  // screen — never the owner's, under a cashier's PIN persona.
+  const showsAccount = !actingAsStaff || linkedStaff;
+  const avatarImage = showsAccount ? user?.image : null;
+  const accountEmail = showsAccount ? user?.email : null;
+
+  const close = () => onOpenChange(false);
+  const hrefFor = (path: string) => `/store/${storeId}${path}`;
+  const shiftHref = hrefFor("/pos/shift");
+  const scheduleHref = hrefFor("/pos/schedule");
+
+  // The strip along the bottom: the same three states the POS offline banner
+  // reports, plus the all-clear it stays hidden for.
+  const syncStatus = !isOnline
+    ? {
+        icon: WifiOff,
+        className: "bg-destructive text-white",
+        label:
+          pendingCount > 0
+            ? t("pages.posOfflineMessageWithPending").replace("{count}", String(pendingCount))
+            : t("pages.posOfflineMessageNoPending"),
+      }
+    : pendingCount > 0
+      ? {
+          icon: CloudUpload,
+          className: "bg-amber-500 text-black",
+          label: t("pages.posOfflineSyncPending").replace("{count}", String(pendingCount)),
+        }
+      : {
+          icon: CheckCircle2,
+          className: "bg-emerald-600 text-white",
+          label: t("pages.posAllSalesSynced"),
+        };
+  const SyncStatusIcon = syncStatus.icon;
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[calc(85dvh/var(--app-zoom,1))] overflow-y-auto rounded-3xl sm:max-w-sm">
-          <DialogTitle>{t("common.actions.more")}</DialogTitle>
-          <DialogDescription className="sr-only">{t("common.actions.more")}</DialogDescription>
-
-          <div className="space-y-4">
-            <div className="space-y-2 rounded-xl border p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <Monitor
-                    className={displayEnabled ? "size-5 shrink-0 text-emerald-500" : "size-5 shrink-0"}
-                    aria-hidden
-                  />
-                  <span className="text-sm font-medium">{t("pos.customerDisplay.enable")}</span>
-                </div>
-                <Switch checked={displayEnabled} onCheckedChange={setDisplayEnabled} />
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-11 w-full gap-1.5"
-                disabled={!displayEnabled}
-                onClick={() => openCustomerDisplay(storeId)}
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="right"
+          title={t("common.actions.more")}
+          description={t("common.actions.more")}
+          hideClose
+          // No focus ring flashing on the close button every time it opens.
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          // Phones: up to 340px, never past 88% of the screen. Tablet and up: 40% of
+          // the screen, never under 340px. Lifts the Sheet's own sm:max-w-sm cap.
+          className="h-[calc(100dvh/var(--app-zoom,1))] w-[min(340px,calc(88vw/var(--app-zoom,1)))] gap-0 overflow-hidden p-0 sm:max-w-none md:w-[max(340px,calc(40vw/var(--app-zoom,1)))]"
+        >
+          {/* Brand header — the Back Office top bar's navy and cream. */}
+          <div
+            className="shrink-0 px-4 pt-4 pb-8"
+            style={{ background: "var(--epi-navy-850)", color: "var(--epi-cream-50)" }}
+          >
+            <div className="flex items-center gap-2.5">
+              <EpidomMark size={34} />
+              {/* Inline, as in EpidomLogo: .epi-display is unlayered CSS, so it would
+                  beat a tracking-* utility on letter-spacing. */}
+              <span
+                className="epi-display"
+                style={{ fontSize: 24, letterSpacing: "0.10em", lineHeight: 1, marginTop: 2 }}
               >
-                <ExternalLink className="size-4" aria-hidden />
-                {t("pos.customerDisplay.openWindow")}
-              </Button>
+                Epidom
+              </span>
+              <SheetClose className="-mr-1 ml-auto flex size-10 items-center justify-center rounded-full opacity-80 transition hover:bg-white/10 hover:opacity-100">
+                <X className="size-5" aria-hidden />
+                <span className="sr-only">{t("common.actions.close")}</span>
+              </SheetClose>
             </div>
 
-            {/* Clock in/out — a timesheet action for the persona already
-                active. Deliberately its own row, not grouped with the
-                "who is this device" actions below — different question,
-                different answer. */}
-            <Button
-              variant="outline"
-              className="h-11 w-full justify-start gap-2"
-              onClick={() => {
-                onOpenChange(false);
-                setClockOpen(true);
-              }}
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3">
+              <Avatar className="size-11">
+                {avatarImage && <AvatarImage src={avatarImage} alt={profileName} />}
+                <AvatarFallback
+                  className="text-base font-semibold"
+                  style={{ background: "var(--epi-navy-600)", color: "var(--epi-cream-50)" }}
+                >
+                  {profileName[0]?.toUpperCase() ?? "?"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <p className="truncate text-base leading-tight font-semibold">{profileName}</p>
+                  {roleLabel && (
+                    <span
+                      className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
+                      style={{
+                        color: "var(--epi-gold-400)",
+                        borderColor: "rgb(217 174 59 / 0.45)",
+                        background: "rgb(217 174 59 / 0.15)",
+                      }}
+                    >
+                      {roleLabel}
+                    </span>
+                  )}
+                </div>
+                {store?.name && (
+                  <p className="mt-1 flex min-w-0 items-center gap-1 text-xs opacity-75">
+                    <Store className="size-3 shrink-0" aria-hidden />
+                    <span className="truncate">{store.name}</span>
+                  </p>
+                )}
+                {accountEmail && (
+                  <p className="mt-0.5 truncate text-xs opacity-60">{accountEmail}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Rounded panel tucked up under the header's profile card. */}
+          <div className="bg-background relative -mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-t-3xl px-3 pt-4 pb-4">
+            {/* Sends any sales queued while offline and refreshes this device's
+                offline copy of the menu and orders — the till's "sync" button. */}
+            <button
+              type="button"
+              onClick={() => void syncNow()}
+              disabled={isSyncing || !isOnline}
+              className="border-primary/40 text-primary hover:bg-primary/10 flex h-11 w-full items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50"
             >
-              <KeyRound className="size-4" aria-hidden />
-              {t("clockInOut.dialogTitle")}
-            </Button>
+              <RefreshCw className={cn("size-4", isSyncing && "animate-spin")} aria-hidden />
+              {isSyncing ? t("pages.posOfflineSyncing") : t("pages.posSyncSales")}
+            </button>
 
-            {/* Open / watch / finish the till. Only for a persona that runs a
-                register — the same rule the status bar's shift label follows. */}
-            {canManageShift({
-              staffRole: posSession.staffRole,
-              allowedPages: posSession.allowedPages,
-            }) && (
-              <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
-                <Link href={`/store/${storeId}/pos/shift`} onClick={() => onOpenChange(false)}>
-                  <Wallet className="size-4" aria-hidden />
-                  {t("pos.shift.title")}
-                </Link>
-              </Button>
-            )}
+            <MenuGroup>
+              {canReachBackOffice && (
+                <MenuRow
+                  icon={LayoutDashboard}
+                  label={t("nav.backOffice")}
+                  href={backOfficeHref}
+                  onClick={close}
+                  tone="primary"
+                />
+              )}
 
-            <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
-              <Link href={`/store/${storeId}/pos/schedule`} onClick={() => onOpenChange(false)}>
-                <CalendarClock className="size-4" aria-hidden />
-                {t("pages.scheduleMyScheduleTitle")}
-              </Link>
-            </Button>
+              {/* Open / watch / finish the till. Only for a persona that runs a
+                  register — the same rule the status bar's shift label follows. */}
+              {canManageShift({
+                staffRole: posSession.staffRole,
+                allowedPages: posSession.allowedPages,
+              }) && (
+                <MenuRow
+                  icon={Wallet}
+                  label={t("pos.shift.title")}
+                  href={shiftHref}
+                  onClick={close}
+                  active={pathname === shiftHref}
+                />
+              )}
 
-            {canReachBackOffice && (
-              <Link
-                href={backOfficeHref}
-                onClick={() => onOpenChange(false)}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 flex h-11 items-center justify-between gap-2 rounded-md px-3 text-sm font-medium transition active:scale-[0.98]"
+              <MenuRow
+                icon={CalendarClock}
+                label={t("pages.scheduleMyScheduleTitle")}
+                href={scheduleHref}
+                onClick={close}
+                active={pathname === scheduleHref}
+              />
+
+              {/* Clock in/out — a timesheet action for the persona already
+                  active. Not grouped with the "who is this device" actions at
+                  the bottom — different question, different answer. */}
+              <MenuRow
+                icon={KeyRound}
+                label={t("clockInOut.dialogTitle")}
+                onClick={() => {
+                  close();
+                  setClockOpen(true);
+                }}
+              />
+
+              <MenuRow
+                icon={Bug}
+                label={t("feedback.buttonLabel")}
+                onClick={() => {
+                  close();
+                  setFeedbackOpen(true);
+                }}
+              />
+            </MenuGroup>
+
+            <MenuGroup>
+              {/* A <label>, so the whole 48px row flips the ~18px Switch. */}
+              <label
+                htmlFor="pos-customer-display"
+                className="flex min-h-12 cursor-pointer items-center gap-3 px-3"
               >
-                <span className="flex items-center gap-2">
-                  <LayoutDashboard className="size-4 shrink-0" aria-hidden />
-                  {t("nav.backOffice")}
+                <span
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                    displayEnabled ? "bg-emerald-500/15 text-emerald-500" : "bg-muted"
+                  )}
+                  aria-hidden
+                >
+                  <Monitor className="size-4" />
                 </span>
-                <ArrowRight className="size-4 shrink-0" aria-hidden />
-              </Link>
-            )}
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {t("pos.customerDisplay.enable")}
+                </span>
+                <Switch
+                  id="pos-customer-display"
+                  checked={displayEnabled}
+                  onCheckedChange={setDisplayEnabled}
+                />
+              </label>
+              <MenuRow
+                icon={ExternalLink}
+                label={t("pos.customerDisplay.openWindow")}
+                onClick={() => openCustomerDisplay(storeId)}
+                disabled={!displayEnabled}
+              />
+            </MenuGroup>
 
-            {/* Device preferences (language, light/dark) — every persona, since
-                they belong to the tablet, not to whoever is signed in. */}
+            {/* Device preferences (language, light/dark, zoom) — every persona,
+                since they belong to the tablet, not to whoever is signed in. */}
             <PosModePreferences />
 
             {/* Who's using this device — switching or logging out, not
                 clocking in/out. Same actions, same reload/cache-clearing
                 behavior as Back Office's NavUser dropdown
-                (useAccountSwitcher), now reachable without leaving POS
-                Mode first. */}
-            <div className="space-y-2 border-t pt-4">
-              <p className="text-muted-foreground px-1 text-xs font-medium tracking-wide uppercase">
-                {posSession.staffName}
-                {posSession.staffRole ? ` · ${posSession.staffRole}` : ""}
-              </p>
+                (useAccountSwitcher), reachable without leaving POS Mode. */}
+            {hasAccountStoreList && <PosModeStoreSwitcher storeId={storeId} onNavigate={close} />}
 
+            <MenuGroup>
               {/* A linked account can only ever be itself — the server refuses
                   any other persona for it — so there's nobody to switch to. */}
               {!linkedStaff && (actingAsStaff || hasSwitchableStaff) && (
-                <Button
-                  variant="outline"
-                  className="h-11 w-full justify-start gap-2"
+                <MenuRow
+                  icon={RefreshCw}
+                  label={t("nav.switchAccount")}
                   onClick={() => {
-                    onOpenChange(false);
+                    close();
                     handleSwitchAccount();
                   }}
-                >
-                  <RefreshCw className="size-4" aria-hidden />
-                  {t("nav.switchAccount")}
-                </Button>
-              )}
-
-              {actingAsStaff && (
-                <Button
-                  variant="outline"
-                  className="h-11 w-full justify-start gap-2"
-                  onClick={() => {
-                    onOpenChange(false);
-                    handleReturnToPicker();
-                  }}
-                >
-                  <LogOut className="size-4" aria-hidden />
-                  {t("nav.logoutStaffSession")}
-                </Button>
+                />
               )}
 
               {/* Tied to the real, underlying account session — a staff PIN
                   persona has no store list of its own, same gate nav-user.tsx
                   uses for this same action in Back Office. */}
               {hasAccountStoreList && (
-                <PosModeStoreSwitcher storeId={storeId} onNavigate={() => onOpenChange(false)} />
+                <MenuRow
+                  icon={Store}
+                  label={t("nav.backToStores")}
+                  href="/stores"
+                  onClick={close}
+                />
               )}
 
-              {hasAccountStoreList && (
-                <Button asChild variant="outline" className="h-11 w-full justify-start gap-2">
-                  <Link href="/stores" onClick={() => onOpenChange(false)}>
-                    <Store className="size-4" aria-hidden />
-                    {t("nav.backToStores")}
-                  </Link>
-                </Button>
+              {actingAsStaff && (
+                <MenuRow
+                  icon={LogOut}
+                  label={t("nav.logoutStaffSession")}
+                  onClick={() => {
+                    close();
+                    handleReturnToPicker();
+                  }}
+                />
               )}
 
-              <Button
-                variant="outline"
-                className="text-destructive hover:text-destructive h-11 w-full justify-start gap-2"
+              <MenuRow
+                icon={LogOut}
+                label={linkedStaff ? t("nav.logoutAccount") : t("nav.logoutOwnerAccount")}
+                tone="destructive"
                 onClick={() => {
-                  onOpenChange(false);
+                  close();
                   handleOwnerAccountLogout();
                 }}
-              >
-                <LogOut className="size-4" aria-hidden />
-                {linkedStaff ? t("nav.logoutAccount") : t("nav.logoutOwnerAccount")}
-              </Button>
-            </div>
+              />
+            </MenuGroup>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          <div
+            role="status"
+            className={cn("shrink-0 pb-[env(safe-area-inset-bottom)]", syncStatus.className)}
+          >
+            <p className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium">
+              <SyncStatusIcon className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{syncStatus.label}</span>
+            </p>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <ClockInOutDialog open={clockOpen} onOpenChange={setClockOpen} storeId={storeId} />
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   );
 }

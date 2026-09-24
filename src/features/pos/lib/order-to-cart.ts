@@ -1,3 +1,4 @@
+import { POS_ONLINE_PLATFORMS, type PosOnlinePlatform } from "@/config/aggregator.config";
 import type { ResumeExtras } from "../hooks/use-pos-cart";
 import type {
   CartCustomer,
@@ -13,6 +14,7 @@ import type {
  */
 export type ResumableOrder = PosOrderDisplay & {
   guestCount?: number | null;
+  tableId?: string | null;
   discountAmount?: number | string | null;
   discountReason?: string | null;
 };
@@ -83,10 +85,21 @@ export function buildResumeExtras(
   customer: CartCustomer | null
 ): ResumeExtras {
   const discount = Number(order.discountAmount ?? 0);
+  const onlinePlatform = (POS_ONLINE_PLATFORMS as readonly string[]).includes(order.source)
+    ? (order.source as PosOnlinePlatform)
+    : null;
   return {
-    orderType: order.orderType === "TAKEAWAY" ? "TAKEAWAY" : "DINE_IN",
+    // A bill saved under a delivery platform comes back under it; any other
+    // DELIVERY (there is none from the till today) falls back to Dine In.
+    orderType: onlinePlatform
+      ? "DELIVERY"
+      : order.orderType === "TAKEAWAY"
+        ? "TAKEAWAY"
+        : "DINE_IN",
+    onlinePlatform,
     guestCount: order.guestCount && order.guestCount > 0 ? order.guestCount : 1,
-    tableNumber: order.tableNumber ?? "",
+    tableNumber: order.tableNumber ?? order.tableLabel ?? "",
+    tableId: order.orderType === "DINE_IN" ? (order.tableId ?? null) : null,
     customer,
     discountSource:
       Number.isFinite(discount) && discount > 0

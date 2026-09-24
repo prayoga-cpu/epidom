@@ -89,10 +89,44 @@ describe("PosModeStatusBar — switch user", () => {
     expect(usePosSession.getState().staffName).toBe("Sam");
   });
 
+  it("shows the name only, not the role", () => {
+    render(<PosModeStatusBar storeId="store-1" />);
+    const button = screen.getByRole("button", { name: /cashierCheckout\.topBar\.switchUser/ });
+    expect(button).not.toHaveTextContent("CASHIER");
+  });
+
   it("no persona, no button", () => {
     usePosSession.setState({ isActive: false, staffName: null, staffRole: null });
     render(<PosModeStatusBar storeId="store-1" />);
     expect(screen.queryByRole("button", { name: /switchUser/ })).toBeNull();
+  });
+});
+
+describe("PosModeStatusBar — More menu", () => {
+  it("sits right of the staff badge, flush with the bar's right edge, with no visible label", () => {
+    const onOverflowClick = vi.fn();
+    render(<PosModeStatusBar storeId="store-1" onOverflowClick={onOverflowClick} />);
+    const more = screen.getByRole("button", { name: "common.actions.more" });
+    const staff = screen.getByRole("button", { name: /cashierCheckout\.topBar\.switchUser/ });
+    expect(staff.nextElementSibling).toBe(more);
+    expect(more.parentElement!.lastElementChild).toBe(more);
+    // The badge and the More button touch — no gap between them.
+    expect(more.parentElement!.className).not.toMatch(/(^|\s)gap-/);
+    expect(more).toHaveTextContent("");
+    // The Epidom mark, then the hamburger to its right.
+    const icons = more.querySelectorAll("svg");
+    expect(icons).toHaveLength(2);
+    expect(icons[1]!.getAttribute("class")).toContain("lucide-menu");
+    expect(more.className).not.toMatch(/(^|\s)h-(\d|\[|px|full)/);
+
+    fireEvent.click(more);
+    expect(onOverflowClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays reachable with no persona", () => {
+    usePosSession.setState({ isActive: false, staffName: null, staffRole: null });
+    render(<PosModeStatusBar storeId="store-1" onOverflowClick={() => {}} />);
+    expect(screen.getByRole("button", { name: "common.actions.more" })).toBeInTheDocument();
   });
 });
 

@@ -9,7 +9,7 @@ import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { OrderSource } from "@prisma/client";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
-import { commissionRate, AGGREGATOR_LABELS } from "@/config/aggregator.config";
+import { commissionRate, ONLINE_PLATFORM_LABELS } from "@/config/aggregator.config";
 import { shiftFilter, paymentMethodFilter } from "@/lib/finance/report-filters";
 
 export const dynamic = "force-dynamic";
@@ -18,10 +18,7 @@ const SOURCE_LABELS: Record<OrderSource, string> = {
   MANUAL: "Manual",
   STOREFRONT: "Storefront",
   POS: "POS Cashier",
-  GOFOOD: AGGREGATOR_LABELS.GOFOOD,
-  GRABFOOD: AGGREGATOR_LABELS.GRABFOOD,
-  SHOPEEFOOD: AGGREGATOR_LABELS.SHOPEEFOOD,
-  TOKOPEDIA: AGGREGATOR_LABELS.TOKOPEDIA,
+  ...ONLINE_PLATFORM_LABELS,
 };
 
 export const GET = withApiHandler(
@@ -78,7 +75,8 @@ export const GET = withApiHandler(
         label: SOURCE_LABELS[g.source] ?? g.source,
         orderCount: g._count.id,
         revenue: Math.round(revenue * 100) / 100,
-        commissionPct: commission * 100,
+        // Rounded to 2 decimals: 0.14 * 100 is 14.000000000000002 in floating point.
+        commissionPct: Math.round(commission * 10000) / 100,
         commissionAmount,
         taxAmount,
         processingFeeAmount,

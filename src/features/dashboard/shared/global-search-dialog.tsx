@@ -154,7 +154,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         id: "supplier-orders",
         title: t("management.supplierOrders.title"),
         description: t("management.supplierOrders.description"),
-        href: `/store/${storeId}/management?tab=stock`,
+        href: `/store/${storeId}/management?tab=delivery`,
         icon: <FileText className="size-4" />,
         category: t("search.categories.management"),
         gateHref: "/management",

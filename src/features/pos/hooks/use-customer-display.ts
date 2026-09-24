@@ -530,10 +530,13 @@ export function useCustomerDisplaySnapshot(storeId: string): CustomerDisplaySnap
  */
 export function useCustomerIntakeChannel(storeId: string): {
   status: CustomerDisplayIntakeStatus | null;
+  /** Bumped each time the cashier asks for the customer's details; 0 = never. */
+  askedAt: number;
   sendPhone: (phone: string | null) => void;
   sendDetails: (name: string, email: string) => void;
 } {
   const [status, setStatus] = useState<CustomerDisplayIntakeStatus | null>(null);
+  const [askedAt, setAskedAt] = useState(0);
   const channelRef = useRef<BroadcastChannel | null>(null);
 
   useEffect(() => {
@@ -542,6 +545,7 @@ export function useCustomerIntakeChannel(storeId: string): {
     channelRef.current = channel;
     channel.onmessage = (event: MessageEvent<CustomerDisplayMessage>) => {
       if (event.data?.type === "customer-status") setStatus(event.data.status);
+      else if (event.data?.type === "ask-details") setAskedAt(Date.now());
     };
     return () => {
       channel.close();
@@ -559,5 +563,17 @@ export function useCustomerIntakeChannel(storeId: string): {
     channelRef.current?.postMessage({ type: "customer-details", name, email });
   }, []);
 
-  return { status, sendPhone, sendDetails };
+  return { status, askedAt, sendPhone, sendDetails };
+}
+
+/**
+ * Cashier side: open the details form on the customer display ("please enter
+ * your WhatsApp number"). Fire-and-forget over the same channel the display
+ * already listens on; a display that isn't open simply never hears it.
+ */
+export function askCustomerForDetails(storeId: string): void {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") return;
+  const channel = new BroadcastChannel(customerDisplayChannelName(storeId));
+  channel.postMessage({ type: "ask-details" } satisfies CustomerDisplayMessage);
+  channel.close();
 }

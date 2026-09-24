@@ -1,11 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { cartItemsToWireLines } from "../lib/cart-wire";
+import type { PosOnlinePlatform } from "@/config/aggregator.config";
+import type { CartOrderType } from "./use-pos-cart";
 import type { CartDiscountSource, CartItem } from "../types/pos.types";
 
 export interface HoldOrderInput {
   items: CartItem[];
-  orderType: "DINE_IN" | "TAKEAWAY";
+  orderType: CartOrderType;
+  /** Set with DELIVERY only: the platform the order came from ("Others"). */
+  onlinePlatform?: PosOnlinePlatform;
   /** Pax, DINE_IN only — carried through to finalize so a held dine-in order
    * keeps the guest count the cashier already entered. */
   guestCount?: number;
@@ -33,9 +37,11 @@ export interface HoldOrderInput {
 /** The slice of the cart store a Save Bill reads. */
 export interface CartHoldSource {
   items: CartItem[];
-  orderType: "DINE_IN" | "TAKEAWAY";
+  orderType: CartOrderType;
+  onlinePlatform: PosOnlinePlatform | null;
   guestCount: number;
   tableNumber: string;
+  tableId: string | null;
   customer: { id: string; name: string; phone?: string | null } | null;
   discountSource: CartDiscountSource | null;
   resumingOrderId: string | null;
@@ -54,12 +60,20 @@ export function cartToHoldInput(
   cart: CartHoldSource,
   extra: { shiftId?: string; notes?: string; label?: string; tableNumber?: string } = {}
 ): HoldOrderInput {
+  const tableNumber = (extra.tableNumber ?? cart.tableNumber).trim();
   return {
     items: cart.items,
     orderType: cart.orderType,
+    onlinePlatform: cart.orderType === "DELIVERY" ? (cart.onlinePlatform ?? undefined) : undefined,
     guestCount: cart.orderType === "DINE_IN" ? cart.guestCount : undefined,
     // The Save Bill dialog lets the cashier correct the table, so it wins over the cart's.
-    tableNumber: (extra.tableNumber ?? cart.tableNumber).trim() || undefined,
+    tableNumber: tableNumber || undefined,
+    // A registered table stays linked only while its label is what gets saved:
+    // retyping it in the Save Bill dialog makes it a custom table.
+    tableId:
+      cart.orderType === "DINE_IN" && cart.tableId && tableNumber === cart.tableNumber.trim()
+        ? cart.tableId
+        : undefined,
     customerId: cart.customer?.id,
     customerPhone: cart.customer?.phone ?? undefined,
     customerName: cart.customer?.name ?? (extra.label?.trim() || undefined),
@@ -90,6 +104,7 @@ export function buildHoldBody(input: HoldOrderInput) {
   return {
     items: cartItemsToWireLines(input.items),
     orderType: input.orderType,
+    onlinePlatform: input.onlinePlatform,
     guestCount: input.guestCount,
     tableId: input.tableId,
     tableNumber: input.tableNumber,

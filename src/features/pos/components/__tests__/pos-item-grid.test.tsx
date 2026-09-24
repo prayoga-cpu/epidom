@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import type { PosMenuCategory } from "../../types/pos.types";
 
 vi.mock("@/components/lang/i18n-provider", () => ({
@@ -49,6 +50,7 @@ const renderGrid = (
     <PosItemGrid
       categories={categories}
       selectedCategory={null}
+      onSelectCategory={() => {}}
       searchQuery=""
       onItemClick={onItemClick}
       viewMode={viewMode}
@@ -157,14 +159,188 @@ describe("PosItemGrid view modes", () => {
       <PosItemGrid
         categories={withCustom}
         selectedCategory={null}
+        onSelectCategory={() => {}}
         searchQuery=""
         onItemClick={() => {}}
         viewMode="columns"
         customDepartmentLabel="Hair Salon"
       />
     );
-    expect(screen.getByText("Hair Salon")).toBeInTheDocument();
-    expect(screen.getByText("Cut")).toBeInTheDocument();
+    // The category cards: the custom line's own under its own heading.
+    const block = screen.getByText("Hair Salon").closest("section")!;
+    expect(within(block).getByRole("button", { name: /Hair/ })).toBeInTheDocument();
+    expect(within(block).queryByRole("button", { name: /Mains/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Mains/ })).toBeInTheDocument();
+  });
+});
+
+describe("PosItemGrid — category cards, then the category's items", () => {
+  const menu: PosMenuCategory[] = [
+    {
+      name: "Coffee",
+      items: [
+        {
+          id: "c1",
+          name: "Cafe Latte",
+          price: 26,
+          imageUrl: "/latte.png",
+          isAvailable: true,
+          department: "BAR",
+        },
+        { id: "c2", name: "Cappuccino", price: 26, isAvailable: true, department: "BAR" },
+      ],
+    },
+    {
+      name: "Pastry",
+      items: [
+        { id: "p1", name: "Croissant", price: 3, isAvailable: true, department: "KITCHEN" },
+        { id: "p2", name: "Iced Tea", price: 4, isAvailable: true, department: "BAR" },
+      ],
+    },
+    {
+      name: "Sets",
+      items: [{ id: "s1", name: "Brunch Set", price: 15, isAvailable: true, department: "BOTH" }],
+    },
+  ];
+
+  /** The grid with its category state held the way PosShell holds it. */
+  function Harness(props: {
+    department?: "KITCHEN" | "BAR" | "CUSTOM" | null;
+    searchQuery?: string;
+    viewMode?: "grid" | "columns" | "list";
+    onItemClick?: () => void;
+  }) {
+    const [category, setCategory] = useState<string | null>(null);
+    return (
+      <PosItemGrid
+        categories={menu}
+        selectedCategory={category}
+        onSelectCategory={setCategory}
+        selectedDepartment={props.department ?? null}
+        searchQuery={props.searchQuery ?? ""}
+        onItemClick={props.onItemClick ?? (() => {})}
+        viewMode={props.viewMode}
+      />
+    );
+  }
+
+  const card = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name}`) });
+
+  it("opens on one card per category, with its item count, and no items yet", () => {
+    render(<Harness />);
+    expect(screen.getByRole("heading", { level: 2, name: "pos.menu.categories" })).toBeVisible();
+    expect(card("Coffee")).toHaveTextContent("pos.menu.itemCount");
+    expect(card("Pastry")).toBeInTheDocument();
+    expect(card("Sets")).toBeInTheDocument();
+    expect(screen.queryByText("Cafe Latte")).toBeNull();
+  });
+
+  it.each(["grid", "columns", "list"] as const)(
+    "%s: a card opens its items with price and image, the Back card first; Back returns to the cards",
+    (viewMode) => {
+      const onItemClick = vi.fn();
+      const { container } = render(<Harness viewMode={viewMode} onItemClick={onItemClick} />);
+      fireEvent.click(card("Coffee"));
+
+      expect(screen.getByRole("heading", { level: 2, name: "Coffee" })).toBeInTheDocument();
+      expect(screen.getByText("Cafe Latte")).toBeInTheDocument();
+      expect(screen.getAllByText("EUR 26.00")).toHaveLength(2);
+      if (viewMode !== "columns")
+        expect(container.querySelector('img[src="/latte.png"]')).not.toBeNull();
+      expect(screen.queryByText("Croissant")).toBeNull();
+
+      // The Back card is the first tile of the items.
+      const back = screen.getByRole("button", { name: /common\.actions\.back/ });
+      expect(back.parentElement!.firstElementChild).toBe(back);
+      expect(back).toHaveTextContent("Coffee");
+
+      fireEvent.click(screen.getByText("Cappuccino"));
+      expect(onItemClick).toHaveBeenCalledWith(expect.objectContaining({ id: "c2" }));
+
+      fireEvent.click(back);
+      expect(card("Pastry")).toBeInTheDocument();
+      expect(screen.queryByText("Cafe Latte")).toBeNull();
+    }
+  );
+
+  it("the Categories crumb also goes back to the cards", () => {
+    render(<Harness />);
+    fireEvent.click(card("Pastry"));
+    fireEvent.click(screen.getByRole("button", { name: "pos.menu.categories" }));
+    expect(card("Coffee")).toBeInTheDocument();
+  });
+
+  it("the Drink tab lists only categories with drinks, and only their drinks", () => {
+    render(<Harness department="BAR" />);
+    expect(screen.getByText("pos.menu.drink")).toBeInTheDocument();
+    fireEvent.click(card("Pastry"));
+    expect(screen.getByText("Iced Tea")).toBeInTheDocument();
+    expect(screen.queryByText("Croissant")).toBeNull();
+  });
+
+  it("an item made in both the kitchen and the bar is under Food and under Drink", () => {
+    const { unmount } = render(<Harness department="KITCHEN" />);
+    expect(card("Sets")).toBeInTheDocument();
+    unmount();
+    render(<Harness department="BAR" />);
+    expect(card("Sets")).toBeInTheDocument();
+  });
+
+  it("the Food tab keeps the cards while it has more than one category", () => {
+    render(
+      <PosItemGrid
+        categories={menu}
+        selectedCategory={null}
+        onSelectCategory={() => {}}
+        selectedDepartment="KITCHEN"
+        searchQuery=""
+        onItemClick={() => {}}
+      />
+    );
+    // Pastry (Croissant) and Sets (BOTH) — two cards; Coffee is all drinks.
+    expect(card("Pastry")).toBeInTheDocument();
+    expect(card("Sets")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Coffee/ })).toBeNull();
+  });
+
+  it("with only one category there is no card to tap and no Back card", () => {
+    render(
+      <PosItemGrid
+        categories={[menu[0]]}
+        selectedCategory={null}
+        onSelectCategory={() => {}}
+        searchQuery=""
+        onItemClick={() => {}}
+      />
+    );
+    expect(screen.getByRole("heading", { level: 2, name: "Coffee" })).toBeInTheDocument();
+    expect(screen.getByText("Cafe Latte")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /common\.actions\.back/ })).toBeNull();
+    // The Categories crumb is plain text: there are no cards to go back to.
+    expect(screen.queryByRole("button", { name: "pos.menu.categories" })).toBeNull();
+  });
+
+  it("an empty Food or Drink tab says where the department is set", () => {
+    const drinksOnly = [menu[0]];
+    render(
+      <PosItemGrid
+        categories={drinksOnly}
+        selectedCategory={null}
+        onSelectCategory={() => {}}
+        selectedDepartment="KITCHEN"
+        searchQuery=""
+        onItemClick={() => {}}
+      />
+    );
+    expect(screen.getByText("pos.menu.noFoodItems")).toBeInTheDocument();
+  });
+
+  it("a search skips the cards and looks through every category at once", () => {
+    render(<Harness searchQuery="c" />);
+    expect(screen.getByText("Cafe Latte")).toBeInTheDocument();
+    expect(screen.getByText("Croissant")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Pastry" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /common\.actions\.back/ })).toBeNull();
   });
 });
 

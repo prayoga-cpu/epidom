@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Monitor, UtensilsCrossed, ChefHat, Grid2X2, MoreHorizontal } from "lucide-react";
+import { Monitor, UtensilsCrossed, ChefHat, Grid2X2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
@@ -10,7 +10,6 @@ import { useKdsSettings } from "@/features/pos/hooks/use-kds-settings";
 
 interface PosModeTabBarProps {
   storeId: string;
-  onOverflowClick: () => void;
 }
 
 const TABS = [
@@ -25,9 +24,10 @@ const TABS = [
  * a left rail costs 230px this shell doesn't have to sacrifice (see
  * docs/dashboard-revamp.md). Dapur hides entirely when the store has
  * kitchenDisplayEnabled off, mirroring sidebar.tsx's own allowedPages
- * filtering for a staff PIN persona with restricted page access.
+ * filtering for a staff PIN persona with restricted page access. The "More"
+ * menu lives in the status bar (PosModeStatusBar), not here.
  */
-export function PosModeTabBar({ storeId, onOverflowClick }: PosModeTabBarProps) {
+export function PosModeTabBar({ storeId }: PosModeTabBarProps) {
   const { t } = useI18n();
   const pathname = usePathname();
   const posSession = usePosSession();
@@ -69,15 +69,6 @@ export function PosModeTabBar({ storeId, onOverflowClick }: PosModeTabBarProps) 
           </Link>
         );
       })}
-      <button
-        type="button"
-        onClick={onOverflowClick}
-        className="text-muted-foreground flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition active:scale-[0.97]"
-        aria-label={t("common.actions.more")}
-      >
-        <MoreHorizontal className="size-5" aria-hidden />
-        <span className="truncate px-1">{t("common.actions.more")}</span>
-      </button>
     </nav>
   );
 }

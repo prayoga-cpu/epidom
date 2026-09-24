@@ -35,14 +35,18 @@ export function PosModeShell({ storeId, children, linkedStaff = false }: PosMode
     <PosModeUpgradeProvider>
       <PosModeToolbarSlotContext.Provider value={slot}>
         <div className="flex h-[calc(100dvh/var(--app-zoom,1))] w-full flex-col overflow-hidden">
-          <PosModeStatusBar storeId={storeId} toolbarSlotRef={setToolbarSlot} />
+          <PosModeStatusBar
+            storeId={storeId}
+            toolbarSlotRef={setToolbarSlot}
+            onOverflowClick={() => setOverflowOpen(true)}
+          />
           <PosModeUpgradeBanner />
 
           <main id="main-content" className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {children}
           </main>
 
-          <PosModeTabBar storeId={storeId} onOverflowClick={() => setOverflowOpen(true)} />
+          <PosModeTabBar storeId={storeId} />
         </div>
       </PosModeToolbarSlotContext.Provider>
 

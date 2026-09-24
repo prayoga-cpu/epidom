@@ -30,7 +30,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[70] bg-epi-navy-800/55 dark:bg-black/50",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-epi-navy-800/55 fixed inset-0 z-[70] dark:bg-black/50",
         className
       )}
       {...props}
@@ -43,6 +43,9 @@ function SheetContent({
   children,
   side = "right",
   navigation = false,
+  title,
+  description,
+  hideClose = false,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left";
@@ -58,6 +61,11 @@ function SheetContent({
    * the side is free to change.
    */
   navigation?: boolean;
+  /** Screen-reader title and description, in place of the generic ones below. */
+  title?: string;
+  description?: string;
+  /** Leave out the corner close button — for a sheet that draws its own. */
+  hideClose?: boolean;
 }) {
   return (
     <SheetPortal>
@@ -80,34 +88,37 @@ function SheetContent({
       >
         {/* Visually hidden title and description for accessibility */}
         <SheetPrimitive.Title className="sr-only">
-          {navigation ? "Navigation Menu" : "Sheet"}
+          {title ?? (navigation ? "Navigation Menu" : "Sheet")}
         </SheetPrimitive.Title>
         <SheetPrimitive.Description className="sr-only">
-          {navigation
-            ? "Navigation menu for accessing dashboard pages and features"
-            : "Sheet content"}
+          {description ??
+            (navigation
+              ? "Navigation menu for accessing dashboard pages and features"
+              : "Sheet content")}
         </SheetPrimitive.Description>
         {children}
-        <SheetPrimitive.Close
-          className={cn(
-            "ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none",
-            // Pinned to the screen edge the sheet is anchored to, so dismissing
-            // it is always a reach toward the side it will disappear into.
-            side === "left" ? "left-4" : "right-4"
-          )}
-        >
-          {navigation ? (
-            // Points the way the drawer travels when it closes.
-            side === "left" ? (
-              <ChevronLeft className="size-5" />
+        {!hideClose && (
+          <SheetPrimitive.Close
+            className={cn(
+              "ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none",
+              // Pinned to the screen edge the sheet is anchored to, so dismissing
+              // it is always a reach toward the side it will disappear into.
+              side === "left" ? "left-4" : "right-4"
+            )}
+          >
+            {navigation ? (
+              // Points the way the drawer travels when it closes.
+              side === "left" ? (
+                <ChevronLeft className="size-5" />
+              ) : (
+                <ChevronRight className="size-5" />
+              )
             ) : (
-              <ChevronRight className="size-5" />
-            )
-          ) : (
-            <XIcon className="size-4" />
-          )}
-          <span className="sr-only">Close</span>
-        </SheetPrimitive.Close>
+              <XIcon className="size-4" />
+            )}
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        )}
       </SheetPrimitive.Content>
     </SheetPortal>
   );

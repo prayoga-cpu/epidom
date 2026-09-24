@@ -67,6 +67,8 @@ vi.mock("@/lib/services/pos-order-settlement", () => ({
   buildPosOrderCreatedResponse: vi.fn(() => ({})),
   buildOrderItemCreateData: vi.fn(() => []),
   mapSettlementError: vi.fn(() => null),
+  posOrderSource: vi.fn((input: { onlinePlatform?: string }) => input.onlinePlatform ?? "POS"),
+  resolveStoreTableId: vi.fn(async () => null),
   SettlementError: class SettlementError extends Error {},
   POS_ORDER_TX_TIMEOUT_MS: 15000,
 }));

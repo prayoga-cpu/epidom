@@ -497,3 +497,61 @@ describe("settlePaymentMethodEnum", () => {
     ]);
   });
 });
+
+describe('online platform orders (the till\'s "Others")', () => {
+  const items = [
+    { menuItemId: "clh1234567890abcdefghijkl", name: "Latte", quantity: 1, unitPrice: 25000 },
+  ];
+
+  it("accepts a DELIVERY that names its platform, on checkout and on Save Bill", () => {
+    const order = {
+      items,
+      orderType: "DELIVERY",
+      onlinePlatform: "GOFOOD",
+      paymentMethod: "OTHER",
+      paymentNote: "GoFood",
+    };
+    expect(createPosOrderSchema.safeParse(order).success).toBe(true);
+    expect(
+      createHoldOrderSchema.safeParse({ items, orderType: "DELIVERY", onlinePlatform: "UBER_EATS" })
+        .success
+    ).toBe(true);
+  });
+
+  it("rejects a DELIVERY with no platform — the till has no other delivery flow", () => {
+    expect(
+      createPosOrderSchema.safeParse({ items, orderType: "DELIVERY", paymentMethod: "CASH" })
+        .success
+    ).toBe(false);
+    expect(createHoldOrderSchema.safeParse({ items, orderType: "DELIVERY" }).success).toBe(false);
+  });
+
+  it("rejects a platform on a Dine In or Take Away sale", () => {
+    const result = createPosOrderSchema.safeParse({
+      items,
+      orderType: "TAKEAWAY",
+      onlinePlatform: "GRABFOOD",
+      paymentMethod: "CASH",
+    });
+    expect(result.success).toBe(false);
+    expect(!result.success && result.error.issues[0].path).toEqual(["onlinePlatform"]);
+  });
+
+  it("rejects a platform the till can't record (not an order source it knows)", () => {
+    expect(
+      createPosOrderSchema.safeParse({
+        items,
+        orderType: "DELIVERY",
+        onlinePlatform: "TOKOPEDIA",
+        paymentMethod: "CASH",
+      }).success
+    ).toBe(false);
+  });
+
+  it("an old Dine In / Take Away payload (no platform) still parses — offline queues hold them", () => {
+    expect(
+      createPosOrderSchema.safeParse({ items, orderType: "DINE_IN", paymentMethod: "CASH" }).success
+    ).toBe(true);
+    expect(createHoldOrderSchema.safeParse({ items, orderType: "TAKEAWAY" }).success).toBe(true);
+  });
+});

@@ -19,6 +19,7 @@ import {
   SHIFT_REPORT_LABELS,
   TICKET_LABELS,
   resolveReceiptLocale,
+  saleTypeLabel,
   type ReceiptLocale,
 } from "@/lib/receipts/receipt-labels";
 
@@ -46,6 +47,9 @@ export interface OrderTicketData {
   queueNumber?: number | null;
   date: string;
   orderType?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
+  /** Order.source when it is a delivery platform (GOFOOD, UBER_EATS, …): the
+   * ticket then names the platform instead of a bare "Delivery". */
+  platform?: string | null;
   tableLabel?: string;
   /** Pax, dine-in only. */
   guestCount?: number | null;
@@ -122,13 +126,9 @@ export function buildOrderTicketEscPos(ticket: OrderTicketData): Uint8Array {
   lines(labelRow(receiptLabels.date, ticket.date, cols));
   if (ticket.tableLabel) lines(labelRow(receiptLabels.table, ticket.tableLabel, cols));
   const typeName =
-    ticket.orderType === "DINE_IN"
-      ? typeLabels.dineIn
-      : ticket.orderType === "TAKEAWAY"
-        ? typeLabels.takeaway
-        : ticket.orderType === "DELIVERY"
-          ? typeLabels.deliveryType
-          : null;
+    ticket.orderType || ticket.platform
+      ? saleTypeLabel(typeLabels, ticket.orderType, ticket.platform)
+      : null;
   if (typeName) {
     const pax =
       ticket.orderType === "DINE_IN" && ticket.guestCount ? ` (${ticket.guestCount} pax)` : "";

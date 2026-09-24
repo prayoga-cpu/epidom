@@ -1,17 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardList, Users, X } from "lucide-react";
+import { ChevronDown, ClipboardList, X } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
+import {
+  ONLINE_PLATFORMS_BY_MARKET,
+  POS_ONLINE_PLATFORMS,
+  type PosOnlinePlatform,
+} from "@/config/aggregator.config";
 import { cn } from "@/lib/utils";
-import { usePosCart, type CartOrderType } from "../hooks/use-pos-cart";
+import { usePosCart } from "../hooks/use-pos-cart";
 import { usePosOrdersSnapshot } from "../hooks/use-pos-orders-snapshot";
-import { formatPax } from "../lib/cart-format";
-import { GuestCountStepper } from "./guest-count-stepper";
+import { onlinePlatformLabel } from "../lib/order-channel";
 
 interface PosCartHeaderProps {
   storeId: string;
@@ -23,29 +33,37 @@ interface PosCartHeaderProps {
   onClose?: () => void;
 }
 
-const ORDER_TYPES: Array<{ value: CartOrderType; labelKey: string }> = [
+const ORDER_TYPES = [
   { value: "DINE_IN", labelKey: "cashierCart.header.dineIn" },
   { value: "TAKEAWAY", labelKey: "cashierCart.header.takeAway" },
-];
+] as const;
+
+const SEGMENT_CLASS =
+  "flex h-10 min-w-0 flex-1 touch-manipulation items-center justify-center gap-1 rounded-md px-2 text-sm font-medium transition-colors";
 
 /**
  * Top of the cart panel: the Order Queue shortcut with its live count, "Clear
- * sale", the Dine In | Take Away switch and — for dine-in — the pax/table chip.
+ * sale", and the Dine In | Take Away | Others switch.
  *
- * Order type, guests and table live in the cart store (not in a dialog), so
- * Save Bill and checkout inherit whatever the cashier set here without asking
- * again.
+ * "Others" is for an order that came in through a delivery platform and is
+ * keyed in by hand: it opens the platforms of the store's market (Fees & Taxes
+ * → Market) and, once one is picked, reads as that platform ("GoFood"). The
+ * sale is then a DELIVERY recorded against the platform (Order.source), which
+ * is what the daily report and the finance channel report split on.
+ *
+ * Order type lives in the cart store (not in a dialog), so Save Bill and
+ * checkout inherit it without asking again. Pax and table moved to the
+ * customer row's dialog (PosCartCustomer).
  */
 export function PosCartHeader({ storeId, onClear, onClose }: PosCartHeaderProps) {
   const { t } = useI18n();
   const { data: orders } = usePosOrdersSnapshot(storeId);
+  const { data: financeSettings } = useFinanceSettings(storeId);
 
   const orderType = usePosCart((s) => s.orderType);
-  const guestCount = usePosCart((s) => s.guestCount);
-  const tableNumber = usePosCart((s) => s.tableNumber);
+  const onlinePlatform = usePosCart((s) => s.onlinePlatform);
   const setOrderType = usePosCart((s) => s.setOrderType);
-  const setGuestCount = usePosCart((s) => s.setGuestCount);
-  const setTableNumber = usePosCart((s) => s.setTableNumber);
+  const setOnlinePlatform = usePosCart((s) => s.setOnlinePlatform);
   const hasSaleState = usePosCart(
     (s) =>
       s.items.length > 0 ||
@@ -59,14 +77,15 @@ export function PosCartHeader({ storeId, onClear, onClose }: PosCartHeaderProps)
   // the same list the queue page shows, so the badge and the page agree.
   const queueCount = orders?.length ?? 0;
 
-  const paxChip = [
-    formatPax(t, guestCount),
-    tableNumber.trim()
-      ? t("cashierCart.header.tableShort").replace("{table}", tableNumber.trim())
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // INDONESIA mirrors the server's default when a store has no settings row.
+  // A platform already on the bill (a resumed bill saved before the market
+  // changed) stays listed, so the menu never hides the current choice.
+  const marketPlatforms = ONLINE_PLATFORMS_BY_MARKET[financeSettings?.market ?? "INDONESIA"];
+  const platforms: PosOnlinePlatform[] =
+    onlinePlatform && !marketPlatforms.includes(onlinePlatform)
+      ? [onlinePlatform, ...marketPlatforms]
+      : marketPlatforms;
+  const isOnline = orderType === "DELIVERY" && onlinePlatform !== null;
 
   return (
     <div className="shrink-0 space-y-2 border-b p-3">
@@ -109,68 +128,78 @@ export function PosCartHeader({ storeId, onClear, onClose }: PosCartHeaderProps)
         </div>
       </div>
 
-      {/* flex-wrap: at the 320px panel width the switch and the pax chip don't
-          both fit on one line, so the chip drops underneath; on a wider panel
-          they share the row. min-w keeps the switch from collapsing first. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div
-          role="radiogroup"
-          aria-label={t("pos.checkout.orderType")}
-          className="bg-muted flex min-w-[10.5rem] flex-1 rounded-lg p-1"
-        >
-          {ORDER_TYPES.map(({ value, labelKey }) => {
-            const selected = orderType === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                onClick={() => setOrderType(value)}
-                className={cn(
-                  "h-10 min-w-0 flex-1 touch-manipulation rounded-md px-2 text-sm font-medium transition-colors",
-                  selected ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-                )}
-              >
-                <span className="truncate">{t(labelKey)}</span>
-              </button>
-            );
-          })}
-        </div>
+      <div
+        role="radiogroup"
+        aria-label={t("pos.checkout.orderType")}
+        className="bg-muted flex rounded-lg p-1"
+      >
+        {ORDER_TYPES.map(({ value, labelKey }) => {
+          const selected = orderType === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => setOrderType(value)}
+              className={cn(
+                SEGMENT_CLASS,
+                selected ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              <span className="truncate">{t(labelKey)}</span>
+            </button>
+          );
+        })}
 
-        {orderType === "DINE_IN" && (
-          // Not auto-closed on change: the cashier bumps the stepper several
-          // times and types a table, so it stays until they tap away.
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="h-10 min-w-0 touch-manipulation gap-1.5 px-3"
-                aria-label={t("cashierCart.header.paxTableLabel")}
-              >
-                <Users className="h-4 w-4" />
-                <span className="truncate">{paxChip}</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-72 space-y-3">
-              <div className="space-y-1.5">
-                <Label>{t("pos.checkout.guestCount")}</Label>
-                <GuestCountStepper idPrefix="cart" value={guestCount} onChange={setGuestCount} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cart-table-number">{t("pos.checkout.tableOptional")}</Label>
-                <Input
-                  id="cart-table-number"
-                  className="h-11"
-                  placeholder="A1, B2..."
-                  value={tableNumber}
-                  onChange={(e) => setTableNumber(e.target.value)}
-                  maxLength={40}
-                />
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
+        {/* Closes on pick, like a native select: the segment itself then shows
+            the choice, so there is nothing left to look at in the menu. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={isOnline}
+              aria-label={
+                isOnline
+                  ? `${t("cashierCart.header.others")}: ${onlinePlatformLabel(t, onlinePlatform)}`
+                  : t("cashierCart.header.others")
+              }
+              className={cn(
+                SEGMENT_CLASS,
+                isOnline ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              <span className="truncate">
+                {isOnline ? onlinePlatformLabel(t, onlinePlatform) : t("cashierCart.header.others")}
+              </span>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+              {t("cashierCart.header.onlineOrderFrom")}
+            </DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={isOnline ? onlinePlatform : ""}
+              onValueChange={(value) => {
+                if ((POS_ONLINE_PLATFORMS as readonly string[]).includes(value)) {
+                  setOnlinePlatform(value as PosOnlinePlatform);
+                }
+              }}
+            >
+              {platforms.map((platform) => (
+                <DropdownMenuRadioItem
+                  key={platform}
+                  value={platform}
+                  className="min-h-11 touch-manipulation text-sm"
+                >
+                  {onlinePlatformLabel(t, platform)}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

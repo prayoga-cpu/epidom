@@ -38,9 +38,7 @@ function renderTabBar(opts: {
   mockKdsSettings.mockReturnValue({
     data: { kitchenDisplayEnabled: opts.kitchenDisplayEnabled ?? true },
   });
-  return render(
-    <PosModeTabBar storeId="store-1" onOverflowClick={() => {}} />
-  );
+  return render(<PosModeTabBar storeId="store-1" />);
 }
 
 function tabHrefs() {

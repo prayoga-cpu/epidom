@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wifi, WifiOff, UserCircle2 } from "lucide-react";
+import { Menu, Wifi, WifiOff, UserCircle2 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { PosPrinterMenu } from "@/features/pos/components/pos-printer-menu";
+import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { PosModeShiftChip } from "./pos-mode-shift-chip";
 
 interface PosModeStatusBarProps {
@@ -17,18 +18,24 @@ interface PosModeStatusBarProps {
    * empty on every other route, where it is just a spacer.
    */
   toolbarSlotRef?: (element: HTMLElement | null) => void;
+  /** Opens PosModeOverflowMenu — the Epidom-mark button at the bar's right edge. */
+  onOverflowClick?: () => void;
 }
 
 /**
  * Persistent 44px strip above every POS Mode route — online status, shift
- * label, store name, staff badge, printer menu. Ports the desktop-branch content
+ * label, store name, printer menu, staff badge, "More" menu. Ports the desktop-branch content
  * pos-header.tsx used to render per-page; here it's shell-level so it
  * doesn't repaint between /pos, /pos/orders, /pos/kds, /tables.
  */
-export function PosModeStatusBar({ storeId, toolbarSlotRef }: PosModeStatusBarProps) {
+export function PosModeStatusBar({
+  storeId,
+  toolbarSlotRef,
+  onOverflowClick,
+}: PosModeStatusBarProps) {
   const { t } = useI18n();
   const { store } = useCurrentStore();
-  const { staffName, staffRole, openPicker } = usePosSession();
+  const { staffName, openPicker } = usePosSession();
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -46,7 +53,7 @@ export function PosModeStatusBar({ storeId, toolbarSlotRef }: PosModeStatusBarPr
   const switchUserLabel = t("cashierCheckout.topBar.switchUser");
 
   return (
-    // No right padding: the staff button below runs edge to edge, so it can sit
+    // No right padding: the "More" button below runs edge to edge, so it can sit
     // flush against the right side (and the full height) of the bar.
     //
     // Deliberately NO `items-center`: a flex row's default alignment stretches every
@@ -97,28 +104,50 @@ export function PosModeStatusBar({ storeId, toolbarSlotRef }: PosModeStatusBarPr
         className="hidden min-w-0 flex-1 gap-2 md:flex"
       />
 
-      <div className="ml-auto flex shrink-0 gap-2">
+      {/* min-w-0 (not shrink-0): on a narrow phone with a long staff name the four
+          controls don't fit, and the name truncates instead of pushing the More
+          button off-screen. The printer and More buttons keep their width. */}
+      <div className="ml-auto flex min-w-0 gap-2">
         <PosPrinterMenu storeId={storeId} />
-        {staffName && (
-          // A real button, not a badge: on a shared till the cashier taps their own
-          // name to hand over. Opens the same "Switch Account" picker as the
-          // overflow menu (StoreAccessGate / PosStaffGate read `pickerOpen`), with
-          // the current session left intact underneath so backing out is free.
-          // Square and full-height — no fixed height, so the group's default stretch
-          // fills the bar (min-h-10 keeps the 40px touch floor): a block that ends
-          // at the bar's edges, not a pill inside it.
-          <button
-            type="button"
-            onClick={openPicker}
-            title={switchUserLabel}
-            className="bg-primary/10 text-primary hover:bg-primary/15 flex min-h-10 shrink-0 cursor-pointer touch-manipulation items-center gap-1.5 rounded-none px-4 text-xs font-medium transition-colors"
-          >
-            <UserCircle2 className="h-4 w-4" />
-            <span className="sr-only">{switchUserLabel}: </span>
-            <span className="max-w-[6rem] truncate lg:max-w-[8rem]">{staffName}</span>
-            {staffRole && <span className="text-primary/60 hidden xl:inline">· {staffRole}</span>}
-          </button>
-        )}
+        {/* No gap inside: the staff badge and the More button read as one block. */}
+        <div className="flex min-w-0">
+          {staffName && (
+            // A real button, not a badge: on a shared till the cashier taps their own
+            // name to hand over. Opens the same "Switch Account" picker as the
+            // overflow menu (StoreAccessGate / PosStaffGate read `pickerOpen`), with
+            // the current session left intact underneath so backing out is free.
+            // Square and full-height — no fixed height, so the group's default stretch
+            // fills the bar (min-h-10 keeps the 40px touch floor): a block that ends
+            // at the bar's edges, not a pill inside it.
+            <button
+              type="button"
+              onClick={openPicker}
+              title={switchUserLabel}
+              className="bg-primary/10 text-primary hover:bg-primary/15 flex min-h-10 min-w-0 cursor-pointer touch-manipulation items-center gap-1.5 rounded-none px-4 text-xs font-medium transition-colors"
+            >
+              <UserCircle2 className="h-4 w-4 shrink-0" />
+              <span className="sr-only">{switchUserLabel}: </span>
+              {/* Name only — the role repeated what the name usually already says
+                ("Owner · OWNER"), and the More menu still shows it. */}
+              <span className="max-w-[6rem] truncate lg:max-w-[8rem]">{staffName}</span>
+            </button>
+          )}
+          {onOverflowClick && (
+            // Was the last tab of the bottom bar. The Epidom mark stands in for a
+            // "More" label, and the hamburger beside it says the mark opens a menu;
+            // aria-label still names it for screen readers. Full-height like the
+            // printer button.
+            <button
+              type="button"
+              onClick={onOverflowClick}
+              aria-label={t("common.actions.more")}
+              className="hover:bg-muted flex shrink-0 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-none px-2 transition-colors active:scale-[0.97]"
+            >
+              <EpidomMark size={32} />
+              <Menu className="text-muted-foreground h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );

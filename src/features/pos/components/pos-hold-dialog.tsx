@@ -12,12 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Info, Loader2 } from "lucide-react";
+import type { PosOnlinePlatform } from "@/config/aggregator.config";
+import type { CartOrderType } from "../hooks/use-pos-cart";
 import { formatPax } from "../lib/cart-format";
+import { onlinePlatformLabel } from "../lib/order-channel";
 import { GUEST_COUNT_MAX, GUEST_COUNT_MIN } from "./guest-count-stepper";
 
 const holdFormSchema = z.object({
   customerName: z.string().optional(),
-  orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
+  orderType: z.enum(["DINE_IN", "TAKEAWAY", "DELIVERY"]),
   guestCount: z.number().int().min(GUEST_COUNT_MIN).max(GUEST_COUNT_MAX).optional(),
   tableNumber: z.string().optional(),
   notes: z.string().optional(),
@@ -27,7 +30,9 @@ export type HoldFormValues = z.infer<typeof holdFormSchema>;
 
 /** What Save Bill starts from — everything the cart already knows. */
 export interface HoldDialogDefaults {
-  orderType: "DINE_IN" | "TAKEAWAY";
+  orderType: CartOrderType;
+  /** The cart's "Others" platform, for the summary line. */
+  onlinePlatform: PosOnlinePlatform | null;
   guestCount: number;
   tableNumber: string;
   /** The attached customer's name, or null for a walk-in. */
@@ -102,10 +107,14 @@ export function PosHoldDialog({
   };
 
   const summary = [
-    t(defaults.orderType === "DINE_IN" ? "cashierCart.header.dineIn" : "cashierCart.header.takeAway"),
-    defaults.orderType === "DINE_IN"
-      ? formatPax(t, defaults.guestCount)
-      : null,
+    defaults.onlinePlatform
+      ? onlinePlatformLabel(t, defaults.onlinePlatform)
+      : t(
+          defaults.orderType === "DINE_IN"
+            ? "cashierCart.header.dineIn"
+            : "cashierCart.header.takeAway"
+        ),
+    defaults.orderType === "DINE_IN" ? formatPax(t, defaults.guestCount) : null,
     defaults.customerName,
   ]
     .filter(Boolean)

@@ -160,6 +160,8 @@ export const id = {
     departmentBarDetailed: "Bar / Minuman",
     departmentBoth: "Keduanya",
     departmentBothDetailed: "Keduanya (Dapur & Bar)",
+    departmentPosHint:
+      "Menentukan tab di POS: item “Dapur / Makanan” tampil di tab Makanan, item “Bar / Minuman” di tab Minuman. Juga menentukan item dikirim ke tiket dapur atau bar.",
     departmentUnassigned: "Belum Ditentukan",
     recipe: "Resep",
     price: "Harga",
@@ -1358,6 +1360,8 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
     posOfflineSyncPending: "{count} pesanan offline menunggu sinkronisasi",
     posOfflineSyncing: "Menyinkronkan...",
     posOfflineSyncNow: "Sinkronkan Sekarang",
+    posSyncSales: "Sinkronkan Penjualan",
+    posAllSalesSynced: "Semua penjualan tersinkronisasi",
     posOfflineLastSynced: "Terakhir disinkronkan: {date}",
     posOfflineNeverSynced: "Belum pernah disinkronkan di perangkat ini",
     entityPreviewCostPerBatch: "Biaya per Batch",
@@ -2639,8 +2643,9 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
 
     // Create Order Dialog
     createOrderDialog: {
-      title: "Buat Pengingat Pesanan",
-      description: "Buat pengingat untuk memesan bahan mentah dari pemasok",
+      title: "Buat Pesanan",
+      description:
+        "Pesan bahan mentah dari pemasok. Pesanan menunggu di Menunggu kiriman sampai Anda ketuk Diterima.",
       supplier: "Pemasok",
       selectSupplier: "Pilih pemasok",
       suppliersForMaterial: "Pemasok untuk bahan ini",
@@ -2663,10 +2668,10 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
       priority: "Prioritas",
       notes: "Catatan",
       notesPlaceholder: "Tambahkan instruksi khusus atau catatan...",
-      notesHint: "Catatan opsional untuk pengingat pesanan ini",
+      notesHint: "Catatan opsional untuk pesanan ini",
       submit: "Buat Pesanan",
       createdTitle: "Pesanan dibuat",
-      createdDescription: "Cetak penawaran pesanan atau kirim ke pemasok",
+      createdDescription: "Pesanan sekarang ada di Menunggu kiriman. Ketuk Diterima saat barang tiba.",
       printQuote: "Cetak penawaran pesanan",
       printQuoteHint:
         "Penawaran terbuka di tab baru lengkap dengan detail toko dan total, siap dicetak atau disimpan sebagai PDF.",
@@ -3222,6 +3227,24 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
     production: "Produksi",
     history: "Riwayat",
     stock: "Stok",
+    // Stock page tabs: Item | Delivery Order (History is the round button beside them)
+    item: "Item",
+    deliveryOrder: "Pesanan Pengiriman",
+    log: "Log",
+    // The Log tab: every stock movement, newest first
+    movementLog: {
+      types: {
+        PURCHASE: "Pengiriman",
+        PRODUCTION_IN: "Hasil produksi",
+        PRODUCTION_OUT: "Dipakai produksi",
+        SALE: "Penjualan",
+        ADJUSTMENT: "Penyesuaian",
+        WASTE: "Limbah",
+        RETURN: "Dikembalikan",
+      },
+      balanceAfter: "Saldo {balance}",
+      loadMore: "Muat lebih banyak",
+    },
     movements: "Pergerakan",
     // Delivery Tab
     delivery: {
@@ -3248,6 +3271,51 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
       sendWhatsappSuccess: "Terkirim ke supplier via WhatsApp",
       sendWhatsappFailed: "Gagal mengirim pesan WhatsApp",
       sendFailed: "Gagal mengirim",
+      // Pesan & Pengiriman: buat pesanan, lalu ketuk Diterima saat barang tiba.
+      openOrders: {
+        title: "Menunggu kiriman",
+        empty: "Tidak ada kiriman yang ditunggu",
+        emptyDescription: "Buat pesanan, lalu pesanan menunggu di sini sampai Anda ketuk Diterima.",
+        expected: "Perkiraan tiba {date}",
+        moreItems: "+{count} lainnya",
+        received: "Diterima",
+        moreActions: "Aksi lainnya",
+        edit: "Ubah tanggal atau catatan",
+        print: "Cetak pesanan",
+        cancel: "Batalkan pesanan",
+      },
+      timing: {
+        noDate: "Dipesan",
+        arrivesTomorrow: "Tiba besok",
+        arrivesInDays: "Tiba dalam {days} hari",
+        dueToday: "Tiba hari ini",
+        lateOneDay: "Terlambat 1 hari",
+        lateDays: "Terlambat {days} hari",
+      },
+      confirmReceived: {
+        title: "Pesanan ini sudah tiba?",
+        addsToStock: "Ya akan menambahkan ini ke stok:",
+        expires: "Kedaluwarsa {date}",
+        notYetHint:
+          "Belum tiba? Ketuk Belum. Pesanan tetap di daftar dan otomatis ditandai terlambat setelah tanggal perkiraan lewat.",
+        notYet: "Belum",
+        confirm: "Ya, sudah diterima",
+        success: "Diterima. Stok diperbarui.",
+        failed: "Gagal menandai pesanan sebagai diterima",
+      },
+      confirmCancel: {
+        title: "Batalkan pesanan ini?",
+        description: "Gunakan ini jika pesanan tidak akan pernah tiba. Stok tidak bertambah.",
+        keep: "Jangan batalkan",
+        confirm: "Batalkan pesanan",
+        success: "Pesanan dibatalkan",
+        failed: "Gagal membatalkan pesanan",
+      },
+      history: {
+        title: "Riwayat kiriman",
+        show: "Tampilkan",
+        hide: "Sembunyikan",
+      },
       filters: {
         status: "Status",
         allStatuses: "Semua Status",
@@ -3260,7 +3328,7 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
       },
       status: {
         pending: "Menunggu",
-        inTransit: "Dalam Perjalanan",
+        inTransit: "Dipesan",
         received: "Diterima",
         cancelled: "Dibatalkan",
       },
@@ -3423,6 +3491,12 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
     editStock: {
       title: "Manajemen Stok",
       description: "Kelola level inventori dan catat penyesuaian stok",
+      view: {
+        label: "Tampilan item",
+        grid: "Kotak",
+        columns: "Kolom",
+        list: "Daftar",
+      },
       searchItems: "Cari berdasarkan nama atau SKU...",
       items: "item",
       itemsSelected: "item dipilih",
@@ -4884,7 +4958,11 @@ lifetime: "Akses seumur hidup",
       online: "Online",
       manual: "Manual",
     },
+    onlinePlatform: {
+      other: "Platform lain",
+    },
     cart: {
+      open: "Buka keranjang",
       empty: "Keranjang kosong",
       emptyDesc: "Ketuk item di menu untuk menambahkan ke pesanan",
       subtotal: "Subtotal",
@@ -5188,6 +5266,15 @@ lifetime: "Akses seumur hidup",
       unavailable: "Tidak tersedia",
       counted: "{count} terhitung",
       customProducts: "Produk Kustom",
+      food: "Makanan",
+      drink: "Minuman",
+      departments: "Makanan atau minuman",
+      categories: "Pilih Kategori",
+      itemCount: "{count} item",
+      noFoodItems:
+        "Belum ada item makanan. Di Back Office, atur Departemen item ke “Dapur / Makanan” agar tampil di sini.",
+      noDrinkItems:
+        "Belum ada item minuman. Di Back Office, atur Departemen item ke “Bar / Minuman” agar tampil di sini.",
     },
     connection: {
       online: "Terhubung",
@@ -6249,7 +6336,8 @@ lifetime: "Akses seumur hidup",
       paxCount: "{count} tamu",
       paxCountOne: "1 tamu",
       tableShort: "Meja {table}",
-      paxTableLabel: "Jumlah tamu dan meja",
+      others: "Lainnya",
+      onlineOrderFrom: "Pesanan online dari",
     },
     customer: {
       add: "Tambah Pelanggan",
@@ -6276,6 +6364,32 @@ lifetime: "Akses seumur hidup",
       gone: "Pelanggan ini sudah tidak ada dan dilepas dari transaksi.",
       points: "{count} poin",
       lifetimeSpend: "Total belanja {amount}",
+      reviewFromDisplay: "Pelanggan baru dari layar pelanggan — ketuk untuk cek",
+    },
+    customerDialog: {
+      title: "Tamu & pelanggan",
+      titleNoGuests: "Pelanggan",
+      customerHeading: "Pelanggan (opsional)",
+      done: "Selesai",
+      remove: "Hapus",
+    },
+    table: {
+      none: "Tanpa meja",
+      custom: "Ketik manual",
+      customOption: "Ketik manual…",
+      customPlaceholder: "Nama atau nomor meja",
+      seats: "{count} kursi",
+      loadFailed: "Daftar meja tidak bisa dimuat. Ketik mejanya saja.",
+    },
+    customerDisplay: {
+      details:
+        "Biarkan pelanggan mengisi datanya sendiri di layar pelanggan: nomor WhatsApp, lalu nama dan email kalau mereka pelanggan baru. Pelanggan lama langsung ditambahkan ke transaksi; pelanggan baru mengisi form di bawah untuk Anda simpan.",
+      ask: "Minta pelanggan isi data",
+      waiting: "Menunggu pelanggan mengetik nomornya…",
+      checking: "Pelanggan mengetik {phone}. Sedang dicek…",
+      matched: "{phone} sudah terdaftar dan ditambahkan ke transaksi ini.",
+      isNew: "{phone} pelanggan baru. Cek form di bawah lalu simpan.",
+      unknown: "Pelanggan mengetik {phone}. Belum bisa dicek sekarang.",
     },
     item: {
       custom: "Kustom",

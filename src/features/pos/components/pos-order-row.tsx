@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import { id, enUS, fr } from "date-fns/locale";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { cn } from "@/lib/utils";
+import { orderSourceBadgeLabel, saleTypeText } from "../lib/order-channel";
 import type { PosOrderDisplay } from "../types/pos.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,12 +47,7 @@ export function PosOrderRow({ order, storeId, onUpdateStatus }: PosOrderRowProps
     locale: dateLocale,
   });
 
-  const typeLabel =
-    order.orderType === "DINE_IN"
-      ? t("pos.checkout.dineIn")
-      : order.orderType === "TAKEAWAY"
-        ? t("pos.checkout.takeaway")
-        : t("pos.history.delivery");
+  const typeLabel = saleTypeText(t, order.orderType);
 
   return (
     <div
@@ -70,7 +66,7 @@ export function PosOrderRow({ order, storeId, onUpdateStatus }: PosOrderRowProps
           {mapOrderStatusLabel(t, order.status)}
         </Badge>
         <Badge variant={getOrderSourceBadgeVariant(order.source)}>
-          {order.source === "POS" ? t("pos.source.walkIn") : t("pos.source.online")}
+          {orderSourceBadgeLabel(t, order.source)}
         </Badge>
         <Badge variant="outline">{mapPaymentMethodLabel(t, order.paymentMethod)}</Badge>
         {isAwaitingPayment(order) && (

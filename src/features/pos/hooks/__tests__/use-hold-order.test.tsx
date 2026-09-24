@@ -43,8 +43,10 @@ const custom: CartItem = {
 const cartSource = (over: Partial<CartHoldSource> = {}): CartHoldSource => ({
   items: [ramen],
   orderType: "DINE_IN",
+  onlinePlatform: null,
   guestCount: 3,
   tableNumber: " A1 ",
+  tableId: null,
   customer: null,
   discountSource: null,
   resumingOrderId: null,
@@ -194,6 +196,27 @@ describe("cartToHoldInput", () => {
     expect(
       cartToHoldInput(cartSource({ tableNumber: "" }), { tableNumber: "" }).tableNumber
     ).toBeUndefined();
+  });
+
+  it("keeps a registered table linked, unless the Save Bill dialog retyped it", () => {
+    const seated = cartSource({ tableNumber: "A1", tableId: "t1" });
+    expect(cartToHoldInput(seated).tableId).toBe("t1");
+    expect(cartToHoldInput(seated, { tableNumber: "A1" }).tableId).toBe("t1");
+    expect(cartToHoldInput(seated, { tableNumber: "A1 terrace" }).tableId).toBeUndefined();
+    // Only a dine-in sale sits at a table.
+    expect(cartToHoldInput({ ...seated, orderType: "TAKEAWAY" }).tableId).toBeUndefined();
+  });
+
+  it("sends the online platform with a DELIVERY, and no pax", () => {
+    const input = cartToHoldInput(
+      cartSource({ orderType: "DELIVERY", onlinePlatform: "SHOPEEFOOD" })
+    );
+    expect(input).toMatchObject({ orderType: "DELIVERY", onlinePlatform: "SHOPEEFOOD" });
+    expect(input.guestCount).toBeUndefined();
+    expect(buildHoldBody(input)).toMatchObject({
+      orderType: "DELIVERY",
+      onlinePlatform: "SHOPEEFOOD",
+    });
   });
 });
 

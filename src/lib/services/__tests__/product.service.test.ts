@@ -37,6 +37,10 @@ vi.mock("@/lib/prisma", () => ({
     menuItem: {
       updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
+    // Stock changes write a movement (the Stock page's Log).
+    stockMovement: {
+      create: vi.fn().mockResolvedValue({}),
+    },
     // getOwnerCurrencyAndRate() (via storefrontService.convertBaseCurrencyToOwner,
     // called from updateProduct's menu-price sync) looks this up — a
     // not-found store defaults to IDR/rate 1, a currency-neutral default for
@@ -527,5 +531,74 @@ describe("ProductService — barcode (optional, unique per store)", () => {
       expect(columns[1](rows[0])).toBe("8991234567890");
       expect(columns[1]({ ...mockProduct, barcode: null })).toBe("");
     });
+  });
+});
+
+describe("ProductService — stock changes go on the Log", () => {
+  let service: ProductService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new ProductService();
+    mockedProductRepo.existsBySku.mockResolvedValue(false);
+    mockedProductRepo.existsByName.mockResolvedValue(false);
+  });
+
+  const newProduct = { storeId: "store-1", sku: "NEW", name: "New", costPrice: 1, sellingPrice: 2 };
+
+  it("logs a new product's opening stock", async () => {
+    mockedProductRepo.create.mockResolvedValue({ ...mockProduct, id: "prod-new", unit: "pcs" });
+
+    await service.createProduct({ ...newProduct, currentStock: 12 });
+
+    expect(prisma.stockMovement.create).toHaveBeenCalledWith({
+      data: {
+        productId: "prod-new",
+        type: "ADJUSTMENT",
+        quantity: 12,
+        unit: "pcs",
+        balanceAfter: 12,
+        notes: "Initial stock",
+      },
+    });
+  });
+
+  it("logs nothing for a product created without stock", async () => {
+    mockedProductRepo.create.mockResolvedValue(mockProduct);
+
+    await service.createProduct(newProduct);
+
+    expect(prisma.stockMovement.create).not.toHaveBeenCalled();
+  });
+
+  it("logs an edit that changes the stock, signed", async () => {
+    mockedProductRepo.findById.mockResolvedValue(mockProduct); // 50 in stock
+    mockedProductRepo.update.mockResolvedValue({
+      ...mockProduct,
+      currentStock: new Prisma.Decimal(45),
+    });
+
+    await service.updateProduct("prod-1", "store-1", { currentStock: 45 });
+
+    expect(prisma.stockMovement.create).toHaveBeenCalledWith({
+      data: {
+        productId: "prod-1",
+        type: "ADJUSTMENT",
+        quantity: -5,
+        unit: "piece",
+        balanceAfter: 45,
+        notes: "Stock decrease - Manual adjustment",
+      },
+    });
+  });
+
+  it("logs nothing when an edit resends the same stock or leaves it out", async () => {
+    mockedProductRepo.findById.mockResolvedValue(mockProduct);
+    mockedProductRepo.update.mockResolvedValue(mockProduct);
+
+    await service.updateProduct("prod-1", "store-1", { currentStock: 50 });
+    await service.updateProduct("prod-1", "store-1", { name: "Renamed" });
+
+    expect(prisma.stockMovement.create).not.toHaveBeenCalled();
   });
 });

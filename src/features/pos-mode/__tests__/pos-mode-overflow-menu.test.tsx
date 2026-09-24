@@ -15,6 +15,36 @@ vi.mock("@/features/pos/lib/open-customer-display", () => ({
 vi.mock("@/features/dashboard/shared/clock-in-out-dialog", () => ({
   ClockInOutDialog: () => null,
 }));
+vi.mock("@/features/dashboard/feedback/components/feedback-dialog", () => ({
+  FeedbackDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="feedback-dialog" /> : null,
+}));
+
+const mockPathname = vi.fn(() => "/store/store-001/pos");
+vi.mock("next/navigation", () => ({
+  usePathname: () => mockPathname(),
+  useRouter: () => ({ push: vi.fn() }),
+}));
+const mockUser = vi.fn(() => ({
+  name: "Dara Owner",
+  email: "dara@example.com",
+  image: null as string | null,
+}));
+vi.mock("@/lib/auth-client", () => ({
+  useUser: () => ({ user: mockUser() }),
+}));
+vi.mock("@/features/dashboard/shared/hooks/use-current-store", () => ({
+  useCurrentStore: () => ({ store: { name: "Tahoma Space" } }),
+}));
+const mockSync = vi.fn(() => ({
+  isOnline: true,
+  isSyncing: false,
+  pendingCount: 0,
+  syncNow: vi.fn(),
+}));
+vi.mock("@/features/dashboard/shared/offline-sync-provider", () => ({
+  useOfflineSyncContext: () => mockSync(),
+}));
 
 const mockSwitcher = vi.fn();
 vi.mock("@/features/dashboard/shared/hooks/use-account-switcher", () => ({
@@ -69,6 +99,17 @@ describe("PosModeOverflowMenu — account switcher (distinct from Clock In/Out)"
     expect(screen.getByText("clockInOut.dialogTitle")).toBeInTheDocument();
   });
 
+  it("Send feedback closes the menu and opens the feedback dialog", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    const onOpenChange = vi.fn();
+    render(<PosModeOverflowMenu storeId="store-001" open={true} onOpenChange={onOpenChange} />);
+    const row = screen.getByRole("button", { name: /feedback.buttonLabel/ });
+    expect(screen.queryByTestId("feedback-dialog")).not.toBeInTheDocument();
+    fireEvent.click(row);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.getByTestId("feedback-dialog")).toBeInTheDocument();
+  });
+
   it("acting as staff: shows 'Switch Account' and 'Log out of staff session' — no direct-to-owner shortcut", () => {
     mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true, hasSwitchableStaff: true }));
     renderMenu();
@@ -77,18 +118,14 @@ describe("PosModeOverflowMenu — account switcher (distinct from Clock In/Out)"
   });
 
   it("owner active, other staff exist: shows the bare 'Switch Account' option", () => {
-    mockSwitcher.mockReturnValue(
-      baseSwitcher({ actingAsStaff: false, hasSwitchableStaff: true })
-    );
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: false, hasSwitchableStaff: true }));
     renderMenu();
     expect(screen.getByText("nav.switchAccount")).toBeInTheDocument();
     expect(screen.queryByText("nav.logoutStaffSession")).toBeNull();
   });
 
   it("owner active, no other staff: no switch option, still shows full logout", () => {
-    mockSwitcher.mockReturnValue(
-      baseSwitcher({ actingAsStaff: false, hasSwitchableStaff: false })
-    );
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: false, hasSwitchableStaff: false }));
     renderMenu();
     expect(screen.queryByText("nav.switchAccount")).toBeNull();
     expect(screen.getByText("nav.logoutOwnerAccount")).toBeInTheDocument();
@@ -255,7 +292,11 @@ describe("PosModeOverflowMenu — Shift link", () => {
   it("a cashier with the POS page gets a link to the Shift page", () => {
     mockSwitcher.mockReturnValue(
       baseSwitcher({
-        posSession: { staffName: "Sam", staffRole: "CASHIER", allowedPages: ["/pos", "/pos/orders"] },
+        posSession: {
+          staffName: "Sam",
+          staffRole: "CASHIER",
+          allowedPages: ["/pos", "/pos/orders"],
+        },
       })
     );
     renderMenu();
@@ -276,7 +317,11 @@ describe("PosModeOverflowMenu — Shift link", () => {
   it("kitchen holds no till, so no Shift link — but My Schedule stays", () => {
     mockSwitcher.mockReturnValue(
       baseSwitcher({
-        posSession: { staffName: "Kim", staffRole: "KITCHEN", allowedPages: ["/pos/kds", "/pos/schedule"] },
+        posSession: {
+          staffName: "Kim",
+          staffRole: "KITCHEN",
+          allowedPages: ["/pos/kds", "/pos/schedule"],
+        },
       })
     );
     renderMenu();
@@ -287,7 +332,11 @@ describe("PosModeOverflowMenu — Shift link", () => {
   it("a floor-only persona without the POS page has no till either", () => {
     mockSwitcher.mockReturnValue(
       baseSwitcher({
-        posSession: { staffName: "Hana", staffRole: "CASHIER", allowedPages: ["/tables", "/pos/schedule"] },
+        posSession: {
+          staffName: "Hana",
+          staffRole: "CASHIER",
+          allowedPages: ["/tables", "/pos/schedule"],
+        },
       })
     );
     renderMenu();
@@ -341,5 +390,110 @@ describe("PosModeOverflowMenu — device preferences and store switching", () =>
     fireEvent.click(screen.getByTestId("store-switcher"));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("PosModeOverflowMenu — the drawer", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("opens as a sheet from the right, named 'More' for screen readers", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    renderMenu();
+    const sheet = screen.getByRole("dialog", { name: "common.actions.more" });
+    expect(sheet).toHaveAttribute("data-slot", "sheet-content");
+    expect(sheet.className).toContain("right-0");
+  });
+
+  it("heads with the persona's profile: name, translated role, store — not the owner's email", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true }));
+    renderMenu();
+    expect(screen.getByText("Test Acc")).toBeInTheDocument();
+    expect(screen.getByText("pages.staffRoleCashier")).toBeInTheDocument();
+    expect(screen.getByText("Tahoma Space")).toBeInTheDocument();
+    expect(screen.queryByText("dara@example.com")).toBeNull();
+  });
+
+  it("the owner's own session shows the account email too", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({
+        actingAsStaff: false,
+        posSession: { staffName: "Owner", staffRole: "OWNER" },
+      })
+    );
+    renderMenu();
+    expect(screen.getByText("Owner")).toBeInTheDocument();
+    expect(screen.getByText("pages.staffRoleOwner")).toBeInTheDocument();
+    expect(screen.getByText("dara@example.com")).toBeInTheDocument();
+  });
+
+  it("with no persona at all, it falls back to the account's own name", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({
+        actingAsStaff: false,
+        posSession: { staffName: null, staffRole: null } as never,
+      })
+    );
+    renderMenu();
+    expect(screen.getByText("Dara Owner")).toBeInTheDocument();
+    expect(screen.getByText("pages.staffRoleOwner")).toBeInTheDocument();
+  });
+
+  it("'Sync sales' runs a full sync, and can't while offline", () => {
+    const syncNow = vi.fn();
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    mockSync.mockReturnValue({ isOnline: true, isSyncing: false, pendingCount: 0, syncNow });
+    const { unmount } = renderMenu();
+    fireEvent.click(screen.getByRole("button", { name: /pages\.posSyncSales/ }));
+    expect(syncNow).toHaveBeenCalledTimes(1);
+    unmount();
+
+    mockSync.mockReturnValue({ isOnline: false, isSyncing: false, pendingCount: 0, syncNow });
+    renderMenu();
+    expect(screen.getByRole("button", { name: /pages\.posSyncSales/ })).toBeDisabled();
+  });
+
+  it("the bottom strip reports the sync state", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    mockSync.mockReturnValue({
+      isOnline: true,
+      isSyncing: false,
+      pendingCount: 0,
+      syncNow: vi.fn(),
+    });
+    const { unmount } = renderMenu();
+    expect(screen.getByRole("status")).toHaveTextContent("pages.posAllSalesSynced");
+    unmount();
+
+    mockSync.mockReturnValue({
+      isOnline: true,
+      isSyncing: false,
+      pendingCount: 3,
+      syncNow: vi.fn(),
+    });
+    const second = renderMenu();
+    expect(screen.getByRole("status")).toHaveTextContent("pages.posOfflineSyncPending");
+    second.unmount();
+
+    mockSync.mockReturnValue({
+      isOnline: false,
+      isSyncing: false,
+      pendingCount: 0,
+      syncNow: vi.fn(),
+    });
+    renderMenu();
+    expect(screen.getByRole("status")).toHaveTextContent("pages.posOfflineMessageNoPending");
+  });
+
+  it("marks the row for the page on screen", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    mockPathname.mockReturnValue("/store/store-001/pos/schedule");
+    renderMenu();
+    expect(screen.getByText("pages.scheduleMyScheduleTitle").closest("a")).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+    mockPathname.mockReturnValue("/store/store-001/pos");
   });
 });

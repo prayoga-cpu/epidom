@@ -1,4 +1,4 @@
-import { Product, Department, ProductLine, StockMode, Prisma } from "@prisma/client";
+import { Product, Department, ProductLine, StockMode, Prisma, MovementType } from "@prisma/client";
 import {
   productRepository,
   ProductWithRelations,
@@ -155,6 +155,21 @@ export class ProductService {
       throw error;
     }
 
+    // Opening stock goes on the Log, as a material's does (createMaterial).
+    const openingStock = data.currentStock ?? 0;
+    if (openingStock > 0) {
+      await prisma.stockMovement.create({
+        data: {
+          productId: product.id,
+          type: MovementType.ADJUSTMENT,
+          quantity: openingStock,
+          unit: product.unit,
+          balanceAfter: openingStock,
+          notes: "Initial stock",
+        },
+      });
+    }
+
     // If user selected an existing menu item, link it instead of creating a new one
     if (data.linkedMenuItemId && data.linkedMenuItemId !== "none") {
       await prisma.menuItem.update({
@@ -281,6 +296,12 @@ export class ProductService {
       }
     }
 
+    // A stock value that differs from the stored one is a stock change, logged
+    // as an adjustment the way updateMaterial logs a material's. The edit
+    // dialogs and the Stock page's CSV import both write stock through here.
+    const stockDelta =
+      data.currentStock !== undefined ? data.currentStock - Number(currentProduct.currentStock) : 0;
+
     // Update basic product fields
     let updatedProduct: ProductWithRelations;
     try {
@@ -306,6 +327,23 @@ export class ProductService {
     } catch (error) {
       if (data.barcode && isBarcodeUniqueViolation(error)) throw barcodeTakenError(data.barcode);
       throw error;
+    }
+
+    if (stockDelta !== 0) {
+      await prisma.stockMovement.create({
+        data: {
+          productId,
+          type: MovementType.ADJUSTMENT,
+          quantity: stockDelta, // signed: positive adds stock, negative takes it out
+          unit: updatedProduct.unit,
+          balanceAfter: data.currentStock!,
+          notes: `Stock ${stockDelta > 0 ? "increase" : "decrease"} - Manual adjustment`,
+        },
+      });
+      publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, {
+        action: "updated",
+        entityId: productId,
+      });
     }
 
     // Keep any storefront menu item(s) linked to this product (MenuItem.productId)

@@ -10,6 +10,7 @@
 import { format, type Locale } from "date-fns";
 import { enUS, fr as frDateFns, id as idDateFns } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils/formatting";
+import { isOnlinePlatformSource, ONLINE_PLATFORM_LABELS } from "@/config/aggregator.config";
 
 export type ReceiptLocale = "en" | "fr" | "id";
 
@@ -188,6 +189,8 @@ interface ShiftReportLabels {
   dineIn: string;
   takeaway: string;
   deliveryType: string;
+  /** A delivery platform the till's "Others" list doesn't name (OTHER_ONLINE). */
+  otherPlatform: string;
   noData: string;
 }
 
@@ -239,6 +242,7 @@ export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
     dineIn: "Makan di Tempat",
     takeaway: "Bawa Pulang",
     deliveryType: "Pengiriman",
+    otherPlatform: "Platform Lain",
     noData: "Tidak ada transaksi",
   },
   en: {
@@ -288,6 +292,7 @@ export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
     dineIn: "Dine In",
     takeaway: "Takeaway",
     deliveryType: "Delivery",
+    otherPlatform: "Other platform",
     noData: "No transactions",
   },
   fr: {
@@ -337,9 +342,29 @@ export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
     dineIn: "Sur place",
     takeaway: "A emporter",
     deliveryType: "Livraison",
+    otherPlatform: "Autre plateforme",
     noData: "Aucune transaction",
   },
 };
+
+/**
+ * The printed name of a sale type: the delivery platform's brand when the order
+ * came from one (the till's "Others" order type, or an aggregator import), else
+ * Dine In / Takeaway / Delivery. Shared by the shift report (browser and ESC/POS)
+ * and the kitchen/bar ticket so all three name a GoFood order the same way.
+ */
+export function saleTypeLabel(
+  labels: Pick<ShiftReportLabels, "dineIn" | "takeaway" | "deliveryType" | "otherPlatform">,
+  orderType: string | null | undefined,
+  platform?: string | null
+): string {
+  if (isOnlinePlatformSource(platform)) {
+    return platform === "OTHER_ONLINE" ? labels.otherPlatform : ONLINE_PLATFORM_LABELS[platform];
+  }
+  if (orderType === "DINE_IN") return labels.dineIn;
+  if (orderType === "TAKEAWAY") return labels.takeaway;
+  return labels.deliveryType;
+}
 
 interface TicketLabels {
   /** Heading of a ticket that carries more than one prep area (one printer

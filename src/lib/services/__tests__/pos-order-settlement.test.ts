@@ -14,6 +14,7 @@ vi.mock("@/lib/prisma", () => {
   prismaMock = {
     customer: { findFirst: vi.fn() },
     order: { update: vi.fn() },
+    table: { findFirst: vi.fn() },
   };
   return { prisma: prismaMock };
 });
@@ -53,6 +54,8 @@ import {
   mergeHeldOrdersInTx,
   settlePendingOrderInTx,
   SettlementError,
+  posOrderSource,
+  resolveStoreTableId,
 } from "../pos-order-settlement";
 import { validateAndBuildOrderItems } from "../pos-order-builder";
 import { resolveOrderDiscount, type ResolvedOrderDiscount } from "../pos-discount.service";
@@ -822,5 +825,40 @@ describe("customerId is three-state", () => {
       existingCustomerId: "cus-from-hold",
     });
     expect(data.customerId).toBeNull();
+  });
+});
+
+describe("posOrderSource — which channel a till sale is booked to", () => {
+  it("is the delivery platform the cashier picked under Others", () => {
+    expect(posOrderSource({ onlinePlatform: "GOFOOD" })).toBe("GOFOOD");
+    expect(posOrderSource({ onlinePlatform: "UBER_EATS" })).toBe("UBER_EATS");
+  });
+
+  it("is POS for every Dine In / Take Away sale", () => {
+    expect(posOrderSource({})).toBe("POS");
+  });
+});
+
+describe("resolveStoreTableId — only this store's own tables", () => {
+  beforeEach(() => prismaMock.table.findFirst.mockReset());
+
+  it("links a table of this store, looked up scoped to the store", async () => {
+    prismaMock.table.findFirst.mockResolvedValue({ id: "t1" });
+    await expect(resolveStoreTableId("s1", "t1", "DINE_IN")).resolves.toBe("t1");
+    expect(prismaMock.table.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "t1", storeId: "s1" } })
+    );
+  });
+
+  it("drops another store's table (or a deleted one) instead of linking it", async () => {
+    prismaMock.table.findFirst.mockResolvedValue(null);
+    await expect(resolveStoreTableId("s1", "t_foreign", "DINE_IN")).resolves.toBeNull();
+  });
+
+  it("never links a table to a takeaway or platform order, and doesn't ask the database", async () => {
+    await expect(resolveStoreTableId("s1", "t1", "TAKEAWAY")).resolves.toBeNull();
+    await expect(resolveStoreTableId("s1", "t1", "DELIVERY")).resolves.toBeNull();
+    await expect(resolveStoreTableId("s1", undefined, "DINE_IN")).resolves.toBeNull();
+    expect(prismaMock.table.findFirst).not.toHaveBeenCalled();
   });
 });

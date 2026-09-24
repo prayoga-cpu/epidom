@@ -8,6 +8,7 @@ import {
   RECEIPT_LABELS,
   RECEIPT_POWERED_BY_URL,
   SHIFT_REPORT_LABELS,
+  saleTypeLabel,
   resolveReceiptLocale,
 } from "@/lib/receipts/receipt-labels";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
@@ -104,13 +105,6 @@ export function ShiftReportDocument({
       new Date(value)
     );
 
-  const orderTypeLabel = (orderType: string) =>
-    orderType === "DINE_IN"
-      ? labels.dineIn
-      : orderType === "TAKEAWAY"
-        ? labels.takeaway
-        : labels.deliveryType;
-
   return (
     <div className="print-report mx-auto w-full max-w-sm rounded-sm bg-white p-6 font-mono text-xs text-black shadow-sm print:max-w-none print:shadow-none">
       {/* Header */}
@@ -192,8 +186,8 @@ export function ShiftReportDocument({
           <div className="space-y-0.5">
             {report.byOrderType.map((bucket) => (
               <Row
-                key={bucket.orderType}
-                label={`${orderTypeLabel(bucket.orderType)} (${bucket.orderCount})`}
+                key={`${bucket.orderType}:${bucket.platform ?? ""}`}
+                label={`${saleTypeLabel(labels, bucket.orderType, bucket.platform)} (${bucket.orderCount})`}
                 value={money(bucket.total)}
               />
             ))}

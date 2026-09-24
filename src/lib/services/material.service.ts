@@ -182,7 +182,7 @@ export class MaterialService {
       productId?: string;
       adjustmentType: "IN" | "OUT";
       quantity: number;
-      reason: string;
+      reason?: string;
       notes?: string;
       referenceId?: string;
     }
@@ -215,7 +215,7 @@ export class MaterialService {
             unit: item.unit,
             balanceAfter: newStock,
             notes: input.notes || undefined,
-            reason: input.reason,
+            reason: input.reason || undefined,
             referenceId: input.referenceId || undefined,
           },
         });

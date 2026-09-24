@@ -4,6 +4,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { formatDistanceToNow } from "date-fns";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { cn } from "@/lib/utils";
+import { orderSourceBadgeLabel, saleTypeText } from "../lib/order-channel";
 import type { PosOrderDisplay } from "../types/pos.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,7 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
             {mapOrderStatusLabel(t, order.status)}
           </Badge>
           <Badge variant={getOrderSourceBadgeVariant(order.source)} className="w-full">
-            {order.source === "POS" ? t("pos.source.walkIn") : t("pos.source.online")}
+            {orderSourceBadgeLabel(t, order.source)}
           </Badge>
           <Badge variant="outline" className="w-full">
             {mapPaymentMethodLabel(t, order.paymentMethod)}
@@ -92,9 +93,7 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
         )}
         <div className="flex justify-between">
           <span className="text-muted-foreground">{t("pos.orderCard.type")}:</span>
-          <span className="font-medium">
-            {order.orderType === "DINE_IN" ? t("pos.checkout.dineIn") : t("pos.checkout.takeaway")}
-          </span>
+          <span className="font-medium">{saleTypeText(t, order.orderType)}</span>
         </div>
       </div>
 

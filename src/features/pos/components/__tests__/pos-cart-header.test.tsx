@@ -12,6 +12,11 @@ vi.mock("../../hooks/use-pos-orders-snapshot", () => ({
   usePosOrdersSnapshot: () => ({ data: queue.orders }),
 }));
 
+const finance = vi.hoisted(() => ({ market: "INDONESIA" as string | undefined }));
+vi.mock("@/features/dashboard/profile/hooks/use-finance-settings", () => ({
+  useFinanceSettings: () => ({ data: finance.market ? { market: finance.market } : undefined }),
+}));
+
 import { PosCartHeader } from "../pos-cart-header";
 import { usePosCart } from "../../hooks/use-pos-cart";
 
@@ -22,6 +27,7 @@ beforeEach(() => {
   localStorage.clear();
   cart().clearCart();
   queue.orders = [];
+  finance.market = "INDONESIA";
 });
 
 describe("PosCartHeader — Order Queue", () => {
@@ -50,7 +56,14 @@ describe("PosCartHeader — Order Queue", () => {
   });
 });
 
-describe("PosCartHeader — Dine In | Take Away", () => {
+describe("PosCartHeader — Dine In | Take Away | Others", () => {
+  /** Radix opens a dropdown on pointer-down or Enter, never on a synthetic click. */
+  const openOthers = () =>
+    fireEvent.keyDown(screen.getByRole("radio", { name: /cashierCart\.header\.others/ }), {
+      key: "Enter",
+    });
+  const platformNames = () => screen.getAllByRole("menuitemradio").map((item) => item.textContent);
+
   it("defaults to Dine In and writes the choice into the cart store", () => {
     render(<PosCartHeader storeId="store_1" onClear={vi.fn()} />);
     const dineIn = screen.getByRole("radio", { name: "Dine In" });
@@ -65,44 +78,82 @@ describe("PosCartHeader — Dine In | Take Away", () => {
     );
   });
 
-  it("gives each half of the switch a >=40px tap target", () => {
+  it("gives each of the three segments a >=40px tap target", () => {
     render(<PosCartHeader storeId="store_1" onClear={vi.fn()} />);
-    expect(screen.getByRole("radio", { name: "Dine In" }).className).toContain("h-10");
-    expect(screen.getByRole("radio", { name: "Take Away" }).className).toContain("h-10");
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    for (const radio of screen.getAllByRole("radio")) expect(radio.className).toContain("h-10");
   });
 
-  it("shows the pax/table chip only for Dine In", () => {
+  it("no longer carries the pax/table chip — that moved to the customer dialog", () => {
     render(<PosCartHeader storeId="store_1" onClear={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "cashierCart.header.paxTableLabel" })).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("radio", { name: "Take Away" }));
-    expect(screen.queryByRole("button", { name: "cashierCart.header.paxTableLabel" })).toBeNull();
+    expect(screen.queryByText("1 pax")).toBeNull();
+    expect(screen.queryByLabelText("pos.checkout.tableOptional")).toBeNull();
   });
 
-  it("the chip reads '2 pax · Table A1' and edits guests and table in a popover", () => {
+  it("Others lists the Indonesian platforms for an Indonesian store", () => {
     render(<PosCartHeader storeId="store_1" onClear={vi.fn()} />);
-    const chip = () => screen.getByRole("button", { name: "cashierCart.header.paxTableLabel" });
-    expect(chip().textContent).toBe("1 pax");
-
-    fireEvent.click(chip());
-    fireEvent.click(screen.getByRole("button", { name: "pos.checkout.guestCountIncrease" }));
-    fireEvent.change(screen.getByLabelText("pos.checkout.tableOptional"), {
-      target: { value: "A1" },
-    });
-
-    expect(cart().guestCount).toBe(2);
-    expect(cart().tableNumber).toBe("A1");
-    expect(chip().textContent).toBe("2 pax · Table A1");
+    openOthers();
+    expect(platformNames()).toEqual([
+      "GoFood",
+      "GrabFood",
+      "ShopeeFood",
+      "pos.onlinePlatform.other",
+    ]);
   });
 
-  it("does not close the popover after a stepper change (the cashier bumps it several times)", () => {
+  it("Others lists the French platforms for a French store", () => {
+    finance.market = "FRANCE";
     render(<PosCartHeader storeId="store_1" onClear={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "cashierCart.header.paxTableLabel" }));
-    const inc = () => screen.getByRole("button", { name: "pos.checkout.guestCountIncrease" });
-    fireEvent.click(inc());
-    fireEvent.click(inc());
-    fireEvent.click(inc());
-    expect(cart().guestCount).toBe(4);
+    openOthers();
+    expect(platformNames()).toEqual([
+      "Uber Eats",
+      "Deliveroo",
+      "Just Eat",
+      "pos.onlinePlatform.other",
+    ]);
+  });
+
+  it("Others lists the US/worldwide platforms for an international store", () => {
+    finance.market = "INTERNATIONAL";
+    render(<PosCartHeader storeId="store_1" onClear={vi.fn()} />);
+    openOthers();
+    expect(platformNames()).toEqual([
+      "Uber Eats",
+      "DoorDash",
+      "Grubhub",
+      "pos.onlinePlatform.other",
+    ]);
+  });
+
+  it("picking a platform makes the sale a DELIVERY for it, and the segment names it", () => {
+    render(<PosCartHeader storeId="store_1" onClear={vi.fn()} />);
+    openOthers();
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "GrabFood" }));
+
+    expect(cart().orderType).toBe("DELIVERY");
+    expect(cart().onlinePlatform).toBe("GRABFOOD");
+    const others = screen.getByRole("radio", { name: /cashierCart\.header\.others/ });
+    expect(others.getAttribute("aria-checked")).toBe("true");
+    expect(others.textContent).toContain("GrabFood");
+    expect(screen.getByRole("radio", { name: "Dine In" }).getAttribute("aria-checked")).toBe(
+      "false"
+    );
+  });
+
+  it("going back to Dine In drops the platform", () => {
+    cart().setOnlinePlatform("GOFOOD");
+    render(<PosCartHeader storeId="store_1" onClear={vi.fn()} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Dine In" }));
+    expect(cart().orderType).toBe("DINE_IN");
+    expect(cart().onlinePlatform).toBeNull();
+  });
+
+  it("keeps a resumed bill's platform listed even after the market changed", () => {
+    finance.market = "FRANCE";
+    cart().setOnlinePlatform("GOFOOD");
+    render(<PosCartHeader storeId="store_1" onClear={vi.fn()} />);
+    openOthers();
+    expect(platformNames()[0]).toBe("GoFood");
   });
 });
 

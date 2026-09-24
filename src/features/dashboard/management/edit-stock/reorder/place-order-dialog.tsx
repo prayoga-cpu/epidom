@@ -37,8 +37,9 @@ import { type LowStockAlert } from "@/features/dashboard/shared/hooks/use-alerts
 import { useCreateSupplierOrder } from "@/features/dashboard/shared/hooks/use-supplier-orders";
 import { useMaterials } from "@/features/dashboard/data/materials/hooks/use-materials";
 import { useSuppliers } from "@/features/dashboard/data/suppliers/hooks/use-suppliers";
-import { CheckCircle2, Loader2, Mail, Package, Phone, Printer } from "lucide-react";
+import { CheckCircle2, Loader2, Mail, Package, Phone, Printer, Send } from "lucide-react";
 import { useParams } from "next/navigation";
+import { tomorrowDateInput } from "./delivery-timing";
 
 // Zod validation schema
 const placeOrderSchema = z.object({
@@ -67,9 +68,11 @@ interface PlaceOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   alert?: LowStockAlert | null;
+  /** Offered on the "Order created" screen; the caller opens its send dialog. */
+  onSend?: (orderId: string) => void;
 }
 
-export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialogProps) {
+export function PlaceOrderDialog({ open, onOpenChange, alert, onSend }: PlaceOrderDialogProps) {
   const { t } = useI18n();
   const { formatPrice } = useCurrency();
   const { toast } = useToast();
@@ -111,7 +114,9 @@ export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialog
       supplierId: suggestedSupplier,
       materialId: alert?.materialId || "",
       quantity: suggestedQuantity,
-      expectedDeliveryDate: "",
+      // Tomorrow, not blank: most restocks arrive next day, and a date is what
+      // lets the order turn Late on its own. Still editable.
+      expectedDeliveryDate: tomorrowDateInput(),
       expiryDate: "",
       notes: "",
     },
@@ -191,7 +196,7 @@ export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialog
       supplierId: alert ? suggestedSupplier : "",
       materialId: alert?.materialId || "",
       quantity: alert ? suggestedQuantity : 0,
-      expectedDeliveryDate: "",
+      expectedDeliveryDate: tomorrowDateInput(),
       expiryDate: "",
       notes: alert ? `Restock order for ${alert.materialName} (${alert.materialSku})` : "",
     });
@@ -255,7 +260,7 @@ export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialog
       supplierId: "",
       materialId: "",
       quantity: 0,
-      expectedDeliveryDate: "",
+      expectedDeliveryDate: tomorrowDateInput(),
       expiryDate: "",
       notes: "",
     });
@@ -296,10 +301,25 @@ export function PlaceOrderDialog({ open, onOpenChange, alert }: PlaceOrderDialog
               >
                 {t("alerts.createOrderDialog.createAnother")}
               </Button>
-              <Button type="button" onClick={handlePrintQuote} className="w-full sm:w-auto">
+              <Button
+                type="button"
+                variant={onSend ? "outline" : "default"}
+                onClick={handlePrintQuote}
+                className="w-full sm:w-auto"
+              >
                 <Printer className="mr-2 h-4 w-4" />
                 {t("alerts.createOrderDialog.printQuote")}
               </Button>
+              {onSend && (
+                <Button
+                  type="button"
+                  onClick={() => onSend(createdOrder.id)}
+                  className="w-full sm:w-auto"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {t("management.delivery.sendToSupplier")}
+                </Button>
+              )}
             </div>
           ) : (
             <FormDialogFooter

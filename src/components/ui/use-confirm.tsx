@@ -9,6 +9,8 @@ export interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   variant?: "default" | "destructive";
+  /** See ConfirmationDialog: needed when confirming from inside a Sheet. */
+  layerClassName?: string;
 }
 
 /**
@@ -57,6 +59,7 @@ export function useConfirm() {
       confirmText={options.confirmText}
       cancelText={options.cancelText}
       variant={options.variant}
+      layerClassName={options.layerClassName}
       onConfirm={() => settle(true)}
     />
   ) : null;

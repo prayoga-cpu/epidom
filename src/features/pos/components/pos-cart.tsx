@@ -437,6 +437,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
         isSubmitting={holdOrder.isPending}
         defaults={{
           orderType: cart.orderType,
+          onlinePlatform: cart.onlinePlatform,
           guestCount: cart.guestCount,
           tableNumber: cart.tableNumber,
           customerName: cart.customer?.name ?? null,

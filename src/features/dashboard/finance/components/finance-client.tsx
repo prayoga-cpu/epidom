@@ -60,7 +60,8 @@ import { mapPaymentMethodLabel } from "@/features/pos/lib/order-status-display";
 import { useStoreShifts } from "@/features/pos/hooks/use-store-shifts";
 import { formatShiftLabel, resolveShiftWindow } from "@/lib/finance/shift-window";
 import { sumCashOnHand, type CashOnHandBreakdown } from "@/lib/finance/cash-drawer";
-import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
+import { ONLINE_PLATFORM_SOURCES } from "@/config/aggregator.config";
+import { orderSourceLabel } from "@/features/pos/lib/order-channel";
 import {
   useWasteEntries,
   useDeleteWasteEntry,
@@ -212,15 +213,7 @@ interface FinanceClientProps {
 
 const ALL = "all";
 
-const CHANNEL_OPTIONS = [
-  "MANUAL",
-  "STOREFRONT",
-  "POS",
-  "GOFOOD",
-  "GRABFOOD",
-  "SHOPEEFOOD",
-  "TOKOPEDIA",
-] as const;
+const CHANNEL_OPTIONS = ["MANUAL", "STOREFRONT", "POS", ...ONLINE_PLATFORM_SOURCES] as const;
 
 // Excludes PAY_LATER — it describes a not-yet-settled order, not a way an
 // order was actually paid, so it isn't a meaningful revenue filter bucket.
@@ -503,18 +496,7 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
     syncUrl({ compare: v ? "1" : null });
   };
 
-  const channelLabel = (source: string) => {
-    switch (source) {
-      case "MANUAL":
-        return t("pos.history.sourceManual");
-      case "STOREFRONT":
-        return t("pos.history.sourceStorefront");
-      case "POS":
-        return t("pos.history.sourcePos");
-      default:
-        return AGGREGATOR_LABELS[source as keyof typeof AGGREGATOR_LABELS] ?? source;
-    }
-  };
+  const channelLabel = (source: string) => orderSourceLabel(t, source);
 
   // This used to be a local switch that only covered CASH/QRIS/BANK_TRANSFER/
   // STRIPE_CARD, silently falling through to the raw enum string for GOPAY/

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
+import { orderSourceLabel } from "../lib/order-channel";
 import type { OrderHistoryItem } from "../types/pos.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -246,18 +246,7 @@ export function OrderHistoryDetailDialog({
     return t(`pos.status.${key}`);
   };
 
-  const mapSourceLabel = (s: string) => {
-    switch (s) {
-      case "MANUAL":
-        return t("pos.history.sourceManual");
-      case "STOREFRONT":
-        return t("pos.history.sourceStorefront");
-      case "POS":
-        return t("pos.history.sourcePos");
-      default:
-        return AGGREGATOR_LABELS[s as keyof typeof AGGREGATOR_LABELS] ?? s;
-    }
-  };
+  const mapSourceLabel = (s: string) => orderSourceLabel(t, s);
 
   const mapPaymentLabel = (s: string) => {
     switch (s) {

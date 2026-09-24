@@ -44,7 +44,12 @@ export function PosCustomerDisplay({
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
 
   const snapshot = useCustomerDisplaySnapshot(storeId);
-  const { status: intakeStatus, sendPhone, sendDetails } = useCustomerIntakeChannel(storeId);
+  const {
+    status: intakeStatus,
+    askedAt,
+    sendPhone,
+    sendDetails,
+  } = useCustomerIntakeChannel(storeId);
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
@@ -122,6 +127,13 @@ export function PosCustomerDisplay({
   // The cashier switched the display off. Standby rather than a frozen last
   // order — a customer must never be shown a total that stopped tracking.
   const isOff = snapshot.phase === "off";
+
+  // The cashier asked for the customer's details: open the pad for them, the
+  // same one the WhatsApp button opens. Not on standby or over a thank-you.
+  useEffect(() => {
+    if (askedAt > 0 && !isOff && !isPaid) setPhoneOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [askedAt]);
 
   return (
     <div

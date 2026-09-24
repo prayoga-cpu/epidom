@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquarePlus } from "lucide-react";
+import { Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -26,7 +26,7 @@ export function FeedbackButton() {
             onClick={() => setOpen(true)}
             aria-label={t("feedback.buttonLabel")}
           >
-            <MessageSquarePlus className="size-4" />
+            <Bug className="size-4" />
             <span className="sr-only">{t("feedback.buttonLabel")}</span>
           </Button>
         </TooltipTrigger>

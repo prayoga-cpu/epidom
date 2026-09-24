@@ -136,6 +136,19 @@ describe("buildOrderTicketEscPos", () => {
     expect(takeaway).not.toContain("pax");
   });
 
+  it("names the delivery platform instead of a bare Delivery", () => {
+    const out = decode(
+      buildOrderTicketEscPos({
+        ...TICKET,
+        orderType: "DELIVERY",
+        platform: "GOFOOD",
+        guestCount: null,
+      })
+    );
+    expect(out).toContain("GoFood");
+    expect(out).not.toContain("pax");
+  });
+
   it("prints an order-level note", () => {
     expect(
       decode(buildOrderTicketEscPos({ ...TICKET, notes: "Birthday - candle please" }))

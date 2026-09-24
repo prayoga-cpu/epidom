@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { createQueryWrapper } from "./cart-test-utils";
+import { createQueryWrapper, stubBrowserApis } from "./cart-test-utils";
 
 vi.mock("@/components/lang/i18n-provider", async () => {
   const { translate } = await import("./cart-test-utils");
@@ -29,6 +29,7 @@ import { apiClient, ApiClientError } from "@/lib/api/client";
 import { PosCartCustomer, prefillFromQuery } from "../pos-cart-customer";
 import { usePosCart } from "../../hooks/use-pos-cart";
 import { useCustomerIntake } from "../../hooks/use-customer-display";
+import { useCustomerDisplaySettings } from "../../hooks/use-customer-display-settings";
 import type { CartCustomer } from "../../types/pos.types";
 
 const get = vi.mocked(apiClient.get);
@@ -61,8 +62,14 @@ const alice: CartCustomer = {
 
 const loyaltyOn = { enabled: true, spendPerPoint: 10, pointValue: 0.1, minRedeemPoints: 0 };
 
-function mockApi(customers: unknown[] = [row()]) {
+const registeredTables = [
+  { id: "t1", label: "A1", capacity: 4, status: "AVAILABLE" },
+  { id: "t2", label: "V3", capacity: 2, status: "OCCUPIED" },
+];
+
+function mockApi(customers: unknown[] = [row()], tables: unknown[] = registeredTables) {
   get.mockImplementation(async (url: string) => {
+    if (url.endsWith("/tables")) return tables as any;
     if (url.endsWith("/customers")) {
       return { customers, nextCursor: null, totalCount: customers.length } as any;
     }
@@ -80,7 +87,11 @@ function renderRow() {
   );
 }
 
+/** The customer section's heading only renders inside the open dialog. */
+const dialog = () => screen.queryByRole("dialog");
+
 beforeEach(() => {
+  stubBrowserApis();
   localStorage.clear();
   cart().clearCart();
   cart().setLoyaltyRules(null);
@@ -100,11 +111,14 @@ describe("PosCartCustomer — empty by default", () => {
     expect(get).not.toHaveBeenCalled();
   });
 
-  it("expands IN PLACE into a search input when tapped", () => {
+  it("opens a dialog with the pax and the customer search when tapped", () => {
     renderRow();
     fireEvent.click(screen.getByRole("button", { name: /Add Customer/ }));
+    expect(dialog()).toBeTruthy();
     expect(screen.getByRole("searchbox")).toBeTruthy();
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "pos.checkout.guestCountIncrease" })).toBeTruthy();
+    // No autofocus on the search: an iPad keyboard would cover the pax picker.
+    expect(document.activeElement).not.toBe(screen.getByRole("searchbox"));
   });
 
   it("gives the '+ Add Customer' row a >=40px tap target", () => {
@@ -135,15 +149,19 @@ describe("PosCartCustomer — search as you type", () => {
     expect(searched.some((c) => (c[1] as any).q === "al")).toBe(false);
   });
 
-  it("attaches the tapped result to the cart", async () => {
+  it("attaches the tapped result to the cart and keeps the dialog open", async () => {
     renderRow();
     fireEvent.click(screen.getByRole("button", { name: /Add Customer/ }));
     fireEvent.click(await screen.findByText("Alice Martin"));
 
     expect(cart().customer).toEqual(alice);
-    // Collapses back to the chip, and the search is gone.
+    // The search gives way to the attached customer; the dialog stays for the pax.
     expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(dialog()).toBeTruthy();
     expect(screen.getByTestId("pos-cart-customer").textContent).toContain("Alice Martin");
+
+    fireEvent.click(screen.getByRole("button", { name: "cashierCart.customerDialog.done" }));
+    expect(dialog()).toBeNull();
   });
 
   it("says so when nothing matches", async () => {
@@ -189,7 +207,7 @@ describe("PosCartCustomer — the attached chip", () => {
   });
 });
 
-describe("PosCartCustomer — new customer, inline", () => {
+describe("PosCartCustomer — new customer, in the dialog", () => {
   const openCreate = () => {
     fireEvent.click(screen.getByRole("button", { name: /Add Customer/ }));
     fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.newCustomer" }));
@@ -330,40 +348,55 @@ describe("PosCartCustomer — synced with the customer screen", () => {
     screen.getByLabelText("cashierCart.customer.nameOptionalPlaceholder") as HTMLInputElement;
   const emailField = () =>
     screen.getByLabelText("cashierCart.customer.emailOptionalPlaceholder") as HTMLInputElement;
+  const reviewButton = () =>
+    screen.queryByRole("button", { name: /cashierCart\.customer\.reviewFromDisplay/ });
+  const openReview = () => fireEvent.click(reviewButton()!);
 
-  it("opens the new-customer form with the number the customer typed on their screen", () => {
+  it("prepares the new-customer form without opening over the cashier; one tap opens it", () => {
     renderRow();
-    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
-
     numberArrives();
+
+    // It must not pull focus off whatever the cashier is in the middle of.
+    expect(dialog()).toBeNull();
+    openReview();
 
     expect(phoneField().value).toBe("+33612345678");
     expect(screen.getByText("cashierCart.customer.fromDisplay")).toBeTruthy();
-    // It must not pull focus off whatever the cashier is in the middle of.
     expect(document.activeElement).not.toBe(phoneField());
+  });
+
+  it("switches an already-open dialog to the form in place", () => {
+    renderRow();
+    fireEvent.click(screen.getByRole("button", { name: /Add Customer/ }));
+    numberArrives();
+    expect(phoneField().value).toBe("+33612345678");
   });
 
   it("stays out of the way when the number belongs to an existing customer or is still being checked", () => {
     renderRow();
     numberArrives({ match: "existing" });
-    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    expect(reviewButton()).toBeNull();
     numberArrives({ match: null });
-    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    expect(reviewButton()).toBeNull();
     numberArrives({ match: "unknown" });
-    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    expect(reviewButton()).toBeNull();
   });
 
   it("does not open over a customer who is already attached", () => {
     cart().setCustomer(alice);
     renderRow();
     numberArrives();
-    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    expect(reviewButton()).toBeNull();
     expect(screen.getByTestId("pos-cart-customer")).toHaveTextContent("Alice Martin");
   });
 
   it("follows the name and email as the customer types them", () => {
     renderRow();
     numberArrives();
+    // Typed while the dialog was still closed: there once the cashier opens it.
+    act(() => useCustomerIntake.getState().setDetails("Cla", ""));
+    openReview();
+    expect(nameField().value).toBe("Cla");
     act(() => useCustomerIntake.getState().setDetails("Claire", ""));
     expect(nameField().value).toBe("Claire");
     act(() => useCustomerIntake.getState().setDetails("Claire Moreau", "claire@example.com"));
@@ -374,6 +407,7 @@ describe("PosCartCustomer — synced with the customer screen", () => {
   it("stops overwriting a field once the cashier has typed in it themselves", () => {
     renderRow();
     numberArrives();
+    openReview();
     act(() => useCustomerIntake.getState().setDetails("Claire", ""));
 
     fireEvent.change(nameField(), { target: { value: "Claire M." } });
@@ -389,6 +423,7 @@ describe("PosCartCustomer — synced with the customer screen", () => {
     renderRow();
     numberArrives();
     act(() => useCustomerIntake.getState().setDetails("Claire", "claire@example.com"));
+    openReview();
 
     fireEvent.click(screen.getByRole("button", { name: "cashierCart.customer.saveAndAttach" }));
 
@@ -400,39 +435,46 @@ describe("PosCartCustomer — synced with the customer screen", () => {
     });
   });
 
-  it("does not spring back open after the cashier closes it, or after leaving and returning", () => {
+  it("does not come back after the cashier closes it, or after leaving and returning", () => {
     const view = renderRow();
     numberArrives();
-    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
-    // Cancel returns to search; close that too.
-    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
-    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    openReview();
+    fireEvent.click(screen.getByRole("button", { name: "cashierCart.customerDialog.done" }));
+    expect(reviewButton()).toBeNull();
 
     view.unmount();
     renderRow();
-    expect(screen.queryByLabelText("cashierCart.customer.whatsappPlaceholder")).toBeNull();
+    expect(reviewButton()).toBeNull();
   });
 
-  it("opens again for the NEXT number the customer submits", () => {
+  it("asks again for the NEXT number the customer submits", () => {
     renderRow();
     numberArrives();
-    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
-    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
+    openReview();
+    fireEvent.click(screen.getByRole("button", { name: "cashierCart.customerDialog.done" }));
 
     numberArrives({ phone: "+33699999999", receivedAt: 200 });
+    openReview();
     expect(phoneField().value).toBe("+33699999999");
   });
 });
 
 describe("PosCartCustomer — offline", () => {
-  it("disables the row with a hint and never calls the network", () => {
+  it("still opens for the pax and a typed table, says the search needs a connection, and never calls the network", () => {
     net.online = false;
     renderRow();
     const add = screen.getByRole("button", { name: /Add Customer/ }) as HTMLButtonElement;
-    expect(add.disabled).toBe(true);
-    expect(add.textContent).toContain("cashierCart.customer.offlineHint");
+    expect(add.disabled).toBe(false);
     fireEvent.click(add);
+
     expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.getByText("cashierCart.customer.offlineHint")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "pos.checkout.guestCountIncrease" }));
+    expect(cart().guestCount).toBe(2);
+    fireEvent.change(screen.getByLabelText("pos.checkout.tableOptional"), {
+      target: { value: "Terrace" },
+    });
+    expect(cart().tableNumber).toBe("Terrace");
     expect(get).not.toHaveBeenCalled();
   });
 
@@ -519,5 +561,161 @@ describe("prefillFromQuery", () => {
       email: "",
     });
     expect(prefillFromQuery("a@b.co")).toEqual({ name: "", phone: "", email: "a@b.co" });
+  });
+});
+
+describe("PosCartCustomer — pax in the dialog", () => {
+  const openDialog = () => fireEvent.click(screen.getByRole("button", { name: /Add Customer/ }));
+
+  it("shows the dine-in pax on the row", () => {
+    cart().setGuestCount(3);
+    renderRow();
+    expect(screen.getByRole("button", { name: /Add Customer/ }).textContent).toContain("3 pax");
+  });
+
+  it("edits one value two ways: − / + in the middle, number boxes underneath", () => {
+    renderRow();
+    openDialog();
+    fireEvent.click(screen.getByRole("button", { name: "pos.checkout.guestCountIncrease" }));
+    expect(cart().guestCount).toBe(2);
+    expect(screen.getByRole("radio", { name: "2" }).getAttribute("aria-checked")).toBe("true");
+
+    fireEvent.click(screen.getByRole("radio", { name: "6" }));
+    expect(cart().guestCount).toBe(6);
+    expect(screen.getByTestId("cart-guest-count").textContent).toBe("6");
+    // Not closed by a pick: the cashier may still be on the table or the customer.
+    expect(dialog()).toBeTruthy();
+  });
+
+  it("offers boxes 1 to 30, and + keeps going past them", () => {
+    cart().setGuestCount(30);
+    renderRow();
+    openDialog();
+    expect(screen.getAllByRole("radio")).toHaveLength(30);
+    fireEvent.click(screen.getByRole("button", { name: "pos.checkout.guestCountIncrease" }));
+    expect(cart().guestCount).toBe(31);
+    expect(screen.queryByRole("radio", { checked: true })).toBeNull();
+  });
+
+  it("takeaway has no pax, on the row or in the dialog", () => {
+    cart().setOrderType("TAKEAWAY");
+    renderRow();
+    expect(screen.getByRole("button", { name: /Add Customer/ }).textContent).not.toContain("pax");
+    openDialog();
+    expect(screen.queryByRole("button", { name: "pos.checkout.guestCountIncrease" })).toBeNull();
+    expect(screen.queryByLabelText("pos.checkout.tableOptional")).toBeNull();
+  });
+});
+
+describe("PosCartCustomer — the table, linked to the registered tables", () => {
+  const openDialog = () => fireEvent.click(screen.getByRole("button", { name: /Add Customer/ }));
+  const tableSelect = () => screen.getByRole("combobox", { name: "pos.checkout.tableOptional" });
+  const openTables = async () => {
+    await waitFor(() => expect(get).toHaveBeenCalledWith("/stores/s1/tables"));
+    fireEvent.keyDown(await waitFor(() => tableSelect()), { key: "Enter" });
+  };
+
+  it("lists the store's tables and links the one picked", async () => {
+    renderRow();
+    openDialog();
+    await openTables();
+    fireEvent.click(await screen.findByRole("option", { name: /A1/ }));
+
+    expect(cart().tableId).toBe("t1");
+    expect(cart().tableNumber).toBe("A1");
+    expect(tableSelect()).toHaveTextContent("A1");
+
+    fireEvent.click(screen.getByRole("button", { name: "cashierCart.customerDialog.done" }));
+    expect(screen.getByRole("button", { name: /Add Customer/ }).textContent).toContain("Table A1");
+  });
+
+  it("Custom opens a box for an unregistered table, and typing drops any link", async () => {
+    cart().setTable({ id: "t1", label: "A1" });
+    renderRow();
+    openDialog();
+    await openTables();
+    fireEvent.click(await screen.findByRole("option", { name: "cashierCart.table.customOption" }));
+
+    const box = screen.getByLabelText("cashierCart.table.customPlaceholder") as HTMLInputElement;
+    expect(cart().tableId).toBeNull();
+    // The label carries over so "A1" can become "A1 terrace".
+    expect(box.value).toBe("A1");
+    fireEvent.change(box, { target: { value: "Terrace 2" } });
+    expect(cart().tableNumber).toBe("Terrace 2");
+    expect(cart().tableId).toBeNull();
+  });
+
+  it("No table clears it", async () => {
+    cart().setTable({ id: "t1", label: "A1" });
+    renderRow();
+    openDialog();
+    await openTables();
+    fireEvent.click(await screen.findByRole("option", { name: "cashierCart.table.none" }));
+    expect(cart().tableId).toBeNull();
+    expect(cart().tableNumber).toBe("");
+  });
+
+  it("a store with no registered tables just gets the box", async () => {
+    mockApi([row()], []);
+    renderRow();
+    openDialog();
+    // The list answers empty: the dropdown gives way to a plain box.
+    await waitFor(() => expect(screen.queryByRole("combobox")).toBeNull());
+    const box = screen.getByLabelText("pos.checkout.tableOptional");
+    fireEvent.change(box, { target: { value: "Bar 3" } });
+    expect(cart().tableNumber).toBe("Bar 3");
+  });
+});
+
+describe("PosCartCustomer — the customer display, from the dialog", () => {
+  const openDialog = () => fireEvent.click(screen.getByRole("button", { name: /Add Customer/ }));
+
+  beforeEach(() => useCustomerDisplaySettings.getState().setEnabled(false));
+
+  it("switches the display on and asks the customer for their details on it", () => {
+    const posted: unknown[] = [];
+    const Original = globalThis.BroadcastChannel;
+    globalThis.BroadcastChannel = class {
+      onmessage = null;
+      constructor(public name: string) {}
+      postMessage(message: unknown) {
+        posted.push(message);
+      }
+      close() {}
+    } as unknown as typeof BroadcastChannel;
+    try {
+      renderRow();
+      openDialog();
+      const ask = screen.getByRole("button", { name: /cashierCart\.customerDisplay\.ask/ });
+      expect((ask as HTMLButtonElement).disabled).toBe(true);
+
+      fireEvent.click(screen.getByRole("switch", { name: /pos\.customerDisplay\.enable/ }));
+      expect(useCustomerDisplaySettings.getState().enabled).toBe(true);
+
+      fireEvent.click(ask);
+      expect(posted).toContainEqual({ type: "ask-details" });
+      expect(screen.getByRole("status").textContent).toBe("cashierCart.customerDisplay.waiting");
+    } finally {
+      globalThis.BroadcastChannel = Original;
+    }
+  });
+
+  it("says what the customer typed and what the till found", () => {
+    useCustomerDisplaySettings.getState().setEnabled(true);
+    renderRow();
+    openDialog();
+    act(() => {
+      useCustomerIntake.setState({ phone: "+33612345678", match: "new", receivedAt: 5 });
+    });
+    expect(screen.getByRole("status").textContent).toBe("cashierCart.customerDisplay.isNew");
+  });
+
+  it("does not offer to ask once a customer is on the sale", () => {
+    useCustomerDisplaySettings.getState().setEnabled(true);
+    cart().setCustomer(alice);
+    renderRow();
+    fireEvent.click(screen.getByRole("button", { name: /Alice Martin/ }));
+    expect(screen.queryByRole("button", { name: /cashierCart\.customerDisplay\.ask/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /pos\.customerDisplay\.openWindow/ })).toBeTruthy();
   });
 });

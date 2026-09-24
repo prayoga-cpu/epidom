@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { AGGREGATOR_LABELS } from "@/config/aggregator.config";
+import { ONLINE_PLATFORM_SOURCES } from "@/config/aggregator.config";
+import { orderSourceLabel } from "../lib/order-channel";
 import {
   buildOrderHistoryParams,
   useDebouncedValue,
@@ -603,18 +604,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     return t(`pos.status.${key}`);
   };
 
-  const mapSourceLabel = (s: string) => {
-    switch (s) {
-      case "MANUAL":
-        return t("pos.history.sourceManual");
-      case "STOREFRONT":
-        return t("pos.history.sourceStorefront");
-      case "POS":
-        return t("pos.history.sourcePos");
-      default:
-        return AGGREGATOR_LABELS[s as keyof typeof AGGREGATOR_LABELS] ?? s;
-    }
-  };
+  const mapSourceLabel = (s: string) => orderSourceLabel(t, s);
 
   const mapPaymentLabel = (s: string) => {
     switch (s) {
@@ -811,9 +801,9 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
                 <SelectItem value="MANUAL">{t("pos.history.sourceManual")}</SelectItem>
                 <SelectItem value="STOREFRONT">{t("pos.history.sourceStorefront")}</SelectItem>
                 <SelectItem value="POS">{t("pos.history.sourcePos")}</SelectItem>
-                {Object.entries(AGGREGATOR_LABELS).map(([value, label]) => (
+                {ONLINE_PLATFORM_SOURCES.map((value) => (
                   <SelectItem key={value} value={value}>
-                    {label}
+                    {orderSourceLabel(t, value)}
                   </SelectItem>
                 ))}
               </SelectContent>

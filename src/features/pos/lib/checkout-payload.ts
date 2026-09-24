@@ -1,4 +1,5 @@
 import type { PaymentMethod } from "@prisma/client";
+import type { PosOnlinePlatform } from "@/config/aggregator.config";
 import type { CreatePosOrderInput } from "@/lib/validation/pos.schemas";
 import type { NormalizedTender, TenderMethod } from "@/lib/finance/order-payments";
 import type { PosOrderCreatedDto } from "@/types/api/cashier";
@@ -59,10 +60,14 @@ export interface CheckoutDiscountInput {
 
 export interface BuildCheckoutPayloadInput {
   items: CartItem[];
-  orderType: "DINE_IN" | "TAKEAWAY";
+  orderType: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
+  /** The cart's platform ("Others"); sent with DELIVERY only. */
+  onlinePlatform?: PosOnlinePlatform | null;
   /** Sent for DINE_IN only, and only when known. */
   guestCount?: number | null;
   tableNumber: string;
+  /** A registered table picked on the cart; sent for DINE_IN only. */
+  tableId?: string | null;
   customer: Pick<CartCustomer, "id" | "name" | "phone"> | null;
   /** A number typed on the customer-facing screen; used when the customer has none. */
   fallbackPhone?: string | null;
@@ -135,8 +140,11 @@ export function buildCheckoutPayload(input: BuildCheckoutPayloadInput): CreatePo
   const base: Partial<CreatePosOrderInput> = {
     items: cartItemsToWireLines(input.items).map((line) => compact({ ...line })),
     orderType: input.orderType,
+    onlinePlatform:
+      input.orderType === "DELIVERY" ? (input.onlinePlatform ?? undefined) : undefined,
     guestCount: input.orderType === "DINE_IN" ? (input.guestCount ?? undefined) : undefined,
     tableNumber: clean(input.tableNumber),
+    tableId: input.orderType === "DINE_IN" ? (input.tableId ?? undefined) : undefined,
     customerId,
     customerName: clean(customer?.name),
     customerPhone: clean(customer?.phone) ?? clean(input.fallbackPhone),

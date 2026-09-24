@@ -34,6 +34,8 @@ export interface OrderPrintContext {
   orderNumber: string;
   queueNumber?: number | null;
   orderType?: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
+  /** The delivery platform (Order.source) for an online order — see OrderTicketData.platform. */
+  platform?: string | null;
   tableLabel?: string;
   guestCount?: number | null;
   cashierName?: string;
@@ -197,6 +199,7 @@ export function planOrderPrint(
         queueNumber: context.queueNumber,
         date,
         orderType: context.orderType,
+        platform: context.platform,
         tableLabel: context.tableLabel,
         guestCount: context.guestCount,
         cashierName: context.cashierName,

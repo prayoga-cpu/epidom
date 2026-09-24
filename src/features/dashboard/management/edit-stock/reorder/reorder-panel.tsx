@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, ShoppingCart, Truck, Send } from "lucide-react";
+import { ChevronDown, History, Plus, Truck } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   useSupplierOrders,
   type SupplierOrder,
 } from "@/features/dashboard/shared/hooks/use-supplier-orders";
 import { useAlerts, type LowStockAlert } from "@/features/dashboard/shared/hooks/use-alerts";
 import { SupplierDelivery, SupplierDeliveryStatus, DeliveryType } from "@/types/entities";
-import { OrdersToPlaceView } from "./orders-to-place-view";
+import { OpenOrdersList } from "./open-orders-list";
 import { SupplierDeliveriesTable } from "./supplier-deliveries-table";
 import { SupplierDeliveryDetails } from "./supplier-delivery-details";
-import { UpdateDeliveryStatusDialog } from "./update-delivery-status-dialog";
 import { AddEditDeliveryDialog } from "./add-edit-delivery-dialog";
 import { PlaceOrderDialog } from "./place-order-dialog";
 import { BulkOrderDialog } from "./bulk-order-dialog";
@@ -46,6 +46,7 @@ function convertOrderToDelivery(order: SupplierOrder): SupplierDelivery {
     status: statusMap[order.status],
     expectedDate: new Date(order.expectedDate || order.orderDate),
     receivedDate: order.receivedDate ? new Date(order.receivedDate) : undefined,
+    notes: order.notes ?? undefined,
     storeId: order.storeId,
     items: order.items.map((item) => ({
       id: item.id,
@@ -98,51 +99,50 @@ export function ReorderPanel({
     initialSupplierOrders ? { orders: initialSupplierOrders } : undefined
   );
 
-  const deliveries = useMemo(() => {
+  // Finished orders only: open ones (PLACED, legacy PENDING) live in the
+  // "Awaiting delivery" list above, each with its own Received button.
+  const history = useMemo(() => {
     const orders = data?.orders || initialSupplierOrders || [];
     return orders
-      .filter((order) => order.status === "PLACED" || order.status === "RECEIVED")
+      .filter((order) => order.status === "RECEIVED" || order.status === "CANCELLED")
       .map(convertOrderToDelivery);
   }, [data, initialSupplierOrders]);
 
+  // Collapsed by default: the page's job is the open orders, and history is
+  // for looking something up.
+  const [showHistory, setShowHistory] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<SupplierDelivery | null>(null);
-  const [updateStatusDialogOpen, setUpdateStatusDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deliveryToUpdate, setDeliveryToUpdate] = useState<SupplierDelivery | null>(null);
   const [deliveryToEdit, setDeliveryToEdit] = useState<SupplierDelivery | null>(null);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [deliveryToSend, setDeliveryToSend] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (deliveries.length > 0 && !selectedDelivery) {
-      setSelectedDelivery(deliveries[0]);
-    }
-  }, [deliveries, selectedDelivery]);
-
-  const handleUpdateStatus = (delivery: SupplierDelivery) => {
-    setDeliveryToUpdate(delivery);
-    setUpdateStatusDialogOpen(true);
-  };
-
-  const handleEdit = (delivery: SupplierDelivery) => {
-    setDeliveryToEdit(delivery);
+  const handleEdit = (order: SupplierOrder) => {
+    setDeliveryToEdit(convertOrderToDelivery(order));
     setEditDialogOpen(true);
   };
 
   // "Print/Download" opens the dedicated print page (window.print → Save as
   // PDF), matching the codebase's established print-page convention rather
   // than the older jsPDF-dialog-download pattern this replaces.
-  const handlePrint = (delivery: SupplierDelivery) => {
-    window.open(`/store/${storeId}/management/print?orderId=${delivery.id}`, "_blank");
+  const handlePrint = (orderId: string) => {
+    window.open(`/store/${storeId}/management/print?orderId=${orderId}`, "_blank");
   };
 
-  const handleSend = (delivery: SupplierDelivery) => {
-    setDeliveryToSend(delivery.id);
+  const handleSend = (orderId: string) => {
+    setDeliveryToSend(orderId);
     setSendDialogOpen(true);
   };
 
   // Manual "New Order" entry point (no pre-selected material).
   const [manualOrderOpen, setManualOrderOpen] = useState(false);
+
+  // "Send to supplier" on a create dialog's success screen: swap that dialog
+  // for the send dialog rather than stacking one on top of the other.
+  const sendFromCreateDialog = (close: () => void) => (orderId: string) => {
+    close();
+    handleSend(orderId);
+  };
 
   // Deep-linked from Alerts: open the place-order dialog for a specific
   // material once, using its live LowStockAlert (supplier suggestions,
@@ -205,8 +205,8 @@ export function ReorderPanel({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
           <CardTitle className="flex items-center gap-2 text-base">
-            <ShoppingCart className="h-4 w-4" />
-            {t("alerts.ordersToPlace")}
+            <Truck className="h-4 w-4" />
+            {t("management.delivery.openOrders.title")}
           </CardTitle>
           <Button size="sm" onClick={() => setManualOrderOpen(true)}>
             <Plus className="mr-1 h-4 w-4" />
@@ -214,53 +214,59 @@ export function ReorderPanel({
           </Button>
         </CardHeader>
         <CardContent>
-          <OrdersToPlaceView />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Truck className="h-4 w-4" />
-            {t("management.delivery.title")}
-          </CardTitle>
-          {selectedDelivery && (
-            <Button size="sm" variant="outline" onClick={() => handleSend(selectedDelivery)}>
-              <Send className="mr-1 h-4 w-4" />
-              {t("management.delivery.sendToSupplier")}
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <SupplierDeliveriesTable
-            deliveries={deliveries}
-            selectedDelivery={selectedDelivery}
-            onDeliverySelect={setSelectedDelivery}
-            isLoading={false}
-            onUpdateStatus={handleUpdateStatus}
-            onEditDelivery={handleEdit}
-            onPrintDelivery={handlePrint}
+          <OpenOrdersList
+            storeId={storeId}
+            onSend={handleSend}
+            onPrint={handlePrint}
+            onEdit={handleEdit}
           />
-          {selectedDelivery && (
-            <SupplierDeliveryDetails
-              selectedDelivery={selectedDelivery}
-              onUpdateStatus={handleUpdateStatus}
-              onEdit={handleEdit}
-              onPrintDelivery={handlePrint}
-            />
-          )}
         </CardContent>
       </Card>
 
-      {deliveryToUpdate && (
-        <UpdateDeliveryStatusDialog
-          open={updateStatusDialogOpen}
-          onOpenChange={(open) => {
-            setUpdateStatusDialogOpen(open);
-            if (!open) setDeliveryToUpdate(null);
-          }}
-          delivery={deliveryToUpdate}
-        />
+      {history.length > 0 && (
+        <section className="space-y-4">
+          <Button
+            variant="outline"
+            className="h-11 w-full justify-between"
+            onClick={() => setShowHistory((v) => !v)}
+            aria-expanded={showHistory}
+          >
+            <span className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              {t("management.delivery.history.title")} ({history.length})
+            </span>
+            <span className="text-muted-foreground flex items-center gap-1 text-sm font-normal">
+              {showHistory
+                ? t("management.delivery.history.hide")
+                : t("management.delivery.history.show")}
+              <ChevronDown
+                className={cn("h-4 w-4 transition-transform", showHistory && "rotate-180")}
+              />
+            </span>
+          </Button>
+
+          {showHistory && (
+            <>
+              <SupplierDeliveriesTable
+                hideHeader
+                deliveries={history}
+                selectedDelivery={selectedDelivery}
+                // A second click on the open row closes its details again.
+                onDeliverySelect={(delivery) =>
+                  setSelectedDelivery((current) => (current?.id === delivery.id ? null : delivery))
+                }
+                isLoading={false}
+                onPrintDelivery={(delivery) => handlePrint(delivery.id)}
+              />
+              {selectedDelivery && (
+                <SupplierDeliveryDetails
+                  selectedDelivery={selectedDelivery}
+                  onPrintDelivery={(delivery) => handlePrint(delivery.id)}
+                />
+              )}
+            </>
+          )}
+        </section>
       )}
 
       {deliveryToEdit && (
@@ -283,12 +289,17 @@ export function ReorderPanel({
         orderId={deliveryToSend}
       />
 
-      <PlaceOrderDialog open={manualOrderOpen} onOpenChange={setManualOrderOpen} />
+      <PlaceOrderDialog
+        open={manualOrderOpen}
+        onOpenChange={setManualOrderOpen}
+        onSend={sendFromCreateDialog(() => setManualOrderOpen(false))}
+      />
 
       <PlaceOrderDialog
         open={highlightOrderOpen}
         onOpenChange={handleHighlightDialogChange}
         alert={highlightAlert}
+        onSend={sendFromCreateDialog(() => handleHighlightDialogChange(false))}
       />
 
       {highlightSupplierGroup && (

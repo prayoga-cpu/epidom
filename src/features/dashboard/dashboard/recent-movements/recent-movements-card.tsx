@@ -8,6 +8,7 @@ import { Activity, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { MovementType } from "@prisma/client";
 import { unwrapApiData } from "@/lib/api/unwrap";
+import { signedMovementQuantity } from "@/lib/utils/stock-movement";
 
 interface Movement {
   id: string;
@@ -81,7 +82,7 @@ export function RecentMovementsCard() {
           </p>
         ) : (
           movements.map((m) => {
-            const qty = Number(m.quantity);
+            const qty = signedMovementQuantity(m);
             const isOut = qty < 0;
             return (
               <div

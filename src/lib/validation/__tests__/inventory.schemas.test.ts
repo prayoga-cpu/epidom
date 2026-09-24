@@ -17,6 +17,7 @@ import {
   addMaterialSupplierSchema,
   createSupplierOrderSchema,
   updateSupplierOrderSchema,
+  stockAdjustmentSchema,
 } from "../inventory.schemas";
 
 // Valid CUID format: c + 24 lowercase alphanumeric characters = 25 total
@@ -464,5 +465,29 @@ describe("Product barcode (optional, unique per store)", () => {
       if (!r.success) expect(r.error.issues[0].path).toEqual(["barcode"]);
     }
     expect(createProductSchema.safeParse({ ...base, barcode: "x".repeat(64) }).success).toBe(true);
+  });
+});
+
+describe("stockAdjustmentSchema — reason is optional", () => {
+  const base = { materialId: validCuid1, adjustmentType: "IN" as const, quantity: 5 };
+
+  it("accepts an adjustment with no reason", () => {
+    const parsed = stockAdjustmentSchema.parse(base);
+    expect(parsed.reason).toBeUndefined();
+  });
+
+  it("stores a blank reason as no reason, not an empty string", () => {
+    expect(stockAdjustmentSchema.parse({ ...base, reason: "" }).reason).toBeUndefined();
+    expect(stockAdjustmentSchema.parse({ ...base, reason: "   " }).reason).toBeUndefined();
+  });
+
+  it("keeps a given reason, trimmed", () => {
+    expect(stockAdjustmentSchema.parse({ ...base, reason: " Damaged " }).reason).toBe("Damaged");
+  });
+
+  it("still caps the reason at 200 characters", () => {
+    const r = stockAdjustmentSchema.safeParse({ ...base, reason: "x".repeat(201) });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues[0].path).toEqual(["reason"]);
   });
 });

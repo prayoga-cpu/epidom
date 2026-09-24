@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import type { OrderHistoryItem } from "../types/pos.types";
 import { mapPaymentMethodLabel } from "../lib/order-status-display";
+import { orderSourceLabel } from "../lib/order-channel";
 
 interface StoreDetail {
   name: string;
@@ -124,7 +125,7 @@ export function OrderHistoryPrintView({
     filterChips.push(`${t("pos.history.colStatus")}: ${mapStatusLabel(filters.status)}`);
   }
   if (filters.source && filters.source !== "ALL") {
-    filterChips.push(`${t("pos.history.colSource")}: ${filters.source}`);
+    filterChips.push(`${t("pos.history.colSource")}: ${orderSourceLabel(t, filters.source)}`);
   }
   if (filters.from || filters.to) {
     const fromLabel = filters.from ? formatDateTime(filters.from).split(",")[0] : "…";
@@ -252,7 +253,7 @@ export function OrderHistoryPrintView({
           </thead>
           <tbody>
             {orders.map((order) => (
-              <tr key={order.id} className="border-b border-gray-200 break-inside-avoid">
+              <tr key={order.id} className="break-inside-avoid border-b border-gray-200">
                 <td className="py-1.5 pr-2 whitespace-nowrap">{formatDateTime(order.orderDate)}</td>
                 <td className="py-1.5 pr-2 font-mono">{order.orderNumber}</td>
                 <td className="py-1.5 pr-2">{mapTypeLabel(order.orderType)}</td>

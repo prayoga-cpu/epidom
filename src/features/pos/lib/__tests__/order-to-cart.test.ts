@@ -179,6 +179,29 @@ describe("buildResumeExtras", () => {
     expect(buildResumeExtras(order({ orderType: "TAKEAWAY" }), null).orderType).toBe("TAKEAWAY");
   });
 
+  it("restores a bill saved under a delivery platform as that platform", () => {
+    expect(
+      buildResumeExtras(order({ orderType: "DELIVERY", source: "GRABFOOD" }), null)
+    ).toMatchObject({ orderType: "DELIVERY", onlinePlatform: "GRABFOOD" });
+  });
+
+  it("restores a dine-in bill's registered table link, and never a takeaway's", () => {
+    expect(buildResumeExtras(order({ tableId: "t1", tableNumber: "A1" }), null)).toMatchObject({
+      tableId: "t1",
+      tableNumber: "A1",
+    });
+    expect(
+      buildResumeExtras(order({ orderType: "TAKEAWAY", tableId: "t1" }), null).tableId
+    ).toBeNull();
+  });
+
+  it("never restores a platform for a till sale", () => {
+    expect(buildResumeExtras(order({ source: "POS" }), null)).toMatchObject({
+      orderType: "DINE_IN",
+      onlinePlatform: null,
+    });
+  });
+
   it("ALWAYS passes every field, so the previous cart's state can't leak onto a resumed bill", () => {
     const extras = buildResumeExtras(
       order({ guestCount: null, tableNumber: null, discountAmount: 0 }),
@@ -186,8 +209,10 @@ describe("buildResumeExtras", () => {
     );
     expect(extras).toEqual({
       orderType: "DINE_IN",
+      onlinePlatform: null,
       guestCount: 1,
       tableNumber: "",
+      tableId: null,
       customer: null,
       discountSource: null,
     });

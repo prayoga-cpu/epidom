@@ -9,6 +9,66 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [2.104.0] - 2026-09-24 · ux
+
+The Stock page shows items as cards you can lay out three ways, and an item's details open in a pop-up.
+
+- **Item | Delivery Order.** The tabs at the top of the Stock page are now Item and Delivery Order. Delivery Order holds what was under "Reorder & Deliveries", so the Items / Reorder & Deliveries switch under the title is gone.
+- **History is now the Log.** It has its own tab, set apart on the right of Item | Delivery Order.
+- **Grid, Columns or List.** A switch next to Select All changes how items are laid out, like the till's menu. Grid shows full cards, Columns shows smaller cards with more to a row, and List shows one row per item. Cards are as tall as their content. The Stock page remembers your choice on each device.
+- **Details in a pop-up.** Tap an item to open its details: stock information, expiry date, and the Adjust Stock, Record Waste, View History and Reset to 0 buttons. The checkbox on each item still selects it for Bulk Adjust without opening it.
+- **The reason is optional when adjusting stock.** Adjust Stock and Bulk Adjust no longer ask for a reason before saving. Leave it blank and the adjustment is recorded without one.
+- **The Log records every stock change.** Stock set when adding or editing a product, and stock brought in by a CSV or Smart Import, now write a Log line, as materials already did. Materials used in production show as a reduction, not an increase.
+- **More in each line.** Each line says what happened (Sale, Delivery, Produced, Used in production, Adjustment, Waste, Returned), the reason, the time (now on phones too) and the stock left afterwards.
+- **The whole history.** Load more goes back through everything. Search and Oldest first now cover the whole history, not only the last 50 lines. A date range now includes its last day.
+- **Re-importing products keeps their stock.** A product sheet without a stock column used to reset every product it matched to 0. Now their stock is left as it is.
+- **Bulk Adjust works.** It used to open with "No items selected" and could not be saved, which also blocked Adjust Stock for products. It now opens with the items you picked.
+- **Adjust Stock works for every material.** It only knew the 50 newest materials, so saving an older one did nothing. It also showed the previous material's name when opened for another one.
+- **Till fixes.** Switching store from the More menu with items in the cart no longer freezes the till behind the menu. A table picked for a saved bill is marked free again once the bill is paid without the kitchen display.
+- **Finance reports** show Just Eat's commission as 14% instead of 14.000000000000002%.
+
+## [2.103.0] - 2026-09-24 · ux
+
+Ordering from a supplier is now two steps: create the order, then tap Received when it arrives.
+
+- **Creating an order places it.** The "Orders to Place" list and its "Mark as Placed" button are gone. A new order goes straight to **Awaiting delivery**. From the "Order created" screen you can print it or send it to the supplier by email or WhatsApp.
+- **The status updates itself.** Each open order shows "Arrives tomorrow", "Due today" or "Late by 3 days", worked out from its expected delivery date. There is no status to pick any more. Late orders are listed first.
+- **One tap to receive.** Received shows what goes into stock ("Flour +5 kg"), and Yes adds it and records today as the received date. There is no date to pick. Not yet leaves the order in the list, where it turns late on its own.
+- **Expected delivery defaults to tomorrow** in the create and bulk-order dialogs. You can still change it.
+- **Other actions are in the ⋯ menu:** send to supplier, print, change the date or notes (for a delivery the supplier pushed back), and cancel an order that will never arrive.
+- **Delivery history** (received and cancelled orders) is folded away under the list. Tap it to open.
+- **Stock can't be added twice.** A double tap or a second device on Received used to be able to add the same delivery to stock twice. Now only the first tap counts. Receiving also no longer overwrites stock that a till sale changed a moment earlier.
+
+## [2.102.0] - 2026-09-24 · ux
+
+The till's "More" menu moved to the top bar and opens as a side menu from the right.
+
+- **More sits next to your name, top right.** It is the Epidom logo, right after the staff name button, with no gap between them. The bottom tab bar now holds only the till's pages.
+- **The name button shows the name only.** It no longer repeats the role ("Owner · OWNER"). On a narrow phone a long name is shortened instead of pushing the buttons off the screen.
+- **A side menu instead of a pop-up.** It slides in from the right: 40% of the screen on a tablet or computer, most of the screen on a phone. The Epidom logo heads it, above a card showing who is signed in: name, role, store and, on your own account, your email.
+- **Sync sales, and the sync state at a glance.** A Sync sales button at the top sends any sales saved while offline and refreshes this device's copy of the menu and orders. A strip along the bottom says "All sales synced", how many offline sales are still waiting, or that the till is offline.
+- **One row per action.** Shift, My Schedule, Clock In / Out, Send feedback, the customer display, language, dark mode, zoom and the account actions each have their own row. The page you are on is highlighted.
+
+## [2.101.0] - 2026-09-24 · feat
+
+The till can now record online delivery orders. The "Add Customer" button opens one place for the pax count, the table and the customer.
+
+- **Dine In | Take Away | Others.** A third option sits next to Dine In and Take Away. "Others" lists the delivery platforms of your market: GoFood, GrabFood and ShopeeFood in Indonesia; Uber Eats, Deliveroo and Just Eat in France; Uber Eats, DoorDash and Grubhub elsewhere. "Other platform" is always there for anything else. The market is the one set in Back Office → Fees & Taxes. Pick a platform to key in an order that came through it.
+- **Each platform in its own report row.** Platform orders are recorded against their platform. The daily and shift report's "By sale type" block gets a line per platform (GoFood, GrabFood, …). The finance Channels report and its channel filter count them with the platform's commission taken off. Receipts, kitchen tickets, the order queue and order history name the platform too.
+- **Pax, table and customer in one dialog.** The pax chip left the order-type row. Tap "Add Customer" (or the attached customer) to set the number of guests, with − / + in the middle and a row of numbers 1–30 to tap underneath. The same dialog holds the table and, optionally, the customer. The row shows the pax and table at a glance.
+- **Tables from your Tables page.** The table field is a dropdown of the tables you registered, with their seats and status. Picking one links the order to that table and marks it occupied. "Custom…" still lets you type any table that isn't registered.
+- **The customer can type their own details.** The customer section has the Customer display switch and an "Ask customer for details" button. It opens the WhatsApp number form on the customer screen. A returning customer is added to the sale automatically; a new one fills the form in the dialog for you to save.
+
+## [2.100.0] - 2026-09-24 · ux
+
+The till's menu now works the way a cashier looks for an item: pick Food or Drink, tap a category, tap the item.
+
+- **Food / Drink tabs replace "+ Add filter".** All, Food (burger icon) and Drink (wine-glass icon) now sit next to the search box on the till and are always on screen, plus a tab for your second product line if you run one. Food lists the items whose Department is "Kitchen / Food" and Drink the "Bar / Drink" ones. An item made in both the kitchen and the bar appears under both.
+- **Categories are cards.** The menu opens on one card per category, with its item count. Tap a card to see its items, with their names, prices and photos. A Back card sits in the top-left corner, and a "Categories › Drink › Coffee" trail runs above them. Changing tab takes you back to that tab's categories. A menu with a single category opens straight on its items.
+- **Search still covers the whole menu.** Typing or scanning looks through every category of the current tab at once. Clear the search to go back to where you were.
+- **On a phone, the cart button floats and the search row is shared.** The cart button is a floating circle at the bottom right, just above the tab bar, instead of a row of its own at the top. The search box and the Food / Drink tabs share one row, with Food and Drink shown as icons.
+- **Department is explained in the Back Office.** When you add or edit a product or a storefront menu item, a note under the Department field says it chooses the till's Food or Drink tab as well as the kitchen or bar ticket. An empty Food or Drink tab on the till points you to the same setting.
+
 ## [2.99.0] - 2026-09-20 · ux
 
 The website now speaks French, Indonesian and English everywhere it should — legal pages included — and tells search engines the truth about which language each page is in.

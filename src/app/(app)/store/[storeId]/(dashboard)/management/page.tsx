@@ -33,16 +33,13 @@ export default async function ManagementPage({ params }: { params: Promise<{ sto
   // Fetch initial supplier orders.
   //
   // This seeds ONE React Query cache key (`["supplier-orders","list",storeId]`)
-  // that TWO panels read: Supplier Deliveries wants PLACED/RECEIVED, and Orders
-  // to Place wants PENDING. Seeding only the deliveries half left a freshly
-  // created (PENDING) order invisible until the 10s poll came round, since the
-  // hook sets refetchOnMount: false.
-  //
-  // CANCELLED is still excluded: nothing renders it, and cancelled orders
-  // accumulate forever — including them would let them crowd out live ones
-  // under the `take` limit below.
+  // that both halves of Reorder & Deliveries read: "Awaiting delivery" wants
+  // PLACED (and legacy PENDING), Delivery history wants RECEIVED/CANCELLED.
+  // Seed every status: the hook sets refetchOnMount: false, so anything left
+  // out here only turns up on the first 10s poll, and a cancelled order would
+  // vanish from both lists until then.
   const supplierOrdersResult = await fetchSupplierOrdersForPage(storeId, {
-    status: ["PENDING", "PLACED", "RECEIVED"],
+    status: ["PENDING", "PLACED", "RECEIVED", "CANCELLED"],
     take: 100, // Reasonable limit for initial view
   });
 

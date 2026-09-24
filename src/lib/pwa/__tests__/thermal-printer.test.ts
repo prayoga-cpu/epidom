@@ -120,7 +120,7 @@ const BASE_REPORT: ShiftReportData = {
   },
   invoices: { count: 46, averagePerInvoice: 54952.17 },
   cancellations: { invoiceCount: 0, itemCount: 0, total: 0 },
-  byOrderType: [{ orderType: "DINE_IN", orderCount: 46, total: 2527800 }],
+  byOrderType: [{ orderType: "DINE_IN", platform: null, orderCount: 46, total: 2527800 }],
   byGuest: null,
   byPaymentMethod: [
     { paymentMethod: "CASH", orderCount: 20, revenue: 787600, percentOfTotal: 31.2 },

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { POS_ONLINE_PLATFORMS } from "@/config/aggregator.config";
 
 // Frozen snapshot of one chosen modifier/option, shared by POS, hold, and
 // public-order item schemas. materialId/materialQty pass through untouched
@@ -105,6 +106,29 @@ export type OrderTenderInput = z.infer<typeof orderTenderSchema>;
 /** Mirrors MAX_TENDERS in src/lib/finance/order-payments.ts. */
 const MAX_TENDERS_PER_ORDER = 10;
 
+/**
+ * DELIVERY only ever comes from the till's "Others" order type, which always
+ * names the platform. Added after DINE_IN / TAKEAWAY, so every payload already
+ * in an offline queue still parses.
+ */
+export const posOrderTypeEnum = z.enum(["DINE_IN", "TAKEAWAY", "DELIVERY"]);
+
+/** A platform the till's "Others" menu can record. See POS_ONLINE_PLATFORMS. */
+export const posOnlinePlatformEnum = z.enum(POS_ONLINE_PLATFORMS);
+
+/** An online-platform order is a DELIVERY, and a DELIVERY must name its platform. */
+function onlinePlatformMatchesOrderType(data: {
+  orderType: string;
+  onlinePlatform?: string;
+}): boolean {
+  return (data.orderType === "DELIVERY") === !!data.onlinePlatform;
+}
+
+const ONLINE_PLATFORM_MISMATCH = {
+  message: "onlinePlatform is required for DELIVERY and only allowed with it",
+  path: ["onlinePlatform"],
+};
+
 // Plain object (not the refined version below) so createHoldOrderSchema can
 // still reach `.shape.items` — .refine() wraps a schema in ZodEffects, which
 // drops `.shape`.
@@ -115,7 +139,14 @@ const posOrderObjectSchema = z.object({
   // (including everything sitting in an offline queue right now) still sends
   // it, so this loosening can never reject an old-shape body.
   paymentMethod: paymentMethodEnum.optional(),
-  orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
+  orderType: posOrderTypeEnum,
+  /**
+   * The delivery platform a DELIVERY order came from — the till's "Others"
+   * order type, where the cashier keys in a GoFood / Uber Eats / … order by
+   * hand. Becomes Order.source. Required with DELIVERY and rejected without it
+   * (see onlinePlatformMatchesOrderType): the till has no other delivery flow.
+   */
+  onlinePlatform: posOnlinePlatformEnum.optional(),
   // Pax at the table — only meaningful for DINE_IN, so the checkout dialog
   // omits it entirely for takeaway rather than sending a misleading 1. Left
   // optional here (not `.default(1)`) so "not recorded" stays distinguishable
@@ -203,7 +234,8 @@ export const createPosOrderSchema = posOrderObjectSchema
   .refine((data) => data.redeemPoints === undefined || !!data.customerId, {
     message: "redeemPoints requires customerId",
     path: ["redeemPoints"],
-  });
+  })
+  .refine(onlinePlatformMatchesOrderType, ONLINE_PLATFORM_MISMATCH);
 
 export type CreatePosOrderInput = z.infer<typeof createPosOrderSchema>;
 
@@ -223,34 +255,37 @@ export function isCustomOrderItem(
  * already-held order in place (e.g. resumed, edited, held again) instead of
  * creating a duplicate row.
  */
-export const createHoldOrderSchema = z.object({
-  items: posOrderObjectSchema.shape.items,
-  orderType: z.enum(["DINE_IN", "TAKEAWAY"]),
-  guestCount: posOrderObjectSchema.shape.guestCount,
-  tableId: z.string().cuid().optional(),
-  tableNumber: z.string().optional(),
-  customerName: z.string().optional(),
-  notes: z.string().optional(),
-  shiftId: z.string().cuid().optional(),
-  orderId: z.string().cuid().optional(),
-  // ── Cashier revamp (2.88.0) ───────────────────────────────────────────────
-  // A hold used to persist nothing but customerName, so "Save Bill" quietly
-  // dropped the attached customer and the discount the cashier had applied.
-  // Coupons and points are deliberately NOT accepted here: they are redeemed
-  // (usedCount bump / ledger burn) at finalize, and parking a bill must not
-  // consume either.
-  //
-  // customerId and the discount fields are all three-state: OMITTED keeps what
-  // the held row already recorded (a re-hold after editing the cart must not
-  // silently drop the customer or the discount the cashier applied), and an
-  // explicit `null` / a sent value replaces it.
-  customerId: z.string().cuid().nullish(),
-  customerPhone: z.string().optional(),
-  customerEmail: z.string().trim().email("Invalid email format").max(254).optional(),
-  presetId: z.string().cuid().nullish(),
-  discountAmount: z.number().min(0).optional(),
-  discountReason: z.string().max(200, "Reason is too long").optional(),
-});
+export const createHoldOrderSchema = z
+  .object({
+    items: posOrderObjectSchema.shape.items,
+    orderType: posOrderTypeEnum,
+    onlinePlatform: posOrderObjectSchema.shape.onlinePlatform,
+    guestCount: posOrderObjectSchema.shape.guestCount,
+    tableId: z.string().cuid().optional(),
+    tableNumber: z.string().optional(),
+    customerName: z.string().optional(),
+    notes: z.string().optional(),
+    shiftId: z.string().cuid().optional(),
+    orderId: z.string().cuid().optional(),
+    // ── Cashier revamp (2.88.0) ───────────────────────────────────────────────
+    // A hold used to persist nothing but customerName, so "Save Bill" quietly
+    // dropped the attached customer and the discount the cashier had applied.
+    // Coupons and points are deliberately NOT accepted here: they are redeemed
+    // (usedCount bump / ledger burn) at finalize, and parking a bill must not
+    // consume either.
+    //
+    // customerId and the discount fields are all three-state: OMITTED keeps what
+    // the held row already recorded (a re-hold after editing the cart must not
+    // silently drop the customer or the discount the cashier applied), and an
+    // explicit `null` / a sent value replaces it.
+    customerId: z.string().cuid().nullish(),
+    customerPhone: z.string().optional(),
+    customerEmail: z.string().trim().email("Invalid email format").max(254).optional(),
+    presetId: z.string().cuid().nullish(),
+    discountAmount: z.number().min(0).optional(),
+    discountReason: z.string().max(200, "Reason is too long").optional(),
+  })
+  .refine(onlinePlatformMatchesOrderType, ONLINE_PLATFORM_MISMATCH);
 
 export type CreateHoldOrderInput = z.infer<typeof createHoldOrderSchema>;
 
@@ -270,9 +305,7 @@ export type MergeOrdersInput = z.infer<typeof mergeOrdersSchema>;
 
 export const updateOrderStatusSchema = z
   .object({
-    status: z
-      .enum(["CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED", "CANCELLED"])
-      .optional(),
+    status: z.enum(["CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED", "CANCELLED"]).optional(),
     // Manual settle-up for orders whose paymentStatus is still PENDING (Pay
     // Later, or a payment that was actually collected outside the online
     // flow) — deliberately narrowed to "mark paid" only, not a general

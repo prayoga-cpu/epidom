@@ -157,6 +157,8 @@ export const en = {
     departmentBarDetailed: "Bar / Drink",
     departmentBoth: "Both",
     departmentBothDetailed: "Both (Kitchen & Bar)",
+    departmentPosHint:
+      "Sets the POS tab: “Kitchen / Food” items show under Food, “Bar / Drink” items under Drink. It also sends the item to the kitchen or bar ticket.",
     departmentUnassigned: "Unassigned",
     recipe: "Recipe",
     price: "Price",
@@ -1340,6 +1342,8 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
     posOfflineSyncPending: "{count} offline orders waiting to sync",
     posOfflineSyncing: "Syncing...",
     posOfflineSyncNow: "Sync Now",
+    posSyncSales: "Sync sales",
+    posAllSalesSynced: "All sales synced",
     posOfflineLastSynced: "Last synced: {date}",
     posOfflineNeverSynced: "Not synced yet on this device",
     entityPreviewCostPerBatch: "Cost per Batch",
@@ -2609,8 +2613,9 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
 
     // Create Order Dialog
     createOrderDialog: {
-      title: "Create Order Reminder",
-      description: "Create a reminder to order raw materials from supplier",
+      title: "Create Order",
+      description:
+        "Order raw materials from a supplier. It waits under Awaiting delivery until you tap Received.",
       supplier: "Supplier",
       selectSupplier: "Select supplier",
       suppliersForMaterial: "Suppliers for this material",
@@ -2633,10 +2638,10 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
       priority: "Priority",
       notes: "Notes",
       notesPlaceholder: "Add any special instructions or notes...",
-      notesHint: "Optional notes for this order reminder",
+      notesHint: "Optional notes for this order",
       submit: "Create Order",
       createdTitle: "Order created",
-      createdDescription: "Print the order quote or send it to the supplier",
+      createdDescription: "It is now under Awaiting delivery. Tap Received when it arrives.",
       printQuote: "Print order quote",
       printQuoteHint:
         "The quote opens in a new tab with your store details and totals, ready to print or save as PDF.",
@@ -3193,6 +3198,24 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
     production: "Production",
     history: "History",
     stock: "Stock",
+    // Stock page tabs: Item | Delivery Order (History is the round button beside them)
+    item: "Item",
+    deliveryOrder: "Delivery Order",
+    log: "Log",
+    // The Log tab: every stock movement, newest first
+    movementLog: {
+      types: {
+        PURCHASE: "Delivery",
+        PRODUCTION_IN: "Produced",
+        PRODUCTION_OUT: "Used in production",
+        SALE: "Sale",
+        ADJUSTMENT: "Adjustment",
+        WASTE: "Waste",
+        RETURN: "Returned",
+      },
+      balanceAfter: "Balance {balance}",
+      loadMore: "Load more",
+    },
     movements: "Movements",
     // Delivery Tab
     delivery: {
@@ -3219,6 +3242,51 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
       sendWhatsappSuccess: "Sent to supplier via WhatsApp",
       sendWhatsappFailed: "Failed to send WhatsApp message",
       sendFailed: "Failed to send",
+      // Reorder & Deliveries: create an order, then tap Received when it arrives.
+      openOrders: {
+        title: "Awaiting delivery",
+        empty: "Nothing on the way",
+        emptyDescription: "Create an order and it waits here until you tap Received.",
+        expected: "Expected {date}",
+        moreItems: "+{count} more",
+        received: "Received",
+        moreActions: "More actions",
+        edit: "Change date or notes",
+        print: "Print order",
+        cancel: "Cancel order",
+      },
+      timing: {
+        noDate: "Ordered",
+        arrivesTomorrow: "Arrives tomorrow",
+        arrivesInDays: "Arrives in {days} days",
+        dueToday: "Due today",
+        lateOneDay: "Late by 1 day",
+        lateDays: "Late by {days} days",
+      },
+      confirmReceived: {
+        title: "Did this order arrive?",
+        addsToStock: "Yes adds this to stock:",
+        expires: "Expires {date}",
+        notYetHint:
+          "Not here yet? Tap Not yet. It stays in the list and shows as late on its own once the expected day has passed.",
+        notYet: "Not yet",
+        confirm: "Yes, received",
+        success: "Received. Stock updated.",
+        failed: "Couldn't mark the order as received",
+      },
+      confirmCancel: {
+        title: "Cancel this order?",
+        description: "Use this when the order will never arrive. Nothing is added to stock.",
+        keep: "Keep it",
+        confirm: "Cancel order",
+        success: "Order cancelled",
+        failed: "Couldn't cancel the order",
+      },
+      history: {
+        title: "Delivery history",
+        show: "Show",
+        hide: "Hide",
+      },
       filters: {
         status: "Status",
         allStatuses: "All Statuses",
@@ -3231,7 +3299,7 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
       },
       status: {
         pending: "Pending",
-        inTransit: "In Transit",
+        inTransit: "Ordered",
         received: "Received",
         cancelled: "Cancelled",
       },
@@ -3393,6 +3461,12 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
     editStock: {
       title: "Stock Management",
       description: "Manage inventory levels and record stock adjustments",
+      view: {
+        label: "Item layout",
+        grid: "Grid",
+        columns: "Columns",
+        list: "List",
+      },
       searchItems: "Search by name or SKU...",
       items: "items",
       itemsSelected: "items selected",
@@ -4855,7 +4929,11 @@ lifetime: "Lifetime access",
       online: "Online",
       manual: "Manual",
     },
+    onlinePlatform: {
+      other: "Other platform",
+    },
     cart: {
+      open: "Open cart",
       empty: "Cart is empty",
       emptyDesc: "Tap an item from the menu to add it to the order",
       subtotal: "Subtotal",
@@ -5160,6 +5238,15 @@ lifetime: "Lifetime access",
       unavailable: "Unavailable",
       counted: "{count} counted",
       customProducts: "Custom Products",
+      food: "Food",
+      drink: "Drink",
+      departments: "Food or drink",
+      categories: "Categories",
+      itemCount: "{count} items",
+      noFoodItems:
+        "No food items yet. In the Back Office, set an item's Department to “Kitchen / Food” to list it here.",
+      noDrinkItems:
+        "No drink items yet. In the Back Office, set an item's Department to “Bar / Drink” to list it here.",
     },
     connection: {
       online: "Connected",
@@ -6216,7 +6303,8 @@ lifetime: "Lifetime access",
       paxCount: "{count} pax",
       paxCountOne: "1 pax",
       tableShort: "Table {table}",
-      paxTableLabel: "Guests and table",
+      others: "Others",
+      onlineOrderFrom: "Online order from",
     },
     customer: {
       add: "Add Customer",
@@ -6243,6 +6331,32 @@ lifetime: "Lifetime access",
       gone: "This customer no longer exists and was removed from the sale.",
       points: "{count} pts",
       lifetimeSpend: "Lifetime spend {amount}",
+      reviewFromDisplay: "New customer on the customer screen — tap to review",
+    },
+    customerDialog: {
+      title: "Guests & customer",
+      titleNoGuests: "Customer",
+      customerHeading: "Customer (optional)",
+      done: "Done",
+      remove: "Remove",
+    },
+    table: {
+      none: "No table",
+      custom: "Custom",
+      customOption: "Custom…",
+      customPlaceholder: "Table name or number",
+      seats: "{count} seats",
+      loadFailed: "Couldn't load your tables. Type the table instead.",
+    },
+    customerDisplay: {
+      details:
+        "Let the customer type their own details on the customer screen: their WhatsApp number, and a name and email if they're new. A returning customer is added to the sale automatically; a new one fills the form below for you to save.",
+      ask: "Ask customer for details",
+      waiting: "Waiting for the customer to type their number…",
+      checking: "Customer typed {phone}. Checking…",
+      matched: "{phone} is already a customer and was added to this sale.",
+      isNew: "{phone} is a new customer. Check the form below and save.",
+      unknown: "Customer typed {phone}. It couldn't be checked right now.",
     },
     item: {
       custom: "Custom",

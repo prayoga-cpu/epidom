@@ -157,7 +157,7 @@ describe("PosShell toolbar — one bar at ≥md, its own row below", () => {
     ).toBeInTheDocument();
   });
 
-  it("at md+ the search, filters and scan button are portaled into the status bar's slot — the view toggle is not", () => {
+  it("at md+ the search, Food / Drink tabs and scan button are portaled into the status bar's slot — the view toggle is not", () => {
     setViewport(true);
     const slot = document.createElement("div");
     document.body.appendChild(slot);
@@ -170,9 +170,7 @@ describe("PosShell toolbar — one bar at ≥md, its own row below", () => {
     expect(within(slot).queryByRole("group", { name: "cashierCheckout.view.label" })).toBeNull();
     // Still on screen — down in the menu container instead.
     expect(screen.getByRole("group", { name: "cashierCheckout.view.label" })).toBeInTheDocument();
-    expect(
-      within(slot).getByRole("button", { name: /pos\.filters\.addFilter/ })
-    ).toBeInTheDocument();
+    expect(within(slot).getByRole("group", { name: "pos.menu.departments" })).toBeInTheDocument();
     // Exactly one search box on screen: no second row underneath.
     expect(screen.getAllByPlaceholderText("pos.menu.search")).toHaveLength(1);
   });
@@ -189,28 +187,116 @@ describe("PosShell toolbar — one bar at ≥md, its own row below", () => {
     expect(field.className).toContain("border-0");
     expect(field.className).not.toContain("h-10");
 
-    // "+ Add filter" is ghost: no border, dashed or otherwise, square corners, a
-    // pointer cursor — and as tall as the bar, so its hover tint is a flat block.
-    // (h-full, not `self-stretch`: a class no other file uses can be missing from a
-    // browser holding an older stylesheet.)
-    const add = within(slot).getByRole("button", { name: /pos\.filters\.addFilter/ });
-    expect(add.className).not.toMatch(/\bborder\b|border-dashed/);
-    expect(add.className).toContain("rounded-none");
-    expect(add.className).not.toContain("rounded-md");
-    expect(add.className).toContain("cursor-pointer");
-    expect(add.className).toContain("h-full");
-    expect(add.className).not.toContain("h-9");
-    expect(add.className).not.toContain("self-stretch");
+    // The Food / Drink tabs are flat blocks too: no border, a pointer cursor — and
+    // as tall as the bar, so the active tab's fill is a block edge to edge. (h-full,
+    // not `self-stretch`: a class no other file uses can be missing from a browser
+    // holding an older stylesheet.)
+    const tabs = within(slot).getByRole("group", { name: "pos.menu.departments" });
+    expect(tabs.className).not.toMatch(/\bborder\b|rounded-md/);
+    expect(tabs.className).toContain("h-full");
+    for (const tab of within(tabs).getAllByRole("button")) {
+      expect(tab.className).toContain("h-full");
+      expect(tab.className).toContain("cursor-pointer");
+      expect(tab.className).not.toContain("self-stretch");
+    }
   });
 
-  it('outside the status bar, "+ Add filter" is the dashed, rounded chip the other filter rows use', () => {
+  it("outside the status bar, the Food / Drink tabs are a bordered control of 40px buttons", () => {
     renderShell(); // no slot → the inline row
-    const add = screen.getByRole("button", { name: /pos\.filters\.addFilter/ });
-    expect(add.className).toContain("border-dashed");
-    expect(add.className).toContain("rounded-md");
-    expect(add.className).toContain("h-9");
-    expect(add.className).not.toContain("h-full");
-    expect(add.className).not.toContain("rounded-none");
+    const tabs = screen.getByRole("group", { name: "pos.menu.departments" });
+    expect(tabs.className).toContain("border");
+    expect(tabs.className).toContain("rounded-md");
+    for (const tab of within(tabs).getAllByRole("button")) expect(tab.className).toContain("h-10");
+  });
+
+  it("on a phone the search and the tabs share one row, Food and Drink as icons only", () => {
+    renderShell(); // no slot → the inline row
+    const row = search().closest("div.border-b") as HTMLElement;
+    const tabs = within(row).getByRole("group", { name: "pos.menu.departments" });
+    // Same row, no wrapping, and the tab strip no longer claims a line of its own.
+    expect(row.className).not.toContain("flex-wrap");
+    expect(tabs.parentElement!.className).not.toContain("basis-full");
+
+    for (const name of ["pos.menu.food", "pos.menu.drink"]) {
+      const tab = within(tabs).getByRole("button", { name });
+      // The label is still the accessible name, just not drawn below sm.
+      const label = within(tab).getByText(name);
+      expect(label.className).toContain("sr-only");
+      expect(label.className).toContain("sm:not-sr-only");
+      expect(tab).toHaveAttribute("title", name);
+      expect(tab.className).toContain("min-w-10"); // the 40px touch floor
+    }
+    // "All" has no icon, so its word stays.
+    const all = within(tabs).getByRole("button", { name: "pos.menu.all" });
+    expect(within(all).getByText("pos.menu.all").className).not.toContain("sr-only");
+  });
+
+  it("in the status bar (md+) Food and Drink keep their words", () => {
+    setViewport(true);
+    const slot = document.createElement("div");
+    document.body.appendChild(slot);
+    renderShell({ available: true, element: slot });
+    const tabs = within(slot).getByRole("group", { name: "pos.menu.departments" });
+    expect(within(tabs).getByText("pos.menu.food").className).not.toContain("sr-only");
+    expect(within(tabs).getByRole("button", { name: "pos.menu.food" })).not.toHaveAttribute(
+      "title"
+    );
+  });
+
+  it('the "+ Add filter" menu is gone: All, Food and Drink are always on screen', () => {
+    renderShell();
+    expect(screen.queryByRole("button", { name: /pos\.filters\.addFilter/ })).toBeNull();
+    const tabs = screen.getByRole("group", { name: "pos.menu.departments" });
+    expect(
+      within(tabs)
+        .getAllByRole("button")
+        .map((b) => b.textContent)
+    ).toEqual(["pos.menu.all", "pos.menu.food", "pos.menu.drink"]);
+    expect(within(tabs).getByRole("button", { name: "pos.menu.all" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    // Food and Drink carry an icon (burger, wine glass); All is text only.
+    expect(
+      within(tabs).getByRole("button", { name: "pos.menu.food" }).querySelector("svg")
+    ).not.toBeNull();
+    expect(
+      within(tabs).getByRole("button", { name: "pos.menu.drink" }).querySelector("svg")
+    ).not.toBeNull();
+    expect(
+      within(tabs).getByRole("button", { name: "pos.menu.all" }).querySelector("svg")
+    ).toBeNull();
+  });
+
+  it("picking a tab narrows the menu and goes back to its category cards", () => {
+    menu.categories = [
+      {
+        name: "Coffee",
+        items: [{ id: "c1", name: "Latte", price: 4, isAvailable: true, department: "BAR" }],
+      },
+      {
+        name: "Bakery",
+        items: [
+          { id: "b1", name: "Croissant", price: 3, isAvailable: true, department: "KITCHEN" },
+          { id: "b2", name: "Iced Tea", price: 3, isAvailable: true, department: "BAR" },
+        ],
+      },
+    ];
+    renderShell();
+    fireEvent.click(screen.getByRole("button", { name: /^Bakery/ }));
+    expect(screen.getByText("Croissant")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "pos.menu.drink" }));
+    expect(screen.getByRole("button", { name: "pos.menu.drink" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    // Back on the cards of the Drink tab, not left inside Bakery.
+    expect(screen.queryByText("Croissant")).toBeNull();
+    expect(screen.queryByText("Iced Tea")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^Bakery/ }));
+    expect(screen.getByText("Iced Tea")).toBeInTheDocument();
+    expect(screen.queryByText("Croissant")).toBeNull();
   });
 
   it("the portaled controls still work (state stays in the shell)", () => {

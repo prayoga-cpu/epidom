@@ -70,6 +70,9 @@ export function PosModeStoreSwitcher({ storeId, onNavigate }: PosModeStoreSwitch
         description: t("pos.switchStore.confirmDesc").replace("{store}", store.name),
         confirmText: t("pos.switchStore.confirmAction"),
         variant: "destructive",
+        // This switcher lives in the More sheet (z-[70]). A z-50 confirm would
+        // open under the sheet's backdrop and freeze the till.
+        layerClassName: "z-[80]",
       });
       if (!ok) return;
       clearCart();

@@ -23,6 +23,7 @@ import {
   useSupplierOrders,
   useSupplierOrder,
   useCreateSupplierOrder,
+  useReceiveSupplierOrder,
 } from "../use-supplier-orders";
 
 const STORE_ID = "cmppdqplp000004l88zerz2ad";
@@ -255,5 +256,53 @@ describe("useCreateSupplierOrder", () => {
         items: [{ materialId: "mat-1", quantity: 1, unit: "kg", unitPrice: 1 }],
       })
     ).rejects.toThrow("Supplier not found");
+  });
+});
+
+describe("useReceiveSupplierOrder", () => {
+  it("PATCHes the order it is given to RECEIVED and returns the unwrapped order", async () => {
+    const fetchMock = vi.fn(async () =>
+      wrapped({ order: makeOrder({ id: "order-7", status: "RECEIVED" }) })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useReceiveSupplierOrder(STORE_ID), {
+      wrapper: makeWrapper(),
+    });
+
+    const received = await result.current.mutateAsync("order-7");
+
+    // One hook serves every row: the order id rides on the call, not the hook.
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(`/api/stores/${STORE_ID}/supplier-orders/order-7`);
+    expect(init.method).toBe("PATCH");
+    // Nothing but the status: the server dates the receipt itself.
+    expect(JSON.parse(init.body as string)).toEqual({ status: "RECEIVED" });
+    expect(received.status).toBe("RECEIVED");
+  });
+
+  it("surfaces the 409 when another tap or device already received it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          ({
+            ok: false,
+            status: 409,
+            json: async () => ({
+              success: false,
+              error: { code: "CONFLICT", message: "This order was already received" },
+            }),
+          }) as Response
+      )
+    );
+
+    const { result } = renderHook(() => useReceiveSupplierOrder(STORE_ID), {
+      wrapper: makeWrapper(),
+    });
+
+    await expect(result.current.mutateAsync("order-1")).rejects.toThrow(
+      "This order was already received"
+    );
   });
 });

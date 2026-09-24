@@ -24,6 +24,7 @@ import {
 const REPORT_ORDER_SELECT = {
   status: true,
   orderType: true,
+  source: true,
   paymentMethod: true,
   guestCount: true,
   subtotal: true,

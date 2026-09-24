@@ -362,6 +362,31 @@ describe("buildCheckoutPayload — split payment", () => {
   });
 });
 
+describe("buildCheckoutPayload — order type, platform and table", () => {
+  it("sends the platform with a DELIVERY, and neither pax nor table link", () => {
+    const body = buildCheckoutPayload(
+      input({
+        orderType: "DELIVERY",
+        onlinePlatform: "GRABFOOD",
+        tableId: "cktable000000000000000001",
+      })
+    );
+    expect(body).toMatchObject({ orderType: "DELIVERY", onlinePlatform: "GRABFOOD" });
+    expect(body.guestCount).toBeUndefined();
+    expect(body.tableId).toBeUndefined();
+  });
+
+  it("never sends a leftover platform with Dine In", () => {
+    const body = buildCheckoutPayload(input({ orderType: "DINE_IN", onlinePlatform: "GOFOOD" }));
+    expect(body.onlinePlatform).toBeUndefined();
+  });
+
+  it("links the registered table picked for a dine-in sale", () => {
+    const body = buildCheckoutPayload(input({ tableId: "cktable000000000000000001" }));
+    expect(body).toMatchObject({ tableId: "cktable000000000000000001", tableNumber: "A1" });
+  });
+});
+
 describe("every payload shape validates against the server's own order schema", () => {
   const alice = { id: CUSTOMER_ID, name: "Alice", phone: "+33612345678" };
   const tenders = normalizeTenders(25, [
@@ -375,6 +400,8 @@ describe("every payload shape validates against the server's own order schema", 
     ["legacy pay later", input({ payment: { kind: "single", method: "PAY_LATER" } })],
     ["custom item", input({ items: [ramen, gift] })],
     ["split", input({ payment: { kind: "split", tenders: tenders.tenders } })],
+    ["online platform", input({ orderType: "DELIVERY", onlinePlatform: "UBER_EATS" })],
+    ["registered table", input({ tableId: "cktable000000000000000001" })],
     [
       "customer + points",
       input({ customer: alice, discount: { ...noDiscount, redeemPoints: 100 } }),

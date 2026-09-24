@@ -28,6 +28,7 @@ import { type LowStockAlert } from "@/features/dashboard/shared/hooks/use-alerts
 import { useCreateSupplierOrder } from "@/features/dashboard/shared/hooks/use-supplier-orders";
 import { ShoppingCart, Loader2, Package, AlertCircle } from "lucide-react";
 import { useParams } from "next/navigation";
+import { tomorrowDateInput } from "./delivery-timing";
 
 // Schema for bulk order items
 const bulkOrderItemSchema = z.object({
@@ -111,7 +112,8 @@ export function BulkOrderDialog({
           quantity: suggestedQuantity > 0 ? suggestedQuantity : 1,
         };
       }),
-      expectedDeliveryDate: "",
+      // Tomorrow by default, like the single-item dialog. Still editable.
+      expectedDeliveryDate: tomorrowDateInput(),
       expiryDate: "",
       notes: "",
     },
@@ -142,7 +144,7 @@ export function BulkOrderDialog({
         supplierId,
         supplierName,
         items,
-        expectedDeliveryDate: "",
+        expectedDeliveryDate: tomorrowDateInput(),
         expiryDate: "",
         notes: `Bulk restock order from ${supplierName}`,
       });

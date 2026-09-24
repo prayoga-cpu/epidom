@@ -424,7 +424,14 @@ export const stockAdjustmentSchema = z
     productId: cuidSchema.optional(),
     adjustmentType: z.enum(["IN", "OUT"]),
     quantity: decimalSchema.positive("Quantity must be positive"),
-    reason: z.string().min(1, "Reason is required").max(200, "Reason is too long"),
+    // Optional — an adjustment can be recorded without one. Blank collapses to
+    // undefined so the movement stores NULL rather than an empty string.
+    reason: z
+      .string()
+      .trim()
+      .max(200, "Reason is too long")
+      .optional()
+      .transform((value) => value || undefined),
     notes: z.string().max(500, "Notes are too long").optional(),
     referenceId: z.string().max(100, "Reference ID is too long").optional(),
   })
@@ -434,6 +441,37 @@ export const stockAdjustmentSchema = z
   });
 
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentSchema>;
+
+const dateStringSchema = z
+  .string()
+  .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid date");
+
+// GET /stock-movements: the Stock page's Log, an item's adjustment history and
+// the dashboard's recent-movements card. Pages with a cursor (the last row's id).
+export const stockMovementsQuerySchema = z.object({
+  materialId: cuidSchema.optional(),
+  productId: cuidSchema.optional(),
+  // Older callers still send it next to an item id. The id alone decides.
+  itemType: z.enum(["material", "product"]).optional(),
+  // Every MovementType, RETURN included (movementTypeSchema above predates it).
+  type: z
+    .enum(["PURCHASE", "PRODUCTION_IN", "PRODUCTION_OUT", "SALE", "ADJUSTMENT", "WASTE", "RETURN"])
+    .optional(),
+  dateFrom: dateStringSchema.optional(),
+  dateTo: dateStringSchema.optional(),
+  // Item name contains this, case-insensitive.
+  q: z.string().trim().max(100).optional(),
+  order: z.enum(["asc", "desc"]).default("desc"),
+  take: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(100)
+    .transform((value) => Math.min(value, 200)),
+  cursor: cuidSchema.optional(),
+});
+
+export type StockMovementsQuery = z.infer<typeof stockMovementsQuerySchema>;
 
 // Supplier schemas
 export const createSupplierSchema = z.object({

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useOnlineStatus } from "@/hooks/use-network-status";
 import type { PosMenuItem, PosMenuCategory } from "../types/pos.types";
@@ -8,13 +8,17 @@ import type { PosViewMode } from "../hooks/use-pos-view-mode";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
 import { cn } from "@/lib/utils";
-import { Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, Sparkles } from "lucide-react";
 import Image from "next/image";
+import { matchesMenuDepartment, type PosMenuDepartment } from "../lib/menu-department";
 
 interface PosItemGridProps {
   categories: PosMenuCategory[];
+  /** The category whose items are open, or null for the category cards. */
   selectedCategory: string | null;
-  selectedDepartment?: "KITCHEN" | "BAR" | "CUSTOM" | null;
+  /** Opens a category card (its name) or goes back to the cards (null). */
+  onSelectCategory: (category: string | null) => void;
+  selectedDepartment?: PosMenuDepartment | null;
   onItemClick: (item: PosMenuItem) => void;
   searchQuery: string;
   /** Heading for the optional second product line's own section (e.g. "Hair
@@ -27,9 +31,17 @@ interface PosItemGridProps {
   toolbar?: ReactNode;
 }
 
+/**
+ * The till's menu, two taps deep: category cards first, then the chosen
+ * category's items behind a Back card in the first (top-left) slot. The Food /
+ * Drink tab above (PosDepartmentBar) narrows both levels. Typing a search skips
+ * the cards: it looks through every category (of the current tab) at once and
+ * lists the hits under their category headings.
+ */
 export function PosItemGrid({
   categories,
   selectedCategory,
+  onSelectCategory,
   selectedDepartment = null,
   onItemClick,
   searchQuery,
@@ -48,43 +60,90 @@ export function PosItemGrid({
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
 
-  const query = searchQuery.toLowerCase();
-  const filteredCategories = categories
+  const query = searchQuery.trim().toLowerCase();
+  const isSearching = query.length > 0;
+
+  // Categories that still have something under the current Food / Drink tab.
+  const tabCategories = categories
     .map((cat) => ({
       ...cat,
-      items: cat.items.filter(
-        (item) =>
-          (selectedCategory === null || cat.name === selectedCategory) &&
-          (selectedDepartment === null || item.department === selectedDepartment) &&
-          // A barcode typed (or partly typed) into the search box narrows to its
-          // product too — Enter then adds an exact match (see PosShell).
-          (item.name.toLowerCase().includes(query) ||
-            (!!query && !!item.barcode && item.barcode.toLowerCase().includes(query)))
-      ),
+      items: cat.items.filter((item) => matchesMenuDepartment(item.department, selectedDepartment)),
     }))
     .filter((cat) => cat.items.length > 0);
+
+  // A search looks past the category cards, through every category of the tab.
+  const searchResults = isSearching
+    ? tabCategories
+        .map((cat) => ({
+          ...cat,
+          items: cat.items.filter(
+            (item) =>
+              item.name.toLowerCase().includes(query) ||
+              // A barcode typed (or partly typed) into the search box narrows to its
+              // product too — Enter then adds an exact match (see PosShell).
+              (!!item.barcode && item.barcode.toLowerCase().includes(query))
+          ),
+        }))
+        .filter((cat) => cat.items.length > 0)
+    : [];
+
+  // The open category. A category that has gone (a menu refresh, or the other tab
+  // has none of it) falls back to the cards rather than an empty page, and a tab
+  // with a single category skips a pointless card and opens it straight away —
+  // with no Back card, since there is nothing to go back to.
+  const hasCategoryCards = tabCategories.length > 1;
+  const openCategory = isSearching
+    ? null
+    : (tabCategories.find((cat) => cat.name === selectedCategory) ??
+      (hasCategoryCards ? null : (tabCategories[0] ?? null)));
+  const showBack = openCategory !== null && hasCategoryCards;
+
+  // Each level starts at the top: tapping a card far down the list must not open
+  // its items already scrolled past the first ones.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const openCategoryName = openCategory?.name ?? null;
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [openCategoryName, selectedDepartment, isSearching]);
+
+  const shownCategories = isSearching
+    ? searchResults
+    : openCategory
+      ? [openCategory]
+      : tabCategories;
 
   // The optional second product line (Product.productLine, tagged
   // department: "CUSTOM" server-side) gets its own visually distinct block
   // below the regular menu rather than sitting among the food/drink
   // categories — it's a different kind of offering, and reading as just
   // another category is what the merchant flagged.
-  const standardCategories: typeof filteredCategories = [];
-  const customCategories: typeof filteredCategories = [];
-  for (const category of filteredCategories) {
+  const standardCategories: typeof shownCategories = [];
+  const customCategories: typeof shownCategories = [];
+  for (const category of shownCategories) {
     const customItems = category.items.filter((i) => i.department === "CUSTOM");
     const standardItems = category.items.filter((i) => i.department !== "CUSTOM");
     if (standardItems.length > 0) standardCategories.push({ ...category, items: standardItems });
     if (customItems.length > 0) customCategories.push({ ...category, items: customItems });
   }
 
-  if (filteredCategories.length === 0) {
+  if (shownCategories.length === 0) {
+    // An empty Food or Drink tab almost always means the items were never given a
+    // department (it defaults to Kitchen), so say where that is set.
+    const emptyMessage =
+      !isSearching && selectedDepartment === "KITCHEN"
+        ? t("pos.menu.noFoodItems")
+        : !isSearching && selectedDepartment === "BAR"
+          ? t("pos.menu.noDrinkItems")
+          : t("pos.menu.noItems");
     return (
       <div className="text-muted-foreground flex flex-1 items-center justify-center p-8 text-center">
-        <p>{t("pos.menu.noItems")}</p>
+        <p className="max-w-sm">{emptyMessage}</p>
       </div>
     );
   }
+
+  const categoryLabel = (name: string) =>
+    name === UNCATEGORIZED_CATEGORY ? t("common.uncategorized") : name;
 
   // Counted finished goods, for batch-produced items only. Deliberately
   // labelled "counted", never "available": at 0 the item is still perfectly
@@ -226,12 +285,160 @@ export function PosItemGrid({
         ? "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
         : "grid grid-cols-2 gap-0 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5";
 
-  const renderCategory = (category: (typeof filteredCategories)[number]) => (
+  // A category card: tinted so it never reads as an item, the same size as an
+  // item tile in each layout (120px / 72px / a 56px row) — well over the 40px floor.
+  const renderCategoryCard = (category: (typeof shownCategories)[number]) => {
+    const count = t("pos.menu.itemCount").replace("{count}", String(category.items.length));
+    const base =
+      "bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/40 focus-visible:ring-primary touch-manipulation border transition-colors focus-visible:ring-2 focus-visible:outline-none";
+    if (viewMode === "list") {
+      return (
+        <button
+          key={category.name}
+          type="button"
+          onClick={() => onSelectCategory(category.name)}
+          className={cn(base, "flex min-h-14 items-center gap-3 rounded-lg px-3 py-2 text-left")}
+        >
+          <span className="min-w-0 flex-1 truncate font-semibold">
+            {categoryLabel(category.name)}
+          </span>
+          <span className="text-muted-foreground shrink-0 text-xs tabular-nums">{count}</span>
+          <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+        </button>
+      );
+    }
+    return (
+      <button
+        key={category.name}
+        type="button"
+        onClick={() => onSelectCategory(category.name)}
+        className={cn(
+          base,
+          "flex flex-col items-center justify-center gap-1 p-3 text-center",
+          viewMode === "columns" ? "min-h-[72px] rounded-lg" : "min-h-[120px] sm:rounded-xl"
+        )}
+      >
+        <span className="line-clamp-3 leading-tight font-semibold">
+          {categoryLabel(category.name)}
+        </span>
+        <span className="text-muted-foreground text-xs tabular-nums">{count}</span>
+      </button>
+    );
+  };
+
+  // The Back card takes the first slot of the open category's items, so the way
+  // out is always in the same top-left spot, one tap away.
+  const renderBackCard = (name: string) => (
+    <button
+      key="__back"
+      type="button"
+      onClick={() => onSelectCategory(null)}
+      className={cn(
+        "bg-muted/60 hover:bg-muted focus-visible:ring-primary flex touch-manipulation border border-dashed text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
+        viewMode === "list"
+          ? "min-h-14 items-center gap-3 rounded-lg px-3 py-2"
+          : cn(
+              "flex-col justify-center gap-1 p-3",
+              viewMode === "columns" ? "min-h-[72px] rounded-lg" : "min-h-[120px] sm:rounded-xl"
+            )
+      )}
+    >
+      <span className="text-muted-foreground flex items-center gap-1.5 text-sm font-medium">
+        <ArrowLeft className="size-4 shrink-0" />
+        {t("common.actions.back")}
+      </span>
+      <span className="text-primary line-clamp-2 leading-tight font-semibold">
+        {categoryLabel(name)}
+      </span>
+    </button>
+  );
+
+  // Search results keep a heading per category, since they mix categories.
+  const renderSearchCategory = (category: (typeof shownCategories)[number]) => (
     <div key={category.name} className="mb-6 last:mb-0 sm:mb-8">
       <h2 className="mb-3 text-lg font-semibold tracking-tight sm:mb-4">
-        {category.name === UNCATEGORIZED_CATEGORY ? t("common.uncategorized") : category.name}
+        {categoryLabel(category.name)}
       </h2>
       <div className={itemsLayoutClass}>{category.items.map(renderTile)}</div>
+    </div>
+  );
+
+  // The open category's items. The Back card goes into whichever block comes
+  // first — the regular menu, or the custom line's when that is all there is.
+  const renderOpenCategory = (category: (typeof shownCategories)[number], withBack: boolean) => (
+    <div key={category.name} className={itemsLayoutClass}>
+      {withBack && renderBackCard(category.name)}
+      {category.items.map(renderTile)}
+    </div>
+  );
+
+  const renderBlock = (blockCategories: typeof shownCategories, isFirstBlock: boolean) =>
+    isSearching
+      ? blockCategories.map(renderSearchCategory)
+      : openCategory
+        ? blockCategories.map((cat) => renderOpenCategory(cat, showBack && isFirstBlock))
+        : [
+            <div key="cards" className={itemsLayoutClass}>
+              {blockCategories.map(renderCategoryCard)}
+            </div>,
+          ];
+
+  const departmentLabel =
+    selectedDepartment === "KITCHEN"
+      ? t("pos.menu.food")
+      : selectedDepartment === "BAR"
+        ? t("pos.menu.drink")
+        : selectedDepartment === "CUSTOM"
+          ? customDepartmentLabel
+          : null;
+
+  // Where the cashier is: Categories › Drink › Classic Coffee. The last crumb is
+  // the heading of what is on screen; "Categories" goes back to the cards.
+  // pr-36 keeps it clear of the view switch floating at the top right.
+  const breadcrumb = !isSearching && (
+    <div
+      className={cn(
+        "mb-3 flex min-h-10 min-w-0 items-center gap-1 pr-36 text-sm sm:mb-4",
+        // Grid view has no side gutter on a phone; bring one, like the view switch.
+        viewMode === "grid" && "pl-3 sm:pl-0"
+      )}
+    >
+      {showBack ? (
+        <button
+          type="button"
+          onClick={() => onSelectCategory(null)}
+          className="text-muted-foreground hover:text-foreground flex min-h-10 shrink-0 cursor-pointer touch-manipulation items-center font-medium transition-colors"
+        >
+          {t("pos.menu.categories")}
+        </button>
+      ) : openCategory ? (
+        <span className="text-muted-foreground shrink-0 font-medium">
+          {t("pos.menu.categories")}
+        </span>
+      ) : (
+        <h2 className="shrink-0 font-semibold">{t("pos.menu.categories")}</h2>
+      )}
+      {departmentLabel && (
+        <>
+          <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+          <span
+            className={cn(
+              "shrink-0",
+              openCategory ? "text-muted-foreground font-medium" : "text-primary font-semibold"
+            )}
+          >
+            {departmentLabel}
+          </span>
+        </>
+      )}
+      {openCategory && (
+        <>
+          <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+          <h2 className="text-primary min-w-0 truncate font-semibold">
+            {categoryLabel(openCategory.name)}
+          </h2>
+        </>
+      )}
     </div>
   );
 
@@ -239,12 +446,14 @@ export function PosItemGrid({
     // pt-2 (not p-2) on mobile: only top spacing below the search/category
     // bar is needed — no left/right container padding in grid view, so tiles
     // run to the actual screen edge. Columns and list keep a small gutter, since
-    // their tiles are rounded cards. pb-24 stays regardless of breakpoint: that's
-    // functional clearance for the floating cart bar, not decorative padding.
+    // their tiles are rounded cards. pb-24 is functional clearance for the phone's
+    // floating cart button (PosHeader), not decorative padding: it must hold at
+    // every width that shows the button (below md), so sm:p-4 re-states it.
     <div
+      ref={scrollRef}
       data-view-mode={viewMode}
       className={cn(
-        "min-h-0 flex-1 overflow-auto pt-2 pb-24 sm:p-4 lg:pb-4",
+        "min-h-0 flex-1 overflow-auto pt-2 pb-24 sm:p-4 sm:pb-24 md:pb-4",
         viewMode !== "grid" && "px-2"
       )}
     >
@@ -268,16 +477,22 @@ export function PosItemGrid({
           <div className="rounded-md shadow-md">{toolbar}</div>
         </div>
       )}
-      {standardCategories.map(renderCategory)}
+      {breadcrumb}
+      {standardCategories.length > 0 && renderBlock(standardCategories, true)}
       {customCategories.length > 0 && (
-        <section className="border-primary/30 bg-primary/5 mt-2 rounded-xl border p-3 sm:p-4">
+        <section
+          className={cn(
+            "border-primary/30 bg-primary/5 rounded-xl border p-3 sm:p-4",
+            standardCategories.length > 0 && "mt-6 sm:mt-8"
+          )}
+        >
           {customDepartmentLabel && (
             <div className="mb-3 flex items-center gap-2 sm:mb-4">
               <Sparkles className="text-primary size-4 shrink-0" />
               <h2 className="text-base font-bold tracking-tight">{customDepartmentLabel}</h2>
             </div>
           )}
-          {customCategories.map(renderCategory)}
+          {renderBlock(customCategories, standardCategories.length === 0)}
         </section>
       )}
     </div>

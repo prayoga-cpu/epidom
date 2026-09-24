@@ -4,15 +4,12 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { Store } from "@prisma/client";
 import { PosHeader } from "./pos-header";
-import { PosCategoryBar } from "./pos-category-bar";
 import { PosDepartmentBar } from "./pos-department-bar";
 import { PosItemGrid } from "./pos-item-grid";
 import { PosCart } from "./pos-cart";
 import { PosMobileCart } from "./pos-mobile-cart";
 import { PosOfflineBanner } from "./pos-offline-banner";
 import { PosUnpaidAlert } from "./pos-unpaid-alert";
-import { AddFilterMenu } from "./add-filter-menu";
-import { RemovableFilter } from "./removable-filter";
 import { PosViewToggle } from "./pos-view-toggle";
 import { PosScannerMenu } from "./pos-scanner-menu";
 import { usePosMenu } from "../hooks/use-pos-menu";
@@ -23,6 +20,7 @@ import { useBarcodeScanner } from "../hooks/use-barcode-scanner";
 import { SCANNER_SPEED_GAP_MS, usePosScannerSettings } from "../hooks/use-pos-scanner-settings";
 import { useCustomerDisplayPublisher } from "../hooks/use-customer-display";
 import { findItemByBarcode } from "../lib/barcode";
+import type { PosMenuDepartment } from "../lib/menu-department";
 import { usePosModeToolbarSlot } from "@/features/pos-mode/pos-mode-toolbar-slot";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -34,12 +32,6 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { MenuItemOptionsDialog } from "@/components/shared/menu-item-options-dialog";
 import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
 import type { PosMenuItem } from "../types/pos.types";
-
-// Hidden by default behind "+ Add filter" — same Notion-chip pattern as the
-// order queue/history toolbars, so the search bar isn't crowded with
-// dimensions the cashier isn't actively narrowing by.
-const POS_FILTER_KEYS = ["department", "category"] as const;
-type PosFilterKey = (typeof POS_FILTER_KEYS)[number];
 
 /** Tailwind's `md` breakpoint — where the toolbar moves up into the status bar. */
 const MD_MIN_WIDTH_PX = 768;
@@ -74,11 +66,10 @@ export function PosShell({ store }: PosShellProps) {
   // conversion. See pos-order-builder.ts.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
+  // Where the cashier is in the menu: a Food / Drink tab, then an open category
+  // card (null = the cards themselves). See PosItemGrid.
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<"KITCHEN" | "BAR" | "CUSTOM" | null>(
-    null
-  );
-  const [activeFilterKeys, setActiveFilterKeys] = useState<PosFilterKey[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<PosMenuDepartment | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [configuringItem, setConfiguringItem] = useState<PosMenuItem | null>(null);
@@ -93,16 +84,12 @@ export function PosShell({ store }: PosShellProps) {
   const { data: menuData, isLoading } = usePosMenu(store.id);
   const { data: orders } = usePosOrders(store.id);
   const unpaidCount = orders?.filter((o) => o.paymentStatus === "PENDING").length ?? 0;
-  const categoryNames = menuData?.categories.map((c: any) => c.name) ?? [];
 
-  const addFilter = (key: PosFilterKey) => {
-    setActiveFilterKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
-  };
-
-  const removeFilter = (key: PosFilterKey) => {
-    setActiveFilterKeys((prev) => prev.filter((k) => k !== key));
-    if (key === "department") setSelectedDepartment(null);
-    if (key === "category") setSelectedCategory(null);
+  // A tab is a fresh start: back to its category cards, not a category that may
+  // not even be under it.
+  const selectDepartment = (department: PosMenuDepartment | null) => {
+    setSelectedDepartment(department);
+    setSelectedCategory(null);
   };
 
   const handleItemClick = (item: PosMenuItem) => {
@@ -155,7 +142,7 @@ export function PosShell({ store }: PosShellProps) {
 
   const toolbarSlot = usePosModeToolbarSlot();
   const isMd = useMinWidth(MD_MIN_WIDTH_PX);
-  // At ≥md the search (with its scan button) and filters live in the shell's
+  // At ≥md the search (with its scan button) and Food / Drink tabs live in the shell's
   // status bar (one 44px row for the whole screen); below md they get a row of
   // their own here, as before. The view toggle is in neither: it belongs to the
   // menu container (see PosItemGrid's `toolbar`). `portalTarget` is null until
@@ -212,48 +199,27 @@ export function PosShell({ store }: PosShellProps) {
         />
       </div>
 
-      {/* Filters sit beside the search bar and scroll horizontally
-          as a single strip instead of wrapping — the search input
-          keeps its width, this row absorbs the overflow. On a phone the strip
-          drops to a line of its own (basis-full) rather than being squeezed to
-          nothing between the search box and the buttons. */}
+      {/* The Food / Drink tabs sit beside the search bar, always on screen (they
+          replaced the "+ Add filter" menu: categories are cards in the menu now),
+          on the same row even on a phone, where Food and Drink go icon-only to
+          fit. The strip scrolls horizontally instead of wrapping (a long custom
+          product-line tab), and the search box keeps at least 9rem either way. */}
       <div
         className={cn(
           "flex min-w-0 items-center gap-2 overflow-x-auto",
-          variant === "bar" ? "flex-1" : "basis-full sm:flex-1 sm:basis-auto"
+          variant === "bar" && "flex-1"
         )}
       >
-        {activeFilterKeys.includes("department") && (
-          <RemovableFilter onRemove={() => removeFilter("department")}>
-            <PosDepartmentBar
-              selectedDepartment={selectedDepartment}
-              onSelectDepartment={setSelectedDepartment}
-              customDepartmentLabel={
-                menuData?.customProductsEnabled ? menuData.customProductsLabel : null
-              }
-            />
-          </RemovableFilter>
-        )}
-        {activeFilterKeys.includes("category") && categoryNames.length > 0 && (
-          <RemovableFilter onRemove={() => removeFilter("category")}>
-            <PosCategoryBar
-              categories={categoryNames}
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-            />
-          </RemovableFilter>
-        )}
-        <AddFilterMenu
-          options={POS_FILTER_KEYS.filter(
-            (k) => !activeFilterKeys.includes(k) && (k !== "category" || categoryNames.length > 0)
-          ).map((k) => ({ key: k, label: t(`pos.filters.${k}`) }))}
-          onAdd={(k) => addFilter(k as PosFilterKey)}
-          // In the top bar it is a flat ghost block as tall as the bar, like the search
-          // field beside it (its "bar" variant uses h-full: the strip it sits in is a
-          // stretched flex child, so that height is definite — no stretch utility
-          // needed). The phone-width row below md keeps the dashed chip the other
-          // filter rows use.
-          variant={variant === "bar" ? "bar" : "chip"}
+        <PosDepartmentBar
+          selectedDepartment={selectedDepartment}
+          onSelectDepartment={selectDepartment}
+          customDepartmentLabel={
+            menuData?.customProductsEnabled ? menuData.customProductsLabel : null
+          }
+          // In the top bar: flat blocks as tall as the bar, like the search field
+          // beside it (h-full works because the strip is a stretched flex child, so
+          // its height is definite). The phone-width row keeps a bordered control.
+          variant={variant === "bar" ? "bar" : "inline"}
         />
       </div>
     </>
@@ -267,9 +233,10 @@ export function PosShell({ store }: PosShellProps) {
           without needing to guess the surrounding chrome's pixel total.
           min-h-0 lets it shrink below its content's natural size so
           overflow-hidden below can actually clip instead of growing past
-          the available space. */}
-      <div className="bg-muted/10 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        <PosHeader onCartClick={() => setMobileCartOpen(true)} />
+          the available space. `relative`: the phone's floating cart button
+          (PosHeader) is placed against this box, whose bottom edge is the top
+          of POS Mode's tab bar. */}
+      <div className="bg-muted/10 relative flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         <PosOfflineBanner />
         <PosUnpaidAlert storeId={store.id} unpaidCount={unpaidCount} />
 
@@ -284,9 +251,11 @@ export function PosShell({ store }: PosShellProps) {
               // Hidden by CSS at ≥md ONLY when a status-bar slot exists to take
               // over (the frame before it mounts its node would otherwise show
               // both); without a PosModeShell there is no slot, so this row stays.
+              // One line, never wrapped: the search and the Food / Drink tabs share
+              // it even on a phone (the tab strip scrolls if it runs out of room).
               <div
                 className={cn(
-                  "bg-background flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2",
+                  "bg-background flex shrink-0 items-center gap-2 border-b px-3 py-2",
                   toolbarSlot.available && "md:hidden"
                 )}
               >
@@ -304,6 +273,7 @@ export function PosShell({ store }: PosShellProps) {
               <PosItemGrid
                 categories={menuData?.categories ?? []}
                 selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
                 selectedDepartment={selectedDepartment}
                 searchQuery={searchQuery}
                 onItemClick={handleItemClick}
@@ -324,6 +294,9 @@ export function PosShell({ store }: PosShellProps) {
           </div>
         </div>
 
+        {/* Floats over the bottom right of the menu (phone widths only); last in
+            the DOM so it is also last in tab order, after the menu it sits on. */}
+        <PosHeader onCartClick={() => setMobileCartOpen(true)} />
         <PosMobileCart store={store} open={mobileCartOpen} onOpenChange={setMobileCartOpen} />
 
         {configuringItem && (

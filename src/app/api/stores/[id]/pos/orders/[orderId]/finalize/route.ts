@@ -136,10 +136,21 @@ export async function POST(
           // skipped when immediately delivered, same as create. updateMany so
           // the write is store-scoped: `update` by id alone would let a
           // forged tableId flip another tenant's table.
-          if (input.tableId && input.orderType === "DINE_IN" && !immediatelyDelivered) {
+          if (settlement.tableId && !immediatelyDelivered) {
             await tx.table.updateMany({
-              where: { id: input.tableId, storeId },
+              where: { id: settlement.tableId, storeId },
               data: { status: "OCCUPIED" },
+            });
+          }
+
+          // Paid and delivered in one step (kitchen display off): the bill is
+          // over, so free the table its Save Bill occupied. The status PATCH
+          // (DELIVERED/CANCELLED) is the only other place that frees a table,
+          // and an order finalized straight to DELIVERED never goes through it.
+          if (updated.tableId && immediatelyDelivered) {
+            await tx.table.updateMany({
+              where: { id: updated.tableId, storeId },
+              data: { status: "AVAILABLE" },
             });
           }
 

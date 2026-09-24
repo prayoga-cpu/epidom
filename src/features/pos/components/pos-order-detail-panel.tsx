@@ -12,6 +12,7 @@ import type { PosOrderDisplay } from "../types/pos.types";
 import { useOrderQueueActions } from "../hooks/use-order-queue-actions";
 import { PosOrderPrimaryAction } from "./pos-order-primary-action";
 import { formatQueueNumber } from "../lib/queue-number";
+import { orderSourceBadgeLabel, saleTypeText } from "../lib/order-channel";
 import {
   getOrderSourceBadgeVariant,
   getOrderStatusBadgeClass,
@@ -87,12 +88,7 @@ function OrderDetail({
     onUpdateStatus
   );
 
-  const typeLabel =
-    order.orderType === "DINE_IN"
-      ? t("pos.checkout.dineIn")
-      : order.orderType === "TAKEAWAY"
-        ? t("pos.checkout.takeaway")
-        : t("pos.history.delivery");
+  const typeLabel = saleTypeText(t, order.orderType);
   const table = order.tableLabel || order.tableNumber;
   const tenders = order.payments ?? [];
   const awaitingPayment = isAwaitingPayment(order);
@@ -123,7 +119,7 @@ function OrderDetail({
               {mapOrderStatusLabel(t, order.status)}
             </Badge>
             <Badge variant={getOrderSourceBadgeVariant(order.source)}>
-              {order.source === "POS" ? t("pos.source.walkIn") : t("pos.source.online")}
+              {orderSourceBadgeLabel(t, order.source)}
             </Badge>
             {awaitingPayment && <Badge variant="destructive">{t("pos.orderCard.unpaid")}</Badge>}
           </div>

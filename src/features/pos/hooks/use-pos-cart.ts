@@ -8,6 +8,7 @@ import type {
   DraftTender,
 } from "../types/pos.types";
 import { nanoid } from "@/lib/utils/nanoid";
+import type { PosOnlinePlatform } from "@/config/aggregator.config";
 import { computeOrderCharges, type ResolvedFinanceSettings } from "@/lib/finance/order-charges";
 import {
   buildDiscountReason,
@@ -26,7 +27,8 @@ const DEFAULT_FINANCE_SETTINGS: ResolvedFinanceSettings = {
   processingFeeOverrides: null,
 };
 
-export type CartOrderType = "DINE_IN" | "TAKEAWAY";
+/** DELIVERY is only ever set together with an `onlinePlatform` — see setOnlinePlatform. */
+export type CartOrderType = "DINE_IN" | "TAKEAWAY" | "DELIVERY";
 
 export interface CustomItemInput {
   name: string;
@@ -40,8 +42,10 @@ export interface CustomItemInput {
 /** State restored when a saved (HELD) bill is resumed. All optional. */
 export interface ResumeExtras {
   orderType?: CartOrderType;
+  onlinePlatform?: PosOnlinePlatform | null;
   guestCount?: number;
   tableNumber?: string;
+  tableId?: string | null;
   customer?: CartCustomer | null;
   discountSource?: CartDiscountSource | null;
 }
@@ -71,8 +75,21 @@ interface PosCartState {
   customer: CartCustomer | null;
   /** Owned by the cart (not the checkout dialog) so Save Bill and checkout inherit it. */
   orderType: CartOrderType;
+  /**
+   * The delivery platform when the cashier picked one under "Others" (GoFood,
+   * Uber Eats, …) — the order is then a DELIVERY recorded against that platform
+   * (Order.source). Null for Dine In / Take Away.
+   */
+  onlinePlatform: PosOnlinePlatform | null;
   guestCount: number;
+  /** The table's label — a registered table's, or whatever the cashier typed. */
   tableNumber: string;
+  /**
+   * Set when the table was picked from the store's registered tables (Tables
+   * page), so the order links to it and seats it. Null for a typed ("Custom")
+   * table or none.
+   */
+  tableId: string | null;
   /** Split-payment tender rows, persisted so a reload doesn't lose them. Cleared by clearCart. */
   draftTenders: DraftTender[];
   /** The store's resolved tax/service-charge settings — set once by the POS
@@ -116,9 +133,15 @@ interface PosCartState {
   setRedeemPoints: (points: number) => void;
   /** Attach/detach the customer. Changing customer resets any points redemption. */
   setCustomer: (customer: CartCustomer | null) => void;
-  setOrderType: (orderType: CartOrderType) => void;
+  /** Dine In / Take Away. Clears any online platform. */
+  setOrderType: (orderType: Exclude<CartOrderType, "DELIVERY">) => void;
+  /** "Others" → a platform: makes the sale a DELIVERY for it. */
+  setOnlinePlatform: (platform: PosOnlinePlatform) => void;
   setGuestCount: (guestCount: number) => void;
+  /** A typed ("Custom") table — drops any registered-table link. */
   setTableNumber: (tableNumber: string) => void;
+  /** Pick one of the store's registered tables, or null for no table. */
+  setTable: (table: { id: string; label: string } | null) => void;
   setDraftTenders: (tenders: DraftTender[]) => void;
   /**
    * Loads items reconstructed from a HELD order directly, bypassing
@@ -198,10 +221,11 @@ const calculateTotals = (input: PricingInput) => {
     pointsDiscountAmount: composed.pointsValue,
     pointsRedeemed: composed.pointsRedeemed,
     // Preview only: the server rebuilds the persisted reason from ids/codes.
-    discountReason: buildDiscountReason([
-      sourceLabel(discountSource),
-      composed.pointsRedeemed > 0 ? `${composed.pointsRedeemed} pts` : null,
-    ]) ?? null,
+    discountReason:
+      buildDiscountReason([
+        sourceLabel(discountSource),
+        composed.pointsRedeemed > 0 ? `${composed.pointsRedeemed} pts` : null,
+      ]) ?? null,
     total: charges.total,
   };
 };
@@ -221,8 +245,10 @@ const EMPTY_CART = {
   redeemPoints: 0,
   customer: null as CartCustomer | null,
   orderType: "DINE_IN" as CartOrderType,
+  onlinePlatform: null as PosOnlinePlatform | null,
   guestCount: 1,
   tableNumber: "",
+  tableId: null as string | null,
   draftTenders: [] as DraftTender[],
   resumingOrderId: null as string | null,
 };
@@ -355,7 +381,11 @@ export const usePosCart = create<PosCartState>()(
             items.push(
               take === 0
                 ? item
-                : { ...item, quantity: left, lineTotal: lineTotalFor(item.unitPrice, item.modifiers, left) }
+                : {
+                    ...item,
+                    quantity: left,
+                    lineTotal: lineTotalFor(item.unitPrice, item.modifiers, left),
+                  }
             );
           }
           apply({ items });
@@ -396,22 +426,37 @@ export const usePosCart = create<PosCartState>()(
           apply({ customer, ...(changed ? { redeemPoints: 0 } : {}) });
         },
 
-        setOrderType: (orderType: CartOrderType) => set({ orderType }),
+        setOrderType: (orderType: Exclude<CartOrderType, "DELIVERY">) =>
+          set({ orderType, onlinePlatform: null }),
+
+        setOnlinePlatform: (platform: PosOnlinePlatform) =>
+          set({ orderType: "DELIVERY", onlinePlatform: platform }),
 
         setGuestCount: (guestCount: number) =>
           set({ guestCount: Math.min(Math.max(Math.floor(guestCount) || 1, 1), 99) }),
 
-        setTableNumber: (tableNumber: string) => set({ tableNumber }),
+        setTableNumber: (tableNumber: string) => set({ tableNumber, tableId: null }),
+
+        setTable: (table: { id: string; label: string } | null) =>
+          set({ tableId: table?.id ?? null, tableNumber: table?.label ?? "" }),
 
         setDraftTenders: (tenders: DraftTender[]) => set({ draftTenders: tenders }),
 
-        hydrateFromOrder: (items: CartItem[], resumingOrderId: string, extras: ResumeExtras = {}) => {
+        hydrateFromOrder: (
+          items: CartItem[],
+          resumingOrderId: string,
+          extras: ResumeExtras = {}
+        ) => {
           apply({
             items,
             resumingOrderId,
             ...(extras.orderType !== undefined ? { orderType: extras.orderType } : {}),
+            ...(extras.onlinePlatform !== undefined
+              ? { onlinePlatform: extras.onlinePlatform }
+              : {}),
             ...(extras.guestCount !== undefined ? { guestCount: extras.guestCount } : {}),
             ...(extras.tableNumber !== undefined ? { tableNumber: extras.tableNumber } : {}),
+            ...(extras.tableId !== undefined ? { tableId: extras.tableId } : {}),
             ...(extras.customer !== undefined
               ? { customer: extras.customer, redeemPoints: 0 }
               : {}),

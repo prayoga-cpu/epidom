@@ -6,16 +6,24 @@ import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import { MovementType, type OrderSource } from "@prisma/client";
 import { sumCogsBase } from "@/lib/finance/cogs";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
-import { shiftFilter, categoryFilter, departmentFilter, UNCATEGORIZED } from "@/lib/finance/report-filters";
+import {
+  shiftFilter,
+  categoryFilter,
+  departmentFilter,
+  UNCATEGORIZED,
+} from "@/lib/finance/report-filters";
 import {
   bucketItemsByCategory,
   bucketItemsByDepartment,
   bucketWasteByReason,
   buildShiftRows,
 } from "@/lib/finance/report-aggregation";
-import { bucketOrdersByScheduleShift, enumerateDateKeys } from "@/lib/finance/schedule-shift-bucketing";
+import {
+  bucketOrdersByScheduleShift,
+  enumerateDateKeys,
+} from "@/lib/finance/schedule-shift-bucketing";
 import { getBusinessDateKey, businessDateKeyToDate } from "@/lib/attendance/business-date";
-import { commissionRate, AGGREGATOR_LABELS } from "@/config/aggregator.config";
+import { commissionRate, ONLINE_PLATFORM_LABELS } from "@/config/aggregator.config";
 import { wasteService } from "@/lib/services/waste.service";
 import { storefrontService } from "@/lib/services/storefront.service";
 import { FinancePrintView } from "@/features/dashboard/finance/components/finance-print-view";
@@ -32,10 +40,7 @@ const SOURCE_LABELS: Record<OrderSource, string> = {
   MANUAL: "Manual",
   STOREFRONT: "Storefront",
   POS: "POS Cashier",
-  GOFOOD: AGGREGATOR_LABELS.GOFOOD,
-  GRABFOOD: AGGREGATOR_LABELS.GRABFOOD,
-  SHOPEEFOOD: AGGREGATOR_LABELS.SHOPEEFOOD,
-  TOKOPEDIA: AGGREGATOR_LABELS.TOKOPEDIA,
+  ...ONLINE_PLATFORM_LABELS,
 };
 
 function firstParam(value: string | string[] | undefined): string | null {
@@ -79,7 +84,9 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
         business: { select: { timezone: true } },
       },
     }),
-    staffId ? prisma.staffMember.findUnique({ where: { id: staffId }, select: { name: true } }) : null,
+    staffId
+      ? prisma.staffMember.findUnique({ where: { id: staffId }, select: { name: true } })
+      : null,
     categoryId && categoryId !== UNCATEGORIZED
       ? prisma.menuCategory.findUnique({ where: { id: categoryId }, select: { name: true } })
       : null,
@@ -146,7 +153,12 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   const netProfit = netRevenue - cogs - wasteLoss;
 
   const rawOrders = await prisma.order.findMany({
-    where: { storeId, status: { notIn: NON_REVENUE_STATUSES }, orderDate: { gte: from, lte: to }, ...shiftWhere },
+    where: {
+      storeId,
+      status: { notIn: NON_REVENUE_STATUSES },
+      orderDate: { gte: from, lte: to },
+      ...shiftWhere,
+    },
     select: { orderDate: true, total: true },
     orderBy: { orderDate: "asc" },
   });
@@ -161,7 +173,12 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   const [channelGrouped, channelFeeGrouped] = await Promise.all([
     prisma.order.groupBy({
       by: ["source"],
-      where: { storeId, status: { notIn: NON_REVENUE_STATUSES }, orderDate: { gte: from, lte: to }, ...shiftWhere },
+      where: {
+        storeId,
+        status: { notIn: NON_REVENUE_STATUSES },
+        orderDate: { gte: from, lte: to },
+        ...shiftWhere,
+      },
       _sum: { total: true, tax: true },
       _count: { id: true },
     }),
@@ -177,7 +194,9 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
       _sum: { processingFee: true },
     }),
   ]);
-  const feeBySource = new Map(channelFeeGrouped.map((g) => [g.source, Number(g._sum.processingFee ?? 0)]));
+  const feeBySource = new Map(
+    channelFeeGrouped.map((g) => [g.source, Number(g._sum.processingFee ?? 0)])
+  );
   const channels = channelGrouped
     .map((g) => {
       const rev = Number(g._sum.total ?? 0);
@@ -185,13 +204,15 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
       const processingFeeAmount = Math.round((feeBySource.get(g.source) ?? 0) * 100) / 100;
       const commission = commissionRate(g.source);
       const commissionAmount = Math.round(rev * commission * 100) / 100;
-      const netRev = Math.round((rev - commissionAmount - processingFeeAmount - taxAmount) * 100) / 100;
+      const netRev =
+        Math.round((rev - commissionAmount - processingFeeAmount - taxAmount) * 100) / 100;
       return {
         source: g.source,
         label: SOURCE_LABELS[g.source] ?? g.source,
         orderCount: g._count.id,
         revenue: Math.round(rev * 100) / 100,
-        commissionPct: commission * 100,
+        // Rounded to 2 decimals: 0.14 * 100 is 14.000000000000002 in floating point.
+        commissionPct: Math.round(commission * 10000) / 100,
         commissionAmount,
         taxAmount,
         processingFeeAmount,
@@ -204,7 +225,12 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   const topItemGroups = await prisma.orderItem.groupBy({
     by: ["name"],
     where: {
-      order: { storeId, status: { notIn: NON_REVENUE_STATUSES }, orderDate: { gte: from, lte: to }, ...shiftWhere },
+      order: {
+        storeId,
+        status: { notIn: NON_REVENUE_STATUSES },
+        orderDate: { gte: from, lte: to },
+        ...shiftWhere,
+      },
       AND: [categoryFilter(categoryId), departmentFilter(department)],
     },
     _sum: { total: true, quantity: true },
@@ -221,7 +247,14 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
 
   // ─── By category / department ───
   const orderItems = await prisma.orderItem.findMany({
-    where: { order: { storeId, status: { notIn: NON_REVENUE_STATUSES }, orderDate: { gte: from, lte: to }, ...shiftWhere } },
+    where: {
+      order: {
+        storeId,
+        status: { notIn: NON_REVENUE_STATUSES },
+        orderDate: { gte: from, lte: to },
+        ...shiftWhere,
+      },
+    },
     select: {
       total: true,
       quantity: true,
@@ -284,14 +317,23 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
       select: { id: true, name: true, startTime: true, endTime: true, color: true },
     }),
     prisma.order.findMany({
-      where: { storeId, status: { notIn: NON_REVENUE_STATUSES }, orderDate: { gte: from, lte: to } },
+      where: {
+        storeId,
+        status: { notIn: NON_REVENUE_STATUSES },
+        orderDate: { gte: from, lte: to },
+      },
       select: { total: true, orderDate: true },
     }),
   ]);
   const fromKey = getBusinessDateKey(from, timezone);
   const toKey = getBusinessDateKey(to, timezone);
   const dateKeys = enumerateDateKeys(fromKey, toKey);
-  const scheduleShiftRawRows = bucketOrdersByScheduleShift(scheduleOrders, scheduleShifts, dateKeys, timezone);
+  const scheduleShiftRawRows = bucketOrdersByScheduleShift(
+    scheduleOrders,
+    scheduleShifts,
+    dateKeys,
+    timezone
+  );
   const rosterRows = await prisma.staffSchedule.findMany({
     where: {
       storeId,
@@ -299,7 +341,11 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
       date: { gte: businessDateKeyToDate(fromKey), lte: businessDateKeyToDate(toKey) },
       scheduleShiftId: { not: null },
     },
-    select: { date: true, scheduleShiftId: true, staffMember: { select: { id: true, name: true } } },
+    select: {
+      date: true,
+      scheduleShiftId: true,
+      staffMember: { select: { id: true, name: true } },
+    },
   });
   const rosterKey = (dateKey: string, scheduleShiftId: string) => `${dateKey}:${scheduleShiftId}`;
   const rosterMap = new Map<string, { staffMemberId: string; name: string }[]>();
@@ -339,7 +385,7 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
     id: entry.id,
     createdAt: entry.createdAt.toISOString(),
     itemName: entry.material?.name ?? entry.product?.name ?? "—",
-    reasonLabel: entry.reason === "OTHER" ? entry.customReason ?? entry.reason : entry.reason,
+    reasonLabel: entry.reason === "OTHER" ? (entry.customReason ?? entry.reason) : entry.reason,
     quantity: Number(entry.quantity),
     unit: entry.unit,
     unitCostSnapshot: Number(entry.unitCostSnapshot),

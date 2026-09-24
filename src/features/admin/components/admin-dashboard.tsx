@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, Calendar, Check, ChevronDown, CircleDollarSign, Copy, Crown, Eye, EyeOff, Gauge, Infinity, KeyRound, LogIn, MessageSquare, Power, PowerOff, RotateCcw, Search, Shield, ShieldCheck, ShieldOff, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
+import { Activity, Bug, Calendar, Check, ChevronDown, CircleDollarSign, Copy, Crown, Eye, EyeOff, Gauge, Infinity, KeyRound, LogIn, Power, PowerOff, RotateCcw, Search, Shield, ShieldCheck, ShieldOff, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -598,7 +598,7 @@ export function AdminDashboard() {
                 className="relative"
                 onClick={() => router.push("/admin/feedback")}
               >
-                <MessageSquare className="mr-2 h-4 w-4" />
+                <Bug className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Feedback</span>
                 <NavBadge count={pendingCounts?.feedback} />
               </Button>

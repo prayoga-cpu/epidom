@@ -397,7 +397,58 @@ export function useUpdateSupplierOrder(storeId: string, orderId: string) {
 }
 
 /**
- * Hook to cancel a supplier order
+ * Hook to mark a supplier order as received: the one tap that ends the order.
+ * The server adds every line to stock and stamps today as the received date.
+ *
+ * Takes the order id per call (unlike useUpdateSupplierOrder, which is bound
+ * to one order) so a list can offer the button on every row. Toasts are left
+ * to the caller, which knows what was received and can say so in the
+ * merchant's language.
+ */
+export function useReceiveSupplierOrder(storeId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<SupplierOrder, Error, string>({
+    mutationFn: async (orderId) => {
+      const response = await fetch(`/api/stores/${storeId}/supplier-orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "RECEIVED" }),
+      });
+
+      const json = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(unwrapError(json).message || "Failed to mark the order as received");
+      }
+
+      return unwrap<SupplierOrderResponse>(json).order;
+    },
+    onSuccess: (order) => {
+      const currentList = queryClient.getQueryData<SupplierOrdersResponse>(
+        supplierOrderKeys.lists(storeId)
+      );
+      if (currentList) {
+        queryClient.setQueryData<SupplierOrdersResponse>(supplierOrderKeys.lists(storeId), {
+          orders: currentList.orders.map((o) => (o.id === order.id ? order : o)),
+        });
+      }
+      queryClient.setQueryData(supplierOrderKeys.detail(storeId, order.id), { order });
+    },
+    // Settled, not success: a 409 means another tap or device already received
+    // it, and the list should catch up with that instead of keeping the button.
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: supplierOrderKeys.lists(storeId) });
+      queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
+      queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
+      queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
+    },
+  });
+}
+
+/**
+ * Hook to cancel a supplier order (for one that never arrives). Toasts are
+ * left to the caller, like useReceiveSupplierOrder.
  */
 export function useCancelSupplierOrder(storeId: string) {
   const queryClient = useQueryClient();
@@ -416,14 +467,10 @@ export function useCancelSupplierOrder(storeId: string) {
 
       return unwrap<{ success: boolean }>(json);
     },
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: supplierOrderKeys.lists(storeId),
       });
-      toast.success("Supplier order cancelled");
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to cancel supplier order");
     },
   });
 }

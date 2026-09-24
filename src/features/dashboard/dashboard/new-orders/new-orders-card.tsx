@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { usePosOrders } from "@/features/pos/hooks/use-pos-orders";
+import { ONLINE_PLATFORM_LABELS } from "@/config/aggregator.config";
 
 // Not translated, matching the existing SOURCE_LABELS precedent in
 // src/app/api/stores/[id]/finance/channels/route.ts.
@@ -17,10 +18,7 @@ const SOURCE_LABELS: Record<string, string> = {
   STOREFRONT: "Storefront",
   POS: "POS",
   MANUAL: "Manual",
-  GOFOOD: "GoFood",
-  GRABFOOD: "GrabFood",
-  SHOPEEFOOD: "ShopeeFood",
-  TOKOPEDIA: "Tokopedia",
+  ...ONLINE_PLATFORM_LABELS,
 };
 
 const VISIBLE_LIMIT = 5;

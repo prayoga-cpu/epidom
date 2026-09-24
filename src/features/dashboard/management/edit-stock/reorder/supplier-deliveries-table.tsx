@@ -51,6 +51,8 @@ interface SupplierDeliveriesTableProps {
   onPrintDelivery?: (delivery: SupplierDelivery) => void;
   onDeleteDelivery?: (deliveryId: string) => void;
   isLoading?: boolean;
+  /** Drop the "Supplier Deliveries (n)" header when the caller already shows one. */
+  hideHeader?: boolean;
 }
 
 type SortField = "deliveryReference" | "supplierName" | "expectedDate" | "status";
@@ -65,6 +67,7 @@ export function SupplierDeliveriesTable({
   isLoading,
   onPrintDelivery,
   onDeleteDelivery,
+  hideHeader,
 }: SupplierDeliveriesTableProps) {
   const { t, formatDate } = useI18n();
 
@@ -239,12 +242,14 @@ export function SupplierDeliveriesTable({
   return (
     <TooltipProvider>
       <Card className="flex h-full min-h-[450px] w-full flex-col overflow-hidden shadow-sm transition-shadow hover:shadow-md lg:min-h-[472px]">
-        <CardHeader className="shrink-0 border-b pb-4">
-          <CardTitle className="text-lg font-bold">
-            {t("pages.supplierDeliveriesSectionTitle") || "Supplier Deliveries"} (
-            {processedDeliveries.length})
-          </CardTitle>
-        </CardHeader>
+        {!hideHeader && (
+          <CardHeader className="shrink-0 border-b pb-4">
+            <CardTitle className="text-lg font-bold">
+              {t("pages.supplierDeliveriesSectionTitle") || "Supplier Deliveries"} (
+              {processedDeliveries.length})
+            </CardTitle>
+          </CardHeader>
+        )}
 
         <CardContent className="flex min-h-0 flex-1 flex-col space-y-4 pt-6 pb-6">
           {/* Loading State */}

@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { MovementType } from "@prisma/client";
 import { ENTITY_UNIQUE_FIELDS } from "@/lib/ai/import-schema";
 import { storefrontService } from "@/lib/services/storefront.service";
 import { parseImportedBarcode } from "@/lib/utils/barcode";
@@ -190,6 +191,17 @@ function normalizeSupplierName(name: string): string {
 /**
  * Import materials with createMany for efficiency
  */
+/** The Log row for stock an import brings in with a new material or product. */
+function openingStockMovement(quantity: number, unit: string) {
+  return {
+    type: MovementType.ADJUSTMENT,
+    quantity,
+    unit,
+    balanceAfter: quantity,
+    notes: "Initial stock (import)",
+  };
+}
+
 async function importMaterials(data: any[], storeId: string): Promise<ImportResult> {
   try {
     // Filter out records without required fields
@@ -304,6 +316,8 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
             }
           : undefined;
 
+        const openingStock = parseGlobalNumber(item.currentStock) || 0;
+        const unit = item.unit || "kg";
         await prisma.material.create({
           data: {
             storeId: item.storeId,
@@ -313,15 +327,19 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
             name: String(item.name).trim(),
             description: item.description || undefined,
             category: item.category || undefined,
-            unit: item.unit || "kg",
+            unit,
             unitCost: unitCostBase,
-            currentStock: parseGlobalNumber(item.currentStock) || 0,
+            currentStock: openingStock,
             minStock: parseGlobalNumber(item.minStock) || 0,
             maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             // Create relation to supplier
             materialSuppliers: materialSuppliersCreate,
+            // Imported stock goes on the Log, as stock typed into the add form does.
+            ...(openingStock !== 0 && {
+              stockMovements: { create: openingStockMovement(openingStock, unit) },
+            }),
           },
         });
         successCount++;
@@ -398,14 +416,14 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
             storeId,
             name: { equals: name, mode: "insensitive" },
           },
-          select: { id: true },
+          select: { id: true, currentStock: true },
         });
 
         // If not found by name, try finding by SKU if provided
         if (!existingProduct && sku) {
           existingProduct = await prisma.product.findFirst({
             where: { storeId, sku },
-            select: { id: true },
+            select: { id: true, currentStock: true },
           });
         }
 
@@ -424,6 +442,12 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
           if (taken) throw new Error(`Barcode "${barcode}" is already used by another product`);
         }
 
+        const hasStock =
+          item.currentStock !== undefined &&
+          item.currentStock !== null &&
+          String(item.currentStock).trim() !== "";
+        const importedStock = hasStock ? parseGlobalNumber(item.currentStock) || 0 : undefined;
+
         const productData = {
           name,
           sku,
@@ -441,7 +465,9 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
             parseGlobalNumber(item.sellingPrice) || 0,
             importRate
           ),
-          currentStock: parseGlobalNumber(item.currentStock) || 0,
+          // Left out when the sheet has no stock (column or cell), like the
+          // barcode above: re-importing without it used to zero every product.
+          ...(importedStock !== undefined && { currentStock: importedStock }),
           minStock: parseGlobalNumber(item.minStock) || 0,
           maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
           updatedAt: new Date(), // Always update timestamp
@@ -449,19 +475,40 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
 
         let productId: string;
         if (existingProduct) {
-          // UPDATE existing product
+          // UPDATE existing product. A stock change goes on the Log, in the
+          // same write as the stock itself.
+          const stockDelta =
+            importedStock !== undefined ? importedStock - Number(existingProduct.currentStock) : 0;
           await prisma.product.update({
             where: { id: existingProduct.id },
-            data: productData,
+            data: {
+              ...productData,
+              ...(stockDelta !== 0 && {
+                stockMovements: {
+                  create: {
+                    type: MovementType.ADJUSTMENT,
+                    quantity: stockDelta,
+                    unit: productData.unit,
+                    balanceAfter: importedStock!,
+                    notes: `Stock ${stockDelta > 0 ? "increase" : "decrease"} - Import`,
+                  },
+                },
+              }),
+            },
           });
           productId = existingProduct.id;
         } else {
           // CREATE new product
+          const openingStock = importedStock ?? 0;
           const created = await prisma.product.create({
             data: {
               ...productData,
+              currentStock: openingStock,
               storeId,
               createdAt: item.createdAt || new Date(),
+              ...(openingStock !== 0 && {
+                stockMovements: { create: openingStockMovement(openingStock, productData.unit) },
+              }),
             },
           });
           productId = created.id;
@@ -616,18 +663,23 @@ async function resolveMaterialId(
     }
   }
 
+  const unit = opts.unit?.trim() || "kg";
+  const openingStock = opts.stock ?? 0;
   const created = await prisma.material.create({
     data: {
       storeId,
       name: cleanName,
-      unit: opts.unit?.trim() || "kg",
+      unit,
       sku: cleanSku || `MAT-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
       unitCost: opts.price ?? 0,
-      currentStock: opts.stock ?? 0,
+      currentStock: openingStock,
       category: "Imported",
       materialSuppliers: supplierId
         ? { create: { supplierId, price: opts.price ?? 0, isPreferred: true } }
         : undefined,
+      ...(openingStock !== 0 && {
+        stockMovements: { create: openingStockMovement(openingStock, unit) },
+      }),
     },
     select: { id: true },
   });

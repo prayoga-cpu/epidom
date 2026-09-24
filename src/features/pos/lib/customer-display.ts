@@ -118,7 +118,15 @@ export type CustomerDisplayMessage =
    * snapshot on purpose — the snapshot is mirrored into localStorage, and a
    * customer's number and first name have no business being written there.
    */
-  | { type: "customer-status"; status: CustomerDisplayIntakeStatus };
+  | { type: "customer-status"; status: CustomerDisplayIntakeStatus }
+  /**
+   * Cashier -> display: "please enter your details" — opens the number pad (and,
+   * for a new customer, the optional name / email step) on the customer's
+   * screen, exactly as if they had tapped its WhatsApp button themselves.
+   * Carries nothing: what the customer types comes back as the two messages
+   * above, and the cashier still reviews and saves it.
+   */
+  | { type: "ask-details" };
 
 /**
  * What the till found out about the number a customer entered.

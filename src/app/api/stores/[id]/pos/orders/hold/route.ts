@@ -10,6 +10,8 @@ import { validateAndBuildOrderItems } from "@/lib/services/pos-order-builder";
 import {
   buildOrderItemCreateData,
   mapSettlementError,
+  posOrderSource,
+  resolveStoreTableId,
   SettlementError,
 } from "@/lib/services/pos-order-settlement";
 import { claimOrderTransition } from "@/lib/services/order-status.helpers";
@@ -178,6 +180,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       settings: { ...financeSettings, processingFeeEnabled: false },
     });
 
+    // Only one of this store's own tables can be linked (see resolveStoreTableId).
+    const tableId = await resolveStoreTableId(storeId, input.tableId, input.orderType);
+
     // Columns shared by the re-hold (update) and fresh-hold (create) paths.
     const heldOrderData = {
       customerPhone: customer?.phone ?? input.customerPhone,
@@ -188,9 +193,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       customerId:
         customer?.id ?? (input.customerId === null ? null : (existing?.customerId ?? null)),
       orderType: input.orderType as OrderType,
+      source: posOrderSource(input),
       guestCount: input.orderType === "DINE_IN" ? input.guestCount : null,
       tableNumber: input.tableNumber,
-      tableId: input.tableId,
+      tableId: tableId ?? undefined,
       notes: input.notes,
       subtotal: new Prisma.Decimal(charges.subtotal),
       tax: new Prisma.Decimal(charges.tax),
@@ -271,7 +277,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           paymentMethod: "CASH",
           paymentStatus: "PENDING",
           status: "HELD",
-          source: "POS",
           delivery: new Prisma.Decimal(0),
         },
         include: { items: true },
@@ -280,9 +285,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       // Parity with normal checkout — mark the table occupied if assigned.
       // updateMany so the write is store-scoped: `update` by id alone would
       // let a forged tableId flip another tenant's table.
-      if (input.tableId && input.orderType === "DINE_IN") {
+      if (tableId) {
         await tx.table.updateMany({
-          where: { id: input.tableId, storeId },
+          where: { id: tableId, storeId },
           data: { status: "OCCUPIED" },
         });
       }

@@ -144,13 +144,18 @@ export const POST = withApiHandler(
     });
     const orderNumber = `SO-${Date.now()}-${String(orderCount + 1).padStart(4, "0")}`;
 
-    // Create order transactionally
+    // Create order transactionally.
+    //
+    // Created straight as PLACED: creating the order IS placing it. There used
+    // to be a PENDING "Orders to Place" stage with a separate "Mark as Placed"
+    // tap in between, which merchants skipped or forgot. PENDING stays in the
+    // enum only so orders created before that change still read as open.
     const order = await prisma.supplierOrder.create({
       data: {
         storeId: storeId!,
         supplierId,
         orderNumber,
-        status: "PENDING",
+        status: "PLACED",
         orderDate: new Date(),
         expectedDate: expectedDate ? new Date(expectedDate) : null,
         subtotal,

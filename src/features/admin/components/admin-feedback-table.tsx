@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  MessageSquare,
+  Bug,
   Inbox,
   Clock,
   CheckCircle2,
@@ -916,7 +916,7 @@ export function AdminFeedbackTable() {
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/15">
-              <MessageSquare className="h-5 w-5 text-blue-400" />
+              <Bug className="h-5 w-5 text-blue-400" />
             </div>
             <div>
               <h1 className="text-foreground text-lg font-bold">Feedback</h1>

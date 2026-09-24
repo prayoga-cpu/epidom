@@ -514,3 +514,50 @@ describe("POST /pos/orders/hold — re-holding an existing bill", () => {
     expect(txMock.orderItem.deleteMany).not.toHaveBeenCalled();
   });
 });
+
+// ─── A saved bill's table is freed when it is paid straight to DELIVERED ────
+
+describe("POST /pos/orders/[orderId]/finalize — the saved bill's table", () => {
+  const call = () =>
+    FINALIZE(jsonRequest(CHECKOUT_BODY), {
+      params: Promise.resolve({ id: "store-1", orderId: "ord-1" }),
+    });
+
+  const store = (kitchenDisplayEnabled: boolean) => ({
+    store: {
+      id: "store-1",
+      name: "Test Store",
+      phone: null,
+      kitchenDisplayEnabled,
+      payLaterEnabled: true,
+    },
+    accessType: "owner",
+  });
+
+  beforeEach(() => {
+    prismaMock.order.findFirst.mockResolvedValue({ ...HELD_ORDER, tableId: "table-1" });
+    txMock.order.update.mockResolvedValue({ ...HELD_ORDER, tableId: "table-1", items: [] });
+  });
+
+  it("frees it when the kitchen display is off (paid and delivered in one step)", async () => {
+    const { verifyStoreAccessWithResponse } = await import("@/lib/utils/store-verification");
+    vi.mocked(verifyStoreAccessWithResponse).mockResolvedValueOnce(store(false) as never);
+
+    const res = await call();
+
+    expect(res.status).toBe(200);
+    expect(txMock.table.updateMany).toHaveBeenCalledWith({
+      where: { id: "table-1", storeId: "store-1" },
+      data: { status: "AVAILABLE" },
+    });
+  });
+
+  it("leaves it alone while the kitchen display still has the order", async () => {
+    const res = await call();
+
+    expect(res.status).toBe(200);
+    expect(txMock.table.updateMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: "AVAILABLE" } })
+    );
+  });
+});
