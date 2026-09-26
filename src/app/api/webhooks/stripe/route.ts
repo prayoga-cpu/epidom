@@ -18,7 +18,7 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import {
   extractSubscriptionPeriod,
   isSubscriptionCanceling,
-  isInvoiceWithSubscription,
+  getInvoiceSubscriptionId,
 } from "@/types/stripe";
 import Stripe from "stripe";
 
@@ -241,11 +241,17 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   subscriptionService.invalidateUserCache(userId);
 }
 
-async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.userId;
-  const plan = mapStripePlanToEnum(subscription.metadata?.plan);
+async function handleSubscriptionCreated(createdSubscription: Stripe.Subscription) {
+  const userId = createdSubscription.metadata?.userId;
+  const plan = mapStripePlanToEnum(createdSubscription.metadata?.plan);
 
   if (!userId || !plan) return;
+
+  // The event carries the subscription as it was at creation, which for a
+  // Checkout card subscription is usually `incomplete`, and Stripe does not
+  // order events. Write Stripe's current state so a late `created` event can't
+  // overwrite the ACTIVE status checkout.session.completed already stored.
+  const subscription = await stripe.subscriptions.retrieve(createdSubscription.id);
 
   const period = extractSubscriptionPeriod(subscription);
   if (!period) return;
@@ -362,9 +368,9 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  if (!isInvoiceWithSubscription(invoice) || !invoice.subscription) return;
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
 
-  const subscriptionId = invoice.subscription;
   const subscription = await subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
   if (!subscription) return;
 
@@ -382,9 +388,9 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  if (!isInvoiceWithSubscription(invoice) || !invoice.subscription) return;
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
 
-  const subscriptionId = invoice.subscription;
   const subscription = await subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
   if (!subscription) return;
 

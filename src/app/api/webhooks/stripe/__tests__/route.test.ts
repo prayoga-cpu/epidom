@@ -287,4 +287,201 @@ describe("Stripe Webhook Handler", () => {
       expect(subscriptionRepository.updateByStripeSubscriptionId).not.toHaveBeenCalled();
     });
   });
+
+  // Since API 2025-03-31.basil (and in clover/dahlia) the billing period lives on
+  // the subscription items and an invoice points at its subscription through
+  // `parent.subscription_details`. These are the shapes Stripe actually sends.
+  describe("current API shape (basil and later)", () => {
+    const itemPeriod = { current_period_start: 1790000000, current_period_end: 1792592000 };
+
+    it("activates the plan on checkout when the period is only on the subscription item", async () => {
+      const mockEvent = {
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            mode: "subscription",
+            subscription: "sub_new",
+            customer: "cus_123",
+            metadata: { userId: "user-123", plan: "POS" },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({
+        id: "sub_new",
+        status: "trialing",
+        cancel_at_period_end: false,
+        cancel_at: null,
+        trial_end: 1791209600,
+        items: { data: [{ price: { id: "price_pos" }, ...itemPeriod }] },
+      });
+      (subscriptionRepository.findByUserId as any).mockResolvedValue(null);
+
+      await POST(createRequest(mockEvent));
+
+      expect(subscriptionRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-123",
+          plan: SubscriptionPlan.POS,
+          status: SubscriptionStatus.ACTIVE,
+          stripeSubscriptionId: "sub_new",
+          stripePriceId: "price_pos",
+          currentPeriodStart: new Date(itemPeriod.current_period_start * 1000),
+          currentPeriodEnd: new Date(itemPeriod.current_period_end * 1000),
+          trialEndsAt: new Date(1791209600 * 1000),
+        })
+      );
+    });
+
+    it("writes Stripe's current status, not the stale snapshot, on customer.subscription.created", async () => {
+      const mockEvent = {
+        type: "customer.subscription.created",
+        data: {
+          object: {
+            id: "sub_new",
+            status: "incomplete",
+            items: { data: [{ price: { id: "price_pos" }, ...itemPeriod }] },
+            metadata: { userId: "user-123", plan: "POS" },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({
+        id: "sub_new",
+        status: "active",
+        cancel_at_period_end: false,
+        cancel_at: null,
+        trial_end: null,
+        items: { data: [{ price: { id: "price_pos" }, ...itemPeriod }] },
+        metadata: { userId: "user-123", plan: "POS" },
+      });
+      (subscriptionRepository.findByUserId as any).mockResolvedValue({
+        userId: "user-123",
+        stripeSubscriptionId: "sub_new",
+        status: SubscriptionStatus.ACTIVE,
+      });
+
+      await POST(createRequest(mockEvent));
+
+      expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_new");
+      expect(subscriptionRepository.update).toHaveBeenCalledWith(
+        "user-123",
+        expect.objectContaining({
+          status: SubscriptionStatus.ACTIVE,
+          plan: SubscriptionPlan.POS,
+          stripeSubscriptionId: "sub_new",
+          currentPeriodEnd: new Date(itemPeriod.current_period_end * 1000),
+        })
+      );
+    });
+
+    it("records a scheduled cancellation from customer.subscription.updated", async () => {
+      const mockEvent = {
+        type: "customer.subscription.updated",
+        data: {
+          object: {
+            id: "sub_123",
+            status: "active",
+            cancel_at_period_end: true,
+            cancel_at: null,
+            trial_end: null,
+            items: { data: [{ price: { id: "price_123" }, ...itemPeriod }] },
+            metadata: { userId: "user-123", plan: "OPERATIONS" },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        customPricePendingAt: null,
+      });
+
+      await POST(createRequest(mockEvent));
+
+      expect(subscriptionRepository.updateByStripeSubscriptionId).toHaveBeenCalledWith(
+        "sub_123",
+        expect.objectContaining({
+          status: SubscriptionStatus.ACTIVE,
+          plan: SubscriptionPlan.OPERATIONS,
+          cancelAtPeriodEnd: true,
+          currentPeriodStart: new Date(itemPeriod.current_period_start * 1000),
+          currentPeriodEnd: new Date(itemPeriod.current_period_end * 1000),
+        })
+      );
+    });
+
+    it("marks the subscription past due when an invoice payment fails", async () => {
+      const mockEvent = {
+        type: "invoice.payment_failed",
+        data: {
+          object: {
+            id: "in_1",
+            parent: {
+              type: "subscription_details",
+              subscription_details: { subscription: "sub_123", metadata: {} },
+            },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        status: SubscriptionStatus.ACTIVE,
+        customPricePendingAt: null,
+      });
+
+      await POST(createRequest(mockEvent));
+
+      expect(subscriptionRepository.findByStripeSubscriptionId).toHaveBeenCalledWith("sub_123");
+      expect(subscriptionRepository.updateByStripeSubscriptionId).toHaveBeenCalledWith("sub_123", {
+        status: SubscriptionStatus.PAST_DUE,
+      });
+    });
+
+    it("reactivates a past-due subscription when its invoice is paid (expanded parent)", async () => {
+      const mockEvent = {
+        type: "invoice.payment_succeeded",
+        data: {
+          object: {
+            id: "in_2",
+            parent: {
+              type: "subscription_details",
+              subscription_details: { subscription: { id: "sub_123" }, metadata: {} },
+            },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        status: SubscriptionStatus.PAST_DUE,
+        customPricePendingAt: null,
+      });
+
+      await POST(createRequest(mockEvent));
+
+      expect(subscriptionRepository.updateByStripeSubscriptionId).toHaveBeenCalledWith("sub_123", {
+        status: SubscriptionStatus.ACTIVE,
+      });
+    });
+
+    it("ignores a one-off invoice that has no parent subscription", async () => {
+      const mockEvent = {
+        type: "invoice.payment_failed",
+        data: { object: { id: "in_3", parent: null } },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+
+      await POST(createRequest(mockEvent));
+
+      expect(subscriptionRepository.findByStripeSubscriptionId).not.toHaveBeenCalled();
+      expect(subscriptionRepository.updateByStripeSubscriptionId).not.toHaveBeenCalled();
+    });
+  });
 });

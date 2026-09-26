@@ -351,6 +351,37 @@ describe("SubscriptionService", () => {
         "No subscription found"
       );
     });
+
+    it("clears cancel_at_period_end for a cancellation made in the app", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({
+        cancel_at_period_end: true,
+        cancel_at: 1792592000,
+      });
+
+      await service.reactivateSubscription("user-1");
+
+      expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_stripe_123", {
+        cancel_at_period_end: false,
+      });
+      expect(mocks.subscriptionRepo.update).toHaveBeenCalledWith("user-1", {
+        cancelAtPeriodEnd: false,
+      });
+    });
+
+    it("unsets cancel_at for a portal cancellation on a flexible billing-mode subscription", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({
+        cancel_at_period_end: false,
+        cancel_at: 1792592000,
+      });
+
+      await service.reactivateSubscription("user-1");
+
+      expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_stripe_123", {
+        cancel_at: "",
+      });
+    });
   });
 
   describe("createPortalSession", () => {
@@ -360,6 +391,42 @@ describe("SubscriptionService", () => {
       await expect(
         service.createPortalSession("user-1", "https://example.com/return")
       ).rejects.toThrow("No subscription found");
+    });
+
+    it("refuses an admin-granted account, which has no Stripe customer", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeCustomerId: "admin_user-1",
+      });
+
+      await expect(
+        service.createPortalSession("user-1", "https://example.com/return")
+      ).rejects.toThrow("Cannot manage billing portal");
+      expect(stripe.billingPortal.sessions.create).not.toHaveBeenCalled();
+    });
+
+    it("replaces a customer the current Stripe account doesn't know (previous account)", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeCustomerId: "cus_old_account",
+      });
+      mocks.userRepo.findById.mockResolvedValue({
+        id: "user-1",
+        email: "a@b.co",
+        name: "A",
+      } as any);
+      (stripe.customers.retrieve as any).mockRejectedValueOnce(new Error("No such customer"));
+      (stripe.customers.create as any).mockResolvedValueOnce({ id: "cus_new_account" });
+
+      await service.createPortalSession("user-1", "https://example.com/return");
+
+      expect(mocks.subscriptionRepo.update).toHaveBeenCalledWith("user-1", {
+        stripeCustomerId: "cus_new_account",
+      });
+      expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
+        customer: "cus_new_account",
+        return_url: "https://example.com/return",
+      });
     });
   });
 

@@ -186,12 +186,22 @@ export class SubscriptionService {
     if (!subscription) {
       throw new Error("No subscription found for user");
     }
-    if (subscription.stripeCustomerId.startsWith("free_")) {
+    if (
+      subscription.stripeCustomerId.startsWith("free_") ||
+      subscription.stripeCustomerId.startsWith("admin_")
+    ) {
       throw new Error("Cannot manage billing portal for free or non-Stripe subscriptions");
     }
 
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // A customer id Stripe no longer knows (e.g. one from the previous Stripe
+    // account) is replaced by a fresh customer, same as at checkout.
     const session = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripeCustomerId,
+      customer: await this.resolveStripeCustomerId(user, subscription),
       return_url: returnUrl,
     });
 
@@ -669,10 +679,17 @@ export class SubscriptionService {
       throw new Error("No subscription found");
     }
 
-    // Reactivate in Stripe
-    await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
-      cancel_at_period_end: false,
-    });
+    // Reactivate in Stripe. A cancellation made in the app sets
+    // cancel_at_period_end; one made in the Customer Portal on a flexible
+    // billing-mode subscription (the default for Checkout since 2025-09-30.clover)
+    // sets cancel_at instead, which cancel_at_period_end: false leaves in place.
+    const stripeSub = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
+    await stripe.subscriptions.update(
+      subscription.stripeSubscriptionId,
+      !stripeSub.cancel_at_period_end && stripeSub.cancel_at
+        ? { cancel_at: "" }
+        : { cancel_at_period_end: false }
+    );
 
     // Update local record
     await this.subscriptionRepo.update(userId, {

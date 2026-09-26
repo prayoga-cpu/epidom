@@ -9,6 +9,14 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.1.1] - 2026-09-26 · fix
+
+Paying for a plan works again.
+
+- **Your plan switches on when you pay.** After checkout, POS or Operations now turns on straight away. Before, Epidom couldn't read Stripe's current payment notices, so a successful payment could leave the account on Free.
+- **Missed and recovered payments are tracked.** A declined renewal now marks the subscription as past due, and paying it puts it back to active.
+- **Cancellations you schedule stay scheduled.** Choosing to cancel at the end of the period now shows on your Billing page until the period ends.
+
 ## [3.1.0] - 2026-09-25 · feat
 
 POS Mode gets its two spaces, the store list gets each store's own look and numbers, and the till gets a little friendlier.

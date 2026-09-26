@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe";
+import { subscriptionService } from "@/lib/services";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 /**
@@ -20,7 +20,11 @@ export const POST = withApiHandler(
       select: { stripeCustomerId: true },
     });
 
-    if (!subscription?.stripeCustomerId || subscription.stripeCustomerId.startsWith("free_")) {
+    if (
+      !subscription?.stripeCustomerId ||
+      subscription.stripeCustomerId.startsWith("free_") ||
+      subscription.stripeCustomerId.startsWith("admin_")
+    ) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.NOT_FOUND, "No active subscription found on Stripe"),
         { status: 404 }
@@ -32,11 +36,12 @@ export const POST = withApiHandler(
     const origin =
       request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    // Create Stripe Customer Portal session
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripeCustomerId,
-      return_url: `${origin}/profile`,
-    });
+    // Create Stripe Customer Portal session (replaces a customer id Stripe no
+    // longer knows, e.g. one from the previous Stripe account)
+    const portalSession = await subscriptionService.createPortalSession(
+      userId,
+      `${origin}/profile`
+    );
 
     return NextResponse.json(
       createSuccessResponse({

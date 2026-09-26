@@ -33,9 +33,9 @@ custom/sales-assisted pricing rather than a fixed Rp 499,000+ floor.)
 **Single source of truth in code:** `src/lib/constants/plan-pricing.ts` holds every displayed price
 (IDR, EUR and USD, monthly and yearly) for POS and OPERATIONS. The billing UI's `PLAN_PRICE_IDR`
 imports from it, and `src/lib/constants/__tests__/plan-pricing.test.ts` fails if any locale's price
-string on `/pricing` or the home teaser differs from it. Whether the Stripe Price objects are
-actually denominated in IDR (the marketing pages also show EUR and USD) has not been verified — check
-the Stripe dashboard. Note `docs/STRATEGY.md` still quotes the older Rp 99k / 249k / 499k figures.
+string on `/pricing` or the home teaser differs from it. The Stripe Price objects mirror it: EUR is
+the base currency, with USD and IDR as `currency_options` on the same Price (see "Products and prices"
+below). Note `docs/STRATEGY.md` still quotes the older Rp 99k / 249k / 499k figures.
 
 **Plan activation without payment:** `SubscriptionService.activateFree` is FREE-only (it throws for
 anything else) and `POST /api/subscriptions/activate-free` accepts only `plan: "FREE"`. The single
@@ -59,41 +59,57 @@ Defined in `/docs/FEATURES.md`. Hitting any limit prompts an upgrade flow, never
 
 ### Products and prices
 
-In the Stripe dashboard:
+Stripe account `acct_1UJrtbBS1eyDCgdx` (France, EUR) since 2026-09-26. Each plan is one Product with a
+monthly and a yearly recurring Price. Every Price is EUR-based and carries USD and IDR
+`currency_options`, with amounts from `src/lib/constants/plan-pricing.ts` (yearly = the per-month
+"billed yearly" figure × 12). Find a price by its lookup key:
 
-| Product           | Monthly Price ID        | Annual Price ID        |
-| ----------------- | ----------------------- | ---------------------- |
-| Epidom POS        | `price_pos_monthly_idr` | `price_pos_annual_idr` |
-| Epidom OPERATIONS | `price_ops_monthly_idr` | `price_ops_annual_idr` |
-| Epidom ENTERPRISE | `price_ent_monthly_idr` | `price_ent_annual_idr` |
+| Product           | Monthly lookup key          | Yearly lookup key          | Env var (monthly / yearly)                                                   |
+| ----------------- | --------------------------- | -------------------------- | ---------------------------------------------------------------------------- |
+| Epidom POS        | `epidom_pos_monthly`        | `epidom_pos_yearly`        | `NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY` / `_POS_YEARLY`                   |
+| Epidom Operations | `epidom_operations_monthly` | `epidom_operations_yearly` | `NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY` / `_OPERATIONS_YEARLY`     |
 
-The actual `price_*` IDs go in the env file. Never commit them.
+ENTERPRISE has no catalog Price; it is quoted per account (see "Admin custom price override" below). The
+`price_*` IDs go in the env file, never in code. The Customer portal must have saved settings in the
+dashboard (Settings → Billing → Customer portal): the code opens portal sessions without a
+configuration ID, so it needs the account's default configuration.
 
 ### Test mode setup
 
+Local `.env` uses a Stripe **sandbox** of the same account, never live keys: a checkout from localhost
+with a live key charges a real card, and because the dev database copies production user IDs, the
+production webhook would upgrade the matching production user.
+
 ```bash
-# .env.local
 STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_WEBHOOK_SECRET=whsec_...   # printed by: stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
-STRIPE_PRICE_POS_MONTHLY_IDR=price_test_...
-STRIPE_PRICE_POS_ANNUAL_IDR=price_test_...
-STRIPE_PRICE_OPS_MONTHLY_IDR=price_test_...
-STRIPE_PRICE_OPS_ANNUAL_IDR=price_test_...
-STRIPE_PRICE_ENT_MONTHLY_IDR=price_test_...
-STRIPE_PRICE_ENT_ANNUAL_IDR=price_test_...
+NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY=price_...        # the sandbox's own price IDs
+NEXT_PUBLIC_STRIPE_PRICE_ID_POS_YEARLY=price_...
+NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY=price_...
+NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_YEARLY=price_...
 ```
 
 ### Webhook events handled
 
+The production endpoint is `https://epidom.fr/api/webhooks/stripe` (the apex host: Stripe does not
+follow redirects), snapshot payloads, API version `2026-08-26.dahlia`. Subscribe it to exactly these:
+
 - `checkout.session.completed` — provision subscription, set plan
-- `customer.subscription.updated` — sync plan and status
+- `customer.subscription.created` — same, for subscriptions created outside Checkout
+- `customer.subscription.updated` — sync plan, status, period and scheduled cancellation
 - `customer.subscription.deleted` — downgrade to FREE, keep data
-- `invoice.payment_failed` — set status to `PAST_DUE`, notify merchant
-- `invoice.payment_succeeded` — confirm renewal
+- `invoice.payment_failed` — set status to `PAST_DUE`
+- `invoice.payment_succeeded` — back to `ACTIVE` after a recovered payment
 
 Webhook handler: `src/app/api/webhooks/stripe/route.ts`. All event handlers are idempotent.
+
+**API version shapes.** Webhook payloads use the endpoint's API version; SDK responses use the version
+pinned in `src/lib/stripe.ts` (`2025-10-29.clover`, stripe-node 19.3). Since `2025-03-31.basil` the
+billing period is on each subscription item and an invoice's subscription is at
+`invoice.parent.subscription_details.subscription`. Read these only through the helpers in
+`src/types/stripe.ts`, which accept both the current and the pre-basil shape.
 
 ### Subscription model
 
