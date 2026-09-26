@@ -14,6 +14,7 @@ import { subscriptionRepository } from "@/lib/repositories";
 import { subscriptionService } from "@/lib/services";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 import { handleApiError } from "@/lib/utils/api-error-handler";
+import { AppError } from "@/lib/errors";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import {
   extractSubscriptionPeriod,
@@ -80,12 +81,16 @@ export async function POST(request: NextRequest) {
   try {
     // Verify webhook signature
     event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET!);
-  } catch (error) {
-    // Signature verification failed
-    return handleApiError(error, {
-      endpoint: "POST /api/webhooks/stripe",
-      context: { step: "signature_verification" },
-    });
+  } catch {
+    // Signature verification failed. A 400 (not the generic 500) so a wrong
+    // STRIPE_WEBHOOK_SECRET shows in Stripe as a rejected delivery, not a server error.
+    return handleApiError(
+      new AppError("Invalid Stripe signature", ApiErrorCode.VALIDATION_ERROR, 400),
+      {
+        endpoint: "POST /api/webhooks/stripe",
+        context: { step: "signature_verification" },
+      }
+    );
   }
 
   try {

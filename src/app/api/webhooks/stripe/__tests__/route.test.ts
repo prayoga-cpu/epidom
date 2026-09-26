@@ -57,6 +57,17 @@ describe("Stripe Webhook Handler", () => {
     });
   };
 
+  it("rejects a request with a bad signature as 400, not 500", async () => {
+    (stripe.webhooks.constructEvent as any).mockImplementationOnce(() => {
+      throw new Error("No signatures found matching the expected signature for payload.");
+    });
+
+    const res = await POST(createRequest({ type: "customer.subscription.deleted" }));
+
+    expect(res.status).toBe(400);
+    expect(subscriptionRepository.findByStripeSubscriptionId).not.toHaveBeenCalled();
+  });
+
   describe("checkout.session.completed", () => {
     it("should assign POS plan for setup mode with new_year_2025 promotion", async () => {
       // Arrange
