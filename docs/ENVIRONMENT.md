@@ -72,26 +72,28 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 # Client-side
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 
-# Price IDs, one per tier per cadence
-STRIPE_PRICE_POS_MONTHLY_IDR=price_...
-STRIPE_PRICE_POS_ANNUAL_IDR=price_...
-STRIPE_PRICE_OPS_MONTHLY_IDR=price_...
-STRIPE_PRICE_OPS_ANNUAL_IDR=price_...
-STRIPE_PRICE_ENT_MONTHLY_IDR=price_...
-STRIPE_PRICE_ENT_ANNUAL_IDR=price_...
+# Price IDs, one per plan per cadence (from the same account as the keys)
+NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY=price_...
+NEXT_PUBLIC_STRIPE_PRICE_ID_POS_YEARLY=price_...
+NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY=price_...
+NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_YEARLY=price_...
 ```
+
+The catalog is one Price per plan and cadence, EUR-based with USD and IDR `currency_options`; find
+each by its lookup key `epidom_{pos,operations}_{monthly,yearly}`. ENTERPRISE has no catalog price
+(it is quoted per account). Details: `docs/BILLING.md` → Stripe setup.
 
 **Where to get keys:**
 
 1. Stripe dashboard → Developers → API keys
-2. Use test mode keys for local development
+2. Use a Stripe **sandbox** (test keys) for local development, never live keys: a local checkout
+   with a live key charges a real card, and the dev database shares production user IDs
 3. Webhook secret: Stripe → Developers → Webhooks → click your endpoint → reveal signing secret
 
 **Setting up webhooks for local dev:**
 
 ```bash
-stripe login
-stripe listen --forward-to localhost:3000/api/webhooks/stripe
+stripe listen --api-key "$STRIPE_SECRET_KEY" --forward-to localhost:3000/api/webhooks/stripe
 ```
 
 The CLI prints the webhook secret. Paste it into `STRIPE_WEBHOOK_SECRET`.
@@ -425,13 +427,11 @@ GOOGLE_CLIENT_SECRET=
 STRIPE_SECRET_KEY=sk_test_
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_
 STRIPE_WEBHOOK_SECRET=whsec_
-# Price IDs for each tier
-STRIPE_PRICE_POS_MONTHLY_IDR=
-STRIPE_PRICE_POS_ANNUAL_IDR=
-STRIPE_PRICE_OPS_MONTHLY_IDR=
-STRIPE_PRICE_OPS_ANNUAL_IDR=
-STRIPE_PRICE_ENT_MONTHLY_IDR=
-STRIPE_PRICE_ENT_ANNUAL_IDR=
+# Price IDs, one per plan per cadence
+NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY=
+NEXT_PUBLIC_STRIPE_PRICE_ID_POS_YEARLY=
+NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY=
+NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_YEARLY=
 
 # === Xendit (customer payments, Phase 2) ===
 XENDIT_SECRET_KEY=

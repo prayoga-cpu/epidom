@@ -80,6 +80,23 @@ export async function POST(request: Request) {
       );
     }
 
+    // A card payment is charged on the merchant's own Stripe account (Connect).
+    // Without one it would be charged to Epidom's account instead, so refuse it
+    // before any order is created.
+    const merchant = storefront.store.business.user;
+    if (
+      input.paymentMethod === "STRIPE_CARD" &&
+      !(merchant.stripeConnectOnboarded && merchant.stripeConnectAccountId)
+    ) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.VALIDATION_ERROR,
+          "Card payment isn't available at this store. Please choose another payment method."
+        ),
+        { status: 400 }
+      );
+    }
+
     // Validate all menu items belong to this storefront and are available
     const menuItemIds = input.items.map((i) => i.menuItemId);
     const menuItems = await prisma.menuItem.findMany({

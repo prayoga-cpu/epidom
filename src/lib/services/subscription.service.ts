@@ -67,8 +67,11 @@ export class SubscriptionService {
       try {
         const customer = await stripe.customers.retrieve(stored);
         if (!customer.deleted) return stored;
-      } catch {
-        // Unknown to Stripe — fall through and create a fresh customer.
+      } catch (error) {
+        // Only a customer Stripe says doesn't exist is replaced. Any other
+        // failure (network, rate limit, auth) must surface, or a paying
+        // customer would be re-pointed at a new, empty customer for good.
+        if ((error as { code?: string }).code !== "resource_missing") throw error;
       }
     }
 

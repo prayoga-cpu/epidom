@@ -6,6 +6,10 @@ import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/type
 import { withApiHandler } from "@/lib/api-handler";
 import Stripe from "stripe";
 import { extractSubscriptionPeriod, isSubscriptionCanceling } from "@/types/stripe";
+import { STRIPE_CONFIG } from "@/config/stripe.config";
+
+/** Stripe statuses that still grant access (trialing and past-due included). */
+const LIVE_STATUSES: Stripe.Subscription.Status[] = ["active", "trialing", "past_due", "unpaid"];
 
 /**
  * POST /api/subscriptions/sync
@@ -44,15 +48,29 @@ export const POST = withApiHandler(
       );
     }
 
-    // Get all active subscriptions from Stripe for this customer
+    // Admin-granted and free accounts have no Stripe customer to sync with.
+    if (
+      dbSubscription.stripeCustomerId.startsWith("free_") ||
+      dbSubscription.stripeCustomerId.startsWith("admin_")
+    ) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.CONFLICT, "This account is not billed through Stripe."),
+        { status: 409 }
+      );
+    }
+
+    // Every subscription that can still grant access. Listing only "active"
+    // would write a trialing or past-due subscription off as CANCELED.
     const stripeSubscriptions = await stripe.subscriptions.list({
       customer: dbSubscription.stripeCustomerId,
-      status: "active",
-      limit: 10,
-      expand: ["data.items.data.price"], // Expand price data for plan detection
+      status: "all",
+      limit: 20,
     });
+    const liveSubscriptions = stripeSubscriptions.data.filter((s) =>
+      LIVE_STATUSES.includes(s.status)
+    );
 
-    if (stripeSubscriptions.data.length === 0) {
+    if (liveSubscriptions.length === 0) {
       // No active subscriptions in Stripe
       if (dbSubscription.status !== SubscriptionStatus.CANCELED) {
         await subscriptionRepository.update(userId, {
@@ -70,12 +88,12 @@ export const POST = withApiHandler(
     }
 
     // Get the newest active subscription
-    const activeSubscription = stripeSubscriptions.data.sort((a, b) => b.created - a.created)[0];
+    const activeSubscription = liveSubscriptions.sort((a, b) => b.created - a.created)[0];
 
     // Cancel any duplicate subscriptions
     // Limit to 5 cancellations per request to prevent timeouts
-    if (stripeSubscriptions.data.length > 1) {
-      const duplicates = stripeSubscriptions.data.slice(1, 6); // Take max 5 duplicates
+    if (liveSubscriptions.length > 1) {
+      const duplicates = liveSubscriptions.slice(1, 6); // Take max 5 duplicates
 
       for (const dup of duplicates) {
         try {
@@ -87,31 +105,17 @@ export const POST = withApiHandler(
       }
     }
 
-    // Get the plan from the subscription
-    // Type-safe access to price data
+    // The plan follows the price actually being paid. Checkout metadata is
+    // written once, so after a plan switch in the Customer Portal it still
+    // names the old plan and would hand back a plan the customer stopped
+    // paying for. A price outside the catalog (an admin custom price) keeps
+    // the plan already on the row.
     const priceId = activeSubscription.items.data[0].price.id;
-    const unitAmount = activeSubscription.items.data[0].price.unit_amount;
-
-    let plan: SubscriptionPlan;
-
-    // Determine plan based on metadata or price amount
-    if (activeSubscription.metadata?.plan) {
-      // Validate metadata value against Enum
-      const metaPlan = activeSubscription.metadata.plan as string;
-      if (metaPlan === "POS" || metaPlan === "OPERATIONS") {
-        plan = metaPlan as SubscriptionPlan;
-      } else {
-        // Metadata invalid, fallback to price check
-        plan = determinePlanByPrice(unitAmount);
-      }
-    } else {
-      plan = determinePlanByPrice(unitAmount);
-    }
-
-    // Fallback to existing DB plan if we still can't determine
-    if (!plan && dbSubscription.plan) {
-      plan = dbSubscription.plan;
-    }
+    const plan = planForPriceId(priceId) ?? dbSubscription.plan;
+    const status =
+      activeSubscription.status === "past_due" || activeSubscription.status === "unpaid"
+        ? SubscriptionStatus.PAST_DUE
+        : SubscriptionStatus.ACTIVE;
 
     // Extract period dates using type-safe helper
     const period = extractSubscriptionPeriod(activeSubscription);
@@ -122,8 +126,8 @@ export const POST = withApiHandler(
     await subscriptionRepository.update(userId, {
       stripeSubscriptionId: activeSubscription.id,
       stripePriceId: priceId,
-      plan: plan || SubscriptionPlan.POS, // Default fallback
-      status: SubscriptionStatus.ACTIVE,
+      plan,
+      status,
       currentPeriodStart: period?.currentPeriodStart ?? new Date(),
       currentPeriodEnd: period?.currentPeriodEnd ?? new Date(),
       cancelAtPeriodEnd,
@@ -137,10 +141,10 @@ export const POST = withApiHandler(
           status: dbSubscription.status,
         },
         after: {
-          plan: plan,
-          status: "ACTIVE",
+          plan,
+          status,
         },
-        duplicatesCanceled: Math.max(0, stripeSubscriptions.data.length - 1),
+        duplicatesCanceled: Math.max(0, liveSubscriptions.length - 1),
       })
     );
   },
@@ -150,11 +154,11 @@ export const POST = withApiHandler(
   }
 );
 
-/**
- * Helper to determine plan from price amount
- */
-function determinePlanByPrice(amount: number | null): SubscriptionPlan {
-  if (amount === 1900) return SubscriptionPlan.POS; // $19
-  if (amount === 4900) return SubscriptionPlan.OPERATIONS; // $49
-  return SubscriptionPlan.POS; // Default safest option
+/** The plan a catalog price belongs to, or undefined for any other price. */
+function planForPriceId(priceId: string): SubscriptionPlan | undefined {
+  const { POS, OPERATIONS } = STRIPE_CONFIG.PRICE_IDS;
+  if (priceId === POS.MONTHLY || priceId === POS.YEARLY) return SubscriptionPlan.POS;
+  if (priceId === OPERATIONS.MONTHLY || priceId === OPERATIONS.YEARLY)
+    return SubscriptionPlan.OPERATIONS;
+  return undefined;
 }

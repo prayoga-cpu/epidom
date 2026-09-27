@@ -81,7 +81,6 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
   "POST /api/subscriptions/audit": { code: "billing.subscription.audit", severity: C },
   "POST /api/subscriptions/activate-free": { code: "billing.plan.activate_free", severity: N },
   "POST /api/subscriptions/beta-plan": { code: "billing.plan.beta", severity: N },
-  "POST /api/subscriptions/setup": { code: "billing.setup", severity: N },
   "POST /api/billing/portal": { code: "billing.portal.open", severity: I },
   "POST /api/connect/onboarding": { code: "billing.connect.onboard", severity: N },
 

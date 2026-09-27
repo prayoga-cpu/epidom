@@ -19,6 +19,34 @@ export interface StripeCustomerPaymentResponse {
   expiresAt: Date;
 }
 
+// Currencies Stripe takes in whole units; every other one is in hundredths.
+// https://docs.stripe.com/currencies#zero-decimal
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  "bif",
+  "clp",
+  "djf",
+  "gnf",
+  "jpy",
+  "kmf",
+  "krw",
+  "mga",
+  "pyg",
+  "rwf",
+  "ugx",
+  "vnd",
+  "vuv",
+  "xaf",
+  "xof",
+  "xpf",
+]);
+
+/** An order amount (major units, e.g. 20.5 EUR) in Stripe's smallest unit. */
+export function toStripeAmount(amount: number, currency: string): number {
+  return ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase())
+    ? Math.round(amount)
+    : Math.round(amount * 100);
+}
+
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
@@ -39,7 +67,7 @@ export async function createStripeCustomerPayment(
       {
         price_data: {
           currency: req.currency.toLowerCase(),
-          unit_amount: Math.round(req.amount),
+          unit_amount: toStripeAmount(req.amount, req.currency),
           product_data: {
             name: req.description,
           },
@@ -61,7 +89,10 @@ export async function createStripeCustomerPayment(
       },
     };
     if (req.applicationFeeAmount !== undefined && req.applicationFeeAmount > 0) {
-      sessionData.payment_intent_data.application_fee_amount = Math.round(req.applicationFeeAmount);
+      sessionData.payment_intent_data.application_fee_amount = toStripeAmount(
+        req.applicationFeeAmount,
+        req.currency
+      );
     }
   }
 

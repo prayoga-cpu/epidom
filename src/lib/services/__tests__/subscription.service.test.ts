@@ -415,7 +415,11 @@ describe("SubscriptionService", () => {
         email: "a@b.co",
         name: "A",
       } as any);
-      (stripe.customers.retrieve as any).mockRejectedValueOnce(new Error("No such customer"));
+      (stripe.customers.retrieve as any).mockRejectedValueOnce(
+        Object.assign(new Error("No such customer: 'cus_old_account'"), {
+          code: "resource_missing",
+        })
+      );
       (stripe.customers.create as any).mockResolvedValueOnce({ id: "cus_new_account" });
 
       await service.createPortalSession("user-1", "https://example.com/return");
@@ -427,6 +431,29 @@ describe("SubscriptionService", () => {
         customer: "cus_new_account",
         return_url: "https://example.com/return",
       });
+    });
+
+    it("keeps the stored customer when Stripe fails for another reason", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeCustomerId: "cus_live_customer",
+      });
+      mocks.userRepo.findById.mockResolvedValue({
+        id: "user-1",
+        email: "a@b.co",
+        name: "A",
+      } as any);
+      (stripe.customers.retrieve as any).mockRejectedValueOnce(
+        Object.assign(new Error("An error occurred with our connection to Stripe."), {
+          type: "StripeConnectionError",
+        })
+      );
+
+      await expect(
+        service.createPortalSession("user-1", "https://example.com/return")
+      ).rejects.toThrow("connection to Stripe");
+      expect(stripe.customers.create).not.toHaveBeenCalled();
+      expect(mocks.subscriptionRepo.update).not.toHaveBeenCalled();
     });
   });
 

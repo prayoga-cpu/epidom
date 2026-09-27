@@ -69,48 +69,77 @@ describe("Stripe Webhook Handler", () => {
   });
 
   describe("checkout.session.completed", () => {
-    it("should assign POS plan for setup mode with new_year_2025 promotion", async () => {
-      // Arrange
+    // The retired "new_year_2025" promo: POST /api/subscriptions/setup let any
+    // signed-in user validate a card in a setup-mode Checkout, and this webhook
+    // then granted POS ACTIVE with no charge. Both are gone. A session like the
+    // ones it created (Stripe can still deliver or retry one) must be
+    // acknowledged and change nothing.
+    it.each([
+      ["a user with no subscription row", null],
+      [
+        "a user on the free plan",
+        { userId: "user-123", plan: SubscriptionPlan.FREE, status: SubscriptionStatus.ACTIVE },
+      ],
+      [
+        "a user whose subscription lapsed",
+        { userId: "user-123", plan: SubscriptionPlan.POS, status: SubscriptionStatus.CANCELED },
+      ],
+    ])(
+      "grants nothing for a legacy new_year_2025 setup-mode session (%s)",
+      async (_who, existingRow) => {
+        const mockEvent = {
+          type: "checkout.session.completed",
+          data: {
+            object: {
+              mode: "setup",
+              customer: "cus_123",
+              // Setup-mode sessions never carry a subscription.
+              subscription: null,
+              setup_intent: "seti_123",
+              // Exactly what the deleted route put on the session.
+              metadata: { userId: "user-123", promotion: "new_year_2025", plan: "POS" },
+            },
+          },
+        };
+
+        (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+        (subscriptionRepository.findByUserId as any).mockResolvedValue(existingRow);
+
+        const res = await POST(createRequest(mockEvent));
+
+        // Acknowledged, so Stripe stops retrying ...
+        expect(res.status).toBe(200);
+        // ... and nothing was granted, whatever the user had before.
+        expect(subscriptionRepository.create).not.toHaveBeenCalled();
+        expect(subscriptionRepository.update).not.toHaveBeenCalled();
+        expect(subscriptionRepository.updateByStripeSubscriptionId).not.toHaveBeenCalled();
+        expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+        expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
+        expect(subscriptionService.invalidateUserCache).not.toHaveBeenCalled();
+      }
+    );
+
+    it("grants nothing for a setup-mode session without a plan either", async () => {
       const mockEvent = {
         type: "checkout.session.completed",
         data: {
           object: {
             mode: "setup",
             customer: "cus_123",
-            metadata: {
-              userId: "user-123",
-              promotion: "new_year_2025",
-            },
+            subscription: null,
+            metadata: { userId: "user-123", promotion: "new_year_2025" },
           },
         },
       };
 
       (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
-      (subscriptionRepository.findByUserId as any).mockResolvedValue(null);
 
-      // Act
-      const req = createRequest(mockEvent);
-      const res = await POST(req);
+      const res = await POST(createRequest(mockEvent));
 
-      // Assert
       expect(res.status).toBe(200);
-
-      // Verify repository call
-      expect(subscriptionRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: "user-123",
-          plan: SubscriptionPlan.POS, // CRITICAL CHECK
-          status: SubscriptionStatus.ACTIVE,
-          stripeCustomerId: "cus_123",
-        })
-      );
-
-      // Verify expiration date is set (end of 2026, matching PROMO_END_DATE)
-      const createCall = (subscriptionRepository.create as any).mock.calls[0][0];
-      const endDate = new Date(createCall.currentPeriodEnd);
-      expect(endDate.getUTCFullYear()).toBe(2026);
-      expect(endDate.getUTCMonth()).toBe(11); // December (0-indexed)
-      expect(endDate.getUTCDate()).toBe(31);
+      expect(subscriptionRepository.create).not.toHaveBeenCalled();
+      expect(subscriptionRepository.update).not.toHaveBeenCalled();
+      expect(subscriptionService.invalidateUserCache).not.toHaveBeenCalled();
     });
 
     it("should assign OPERATIONS plan for regular subscription checkout", async () => {
@@ -473,12 +502,175 @@ describe("Stripe Webhook Handler", () => {
         status: SubscriptionStatus.PAST_DUE,
         customPricePendingAt: null,
       });
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({ id: "sub_123", status: "active" });
+
+      await POST(createRequest(mockEvent));
+
+      expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_123");
+      expect(subscriptionRepository.updateByStripeSubscriptionId).toHaveBeenCalledWith("sub_123", {
+        status: SubscriptionStatus.ACTIVE,
+      });
+    });
+
+    it("follows Stripe, not the row, when an invoice is paid on a subscription dunning ended", async () => {
+      const mockEvent = {
+        type: "invoice.payment_succeeded",
+        data: {
+          object: {
+            id: "in_after_dunning",
+            parent: { subscription_details: { subscription: "sub_123", metadata: {} } },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      // payment_failed was processed after deleted, so the row reads PAST_DUE.
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        status: SubscriptionStatus.PAST_DUE,
+        customPricePendingAt: null,
+      });
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({
+        id: "sub_123",
+        status: "canceled",
+      });
 
       await POST(createRequest(mockEvent));
 
       expect(subscriptionRepository.updateByStripeSubscriptionId).toHaveBeenCalledWith("sub_123", {
+        status: SubscriptionStatus.CANCELED,
+      });
+    });
+
+    it("leaves a canceled row alone when the last failed payment arrives after the deletion", async () => {
+      const mockEvent = {
+        type: "invoice.payment_failed",
+        data: {
+          object: {
+            id: "in_last",
+            parent: { subscription_details: { subscription: "sub_123", metadata: {} } },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        status: SubscriptionStatus.CANCELED,
+        customPricePendingAt: null,
+      });
+
+      await POST(createRequest(mockEvent));
+
+      expect(subscriptionRepository.updateByStripeSubscriptionId).not.toHaveBeenCalled();
+    });
+
+    it("does not reopen a canceled subscription when a late invoice is paid", async () => {
+      const mockEvent = {
+        type: "invoice.payment_succeeded",
+        data: {
+          object: {
+            id: "in_late",
+            parent: { subscription_details: { subscription: "sub_123", metadata: {} } },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        status: SubscriptionStatus.CANCELED,
+        customPricePendingAt: null,
+      });
+
+      await POST(createRequest(mockEvent));
+
+      expect(subscriptionRepository.updateByStripeSubscriptionId).not.toHaveBeenCalled();
+    });
+
+    it("cancels a past-due subscription the customer replaced at checkout", async () => {
+      const mockEvent = {
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            mode: "subscription",
+            subscription: "sub_new",
+            customer: "cus_123",
+            metadata: { userId: "user-123", plan: "POS" },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (stripe.subscriptions.retrieve as any).mockImplementation(async (id: string) =>
+        id === "sub_old"
+          ? { id: "sub_old", status: "past_due", created: 1780000000 }
+          : {
+              id: "sub_new",
+              status: "active",
+              created: 1790000000,
+              cancel_at_period_end: false,
+              cancel_at: null,
+              trial_end: null,
+              items: { data: [{ price: { id: "price_pos" }, ...itemPeriod }] },
+            }
+      );
+      (subscriptionRepository.findByUserId as any).mockResolvedValue({
+        userId: "user-123",
+        stripeSubscriptionId: "sub_old",
+        status: SubscriptionStatus.PAST_DUE,
+      });
+
+      await POST(createRequest(mockEvent));
+
+      expect(stripe.subscriptions.cancel).toHaveBeenCalledWith("sub_old");
+      expect(subscriptionRepository.update).toHaveBeenCalledWith(
+        "user-123",
+        expect.objectContaining({
+          stripeSubscriptionId: "sub_new",
+          status: SubscriptionStatus.ACTIVE,
+        })
+      );
+    });
+
+    it("ignores a retried checkout for an older subscription the customer already replaced", async () => {
+      const mockEvent = {
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            mode: "subscription",
+            subscription: "sub_old",
+            customer: "cus_123",
+            metadata: { userId: "user-123", plan: "POS" },
+          },
+        },
+      };
+
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (stripe.subscriptions.retrieve as any).mockImplementation(async (id: string) =>
+        id === "sub_current"
+          ? { id: "sub_current", status: "trialing", created: 1790000000 }
+          : {
+              id: "sub_old",
+              status: "canceled",
+              created: 1780000000,
+              cancel_at_period_end: false,
+              cancel_at: null,
+              trial_end: null,
+              items: { data: [{ price: { id: "price_pos" }, ...itemPeriod }] },
+            }
+      );
+      (subscriptionRepository.findByUserId as any).mockResolvedValue({
+        userId: "user-123",
+        stripeSubscriptionId: "sub_current",
         status: SubscriptionStatus.ACTIVE,
       });
+
+      const res = await POST(createRequest(mockEvent));
+
+      expect(res.status).toBe(200);
+      expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
+      expect(subscriptionRepository.update).not.toHaveBeenCalled();
     });
 
     it("ignores a one-off invoice that has no parent subscription", async () => {

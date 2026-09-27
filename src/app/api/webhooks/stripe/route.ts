@@ -62,6 +62,43 @@ function mapPriceIdToEnum(priceId: string | undefined): SubscriptionPlan | undef
 }
 
 /**
+ * Statuses in which a superseded subscription can still bill the customer.
+ * A re-subscribe cancels the old one in any of these, not only while active,
+ * or a past-due or trialing one would keep charging alongside the new one.
+ */
+const BILLABLE_STATUSES: Stripe.Subscription.Status[] = [
+  "active",
+  "trialing",
+  "past_due",
+  "unpaid",
+  "incomplete",
+];
+
+/**
+ * Settles the subscription a row already points at before an incoming one
+ * replaces it. Returns "stale" when the stored subscription is newer and can
+ * still bill: the incoming event was retried or arrived out of order, and must
+ * neither cancel the customer's current subscription nor overwrite the row.
+ * Otherwise cancels the stored one if it can still bill, and returns "replace".
+ */
+async function supersedeStoredSubscription(
+  storedId: string | null | undefined,
+  incoming: Stripe.Subscription
+): Promise<"stale" | "replace"> {
+  if (!storedId || storedId === incoming.id) return "replace";
+  try {
+    const stored = await stripe.subscriptions.retrieve(storedId);
+    if (BILLABLE_STATUSES.includes(stored.status)) {
+      if (stored.created > incoming.created) return "stale";
+      await stripe.subscriptions.cancel(storedId);
+    }
+  } catch {
+    // Already deleted, or from the previous Stripe account: nothing to cancel.
+  }
+  return "replace";
+}
+
+/**
  * POST /api/webhooks/stripe
  * Handles Stripe webhook events securely.
  */
@@ -149,40 +186,8 @@ function customPriceSettlement(metadata: Stripe.Metadata | null | undefined) {
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId;
   const plan = mapStripePlanToEnum(session.metadata?.plan);
-  const promotion = session.metadata?.promotion;
 
   if (!userId) return;
-
-  // SETUP MODE: Card validation for free promo
-  if (session.mode === "setup" && promotion === "new_year_2025") {
-    const promoEndDate = new Date(process.env.PROMO_END_DATE || "2026-12-31T23:59:59Z");
-    const now = new Date();
-
-    const existingSubscription = await subscriptionRepository.findByUserId(userId);
-
-    const subscriptionData = {
-      plan: SubscriptionPlan.POS,
-      status: SubscriptionStatus.ACTIVE,
-      currentPeriodStart: now,
-      currentPeriodEnd: promoEndDate,
-      cancelAtPeriodEnd: false,
-      stripeSubscriptionId: null,
-      stripePriceId: null,
-    };
-
-    if (existingSubscription) {
-      await subscriptionRepository.update(userId, subscriptionData);
-    } else {
-      await subscriptionRepository.create({
-        userId,
-        stripeCustomerId: session.customer as string,
-        ...subscriptionData,
-      });
-    }
-
-    subscriptionService.invalidateUserCache(userId);
-    return;
-  }
 
   // SUBSCRIPTION MODE
   if (!plan) return;
@@ -201,22 +206,11 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const existingSubscription = await subscriptionRepository.findByUserId(userId);
 
   if (existingSubscription) {
-    // Verify cleanup of old subscription
-    if (
-      existingSubscription.stripeSubscriptionId &&
-      existingSubscription.stripeSubscriptionId !== subscriptionId
-    ) {
-      try {
-        const oldSub = await stripe.subscriptions.retrieve(
-          existingSubscription.stripeSubscriptionId
-        );
-        if (oldSub.status === "active") {
-          await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
-        }
-      } catch (e) {
-        /* Ignore if already deleted */
-      }
-    }
+    const outcome = await supersedeStoredSubscription(
+      existingSubscription.stripeSubscriptionId,
+      stripeSubscription
+    );
+    if (outcome === "stale") return;
 
     await subscriptionRepository.update(userId, {
       stripeSubscriptionId: subscriptionId,
@@ -265,20 +259,11 @@ async function handleSubscriptionCreated(createdSubscription: Stripe.Subscriptio
   const existingSubscription = await subscriptionRepository.findByUserId(userId);
 
   if (existingSubscription) {
-    // Cleanup logic similar to checkout handler...
-    if (
-      existingSubscription.stripeSubscriptionId &&
-      existingSubscription.stripeSubscriptionId !== subscription.id
-    ) {
-      try {
-        const oldSub = await stripe.subscriptions.retrieve(
-          existingSubscription.stripeSubscriptionId
-        );
-        if (oldSub.status === "active") {
-          await stripe.subscriptions.cancel(existingSubscription.stripeSubscriptionId);
-        }
-      } catch (e) {}
-    }
+    const outcome = await supersedeStoredSubscription(
+      existingSubscription.stripeSubscriptionId,
+      subscription
+    );
+    if (outcome === "stale") return;
 
     await subscriptionRepository.update(userId, {
       stripeSubscriptionId: subscription.id,
@@ -379,16 +364,24 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   const subscription = await subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
   if (!subscription) return;
 
-  // A paid invoice on the *superseded* subscription must not reactivate an
-  // account that is waiting to pay an admin-quoted custom price.
+  // Only a subscription waiting on a payment can come back: a late invoice
+  // for an ended (CANCELED) subscription must not reopen access. A paid
+  // invoice on the *superseded* subscription must not reactivate an account
+  // that is waiting to pay an admin-quoted custom price either.
   if (
-    subscription.status !== SubscriptionStatus.ACTIVE &&
+    (subscription.status === SubscriptionStatus.PAST_DUE ||
+      subscription.status === SubscriptionStatus.INCOMPLETE) &&
     subscription.customPricePendingAt == null
   ) {
-    await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
-      status: SubscriptionStatus.ACTIVE,
-    });
-    subscriptionService.invalidateUserCache(subscription.userId);
+    // Take the status from Stripe, not from the row: dunning can end a
+    // subscription while its last invoice is still payable, and events arrive
+    // in any order, so a paid invoice alone doesn't mean it is live again.
+    const live = await stripe.subscriptions.retrieve(subscriptionId);
+    const status = mapStripeStatus(live.status);
+    if (status !== subscription.status) {
+      await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, { status });
+      subscriptionService.invalidateUserCache(subscription.userId);
+    }
   }
 }
 
@@ -397,7 +390,9 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   if (!subscriptionId) return;
 
   const subscription = await subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
-  if (!subscription) return;
+  // An ended subscription stays CANCELED: dunning sends the last failed
+  // payment and the deletion together, in either order.
+  if (!subscription || subscription.status === SubscriptionStatus.CANCELED) return;
 
   await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
     status: SubscriptionStatus.PAST_DUE,

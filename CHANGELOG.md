@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.1.2] - 2026-09-27 · fix
+
+Billing and storefront payment fixes that follow the move to our new payment account.
+
+- **Card payments on your storefront go to your own Stripe account.** If your store hasn't connected Stripe yet, customers are asked to pick another payment method instead of the card payment landing with Epidom. Card totals are also sent at the right amount.
+- **A plan you switch in the billing portal stays switched.** Your plan now follows the price you actually pay, and refreshing your billing no longer marks a trial or an overdue subscription as cancelled.
+- **Subscribing again replaces the old subscription completely.** An overdue or trial subscription you replace is cancelled, so you are never billed twice. A late payment on a subscription that has ended no longer reopens it, and a delayed or repeated notice from Stripe can no longer cancel the subscription you have now.
+- **Your billing record stays linked.** A brief Stripe outage can no longer detach your account from its billing history.
+
 ## [3.1.1] - 2026-09-26 · fix
 
 Paying for a plan works again.
