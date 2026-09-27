@@ -286,6 +286,30 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 10 analyses per minute
   },
 
+  // Setup wizard (3.3.0). The state read runs on every wizard load and the
+  // link check as the owner types (debounced); the step saves each write
+  // several rows, and complete publishes.
+  "/api/onboarding/state": {
+    limit: 60,
+    window: 60, // 60 reads per minute
+  },
+  "/api/onboarding/slug-check": {
+    limit: 60,
+    window: 60, // 60 link checks per minute
+  },
+  "/api/onboarding/store": {
+    limit: 20,
+    window: 60, // 20 step saves per minute
+  },
+  "/api/onboarding/storefront": {
+    limit: 20,
+    window: 60, // 20 step saves per minute
+  },
+  "/api/onboarding/complete": {
+    limit: 10,
+    window: 60, // 10 publish attempts per minute
+  },
+
   // Feedback submission - generous limit, feedback is welcome; only blocks runaway bots
   "/api/feedback": {
     limit: 30,
@@ -310,6 +334,30 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 30 PIN attempts per minute
   },
 
+  // Owner PIN check ("switch back to Owner" on a shared device). Same 10,000
+  // possibilities as a staff PIN, but it guards the whole owner UI (billing,
+  // staff, finance) and the person guessing is typically a staff persona on
+  // the owner's own session, so it is much tighter. An owner who mistypes a few
+  // times waits a minute at most. The window stays 60s on purpose: the
+  // in-memory limiter's sweep uses the window of whichever call triggers it, so
+  // a longer window would not be kept reliably.
+  "/api/user/verify-owner-pin": {
+    limit: 5,
+    window: 60, // 5 PIN attempts per minute
+  },
+
+  // Forgotten owner PIN: reset checks a 6-digit emailed code, and request-otp
+  // sends that email. On the default 100/min the code could be guessed online
+  // and the inbox flooded, so both get the same tight 60s window as above.
+  "/api/user/owner-pin/reset": {
+    limit: 5,
+    window: 60, // 5 code attempts per minute
+  },
+  "/api/user/owner-pin/request-otp": {
+    limit: 3,
+    window: 60, // 3 code emails per minute
+  },
+
   // Staff account invites — each one sends an email carrying a sign-in link,
   // so keep an owner from turning this into a mail cannon.
   "/api/stores/[id]/staff/[staffId]/invite": {
@@ -326,6 +374,18 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
   "/api/staff-invite/complete": {
     limit: 10,
     window: 60, // 10 claim attempts per minute
+  },
+
+  // In-app guide (3.3.0). Guide state is read once per session and written on
+  // a tap (dismiss a card, finish the tour); the checklist refetches on window
+  // focus. Both well under the default, which only a runaway loop would reach.
+  "/api/user/guide-state": {
+    limit: 60,
+    window: 60, // 60 reads/changes per minute
+  },
+  "/api/stores/[id]/setup-progress": {
+    limit: 60,
+    window: 60, // 60 checklist reads per minute
   },
 
   // Webhooks (no rate limit - handled by Stripe)

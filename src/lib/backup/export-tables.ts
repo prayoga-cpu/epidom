@@ -127,7 +127,8 @@ export async function pruneOldBackups(): Promise<{ deletedObjects: number }> {
     const stale = (list.Contents ?? []).filter((obj: S3Object) => {
       const dateFolder = obj.Key?.split("/")[1]; // backups/<date>/<table>.csv.gz
       if (!dateFolder) return false;
-      const folderDate = new Date(dateFolder);
+      // Manual runs use `<date>-manual-<HHMMSS>`, which Date can't parse whole.
+      const folderDate = new Date(dateFolder.slice(0, 10));
       return !Number.isNaN(folderDate.getTime()) && folderDate < cutoff;
     });
 

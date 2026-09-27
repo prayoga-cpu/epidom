@@ -37,12 +37,12 @@ The pivot trades a saturated niche (French bakeries) for a defensible wedge (Ind
 
 ### Customer segments
 
-| Tier                           | Who                                                       | Trigger to upgrade                                                             |
-| ------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **FREE**                       | Solo warung, home baker, food truck, single-location café | They open shop, post on Instagram, customers want to order online              |
-| **POS** (~IDR 99k/mo)          | Café or warung doing >50 orders/day with a cashier        | They hire a cashier, can't manage orders by hand                               |
-| **OPERATIONS** (~IDR 249k/mo)  | Multi-staff café or restaurant                            | They hire a second shift, need ingredient cost control and shift handover      |
-| **ENTERPRISE** (~IDR 499k+/mo) | Multi-outlet brand, small manufacturer                    | They open a second outlet, need consolidated finance and aggregator dashboards |
+| Tier                          | Who                                                                  | Trigger to upgrade                                                                                            |
+| ----------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **FREE**                      | Solo warung, home baker, food truck, single-location café            | They open shop, post on Instagram, customers want to order online                                             |
+| **POS** (~IDR 99k/mo)         | Café or warung doing >50 orders/day with a cashier                   | They hire a cashier, can't manage orders by hand                                                              |
+| **OPERATIONS** (~IDR 249k/mo) | Multi-staff café or restaurant, up to 3 outlets                      | They hire a second shift or open a second outlet, need ingredient cost control, shift handover and a real P&L |
+| **ENTERPRISE** (custom)       | A group of 4+ outlets, or a business that wants its own system built | They open a 4th outlet, or need a custom build, integration or SLA the standard product doesn't cover         |
 
 ---
 
@@ -99,16 +99,23 @@ The POS, KDS, and inventory features upsell _after_ we have the storefront relat
 ## 6. Tier ladder
 
 ```
-FREE         POS          OPERATIONS         ENTERPRISE
-   |           |               |                  |
-   v           v               v                  v
-Storefront  + Cashier     + Shift mgmt       + Multi-outlet
-Menu        + Order list  + Kitchen Display  + Finance reports
-QR ordering + Receipts    + Inventory        + Aggregator dashboard
-QRIS pay    + Basic KDS   + Recipe cost      + Stripe Connect 80/20 (optional)
-WhatsApp                  + Stock deduction
-notify                    + Low stock alerts
+FREE         POS          OPERATIONS           ENTERPRISE (service)
+   |           |               |                    |
+   v           v               v                    v
+Storefront  + Cashier     + Shift mgmt         + Unlimited outlets (4+)
+Menu        + Order list  + Kitchen Display    + Your own system, built
+QR ordering + Receipts    + Inventory            with the Prionation team
+QRIS pay    + Basic KDS   + Recipe cost        + Custom integrations
+WhatsApp                  + Stock deduction    + Priority support, SLAs
+notify                    + Low stock alerts   + Stripe Connect 80/20 (optional)
+                          + Multi-outlet (up to 3)
+                          + Finance reports
+                            (incl. all-outlets roll-up)
 ```
+
+Since 2026-09-26, ENTERPRISE is a consultation / custom-build service, not a feature tier: no self-serve feature is gated to it. Finance and the multi-outlet roll-up moved to OPERATIONS, where the recipe cost engine and multi-outlet support they depend on already live. Requesting a custom build (Custom Development) is open from POS up and is how an Enterprise engagement starts.
+
+Since 2026-09-27, outlets are capped per plan (`PLAN_MAX_STORES`): FREE and POS 1, OPERATIONS up to 3, ENTERPRISE unlimited. Opening a 4th outlet is the business event that leads to ENTERPRISE, which stays sales-led.
 
 Each tier upgrade is triggered by a clear business event, not a feature gate. Upgrade prompts should explain the event ("You've onboarded your 2nd cashier. Time to add Shifts.") rather than the feature.
 
@@ -116,12 +123,14 @@ Each tier upgrade is triggered by a clear business event, not a feature gate. Up
 
 ## 7. Pricing rationale
 
-| Tier       | Indonesia (IDR/mo)  | France-ready price (EUR/mo) | Why                                                        |
-| ---------- | ------------------- | --------------------------- | ---------------------------------------------------------- |
-| FREE       | Rp 0                | €0                          | Wedge. Forever free.                                       |
-| POS        | Rp 99,000 (~$6)     | €19                         | Beats Klikit's Rp 390k by being focused on small operators |
-| OPERATIONS | Rp 249,000 (~$15)   | €49                         | Where most revenue comes from                              |
-| ENTERPRISE | Rp 499,000+ (~$30+) | €99+                        | Custom upsell for chains and manufacturers                 |
+| Tier       | Indonesia (IDR/mo) | France-ready price (EUR/mo) | Why                                                        |
+| ---------- | ------------------ | --------------------------- | ---------------------------------------------------------- |
+| FREE       | Rp 0               | €0                          | Wedge. Forever free.                                       |
+| POS        | Rp 99,000 (~$6)    | €19                         | Beats Klikit's Rp 390k by being focused on small operators |
+| OPERATIONS | Rp 249,000 (~$15)  | €49                         | Where most revenue comes from                              |
+| ENTERPRISE | Custom             | Custom                      | 4+ outlets and custom builds, priced per engagement        |
+
+Settled 2026-09-27: OPERATIONS is not priced per outlet. It is capped at 3 outlets, and a 4th needs ENTERPRISE. Prices are unchanged. Open: whether to publish an ENTERPRISE "from" price. Competitors sell the 4th outlet online, and sales-led tiers usually start at 10+ outlets. Not decided.
 
 The IDR pricing matters more than any other number in this strategy. Reference: Indonesian SME SaaS ARPU benchmarks suggest pain threshold ~Rp 300k/month for software, soft ceiling ~Rp 500k for non-payment SaaS.
 
@@ -132,7 +141,7 @@ The IDR pricing matters more than any other number in this strategy. Reference: 
 Two streams, kept architecturally separate:
 
 1. **SaaS subscriptions** (recurring): merchants pay Epidom monthly via Stripe.
-2. **Payment processing** (future, Stripe Connect 80/20 model from original codebase): if a merchant accepts customer payments through us via QRIS/Xendit, we take a small margin on each transaction. **This is opt-in and lives in ENTERPRISE tier only.**
+2. **Payment processing** (future, Stripe Connect 80/20 model from original codebase): if a merchant accepts customer payments through us via QRIS/Xendit, we take a small margin on each transaction. **This is opt-in and only offered as part of an ENTERPRISE engagement.**
 
 We are not a payment facilitator at scale. We are a SaaS company that integrates one. Important for regulatory positioning (BI / OJK).
 

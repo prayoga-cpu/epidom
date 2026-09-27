@@ -18,6 +18,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { requireFinanceReportAccessApi } from "@/lib/auth/require-finance-access";
 import { requireManagerOrOwnerApi } from "@/lib/auth/require-manager-or-owner";
 import { buildCashReconciliationRows } from "@/lib/finance/report-aggregation";
 import { getShiftCashOnHand } from "@/lib/services/cash-drawer.service";
@@ -31,6 +32,10 @@ export const GET = withApiHandler(
   async (request, { storeId }) => {
     const guardResponse = await requireManagerOrOwnerApi(storeId!);
     if (guardResponse) return guardResponse;
+    // /shifts (Operations) reads this route as well as Finance, so either
+    // page grant opens it to a persona of this outlet.
+    const gate = await requireFinanceReportAccessApi(storeId!, ["/finance", "/shifts"]);
+    if (gate) return gate;
 
     const { searchParams } = new URL(request.url);
     const now = new Date();

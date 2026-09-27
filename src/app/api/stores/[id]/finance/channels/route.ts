@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { requireFinanceReportAccessApi } from "@/lib/auth/require-finance-access";
 import { OrderSource } from "@prisma/client";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { commissionRate, ONLINE_PLATFORM_LABELS } from "@/config/aggregator.config";
@@ -23,6 +24,9 @@ const SOURCE_LABELS: Record<OrderSource, string> = {
 
 export const GET = withApiHandler(
   async (request, { storeId }) => {
+    const gate = await requireFinanceReportAccessApi(storeId!);
+    if (gate) return gate;
+
     const { searchParams } = new URL(request.url);
     const now = new Date();
     const from = new Date(

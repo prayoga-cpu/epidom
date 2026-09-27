@@ -10,9 +10,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * The formula now lives in ONE place, `src/lib/finance/cogs.ts`, and that is
  * what is tested here.
  *
- * The arithmetic the route still does inline on top of COGS (gross/net profit)
- * has no extractable helper, so it is mirrored below — clearly labelled, and
- * driven by a real `sumCogsBase` result rather than a hand-made number.
+ * The arithmetic on top of COGS (gross/net profit) lives in deriveStoreSummary
+ * (src/lib/finance/store-summary.ts), shared by this route and every row of
+ * the All outlets roll-up — the helpers below call it, driven in one case by a
+ * real `sumCogsBase` result rather than a hand-made number.
  */
 
 // var (not const/let) avoids TDZ when vi.mock factory is hoisted above declarations.
@@ -28,6 +29,21 @@ vi.mock("@/lib/prisma", () => {
 });
 
 import { sumCogsBase, sumCogsBaseByStore } from "@/lib/finance/cogs";
+import { deriveStoreSummary, type StoreSummaryInputs } from "@/lib/finance/store-summary";
+
+const NO_SALES: StoreSummaryInputs = {
+  revenue: 0,
+  orderCount: 0,
+  taxCollected: 0,
+  serviceCharge: 0,
+  discountAmount: 0,
+  refundAmount: 0,
+  processingFee: 0,
+  cogsBase: 0,
+  unknownCostLines: 0,
+  unknownCostRevenue: 0,
+  wasteBase: 0,
+};
 
 /** The literal SQL of a `Prisma.sql` template, parameters elided. */
 function sqlText(query: any): string {
@@ -283,20 +299,15 @@ describe("sumCogsBaseByStore", () => {
   });
 });
 
-describe("gross/net profit arithmetic (mirrors summary/route.ts — no extractable helper)", () => {
-  // route.ts: grossProfit = revenue - cogs; grossMargin guards revenue === 0.
+describe("gross/net profit arithmetic (deriveStoreSummary, IDR store: rate 1)", () => {
+  // grossProfit = revenue - cogs; grossMargin guards revenue === 0.
   function calcGross(revenue: number, cogs: number) {
-    const grossProfit = revenue - cogs;
-    const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-    return {
-      cogs: Math.round(cogs * 100) / 100,
-      grossProfit: Math.round(grossProfit * 100) / 100,
-      grossMarginPct: Math.round(grossMargin * 100) / 100,
-    };
+    const r = deriveStoreSummary({ ...NO_SALES, revenue, cogsBase: cogs }, 1);
+    return { cogs: r.cogs, grossProfit: r.grossProfit, grossMarginPct: r.grossMarginPct };
   }
 
-  // route.ts: netRevenue strips tax, processing fee and refunds; netProfit
-  // further strips COGS and waste loss.
+  // netRevenue strips tax, processing fee and refunds; netProfit further
+  // strips COGS and waste loss.
   function calcNet(
     revenue: number,
     taxCollected: number,
@@ -305,12 +316,19 @@ describe("gross/net profit arithmetic (mirrors summary/route.ts — no extractab
     wasteLoss: number = 0,
     refundAmount: number = 0
   ) {
-    const netRevenue = revenue - refundAmount - taxCollected - processingFee;
-    const netProfit = netRevenue - cogs - wasteLoss;
-    return {
-      netRevenue: Math.round(netRevenue * 100) / 100,
-      netProfit: Math.round(netProfit * 100) / 100,
-    };
+    const r = deriveStoreSummary(
+      {
+        ...NO_SALES,
+        revenue,
+        taxCollected,
+        processingFee,
+        cogsBase: cogs,
+        wasteBase: wasteLoss,
+        refundAmount,
+      },
+      1
+    );
+    return { netRevenue: r.netRevenue, netProfit: r.netProfit };
   }
 
   beforeEach(() => {
@@ -397,11 +415,10 @@ describe("gross/net profit arithmetic (mirrors summary/route.ts — no extractab
 });
 
 describe("grossRevenue (P&L statement view)", () => {
-  // Inline from summary/route.ts: total is already post-discount, so
-  // grossRevenue backs the pre-discount figure out rather than being an
-  // independently-summed value.
+  // Order.total is already post-discount, so grossRevenue backs the
+  // pre-discount figure out rather than being an independently-summed value.
   function calcGrossRevenue(revenue: number, discountAmount: number) {
-    return Math.round((revenue + discountAmount) * 100) / 100;
+    return deriveStoreSummary({ ...NO_SALES, revenue, discountAmount }, 1).grossRevenue;
   }
 
   it("equals revenue when no discount was applied", () => {

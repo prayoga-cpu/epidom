@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageIntro } from "@/features/guide/components/page-intro";
 import type { PosMenuCategory } from "../types/pos.types";
 import { PrinterSettingsPanel } from "./printer-settings-dialog";
 import { ScannerSettingsPanel } from "./pos-scanner-menu";
@@ -63,6 +64,13 @@ function HardwareSettingsBody({ storeId }: { storeId: string }) {
         <DialogTitle>{t("pos.hardware.title")}</DialogTitle>
         <DialogDescription>{t("pos.hardware.dialogDesc")}</DialogDescription>
       </DialogHeader>
+
+      <PageIntro
+        id="hardware"
+        variant="compact"
+        storeId={storeId}
+        className="mx-5 mt-3 shrink-0"
+      />
 
       <Tabs defaultValue="printers" className="min-h-0 flex-1 gap-0">
         <div className="shrink-0 px-5 pt-3">

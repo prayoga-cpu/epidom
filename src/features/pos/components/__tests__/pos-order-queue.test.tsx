@@ -30,6 +30,16 @@ vi.mock("../../hooks/use-update-order-status", () => ({
 }));
 vi.mock("../../hooks/use-kds-settings", () => ({
   useKdsSettings: () => ({ data: { kitchenDisplayEnabled: true }, isLoading: false }),
+  useUpdateKdsSettings: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+// The store's open till, if any — null is "No shift".
+const till = vi.hoisted(() => ({ shift: null as { id: string; openedAt: string } | null }));
+vi.mock("../../hooks/use-active-shift", () => ({
+  useActiveShift: () => ({ shift: till.shift, allowed: true, known: true }),
+}));
+// The Log is its own tab's business; here it only has to show up when picked.
+vi.mock("../order-history-tab", () => ({
+  OrderHistoryTab: () => <div data-testid="order-log" />,
 }));
 vi.mock("@/features/dashboard/data/custom-products/hooks/use-custom-products-settings", () => ({
   useCustomProductsSettings: () => ({ data: undefined }),
@@ -49,7 +59,7 @@ vi.mock("@/lib/hooks/use-min-width", async (importOriginal) => ({
   useMinWidth: () => true,
 }));
 
-import { PosOrderQueue } from "../pos-order-queue";
+import { PosOrdersTabs } from "../pos-orders-tabs";
 import { makeOrder } from "./order-queue-fixtures";
 import type { PosOrderDisplay } from "../../types/pos.types";
 
@@ -81,10 +91,12 @@ const online = orderToday({ id: "w1", orderNumber: "WEB-A", source: "STOREFRONT"
 
 const persist = (state: object) => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
+// The whole page, not the queue alone: its POS / Online ordering tabs are the
+// page's top bar now, beside the Log.
 async function renderQueue() {
   // usePersistedState applies its saved value in a mount effect; let it land.
   await act(async () => {
-    render(<PosOrderQueue storeId="store-1" />);
+    render(<PosOrdersTabs storeId="store-1" canManageSettings={false} />);
   });
 }
 
@@ -96,6 +108,7 @@ beforeEach(() => {
   localStorage.clear();
   url.search = "";
   queue.orders = [posA, posB, online];
+  till.shift = null;
 });
 
 describe("PosOrderQueue — POS / Online tabs", () => {
@@ -328,5 +341,123 @@ describe("PosOrderQueue — date scope", () => {
     expect(screen.getByText("pos.queue.noMatches")).toBeInTheDocument();
     // The cashier can still widen the date from here.
     expect(dateSelect()).toBeInTheDocument();
+  });
+});
+
+describe("PosOrdersTabs — POS / Online ordering replace Active, History is the Log", () => {
+  it("has no Active or History tab — POS, Online ordering and a separate Log", async () => {
+    await renderQueue();
+    const names = screen.getAllByRole("tab").map((t) => t.textContent);
+    expect(names).toHaveLength(3);
+    expect(tab(/pos\.history\.logTab/)).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /activeTab|historyTab/ })).toBeNull();
+    // Two lists, like the Stock page's Item | Delivery Order + Log.
+    expect(screen.getAllByRole("tablist")).toHaveLength(2);
+  });
+
+  it("opens the Log, and keeps the POS / Online counts up while it is open", async () => {
+    await renderQueue();
+    openTab(/pos\.history\.logTab/);
+    expect(screen.getByTestId("order-log")).toBeInTheDocument();
+    expect(visible("POS-A")).toBe(false);
+    expect(tab(/tabPos/)).toHaveTextContent("2");
+    expect(tab(/tabOnline/)).toHaveTextContent("1");
+    expect(tab(/tabPos/)).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("goes from the Log straight to the queue on the source that was picked", async () => {
+    await renderQueue();
+    openTab(/pos\.history\.logTab/);
+    openTab(/tabOnline/);
+    expect(screen.queryByTestId("order-log")).toBeNull();
+    expect(tab(/tabOnline/)).toHaveAttribute("aria-selected", "true");
+    expect(visible("WEB-A")).toBe(true);
+    expect(visible("POS-A")).toBe(false);
+  });
+
+  it("remembers the Log across visits", async () => {
+    localStorage.setItem("epidom-pos-orders-tab-store-1", JSON.stringify({ tab: "history" }));
+    await renderQueue();
+    expect(screen.getByTestId("order-log")).toBeInTheDocument();
+  });
+});
+
+describe("PosOrderQueue — the open till's shift", () => {
+  const dateSelect = () => screen.getByRole("combobox", { name: "pos.filters.dateRange" });
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+
+  // Placed before the till opened. How long before doesn't matter: the shift
+  // started after it, so it is not the shift's.
+  const beforeShift = orderToday({
+    id: "b1",
+    orderNumber: "POS-BEFORE",
+    source: "POS",
+    queueNumber: 7,
+    createdAt: hoursAgo(3),
+  });
+
+  beforeEach(() => {
+    queue.orders = [posA, beforeShift];
+    till.shift = { id: "shift-1", openedAt: hoursAgo(2) };
+  });
+
+  it("opens on the current shift: an order placed before the till opened is not listed", async () => {
+    await renderQueue();
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.shift");
+    expect(visible("POS-A")).toBe(true);
+    expect(visible("POS-BEFORE")).toBe(false);
+    expect(tab(/tabPos/)).toHaveTextContent("1");
+  });
+
+  it("is the shift, not the day: a till opened yesterday still lists last night's orders", async () => {
+    const d = new Date();
+    till.shift = {
+      id: "shift-1",
+      openedAt: new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1, 11).toISOString(),
+    };
+    queue.orders = [
+      posA,
+      orderToday({
+        id: "y1",
+        orderNumber: "POS-LASTNIGHT",
+        source: "POS",
+        queueNumber: 8,
+        createdAt: YESTERDAY_NOON,
+      }),
+    ];
+    await renderQueue();
+    expect(visible("POS-LASTNIGHT")).toBe(true);
+    expect(visible("POS-A")).toBe(true);
+  });
+
+  it("is today again with no till open, with nothing to reset", async () => {
+    till.shift = null;
+    persist({ version: 3, datePreset: "shift", sourceFilter: "POS", view: "split" });
+    await renderQueue();
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.today");
+    expect(screen.queryByRole("button", { name: /pos\.filters\.reset/ })).toBeNull();
+  });
+
+  it("keeps a deliberate Today while a till is open, and offers the way back to the shift", async () => {
+    persist({ version: 3, datePreset: "today", sourceFilter: "POS", view: "split" });
+    await renderQueue();
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.today");
+
+    fireEvent.click(screen.getByRole("button", { name: /pos\.filters\.resetToShift/ }));
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.shift");
+    expect(visible("POS-BEFORE")).toBe(false);
+    expect(screen.queryByRole("button", { name: /pos\.filters\.reset/ })).toBeNull();
+  });
+
+  it("moves a Today saved when Today was the default (v2) onto the shift", async () => {
+    persist({ version: 2, datePreset: "today", sourceFilter: "POS", view: "split" });
+    await renderQueue();
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.shift");
+  });
+
+  it("but keeps any other v2 date, which was picked on purpose", async () => {
+    persist({ version: 2, datePreset: "yesterday", sourceFilter: "POS", view: "split" });
+    await renderQueue();
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.yesterday");
   });
 });

@@ -11,7 +11,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Search, Lock, Monitor, ArrowRight } from "lucide-react";
+import { Search, Lock, Monitor, ArrowRight, CircleHelp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useAlertsCount } from "@/features/dashboard/alerts/hooks/use-alerts-count";
@@ -62,6 +62,11 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
     if (!badgeKey) return null;
     return badgeKey === "alerts" ? alertsCount : null;
   };
+
+  // The Help centre: a footer link, not a rail item — every member of the store
+  // can open it (no plan tier, no page grant), like the changelog.
+  const helpHref = storeId ? `/store/${storeId}/help` : null;
+  const helpActive = helpHref !== null && pathname === helpHref;
 
   return (
     <aside
@@ -274,6 +279,23 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
             );
           })}
         </nav>
+        {mode === "desktop" && helpHref && (
+          <div className="border-t p-3">
+            <Link
+              href={helpHref}
+              aria-current={helpActive ? "page" : undefined}
+              className={cn(
+                "flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm transition active:scale-[0.98]",
+                helpActive
+                  ? "bg-muted/60 text-foreground shadow-inner"
+                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              )}
+            >
+              <CircleHelp className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{t("nav.help")}</span>
+            </Link>
+          </div>
+        )}
         {mode === "mobile" && (
           <div className="space-y-3 border-t p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             <div className="flex flex-col gap-2">
@@ -307,6 +329,16 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
             </div>
             <PwaInstallTrigger variant="full" />
             <OfflineSyncTrigger variant="full" />
+            {helpHref && (
+              <Link
+                href={helpHref}
+                aria-current={helpActive ? "page" : undefined}
+                className="text-muted-foreground hover:text-foreground flex min-h-10 items-center gap-2 text-sm transition-colors"
+              >
+                <CircleHelp className="size-4 shrink-0" aria-hidden />
+                <span>{t("nav.help")}</span>
+              </Link>
+            )}
             <Link
               href={storeId ? `/store/${storeId}/changelog` : "/changelog"}
               className="text-muted-foreground hover:text-foreground flex items-center justify-between gap-2 text-xs transition-colors"

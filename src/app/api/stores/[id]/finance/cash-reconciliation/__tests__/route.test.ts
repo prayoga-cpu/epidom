@@ -18,6 +18,11 @@ vi.mock("@/lib/auth/require-manager-or-owner", () => ({
   requireManagerOrOwnerApi: (...a: unknown[]) => requireManagerOrOwnerApi(...a),
 }));
 
+const requireFinanceReportAccessApi = vi.fn();
+vi.mock("@/lib/auth/require-finance-access", () => ({
+  requireFinanceReportAccessApi: (...a: unknown[]) => requireFinanceReportAccessApi(...a),
+}));
+
 const getShiftCashOnHand = vi.fn();
 vi.mock("@/lib/services/cash-drawer.service", () => ({
   getShiftCashOnHand: (...a: unknown[]) => getShiftCashOnHand(...a),
@@ -34,6 +39,7 @@ const get = (query = "") =>
 beforeEach(() => {
   vi.clearAllMocks();
   requireManagerOrOwnerApi.mockResolvedValue(null);
+  requireFinanceReportAccessApi.mockResolvedValue(null);
   prismaMock.shift.findMany.mockResolvedValue([]);
 });
 
@@ -64,5 +70,28 @@ describe("GET /finance/cash-reconciliation — who may read it", () => {
     expect(res.status).toBe(200);
     expect(prismaMock.shift.findMany.mock.calls[0][0].where.storeId).toBe(STORE);
     expect((await res.json()).data.shifts).toEqual([]);
+  });
+});
+
+// Finance and /shifts both read this route; both are Operations pages, and the
+// route enforces that itself so it can't be read on a lower plan by calling it.
+describe("GET /finance/cash-reconciliation — plan", () => {
+  it("a store below the Finance plan is refused, and no shift is read", async () => {
+    requireFinanceReportAccessApi.mockResolvedValue(
+      NextResponse.json(
+        { success: false, error: { code: "SUBSCRIPTION_FEATURE_LOCKED" } },
+        { status: 403 }
+      )
+    );
+
+    const res = await get();
+
+    expect(res.status).toBe(403);
+    expect(prismaMock.shift.findMany).not.toHaveBeenCalled();
+  });
+
+  it("judges THIS store, and lets a persona in with either the Finance or the Shifts grant", async () => {
+    await get();
+    expect(requireFinanceReportAccessApi).toHaveBeenCalledWith(STORE, ["/finance", "/shifts"]);
   });
 });

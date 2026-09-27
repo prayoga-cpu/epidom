@@ -3,6 +3,9 @@
  *
  * Handles business CRUD operations for authenticated users.
  * Each user can have one business which can contain multiple stores.
+ *
+ * No response carries `ownerPin` (the owner PIN hash); `hasOwnerPin` says
+ * whether one is set. See toPublicBusiness.
  */
 
 import { NextResponse } from "next/server";
@@ -12,6 +15,7 @@ import { createBusinessSchema, updateBusinessSchema } from "@/lib/validation/bus
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api";
 import { withApiHandler } from "@/lib/api-handler";
 import { logger } from "@/lib/logger";
+import { toPublicBusiness } from "@/lib/auth/owner-pin";
 
 /**
  * GET /api/user/business
@@ -28,7 +32,7 @@ export const GET = withApiHandler(
       );
     }
 
-    return NextResponse.json(createSuccessResponse(business));
+    return NextResponse.json(createSuccessResponse(toPublicBusiness(business)));
   },
   {
     rateLimitEndpoint: "/api/user/business",
@@ -46,7 +50,7 @@ export const POST = withApiHandler(
 
     const business = await businessService.createBusiness(userId, input);
 
-    return NextResponse.json(createSuccessResponse(business), { status: 201 });
+    return NextResponse.json(createSuccessResponse(toPublicBusiness(business)), { status: 201 });
   },
   {
     rateLimitEndpoint: "/api/user/business",
@@ -125,7 +129,10 @@ export const PATCH = withApiHandler(
       );
     }
 
-    return NextResponse.json(createSuccessResponse({ ...business, storeId: store.id }));
+    // The upsert returns the whole row, PIN hash included once one is set.
+    return NextResponse.json(
+      createSuccessResponse({ ...toPublicBusiness(business), storeId: store.id })
+    );
   },
   {
     rateLimitEndpoint: "/api/user/business",

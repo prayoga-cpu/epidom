@@ -56,10 +56,37 @@ export const FEATURE_MIN_PLAN = {
   // only the promotion mechanics are gated. Unlike `discounts`, the server
   // enforces this one on its routes too.
   loyaltyAndPromotions: "OPERATIONS",
-  finance: "ENTERPRISE",
+  // The Finance page — P&L, margins, cash reconciliation — and its All
+  // outlets roll-up (GET /api/owner/summary). Operations sells the recipe/COGS
+  // engine and up to three outlets; this is where both pay off, so it ships
+  // with them rather than behind a tier nobody can self-serve.
+  finance: "OPERATIONS",
+  // Requesting a custom build (the Custom Development page). Open to every
+  // paying plan: it is how an Enterprise project starts, so gating it behind
+  // Enterprise meant only people who already had one could ask for one.
+  customDevelopment: "POS",
 } satisfies Record<string, PlanTier>;
 
 export type PlanFeature = keyof typeof FEATURE_MIN_PLAN;
+
+/**
+ * Stores (outlets) one business may have on each plan. Operations covers a
+ * small group of up to three; a fourth outlet is an Enterprise conversation
+ * (sales-led, alongside custom builds, integrations and SLAs). Read through
+ * getStoreLimit/canCreateStore (stripe.config.ts), which every store-creation
+ * path and the downgrade check use.
+ */
+export const PLAN_MAX_STORES: Record<PlanTier, number> = {
+  FREE: 1,
+  POS: 1,
+  OPERATIONS: 3,
+  ENTERPRISE: Infinity,
+};
+
+/** The lowest plan that allows a business to have `storeCount` stores. */
+export function minPlanForStores(storeCount: number): PlanTier {
+  return PLAN_ORDER.find((plan) => storeCount <= PLAN_MAX_STORES[plan]) ?? "ENTERPRISE";
+}
 
 export function minPlanFor(feature: PlanFeature): PlanTier {
   return FEATURE_MIN_PLAN[feature];

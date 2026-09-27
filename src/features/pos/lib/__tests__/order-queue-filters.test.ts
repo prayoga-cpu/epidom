@@ -203,8 +203,8 @@ describe("matchesQueueDate — the queue's date scope", () => {
   const placed = (d: number, h: number, mi = 0) =>
     order({ createdAt: new Date(2026, 8, d, h, mi).toISOString() });
 
-  it("defaults to today", () => {
-    expect(DEFAULT_QUEUE_DATE_PRESET).toBe("today");
+  it("defaults to the current shift (which is today while no till is open)", () => {
+    expect(DEFAULT_QUEUE_DATE_PRESET).toBe("shift");
   });
 
   it("offers the presets but not a custom range (it is a work queue, not a report)", () => {
@@ -235,5 +235,26 @@ describe("matchesQueueDate — the queue's date scope", () => {
     expect(matchesQueueDate(order({ createdAt: "2001-01-01T00:00:00.000Z" }), "all", NOW)).toBe(
       true
     );
+  });
+
+  describe("current shift", () => {
+    // Opened yesterday evening and still running.
+    const OPENED = new Date(2026, 8, 18, 18, 0).toISOString();
+
+    it("runs from the moment the till opened — across midnight — with no end", () => {
+      expect(matchesQueueDate(placed(18, 18, 0), "shift", NOW, OPENED)).toBe(true);
+      expect(matchesQueueDate(placed(18, 23, 30), "shift", NOW, OPENED)).toBe(true);
+      // Stamped ahead of this device's clock: still the running shift, not excluded.
+      expect(matchesQueueDate(placed(19, 16, 0), "shift", NOW, OPENED)).toBe(true);
+    });
+
+    it("leaves out what was placed before the till opened, even earlier the same day", () => {
+      expect(matchesQueueDate(placed(18, 17, 59), "shift", NOW, OPENED)).toBe(false);
+    });
+
+    it("is today when no till is open", () => {
+      expect(matchesQueueDate(placed(19, 1, 0), "shift", NOW, null)).toBe(true);
+      expect(matchesQueueDate(placed(18, 23, 0), "shift", NOW, null)).toBe(false);
+    });
   });
 });

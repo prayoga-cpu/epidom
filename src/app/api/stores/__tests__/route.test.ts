@@ -10,11 +10,12 @@ vi.mock("@/lib/api-handler", () => ({
 
 const getBusinessByUserId = vi.fn();
 const getStoresByBusinessId = vi.fn();
+const createStoreForUser = vi.fn();
 vi.mock("@/lib/services", () => ({
   businessService: {
     getBusinessByUserId: (...a: unknown[]) => getBusinessByUserId(...a),
     getStoresByBusinessId: (...a: unknown[]) => getStoresByBusinessId(...a),
-    createStoreForUser: vi.fn(),
+    createStoreForUser: (...a: unknown[]) => createStoreForUser(...a),
   },
 }));
 
@@ -25,7 +26,8 @@ vi.mock("@/lib/auth/staff-link", () => ({
   linkedStaffLandingPath: (...a: unknown[]) => linkedStaffLandingPath(...a),
 }));
 
-import { GET } from "../route";
+import { ZodError } from "zod";
+import { GET, POST } from "../route";
 
 const store = (id: string) => ({ id, businessId: "biz_1", name: `Store ${id}` });
 const staffLink = (storeId: string) => ({
@@ -44,7 +46,58 @@ beforeEach(() => {
   getStoresByBusinessId.mockReset();
   getLinkedStaffForUser.mockReset();
   linkedStaffLandingPath.mockReset();
+  createStoreForUser.mockReset();
   getLinkedStaffForUser.mockResolvedValue(null);
+});
+
+const post = (payload: unknown, userId = "u1") =>
+  POST(
+    new Request("http://localhost/api/stores", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+    { userId } as never
+  );
+
+describe("POST /api/stores", () => {
+  it("a legacy body (store columns only) reaches the service unchanged and answers 201 with the store", async () => {
+    createStoreForUser.mockResolvedValue(store("new"));
+
+    const res = await post({ name: "Kopi Dua", city: "Bandung" });
+
+    expect(res.status).toBe(201);
+    expect(createStoreForUser).toHaveBeenCalledWith("u1", { name: "Kopi Dua", city: "Bandung" });
+    expect((await res.json()).data).toMatchObject({ id: "new" });
+  });
+
+  it("passes the normalized countryCode and financeSource to the service", async () => {
+    createStoreForUser.mockResolvedValue(store("new"));
+
+    await post({
+      name: "Chez Nous",
+      countryCode: "fr",
+      financeSource: { mode: "copy", storeId: "store_a" },
+    });
+
+    expect(createStoreForUser).toHaveBeenCalledWith("u1", {
+      name: "Chez Nous",
+      countryCode: "FR",
+      financeSource: { mode: "copy", storeId: "store_a" },
+    });
+  });
+
+  it("an unsupported country never reaches the service (ZodError → 400 in withApiHandler)", async () => {
+    await expect(post({ name: "Chez Nous", countryCode: "XX" })).rejects.toBeInstanceOf(ZodError);
+    expect(createStoreForUser).not.toHaveBeenCalled();
+  });
+
+  it("an unknown financeSource mode never reaches the service", async () => {
+    await expect(
+      post({ name: "Chez Nous", countryCode: "FR", financeSource: { mode: "business" } })
+    ).rejects.toBeInstanceOf(ZodError);
+    expect(createStoreForUser).not.toHaveBeenCalled();
+  });
 });
 
 describe("GET /api/stores", () => {

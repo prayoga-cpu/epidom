@@ -4,6 +4,7 @@ import { verifyStoreAccess } from "@/lib/utils/store-verification";
 import { PosOrdersTabs } from "@/features/pos/components/pos-orders-tabs";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import { getActiveStaffSession } from "@/lib/staff-session";
+import { PageIntro } from "@/features/guide/components/page-intro";
 
 export default async function PosOrdersPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
@@ -31,6 +32,12 @@ export default async function PosOrdersPage({ params }: { params: Promise<{ stor
   return (
     <div className="flex h-full flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
+        <PageIntro
+          id="orderQueue"
+          variant="compact"
+          storeId={storeId}
+          className="mx-3 mt-2 mb-2 sm:mx-6"
+        />
         <PosOrdersTabs storeId={storeId} canManageSettings={canManageSettings} />
       </div>
     </div>

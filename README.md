@@ -86,7 +86,7 @@ src/
 │   ├── (app)/             # Authenticated app surface
 │   │   ├── (auth)/        # Login, register, password reset, onboarding
 │   │   ├── admin/         # Admin panel (master accounts only)
-│   │   ├── owner/         # Multi-outlet owner dashboard
+│   │   ├── owner/         # Redirect → Finance "All outlets" scope
 │   │   ├── profile/       # User profile & subscription
 │   │   ├── stores/        # Store selector
 │   │   └── store/[storeId]/(dashboard)/
@@ -102,7 +102,7 @@ src/
 │   │       ├── pos/tables/# Table management + reservations
 │   │       ├── staff/     # Staff management
 │   │       ├── shifts/    # Shift management
-│   │       └── finance/   # Finance reports
+│   │       └── finance/   # Finance reports + All outlets roll-up
 │   ├── (marketing)/       # Public marketing site
 │   ├── (public)/          # Public storefronts /@slug
 │   └── api/               # REST API routes
@@ -120,12 +120,13 @@ src/
 
 ### Goal, in one layer per row
 
-| Layer                      | Who it serves                      | The job it does                                                                    |
-| -------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
-| **Storefront** (the wedge) | Any merchant, day 1                | Replace Linktree + a Google Drive PDF menu + WhatsApp ordering chaos with one link |
-| **POS**                    | Merchants who serve in person      | Take the order, take the money, feed the kitchen — on the phone or tablet they own |
-| **Operations**             | Merchants with staff and recipes   | Know the cost of a dish, who worked when, and what is about to run out             |
-| **Finance / Enterprise**   | Multi-outlet brands, manufacturers | Consolidate margin across outlets and channels, and pay per channel honestly       |
+| Layer                         | Who it serves                                               | The job it does                                                                    |
+| ----------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Storefront** (the wedge)    | Any merchant, day 1                                         | Replace Linktree + a Google Drive PDF menu + WhatsApp ordering chaos with one link |
+| **POS**                       | Merchants who serve in person                               | Take the order, take the money, feed the kitchen — on the phone or tablet they own |
+| **Operations**                | Merchants with staff and recipes                            | Know the cost of a dish, who worked when, and what is about to run out             |
+| **Finance** (Operations plan) | Owners of one outlet or several                             | Consolidate margin across outlets and channels, and pay per channel honestly       |
+| **Enterprise** (service)      | Groups of 4+ outlets; businesses that need their own system | Scope and build it with the Prionation team, hosted on Prionation infrastructure   |
 
 Market priority: **France primary**, **Indonesia secondary**, worldwide via `en` + USD (see [docs/STRATEGY.md](docs/STRATEGY.md) §3). Money is stored and reasoned about in a base currency and rendered in any of **156 ISO-4217 currencies** through `useCurrency()`.
 
@@ -133,29 +134,31 @@ Market priority: **France primary**, **Indonesia secondary**, worldwide via `en`
 
 ### Plans & pricing
 
-| Plan           | Monthly              | Yearly (save 16%) | Trial                  | Who it is for                          | Upgrade trigger                                    |
-| -------------- | -------------------- | ----------------- | ---------------------- | -------------------------------------- | -------------------------------------------------- |
-| **FREE**       | Rp 0 / $0            | —                 | n/a, no card           | Solo warung, home baker, food truck    | Customers start asking to order online             |
-| **POS**        | Rp 229,000 / $14.99  | $12.49/mo         | 14 days, card required | Café or warung with a cashier          | They hire a cashier and can't track orders by hand |
-| **OPERATIONS** | Rp 459,000 / $29.99  | $24.99/mo         | 14 days, card required | Multi-staff café or restaurant         | Second shift hired; ingredient cost starts to hurt |
-| **ENTERPRISE** | Custom, admin-quoted | Custom            | Sales-led              | Multi-outlet brand, small manufacturer | Second outlet opens; needs consolidated finance    |
+| Plan           | Monthly              | Yearly (save 16%) | Trial                  | Who it is for                                                        | Upgrade trigger                                               |
+| -------------- | -------------------- | ----------------- | ---------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------- |
+| **FREE**       | Rp 0 / $0            | —                 | n/a, no card           | Solo warung, home baker, food truck                                  | Customers start asking to order online                        |
+| **POS**        | Rp 229,000 / $14.99  | $12.49/mo         | 14 days, card required | Café or warung with a cashier                                        | They hire a cashier and can't track orders by hand            |
+| **OPERATIONS** | Rp 459,000 / $29.99  | $24.99/mo         | 14 days, card required | Multi-staff café or restaurant, up to 3 outlets                      | Second shift or second outlet; ingredient cost starts to hurt |
+| **ENTERPRISE** | Custom, admin-quoted | Custom            | Talk to us (WhatsApp)  | A group of 4+ outlets, or a business that wants its own system built | A 4th outlet, or a custom build, integration or SLA           |
 
 - **IDR is the pricing base.** Every other display currency is derived live from it, not hardcoded — so all 156 currencies work, not a chosen few.
 - **Trial** is a real Stripe `trial_period_days: 14` on POS and OPERATIONS checkout. `/pricing?trial=true#plans` auto-opens the POS trial confirm.
+- **Outlets are capped per plan** (since 2026-09-27): FREE 1, POS 1, OPERATIONS up to 3, ENTERPRISE unlimited (`PLAN_MAX_STORES` + `minPlanForStores` in [src/lib/plans/entitlements.ts](src/lib/plans/entitlements.ts), read by `getStoreLimit` / `canCreateStore`). Checked on store creation and when a store ownership transfer is accepted. A downgrade never removes or locks a store: a business over its new limit keeps every store but can't create or receive another, and Billing shows "Over your plan's limit". Prices are unchanged; whether to publish an ENTERPRISE "from" price is open.
+- **Enterprise is sales-led: unlimited outlets plus a service** (a service since 2026-09-26). `FEATURE_MIN_PLAN` gates nothing to ENTERPRISE; what it unlocks is a 4th outlet and beyond. It is also your own internal system or website scoped and built with the Prionation team (the company behind Epidom; see `/build-with-us`) and hosted on Prionation infrastructure, plus custom integrations (accounting, delivery apps, payments), priority support, onboarding and data migration, a dedicated account manager and custom SLAs. It starts from "Talk to us" (WhatsApp) on `/pricing` or a Custom Development request, which any paid plan can send.
 - **Enterprise pricing is an offer, not a catalog price.** An admin sets `Subscription.customPrice*`; the old subscription is canceled, access suspends (`customPricePendingAt`), and `requirePlan` routes the user to **Billing**, not `/pricing`, because `/pricing` cannot sell them the quoted price.
 - **Beta / admin-granted accounts** (`admin_`/`free_`-prefixed Stripe customer ids) switch plans instantly with no payment method, via `POST /api/subscriptions/beta-plan`.
 
-> ⚠️ `docs/BILLING.md` (Rp 99k/249k) and `STRIPE_CONFIG.PLAN_LIMITS` in [src/config/stripe.config.ts](src/config/stripe.config.ts) (EUR 29/79, "Starter"/"Pro") both predate a price rise. `PLAN_LIMITS` is **dead config — nothing reads it.** The live numbers are `PLAN_PRICE_IDR` + the `/pricing` copy.
+> ⚠️ `STRIPE_CONFIG.PLAN_LIMITS` in [src/config/stripe.config.ts](src/config/stripe.config.ts) is only half live. Its limits are read (`getStoreLimit` / `canCreateStore` / `getProductLimit`; `maxStores` comes from `PLAN_MAX_STORES`), but its `name` / `price` fields (EUR 29/79, "Starter"/"Pro") predate a price rise and **nothing reads them.** The live prices are `PLAN_PRICE_IDR` ([src/lib/constants/plan-pricing.ts](src/lib/constants/plan-pricing.ts)) + the `/pricing` copy.
 
 #### How a plan is actually enforced — three independent layers
 
-| Layer               | Where                                                                             | What it does                                                   |
-| ------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **Entitlement map** | [src/lib/plans/entitlements.ts](src/lib/plans/entitlements.ts) `FEATURE_MIN_PLAN` | The single source of truth: feature → minimum tier             |
-| **Server gate**     | `requirePlan(storeId, "OPERATIONS")` in the page/layout                           | Redirects to the right upgrade URL before anything renders     |
-| **Nav gate**        | [src/config/navigation.config.ts](src/config/navigation.config.ts) `requiredPlan` | Sidebar shows the item in a locked state rather than hiding it |
+| Layer               | Where                                                                                                | What it does                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Entitlement map** | [src/lib/plans/entitlements.ts](src/lib/plans/entitlements.ts) `FEATURE_MIN_PLAN`, `PLAN_MAX_STORES` | The single source of truth: feature → minimum tier, and stores per plan |
+| **Server gate**     | `requirePlan(storeId, "OPERATIONS")` in the page/layout                                              | Redirects to the right upgrade URL before anything renders              |
+| **Nav gate**        | [src/config/navigation.config.ts](src/config/navigation.config.ts) `requiredPlan`                    | Sidebar shows the item in a locked state rather than hiding it          |
 
-Public endpoints re-check the **owner's** plan (`api/public/orders`, `api/public/reservations`) so a stale `acceptsOrders` flag on a downgraded account can't leak a paid feature to customers.
+Public endpoints re-check the **owner's** plan (`api/public/orders`, `api/public/reservations`) so a stale `acceptsOrders` flag on a downgraded account can't leak a paid feature to customers. The Finance report APIs do the same through `requireStoreFeatureApi(storeId, "finance")` ([src/lib/auth/require-store-feature.ts](src/lib/auth/require-store-feature.ts)): the store owner's plan, ACTIVE only.
 
 ---
 
@@ -221,34 +224,38 @@ Public endpoints re-check the **owner's** plan (`api/public/orders`, `api/public
 
 | Feature                     | What it does                                                                                                                                          | Goal                                                  | Plan       | Status                                                    |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------- | --------------------------------------------------------- |
-| P&L summary                 | Revenue, COGS, gross margin % over any date range, daily/weekly/monthly                                                                               | The number the owner actually wants                   | ENTERPRISE | ✅                                                        |
-| Report cuts                 | By category, by department, by item margin, by payment method, by staff shift, by roster shift-block, by waste reason, cash reconciliation, top items | Find _where_ the margin went, not just that it went   | ENTERPRISE | ✅                                                        |
-| Channel margin              | Per-channel revenue across `MANUAL`, `STOREFRONT`, `POS`, `GOFOOD`, `GRABFOOD`, `SHOPEEFOOD`, `TOKOPEDIA`, with commission and net                    | Aggregator commission is invisible until you price it | ENTERPRISE | ✅                                                        |
-| Aggregator ingestion        | Inngest + OpenAI parse aggregator order emails into source-tagged orders (`AggregatorConnection`, `AggregatorEmail`)                                  | One queue instead of four tablets                     | ENTERPRISE | 🟡 email parsing (v1) live; direct partner APIs not built |
-| Owner roll-up `/owner`      | All outlets under one business, consolidated                                                                                                          | Multi-outlet owners stop opening five dashboards      | ENTERPRISE | ✅                                                        |
-| Export & print              | CSV / Excel export and a dedicated print view for every report                                                                                        | Accountants want a file, not a screenshot             | ENTERPRISE | ✅                                                        |
-| Custom development requests | `NEW → IN_REVIEW → QUOTED → IN_PROGRESS → COMPLETED / DECLINED`, with admin triage                                                                    | Sell bespoke work without leaving the product         | ENTERPRISE | ✅                                                        |
-| Customer analytics          | Repeat/behaviour analytics per store                                                                                                                  | Know who comes back                                   | ENTERPRISE | ✅                                                        |
+| P&L summary                 | Revenue, COGS, gross margin % over any date range, daily/weekly/monthly                                                                               | The number the owner actually wants                   | OPERATIONS | ✅                                                        |
+| Report cuts                 | By category, by department, by item margin, by payment method, by staff shift, by roster shift-block, by waste reason, cash reconciliation, top items | Find _where_ the margin went, not just that it went   | OPERATIONS | ✅                                                        |
+| Channel margin              | Per-channel revenue across `MANUAL`, `STOREFRONT`, `POS`, `GOFOOD`, `GRABFOOD`, `SHOPEEFOOD`, `TOKOPEDIA`, with commission and net                    | Aggregator commission is invisible until you price it | OPERATIONS | ✅                                                        |
+| Aggregator ingestion        | Inngest + OpenAI parse aggregator order emails into source-tagged orders (`AggregatorConnection`, `AggregatorEmail`)                                  | One queue instead of four tablets                     | Not gated  | 🟡 email parsing (v1) live; direct partner APIs not built |
+| All outlets roll-up         | Owner-only "All outlets" scope in Finance (`?scope=all`; `/owner` redirects there): totals plus a sortable by-outlet table                            | Multi-outlet owners stop opening five dashboards      | OPERATIONS | ✅                                                        |
+| Export & print              | CSV / Excel export and a dedicated print view for every report                                                                                        | Accountants want a file, not a screenshot             | OPERATIONS | ✅                                                        |
+| Custom development requests | `NEW → IN_REVIEW → QUOTED → IN_PROGRESS → COMPLETED / DECLINED`, with admin triage                                                                    | Start an Enterprise build without leaving the product | POS        | ✅                                                        |
+| Customer analytics          | Repeat/behaviour analytics per store (dashboard card)                                                                                                 | Know who comes back                                   | All        | ✅                                                        |
+
+> Finance moved from ENTERPRISE to OPERATIONS on 2026-09-26, and the old Owner dashboard became its All outlets scope. That scope shows only to the business owner (not staff personas) when the business has more than one store: revenue, gross profit and margin, waste loss, net profit, outlet count, orders awaiting payment, and a by-outlet table with totals that links into each outlet's own report for the same dates. Each outlet uses the same calculation as its single-outlet report; outlets in different currencies are shown in their own currency and never added together.
+>
+> The top items, by department and finance settings APIs stay open on every plan, because the main dashboard, storefront editor and POS use them; the Finance page and its other report APIs require OPERATIONS. Aggregator ingestion checks no plan: the inbound email webhook routes any storefront slug.
 
 #### Account, platform & cross-tier
 
-| Feature                      | What it does                                                                                                                                                          | Plan                | Status                                                                                                   |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
-| Auth                         | Better Auth — email/password + Google OAuth, email verification with resend, password reset; OAuth failures land on `/login` with a readable toast                    | All                 | ✅                                                                                                       |
-| Guided onboarding            | 5 steps (business → logo → menu → theme → publish), AI-assisted profile analysis, menu suggestion, and logo generation; `hasOnboarded` makes the redirect server-side | All                 | ✅                                                                                                       |
-| Multi-store                  | Store selector; multiple outlets under one `Business`                                                                                                                 | OPERATIONS          | ✅                                                                                                       |
-| Profile & preferences        | Contact, business details, timezone (browser-detected, `timezoneUpdatedAt` records that it was really set), locale, currency, "resume where I left off"               | All                 | ✅                                                                                                       |
-| Owner PIN                    | `Business.ownerPin` + OTP reset — how the real owner steps back out of a staff persona                                                                                | All                 | ✅                                                                                                       |
-| Account deactivation         | Soft delete → 30-day self-service reactivation → up to 1 year support-quoted recovery → nightly purge job                                                             | All                 | ✅                                                                                                       |
-| Billing surface              | Stripe Checkout + Customer Portal, plan switch, trial state, custom-price offers; Xendit handles **customer** payments and is kept in a separate module by rule       | All                 | ✅                                                                                                       |
-| Stripe Connect               | Merchant onboarding, status and express dashboard links from Profile                                                                                                  | All                 | 🟡 plumbing live; the 80/20 revenue split is not switched on                                             |
-| i18n                         | `id`, `en`, `fr` — code-split per locale (2.79.0); marketing renders its locale server-side for crawlers                                                              | All                 | ✅                                                                                                       |
-| PWA + install prompt         | Service worker (cache-first static, network-first navigation, never intercepts `/api/`), topbar install button that hides when already installed                      | All                 | ✅                                                                                                       |
-| Feedback & changelog         | In-app `BUG` / `FEATURE_SUGGESTION` / `GENERAL_FEEDBACK` with admin triage; in-app "what's new" from CHANGELOG                                                        | All                 | ✅                                                                                                       |
-| Admin panel                  | Users & subscriptions, revenue, capacity, Neon platform usage, backup freshness, feedback and custom-dev triage, demo seeding                                         | Platform admin only | ✅                                                                                                       |
-| Nightly backup               | Inngest database backup + a freshness check that alerts if it goes stale                                                                                              | Platform            | ✅                                                                                                       |
-| Audit log                    | Recording of sensitive admin/owner actions                                                                                                                            | —                   | ⚪ Planned — designed in [docs/AUDIT_LOG_PLAN.md](docs/AUDIT_LOG_PLAN.md); **nothing is recorded today** |
-| Custom domains / white-label | Own domain instead of `/@slug`; remove "Powered by Epidom"                                                                                                            | ENTERPRISE          | ⚪ Not built                                                                                             |
+| Feature                      | What it does                                                                                                                                                          | Plan                                  | Status                                                                                                   |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Auth                         | Better Auth — email/password + Google OAuth, email verification with resend, password reset; OAuth failures land on `/login` with a readable toast                    | All                                   | ✅                                                                                                       |
+| Guided onboarding            | 5 steps (business → logo → menu → theme → publish), AI-assisted profile analysis, menu suggestion, and logo generation; `hasOnboarded` makes the redirect server-side | All                                   | ✅                                                                                                       |
+| Multi-store                  | Store selector; multiple outlets under one `Business`                                                                                                                 | OPERATIONS (up to 3), ENTERPRISE (4+) | ✅                                                                                                       |
+| Profile & preferences        | Contact, business details, timezone (browser-detected, `timezoneUpdatedAt` records that it was really set), locale, currency, "resume where I left off"               | All                                   | ✅                                                                                                       |
+| Owner PIN                    | `Business.ownerPin` + OTP reset — how the real owner steps back out of a staff persona                                                                                | All                                   | ✅                                                                                                       |
+| Account deactivation         | Soft delete → 30-day self-service reactivation → up to 1 year support-quoted recovery → nightly purge job                                                             | All                                   | ✅                                                                                                       |
+| Billing surface              | Stripe Checkout + Customer Portal, plan switch, trial state, custom-price offers; Xendit handles **customer** payments and is kept in a separate module by rule       | All                                   | ✅                                                                                                       |
+| Stripe Connect               | Merchant onboarding, status and express dashboard links from Profile                                                                                                  | All                                   | 🟡 plumbing live; the 80/20 revenue split is not switched on                                             |
+| i18n                         | `id`, `en`, `fr` — code-split per locale (2.79.0); marketing renders its locale server-side for crawlers                                                              | All                                   | ✅                                                                                                       |
+| PWA + install prompt         | Service worker (cache-first static, network-first navigation, never intercepts `/api/`), topbar install button that hides when already installed                      | All                                   | ✅                                                                                                       |
+| Feedback & changelog         | In-app `BUG` / `FEATURE_SUGGESTION` / `GENERAL_FEEDBACK` with admin triage; in-app "what's new" from CHANGELOG                                                        | All                                   | ✅                                                                                                       |
+| Admin panel                  | Users & subscriptions, revenue, capacity, Neon platform usage, backup freshness, feedback and custom-dev triage, demo seeding                                         | Platform admin only                   | ✅                                                                                                       |
+| Nightly backup               | Inngest database backup + a freshness check that alerts if it goes stale                                                                                              | Platform                              | ✅                                                                                                       |
+| Audit log                    | Recording of sensitive admin/owner actions                                                                                                                            | —                                     | ⚪ Planned — designed in [docs/AUDIT_LOG_PLAN.md](docs/AUDIT_LOG_PLAN.md); **nothing is recorded today** |
+| Custom domains / white-label | Own domain instead of `/@slug`; remove "Powered by Epidom"                                                                                                            | ENTERPRISE                            | ⚪ Not built                                                                                             |
 
 ---
 
@@ -281,6 +288,7 @@ Four **independent** authorities. They are not one ladder — a platform admin i
 | Gate                       | File                                                                                   | Answers                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `requirePlan`              | [src/lib/auth/require-plan.ts](src/lib/auth/require-plan.ts)                           | Does this account's tier include this surface?                              |
+| `requireStoreFeatureApi`   | [src/lib/auth/require-store-feature.ts](src/lib/auth/require-store-feature.ts)         | API routes: does the store owner's ACTIVE plan include this feature?        |
 | `requireStaffPageAccess`   | [src/lib/auth/require-staff-page-access.ts](src/lib/auth/require-staff-page-access.ts) | Is this page in this persona's resolved page list?                          |
 | `requireOwnerOnly`         | [src/lib/auth/require-owner-only.ts](src/lib/auth/require-owner-only.ts)               | Is this the real owner, with no staff persona active?                       |
 | `requireManagerOrOwnerApi` | [src/lib/auth/require-manager-or-owner.ts](src/lib/auth/require-manager-or-owner.ts)   | Roster publishing, attendance corrections, overtime threshold, KDS settings |
@@ -313,7 +321,7 @@ The matrix covers **role-granted access inside the app**. The public storefront 
 | Attendance corrections, overtime threshold                             |       —        |  ✅   |   ✅    |    —    |    —    |         —         |
 | Staff management                                                       |       —        |  ✅   |    —    |    —    |    —    |         —         |
 | Finance reports                                                        |       —        |  ✅   |    —    |    —    |    —    |         —         |
-| Owner roll-up `/owner`                                                 |       —        |  ✅   |    —    |    —    |    —    |         —         |
+| Finance — All outlets roll-up                                          |       —        |  ✅   |    —    |    —    |    —    |         —         |
 | Billing & subscription                                                 |       —        |  ✅   |    —    |    —    |    —    |         —         |
 | Account profile                                                        |       —        |  ✅   |   🔹    |   🔹    |   🔹    |         —         |
 | Admin panel                                                            |       ✅       |   —   |    —    |    —    |    —    |         —         |

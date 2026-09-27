@@ -11,6 +11,7 @@
  *
  * Usage:
  *   pnpm tsx scripts/restore-from-backup.ts --date=2026-08-10 --target=postgresql://...
+ *   pnpm tsx scripts/restore-from-backup.ts --date=2026-09-26-manual-140327 --target=...
  *   (or set RESTORE_DATABASE_URL instead of --target)
  */
 import { Client } from "pg";
@@ -38,8 +39,12 @@ function parseArgs(): { date: string; target: string } {
   const date = args.get("date");
   const target = args.get("target") || process.env.RESTORE_DATABASE_URL;
 
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new Error("Missing/invalid --date=YYYY-MM-DD");
+  // A nightly folder is the bare date; a manual "Run backup now" folder adds its
+  // UTC start time (src/lib/backup/run-backup.ts, manualBackupFolder).
+  if (!date || !/^\d{4}-\d{2}-\d{2}(-manual-\d{6})?$/.test(date)) {
+    throw new Error(
+      "Missing/invalid --date=YYYY-MM-DD (or YYYY-MM-DD-manual-HHMMSS for a manual run)"
+    );
   }
   if (!target) {
     throw new Error("Missing --target=<connection-string> (or set RESTORE_DATABASE_URL)");

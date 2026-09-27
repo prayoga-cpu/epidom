@@ -47,10 +47,10 @@ Using the 21 dashboard pages from Section 6.5 of the source brief.
 | `/alerts` | Stock and system alerts |
 | `/staff` | Owner-only, never staff-grantable |
 | `/schedule` | Full roster builder, published shifts |
-| `/finance` | P&L, channel margin (Enterprise) |
-| `/owner` | Multi-outlet roll-up (Enterprise) |
+| `/finance` | P&L, channel margin, and the All outlets roll-up (Operations since 2026-09-26; was Enterprise) |
+| `/owner` | Was the multi-outlet roll-up; now redirects to Finance's All outlets scope (2026-09-26) |
 | `/billing`, `/profile` | Account-level |
-| `/custom-development` | Enterprise requests |
+| `/custom-development` | Custom-build requests, any paid plan (was Enterprise) |
 
 Print/display routes (Section 6.6) stay attached to whichever shell generates them, daily reports and order-history print from POS Mode, everything else from Back Office. No change needed there, they're already chrome-free by design.
 
@@ -121,6 +121,8 @@ Desktop (≥1280px)                          Mobile (<1280px)
 ```
 
 **Section grouping:** unchanged from today, General, Point of Sale, Operations, Enterprise, mirroring the plan ladder directly in the IA. This part of the current shell already works, Section 9.2 documents it as deliberate, keep it.
+
+> **As built (2026-09-26):** the wireframe above is the Phase 1 plan, kept as written. The rail today is General, Operations, Reports (Shifts, Finance) and Account (Profile, Billing, Custom Development), see `docs/back-office-revamp.md`; there is no Point of Sale or Enterprise section. Finance, with its All outlets roll-up, is Operations-tier, and Enterprise is a custom-build service rather than a feature tier. A locked rail item's second line is its event-framed hint (`lockedHintKey`, e.g. Finance: "See P&L and margin by channel"), not a generic "Upgrade to X".
 
 **What moves here that wasn't here before:** nothing. Back Office keeps every non-POS page it already has. The only change is that `/pos`, `/pos/orders`, `/pos/kds`, `/pos/display`, and `/tables` no longer appear in this rail at all, they've moved to their own shell entirely. A Manager who needs to glance at the live order queue gets a summary card on `/dashboard` linking out to POS Mode, not a duplicated live view inside Back Office.
 

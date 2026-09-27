@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
@@ -9,13 +9,46 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2, Mail, CheckCircle2 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { safeInternalPath } from "@/lib/safe-redirect";
+import { emailVerificationCallbackURL } from "@/features/auth/register/lib/verification-landing";
+import {
+  readStashedVerifyEmail,
+  stashVerifyEmail,
+} from "@/features/auth/register/lib/verify-email-handoff";
 
 function VerifyEmailContent() {
   const { t } = useI18n();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email");
-  const next = safeInternalPath(searchParams.get("next"));
+  // The address signup just registered. useRegister leaves it in
+  // sessionStorage rather than the URL (analytics records page URLs). It is
+  // read in an effect because the server has no storage, so reading it during
+  // render would not match the server HTML.
+  const [email, setEmail] = useState<string | null>(null);
+  const urlEmail = searchParams.get("email");
+  useEffect(() => {
+    if (!urlEmail) {
+      setEmail(readStashedVerifyEmail());
+      return;
+    }
+    // A legacy link (history, a bookmark) still carries ?email=. Honour it,
+    // and once it is safely stashed, take it out of the address bar so a
+    // reload does not put it back in front of analytics. If storage is
+    // unavailable it stays in the URL, or a reload would lose it.
+    setEmail(urlEmail);
+    if (!stashVerifyEmail(urlEmail)) return;
+    const rest = new URLSearchParams(window.location.search);
+    rest.delete("email");
+    const query = rest.toString();
+    // null, not history.state: Next's patched replaceState only syncs its
+    // router (and useSearchParams) for state it did not write itself.
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`
+    );
+  }, [urlEmail]);
+  // Same landing as the first email: the safe ?next= deep link, else the
+  // setup wizard as /onboarding?verified=1.
+  const callbackURL = emailVerificationCallbackURL(searchParams.get("next"));
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
 
@@ -26,7 +59,7 @@ function VerifyEmailContent() {
     try {
       const { error } = await authClient.sendVerificationEmail({
         email,
-        callbackURL: next ?? "/onboarding",
+        callbackURL,
       });
 
       if (error) {

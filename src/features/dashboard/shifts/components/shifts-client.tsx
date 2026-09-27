@@ -30,6 +30,7 @@ import { apiClient } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { startOfMonthLocalISO, todayLocalISO } from "@/lib/utils/date-range";
 import { shiftReportPath } from "@/lib/finance/shift-report-path";
+import { PageIntro } from "@/features/guide/components/page-intro";
 import type { CashReconciliationRow } from "@/lib/finance/report-aggregation";
 import { DIFFERENCE_TONE_CLASSES, differenceTone } from "@/features/pos/lib/shift-summary";
 
@@ -157,6 +158,8 @@ export function ShiftsClient({ storeId, staff }: { storeId: string; staff: Staff
         <h1 className="text-2xl font-bold tracking-tight">{t("pages.shiftsTitle")}</h1>
         <p className="text-muted-foreground text-sm">{t("pages.shiftsDesc")}</p>
       </div>
+
+      <PageIntro id="shifts" storeId={storeId} />
 
       <div className="flex flex-wrap items-start gap-4">
         <div className="space-y-1">

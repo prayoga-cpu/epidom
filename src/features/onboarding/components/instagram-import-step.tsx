@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { AvatarCropper } from "@/components/shared/avatar-cropper";
-import { ArrowRight, Instagram, Loader2, Upload } from "lucide-react";
+import { ArrowRight, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
   compressImage,
@@ -13,22 +13,22 @@ import {
   isValidImageSize,
   revokeImagePreview,
 } from "@/lib/utils/image-compression";
+import type { InstagramPrefill } from "../lib/instagram-prefill";
+import { slugifyStoreLink, storeLinkLabel } from "../lib/store-link";
 
-export interface InstagramPrefill {
-  name: string;
-  tagline: string;
-  slugCandidate: string | null;
-  instagramUrl: string | null;
-  whatsappNumber: string | null;
-  themeColor: string | null;
-  logoUrl: string | null;
-  bio: string | null;
-  category: string | null;
-}
+export type { InstagramPrefill } from "../lib/instagram-prefill";
 
+/**
+ * The optional "Fill from Instagram" shortcut on the wizard's first step,
+ * rendered inside a dialog: upload a screenshot of the profile page → it is
+ * read (POST /api/onboarding/analyze-profile) → the owner reviews what was
+ * found → optionally crops the profile picture into the store logo. Nothing
+ * is saved here; the result pre-fills step 1, which saves it.
+ */
 interface InstagramImportStepProps {
   onComplete: (prefill: InstagramPrefill) => void;
-  onSkip: () => void;
+  /** Close without using anything (the owner fills the form by hand). */
+  onCancel: () => void;
 }
 
 interface AnalyzeProfileResult {
@@ -46,17 +46,13 @@ interface AnalyzeProfileResult {
 type Phase = "choice" | "upload" | "review" | "crop";
 
 const BUTTON_PRIMARY =
-  "group h-12 w-full rounded-xl text-sm font-semibold shadow-lg transition-all bg-[var(--epi-gold-500)] hover:bg-[var(--epi-gold-600)] text-[var(--epi-navy-900)]";
+  "group h-11 w-full rounded-xl text-sm font-semibold transition-colors bg-[var(--epi-gold-500)] hover:bg-[var(--epi-gold-600)] text-[var(--epi-navy-900)]";
 const BUTTON_SECONDARY =
-  "h-12 rounded-xl border border-[var(--epi-gold-500)]/30 text-foreground hover:bg-[var(--epi-gold-500)]/10";
-const BUTTON_GHOST = "h-12 w-full rounded-xl text-sm text-muted-foreground";
+  "h-11 min-w-0 flex-1 rounded-xl border border-[var(--epi-gold-500)]/30 text-foreground hover:bg-[var(--epi-gold-500)]/10";
+const BUTTON_GHOST = "h-11 w-full rounded-xl text-sm text-muted-foreground";
 
-function sanitizeSlug(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-}
+/** Thrown when /api/upload refuses the file; the caller shows its own localized message. */
+class UploadError extends Error {}
 
 async function uploadImage(file: File): Promise<string> {
   const compressed = await compressImage(file);
@@ -64,14 +60,14 @@ async function uploadImage(file: File): Promise<string> {
   formData.append("file", compressed);
 
   const res = await fetch("/api/upload", { method: "POST", body: formData });
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json?.error?.message || "Upload failed");
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.data?.url) {
+    throw new UploadError(json?.error?.message || "Upload failed");
   }
   return json.data.url as string;
 }
 
-export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepProps) {
+export function InstagramImportStep({ onComplete, onCancel }: InstagramImportStepProps) {
   const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("choice");
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
@@ -95,10 +91,10 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
     setLocalPreviewUrl(url);
   };
 
-  const ik = "onboarding.storeSetup.importStep" as const;
+  const ik = "onboarding.instagram" as const;
 
   const username = analysis?.username ? analysis.username.replace(/^@+/, "") : null;
-  const slug = analysis ? sanitizeSlug(username ?? analysis.businessName ?? "") : "";
+  const slug = analysis ? slugifyStoreLink(username ?? analysis.businessName ?? "") : "";
 
   const openFilePicker = () => fileInputRef.current?.click();
 
@@ -123,9 +119,11 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl }),
       });
-      const analyzeJson = await analyzeRes.json();
-      if (!analyzeRes.ok) {
-        throw new Error(analyzeJson?.error?.message || "Failed to analyze profile");
+      const analyzeJson = await analyzeRes.json().catch(() => null);
+      if (!analyzeRes.ok || !analyzeJson?.data) {
+        toast.error(t(`${ik}.analyzeFailed`));
+        setPhase("choice");
+        return;
       }
       const result = analyzeJson.data as AnalyzeProfileResult;
 
@@ -143,7 +141,7 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
       setAnalysis(result);
       setPhase("review");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("common.error"));
+      toast.error(t(err instanceof UploadError ? `${ik}.uploadFailed` : `${ik}.analyzeFailed`));
       setPhase("choice");
     }
   };
@@ -179,53 +177,40 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
       const file = new File([blob], "logo.png", { type: "image/png" });
       const logoUrl = await uploadImage(file);
       finish(logoUrl);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } catch {
+      toast.error(t(`${ik}.uploadFailed`));
     } finally {
       if (croppedUrl.startsWith("blob:")) revokeImagePreview(croppedUrl);
       setIsUploadingLogo(false);
     }
   };
 
-  const StepHeader = ({ title, subtitle }: { title: string; subtitle: string }) => (
-    <div className="mb-8 text-center">
-      <div
-        className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
-        style={{
-          background: "color-mix(in srgb, var(--epi-gold-500) 12%, transparent)",
-          color: "var(--epi-gold-500)",
-        }}
-      >
-        <Instagram className="h-7 w-7" />
-      </div>
-      <h1 className="text-foreground text-2xl font-bold tracking-tight">{title}</h1>
-      <p className="text-muted-foreground mt-2 text-sm">{subtitle}</p>
+  const PhaseHeader = ({ title, subtitle }: { title: string; subtitle: string }) => (
+    <div className="space-y-1">
+      <h3 className="text-foreground text-base font-semibold">{title}</h3>
+      <p className="text-muted-foreground text-sm">{subtitle}</p>
     </div>
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* CHOICE */}
       {phase === "choice" && (
-        <>
-          <StepHeader title={t(`${ik}.title`)} subtitle={t(`${ik}.subtitle`)} />
-          <div className="space-y-3">
-            <Button onClick={openFilePicker} className={BUTTON_PRIMARY}>
-              <Upload className="mr-2 h-4 w-4" />
-              {t(`${ik}.uploadCta`)}
-            </Button>
-            <p className="text-muted-foreground text-center text-xs">{t(`${ik}.uploadHint`)}</p>
-            <Button variant="ghost" onClick={onSkip} className={BUTTON_GHOST}>
-              {t(`${ik}.manualSetup`)}
-            </Button>
-          </div>
-        </>
+        <div className="space-y-3">
+          <Button type="button" onClick={openFilePicker} className={BUTTON_PRIMARY}>
+            <Upload className="mr-2 h-4 w-4" />
+            {t(`${ik}.uploadCta`)}
+          </Button>
+          <p className="text-muted-foreground text-center text-xs">{t(`${ik}.uploadHint`)}</p>
+          <Button type="button" variant="ghost" onClick={onCancel} className={BUTTON_GHOST}>
+            {t(`${ik}.cancel`)}
+          </Button>
+        </div>
       )}
 
       {/* UPLOAD / ANALYZING */}
       {phase === "upload" && (
         <>
-          <StepHeader title={t(`${ik}.title`)} subtitle={t(`${ik}.subtitle`)} />
           <div className="border-border bg-muted relative mx-auto w-full max-w-xs overflow-hidden rounded-xl border">
             {localPreviewUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -235,8 +220,14 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
                 className="max-h-72 w-full object-contain opacity-40"
               />
             )}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--epi-gold-500)" }} />
+            <div
+              role="status"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+            >
+              <Loader2
+                aria-hidden="true"
+                className="h-6 w-6 animate-spin text-[var(--epi-gold-500)]"
+              />
               <span className="text-foreground text-sm font-medium">{t(`${ik}.analyzing`)}</span>
             </div>
           </div>
@@ -246,8 +237,8 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
       {/* REVIEW */}
       {phase === "review" && analysis && (
         <>
-          <StepHeader title={t(`${ik}.reviewTitle`)} subtitle={t(`${ik}.fromInstagram`)} />
-          <div className="border-border bg-muted/30 space-y-4 rounded-2xl border p-6">
+          <PhaseHeader title={t(`${ik}.reviewTitle`)} subtitle={t(`${ik}.fromInstagram`)} />
+          <div className="border-border bg-muted/30 space-y-4 rounded-2xl border p-4 sm:p-5">
             <div>
               <p className="text-muted-foreground text-xs font-medium">{t(`${ik}.detectedName`)}</p>
               <p className="text-foreground text-sm font-semibold">{analysis.businessName ?? ""}</p>
@@ -268,30 +259,38 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
                 <p className="text-foreground line-clamp-3 text-sm">{analysis.bio}</p>
               </div>
             )}
-            <div className="border-border border-t pt-3">
-              <p className="text-muted-foreground text-xs">
-                {t(`${ik}.slugPreview`) + " "}
-                <span className="text-foreground font-mono font-medium">
-                  {"epidom.fr/@" + slug}
-                </span>
-              </p>
-            </div>
+            {slug ? (
+              <div className="border-border border-t pt-3">
+                <p className="text-muted-foreground text-xs">
+                  {t(`${ik}.slugPreview`) + " "}
+                  <span className="text-foreground font-mono font-medium break-all">
+                    {storeLinkLabel(slug)}
+                  </span>
+                </p>
+              </div>
+            ) : null}
           </div>
           <div className="space-y-3">
-            <Button onClick={() => setPhase("crop")} className={BUTTON_PRIMARY}>
+            <Button type="button" onClick={() => setPhase("crop")} className={BUTTON_PRIMARY}>
               {t(`${ik}.looksRight`)}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={openFilePicker} className={BUTTON_SECONDARY}>
-                {t(`${ik}.uploadCta`)}
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={openFilePicker}
+                className={BUTTON_SECONDARY}
+              >
+                <span className="truncate">{t(`${ik}.reupload`)}</span>
               </Button>
               <Button
+                type="button"
                 variant="ghost"
-                onClick={onSkip}
-                className="text-muted-foreground h-12 rounded-xl"
+                onClick={onCancel}
+                className="text-muted-foreground h-11 rounded-xl sm:flex-none"
               >
-                {t(`${ik}.manualSetup`)}
+                {t(`${ik}.cancel`)}
               </Button>
             </div>
           </div>
@@ -301,10 +300,14 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
       {/* CROP */}
       {phase === "crop" && localPreviewUrl && (
         <>
-          <StepHeader title={t(`${ik}.cropTitle`)} subtitle={t(`${ik}.cropSubtitle`)} />
+          <PhaseHeader title={t(`${ik}.cropTitle`)} subtitle={t(`${ik}.cropSubtitle`)} />
           {isUploadingLogo ? (
-            <div className="flex h-[300px] items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--epi-gold-500)" }} />
+            <div role="status" className="flex h-[300px] items-center justify-center">
+              <Loader2
+                aria-hidden="true"
+                className="h-6 w-6 animate-spin text-[var(--epi-gold-500)]"
+              />
+              <span className="sr-only">{t(`${ik}.uploadingLogo`)}</span>
             </div>
           ) : (
             <>
@@ -315,7 +318,7 @@ export function InstagramImportStep({ onComplete, onSkip }: InstagramImportStepP
                 onCropComplete={handleCropped}
                 onCancel={skipCrop}
               />
-              <Button variant="ghost" onClick={skipCrop} className={BUTTON_GHOST}>
+              <Button type="button" variant="ghost" onClick={skipCrop} className={BUTTON_GHOST}>
                 {t(`${ik}.cropSkip`)}
               </Button>
             </>

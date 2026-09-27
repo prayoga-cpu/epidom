@@ -430,19 +430,67 @@ describe("RegisterForm — ?next= handling is unchanged", () => {
     submit();
 
     await waitFor(() => expect(h.mutate).toHaveBeenCalledTimes(1));
+    // No deep link, so useRegister applies the default wizard landing.
     expect(h.mutate.mock.calls[0][0]).not.toHaveProperty("callbackURL");
   });
 });
 
 describe("RegisterForm — Google sign-up is unaffected by a prefill", () => {
-  it("still sends new visitors to /onboarding", async () => {
+  // Better Auth follows newUserCallbackURL only when its OAuth callback has
+  // just created the account; an existing account gets callbackURL.
+  it("sends new visitors to the setup wizard, flagged so it can fire the sign_up conversion", async () => {
     renderAt("email=jane%40bakery.com");
     fireEvent.click(screen.getByRole("button", { name: /Google/ }));
 
     await waitFor(() => expect(h.signInSocial).toHaveBeenCalledTimes(1));
     expect(h.signInSocial).toHaveBeenCalledWith({
       provider: "google",
+      callbackURL: "/stores",
+      newUserCallbackURL: "/onboarding?signup=google",
+    });
+  });
+
+  it("sends an existing account that presses Google here to /stores, like the login page", async () => {
+    renderAt("");
+    fireEvent.click(screen.getByRole("button", { name: /Google/ }));
+
+    await waitFor(() => expect(h.signInSocial).toHaveBeenCalledTimes(1));
+    expect(h.signInSocial.mock.calls[0][0].callbackURL).toBe("/stores");
+  });
+
+  it("uses the same wizard landing when ?next= is unsafe", async () => {
+    renderAt("next=%2F%2Fevil.com");
+    fireEvent.click(screen.getByRole("button", { name: /Google/ }));
+
+    await waitFor(() => expect(h.signInSocial).toHaveBeenCalledTimes(1));
+    expect(h.signInSocial).toHaveBeenCalledWith({
+      provider: "google",
+      callbackURL: "/stores",
+      newUserCallbackURL: "/onboarding?signup=google",
+    });
+  });
+
+  it("keeps the flag when ?next= is the wizard itself", async () => {
+    renderAt("next=%2Fonboarding");
+    fireEvent.click(screen.getByRole("button", { name: /Google/ }));
+
+    await waitFor(() => expect(h.signInSocial).toHaveBeenCalledTimes(1));
+    expect(h.signInSocial).toHaveBeenCalledWith({
+      provider: "google",
       callbackURL: "/onboarding",
+      newUserCallbackURL: "/onboarding?signup=google",
+    });
+  });
+
+  it("flags a new account bounced here with ?next=/stores (it has no store, so /stores would drop the flag)", async () => {
+    renderAt("next=%2Fstores");
+    fireEvent.click(screen.getByRole("button", { name: /Google/ }));
+
+    await waitFor(() => expect(h.signInSocial).toHaveBeenCalledTimes(1));
+    expect(h.signInSocial).toHaveBeenCalledWith({
+      provider: "google",
+      callbackURL: "/stores",
+      newUserCallbackURL: "/onboarding?signup=google",
     });
   });
 
@@ -454,6 +502,7 @@ describe("RegisterForm — Google sign-up is unaffected by a prefill", () => {
     expect(h.signInSocial).toHaveBeenCalledWith({
       provider: "google",
       callbackURL: "/staff-invite/tok",
+      newUserCallbackURL: "/staff-invite/tok",
     });
   });
 });

@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Area,
   AreaChart,
@@ -25,12 +27,18 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  DatabaseBackup,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import {
+  ACTIVE_RUN_WINDOW_MINUTES,
+  NIGHTLY_RUN_ID_PREFIX,
+  activeRunWindowMs,
+} from "@/lib/backup/constants";
 
 interface TableRow {
   name: string;
@@ -116,6 +124,33 @@ const BACKUP_STATUS_ICON: Record<BackupRunRow["status"], typeof CheckCircle2> = 
   FAILED: XCircle,
   RUNNING: Loader2,
 };
+
+/** A RUNNING row older than its window (constants.ts) was abandoned, not running. */
+function isActiveRun(run: BackupRunRow): boolean {
+  return (
+    run.status === "RUNNING" &&
+    Date.now() - new Date(run.startedAt).getTime() < activeRunWindowMs(run.id)
+  );
+}
+
+/** Any run in flight, nightly included: the page keeps polling while one is. */
+function activeBackupRun(data: BackupsData | undefined): BackupRunRow | undefined {
+  return data?.history.find(isActiveRun);
+}
+
+/** Only a manual run blocks the button. A nightly writes its own folder, and the
+ *  button has to keep working while a nightly is stuck. */
+function activeManualRun(data: BackupsData | undefined): BackupRunRow | undefined {
+  return data?.history.find((r) => isActiveRun(r) && !r.id.startsWith(NIGHTLY_RUN_ID_PREFIX));
+}
+
+/** Admin routes answer `{ error: "..." }`; errors thrown inside them `{ error: { message } }`. */
+function apiErrorMessage(json: unknown, fallback: string): string {
+  const error = (json as { error?: unknown } | null)?.error;
+  if (typeof error === "string") return error;
+  const message = (error as { message?: unknown } | undefined)?.message;
+  return typeof message === "string" ? message : fallback;
+}
 
 function formatHours(seconds: number): string {
   return `${(seconds / 3600).toFixed(1)}h`;
@@ -209,16 +244,65 @@ export function CapacityDashboard() {
   });
   const platform = platformData?.data;
 
-  const { data: backupsData, isLoading: backupsLoading } = useQuery<{ data: BackupsData }>({
+  const {
+    data: backupsData,
+    isLoading: backupsLoading,
+    // Read so every poll re-renders even when the rows come back identical:
+    // that is how a run that ages out of the active window stops showing as
+    // in flight once polling ends.
+    dataUpdatedAt: backupsUpdatedAt,
+  } = useQuery<{ data: BackupsData }>({
     queryKey: ["admin-backups"],
     queryFn: async () => {
       const res = await fetch("/api/admin/backups");
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error || "Failed to fetch backups");
+      if (!res.ok) throw new Error(apiErrorMessage(json, "Failed to fetch backups"));
       return json;
     },
+    // Poll while a run is in flight so its row settles without a reload.
+    refetchInterval: (query) => (activeBackupRun(query.state.data?.data) ? 3000 : false),
   });
   const backups = backupsData?.data;
+  const activeRun = activeManualRun(backups);
+
+  const queryClient = useQueryClient();
+  // The run this admin started, so its outcome can be announced when it lands.
+  const startedRunId = useRef<string | null>(null);
+  const runBackup = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/backups", { method: "POST" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(apiErrorMessage(json, "Failed to start the backup"));
+      return json.data as { runId: string; folder: string };
+    },
+    // Starting a backup isn't idempotent: never resend on failure.
+    retry: false,
+    onSuccess: ({ runId }) => {
+      startedRunId.current = runId;
+      toast.success("Backup started");
+    },
+    onError: (e: Error) => toast.error(e.message),
+    // Returned so the button stays pending until the RUNNING row (ours, or the
+    // one a 409 refers to) is on screen and polling has started.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["admin-backups"] }),
+  });
+
+  useEffect(() => {
+    const run = backups?.history.find((r) => r.id === startedRunId.current);
+    if (!run || isActiveRun(run)) return;
+    startedRunId.current = null;
+    if (run.status === "SUCCESS") {
+      toast.success(
+        `Backup finished: ${run.tableCount} tables, ${formatBytes(Number(run.totalBytes))}`
+      );
+    } else if (run.status === "FAILED") {
+      toast.error(`Backup failed: ${run.errorMessage ?? "unknown error"}`);
+    } else {
+      toast.error(
+        `The backup never finished (still running after ${ACTIVE_RUN_WINDOW_MINUTES} minutes).`
+      );
+    }
+  }, [backups, backupsUpdatedAt]);
   const lastSuccessHoursAgo = backups?.lastSuccess?.finishedAt
     ? (Date.now() - new Date(backups.lastSuccess.finishedAt).getTime()) / (60 * 60 * 1000)
     : null;
@@ -448,10 +532,30 @@ export function CapacityDashboard() {
 
         {/* Backups */}
         <div>
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <Archive className="text-muted-foreground h-5 w-5" />
-            Database Backups
-          </h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+                <Archive className="text-muted-foreground h-5 w-5" />
+                Database Backups
+              </h2>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Nightly at 02:00 UTC by the Inngest cron, kept 90 days in Cloudflare R2.
+              </p>
+            </div>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => runBackup.mutate()}
+              disabled={!backups?.r2Configured || !!activeRun || runBackup.isPending}
+            >
+              {activeRun || runBackup.isPending ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <DatabaseBackup />
+              )}
+              {activeRun ? "Backing up…" : "Run backup now"}
+            </Button>
+          </div>
           <Card>
             <CardContent className="space-y-4 pt-4">
               {backupsLoading ? (
@@ -478,9 +582,8 @@ export function CapacityDashboard() {
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>R2 is configured — no backup has run yet</AlertTitle>
                   <AlertDescription>
-                    The nightly job runs at 2am. To verify it now, trigger{" "}
-                    <code className="text-[11px]">nightly-database-backup</code> manually via the
-                    Inngest dev server instead of waiting.
+                    The nightly job runs at 02:00 UTC. Use Run backup now to take one immediately
+                    instead of waiting.
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -507,16 +610,22 @@ export function CapacityDashboard() {
                     </thead>
                     <tbody>
                       {backups!.history.map((run) => {
-                        const Icon = BACKUP_STATUS_ICON[run.status];
+                        // Still RUNNING past the window: the process died before it
+                        // could record an outcome. The next claim marks it FAILED.
+                        const abandoned = run.status === "RUNNING" && !isActiveRun(run);
+                        const status = abandoned ? "FAILED" : run.status;
+                        const Icon = BACKUP_STATUS_ICON[status];
                         return (
                           <tr key={run.id} className="border-border/60 border-b last:border-0">
                             <td className="px-2 py-2">
                               <span
-                                className={`inline-flex items-center gap-1.5 text-xs font-medium ${BACKUP_STATUS_STYLE[run.status]}`}
+                                className={`inline-flex items-center gap-1.5 text-xs font-medium ${BACKUP_STATUS_STYLE[status]}`}
                                 title={run.errorMessage ?? undefined}
                               >
-                                <Icon className="h-3.5 w-3.5" />
-                                {run.status}
+                                <Icon
+                                  className={`h-3.5 w-3.5 ${status === "RUNNING" ? "animate-spin" : ""}`}
+                                />
+                                {abandoned ? "ABANDONED" : run.status}
                               </span>
                             </td>
                             <td className="text-muted-foreground px-2 py-2 text-xs whitespace-nowrap">

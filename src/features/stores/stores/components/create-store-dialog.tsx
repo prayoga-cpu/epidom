@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,21 +13,47 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { StoreForm } from "./store-form";
-import { useCreateStore } from "../hooks/use-stores";
+import { CREATE_STORE_FORM_ID, StoreForm } from "./store-form";
+import { useCreateStore, useStores } from "../hooks/use-stores";
 import { CreateStoreInput } from "@/lib/validation/business.schemas";
 import { toast } from "sonner";
 
+export interface CreateStoreDialogProps {
+  /** The business's own country (free text), a default for the country picker. */
+  businessCountry?: string | null;
+  /** The business timezone, shown in the market summary (shared by every store). */
+  businessTimezone?: string | null;
+  /**
+   * Each store's current currency by id (GET /api/stores/overview), so the
+   * copy switch can warn when the store it copies uses another currency.
+   */
+  sourceCurrencyById?: Readonly<Record<string, string>>;
+}
+
 /**
- * Dialog for creating a new store
- * Uses shared StoreForm component (DRY principle)
- * Refactored from CreateStoreButton with proper validation and API integration
+ * "Create a store" on Your Stores. Asks the essentials first (name, country,
+ * city, where the currency & payment settings come from) and tucks the image,
+ * address, phone and email under "More details". On success it opens the new
+ * store's Back Office dashboard, where the Getting-started checklist is.
  *
  * IMPORTANT: Includes debounce to prevent multiple clicks and race conditions
  */
-export function CreateStoreDialog() {
+export function CreateStoreDialog({
+  businessCountry,
+  businessTimezone,
+  sourceCurrencyById,
+}: CreateStoreDialogProps) {
   const { t } = useI18n();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
+  // Same query as the page's list (shared cache): the copy sources and default country.
+  const { data: stores } = useStores();
+  const ownedStores = useMemo(
+    () => (stores ?? []).filter((store) => store.accessRole !== "staff"),
+    [stores]
+  );
+  const hasStores = ownedStores.length > 0;
   const { mutate: createStore, isPending } = useCreateStore();
   const isSubmittingRef = useRef(false);
 
@@ -34,6 +61,7 @@ export function CreateStoreDialog() {
   useEffect(() => {
     if (!open) {
       isSubmittingRef.current = false;
+      setIsImageUploading(false);
     }
   }, [open]);
 
@@ -46,18 +74,22 @@ export function CreateStoreDialog() {
     isSubmittingRef.current = true;
 
     createStore(data, {
-      onSuccess: () => {
-        toast.success(t("stores.createSuccess") || "Store created successfully");
+      onSuccess: (store) => {
+        toast.success(t("stores.createSuccess"));
         setOpen(false);
         isSubmittingRef.current = false;
-        // Form will be reset when dialog closes and reopens
+        // The new store's dashboard shows its Getting-started checklist.
+        router.push(`/store/${store.id}/dashboard`);
       },
       onError: (error) => {
-        toast.error(error.message || t("stores.createError") || "Failed to create store");
+        // The server's reason (name taken, store limit…) when there is one.
+        toast.error(error.message || t("stores.createError"));
         isSubmittingRef.current = false;
       },
     });
   };
+
+  const busy = isPending || isSubmittingRef.current;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -71,52 +103,61 @@ export function CreateStoreDialog() {
           {t("stores.createStore")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] flex-col overflow-hidden p-0 sm:h-[90dvh] sm:max-w-[550px]">
+      {/* Fits its content (the essentials are short; "More details" grows it) up to 90dvh. */}
+      <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] flex-col overflow-hidden p-0 sm:max-w-[550px]">
         {/* Fixed Header */}
         <DialogHeader className="border-border shrink-0 border-b px-4 py-3 pr-10 sm:px-6 sm:py-4 sm:pr-6">
           <DialogTitle className="text-lg font-bold sm:text-xl md:text-2xl">
             {t("stores.createStore")}
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm md:text-base">
-            {t("stores.createFirst") || "Create your first store to start managing inventory"}
+            {hasStores ? t("stores.createSubtitleAnother") : t("stores.createSubtitleFirst")}
           </DialogDescription>
         </DialogHeader>
 
         {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
           {open && (
             <StoreForm
               key="create-store-form"
+              mode="create"
+              formId={CREATE_STORE_FORM_ID}
+              existingStores={ownedStores}
+              businessCountry={businessCountry}
+              businessTimezone={businessTimezone}
+              sourceCurrencyById={sourceCurrencyById}
               onSubmit={handleSubmit}
               isLoading={isPending}
-              submitText={t("actions.save") || "Save"}
               onCancel={() => setOpen(false)}
               showActions={false}
+              onUploadStateChange={setIsImageUploading}
             />
           )}
         </div>
 
         {/* Fixed Footer with Actions */}
         <div className="border-border shrink-0 border-t px-4 py-3 sm:px-6 sm:py-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+          <div className="flex gap-2 sm:justify-end sm:gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isPending}
-              className="w-full sm:w-auto"
+              className="min-h-10 flex-1 sm:flex-none"
             >
               {t("actions.cancel")}
             </Button>
             <Button
               type="submit"
-              form="create-store-form"
-              disabled={isPending || isSubmittingRef.current}
-              className="w-full sm:w-auto"
+              form={CREATE_STORE_FORM_ID}
+              disabled={busy || isImageUploading}
+              className="min-h-10 flex-1 sm:flex-none"
             >
-              {isPending || isSubmittingRef.current
-                ? t("actions.saving") || "Saving..."
-                : t("actions.save") || "Save"}
+              {busy
+                ? t("stores.form.creating")
+                : isImageUploading
+                  ? t("stores.form.uploadingImage")
+                  : t("stores.form.submitCreate")}
             </Button>
           </div>
         </div>

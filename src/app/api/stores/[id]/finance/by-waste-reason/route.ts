@@ -12,12 +12,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { requireFinanceReportAccessApi } from "@/lib/auth/require-finance-access";
 import { bucketWasteByReason } from "@/lib/finance/report-aggregation";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withApiHandler(
   async (request, { storeId }) => {
+    const gate = await requireFinanceReportAccessApi(storeId!);
+    if (gate) return gate;
+
     const { searchParams } = new URL(request.url);
     const now = new Date();
     const from = new Date(

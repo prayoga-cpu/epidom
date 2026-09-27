@@ -185,10 +185,39 @@ describe("SubscriptionService", () => {
       expect(result.current).toBe(1);
     });
 
-    it("should allow OPERATIONS plan unlimited stores", async () => {
+    it("should allow an OPERATIONS plan up to three stores", async () => {
       mocks.subscriptionRepo.findByUserId.mockResolvedValue({
         ...mockSubscription,
         plan: SubscriptionPlan.OPERATIONS,
+      });
+      mocks.userRepo.getProfile.mockResolvedValue(mockUserProfile);
+      mocks.storeRepo.count.mockResolvedValue(2);
+
+      const result = await service.canCreateStore("user-1");
+
+      expect(result.allowed).toBe(true);
+      expect(result.limit).toBe(3);
+    });
+
+    // A fourth outlet is an Enterprise conversation, not an Operations one.
+    it("should stop an OPERATIONS plan at three stores", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        plan: SubscriptionPlan.OPERATIONS,
+      });
+      mocks.userRepo.getProfile.mockResolvedValue(mockUserProfile);
+      mocks.storeRepo.count.mockResolvedValue(3);
+
+      const result = await service.canCreateStore("user-1");
+
+      expect(result.allowed).toBe(false);
+      expect(result.limit).toBe(3);
+    });
+
+    it("should allow an ENTERPRISE plan unlimited stores", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        plan: SubscriptionPlan.ENTERPRISE,
       });
       mocks.userRepo.getProfile.mockResolvedValue(mockUserProfile);
       mocks.storeRepo.count.mockResolvedValue(10);

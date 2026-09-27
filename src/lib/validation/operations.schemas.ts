@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { phoneSchema, optionalEmailSchema } from "./common.schemas";
-import { ALL_STAFF_PAGES } from "@/config/staff-permissions.config";
+import { ALL_STAFF_PAGES, RETIRED_STAFF_PAGES } from "@/config/staff-permissions.config";
 
 // ── Staff ────────────────────────────────────────────────────────────────────
 
@@ -17,8 +17,11 @@ const usernameSchema = z
 // Dashboard nav item hrefs a staff member can be granted — validated
 // against the actual page universe (staff-permissions.config.ts), so this
 // can't drift out of sync with navigation.config.ts or accept junk values.
+// Retired pages still stored on old rows are dropped first, not rejected.
 const allowedPagesSchema = z
-  .array(z.string().refine((page) => ALL_STAFF_PAGES.includes(page), "Unknown page"))
+  .array(z.string())
+  .transform((pages) => pages.filter((page) => !RETIRED_STAFF_PAGES.includes(page)))
+  .pipe(z.array(z.string().refine((page) => ALL_STAFF_PAGES.includes(page), "Unknown page")))
   .optional();
 
 export const createStaffSchema = z.object({

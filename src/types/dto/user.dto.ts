@@ -41,6 +41,10 @@ export interface BusinessDto {
   website: string | null;
   timezone: string;
   locale: string;
+  /** Setup wizard step while it's in progress (1-3); null otherwise. */
+  onboardingStep?: number | null;
+  /** Whether an owner PIN is set. The PIN hash itself is never sent (toPublicBusiness). */
+  hasOwnerPin?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

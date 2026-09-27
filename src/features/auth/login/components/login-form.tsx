@@ -23,6 +23,10 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { trackEvent } from "@/lib/analytics";
 import { safeInternalPath } from "@/lib/safe-redirect";
+import {
+  emailVerificationCallbackURL,
+  googleSignupCallbackURL,
+} from "../../register/lib/verification-landing";
 
 export function LoginForm() {
   const { t } = useI18n();
@@ -147,6 +151,10 @@ export function LoginForm() {
             // same way the email login does — validated, since OAuth
             // callbacks are a classic open-redirect vector.
             callbackURL: safeInternalPath(nextUrl) ?? "/stores",
+            // Better Auth also signs a NEW visitor up from here (implicit
+            // sign-up), and follows this URL only in that case: the setup
+            // wizard, flagged so it fires the sign_up conversion.
+            newUserCallbackURL: googleSignupCallbackURL(nextUrl),
           });
         }}
       >
@@ -251,7 +259,9 @@ export function LoginForm() {
                   try {
                     const { error } = await authClient.sendVerificationEmail({
                       email: unverifiedEmail,
-                      callbackURL: safeInternalPath(nextUrl) ?? "/onboarding",
+                      // A safe ?next= wins; otherwise the setup wizard as
+                      // /onboarding?verified=1, like the signup email.
+                      callbackURL: emailVerificationCallbackURL(nextUrl),
                     });
 
                     if (error) {

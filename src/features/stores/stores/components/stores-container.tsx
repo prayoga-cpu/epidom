@@ -13,10 +13,34 @@ import { AlertCircle, Store, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
 import { isUnauthorizedError } from "@/lib/api/unauthorized";
-import type { PlanTier } from "@/lib/plans/entitlements";
+import { minPlanForStores, upgradeHrefFor, type PlanTier } from "@/lib/plans/entitlements";
+import {
+  clearWizardRedirect,
+  gatekeeperVerdict,
+  rememberWizardRedirect,
+  wizardRedirectedRecently,
+  type GatekeeperProfile,
+} from "../lib/stores-gatekeeper";
+
+/**
+ * Where the gatekeeper stands: still asking the profile, sending the account
+ * to /onboarding, or letting it stay (with the business's country and
+ * timezone for the Create a store dialog's defaults, and whether the account
+ * owns a business at all).
+ */
+type GateState =
+  | { status: "pending" }
+  | { status: "redirecting" }
+  | {
+      status: "stay";
+      businessCountry: string | null;
+      businessTimezone: string | null;
+      hasBusiness: boolean;
+    };
 
 export function StoresContainer() {
   const { t } = useI18n();
@@ -39,6 +63,13 @@ export function StoresContainer() {
     () => new Map((overviews ?? []).map((overview) => [overview.storeId, overview])),
     [overviews]
   );
+  // The currency each store really uses, for the Create a store dialog's
+  // "copies another currency" warning (a legacy store's country often says nothing).
+  const currencyById = useMemo(
+    () =>
+      Object.fromEntries((overviews ?? []).map((overview) => [overview.storeId, overview.currency])),
+    [overviews]
+  );
   const { data: subscriptionStatus, isLoading: isLoadingSubscription } = useSubscriptionStatus();
   const [isActivating, setIsActivating] = useState(false);
   const { data: session } = useSession();
@@ -47,9 +78,6 @@ export function StoresContainer() {
   // Email check only (no DB isAdmin flag) — same simplification the old
   // top-nav Admin badge used; this card replaces that badge.
   const isAdmin = mounted && isAdminEmail(session?.user?.email);
-  // A linked staff login: every store it can see is one it works at, so there
-  // is no plan of its own to upgrade and no store of its own to create here.
-  const isStaffOnly = !!stores?.length && stores.every((store) => store.accessRole === "staff");
 
   async function handleActivateFree() {
     setIsActivating(true);
@@ -65,53 +93,87 @@ export function StoresContainer() {
   }
   /**
    * GATEKEEPER LOGIC:
-   * Protects the /stores route from incomplete users.
-   * If a user lands here without a complete business profile or active plan,
-   * they correspond to a 'New User' flow and must be sent to onboarding.
+   * Protects the /stores route from incomplete owners (see gatekeeperVerdict):
+   * an owner with no business/store, or whose setup wizard is still in
+   * progress, belongs on /onboarding. Linked staff logins never go there.
+   * Until the answer is in, the page keeps its skeleton so neither the empty
+   * state nor the grid flashes before a redirect. A failed check lets the
+   * page render as before (fail open).
    */
+  const [gate, setGate] = useState<GateState>({ status: "pending" });
   useEffect(() => {
-    // Run only when authentication/subscription is adequately loaded
-    if (isLoadingSubscription) return;
+    let cancelled = false;
+    const stay = (profile?: GatekeeperProfile | null) => {
+      if (cancelled) return;
+      setGate({
+        status: "stay",
+        businessCountry: profile?.business?.country ?? null,
+        businessTimezone: profile?.business?.timezone ?? null,
+        hasBusiness: !!profile?.business,
+      });
+    };
 
     const checkCompliance = async () => {
       try {
         const res = await fetch("/api/user/profile");
-        if (res.ok) {
-          const { data: profile } = await res.json();
-          const business = profile.business;
-          const subscription = profile.subscription;
-
-          // Redirect to onboarding only if the user has no business set up at all
-          // (subscription is always active now via free plan provisioning) — and
-          // isn't a linked staff login: staff have no business by design, and
-          // onboarding is the owner's merchant setup, not theirs.
-          const hasStore = business?.stores?.length > 0;
-          if ((!business || !hasStore) && !profile.staffLink) {
-            // Hard navigation, not router.replace(): a soft/client navigation here
-            // can replay a stale cached "redirect to /login" from an earlier
-            // unauthenticated visit to /onboarding (Next.js client router cache),
-            // looping the freshly-authenticated user back to the login page.
-            window.location.href = "/onboarding";
-          }
+        if (!res.ok) return stay();
+        const { data: profile } = (await res.json()) as { data?: GatekeeperProfile | null };
+        // Checked before any side effect: a discarded run (StrictMode's double
+        // effect) must not record a redirect the live run would then skip.
+        if (cancelled) return;
+        const verdict = gatekeeperVerdict(profile);
+        if (verdict === "stay") {
+          clearWizardRedirect();
+          return stay(profile);
         }
+        // Loop breaker: right after sending an owner to finish the wizard, a
+        // second landing here means /onboarding sent them back (or they chose
+        // to leave it) — let them stay rather than bounce forever.
+        if (verdict === "wizard-unfinished") {
+          if (wizardRedirectedRecently()) return stay(profile);
+          rememberWizardRedirect();
+        }
+        setGate({ status: "redirecting" });
+        // Hard navigation, not router.replace(): a soft/client navigation here
+        // can replay a stale cached "redirect to /login" from an earlier
+        // unauthenticated visit to /onboarding (Next.js client router cache),
+        // looping the freshly-authenticated user back to the login page.
+        window.location.href = "/onboarding";
       } catch (error) {
         console.error("Gatekeeper compliance check failed", error);
+        stay();
       }
     };
 
     checkCompliance();
-  }, [isLoadingSubscription]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const gateDecided = gate.status === "stay";
+  // The skeleton covers both the stores fetch and the gatekeeper's answer.
+  const showSkeleton = isLoading || !gateDecided;
+  // A linked staff login: every store it can see is one it works at, so there
+  // is no plan of its own to upgrade and no store of its own to create here.
+  // Not an owner who is also staff elsewhere: with a business of their own
+  // (even one whose last store was deleted) they keep Create a store, since
+  // the gatekeeper lets any staff-linked account stay here.
+  const ownsBusiness = gate.status === "stay" && gate.hasBusiness;
+  const isStaffOnly =
+    !ownsBusiness && !!stores?.length && stores.every((store) => store.accessRole === "staff");
 
   /**
    * Render create store button based on subscription status
    */
   const renderCreateStoreButton = () => {
     // Loading state - show skeleton button that matches actual button size
-    // Width matches "Subscribe to Create Store" button:
+    // Width matches the "Activate the free plan" button:
     // - Mobile: w-full (matches button's w-full)
     // - Desktop: fixed width that approximates button's content-based width (w-auto)
-    // Text "Subscribe to Create Store" + ArrowRight icon + padding ≈ 200px (sm) to 220px (md)
-    if (isLoadingSubscription || isLoading) {
+    // Label + ArrowRight icon + padding ≈ 200px (sm) to 220px (md)
+    // Also held while the gatekeeper decides: the Create a store dialog takes
+    // the business's country from its answer.
+    if (isLoadingSubscription || showSkeleton) {
       return (
         <Skeleton className="h-9 w-full rounded-full sm:h-10 sm:w-[200px] md:h-11 md:w-[220px]" />
       );
@@ -127,19 +189,24 @@ export function StoresContainer() {
     // This provides real-time check even if subscription-status cache is stale
     const canCreateMoreFromSubscription = storeUsage?.canCreateMore ?? false;
     const storeLimit = storeUsage?.limit;
-    const currentStoreCount = stores?.length ?? 0;
+    // Only stores this account owns count toward its plan: GET /api/stores also
+    // lists the store where the account works as linked staff (accessRole
+    // "staff"), which the server's limit check never counts.
+    const ownedStoreCount = (stores ?? []).filter((store) => store.accessRole !== "staff").length;
 
-    // If we have store limit info, calculate directly from current stores
+    // If we have store limit info, calculate directly from the owned stores
     // This ensures button updates immediately after creating a store
-    // For OPERATIONS/ENTERPRISE (limit = Infinity), always allow creating
+    // ENTERPRISE (limit = Infinity) always allows creating; FREE/POS stop at 1
+    // and OPERATIONS at 3 (PLAN_MAX_STORES)
     const canCreateMore =
       storeLimit === Infinity || storeLimit === null
-        ? true // OPERATIONS/ENTERPRISE: unlimited stores
+        ? true // ENTERPRISE: unlimited stores
         : storeLimit !== undefined
-          ? currentStoreCount < storeLimit // Calculate from current count
+          ? ownedStoreCount < storeLimit // Calculate from current count
           : canCreateMoreFromSubscription; // Fallback to subscription status
 
-    // No subscription - activate free plan directly
+    // No subscription - activate the free plan directly (no payment step);
+    // the Create a store button replaces this once it is active.
     if (!hasSubscription || subscription?.status !== "ACTIVE") {
       return (
         <Button
@@ -153,7 +220,7 @@ export function StoresContainer() {
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
-              {t("stores.subscribeToCreateStore")}
+              {t("stores.activateFreePlan")}
               <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:ml-2 sm:h-4 sm:w-4" />
             </>
           )}
@@ -161,30 +228,35 @@ export function StoresContainer() {
       );
     }
 
-    // Has subscription but limit reached - activate free upgrade directly
+    // Has subscription but the store limit is reached: the plans page, on the
+    // lowest plan that fits one more store (Operations from FREE/POS,
+    // Enterprise from Operations at 3 — the limit error names the same plan).
+    // It used to call activate-free, which only re-granted the FREE plan and
+    // changed nothing.
     if (!canCreateMore) {
       return (
         <Button
+          asChild
           size="lg"
-          onClick={handleActivateFree}
-          disabled={isActivating}
           style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}
           className="w-full rounded-full px-4 py-2.5 text-xs font-semibold shadow-md transition-all hover:opacity-90 hover:shadow-lg sm:w-auto sm:px-6 sm:py-3 sm:text-sm md:px-8 md:py-3.5 md:text-base"
         >
-          {isActivating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              {t("stores.upgradePlan")}
-              <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:ml-2 sm:h-4 sm:w-4" />
-            </>
-          )}
+          <Link href={upgradeHrefFor(minPlanForStores(ownedStoreCount + 1))}>
+            {t("stores.upgradePlan")}
+            <ArrowRight className="ml-1.5 h-3.5 w-3.5 sm:ml-2 sm:h-4 sm:w-4" />
+          </Link>
         </Button>
       );
     }
 
     // Has subscription and can create more - show CreateStoreDialog
-    return <CreateStoreDialog />;
+    return (
+      <CreateStoreDialog
+        businessCountry={gate.status === "stay" ? gate.businessCountry : null}
+        businessTimezone={gate.status === "stay" ? gate.businessTimezone : null}
+        sourceCurrencyById={currencyById}
+      />
+    );
   };
 
   return (
@@ -205,8 +277,8 @@ export function StoresContainer() {
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 lg:py-8">
-          {/* Loading State */}
-          {isLoading && (
+          {/* Loading State (also while the gatekeeper decides — no flash before a redirect) */}
+          {showSkeleton && (
             <div className="animate-slide-up-delayed grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:gap-6">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="space-y-2 sm:space-y-3">
@@ -219,7 +291,7 @@ export function StoresContainer() {
           )}
 
           {/* Error State */}
-          {error && !isLoading && !unauthorized && (
+          {error && !showSkeleton && !unauthorized && (
             <div className="animate-slide-up-delayed flex min-h-[calc((100vh-250px)/var(--app-zoom,1))] items-center justify-center px-4 py-8 text-center sm:min-h-[calc((100vh-300px)/var(--app-zoom,1))] sm:py-12 md:py-16">
               <div className="w-full max-w-md">
                 <AlertCircle className="text-destructive mx-auto mb-4 h-10 w-10 sm:h-12 sm:w-12" />
@@ -230,14 +302,14 @@ export function StoresContainer() {
                   {error.message || "An unexpected error occurred"}
                 </p>
                 <Button onClick={() => refetch()} variant="outline" className="w-full sm:w-auto">
-                  Try Again
+                  {t("common.routeError.tryAgain")}
                 </Button>
               </div>
             </div>
           )}
 
           {/* Empty State - Enhanced with visual and CTA */}
-          {!isLoading && !error && stores?.length === 0 && (
+          {!showSkeleton && !error && stores?.length === 0 && (
             <div className="animate-slide-up-delayed flex min-h-[calc((100vh-250px)/var(--app-zoom,1))] items-center justify-center px-4 py-8 text-center sm:min-h-[calc((100vh-300px)/var(--app-zoom,1))] sm:py-12 md:py-16">
               <div className="mx-auto w-full max-w-md">
                 {/* Visual Icon */}
@@ -260,7 +332,7 @@ export function StoresContainer() {
           )}
 
           {/* Stores Grid */}
-          {!isLoading && !error && stores && stores.length > 0 && (
+          {!showSkeleton && !error && stores && stores.length > 0 && (
             <div className="animate-slide-up-delayed grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:gap-6 xl:gap-8">
               {/* Show loading skeleton for store cards while subscription status is loading */}
               {isLoadingSubscription

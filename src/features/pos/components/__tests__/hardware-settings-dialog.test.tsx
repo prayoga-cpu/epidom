@@ -19,6 +19,9 @@ vi.mock("@/lib/pwa/printer-connection", async (importOriginal) => ({
   isPrinterConnected: () => false,
 }));
 vi.mock("@/lib/pwa/printer-test", () => ({ printTestPage: vi.fn() }));
+// The intro card has its own suite (src/features/guide); left in, its guide-state
+// read would trip the "never fetches" assertion below.
+vi.mock("@/features/guide/components/page-intro", () => ({ PageIntro: () => null }));
 
 import { HardwareSettingsDialog } from "../hardware-settings-dialog";
 import { usePosScannerSettings } from "../../hooks/use-pos-scanner-settings";

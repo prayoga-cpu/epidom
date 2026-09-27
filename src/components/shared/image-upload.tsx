@@ -9,7 +9,7 @@
  * - File size validation (< 5MB original)
  * - Image preview with remove button
  * - Upload progress indicator
- * - Error handling with toast notifications
+ * - Errors shown under the tile (and as a sonner toast), in the UI language
  * - Accessible (ARIA labels, keyboard navigation)
  * - Client-side compression before upload
  */
@@ -18,8 +18,9 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { toast } from "sonner";
+import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import {
   compressImage,
   isValidImage,
@@ -30,7 +31,6 @@ import {
 } from "@/lib/utils/image-compression";
 import { IMAGE_DEFAULT_TARGET_MB, IMAGE_RAW_UPLOAD_MAX_MB } from "@/lib/constants/image";
 import { cn } from "@/lib/utils";
-import { unwrapApiError } from "@/lib/api/unwrap";
 
 export interface ImageUploadProps {
   /** Current image URL */
@@ -57,6 +57,14 @@ export interface ImageUploadProps {
    * pair with a caller-supplied guide instead.
    */
   compact?: boolean;
+  /**
+   * Delete the previous file from storage when the image is removed, or
+   * after a replacement has uploaded (default: true). Pass false when the
+   * previous URL may still be saved somewhere until the form is submitted
+   * (e.g. the setup wizard, whose Skip/Back don't save): the server then
+   * cleans up the old file once the new value is saved.
+   */
+  deletePrevious?: boolean;
 }
 
 export function ImageUpload({
@@ -68,13 +76,16 @@ export function ImageUpload({
   aspectRatio,
   onUploadStateChange,
   compact = false,
+  deletePrevious = true,
 }: ImageUploadProps) {
+  const { t } = useI18n();
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(value);
+  // The last failure, shown under the tile until the next pick or removal.
+  const [error, setError] = useState<string | null>(null);
   const previousValueRef = useRef<string | undefined>(value);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
 
   // Sync previewUrl with value prop when it changes externally
   useEffect(() => {
@@ -92,20 +103,28 @@ export function ImageUpload({
   /**
    * Validate file before upload
    */
-  const validateFile = useCallback((file: File): string | null => {
-    // Check file type
-    if (!isValidImage(file)) {
-      return "Please select a valid image file (JPEG, PNG, WebP, or GIF)";
-    }
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      // Check file type
+      if (!isValidImage(file)) {
+        return t("imageUpload.invalidType");
+      }
 
-    // Check raw (pre-compression) file size — compression brings it down to
-    // `maxSize` afterward, so this only needs to bound processing cost, not
-    // match the target.
-    if (!isValidImageSize(file, IMAGE_RAW_UPLOAD_MAX_MB)) {
-      return `Image must be smaller than ${IMAGE_RAW_UPLOAD_MAX_MB}MB`;
-    }
+      // Check raw (pre-compression) file size — compression brings it down to
+      // `maxSize` afterward, so this only needs to bound processing cost, not
+      // match the target.
+      if (!isValidImageSize(file, IMAGE_RAW_UPLOAD_MAX_MB)) {
+        return t("imageUpload.tooLarge").replace("{max}", String(IMAGE_RAW_UPLOAD_MAX_MB));
+      }
 
-    return null;
+      return null;
+    },
+    [t]
+  );
+
+  const showError = useCallback((message: string) => {
+    setError(message);
+    toast.error(message);
   }, []);
 
   /**
@@ -114,36 +133,18 @@ export function ImageUpload({
   const uploadImage = useCallback(
     async (file: File) => {
       const oldImageUrl = value; // Store old image URL before starting upload
+      let preview: string | undefined;
 
       try {
         setIsUploading(true);
+        setError(null);
 
-        // Delete old image if exists
-        if (oldImageUrl) {
-          try {
-            await deleteBlobImage(oldImageUrl);
-          } catch (error) {
-            // Continue with upload even if delete fails
-          }
-        }
-
-        // Compress image
-        toast({
-          title: "Compressing image...",
-          description: "Please wait while we optimize your image.",
-        });
-
+        // The spinner on the tile is the progress feedback; no toasts.
         const compressedFile = await compressImage(file, { maxSizeMB: maxSize });
 
         // Create preview
-        const preview = createImagePreview(compressedFile);
+        preview = createImagePreview(compressedFile);
         setPreviewUrl(preview);
-
-        // Upload to server
-        toast({
-          title: "Uploading image...",
-          description: "Please wait while we upload your image.",
-        });
 
         const formData = new FormData();
         formData.append("file", compressedFile);
@@ -155,46 +156,41 @@ export function ImageUpload({
         });
 
         if (!response.ok) {
-          // /api/upload answers createErrorResponse, so the reason is at
-          // error.error.message — reading the top level always gave undefined
-          // and every rejected upload showed the generic fallback instead.
-          const error = unwrapApiError(await response.json().catch(() => ({})));
-          throw new Error(error.message || "Upload failed");
+          // /api/upload's reasons are English-only, so the catch below shows
+          // a message in the UI language instead.
+          throw new Error(`Upload failed (${response.status})`);
         }
 
         const data = await response.json();
+        const newUrl: string = data.data.url;
 
         // Revoke preview URL since we have the final URL
         revokeImagePreview(preview);
+        preview = undefined;
 
         // Update with final URL
-        setPreviewUrl(data.data.url);
-        previousValueRef.current = data.data.url;
-        onChange(data.data.url);
+        setPreviewUrl(newUrl);
+        previousValueRef.current = newUrl;
+        onChange(newUrl);
 
-        toast({
-          title: "Success!",
-          description: "Image uploaded successfully.",
-        });
-      } catch (error) {
-        // Cleanup preview on error and restore old value
-        if (previewUrl && previewUrl.startsWith("blob:")) {
-          revokeImagePreview(previewUrl);
+        // Only now that the new file is in place is the old one removed, so a
+        // failed upload never leaves the field pointing at a deleted file.
+        if (deletePrevious && oldImageUrl && oldImageUrl !== newUrl) {
+          deleteBlobImage(oldImageUrl).catch(() => {
+            // An orphaned old file is harmless.
+          });
         }
+      } catch {
+        // Cleanup preview on error and restore old value (still in storage:
+        // nothing is deleted before the new upload succeeds).
+        if (preview) revokeImagePreview(preview);
         setPreviewUrl(oldImageUrl);
-
-        const message = error instanceof Error ? error.message : "Failed to upload image";
-
-        toast({
-          title: "Upload failed",
-          description: message,
-          variant: "destructive",
-        });
+        showError(t("imageUpload.uploadFailed"));
       } finally {
         setIsUploading(false);
       }
     },
-    [value, onChange, toast, previewUrl, maxSize]
+    [value, onChange, maxSize, deletePrevious, showError, t]
   );
 
   /**
@@ -202,19 +198,15 @@ export function ImageUpload({
    */
   const handleFileSelect = useCallback(
     (file: File) => {
-      const error = validateFile(file);
-      if (error) {
-        toast({
-          title: "Invalid file",
-          description: error,
-          variant: "destructive",
-        });
+      const invalid = validateFile(file);
+      if (invalid) {
+        showError(invalid);
         return;
       }
 
       uploadImage(file);
     },
-    [validateFile, uploadImage, toast]
+    [validateFile, uploadImage, showError]
   );
 
   /**
@@ -269,12 +261,14 @@ export function ImageUpload({
    */
   const handleRemove = useCallback(async () => {
     const currentUrl = previewUrl || value;
+    setError(null);
 
-    // Delete from blob storage if it's a blob storage URL
-    if (currentUrl) {
+    // Delete from blob storage if it's a blob storage URL (never when the
+    // caller may still have this URL saved: see `deletePrevious`).
+    if (deletePrevious && currentUrl) {
       try {
         await deleteBlobImage(currentUrl);
-      } catch (error) {
+      } catch {
         // Continue with removal even if delete fails
       }
     }
@@ -287,12 +281,7 @@ export function ImageUpload({
     setPreviewUrl(undefined);
     previousValueRef.current = undefined;
     onChange(undefined);
-
-    toast({
-      title: "Image removed",
-      description: "The image has been removed.",
-    });
-  }, [previewUrl, value, onChange, toast]);
+  }, [previewUrl, value, onChange, deletePrevious]);
 
   /**
    * Open file picker
@@ -311,7 +300,11 @@ export function ImageUpload({
             className="border-border bg-muted relative overflow-hidden rounded-lg border"
             style={aspectRatio ? { aspectRatio } : undefined}
           >
-            <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
+            <img
+              src={previewUrl}
+              alt={t("imageUpload.previewAlt")}
+              className="h-full w-full object-cover"
+            />
 
             {/* Remove Button — the dark backdrop is a hover-only decorative
                 enhancement (mouse only), but the button itself stays fully
@@ -323,12 +316,12 @@ export function ImageUpload({
                 <Button
                   type="button"
                   variant="destructive"
-                  size="icon"
+                  size="icon-lg"
                   onClick={handleRemove}
                   disabled={isUploading}
                 >
                   <X className="h-4 w-4" />
-                  <span className="sr-only">Remove image</span>
+                  <span className="sr-only">{t("imageUpload.removeLabel")}</span>
                 </Button>
               </div>
             )}
@@ -351,7 +344,7 @@ export function ImageUpload({
           onClick={!disabled ? openFilePicker : undefined}
           role="button"
           tabIndex={disabled ? -1 : 0}
-          aria-label="Upload image"
+          aria-label={t("imageUpload.uploadLabel")}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
@@ -369,10 +362,12 @@ export function ImageUpload({
                     compact ? "mb-2 h-6 w-6" : "mb-4 h-10 w-10"
                   )}
                 />
-                <p className="text-muted-foreground text-sm font-medium">Uploading...</p>
+                <p className="text-muted-foreground text-sm font-medium">
+                  {t("imageUpload.uploading")}
+                </p>
                 {!compact && (
                   <p className="text-muted-foreground mt-1 text-xs">
-                    Please wait while we process your image
+                    {t("imageUpload.processing")}
                   </p>
                 )}
               </>
@@ -389,15 +384,16 @@ export function ImageUpload({
                 </div>
                 {compact ? (
                   <p className="text-foreground text-xs font-medium">
-                    {isDragging ? "Drop here" : "Click or drag to upload"}
+                    {isDragging ? t("imageUpload.dropHereCompact") : t("imageUpload.promptCompact")}
                   </p>
                 ) : (
                   <>
                     <p className="text-foreground mb-1 text-sm font-medium">
-                      {isDragging ? "Drop image here" : "Drag & drop an image, or click to browse"}
+                      {isDragging ? t("imageUpload.dropHere") : t("imageUpload.prompt")}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      JPEG, PNG, WebP, or GIF (max {maxSize}MB)
+                      {/* The largest file accepted (it is compressed afterwards). */}
+                      {t("imageUpload.formats").replace("{max}", String(IMAGE_RAW_UPLOAD_MAX_MB))}
                     </p>
                   </>
                 )}
@@ -418,12 +414,14 @@ export function ImageUpload({
         </div>
       )}
 
-      {/* Help Text */}
-      {!compact && (
-        <p className="text-muted-foreground text-xs">
-          Images will be automatically compressed and optimized for best performance.
+      {error ? (
+        <p role="alert" className="text-destructive text-xs">
+          {error}
         </p>
-      )}
+      ) : null}
+
+      {/* Help Text */}
+      {!compact && <p className="text-muted-foreground text-xs">{t("imageUpload.help")}</p>}
     </div>
   );
 }

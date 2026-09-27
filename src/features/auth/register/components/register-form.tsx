@@ -25,14 +25,18 @@ import { useEffect, useMemo, useState } from "react";
 import { safeInternalPath } from "@/lib/safe-redirect";
 import { parsePrefillEmail } from "../lib/prefill-email";
 import { takeStashedPrefillEmail } from "../lib/prefill-handoff";
+import { googleSignupCallbackURL } from "../lib/verification-landing";
 
 export function RegisterForm() {
   const { t } = useI18n();
   const { mutate: register, isPending } = useRegister();
   const searchParams = useSearchParams();
-  // A deep link that has to survive signup + email verification (e.g. the
-  // store-transfer accept page) — validated, then used as the post-verify
-  // landing instead of /onboarding.
+  // A deep link that has to survive signup (e.g. the store-transfer accept
+  // page). It is validated, then used instead of the setup wizard as the
+  // landing after email verification or Google sign-up. Without one, email
+  // signups land on /onboarding?verified=1 (useRegister applies that default)
+  // and Google signups on /onboarding?signup=google (see
+  // ../lib/verification-landing.ts).
   const next = safeInternalPath(searchParams.get("next"));
   // A legacy link may still carry the address the visitor typed into a marketing
   // CTA as ?email=. Read once because react-hook-form only takes defaultValues on
@@ -112,7 +116,13 @@ export function RegisterForm() {
           });
           await authClient.signIn.social({
             provider: "google",
-            callbackURL: next ?? "/onboarding",
+            // An existing account pressing Google here is just signing in,
+            // so it lands like the login page's Google button does.
+            callbackURL: next ?? "/stores",
+            // Followed only when Better Auth just created the account: the
+            // wizard with ?signup=google, so it fires the sign_up conversion
+            // (it also checks the account is brand new itself).
+            newUserCallbackURL: googleSignupCallbackURL(next),
           });
         }}
       >

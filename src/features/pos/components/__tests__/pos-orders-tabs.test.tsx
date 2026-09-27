@@ -13,6 +13,13 @@ vi.mock("../../hooks/use-kds-settings", () => ({
 // Each has its own test; this file is only about the header row.
 vi.mock("../pos-order-queue", () => ({ PosOrderQueue: () => null }));
 vi.mock("../order-history-tab", () => ({ OrderHistoryTab: () => null }));
+vi.mock("../../hooks/use-order-queue-state", () => ({
+  useOrderQueueState: () => ({
+    filters: { sourceFilter: "POS" },
+    patchFilters: vi.fn(),
+    sourceCounts: { POS: 0, ONLINE: 0 },
+  }),
+}));
 
 import { PosOrdersTabs } from "../pos-orders-tabs";
 

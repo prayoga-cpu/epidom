@@ -5,6 +5,7 @@ import { fetchSupplierOrdersForPage } from "@/lib/server/data-fetchers";
 import { ManagementClient } from "@/features/dashboard/management/components/management-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
+import { PageIntro } from "@/features/guide/components/page-intro";
 
 function ManagementSkeleton() {
   return (
@@ -44,8 +45,12 @@ export default async function ManagementPage({ params }: { params: Promise<{ sto
   });
 
   return (
-    <Suspense fallback={<ManagementSkeleton />}>
-      <ManagementClient initialSupplierOrders={supplierOrdersResult.orders} storeId={storeId} />
-    </Suspense>
+    <>
+      {/* The page has no header of its own: the intro sits above the tabs. */}
+      <PageIntro id="stock" storeId={storeId} className="mb-4" />
+      <Suspense fallback={<ManagementSkeleton />}>
+        <ManagementClient initialSupplierOrders={supplierOrdersResult.orders} storeId={storeId} />
+      </Suspense>
+    </>
   );
 }

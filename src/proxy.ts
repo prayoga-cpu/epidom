@@ -290,7 +290,15 @@ export default async function proxy(req: NextRequest) {
     "/register",
     "/checkout/success",
     "/checkout/failed",
-    "/onboarding", // Card validation step
+    // The setup wizard. The proxy lets it through, and the page does its own
+    // session check: src/app/(app)/onboarding/page.tsx sends a signed-out
+    // visitor to /login?callbackUrl=/onboarding itself.
+    "/onboarding",
+    // "Check your email" after an email signup. The new account has no session
+    // until the verification link is clicked, so this page has to be public or
+    // the visitor is bounced to /login instead of being told to check their
+    // inbox. It only shows the address from its own ?email= and a resend button.
+    "/verify-email-sent",
     "/forgot-password",
     "/reset-password",
     // Emailed store-ownership invite. Public on purpose: a recipient with no

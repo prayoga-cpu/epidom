@@ -20,6 +20,7 @@ import { getStorageAdapter } from "@/lib/storage";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { compressImageServer } from "@/lib/utils/server-image-compression";
+import { isOwnUpload } from "@/lib/utils/own-upload";
 import { ALLOWED_IMAGE_TYPES, IMAGE_RAW_UPLOAD_MAX_BYTES, clampTargetMB } from "@/lib/constants/image";
 
 /**
@@ -153,7 +154,7 @@ export const POST = withApiHandler(
  * Delete an uploaded image
  */
 export const DELETE = withApiHandler(
-  async (request) => {
+  async (request, { userId }) => {
     // Parse request body
     const body = await request.json();
     const { url } = body;
@@ -162,6 +163,18 @@ export const DELETE = withApiHandler(
       return NextResponse.json(createErrorResponse(ApiErrorCode.VALIDATION_ERROR, "Invalid URL"), {
         status: 400,
       });
+    }
+
+    // Only the caller's own uploads (users/<userId>/images/…, what POST writes).
+    // The Blob token is app-wide, so without this any signed-in account could
+    // delete another tenant's logo or menu photo by sending its URL. A file
+    // that isn't the caller's is left alone and reported as not deleted rather
+    // than refused: a linked staff login replacing an image its owner uploaded
+    // is a normal flow, and the client treats any error as a failed save.
+    if (!isOwnUpload(url, userId)) {
+      return NextResponse.json(
+        createSuccessResponse({ deleted: false, message: "File not deleted: not your upload" })
+      );
     }
 
     // Get storage adapter
@@ -173,6 +186,7 @@ export const DELETE = withApiHandler(
     // Return success response
     return NextResponse.json(
       createSuccessResponse({
+        deleted: true,
         message: "File deleted successfully",
       })
     );

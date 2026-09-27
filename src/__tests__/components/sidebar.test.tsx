@@ -103,11 +103,15 @@ describe("Sidebar plan gating", () => {
       expect(profileLink.getAttribute("href")).toBe("/store/store-1/profile");
     });
 
-    it("Owner (ENTERPRISE) is locked", () => {
+    it("Finance (OPERATIONS) and Custom Development (POS) are locked", () => {
       renderSidebar("FREE");
       const links = screen.getAllByRole("link");
-      const ownerLink = links.find((l) => l.getAttribute("href") === "/store/store-1/owner");
-      expect(ownerLink).toBeUndefined();
+      const financeLink = links.find((l) => l.getAttribute("href") === "/store/store-1/finance");
+      const customDevLink = links.find(
+        (l) => l.getAttribute("href") === "/store/store-1/custom-development"
+      );
+      expect(financeLink).toBeUndefined();
+      expect(customDevLink).toBeUndefined();
     });
   });
 
@@ -140,26 +144,34 @@ describe("Sidebar plan gating", () => {
       expect(mgmtLink).toBeTruthy();
     });
 
-    it("shows Finance and Owner (ENTERPRISE) as locked", () => {
+    // Finance (with its All outlets roll-up) moved down from Enterprise, so
+    // Operations is the top of the self-serve ladder: nothing is locked.
+    it("shows Finance unlocked and nothing locked", () => {
       renderSidebar("OPERATIONS");
       const links = screen.getAllByRole("link");
       const financeLink = links.find((l) => l.getAttribute("href") === "/store/store-1/finance");
-      const ownerLink = links.find((l) => l.getAttribute("href") === "/store/store-1/owner");
-      expect(financeLink).toBeUndefined();
-      expect(ownerLink).toBeUndefined();
+      expect(financeLink).toBeTruthy();
       const pricingLinks = links.filter((l) => l.getAttribute("href")?.startsWith("/pricing"));
-      expect(pricingLinks.length).toBeGreaterThan(0);
+      expect(pricingLinks.length).toBe(0);
+    });
+
+    it("has no Owner item — the roll-up is inside Finance", () => {
+      renderSidebar("OPERATIONS");
+      const links = screen.getAllByRole("link");
+      expect(links.find((l) => l.getAttribute("href") === "/store/store-1/owner")).toBeUndefined();
     });
   });
 
   describe("ENTERPRISE plan", () => {
-    it("shows all items unlocked including Finance and Owner", () => {
+    it("shows all items unlocked including Finance and Custom Development", () => {
       renderSidebar("ENTERPRISE");
       const links = screen.getAllByRole("link");
       const financeLink = links.find((l) => l.getAttribute("href") === "/store/store-1/finance");
-      const ownerLink = links.find((l) => l.getAttribute("href") === "/store/store-1/owner");
+      const customDevLink = links.find(
+        (l) => l.getAttribute("href") === "/store/store-1/custom-development"
+      );
       expect(financeLink).toBeTruthy();
-      expect(ownerLink).toBeTruthy();
+      expect(customDevLink).toBeTruthy();
       const pricingLinks = links.filter((l) => l.getAttribute("href")?.startsWith("/pricing"));
       expect(pricingLinks.length).toBe(0);
     });
@@ -173,5 +185,14 @@ describe("Sidebar plan gating", () => {
       const pricingLinks = links.filter((l) => l.getAttribute("href")?.startsWith("/pricing"));
       expect(pricingLinks.length).toBeGreaterThan(0);
     });
+  });
+});
+
+// The Help centre is a footer link, not a rail item: every plan, never locked.
+describe("Sidebar Help link", () => {
+  it.each(["FREE", "POS", "OPERATIONS"])("%s: the rail's footer links to the store's Help page", (plan) => {
+    renderSidebar(plan);
+    const help = screen.getByRole("link", { name: "nav.help" });
+    expect(help).toHaveAttribute("href", "/store/store-1/help");
   });
 });

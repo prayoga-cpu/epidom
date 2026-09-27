@@ -224,6 +224,10 @@ These were not deleted in Phase 0; just hidden. They come back behind plan gatin
 
 **Goal:** consolidated view across all sales channels and outlets. The reason a multi-outlet chain pays for ENTERPRISE.
 
+**2026-09-26 update — these features are OPERATIONS now.** Finance reports and the multi-outlet roll-up moved from ENTERPRISE to OPERATIONS (`FEATURE_MIN_PLAN.finance`), next to the recipe cost engine and unlimited outlets they rely on. The owner-level dashboard (`/owner`) became the owner-only "All outlets" scope inside Finance (`/finance?scope=all`; `/owner` redirects there), so the roll-up and each outlet's report share one date range and one calculation. Each outlet row links into that outlet's own Finance report for the same dates, which covers the rollup → outlet step of the drill-down criterion below. ENTERPRISE is now a consultation / custom-build service with the Prionation team, not a feature tier. The goal and acceptance criteria below are kept as written; read their "ENTERPRISE" as OPERATIONS for the Finance reports and the roll-up. Order ingestion from the delivery apps (the "all sources in one queue" criterion) was never plan-gated: it reaches the POS order queue on every plan.
+
+**2026-09-27 update — outlets are capped per plan.** The "unlimited outlets" above no longer holds: `PLAN_MAX_STORES` allows FREE and POS 1 store, OPERATIONS up to 3 and ENTERPRISE unlimited. A chain of 4 or more outlets does pay for ENTERPRISE (sales-led), while the Finance reports and the roll-up stay OPERATIONS.
+
 **New schema:**
 
 - `Order.source` enum: `DIRECT`, `GOFOOD`, `GRABFOOD`, `SHOPEEFOOD`, `TOKOPEDIA`

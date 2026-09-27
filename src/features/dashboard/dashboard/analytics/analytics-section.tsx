@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
-import { Download } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Download } from "lucide-react";
 import { ChartSkeleton } from "../components/chart-skeleton";
 import { DateRangeField } from "@/components/ui/date-range-field";
 import { todayLocalISO } from "@/lib/utils/date-range";
@@ -69,9 +70,11 @@ interface CustomersAnalytics {
 
 interface AnalyticsSectionProps {
   storeId: string;
+  /** Show a "Full report" link into Finance for the same date range. */
+  canOpenFinance?: boolean;
 }
 
-export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
+export function AnalyticsSection({ storeId, canOpenFinance = false }: AnalyticsSectionProps) {
   const { t } = useI18n();
   // Every value shown here (revenue, AOV, totalRevenue, totalSpend) is
   // Order/OrderItem-derived — already literal in the owner's own currency,
@@ -215,12 +218,23 @@ export function AnalyticsSection({ storeId }: AnalyticsSectionProps) {
           </h2>
           <p className="text-muted-foreground text-sm">{t("dashboard.analytics.subtitle")}</p>
         </div>
-        {advancedReportsAccess && (
-          <Button size="sm" variant="outline" onClick={exportXlsx} className="shrink-0">
-            <Download className="mr-2 h-4 w-4" />
-            {t("common.actions.exportAsExcel")}
-          </Button>
-        )}
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {advancedReportsAccess && (
+            <Button size="sm" variant="outline" onClick={exportXlsx}>
+              <Download className="mr-2 h-4 w-4" />
+              {t("common.actions.exportAsExcel")}
+            </Button>
+          )}
+          {/* The same period, in depth: margins, fees, cash, every outlet. */}
+          {canOpenFinance && (
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/store/${storeId}/finance?from=${from}&to=${to}`}>
+                {t("dashboard.analytics.fullReport")}
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Date range */}

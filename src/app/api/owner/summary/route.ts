@@ -1,186 +1,170 @@
 /**
  * GET /api/owner/summary
  *
- * Aggregates metrics across all stores in the authenticated user's business.
- * Gated to ENTERPRISE plan.
+ * Finance's "All outlets" scope: every store in the signed-in owner's
+ * business, side by side, for one date range. Operations plan and up
+ * (FEATURE_MIN_PLAN.finance), owner only.
  *
- * Returns per-store revenue + COGS/gross-profit/margin breakdown + rolled-up
- * totals for the given date range. COGS/waste are fetched with one batched
- * query across every store (storeId IN [...]) rather than looping the
- * per-store /finance/summary logic once per store — cheap regardless of how
- * many outlets the business has.
+ * Each outlet's row is computeStoreFinanceSummary — the very function behind
+ * that outlet's own Finance page — so a row here always equals the outlet's
+ * report for the same dates. It costs a handful of queries per outlet, run in
+ * parallel; worth it next to the drift a second copy of the arithmetic had
+ * (net profit that ignored refunds, tax and card fees; costs converted into
+ * the business currency while revenue stayed in each store's own).
+ *
+ * Money totals are only added up when every outlet uses the same currency —
+ * summing rupiah and euros produces a number that means nothing, so a
+ * mixed-currency business gets `totals: null` and per-outlet figures, each in
+ * its outlet's currency.
  */
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { MovementType } from "@prisma/client";
-import { sumCogsBaseByStore } from "@/lib/finance/cogs";
+import { withApiHandler } from "@/lib/api-handler";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
-import { planHasFeature } from "@/lib/plans/entitlements";
-import { getExchangeRate } from "@/lib/services/exchange-rate.service";
-import { storefrontService } from "@/lib/services/storefront.service";
-import { getBusinessFinanceSettings } from "@/lib/services/finance-settings.service";
+import { minPlanFor, planHasFeature, PLAN_LABELS } from "@/lib/plans/entitlements";
+import { computeStoreFinanceSummary } from "@/lib/finance/store-summary";
+import { getActiveStaffSession } from "@/lib/staff-session";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const session = await getSession();
-  if (!session?.user?.id) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.UNAUTHORIZED, "Unauthorized"), {
-      status: 401,
-    });
-  }
+const round2 = (value: number) => Math.round(value * 100) / 100;
 
-  const userId = session.user.id;
+export const GET = withApiHandler(
+  async (request, { userId }) => {
+    // Every outlet's revenue and profit is the owner's to see. A PIN persona
+    // on the owner's device carries the owner's session, so without this a
+    // manager granted /finance for one outlet could read all the others.
+    const staffSession = await getActiveStaffSession();
+    if (staffSession && staffSession.role !== "OWNER") {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.FORBIDDEN,
+          "The all-outlets report is only available to the business owner."
+        ),
+        { status: 403 }
+      );
+    }
 
-  const subscription = await prisma.subscription.findUnique({ where: { userId } });
-  const plan = subscription?.plan ?? "FREE";
-  if (!planHasFeature(plan, "finance")) {
+    // The caller's OWN business: a linked staff login has none, and so gets
+    // the 404 below rather than anyone else's numbers.
+    const [business, subscription] = await Promise.all([
+      prisma.business.findUnique({
+        where: { userId },
+        select: {
+          name: true,
+          stores: { select: { id: true, name: true, image: true }, orderBy: { createdAt: "asc" } },
+        },
+      }),
+      prisma.subscription.findUnique({
+        where: { userId },
+        select: { plan: true, status: true },
+      }),
+    ]);
+
+    // Same rule as requirePlan/getStorePlan: anything not ACTIVE is FREE.
+    const plan = subscription?.status === "ACTIVE" ? subscription.plan : "FREE";
+    if (!planHasFeature(plan, "finance")) {
+      const required = minPlanFor("finance");
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.SUBSCRIPTION_FEATURE_LOCKED,
+          `Finance reports requires the ${PLAN_LABELS[required]} plan.`,
+          { feature: "finance", requiredPlan: required, upgradeRequired: true }
+        ),
+        { status: 403 }
+      );
+    }
+
+    if (!business) {
+      return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "No business found"), {
+        status: 404,
+      });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const now = new Date();
+    const from = new Date(
+      searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    );
+    const to = new Date(searchParams.get("to") ?? now.toISOString());
+    if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Invalid date range"),
+        { status: 400 }
+      );
+    }
+
+    const stores = await Promise.all(
+      business.stores.map(async (store) => {
+        const [summary, pendingOrders] = await Promise.all([
+          computeStoreFinanceSummary(store.id, { from, to }),
+          // Orders still waiting on payment, whenever they were placed — a
+          // follow-up list, not a period figure, so it ignores from/to.
+          prisma.order.count({
+            where: {
+              storeId: store.id,
+              paymentStatus: "PENDING",
+              status: { notIn: NON_REVENUE_STATUSES },
+            },
+          }),
+        ]);
+        return {
+          storeId: store.id,
+          name: store.name,
+          image: store.image,
+          currency: summary.currency,
+          revenue: round2(summary.revenue),
+          orderCount: summary.orderCount,
+          pendingOrders,
+          cogs: summary.cogs,
+          grossProfit: summary.grossProfit,
+          grossMarginPct: summary.grossMarginPct,
+          wasteLoss: summary.wasteLoss,
+          netProfit: summary.netProfit,
+        };
+      })
+    );
+
+    const currencies = [...new Set(stores.map((s) => s.currency))].sort();
+    const mixedCurrencies = currencies.length > 1;
+    // Biggest earner first — within one currency. Across currencies a raw
+    // number compares rupiah with euros, so outlets are grouped by currency.
+    stores.sort((a, b) =>
+      a.currency === b.currency ? b.revenue - a.revenue : a.currency.localeCompare(b.currency)
+    );
+    const sum = (pick: (s: (typeof stores)[number]) => number) =>
+      round2(stores.reduce((total, s) => total + pick(s), 0));
+
+    const totalRevenue = sum((s) => s.revenue);
+    const totalGrossProfit = sum((s) => s.grossProfit);
+
     return NextResponse.json(
-      createErrorResponse(ApiErrorCode.FORBIDDEN, "Owner summary requires ENTERPRISE plan"),
-      { status: 403 }
+      createSuccessResponse({
+        from: from.toISOString(),
+        to: to.toISOString(),
+        businessName: business.name,
+        storeCount: stores.length,
+        // Counts add up across currencies; money doesn't.
+        totalOrders: stores.reduce((total, s) => total + s.orderCount, 0),
+        totalPending: stores.reduce((total, s) => total + s.pendingOrders, 0),
+        currency: mixedCurrencies ? null : (currencies[0] ?? null),
+        mixedCurrencies,
+        currencies,
+        totals: mixedCurrencies
+          ? null
+          : {
+              revenue: totalRevenue,
+              cogs: sum((s) => s.cogs),
+              grossProfit: totalGrossProfit,
+              grossMarginPct:
+                totalRevenue > 0 ? round2((totalGrossProfit / totalRevenue) * 100) : 0,
+              wasteLoss: sum((s) => s.wasteLoss),
+              netProfit: sum((s) => s.netProfit),
+            },
+        stores,
+      })
     );
-  }
-
-  const business = await prisma.business.findUnique({
-    where: { userId },
-    include: {
-      stores: { select: { id: true, name: true, image: true } },
-    },
-  });
-
-  if (!business) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "No business found"), {
-      status: 404,
-    });
-  }
-
-  // Order.total (→ revenue) is already a literal value in the business's own
-  // currency, but Material.unitCost/WasteEntry.totalValue (→ cogs/wasteLoss)
-  // are stored in IDR, the platform base currency. Mixing them in
-  // `revenue - cogs` without converting first produces a nonsensical number
-  // for any non-IDR business (subtracting IDR-scale cost from e.g. a EUR
-  // total) — convert cogs/waste into the business's currency before combining.
-  // This rolls up across every store in the business, so the shared
-  // business-level currency (BusinessFinanceSettings) is the one source that
-  // makes sense here, regardless of any individual store's own override.
-  const ownerCurrency = (await getBusinessFinanceSettings(business.id)).currency;
-  const ownerRate =
-    ownerCurrency === "IDR" ? 1 : (await getExchangeRate("IDR", ownerCurrency)).rate;
-
-  const { searchParams } = new URL(request.url);
-  const now = new Date();
-  const from = new Date(
-    searchParams.get("from") ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  );
-  const to = new Date(searchParams.get("to") ?? now.toISOString());
-  const storeIds = business.stores.map((s) => s.id);
-
-  // Per-store revenue + pending-payment count in parallel. "Pending" here
-  // means paymentStatus PENDING (orders needing a payment follow-up), not
-  // OrderStatus — production no longer gates on payment clearing, so there's
-  // no order-status value left that means "awaiting confirmation."
-  const storeMetricsPromise = Promise.all(
-    business.stores.map(async (store) => {
-      const [agg, pendingCount] = await Promise.all([
-        prisma.order.aggregate({
-          where: {
-            storeId: store.id,
-            status: { notIn: NON_REVENUE_STATUSES },
-            orderDate: { gte: from, lte: to },
-          },
-          _sum: { total: true },
-          _count: { id: true },
-        }),
-        prisma.order.count({
-          where: {
-            storeId: store.id,
-            paymentStatus: "PENDING",
-            status: { notIn: NON_REVENUE_STATUSES },
-          },
-        }),
-      ]);
-      return {
-        storeId: store.id,
-        name: store.name,
-        image: store.image,
-        revenue: Math.round(Number(agg._sum.total ?? 0) * 100) / 100,
-        orderCount: agg._count.id,
-        pendingOrders: pendingCount,
-      };
-    })
-  );
-
-  // COGS across every store in one batched pass — see src/lib/finance/cogs.ts.
-  // Frozen per-line snapshots where they exist, the legacy material-SALE ledger
-  // for orders that predate them.
-  const cogsByStorePromise = sumCogsBaseByStore({
-    storeId: { in: storeIds },
-    orderDate: { gte: from, lte: to },
-    status: { notIn: NON_REVENUE_STATUSES },
-  });
-
-  // Waste loss across every store in one query, same batching principle.
-  const wasteEntriesPromise = prisma.wasteEntry.findMany({
-    where: { storeId: { in: storeIds }, createdAt: { gte: from, lte: to } },
-    select: { storeId: true, totalValue: true },
-  });
-
-  const [storeMetrics, cogsResults, wasteEntries] = await Promise.all([
-    storeMetricsPromise,
-    cogsByStorePromise,
-    wasteEntriesPromise,
-  ]);
-
-  const cogsByStore = new Map<string, number>();
-  for (const [storeId, result] of cogsResults) {
-    cogsByStore.set(storeId, result.cogsBase);
-  }
-
-  const wasteByStore = new Map<string, number>();
-  for (const w of wasteEntries) {
-    wasteByStore.set(w.storeId, (wasteByStore.get(w.storeId) ?? 0) + Number(w.totalValue));
-  }
-
-  const enrichedStores = storeMetrics.map((m) => {
-    const cogs = storefrontService.convertBaseToOwnerSync(cogsByStore.get(m.storeId) ?? 0, ownerRate);
-    const wasteLoss = storefrontService.convertBaseToOwnerSync(
-      wasteByStore.get(m.storeId) ?? 0,
-      ownerRate
-    );
-    const grossProfit = Math.round((m.revenue - cogs) * 100) / 100;
-    const grossMarginPct = m.revenue > 0 ? Math.round((grossProfit / m.revenue) * 1000) / 10 : 0;
-    const netProfit = Math.round((grossProfit - wasteLoss) * 100) / 100;
-    return { ...m, cogs, grossProfit, grossMarginPct, wasteLoss, netProfit };
-  });
-
-  const totalRevenue = enrichedStores.reduce((s, m) => s + m.revenue, 0);
-  const totalOrders = enrichedStores.reduce((s, m) => s + m.orderCount, 0);
-  const totalPending = enrichedStores.reduce((s, m) => s + m.pendingOrders, 0);
-  const totalCogs = enrichedStores.reduce((s, m) => s + m.cogs, 0);
-  const totalGrossProfit = enrichedStores.reduce((s, m) => s + m.grossProfit, 0);
-  const totalWasteLoss = enrichedStores.reduce((s, m) => s + m.wasteLoss, 0);
-  const totalNetProfit = enrichedStores.reduce((s, m) => s + m.netProfit, 0);
-
-  enrichedStores.sort((a, b) => b.revenue - a.revenue);
-
-  return NextResponse.json(
-    createSuccessResponse({
-      from: from.toISOString(),
-      to: to.toISOString(),
-      businessName: business.name,
-      totalRevenue: Math.round(totalRevenue * 100) / 100,
-      totalOrders,
-      totalPending,
-      totalCogs: Math.round(totalCogs * 100) / 100,
-      totalGrossProfit: Math.round(totalGrossProfit * 100) / 100,
-      totalGrossMarginPct:
-        totalRevenue > 0 ? Math.round((totalGrossProfit / totalRevenue) * 1000) / 10 : 0,
-      totalWasteLoss: Math.round(totalWasteLoss * 100) / 100,
-      totalNetProfit: Math.round(totalNetProfit * 100) / 100,
-      storeCount: business.stores.length,
-      stores: enrichedStores,
-    })
-  );
-}
+  },
+  { rateLimitEndpoint: "/api/owner/summary" }
+);

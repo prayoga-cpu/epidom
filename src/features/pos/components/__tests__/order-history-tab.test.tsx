@@ -44,6 +44,18 @@ vi.mock("../../hooks/use-order-history", async (importOriginal) => ({
 vi.mock("../../hooks/use-pos-menu", () => ({ usePosMenu: () => ({ data: undefined }) }));
 vi.mock("../../hooks/use-pos-staff-list", () => ({ usePosStaffList: () => ({ data: [] }) }));
 vi.mock("../../hooks/use-store-shifts", () => ({ useStoreShifts: () => ({ data: [] }) }));
+// The store's open till, if any — null is "No shift".
+const till = vi.hoisted(() => ({
+  shift: null as {
+    id: string;
+    openedAt: string;
+    closedAt: null;
+    staffMember: { id: string; name: string; role: string } | null;
+  } | null,
+}));
+vi.mock("../../hooks/use-active-shift", () => ({
+  useActiveShift: () => ({ shift: till.shift, allowed: true, known: true }),
+}));
 vi.mock("../../hooks/use-update-order-status", () => ({
   useUpdateOrderStatus: () => ({ mutateAsync: vi.fn() }),
 }));
@@ -86,6 +98,7 @@ beforeEach(() => {
   localStorage.clear();
   url.search = "";
   captured.filters = null;
+  till.shift = null;
 });
 
 describe("OrderHistoryTab — opens on today", () => {
@@ -106,6 +119,60 @@ describe("OrderHistoryTab — opens on today", () => {
     expect(dateSelect()).toBeInTheDocument();
     // A removable chip would carry a "remove filter" control; the date has none.
     expect(screen.queryByTitle("pos.filters.removeFilter")).toBeNull();
+  });
+});
+
+describe("OrderHistoryTab — while the till is open", () => {
+  const OPENED = new Date(Date.now() - 2 * 3_600_000).toISOString();
+  const shiftResetButton = () =>
+    screen.queryByRole("button", { name: /pos\.filters\.resetToShift/ });
+
+  beforeEach(() => {
+    till.shift = {
+      id: "shift-1",
+      openedAt: OPENED,
+      closedAt: null,
+      staffMember: { id: "s1", name: "Budi", role: "CASHIER" },
+    };
+  });
+
+  it("opens on the current shift: from when the till opened, with no end", async () => {
+    await renderHistory();
+    expect(captured.filters.from).toBe(OPENED);
+    expect(captured.filters.to).toBe("");
+    expect(dateSelect()).toHaveTextContent("pos.history.dateRange.shift");
+    expect(shiftResetButton()).toBeNull();
+  });
+
+  it("says which shift it is showing, since the date control can't", async () => {
+    await renderHistory();
+    expect(screen.getByText("pos.history.shiftWindowLabel")).toBeInTheDocument();
+  });
+
+  it("keeps a deliberate Today, and offers the way back to the shift", async () => {
+    persist({ ...HISTORY_FILTERS_DEFAULTS, datePreset: "today" });
+    await renderHistory();
+    expect(captured.filters.from).toBe(dayKey(0));
+    expect(screen.queryByText("pos.history.shiftWindowLabel")).toBeNull();
+
+    fireEvent.click(shiftResetButton()!);
+    expect(captured.filters.from).toBe(OPENED);
+    expect(captured.filters.to).toBe("");
+    expect(shiftResetButton()).toBeNull();
+  });
+
+  it("the reset goes to the shift from All time too", async () => {
+    persist({ ...HISTORY_FILTERS_DEFAULTS, datePreset: "all" });
+    await renderHistory();
+    fireEvent.click(shiftResetButton()!);
+    expect(captured.filters.from).toBe(OPENED);
+  });
+
+  it("a deep link to one order still opens on All time", async () => {
+    url.search = "tab=history&order=order-from-last-week";
+    await renderHistory();
+    expect(captured.filters.from).toBe("");
+    expect(captured.filters.to).toBe("");
   });
 });
 
@@ -196,8 +263,8 @@ describe("sanitizeHistoryFilters", () => {
     );
   });
 
-  it("defaults to today, not all time", () => {
-    expect(HISTORY_FILTERS_DEFAULTS.datePreset).toBe("today");
+  it("defaults to the current shift (today while no till is open), not all time", () => {
+    expect(HISTORY_FILTERS_DEFAULTS.datePreset).toBe("shift");
   });
 
   it("takes the new date default from an unversioned state, and drops the shift that drove the old window", () => {
@@ -213,7 +280,7 @@ describe("sanitizeHistoryFilters", () => {
       HISTORY_FILTERS_DEFAULTS
     );
     expect(out.status).toBe("READY");
-    expect(out.datePreset).toBe("today");
+    expect(out.datePreset).toBe("shift");
     expect(out.from).toBe("");
     expect(out.to).toBe("");
     expect(out.shiftId).toBe("ALL");
@@ -236,7 +303,31 @@ describe("sanitizeHistoryFilters", () => {
       { ...HISTORY_FILTERS_DEFAULTS, datePreset: "next-century" },
       HISTORY_FILTERS_DEFAULTS
     );
-    expect(out.datePreset).toBe("today");
+    expect(out.datePreset).toBe("shift");
+  });
+
+  it("moves a Today saved when it was the default (v2) onto the current shift", () => {
+    const out = sanitizeHistoryFilters(
+      { ...HISTORY_FILTERS_DEFAULTS, version: 2, datePreset: "today", status: "READY" },
+      HISTORY_FILTERS_DEFAULTS
+    );
+    expect(out.datePreset).toBe("shift");
+    expect(out.status).toBe("READY");
+  });
+
+  it("keeps any other v2 date — it was picked on purpose — with its dates and shift", () => {
+    const saved = {
+      ...HISTORY_FILTERS_DEFAULTS,
+      version: 2,
+      datePreset: "custom" as const,
+      from: "2026-09-01T01:00:00.000Z",
+      to: "2026-09-01T09:00:00.000Z",
+      shiftId: "shift-1",
+    };
+    expect(sanitizeHistoryFilters(saved, HISTORY_FILTERS_DEFAULTS)).toEqual({
+      ...saved,
+      version: 3,
+    });
   });
 });
 
@@ -258,6 +349,18 @@ describe("resolveHistoryRange", () => {
     expect(resolveHistoryRange("all", "2026-01-01", "2026-01-02", NOW)).toEqual({
       from: "",
       to: "",
+    });
+  });
+
+  it("runs the current shift from the moment the till opened, with no end", () => {
+    const opened = new Date(2026, 8, 18, 18, 30).toISOString();
+    expect(resolveHistoryRange("shift", "", "", NOW, opened)).toEqual({ from: opened, to: "" });
+  });
+
+  it("reads the current shift as today while no till is open", () => {
+    expect(resolveHistoryRange("shift", "", "", NOW, null)).toEqual({
+      from: "2026-09-19",
+      to: "2026-09-19",
     });
   });
 

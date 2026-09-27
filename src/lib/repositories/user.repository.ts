@@ -1,6 +1,7 @@
 import { User, Prisma } from "@prisma/client";
 import { BaseRepository } from "./base.repository";
 import { UserDto, UserProfileDto } from "@/types/dto";
+import { toPublicBusiness } from "@/lib/auth/owner-pin";
 
 /**
  * User Repository
@@ -45,8 +46,15 @@ export class UserRepository extends BaseRepository {
 
     if (!user) return null;
 
-    // User data is already safe (no password field in better-auth User model)
-    return user as unknown as UserProfileDto;
+    // User data is already safe (no password field in better-auth User model).
+    // The Business row is not: it carries the owner PIN hash, which a staff
+    // persona on the owner's device could crack offline. Every consumer of the
+    // profile (the /api/user/profile response, the Profile pages) gets
+    // `hasOwnerPin` instead. See toPublicBusiness.
+    return {
+      ...user,
+      business: user.business ? toPublicBusiness(user.business) : null,
+    } as unknown as UserProfileDto;
   }
 
   /**

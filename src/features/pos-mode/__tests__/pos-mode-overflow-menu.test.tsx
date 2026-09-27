@@ -26,6 +26,17 @@ vi.mock("@/features/dashboard/feedback/components/feedback-dialog", () => ({
   FeedbackDialog: ({ open }: { open: boolean }) =>
     open ? <div data-testid="feedback-dialog" /> : null,
 }));
+// The Help centre has its own suite (src/features/guide); here only that the row opens it.
+vi.mock("@/features/guide/components/help-sheet", () => ({
+  HelpSheet: ({ open, canManage }: { open: boolean; canManage?: boolean }) =>
+    open ? <div data-testid="help-sheet" data-can-manage={String(!!canManage)} /> : null,
+}));
+// The loader is real (it loads the mock above); only the preload is watched.
+const preloadHelpSheet = vi.hoisted(() => vi.fn(() => () => {}));
+vi.mock("@/features/guide/components/help-sheet-loader", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/guide/components/help-sheet-loader")>()),
+  preloadHelpSheet,
+}));
 
 const mockPathname = vi.fn(() => "/store/store-001/pos");
 vi.mock("next/navigation", () => ({
@@ -136,6 +147,39 @@ describe("PosModeOverflowMenu — account switcher", () => {
     mockSwitcher.mockReturnValue(baseSwitcher());
     renderMenu();
     expect(screen.getByText("nav.logoutOwnerAccount")).toBeInTheDocument();
+  });
+
+  it("'Help & what's new' closes the menu and opens the Help sheet — shortcuts for a manager only", async () => {
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    const onOpenChange = vi.fn();
+    const { unmount } = render(
+      <PosModeOverflowMenu storeId="store-001" open={true} onOpenChange={onOpenChange} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /helpCenter\.sheetTitle/ }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    // The sheet is loaded on first open (next/dynamic), so it lands a moment later.
+    expect(await screen.findByTestId("help-sheet", {}, { timeout: 5000 })).toHaveAttribute(
+      "data-can-manage",
+      "false"
+    );
+    unmount();
+
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({ posSession: { staffName: "Mia", staffRole: "MANAGER" } })
+    );
+    renderMenu();
+    fireEvent.click(screen.getByRole("button", { name: /helpCenter\.sheetTitle/ }));
+    expect(await screen.findByTestId("help-sheet", {}, { timeout: 5000 })).toHaveAttribute(
+      "data-can-manage",
+      "true"
+    );
+  });
+
+  it("preloads the Help sheet on mount, so it still opens after the Wi-Fi drops", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    preloadHelpSheet.mockClear();
+    render(<PosModeOverflowMenu storeId="store-001" open={false} onOpenChange={() => {}} />);
+    expect(preloadHelpSheet).toHaveBeenCalledTimes(1);
   });
 
   it("Back Office link only shows for OWNER/MANAGER, not Cashier/Kitchen", () => {
@@ -312,6 +356,22 @@ describe("PosModeOverflowMenu — POS System and Operational", () => {
     expect(screen.queryByText("pos.shift.title")).toBeNull();
     expect(screen.queryByText("pages.scheduleMyScheduleTitle")).toBeNull();
     expect(screen.queryByText("clockInOut.dialogTitle")).toBeNull();
+  });
+
+  it("each space says what's inside, under its name — the link is still named by the label alone", () => {
+    mockSwitcher.mockReturnValue(
+      baseSwitcher({ posSession: { staffName: "Owner", staffRole: "OWNER" } })
+    );
+    renderMenu();
+    for (const [label, description] of [
+      ["nav.backOffice", "nav.backOfficeDesc"],
+      ["nav.posSystem", "nav.posSystemDesc"],
+      ["nav.posOperational", "nav.posOperationalDesc"],
+    ]) {
+      const row = screen.getByRole("link", { name: label });
+      expect(row).toContainElement(screen.getByText(description));
+      expect(row).toHaveAccessibleDescription(description);
+    }
   });
 
   it("POS System leads to the first tab the persona's bar shows — kitchen lands on Kitchen & Bar", () => {
@@ -548,21 +608,54 @@ describe("PosModeOverflowMenu — the drawer", () => {
     expect(screen.getByText("pages.staffRoleOwner")).toBeInTheDocument();
   });
 
+  const syncButton = () => screen.getByRole("button", { name: "pages.posSyncSales" });
+
+  it("'Sync sales' is an icon button inside the profile card — the full-width button is gone", () => {
+    mockSwitcher.mockReturnValue(baseSwitcher({ actingAsStaff: true }));
+    mockSync.mockReturnValue({
+      isOnline: true,
+      isSyncing: false,
+      pendingCount: 0,
+      syncNow: vi.fn(),
+    });
+    renderMenu();
+    // Found by its accessible name, sitting in the same card as the profile.
+    expect(syncButton()).toHaveAttribute("title", "pages.posSyncSales");
+    expect(syncButton().parentElement).toContainElement(screen.getByText("Test Acc"));
+    expect(syncButton().parentElement).toContainElement(screen.getByText("Tahoma Space"));
+    // Just the one sync control, and no visible "Sync sales" caption any more.
+    expect(screen.getAllByRole("button", { name: /pages\.posSyncSales/ })).toHaveLength(1);
+    expect(screen.queryByText("pages.posSyncSales")).toBeNull();
+  });
+
   it("'Sync sales' runs a full sync, and can't while offline", () => {
     const syncNow = vi.fn();
     mockSwitcher.mockReturnValue(baseSwitcher());
     mockSync.mockReturnValue({ isOnline: true, isSyncing: false, pendingCount: 0, syncNow });
     const { unmount } = renderMenu();
-    fireEvent.click(screen.getByRole("button", { name: /pages\.posSyncSales/ }));
+    fireEvent.click(syncButton());
     expect(syncNow).toHaveBeenCalledTimes(1);
     unmount();
 
     mockSync.mockReturnValue({ isOnline: false, isSyncing: false, pendingCount: 0, syncNow });
     renderMenu();
-    expect(screen.getByRole("button", { name: /pages\.posSyncSales/ })).toBeDisabled();
+    expect(syncButton()).toBeDisabled();
   });
 
-  it("reports the sync state right under the Sync sales button", () => {
+  it("while syncing it spins, is busy and disabled, and is named 'Syncing…'", () => {
+    const syncNow = vi.fn();
+    mockSwitcher.mockReturnValue(baseSwitcher());
+    mockSync.mockReturnValue({ isOnline: true, isSyncing: true, pendingCount: 2, syncNow });
+    renderMenu();
+    const button = screen.getByRole("button", { name: "pages.posOfflineSyncing" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button.querySelector("svg")).toHaveClass("animate-spin");
+    fireEvent.click(button);
+    expect(syncNow).not.toHaveBeenCalled();
+  });
+
+  it("reports the sync state in a strip attached right under the profile card", () => {
     mockSwitcher.mockReturnValue(baseSwitcher());
     mockSync.mockReturnValue({
       isOnline: true,
@@ -573,10 +666,9 @@ describe("PosModeOverflowMenu — the drawer", () => {
     const { unmount } = renderMenu();
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent("pages.posAllSalesSynced");
-    // Directly after the button, not a strip at the bottom of the drawer.
-    expect(screen.getByRole("button", { name: /pages\.posSyncSales/ }).nextElementSibling).toBe(
-      status
-    );
+    expect(status).toHaveClass("bg-emerald-600");
+    // Directly after the card the button sits in, not a strip at the bottom of the drawer.
+    expect(syncButton().parentElement?.nextElementSibling).toBe(status);
     unmount();
 
     mockSync.mockReturnValue({

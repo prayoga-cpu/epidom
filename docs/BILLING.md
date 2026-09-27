@@ -30,12 +30,22 @@ The current public pricing for Indonesia.
 (Raised from the original Rp 99k/249k/499k+ figures — see `CHANGELOG.md` 2.24.1. Enterprise moved to
 custom/sales-assisted pricing rather than a fixed Rp 499,000+ floor.)
 
+**ENTERPRISE is sales-led: unlimited outlets plus a consultation / custom-build service.** No
+self-serve feature is gated to it (since 2026-09-26): Finance and its All outlets roll-up are
+OPERATIONS, and Custom Development requests are open from POS up. What it does unlock is a 4th outlet
+(since 2026-09-27; see "Store limits" below). An Enterprise engagement is unlimited outlets (4 and up)
+plus your own internal system or website scoped and built with the Prionation team (the company behind
+Epidom) and hosted on Prionation infrastructure, custom integrations (accounting, delivery apps,
+payments), priority support, onboarding and data migration, a dedicated account manager and custom
+SLAs. It starts from "Talk to us" (WhatsApp) on `/pricing` or a Custom Development request, and is
+priced per engagement.
+
 **Single source of truth in code:** `src/lib/constants/plan-pricing.ts` holds every displayed price
 (IDR, EUR and USD, monthly and yearly) for POS and OPERATIONS. The billing UI's `PLAN_PRICE_IDR`
 imports from it, and `src/lib/constants/__tests__/plan-pricing.test.ts` fails if any locale's price
 string on `/pricing` or the home teaser differs from it. The Stripe Price objects mirror it: EUR is
 the base currency, with USD and IDR as `currency_options` on the same Price (see "Products and prices"
-below). Note `docs/STRATEGY.md` still quotes the older Rp 99k / 249k / 499k figures.
+below). Note `docs/STRATEGY.md` still quotes the older Rp 99k / 249k POS and OPERATIONS figures.
 
 **Plan activation without payment:** `SubscriptionService.activateFree` is FREE-only (it throws for
 anything else) and `POST /api/subscriptions/activate-free` accepts only `plan: "FREE"`. The single
@@ -53,6 +63,20 @@ Pricing rationale and the Indonesian SaaS benchmarks behind these numbers are in
 
 Defined in `/docs/FEATURES.md`. Hitting any limit prompts an upgrade flow, never a hard block on essential reads.
 
+### Store limits
+
+Stores (outlets) per business: FREE 1, POS 1, OPERATIONS up to 3, ENTERPRISE unlimited. The source
+of truth is `PLAN_MAX_STORES` and `minPlanForStores(count)` in `src/lib/plans/entitlements.ts`, read by
+`getStoreLimit` / `canCreateStore` in `src/config/stripe.config.ts`. It is checked in two places:
+
+- **Creating a store** (`createStore` in `business.service.ts`), under a row lock on the business.
+- **Accepting a store ownership transfer** (`acceptStoreTransfer` in `store-transfer.service.ts`). A
+  recipient at their limit is refused with `SUBSCRIPTION_LIMIT_EXCEEDED` and `details.requiredPlan`,
+  inside the transaction, so the invite is not consumed and still works after an upgrade. Before
+  2026-09-27 a transferred store was let in past the limit.
+
+A downgrade never removes or locks a store (see "Plan changes and proration").
+
 ---
 
 ## Stripe setup (SaaS subscription)
@@ -69,7 +93,7 @@ monthly and a yearly recurring Price. Every Price is EUR-based and carries USD a
 | Epidom POS        | `epidom_pos_monthly`        | `epidom_pos_yearly`        | `NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY` / `_POS_YEARLY`                   |
 | Epidom Operations | `epidom_operations_monthly` | `epidom_operations_yearly` | `NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY` / `_OPERATIONS_YEARLY`     |
 
-ENTERPRISE has no catalog Price; it is quoted per account (see "Admin custom price override" below). The
+ENTERPRISE has no catalog Price; each engagement is quoted per account (see "Admin custom price override" below). The
 `price_*` IDs go in the env file, never in code. The Customer portal must have saved settings in the
 dashboard (Settings → Billing → Customer portal): the code opens portal sessions without a
 configuration ID, so it needs the account's default configuration.
@@ -165,7 +189,7 @@ Clearing (`clearCustomPrice`) nulls every custom-price field. A still-pending qu
 | Bank Transfer (Virtual Account) | T+1        | Rp 4,000 flat   |
 | Credit Card                     | T+2        | 2.9% + Rp 2,000 |
 
-Fees are passed through to merchants, not absorbed by Epidom (FREE tier). On ENTERPRISE Stripe Connect, Epidom takes an additional 20% margin on top — but only if the merchant opts into Connect.
+Fees are passed through to merchants, not absorbed by Epidom (FREE tier). If Stripe Connect 80/20 ships (an ENTERPRISE custom arrangement, see below), Epidom takes an additional 20% margin on top — but only for a merchant who opts into Connect.
 
 ### Test mode setup
 
@@ -214,9 +238,9 @@ The original codebase has Stripe Connect scaffolding for an 80/20 revenue split.
 
 1. Legal review for Indonesian payment regulations (Bank Indonesia, OJK)
 2. Validation that merchants want consolidated billing
-3. Sufficient ENTERPRISE tier customer base to justify the complexity
+3. Enough ENTERPRISE engagements asking for it to justify the complexity
 
-Until then, ENTERPRISE merchants on Connect-style billing get a custom integration, not the productized flow.
+Until then, an ENTERPRISE engagement that needs Connect-style billing gets it as a custom integration, not the productized flow.
 
 When Connect ships:
 
@@ -251,6 +275,8 @@ The Customer Portal handles payment method changes, invoice history, and cancell
 | Cancel           | Stays active until period end, then drops to FREE |
 
 We never delete data on downgrade. A merchant who drops from OPERATIONS to FREE still has their inventory data; they just can't access the inventory UI until they upgrade again.
+
+Stores are not removed or locked either, whatever the path (Stripe portal / webhook, cancel then activate Free, admin set-plan, beta switch). A business above its new plan's store limit keeps every store working but cannot create or receive another one; the in-app Billing page shows "Over your plan's limit" and which plan allows more stores.
 
 ---
 
@@ -299,3 +325,5 @@ Indonesia uses period `.` for thousands and comma `,` for decimals: `Rp 99.000,0
 2. Will we offer a "social tier" below FREE for menu-only with no ordering? (Possibly Phase 2 decision.)
 3. Annual discount: 20% or 17%? (20% chosen; revisit after 6 months of conversion data.)
 4. When does Stripe Connect 80/20 ship? (Targeting Phase 5, contingent on legal.)
+5. Should OPERATIONS be priced per outlet? (Answered 2026-09-27: no. Prices are unchanged; OPERATIONS is capped at 3 outlets and a 4th needs ENTERPRISE.)
+6. Should ENTERPRISE publish a "from" price? (Current: custom quote only, via "Talk to us". Competitors sell the 4th outlet online, and sales-led tiers usually start at 10+ outlets. Undecided.)

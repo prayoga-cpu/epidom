@@ -23,7 +23,9 @@ export const GET = withApiHandler(
 /**
  * POST /api/custom-development
  *
- * Submit a custom development / feature request (Enterprise plan).
+ * Submit a custom development / feature request. The page is open to every
+ * paying plan (FEATURE_MIN_PLAN.customDevelopment); the route itself only
+ * needs a session.
  */
 export const POST = withApiHandler(
   async (request, { userId, session }) => {

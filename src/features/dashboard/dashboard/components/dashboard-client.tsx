@@ -10,6 +10,8 @@ import { NewOrdersCard } from "../new-orders/new-orders-card";
 import { TrackingCard } from "../tracking/tracking-card";
 import { SubscriptionLockedState } from "@/features/dashboard/shared/components/subscription-locked-state";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { SetupChecklist } from "@/features/guide/components/setup-checklist";
+import { WelcomeTourAutoOpen } from "@/features/guide/components/welcome-tour";
 
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { Alert } from "@/features/dashboard/shared/hooks/use-alerts";
@@ -68,6 +70,15 @@ interface DashboardClientProps {
   showProductionHistory: boolean;
   /** OPERATIONS plan, and the viewer is the owner or a MANAGER persona. */
   showOperations: boolean;
+  /** Plan includes Finance and this viewer may open it — adds a "Full report"
+   * link to the analytics block. */
+  canOpenFinance: boolean;
+  /** The owner or a MANAGER persona — shows the Getting-started checklist. */
+  showSetupGuide: boolean;
+  /** The store's owner on their own persona — the welcome tour may open by itself. */
+  isOwner: boolean;
+  /** Store created within NEW_STORE_WINDOW_DAYS (server clock). */
+  isNewStore: boolean;
 }
 
 export function DashboardClient({
@@ -77,6 +88,10 @@ export function DashboardClient({
   hasOperationsAccess,
   showProductionHistory,
   showOperations,
+  canOpenFinance,
+  showSetupGuide,
+  isOwner,
+  isNewStore,
 }: DashboardClientProps) {
   const { t } = useI18n();
 
@@ -122,7 +137,11 @@ export function DashboardClient({
     <div className="grid min-h-[calc((100vh-120px)/var(--app-zoom,1))] w-full gap-6 pb-6">
       <PageHeader pageTitle={t("dashboard.title")} pageDescription={t("dashboard.description")} />
 
-      <AnalyticsSection storeId={storeId} />
+      {/* Welcome tour (a dialog: renders nothing in the flow) + Getting-started checklist */}
+      <WelcomeTourAutoOpen isOwner={isOwner} isNewStore={isNewStore} />
+      <SetupChecklist storeId={storeId} canView={showSetupGuide} isNewStore={isNewStore} />
+
+      <AnalyticsSection storeId={storeId} canOpenFinance={canOpenFinance} />
 
       {/* New orders awaiting confirmation — incoming storefront orders don't get missed */}
       <NewOrdersCard storeId={storeId} />

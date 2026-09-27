@@ -71,6 +71,8 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
     targetType: "BusinessFinanceSettings",
   },
   "POST /api/user/timezone": { code: "account.timezone.set", severity: I, targetType: "User" },
+  // Dismissed guide cards / tour seen: a viewer preference, nothing to revert.
+  "PATCH /api/user/guide-state": { code: "account.guide_state.update", severity: I, targetType: "User" },
 
   // ------------------------------------------------------- subscriptions
   "POST /api/subscriptions/checkout": { code: "billing.checkout.start", severity: N },
@@ -441,6 +443,14 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
   // -------------------------------------------------------------- upload
   "POST /api/upload": { code: "upload.file", severity: I },
   "POST /api/onboarding/complete": { code: "onboarding.complete", severity: N },
+  // Setup wizard steps: step 1 creates the business, first store and its
+  // finance settings, so it is filed like PATCH /api/user/business.
+  "POST /api/onboarding/store": { code: "onboarding.store.save", severity: N, targetType: "Business" },
+  "POST /api/onboarding/storefront": {
+    code: "onboarding.storefront.save",
+    severity: I,
+    targetType: "Storefront",
+  },
 };
 
 /**

@@ -15,8 +15,13 @@ import {
 import { usePosMenu } from "../hooks/use-pos-menu";
 import { usePosStaffList } from "../hooks/use-pos-staff-list";
 import { useStoreShifts } from "../hooks/use-store-shifts";
+import { useActiveShift } from "../hooks/use-active-shift";
 import { useTodayKey } from "../hooks/use-today-key";
-import { formatShiftLabel, resolveShiftWindow } from "@/lib/finance/shift-window";
+import {
+  formatShiftLabel,
+  resolveShiftWindow,
+  type ShiftLabelInput,
+} from "@/lib/finance/shift-window";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { useUpdateOrderStatus } from "../hooks/use-update-order-status";
 import { MarkPaidDialog, type MarkPaidConfirmData } from "./mark-paid-dialog";
@@ -28,6 +33,12 @@ import {
   resolveDateRangePreset,
   type DateRangePreset,
 } from "../lib/date-range-presets";
+import {
+  CURRENT_SHIFT_PRESET,
+  defaultScopePreset,
+  effectiveScopePreset,
+  type CurrentShiftPreset,
+} from "../lib/current-shift-scope";
 import type { OrderHistoryFilters, OrderHistoryItem } from "../types/pos.types";
 import { mapPaymentMethodLabel } from "../lib/order-status-display";
 import { formatQueueNumber } from "../lib/queue-number";
@@ -84,7 +95,14 @@ const ORDER_STATUSES = [
 ] as const;
 
 const DEPARTMENT_VALUES = ["ALL", "KITCHEN", "BAR"] as const;
-const DATE_PRESET_VALUES: DateRangePreset[] = [...DATE_RANGE_PRESETS, "custom"];
+
+/** A calendar preset, or the open till's shift (current-shift-scope.ts). */
+export type HistoryDatePreset = DateRangePreset | CurrentShiftPreset;
+const DATE_PRESET_VALUES: HistoryDatePreset[] = [
+  CURRENT_SHIFT_PRESET,
+  ...DATE_RANGE_PRESETS,
+  "custom",
+];
 
 // The optional filter dropdowns hidden by default behind "+ Add filter". The
 // date range is not one of them: it is always on (Today unless changed), so it
@@ -125,7 +143,7 @@ export interface HistoryFiltersState {
   source: string;
   from: string;
   to: string;
-  datePreset: DateRangePreset;
+  datePreset: HistoryDatePreset;
   unpaidOnly: boolean;
   productId: string;
   department: string;
@@ -141,22 +159,24 @@ export interface HistoryFiltersState {
 }
 
 /**
- * Bumped when the saved shape's meaning changes. 2 = the date defaults to TODAY
- * (it used to be all-time) and is always shown. usePersistedState can't tell a
+ * Bumped when the saved shape's meaning changes. usePersistedState can't tell a
  * saved default from a deliberate choice, so without this every user who had ever
- * touched a filter would stay pinned to "All time" and never see the new default.
+ * touched a filter would stay pinned to the old default and never see the new one.
+ *   2 = the date defaults to TODAY (it used to be all-time) and is always shown.
+ *   3 = the date defaults to the CURRENT SHIFT (today when no till is open).
  */
-const HISTORY_FILTERS_VERSION = 2;
+const HISTORY_FILTERS_VERSION = 3;
 
-// Everyone starts on today's orders (on their own clock) — the date defaults to
-// a PRESET rather than to stored dates, so it can never go stale: see
+// Everyone starts on the open till's shift — today's orders (on their own clock)
+// when no till is open. The date defaults to a PRESET rather than to stored dates
+// or a shift id, so it can never go stale and follows whichever till is open: see
 // resolveHistoryRange.
 export const HISTORY_FILTERS_DEFAULTS: HistoryFiltersState = {
   status: "ALL",
   source: "ALL",
   from: "",
   to: "",
-  datePreset: "today",
+  datePreset: CURRENT_SHIFT_PRESET,
   unpaidOnly: false,
   productId: "ALL",
   department: "ALL",
@@ -178,23 +198,32 @@ const HISTORY_FILTER_RESET: Record<HistoryFilterKey, Partial<HistoryFiltersState
   paymentMethod: { paymentMethod: "ALL" },
   // Clearing the shift also clears the window it drove — otherwise the
   // session's ISO from/to would keep silently narrowing results with no
-  // visible control left to explain why. It falls back to the default (today).
-  shift: { shiftId: "ALL", datePreset: "today", from: "", to: "" },
+  // visible control left to explain why. It falls back to the default.
+  shift: { shiftId: "ALL", datePreset: CURRENT_SHIFT_PRESET, from: "", to: "" },
 };
 
 /**
  * The from/to actually queried. A preset is re-resolved against the CURRENT day
  * every time instead of trusting the dates saved alongside it, so a "Today" saved
  * yesterday — or left open past midnight — means today, not a stale date. A custom
- * range (including a shift's ISO window) is exactly what was stored.
+ * range (including a picked shift's ISO window) is exactly what was stored.
+ *
+ * "Current shift" runs from the moment the open till was opened, with NO end: it
+ * is still running, and a `to` of "now" would miss the next order (and change the
+ * query key on every render). With no till open (`shiftOpenedAt` null) it is today.
  */
 export function resolveHistoryRange(
-  datePreset: DateRangePreset,
+  datePreset: HistoryDatePreset,
   from: string,
   to: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  shiftOpenedAt: string | null = null
 ): { from: string; to: string } {
   if (datePreset === "custom") return { from, to };
+  if (datePreset === CURRENT_SHIFT_PRESET) {
+    if (shiftOpenedAt) return { from: new Date(shiftOpenedAt).toISOString(), to: "" };
+    return resolveDateRangePreset("today", now) ?? { from: "", to: "" };
+  }
   return resolveDateRangePreset(datePreset, now) ?? { from: "", to: "" };
 }
 
@@ -213,18 +242,23 @@ export function sanitizeHistoryFilters(
         (HISTORY_FILTER_KEYS as readonly string[]).includes(k)
       )
     : defaults.activeFilterKeys;
-  // Saved before "today" became the default: the date it holds is the old
-  // all-time default or an old window, so it takes the new default. Everything
-  // else the user set is kept. A shift drives the date, so it goes with it.
-  const legacy = r.version !== HISTORY_FILTERS_VERSION;
+  // Saved before "today" became the default (no version, or 1): the date it
+  // holds is the old all-time default or an old window, so it takes the new
+  // default. Everything else the user set is kept. A shift drives the date, so it
+  // goes with it. Saved at v2, a "Today" is that version's default rather than a
+  // choice, so it moves to the current shift; any other v2 date was picked on
+  // purpose and stays.
+  const legacy = r.version !== HISTORY_FILTERS_VERSION && r.version !== 2;
+  const oldDefault = r.version === 2 && r.datePreset === "today";
   return {
     status: typeof r.status === "string" ? r.status : defaults.status,
     source: typeof r.source === "string" ? r.source : defaults.source,
     from: !legacy && typeof r.from === "string" ? r.from : defaults.from,
     to: !legacy && typeof r.to === "string" ? r.to : defaults.to,
-    datePreset: legacy
-      ? defaults.datePreset
-      : pick(r.datePreset, DATE_PRESET_VALUES, defaults.datePreset),
+    datePreset:
+      legacy || oldDefault
+        ? defaults.datePreset
+        : pick(r.datePreset, DATE_PRESET_VALUES, defaults.datePreset),
     unpaidOnly: typeof r.unpaidOnly === "boolean" ? r.unpaidOnly : defaults.unpaidOnly,
     productId: typeof r.productId === "string" ? r.productId : defaults.productId,
     department: pick(r.department, DEPARTMENT_VALUES, defaults.department),
@@ -362,36 +396,50 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   const shiftOptions = shiftList ?? [];
   const selectedShift = shiftOptions.find((s) => s.id === shiftId) ?? null;
 
-  const shiftLabel = (shift: (typeof shiftOptions)[number]) =>
+  const shiftLabel = (shift: ShiftLabelInput) =>
     formatShiftLabel(shift, {
       formatDayDate,
       formatTimeOnly,
       openLabel: t("pos.history.shiftStillOpen"),
     });
 
+  // The store's open till, shared by every device (polled by useActiveShift).
+  // "Current shift" follows it: opening one scopes the page to it, closing it
+  // drops the page back to today.
+  const { shift: openShift } = useActiveShift(storeId);
+  const hasOpenShift = openShift !== null;
+  const shiftOpenedAt = openShift?.openedAt ?? null;
+  // The preset in force — a saved "Current shift" reads as today with no till open.
+  const activePreset = effectiveScopePreset(datePreset, hasOpenShift);
+  // The till session whose window the table shows, if any: one picked in the
+  // shift filter, else the open one while on "Current shift".
+  const windowShift =
+    selectedShift ?? (activePreset === CURRENT_SHIFT_PRESET ? openShift : null);
+
   // The dates actually queried. Recomputed when the local day changes (todayKey),
   // so a till left open past midnight rolls "Today" over on its own instead of
   // still showing yesterday. See resolveHistoryRange.
   const todayKey = useTodayKey();
   const range = useMemo(
-    () => resolveHistoryRange(datePreset, from, to),
+    () => resolveHistoryRange(activePreset, from, to, new Date(), shiftOpenedAt),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [datePreset, from, to, todayKey]
+    [activePreset, from, to, shiftOpenedAt, todayKey]
   );
 
   // Picking a date range supersedes a selected shift (which drives its own window
   // and the daily report), so the shift is cleared with it — otherwise the visible
   // range and the report would describe different windows.
-  const handlePresetChange = (preset: DateRangePreset) => {
+  const handlePresetChange = (preset: HistoryDatePreset) => {
     if (preset === "custom") {
       // Seed the date inputs with what was showing. A shift's window is a full ISO
-      // datetime, which <input type="date"> can't hold — reduce it to its day.
+      // datetime, which <input type="date"> can't hold — reduce it to its day. The
+      // current shift has no end yet: it runs to today.
       const toDay = (value: string) =>
         !value || DATE_ONLY.test(value) ? value : localDateKey(new Date(value));
       patchFilters({
         datePreset: "custom",
         from: toDay(range.from),
-        to: toDay(range.to),
+        to: range.from && !range.to ? localDateKey() : toDay(range.to),
         shiftId: "ALL",
       });
       return;
@@ -399,9 +447,11 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
     patchFilters({ datePreset: preset, from: "", to: "", shiftId: "ALL" });
   };
 
-  // Back to the default view: today's orders on the user's clock.
-  const resetToToday = () =>
-    patchFilters({ datePreset: "today", from: "", to: "", shiftId: "ALL" });
+  // Back to the default view: the open till's shift, else today's orders on the
+  // user's clock. Stored as "Current shift" either way, so it follows the next till.
+  const defaultPreset = defaultScopePreset(hasOpenShift);
+  const resetDate = () =>
+    patchFilters({ datePreset: CURRENT_SHIFT_PRESET, from: "", to: "", shiftId: "ALL" });
 
   // A shift is a date-range *preset*, not a separate server filter: it resolves
   // to the session's open→close window and writes it into from/to as full ISO
@@ -411,7 +461,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   // window for free.
   const handleShiftChange = (nextShiftId: string) => {
     if (nextShiftId === "ALL") {
-      patchFilters({ shiftId: "ALL", datePreset: "today", from: "", to: "" });
+      patchFilters({ shiftId: "ALL", datePreset: CURRENT_SHIFT_PRESET, from: "", to: "" });
       return;
     }
     const shift = shiftOptions.find((s) => s.id === nextShiftId);
@@ -661,12 +711,15 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
 
   // The shift/daily report ("Z-report") — a summary of the current window, not
   // a row-per-order listing like openPrintReport above. Passes shiftId when a
-  // session is selected so the report can add its cash-drawer block; otherwise
-  // it falls back to whatever from/to the date filters resolved to.
+  // session is selected — or the page is on the open till's shift — so the
+  // report can add its cash-drawer block; otherwise it falls back to whatever
+  // from/to the date filters resolved to.
   function dailyReportParams(): URLSearchParams {
     const params = new URLSearchParams();
-    if (shiftId !== "ALL") {
-      params.set("shiftId", shiftId);
+    const reportShiftId =
+      shiftId !== "ALL" ? shiftId : activePreset === CURRENT_SHIFT_PRESET ? openShift?.id : null;
+    if (reportShiftId) {
+      params.set("shiftId", reportShiftId);
     } else {
       const built = buildOrderHistoryParams(filters, 0);
       const rangeFrom = built.get("from");
@@ -743,14 +796,22 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
           active={unpaidOnly}
           onToggle={() => patchFilters({ unpaidOnly: !unpaidOnly })}
         />
-        {/* Always shown, never removable: the date is always applied (Today by
-            default), so it must stay visible — orders outside it are hidden, and
-            a control that could vanish would leave no way to see why. */}
-        <Select value={datePreset} onValueChange={(v) => handlePresetChange(v as DateRangePreset)}>
+        {/* Always shown, never removable: the date is always applied (the open
+            shift, else Today, by default), so it must stay visible — orders
+            outside it are hidden, and a control that could vanish would leave no
+            way to see why. */}
+        <Select
+          value={activePreset}
+          onValueChange={(v) => handlePresetChange(v as HistoryDatePreset)}
+        >
           <SelectTrigger className="w-full lg:w-44" aria-label={t("pos.filters.dateRange")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            {/* Only while a till is open — with none, there is no shift to show. */}
+            {hasOpenShift && (
+              <SelectItem value={CURRENT_SHIFT_PRESET}>{t("pos.history.dateRange.shift")}</SelectItem>
+            )}
             {DATE_RANGE_PRESETS.map((preset) => (
               <SelectItem key={preset} value={preset}>
                 {t(`pos.history.dateRange.${preset}`)}
@@ -772,7 +833,9 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
             onChange={(nextFrom, nextTo) => patchFilters({ from: nextFrom, to: nextTo })}
           />
         )}
-        {datePreset !== "today" && <ResetToTodayButton onClick={resetToToday} />}
+        {activePreset !== defaultPreset && (
+          <ResetToTodayButton toShift={hasOpenShift} onClick={resetDate} />
+        )}
         {activeFilterKeys.includes("status") && (
           <RemovableFilter onRemove={() => removeFilter("status")}>
             <Select value={status} onValueChange={(v) => patchFilters({ status: v })}>
@@ -930,14 +993,14 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
         </DropdownMenu>
       </div>
 
-      {/* A selected shift drives from/to as ISO datetimes, which the date
-          controls can't display — surface the resolved window so it's never
-          unclear why the table is narrowed. */}
-      {selectedShift && (
+      {/* A selected shift — or the open till's, on "Current shift" — drives
+          from/to as ISO datetimes, which the date controls can't display:
+          surface the window so it's never unclear why the table is narrowed. */}
+      {windowShift && (
         <div className="bg-muted/30 text-muted-foreground flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-xs">
           <ReceiptText className="h-3.5 w-3.5 shrink-0" />
           <span className="font-medium">{t("pos.history.shiftWindowLabel")}</span>
-          <span>{shiftLabel(selectedShift)}</span>
+          <span>{shiftLabel(windowShift)}</span>
         </div>
       )}
 

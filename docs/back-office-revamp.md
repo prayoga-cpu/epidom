@@ -10,7 +10,7 @@ Companion to `docs/dashboard-revamp.md` (Phase 1, POS Mode — shipped). That do
 
 `dashboard-revamp.md` said Back Office "earns density, it doesn't need the operator-mode simplification," and "what moves here that wasn't here before: nothing." The first sentence still holds — nothing in this research argues for replacing the left-rail/drawer shell. Square, Toast, and Moka's own back-office products are all dense, desktop-first, left-nav/top-nav shells; none of them simplify their management surface the way a POS terminal simplifies.
 
-The second sentence was wrong, and it's why this brief exists. Splitting POS Mode out was a real edit to the same nav config this phase touches, and it left three concrete scars: a nav section reduced to one item, a stale comment, and — unrelated to Phase 1 but never addressed — a pre-existing completeness gap in `/owner`, the flagship Enterprise multi-outlet page.
+The second sentence was wrong, and it's why this brief exists. Splitting POS Mode out was a real edit to the same nav config this phase touches, and it left three concrete scars: a nav section reduced to one item, a stale comment, and — unrelated to Phase 1 but never addressed — a pre-existing completeness gap in `/owner`, the flagship Enterprise multi-outlet page (since 2026-09-26 an Operations-tier scope inside Finance, see the update under Tier 1).
 
 None of the fixes below touch the shell's structure. All are nav-config, one relocated page, and one page's tab consolidation.
 
@@ -24,8 +24,10 @@ None of the fixes below touch the shell's structure. All are nav-config, one rel
 
 **Direction:** Moved into the shell at `/store/{storeId}/owner`, gated exactly like Finance (`requirePlan(storeId, "ENTERPRISE")` + `requireStaffPageAccess`). Added to the nav rail. The old bare `/owner` now redirects via `/go/owner` so existing bookmarks resolve. Each row in the rollup table now links to that store's own Finance page — the cheapest possible fix for the roadmap's named drill-down gap. The "All Outlets" button in Finance stays (a contextual shortcut is a legitimate second affordance alongside a nav-reachable page, not a duplicate — see the competitor synthesis below), just retargeted to the new store-scoped URL.
 
-**Reference:** Square/Toast/sunday all converge on the same pattern — multi-location always has two distinct, coexisting UI patterns: a context-switcher (pick one store) and a separate comparison/rollup view (see several/all at once). Never merged into one control. Epidom's `store-switcher.tsx` is the former; `/owner` is now properly the latter.
+**Reference:** Square/Toast/sunday all converge on the same pattern — multi-location always has two distinct, coexisting UI patterns: a context-switcher (pick one store) and a separate comparison/rollup view (see several/all at once). Never merged into one control. Epidom's `store-switcher.tsx` is the former; `/owner` is now properly the latter. *(Superseded for the roll-up on 2026-09-26, see below.)*
 **Priority:** P0. Shipped this phase.
+
+**2026-09-26 update — merged into Finance.** `/owner` is no longer its own page. The roll-up is now an "All outlets" scope inside Finance: a "This outlet / All outlets" switch in the Finance header, shown only to the business owner (not staff personas) when the business has more than one store. It is Operations-tier like the rest of Finance (ENTERPRISE stopped being a feature tier the same day). `/store/{id}/owner` redirects to `/finance?scope=all` and the Owner nav item is gone. Why a switch after all: the roll-up and the single-outlet report now share one date range and one set of definitions. Each outlet in the roll-up runs the exact calculation its own Finance report uses (the old `/owner` computed a simpler net profit that skipped refunds, tax and processing fees), outlets in different currencies are shown in their own currency instead of being summed, and each row links into that outlet's report for the same dates. The store context-switcher (`store-switcher.tsx`) stays a separate control, so the competitor split between picking one store and comparing them all still holds.
 
 ---
 
@@ -44,6 +46,8 @@ None of the fixes below touch the shell's structure. All are nav-config, one rel
 | Operations | Data, Management, Production, Alerts, Staff, Schedule | unchanged |
 | Reports *(renamed from Enterprise)* | Finance, Custom Development | Finance, Owner |
 | Account *(new)* | — | Profile, Billing, Custom Development |
+
+*2026-09-26:* Reports now holds Shifts and Finance (Owner merged into Finance), all Operations-tier. Custom Development opened to every paid plan.
 
 **Reference:** Square's Reports / Items+Customers+Team / Account & Settings split, with Banking pulled out of Settings for being a daily-glance concern (Epidom's version: Finance/Owner get their own "Reports" bucket, not buried in Account).
 **Priority:** P0. Shipped this phase.
@@ -89,7 +93,7 @@ Checked whether Square's Banking-vs-Reports split (pull a daily-glance workflow 
 - **Codebase-wide feature-framed upgrade copy** (`storefront-settings.tsx`, `custom-products-section.tsx`, `onboarding-content.tsx` all have the same STRATEGY.md-violating pattern this phase fixed in the nav rail specifically) — true event-framing needs a live per-site signal, which is new feature work, not a copy edit. Flagged for its own pass.
 - **sunday as a reference** — thin public docs, contributed one usable data point (consolidate multi-venue finance into one view over a switcher) and nothing else.
 - **Section-title i18n** (`"General"`, `"Operations"`, etc. are hardcoded, never `t()`-wrapped) — pre-existing, unrelated, cosmetic.
-- **Full drill-down UI polish on `/owner`'s table** (sorting, filters matching Finance's own) — this phase closes the roadmap's named gap with one link; a fuller UI has no forcing function yet.
+- **Full drill-down UI polish on `/owner`'s table** (sorting, filters matching Finance's own) — this phase closes the roadmap's named gap with one link; a fuller UI has no forcing function yet. *(2026-09-26: moot. The table now lives in Finance's All outlets scope, sortable, on Finance's own date filter.)*
 
 ## What's already working — don't touch
 
@@ -107,4 +111,4 @@ The left-rail/drawer shell itself (density, `xl:` breakpoint). `/data`'s 5-tab s
 
 ## Strategy grounding
 
-Plan tier ladder maps directly to nav groupings (FREE→storefront only, POS→cashier, OPERATIONS→Data/Staff/Schedule/Management, ENTERPRISE→Finance/Owner). Upsell philosophy is explicitly event-framed, not feature-framed (`STRATEGY.md` §5). Named activation metric (>40% of signups publish a menu in week 1) directly prioritized the `/menu`↔`/storefront` fix. `/owner`'s gap between documented ("shipped," full drill-down) and actual (flat table, no nav entry) was independently confirmed by both a codebase audit and a strategy-doc audit.
+Plan tier ladder maps directly to nav groupings (FREE→storefront only, POS→cashier, OPERATIONS→Data/Staff/Schedule/Management, ENTERPRISE→Finance/Owner). *Since 2026-09-26:* Finance, with the All outlets roll-up that replaced Owner, is OPERATIONS; ENTERPRISE is a custom-build service with no nav items of its own. Upsell philosophy is explicitly event-framed, not feature-framed (`STRATEGY.md` §5). Named activation metric (>40% of signups publish a menu in week 1) directly prioritized the `/menu`↔`/storefront` fix. `/owner`'s gap between documented ("shipped," full drill-down) and actual (flat table, no nav entry) was independently confirmed by both a codebase audit and a strategy-doc audit.

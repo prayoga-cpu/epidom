@@ -7,6 +7,7 @@ import {
   isBaseRoleTemplate,
   pickStaffHomePage,
   pickStaffLandingPage,
+  RETIRED_STAFF_PAGES,
 } from "../staff-permissions.config";
 import { updateStaffSchema } from "@/lib/validation/operations.schemas";
 
@@ -70,6 +71,16 @@ describe("POS Mode routes stay grantable after the shell split", () => {
       allowedPages: ["/pos", "/not-a-real-page"],
     });
     expect(result.success).toBe(false);
+  });
+
+  // "/owner" was grantable until the Owner dashboard became Finance's All
+  // outlets scope. The Staff dialog sends a row's stored list back on every
+  // save, so rejecting it would lock the owner out of editing that row.
+  it("updateStaffSchema drops a retired page instead of rejecting the save", () => {
+    expect(RETIRED_STAFF_PAGES).toContain("/owner");
+    const result = updateStaffSchema.safeParse({ allowedPages: ["/dashboard", "/owner", "/finance"] });
+    expect(result.success).toBe(true);
+    expect(result.data?.allowedPages).toEqual(["/dashboard", "/finance"]);
   });
 });
 

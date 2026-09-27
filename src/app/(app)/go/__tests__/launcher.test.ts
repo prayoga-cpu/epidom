@@ -31,9 +31,15 @@ vi.mock("@/lib/auth/staff-link", async (importOriginal) => ({
 import StoreLauncherPage from "../[...path]/page";
 
 /** Runs the launcher and returns where it redirected to. */
-async function launch(path: string[]): Promise<string> {
+async function launch(
+  path: string[],
+  searchParams?: Record<string, string | string[]>
+): Promise<string> {
   try {
-    await StoreLauncherPage({ params: Promise.resolve({ path }) });
+    await StoreLauncherPage({
+      params: Promise.resolve({ path }),
+      ...(searchParams ? { searchParams: Promise.resolve(searchParams) } : {}),
+    });
   } catch (error) {
     if (error instanceof Redirect) return error.url;
     throw error;
@@ -118,5 +124,39 @@ describe("/go/* launcher", () => {
     userFindUnique.mockResolvedValue({ defaultLanding: "dashboard", business: null });
 
     expect(await launch(["pos"])).toBe("/stores");
+  });
+
+  // The retired /owner bookmark goes through /go/finance?scope=all — the query
+  // has to survive the hop, or it lands on the single-outlet report.
+  describe("query string", () => {
+    beforeEach(() => {
+      userFindUnique.mockResolvedValue({
+        defaultLanding: "dashboard",
+        business: { stores: [{ id: "store_new" }] },
+      });
+    });
+
+    it("is carried onto the section it was asked for", async () => {
+      expect(await launch(["finance"], { scope: "all" })).toBe(
+        "/store/store_new/finance?scope=all"
+      );
+    });
+
+    it("keeps repeated keys and encodes values, so it can only ever be a query string", async () => {
+      expect(await launch(["finance"], { a: ["1", "2"], x: "/../evil?y=1" })).toBe(
+        "/store/store_new/finance?a=1&a=2&x=%2F..%2Fevil%3Fy%3D1"
+      );
+    });
+
+    it("is dropped when the section falls back to the default landing page", async () => {
+      expect(await launch(["owner"], { scope: "all" })).toBe("/store/store_new/dashboard");
+    });
+
+    it("survives the login hop", async () => {
+      getSession.mockResolvedValue(null);
+      expect(await launch(["finance"], { scope: "all" })).toBe(
+        `/login?callbackUrl=${encodeURIComponent("/go/finance?scope=all")}`
+      );
+    });
   });
 });

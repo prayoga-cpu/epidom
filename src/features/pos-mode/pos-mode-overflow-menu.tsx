@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  CircleHelp,
   Monitor,
   MonitorSmartphone,
   ClipboardList,
@@ -42,6 +43,9 @@ import { LAST_VISITED_BACK_OFFICE_COOKIE, isBackOfficeAppPath } from "@/lib/last
 import { PosModePreferences } from "./pos-mode-preferences";
 import { isPosTabPath, usePosTabs } from "./pos-mode-tab-bar";
 import { PosModeStoreSwitcher } from "./pos-mode-store-switcher";
+// Every guide in three languages rides in the Help sheet: its own chunk, loaded
+// on first open (or preloaded while online), failing into a toast when offline.
+import { LazyHelpSheet, preloadHelpSheet } from "@/features/guide/components/help-sheet-loader";
 
 interface PosModeOverflowMenuProps {
   storeId: string;
@@ -127,6 +131,74 @@ function MenuRow({
   );
 }
 
+interface SpaceRowProps {
+  icon: LucideIcon;
+  label: string;
+  /** One line on what the space holds — may wrap to two on a phone. */
+  description: string;
+  href: string;
+  onClick: () => void;
+  /** This space is the one on screen. */
+  active?: boolean;
+}
+
+/**
+ * One of POS Mode's spaces (Back Office, POS System, Operational): a MenuRow
+ * scaled up — 48px tile, 24px icon, large label — with a muted description
+ * under the label. The link is named by the label alone; the description is
+ * its accessible description, so a screen reader doesn't read it as the name.
+ */
+function SpaceRow({
+  icon: Icon,
+  label,
+  description,
+  href,
+  onClick,
+  active = false,
+}: SpaceRowProps) {
+  const labelId = useId();
+  const descriptionId = useId();
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      aria-labelledby={labelId}
+      aria-describedby={descriptionId}
+      className={cn(
+        "hover:bg-accent active:bg-accent relative flex w-full items-center gap-3 px-3 py-3 text-left transition-colors",
+        active && "bg-primary/10 text-primary hover:bg-primary/10"
+      )}
+    >
+      {/* The accent bar on the current space's row, as in a nav drawer. */}
+      {active && (
+        <span className="bg-primary absolute inset-y-3 left-0 w-1 rounded-r-full" aria-hidden />
+      )}
+      <span
+        className={cn(
+          "flex size-12 shrink-0 items-center justify-center rounded-xl",
+          active ? "bg-primary/15" : "bg-muted"
+        )}
+        aria-hidden
+      >
+        <Icon className="size-6" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span id={labelId} className="block truncate text-lg leading-tight font-semibold">
+          {label}
+        </span>
+        <span
+          id={descriptionId}
+          className="text-muted-foreground mt-0.5 block text-sm leading-snug"
+        >
+          {description}
+        </span>
+      </span>
+      <ChevronRight className="text-muted-foreground size-5 shrink-0" aria-hidden />
+    </Link>
+  );
+}
+
 /** A bordered card of rows, split by hairlines. */
 function MenuGroup({ children }: { children: React.ReactNode }) {
   return <div className="divide-y overflow-hidden rounded-xl border">{children}</div>;
@@ -141,12 +213,13 @@ function MenuGroup({ children }: { children: React.ReactNode }) {
  * preferences, who's using the till).
  *
  * A right-hand Sheet laid out like a till's side menu: a navy brand header
- * with the signed-in profile, a Sync sales button with the sync state right
- * under it, and rows with chevrons. The sheet is pinned to the viewport
- * with an explicit height (divided by --app-zoom, like every viewport unit
- * here), so the middle can scroll while the header stays put — the
- * definite height a bottom Sheet never got through this shell's flex chain,
- * which is why this was a Dialog before.
+ * with the signed-in profile (its Sync sales button on the right, the sync
+ * state right under it), the spaces as large described rows, and rows with
+ * chevrons. The sheet is pinned to the viewport with an explicit height
+ * (divided by --app-zoom, like every viewport unit here), so the middle can
+ * scroll while the header stays put — the definite height a bottom Sheet
+ * never got through this shell's flex chain, which is why this was a Dialog
+ * before.
  */
 export function PosModeOverflowMenu({
   storeId,
@@ -163,6 +236,10 @@ export function PosModeOverflowMenu({
   const setDisplayEnabled = useCustomerDisplaySettings((state) => state.setEnabled);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [hardwareOpen, setHardwareOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  // This menu is mounted on every POS Mode screen: fetch the Help sheet while
+  // online, so it (and the page intros' Learn more) still opens offline later.
+  useEffect(() => preloadHelpSheet(), []);
 
   const {
     posSession,
@@ -238,8 +315,10 @@ export function PosModeOverflowMenu({
     canManageShift({ staffRole: posSession.staffRole, allowedPages: posSession.allowedPages }) ||
     (posSession.allowedPages?.includes("/pos/schedule") ?? true);
 
-  // The strip along the bottom: the same three states the POS offline banner
-  // reports, plus the all-clear it stays hidden for.
+  const syncLabel = isSyncing ? t("pages.posOfflineSyncing") : t("pages.posSyncSales");
+
+  // The strip under the profile card: the same three states the POS offline
+  // banner reports, plus the all-clear it stays hidden for.
   const syncStatus = !isOnline
     ? {
         icon: WifiOff,
@@ -289,61 +368,62 @@ export function PosModeOverflowMenu({
               </SheetClose>
             </div>
 
-            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3">
-              <Avatar className="size-11">
-                {avatarImage && <AvatarImage src={avatarImage} alt={profileName} />}
-                <AvatarFallback
-                  className="text-base font-semibold"
-                  style={{ background: "var(--epi-navy-600)", color: "var(--epi-cream-50)" }}
-                >
-                  {profileName[0]?.toUpperCase() ?? "?"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  <p className="truncate text-base leading-tight font-semibold">{profileName}</p>
-                  {roleLabel && (
-                    <span
-                      className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
-                      style={{
-                        color: "var(--epi-gold-400)",
-                        borderColor: "rgb(217 174 59 / 0.45)",
-                        background: "rgb(217 174 59 / 0.15)",
-                      }}
-                    >
-                      {roleLabel}
-                    </span>
+            {/* The profile card with the till's "sync" button on its right, and
+                the sync state fused under it as one unit: offline, sales
+                waiting, or all synced. */}
+            <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
+              <div className="flex items-center gap-3 bg-white/10 p-3">
+                <Avatar className="size-11">
+                  {avatarImage && <AvatarImage src={avatarImage} alt={profileName} />}
+                  <AvatarFallback
+                    className="text-base font-semibold"
+                    style={{ background: "var(--epi-navy-600)", color: "var(--epi-cream-50)" }}
+                  >
+                    {profileName[0]?.toUpperCase() ?? "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate text-base leading-tight font-semibold">{profileName}</p>
+                    {roleLabel && (
+                      <span
+                        className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
+                        style={{
+                          color: "var(--epi-gold-400)",
+                          borderColor: "rgb(217 174 59 / 0.45)",
+                          background: "rgb(217 174 59 / 0.15)",
+                        }}
+                      >
+                        {roleLabel}
+                      </span>
+                    )}
+                  </div>
+                  {store?.name && (
+                    <p className="mt-1 flex min-w-0 items-center gap-1 text-xs opacity-75">
+                      <Store className="size-3 shrink-0" aria-hidden />
+                      <span className="truncate">{store.name}</span>
+                    </p>
+                  )}
+                  {accountEmail && (
+                    <p className="mt-0.5 truncate text-xs opacity-60">{accountEmail}</p>
                   )}
                 </div>
-                {store?.name && (
-                  <p className="mt-1 flex min-w-0 items-center gap-1 text-xs opacity-75">
-                    <Store className="size-3 shrink-0" aria-hidden />
-                    <span className="truncate">{store.name}</span>
-                  </p>
-                )}
-                {accountEmail && (
-                  <p className="mt-0.5 truncate text-xs opacity-60">{accountEmail}</p>
-                )}
+                {/* Sends any sales queued while offline and refreshes this device's
+                    offline copy of the menu and orders. An icon button now, so its
+                    old "Syncing…" caption lives on as its name while it spins.
+                    Gold, not text-primary: that is navy in light mode, on navy. */}
+                <button
+                  type="button"
+                  onClick={() => void syncNow()}
+                  disabled={isSyncing || !isOnline}
+                  aria-busy={isSyncing}
+                  aria-label={syncLabel}
+                  title={syncLabel}
+                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-[var(--epi-gold-400)] transition hover:bg-white/20 active:scale-[0.95] disabled:opacity-50"
+                >
+                  <RefreshCw className={cn("size-5", isSyncing && "animate-spin")} aria-hidden />
+                </button>
               </div>
-            </div>
-          </div>
-
-          {/* Rounded panel tucked up under the header's profile card. */}
-          <div className="bg-background relative -mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-t-3xl px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {/* The till's "sync" button with its state fused under it as one control:
-                offline, sales waiting, or all synced. */}
-            <div className="border-primary/40 overflow-hidden rounded-xl border">
-              {/* Sends any sales queued while offline and refreshes this device's
-                  offline copy of the menu and orders. */}
-              <button
-                type="button"
-                onClick={() => void syncNow()}
-                disabled={isSyncing || !isOnline}
-                className="text-primary hover:bg-primary/10 flex h-11 w-full items-center justify-center gap-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50"
-              >
-                <RefreshCw className={cn("size-4", isSyncing && "animate-spin")} aria-hidden />
-                {isSyncing ? t("pages.posOfflineSyncing") : t("pages.posSyncSales")}
-              </button>
               <div
                 role="status"
                 className={cn(
@@ -355,21 +435,27 @@ export function PosModeOverflowMenu({
                 <span className="truncate">{syncStatus.label}</span>
               </div>
             </div>
+          </div>
 
+          {/* Rounded panel tucked up under the header's profile card. */}
+          <div className="bg-background relative -mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-t-3xl px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {/* The spaces of POS Mode — the big rows, each saying what's inside. */}
             <MenuGroup>
               {canReachBackOffice && (
-                <MenuRow
+                <SpaceRow
                   icon={LayoutDashboard}
                   label={t("nav.backOffice")}
+                  description={t("nav.backOfficeDesc")}
                   href={backOfficeHref}
                   onClick={close}
                 />
               )}
 
               {posSystemHref && (
-                <MenuRow
+                <SpaceRow
                   icon={MonitorSmartphone}
                   label={t("nav.posSystem")}
+                  description={t("nav.posSystemDesc")}
                   href={posSystemHref}
                   onClick={close}
                   active={isPosTabPath(pathname, storeId)}
@@ -377,9 +463,10 @@ export function PosModeOverflowMenu({
               )}
 
               {showOperational && (
-                <MenuRow
+                <SpaceRow
                   icon={ClipboardList}
                   label={t("nav.posOperational")}
+                  description={t("nav.posOperationalDesc")}
                   href={operationalHref}
                   onClick={close}
                   active={pathname === operationalHref}
@@ -451,6 +538,14 @@ export function PosModeOverflowMenu({
                   setFeedbackOpen(true);
                 }}
               />
+              <MenuRow
+                icon={CircleHelp}
+                label={t("helpCenter.sheetTitle")}
+                onClick={() => {
+                  close();
+                  setHelpOpen(true);
+                }}
+              />
             </MenuGroup>
 
             {/* Device preferences (language, light/dark, zoom) — every persona,
@@ -520,6 +615,14 @@ export function PosModeOverflowMenu({
         open={hardwareOpen}
         onOpenChange={setHardwareOpen}
       />
+      {helpOpen && (
+        <LazyHelpSheet
+          storeId={storeId}
+          open={helpOpen}
+          onOpenChange={setHelpOpen}
+          canManage={canReachBackOffice}
+        />
+      )}
     </>
   );
 }

@@ -1,28 +1,47 @@
 import type { PosOrderDisplay } from "../types/pos.types";
 import { DATE_RANGE_PRESETS, isWithinPreset, type DateRangePreset } from "./date-range-presets";
+import {
+  CURRENT_SHIFT_PRESET,
+  isWithinOpenShift,
+  type CurrentShiftPreset,
+} from "./current-shift-scope";
 
 /**
- * How far back the queue looks. The same presets History offers, minus "custom" —
- * this is a live work queue, not a report. Always applied; see DEFAULT_QUEUE_DATE_PRESET.
+ * How far back the queue looks: the open till's shift, or the same calendar
+ * presets History offers minus "custom" — this is a live work queue, not a
+ * report. Always applied; see DEFAULT_QUEUE_DATE_PRESET.
  */
-export type QueueDatePreset = Exclude<DateRangePreset, "custom">;
+export type QueueDatePreset = Exclude<DateRangePreset, "custom"> | CurrentShiftPreset;
 
-export const QUEUE_DATE_PRESETS: readonly QueueDatePreset[] = DATE_RANGE_PRESETS;
+/** The calendar presets. "Current shift" is offered beside them only while a till is open. */
+export const QUEUE_DATE_PRESETS: readonly Exclude<DateRangePreset, "custom">[] = DATE_RANGE_PRESETS;
 
-/** What everyone sees until they choose otherwise: today's orders, on their own clock. */
-export const DEFAULT_QUEUE_DATE_PRESET: QueueDatePreset = "today";
+/**
+ * What everyone sees until they choose otherwise: the open till's shift, or
+ * today's orders on their own clock when no till is open (current-shift-scope.ts).
+ */
+export const DEFAULT_QUEUE_DATE_PRESET: QueueDatePreset = CURRENT_SHIFT_PRESET;
 
 /**
  * Whether an order was placed inside the date preset's window, measured on the
  * USER's clock (00:00 local, not UTC). Kept apart from matchesQueueFilters: it
  * scopes which orders the page is about at all — tab counts included — rather
  * than narrowing within them.
+ *
+ * "Current shift" is everything since `shiftOpenedAt`, with no end; with no till
+ * open (`null`) it is today.
  */
 export function matchesQueueDate(
   order: PosOrderDisplay,
   preset: QueueDatePreset,
-  now: Date = new Date()
+  now: Date = new Date(),
+  shiftOpenedAt: string | null = null
 ): boolean {
+  if (preset === CURRENT_SHIFT_PRESET) {
+    return shiftOpenedAt
+      ? isWithinOpenShift(order.createdAt, shiftOpenedAt)
+      : isWithinPreset(order.createdAt, "today", now);
+  }
   return isWithinPreset(order.createdAt, preset, now);
 }
 

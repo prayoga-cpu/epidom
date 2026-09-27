@@ -3,6 +3,8 @@ import { useRouter } from "next/navigation";
 import { LoginInput, RegisterInput } from "../validation/auth.schemas";
 import { authClient } from "@/lib/auth-client";
 import { trackMetaPixelEvent, trackEvent, trackConversion } from "@/lib/analytics";
+import { emailVerificationCallbackURL } from "../register/lib/verification-landing";
+import { stashVerifyEmail } from "../register/lib/verify-email-handoff";
 
 /**
  * Login mutation hook
@@ -38,16 +40,18 @@ export function useRegister() {
   const router = useRouter();
 
   return useMutation({
-    // `callbackURL` is where the emailed verification link lands after
-    // auto-sign-in — set when signup was started from a deep link that must
-    // survive it (e.g. accepting a store transfer). Caller is responsible for
-    // passing only a validated internal path (see safeInternalPath).
+    // `callbackURL` is the deep link the emailed verification link should land
+    // on after auto-sign-in, when signup started from one that must survive it
+    // (e.g. accepting a store transfer). Caller is responsible for passing only
+    // a validated internal path (see safeInternalPath). Without one, the link
+    // lands on the setup wizard as /onboarding?verified=1. It is always sent,
+    // because Better Auth's own default is "/", the marketing homepage.
     mutationFn: async (data: RegisterInput & { callbackURL?: string }) => {
       const { data: session, error } = await authClient.signUp.email({
         email: data.email,
         password: data.password,
         name: data.name,
-        ...(data.callbackURL ? { callbackURL: data.callbackURL } : {}),
+        callbackURL: emailVerificationCallbackURL(data.callbackURL),
       });
 
       if (error) {
@@ -71,10 +75,17 @@ export function useRegister() {
       // so it also feeds Google Ads conversion tracking if/when linked.
       trackConversion("sign_up", { event_label: "email", method: "email" });
 
-      // Redirect to verify-email-sent page with email parameter (and the
-      // deep link to resume after verification, if there is one)
-      const next = data.callbackURL ? `&next=${encodeURIComponent(data.callbackURL)}` : "";
-      router.push(`/verify-email-sent?email=${encodeURIComponent(data.email)}${next}`);
+      // Redirect to verify-email-sent (with the deep link to resume after
+      // verification, if there is one; without it that page's resend button
+      // falls back to the same wizard landing). The address goes through
+      // sessionStorage, not the URL, because analytics records page URLs.
+      // Only when storage is unavailable does it ride in ?email=, so the page
+      // can still show it and resend.
+      const params = new URLSearchParams();
+      if (!stashVerifyEmail(data.email)) params.set("email", data.email);
+      if (data.callbackURL) params.set("next", data.callbackURL);
+      const query = params.toString();
+      router.push(query ? `/verify-email-sent?${query}` : "/verify-email-sent");
     },
   });
 }

@@ -4,6 +4,7 @@ import { verifyStoreAccess } from "@/lib/utils/store-verification";
 import { TablesManager } from "@/features/pos/components/tables/tables-manager";
 import { ReservationList } from "@/features/pos/components/tables/reservation-list";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
+import { PageIntro } from "@/features/guide/components/page-intro";
 
 export const metadata = { title: "Tables | Epidom" };
 
@@ -17,6 +18,12 @@ export default async function TablesPage({ params }: { params: Promise<{ storeId
   return (
     <div className="flex h-full flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
+        <PageIntro
+          id="tables"
+          variant="compact"
+          storeId={storeId}
+          className="mx-3 mt-2 sm:mx-6"
+        />
         <TablesManager storeId={storeId} />
         <ReservationList storeId={storeId} />
       </div>

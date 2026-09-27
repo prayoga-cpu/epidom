@@ -14,9 +14,10 @@
  *  - the old owner's identity inside the store (their OWNER StaffMember row,
  *    live staff PIN sessions) — stripped/ended so "fully removed" is true;
  *  - billing: Subscription hangs off the User, not the store, so it stays with
- *    whoever pays for it. Plan limits are only enforced when a store is
- *    CREATED, so a transferred store is grandfathered onto the new owner's plan
- *    (feature gates still apply to it as usual).
+ *    whoever pays for it. The recipient's STORE LIMIT is checked at accept
+ *    time exactly as at creation — otherwise the cap is a formality (open free
+ *    accounts, one store each, transfer them all to one Operations owner). Feature
+ *    gates then apply to the store as usual.
  * Storefront customer payments resolve their Connect account live via
  * store -> business -> user, so they follow the new owner (or fail closed)
  * with no extra handling here.
@@ -30,6 +31,8 @@ import { AppError } from "@/lib/errors";
 import { ApiErrorCode } from "@/types/api/responses";
 import { DEFAULT_ENABLED_PAYMENT_METHODS } from "@/config/payment-fees.config";
 import { subscriptionService } from "./subscription.service";
+import { canCreateStore, getStoreLimit } from "@/config/stripe.config";
+import { minPlanForStores, PLAN_LABELS } from "@/lib/plans/entitlements";
 import { sendStoreOwnershipTransferEmail } from "./email.service";
 import {
   TRANSFER_IDENTIFIER_PREFIX,
@@ -275,6 +278,30 @@ export async function acceptStoreTransfer(params: {
         }
         if (business.id === store.businessId) {
           throw new AppError("You already own this store.", ApiErrorCode.INVALID_INPUT, 400);
+        }
+
+        // Receiving a store counts against the recipient's plan like creating
+        // one (Operations: three; a fourth is Enterprise). Thrown inside the
+        // transaction, so the invite is NOT consumed: they can upgrade and
+        // then accept the same link.
+        const [recipientSubscription, recipientStoreCount] = await Promise.all([
+          tx.subscription.findUnique({
+            where: { userId: recipient.id },
+            select: { plan: true, status: true },
+          }),
+          tx.store.count({ where: { businessId: business.id } }),
+        ]);
+        const recipientPlan =
+          recipientSubscription?.status === "ACTIVE" ? recipientSubscription.plan : "FREE";
+        if (!canCreateStore(recipientPlan, recipientStoreCount)) {
+          const limit = getStoreLimit(recipientPlan);
+          const requiredPlan = minPlanForStores(recipientStoreCount + 1);
+          throw new AppError(
+            `Your plan includes ${limit} ${limit === 1 ? "store" : "stores"}. Upgrade to the ${PLAN_LABELS[requiredPlan]} plan to take over this store.`,
+            ApiErrorCode.SUBSCRIPTION_LIMIT_EXCEEDED,
+            403,
+            { current: recipientStoreCount, limit, requiredPlan, upgradeRequired: true }
+          );
         }
 
         // Finance: a store synced to its Business's shared settings would flip

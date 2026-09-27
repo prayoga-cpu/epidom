@@ -473,8 +473,8 @@ export async function invalidateSupplierRelatedQueries(
  *   (`/orders/analytics`, `/customers/analytics`, `/finance/top-items`,
  *   `/finance/by-department`), 5-minute staleTime — longer than
  *   `finance-*`'s 30s, so this one was *more* likely to look stuck.
- * - `owner-summary` — the multi-store Enterprise rollup
- *   (`owner-dashboard-client.tsx`, `/api/owner/summary`); not per-store
+ * - `owner-summary` — Finance's All outlets roll-up
+ *   (`all-outlets-report.tsx`, `/api/owner/summary`); not per-store
  *   (no storeId in its key), which is fine for a predicate match.
  * - `storefront-analytics*` — the Storefront editor's own analytics tab
  *   (`storefront-analytics.tsx`, `/api/stores/[id]/storefront/analytics`).

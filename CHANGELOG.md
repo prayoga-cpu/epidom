@@ -9,6 +9,44 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.3.0] - 2026-09-27 · feat
+
+A simpler way to set up your store, and a guide to everything inside Epidom.
+
+- **Set up your store in three steps.** Setup now asks for what matters first: your store's name, country, city and what kind of place it is. Then your storefront, with your logo, colour, a short tagline and your first three items, next to a live preview. Last, what you want Epidom to help with. Each step is saved as you go: close the page and you pick up where you left off, with a Back button on every step.
+- **Your country sets up the rest.** Choosing your country sets your store's currency, payment methods, delivery platforms, time zone and language. A store in France now starts in euros, with card, cash, cheque, bank transfer and Titre-Restaurant, and Uber Eats, Deliveroo and Just Eat at the till. Before, every new store started in Indonesian rupiah and on Jakarta time. Prices you type during setup are in your own currency.
+- **Fill it in from Instagram.** A screenshot of your Instagram profile can still fill in your name, tagline, logo and colour. It's now a shortcut on the first step instead of a screen of its own.
+- **Your store is live.** When you publish, you get your store link, a QR code to print, a WhatsApp share button and a one-minute tour.
+- **A tour of Epidom's three spaces.** A short tour explains the storefront, POS Mode and the Back Office, which plan each part needs, and how to move between them. You can replay it from Help.
+- **A setup checklist on your dashboard.** New stores get a "Get your store ready" list that ticks itself off as you go: publish, add items and photos, add your logo and WhatsApp number, get your first visitor. On the right plan it adds your first sale, shift, tables, stock, suppliers, staff and schedule. Parts your plan doesn't include say what they would add. Hide the list whenever you like.
+- **Help inside the app.** A new Help page, at the bottom of the sidebar and under Help & what's new in POS Mode's menu, has the guides, the latest updates, WhatsApp support and a button to show page tips again. Four new guides cover POS Mode, stock and supplier orders, staff and schedules, and printers and the scanner. They're also on the website's Docs.
+- **Page tips.** The first time you open Stock, Schedule, Shifts, Finance, Customers, Data, the storefront editor, the Order Queue, Kitchen & Bar, Tables, Operational or Hardware settings, a short card explains what the page is for. Got it hides the card.
+- **Creating another store starts with what matters.** The Create a store dialog now asks for the name, country and city first, and can copy the currency and payment settings of one of your other stores. The photo, address, phone and email are under More details. A new store now gets its payment settings, a draft storefront and you on its staff list straight away, instead of starting in rupiah. When you reach your plan's store limit, the button and the message name the plan that allows one more.
+- **Set your business time zone.** Profile → Business info now has the time zone used for attendance, shifts and reports. It used to be fixed to Jakarta.
+- **Signing up takes you to setup.** After you confirm your email you go straight to setup, instead of the website's home page, and the "check your email" page opens instead of sending you to the login page. New Google accounts go to setup too.
+- **Security.** An old card-check promotion that could still grant the POS plan for free is removed. The scrambled copy of the owner PIN is no longer sent to the browser, and guessing the owner PIN or its reset code is limited to a few tries a minute. Removing an uploaded image now only ever deletes your own files.
+- **Image uploads explain themselves.** When a logo or photo can't be uploaded (too big, wrong type, no connection), the upload box now says why, in your language. Replacing an image keeps the old one until the new one has uploaded, so a failed upload no longer leaves a broken picture.
+- **Clearing a store's details works.** Emptying the address, phone or email in Edit store now clears it. Before, the old value quietly stayed.
+- **The Order Queue opens on the current shift.** While the till is open, Active and History start with every order since the shift was opened, storefront and delivery orders included, and Back to current shift returns there. With no till open they open on today, as before.
+- **Removed.** The AI logo generator, which only ever produced a placeholder, and the AI menu suggestions, which only knew Indonesian dishes. Setup is now fully translated into French and Indonesian.
+
+## [3.2.0] - 2026-09-26 · feat
+
+Plans and prices are on the Billing page, and financial reports now come with Operations.
+
+- **Financial reports on Operations.** Finance, with its P&L, margins, fees and cash reconciliation, is now part of the Operations plan instead of Enterprise. It's where your recipe costs and multiple outlets pay off.
+- **All your outlets in Finance.** The Owner dashboard is now the All outlets view of Finance: switch between This outlet and All outlets at the top of the page. Each outlet shows revenue, gross profit, margin, waste and net profit for the same dates, with a total row, an Excel export and a link to that outlet's full report. Old Owner links open it.
+- **Outlet figures match their own report.** An outlet's row in All outlets now shows the same net profit as its own Finance page, after refunds, tax and card fees. When your outlets use different currencies, each one is shown in its own currency and money isn't added across them.
+- **Full report from the dashboard.** The dashboard's Analytics section links to Finance for the same dates.
+- **Operations covers up to three outlets.** A fourth outlet needs Enterprise. Your Billing page shows how many stores your plan allows and which plan allows more. Taking over a store from another owner counts too.
+- **Enterprise is for chains and custom builds.** Enterprise covers four or more outlets, your own system designed and built with our team on Prionation, custom integrations (accounting, delivery apps, payments) and dedicated support. Talk to us on WhatsApp. Custom Development requests are now open on every paid plan.
+
+- **Compare plans without leaving the app.** Billing now lists POS, Operations and Enterprise with their price, what each one includes and a Monthly / Yearly switch. You no longer need to go to the website.
+- **Change plan from the card.** Upgrade, downgrade or start the 14-day POS trial from Billing: new subscriptions go to Stripe to pay, and subscriptions you already pay for open Stripe's billing page. Enterprise opens a WhatsApp chat with us.
+- **Prices you'll actually pay.** Plans show the exact price in your store's currency (euros, dollars or rupiah) instead of a converted estimate.
+- **Unlimited stores say so.** Store usage on an unlimited plan now reads "2 / Unlimited stores" instead of "2 / stores".
+- **Database backups on demand.** Admins can start a backup from the Capacity page with Run backup now, and watch it finish in the backup history, instead of waiting for the nightly job.
+
 ## [3.1.2] - 2026-09-27 · fix
 
 Billing and storefront payment fixes that follow the move to our new payment account.

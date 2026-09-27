@@ -5,9 +5,11 @@ import type { Locale } from "@/components/lang/i18n-provider";
  *
  * Amounts are what the marketing site quotes, per month, before tax, in major
  * units: `yearly` is the per-month equivalent of the annual plan (the /pricing
- * toggle shows it next to "billed yearly"). The billing dashboard prices in IDR
- * and converts to the user's currency at the live exchange rate, so it reads
- * PLAN_PRICE_IDR below.
+ * toggle shows it next to "billed yearly"). The in-app Billing page quotes these
+ * exact amounts too, in the store's currency when it is one of the three (see
+ * resolvePriceCurrency in src/features/dashboard/billing/lib/plan-price.ts).
+ * The profile subscription card still converts PLAN_PRICE_IDR below at the
+ * live exchange rate.
  *
  * The /pricing page and the home teaser still carry each locale's price as a
  * literal string (redesign.pricingPage.t2price_mo, ...) because the locale

@@ -3,8 +3,12 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
-import { MovementType, type OrderSource } from "@prisma/client";
-import { sumCogsBase } from "@/lib/finance/cogs";
+import { requirePlan } from "@/lib/auth/require-plan";
+import { minPlanFor } from "@/lib/plans/entitlements";
+import { getActiveStaffSession } from "@/lib/staff-session";
+import { staffPersonaMayReadFinance } from "@/lib/auth/require-finance-access";
+import { type OrderSource } from "@prisma/client";
+import { computeStoreFinanceSummary } from "@/lib/finance/store-summary";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import {
   shiftFilter,
@@ -60,7 +64,16 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   if (!session?.user?.id) {
     redirect("/login");
   }
+  // Outside the (dashboard) group, so Finance's layout gate never runs here —
+  // without its own check this printed the full report on any plan.
+  await requirePlan(storeId, minPlanFor("finance"));
   await requireStaffPageAccess(storeId, "/finance");
+  // Same persona rule as the Finance report routes: another outlet's persona
+  // can't print this outlet's P&L.
+  const staffSession = await getActiveStaffSession();
+  if (staffSession && !staffPersonaMayReadFinance(staffSession, storeId)) {
+    redirect(`/store/${staffSession.storeId}/pos`);
+  }
 
   const store = await verifyStoreOwnership(storeId, session.user.id);
 
@@ -77,7 +90,7 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   if (staffId) urlParams.set("staffId", staffId);
   const shiftWhere = shiftFilter(urlParams);
 
-  const [business, staffMember, categoryRecord, { currency, rate: ownerRate }] = await Promise.all([
+  const [business, staffMember, categoryRecord, { currency }] = await Promise.all([
     prisma.store.findUnique({
       where: { id: storeId },
       select: {
@@ -95,62 +108,23 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   const timezone = business?.business.timezone ?? "UTC";
 
   // ─── Summary ───
-  const revenueResult = await prisma.order.aggregate({
-    where: {
-      storeId,
-      status: { notIn: NON_REVENUE_STATUSES },
-      orderDate: { gte: from, lte: to },
-      ...shiftWhere,
-    },
-    _sum: { total: true, tax: true, serviceCharge: true },
-    _count: { id: true },
-  });
-  const revenue = Number(revenueResult._sum.total ?? 0);
-  const orderCount = revenueResult._count.id;
-  const taxCollected = Number(revenueResult._sum.tax ?? 0);
-  const serviceCharge = Number(revenueResult._sum.serviceCharge ?? 0);
-
-  const processingFeeResult = await prisma.order.aggregate({
-    where: {
-      storeId,
-      status: { notIn: NON_REVENUE_STATUSES },
-      paymentStatus: "PAID",
-      orderDate: { gte: from, lte: to },
-      ...shiftWhere,
-    },
-    _sum: { processingFee: true },
-  });
-  const processingFee = Number(processingFeeResult._sum.processingFee ?? 0);
-
-  // Shared with /api/stores/[id]/finance/summary — see src/lib/finance/cogs.ts.
-  // This page used to carry its own hand-copy of the formula, which is how the
-  // printed P&L and the on-screen one could disagree.
-  const { cogsBase: cogsRaw } = await sumCogsBase({
-    storeId,
-    orderDate: { gte: from, lte: to },
-    status: { notIn: NON_REVENUE_STATUSES },
-    ...shiftWhere,
-  });
-  // revenue is already literal in the owner's own currency; cogs comes
-  // from Material.unitCost, stored in IDR (the platform base currency).
-  // Convert before combining, or the result mixes units for any non-IDR
-  // store — mirrors the fix in /api/stores/[id]/finance/summary.
-  const cogs = storefrontService.convertBaseToOwnerSync(cogsRaw, ownerRate);
-
-  const grossProfit = revenue - cogs;
-  const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-
-  const wasteResult = await prisma.wasteEntry.aggregate({
-    where: { storeId, createdAt: { gte: from, lte: to } },
-    _sum: { totalValue: true },
-  });
-  const wasteLoss = storefrontService.convertBaseToOwnerSync(
-    Number(wasteResult._sum.totalValue ?? 0),
-    ownerRate
-  );
-
-  const netRevenue = revenue - taxCollected - processingFee;
-  const netProfit = netRevenue - cogs - wasteLoss;
+  // The same computeStoreFinanceSummary the on-screen report and the All
+  // outlets roll-up use. This page used to carry its own copy of the P&L,
+  // which left refunds out of net revenue — so the printed and on-screen
+  // figures disagreed for any period with a refund.
+  const {
+    revenue,
+    orderCount,
+    taxCollected,
+    serviceCharge,
+    processingFee,
+    cogs,
+    grossProfit,
+    grossMarginPct,
+    wasteLoss,
+    netRevenue,
+    netProfit,
+  } = await computeStoreFinanceSummary(storeId, { from, to }, shiftWhere);
 
   const rawOrders = await prisma.order.findMany({
     where: {

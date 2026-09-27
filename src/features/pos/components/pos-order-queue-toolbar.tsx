@@ -43,6 +43,7 @@ import { UnpaidFilterToggle } from "./unpaid-filter-toggle";
 import { AddFilterMenu } from "./add-filter-menu";
 import { RemovableFilter } from "./removable-filter";
 import { ResetToTodayButton } from "./reset-to-today-button";
+import { CURRENT_SHIFT_PRESET } from "../lib/current-shift-scope";
 
 interface FilterOption {
   id: string;
@@ -106,8 +107,15 @@ interface PosOrderQueueToolbarProps {
   onViewChange: (value: QueueView) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
-  /** Which day(s) the queue is about — always applied, today unless changed. */
+  /**
+   * Which orders the queue is about — always applied. The preset IN FORCE: a
+   * saved "Current shift" arrives as "today" while no till is open.
+   */
   datePreset: QueueDatePreset;
+  /** What the date opens on right now: the current shift while a till is open, else today. */
+  defaultDatePreset: QueueDatePreset;
+  /** "Current shift" is only offered while the store's till is open. */
+  hasOpenShift: boolean;
   onDatePresetChange: (value: QueueDatePreset) => void;
 }
 
@@ -144,6 +152,8 @@ export function PosOrderQueueToolbar({
   hasActiveFilters,
   onClearFilters,
   datePreset,
+  defaultDatePreset,
+  hasOpenShift,
   onDatePresetChange,
 }: PosOrderQueueToolbarProps) {
   const { t } = useI18n();
@@ -216,9 +226,10 @@ export function PosOrderQueueToolbar({
             count={unpaidCount}
             className="h-8 px-2.5 text-xs"
           />
-          {/* Always shown, never removable: the date is always applied (Today by
-              default), so it stays visible — orders outside it are hidden, and a
-              control that could vanish would leave no way to see why. */}
+          {/* Always shown, never removable: the date is always applied (the open
+              shift, else Today, by default), so it stays visible — orders outside
+              it are hidden, and a control that could vanish would leave no way to
+              see why. */}
           <Select
             value={datePreset}
             onValueChange={(v) => onDatePresetChange(v as QueueDatePreset)}
@@ -231,6 +242,11 @@ export function PosOrderQueueToolbar({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              {hasOpenShift && (
+                <SelectItem value={CURRENT_SHIFT_PRESET}>
+                  {t("pos.history.dateRange.shift")}
+                </SelectItem>
+              )}
               {QUEUE_DATE_PRESETS.map((preset) => (
                 <SelectItem key={preset} value={preset}>
                   {t(`pos.history.dateRange.${preset}`)}
@@ -238,9 +254,12 @@ export function PosOrderQueueToolbar({
               ))}
             </SelectContent>
           </Select>
-          {datePreset !== "today" && (
+          {/* Back to the default. Always stored as "Current shift", even with no
+              till open (where it reads as today), so it follows the next shift. */}
+          {datePreset !== defaultDatePreset && (
             <ResetToTodayButton
-              onClick={() => onDatePresetChange("today")}
+              toShift={hasOpenShift}
+              onClick={() => onDatePresetChange(CURRENT_SHIFT_PRESET)}
               className="h-8 px-2 text-xs"
             />
           )}

@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   search: "",
   mutate: vi.fn(),
   signInSocial: vi.fn(),
+  sendVerificationEmail: vi.fn(),
 }));
 
 // A fresh URLSearchParams per call mirrors the real hook; each test sets h.search.
@@ -26,7 +27,10 @@ vi.mock("@/features/auth/hooks/use-auth", () => ({
 }));
 
 vi.mock("@/lib/auth-client", () => ({
-  authClient: { signIn: { social: h.signInSocial }, sendVerificationEmail: vi.fn() },
+  authClient: {
+    signIn: { social: h.signInSocial },
+    sendVerificationEmail: h.sendVerificationEmail,
+  },
 }));
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
@@ -44,6 +48,7 @@ beforeEach(() => {
   h.search = "";
   h.mutate.mockReset();
   h.signInSocial.mockReset();
+  h.sendVerificationEmail.mockReset();
   // The server accepted the credentials: fire the success callback the way react-query would.
   h.mutate.mockImplementation((_data: unknown, options: { onSuccess?: () => void }) => {
     options.onSuccess?.();
@@ -141,7 +146,11 @@ describe("LoginForm: the other places that use ?next= agree with the redirect", 
     fireEvent.click(screen.getByRole("button", { name: /Google/ }));
 
     await waitFor(() => expect(h.signInSocial).toHaveBeenCalledTimes(1));
-    expect(h.signInSocial).toHaveBeenCalledWith({ provider: "google", callbackURL: "/stores" });
+    expect(h.signInSocial).toHaveBeenCalledWith({
+      provider: "google",
+      callbackURL: "/stores",
+      newUserCallbackURL: "/onboarding?signup=google",
+    });
   });
 
   it("sends Google sign-in to a legitimate ?next= path", async () => {
@@ -154,6 +163,70 @@ describe("LoginForm: the other places that use ?next= agree with the redirect", 
     expect(h.signInSocial).toHaveBeenCalledWith({
       provider: "google",
       callbackURL: "/store/abc/pos",
+      newUserCallbackURL: "/store/abc/pos",
     });
+  });
+});
+
+describe("LoginForm: Google also signs brand-new visitors up, and flags them for the wizard", () => {
+  // Better Auth follows newUserCallbackURL only when its OAuth callback has
+  // just created the account; a returning user gets callbackURL.
+  async function googleArgsAt(search: string) {
+    h.search = search;
+    render(<LoginForm />);
+    fireEvent.click(screen.getByRole("button", { name: /Google/ }));
+    await waitFor(() => expect(h.signInSocial).toHaveBeenCalledTimes(1));
+    return h.signInSocial.mock.calls[0][0];
+  }
+
+  it.each([
+    ["there is no ?next=", "", "/stores"],
+    // Where the proxy sends a signed-out visitor who asked for a protected page.
+    ["?callbackUrl= is /stores", "callbackUrl=%2Fstores", "/stores"],
+    ["?callbackUrl= is the wizard itself", "callbackUrl=%2Fonboarding", "/onboarding"],
+    ["?next= is unsafe", "next=%2F%2Fevil.example", "/stores"],
+  ])("sends a new account to the flagged wizard when %s", async (_label, search, returning) => {
+    const args = await googleArgsAt(search);
+
+    expect(args.newUserCallbackURL).toBe("/onboarding?signup=google");
+    expect(args.callbackURL).toBe(returning);
+  });
+
+  it("lets a real deep link win for a new account too (staff invite, store transfer)", async () => {
+    const args = await googleArgsAt("next=%2Fstaff-invite%2Ftok");
+
+    expect(args).toEqual({
+      provider: "google",
+      callbackURL: "/staff-invite/tok",
+      newUserCallbackURL: "/staff-invite/tok",
+    });
+  });
+});
+
+describe("LoginForm: the resent verification link lands where the signup email does", () => {
+  /** Signs in with an unverified address, then presses "resend" on the notice. */
+  async function resendAt(search: string) {
+    h.mutate.mockImplementation((_data: unknown, options: { onError?: (e: Error) => void }) => {
+      options.onError?.(new Error("Email not verified"));
+    });
+    h.sendVerificationEmail.mockResolvedValue({ error: null });
+
+    signInAt(search);
+    fireEvent.click(await screen.findByRole("button", { name: "auth.verifyEmail.resendButton" }));
+    await waitFor(() => expect(h.sendVerificationEmail).toHaveBeenCalledTimes(1));
+    return h.sendVerificationEmail.mock.calls[0][0];
+  }
+
+  it.each([
+    ["there is no ?next=", "", "/onboarding?verified=1"],
+    // Where the wizard sends a signed-out visitor, e.g. after an expired link.
+    ["?callbackUrl= is the wizard itself", "callbackUrl=%2Fonboarding", "/onboarding?verified=1"],
+    ["?next= is unsafe", "next=%2F%2Fevil.example", "/onboarding?verified=1"],
+    ["?next= is an absolute URL", "next=https%3A%2F%2Fevil.example", "/onboarding?verified=1"],
+    ["?next= is a real deep link", "next=%2Ftransfer-ownership%2Fabc", "/transfer-ownership/abc"],
+  ])("when %s", async (_label, search, expected) => {
+    const args = await resendAt(search);
+
+    expect(args).toEqual({ email: "jane@bakery.com", callbackURL: expected });
   });
 });

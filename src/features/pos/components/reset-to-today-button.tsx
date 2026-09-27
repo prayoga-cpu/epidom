@@ -6,15 +6,18 @@ import { cn } from "@/lib/utils";
 
 interface ResetToTodayButtonProps {
   onClick: () => void;
+  /** While a till is open the default is its shift, not today — say so. */
+  toShift?: boolean;
   className?: string;
 }
 
 /**
- * "Reset to today" — sends a date filter that has been moved off its default
- * (today's orders) back to it. Rendered only while the date differs from today;
- * an always-present button would have nothing to do most of the time.
+ * "Reset to today" / "Back to current shift" — sends a date filter that has been
+ * moved off its default (the open till's shift, else today's orders) back to it.
+ * Rendered only while the date differs from that default; an always-present
+ * button would have nothing to do most of the time.
  */
-export function ResetToTodayButton({ onClick, className }: ResetToTodayButtonProps) {
+export function ResetToTodayButton({ onClick, toShift = false, className }: ResetToTodayButtonProps) {
   const { t } = useI18n();
   return (
     <button
@@ -26,7 +29,7 @@ export function ResetToTodayButton({ onClick, className }: ResetToTodayButtonPro
       )}
     >
       <RotateCcw className="h-3.5 w-3.5" />
-      {t("pos.filters.resetToToday")}
+      {t(toShift ? "pos.filters.resetToShift" : "pos.filters.resetToToday")}
     </button>
   );
 }

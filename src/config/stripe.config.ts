@@ -11,13 +11,15 @@
  * 4. Copy the price IDs and paste them below
  */
 
+import { PLAN_MAX_STORES } from "@/lib/plans/entitlements";
+
 export const STRIPE_CONFIG = {
   /**
    * Store limits per plan
    */
   PLAN_LIMITS: {
     FREE: {
-      maxStores: 1,
+      maxStores: PLAN_MAX_STORES.FREE,
       maxProducts: 50,
       name: "Free",
       price: 0,
@@ -27,7 +29,7 @@ export const STRIPE_CONFIG = {
       },
     },
     POS: {
-      maxStores: 1,
+      maxStores: PLAN_MAX_STORES.POS,
       maxProducts: 500,
       name: "Starter",
       price: 29, // EUR
@@ -37,7 +39,7 @@ export const STRIPE_CONFIG = {
       },
     },
     OPERATIONS: {
-      maxStores: Infinity, // Unlimited
+      maxStores: PLAN_MAX_STORES.OPERATIONS, // 3 — a 4th outlet is Enterprise
       maxProducts: Infinity, // Unlimited
       name: "Pro",
       price: 79, // EUR
@@ -47,7 +49,7 @@ export const STRIPE_CONFIG = {
       },
     },
     ENTERPRISE: {
-      maxStores: Infinity, // Unlimited
+      maxStores: PLAN_MAX_STORES.ENTERPRISE, // Unlimited
       maxProducts: Infinity, // Unlimited
       name: "Enterprise",
       price: null, // Custom pricing

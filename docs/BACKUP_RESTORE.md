@@ -34,6 +34,25 @@ silently stopped working." Both jobs no-op cleanly if R2 isn't configured yet
 `R2_BUCKET_NAME` — see `docs/ENVIRONMENT.md`). Status and history are visible
 on `/admin/capacity`.
 
+The crons only fire while the app is **synced** in Inngest Cloud. Until
+2026-09-26 it never had been, so no nightly backup ran between the manual
+2026-08-10 run and then. Re-sync after every production deploy (the Inngest
+Vercel integration does it for you) with `curl -X PUT https://epidom.fr/api/inngest`.
+Never sync a preview deployment with the production keys: it would re-point
+every production cron at that deployment.
+
+**Run backup now** (`/admin/capacity`, `POST /api/admin/backups`) takes a
+backup on demand without Inngest. It writes to its own folder,
+`backups/<YYYY-MM-DD>-manual-<HHMMSS>/` (UTC start time), next to the nightly
+`backups/<YYYY-MM-DD>/` rather than over it: tables are exported one at a
+time, so a run that failed halfway through the nightly's folder would leave a
+mix of two snapshots. It gives up and records FAILED after 270 s, inside the
+route's 300 s limit, and only one manual run can be in flight at a time (a
+nightly never blocks it, since the two write different folders). A row still
+RUNNING past its window is marked FAILED ("Abandoned") by the next run: 15
+minutes for a manual run, 6 hours for a nightly, whose per-table steps retry
+with backoff and have no overall time limit.
+
 ---
 
 ## Restoring
@@ -52,6 +71,8 @@ DATABASE_URL=<target> pnpm prisma migrate deploy
 # 2. Restore the data for a given day
 pnpm restore:backup --date=2026-08-10 --target=<target-connection-string>
 # (or set RESTORE_DATABASE_URL instead of --target)
+# A manual "Run backup now" folder is restored the same way by its full name:
+pnpm restore:backup --date=2026-09-26-manual-140327 --target=<target-connection-string>
 ```
 
 The script lists every `backups/<date>/*.csv.gz` object in R2, restores each

@@ -10,7 +10,8 @@ import {
 /**
  * Custom Development Request Service
  *
- * Business logic layer for Enterprise "Custom Development" requests.
+ * Business logic layer for "Custom Development" requests — a paying
+ * customer describing a custom build; the start of an Enterprise engagement.
  * Single-table feature - uses Prisma directly without a repository.
  */
 export class CustomDevelopmentService {

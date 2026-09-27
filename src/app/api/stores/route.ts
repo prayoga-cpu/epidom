@@ -50,16 +50,28 @@ export const GET = withApiHandler(
  * Create a new store for the current user's business.
  * Auto-creates business if not exists.
  *
+ * Body: createStoreSchema — the store columns plus the optional `countryCode`
+ * (stored as the country's English name) and `financeSource` ({ mode: "copy",
+ * storeId } or { mode: "country", currency? }). A body with only the store
+ * columns behaves as before.
+ *
  * All business logic handled by service:
  * - Auto-create business if missing
  * - Check subscription status
  * - Check store limit
- * - Create store in transaction
+ * - Create store in transaction, with its OWNER staff row and finance settings
+ * - Create its draft storefront after commit (best-effort)
  *
  * Errors thrown by service are automatically mapped to HTTP responses:
+ * - ZodError → 400 VALIDATION_ERROR (e.g. unsupported countryCode)
  * - SubscriptionInactiveError → 403
- * - StoreLimitExceededError → 403 with upgradeRequired: true
- * - ConflictError → 409 (store name exists)
+ * - StoreLimitReachedError → 403 SUBSCRIPTION_LIMIT_EXCEEDED, details
+ *   { current, limit, upgradeRequired: true, requiredPlan } — the lowest plan
+ *   that fits one more store (minPlanForStores): OPERATIONS from FREE/POS,
+ *   ENTERPRISE from OPERATIONS at its 3-store cap
+ * - financeSource.copy from a store outside the caller's business → 403 FORBIDDEN
+ * - financeSource.country without countryCode → 400 VALIDATION_ERROR
+ * - store name exists → 409
  */
 export const POST = withApiHandler(
   async (request, { userId }) => {

@@ -6,6 +6,7 @@ import {
   getAllDashboardNavItems,
   getAllAppNavItems,
 } from "../navigation.config";
+import { minPlanFor } from "@/lib/plans/entitlements";
 
 describe("Back Office rail vs. the full app page universe", () => {
   it("dashboardNavigation no longer contains POS Mode's own routes", () => {
@@ -28,12 +29,31 @@ describe("Back Office rail vs. the full app page universe", () => {
     expect(hrefs).toContain("/menu");
   });
 
-  // Phase 2: /owner (the multi-outlet rollup) moved into the shell — see
-  // docs/back-office-revamp.md's "orphaned outside the shell" finding.
-  it("dashboardNavigation now contains /owner, ENTERPRISE-gated", () => {
-    const ownerItem = getAllDashboardNavItems().find((i) => i.href === "/owner");
-    expect(ownerItem).toBeDefined();
-    expect(ownerItem?.requiredPlan).toBe("ENTERPRISE");
+  // The multi-outlet roll-up is Finance's "All outlets" scope now; /owner is
+  // only a redirect into it, so it has no rail item (and isn't grantable).
+  it("dashboardNavigation has no /owner item — the roll-up lives inside Finance", () => {
+    const hrefs = getAllAppNavItems().map((i) => i.href);
+    expect(hrefs).not.toContain("/owner");
+  });
+
+  // Finance follows FEATURE_MIN_PLAN.finance, so the rail and the page gate
+  // can't disagree about which plan unlocks it.
+  it("/finance is gated at the same plan as FEATURE_MIN_PLAN.finance (Operations)", () => {
+    const finance = getAllDashboardNavItems().find((i) => i.href === "/finance");
+    expect(finance?.requiredPlan).toBe(minPlanFor("finance"));
+    expect(finance?.requiredPlan).toBe("OPERATIONS");
+  });
+
+  it("/custom-development is open to every paying plan (POS and up)", () => {
+    const customDev = getAllDashboardNavItems().find((i) => i.href === "/custom-development");
+    expect(customDev?.requiredPlan).toBe(minPlanFor("customDevelopment"));
+    expect(customDev?.requiredPlan).toBe("POS");
+  });
+
+  it("no Back Office item is gated to Enterprise — it is a custom-build tier, not a feature tier", () => {
+    for (const item of getAllDashboardNavItems()) {
+      expect(item.requiredPlan, item.href).not.toBe("ENTERPRISE");
+    }
   });
 
   it("every gated Back Office item has a lockedHintKey (event-framed copy, not generic)", () => {
@@ -77,7 +97,7 @@ describe("Back Office rail vs. the full app page universe", () => {
     const hrefs = getAllAppNavItems().map((i) => i.href);
     for (const page of [
       "/menu",
-      "/owner",
+      "/finance",
       "/pos",
       "/pos/orders",
       "/pos/kds",

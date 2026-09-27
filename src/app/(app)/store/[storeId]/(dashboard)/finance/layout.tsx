@@ -1,7 +1,9 @@
 import type React from "react";
 import { requirePlan } from "@/lib/auth/require-plan";
+import { minPlanFor } from "@/lib/plans/entitlements";
 
-// Finance requires the ENTERPRISE plan (redirects below tier).
+// Finance — the single-outlet report and its All outlets roll-up — follows
+// FEATURE_MIN_PLAN.finance (redirects below tier).
 export default async function FinanceLayout({
   children,
   params,
@@ -10,6 +12,6 @@ export default async function FinanceLayout({
   params: Promise<{ storeId: string }>;
 }) {
   const { storeId } = await params;
-  await requirePlan(storeId, "ENTERPRISE");
+  await requirePlan(storeId, minPlanFor("finance"));
   return <>{children}</>;
 }

@@ -17,6 +17,7 @@ import { useDialogSwap } from "@/components/ui/use-dialog-swap";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
 import type { CustomerRowDto } from "@/types/api/cashier";
+import { PageIntro } from "@/features/guide/components/page-intro";
 import { useExportCustomers } from "../hooks/use-customer-mutations";
 import {
   useCustomerDetail,
@@ -129,6 +130,8 @@ export function CustomersClient({ storeId, canManage }: CustomersClientProps) {
         </h1>
         <p className="text-muted-foreground text-sm">{t("customers.page.description")}</p>
       </div>
+
+      <PageIntro id="customers" storeId={storeId} />
 
       <CustomersSummary
         loyaltyEnabled={loyalty.enabled}

@@ -5,7 +5,8 @@ import { DEFAULT_ENABLED_PAYMENT_METHODS } from "@/config/payment-fees.config";
 
 const h = vi.hoisted(() => {
   const tx = {
-    store: { findUnique: vi.fn(), update: vi.fn() },
+    store: { findUnique: vi.fn(), update: vi.fn(), count: vi.fn() },
+    subscription: { findUnique: vi.fn() },
     verification: { deleteMany: vi.fn() },
     business: { findUnique: vi.fn(), create: vi.fn() },
     businessFinanceSettings: { findUnique: vi.fn() },
@@ -105,6 +106,9 @@ beforeEach(() => {
   h.tx.business.create.mockResolvedValue({ id: "biz_created" });
   h.tx.businessFinanceSettings.findUnique.mockResolvedValue(null);
   h.tx.staffMember.updateMany.mockResolvedValue({ count: 1 });
+  // A recipient on Free with no store yet: room for exactly one.
+  h.tx.subscription.findUnique.mockResolvedValue({ plan: "FREE", status: "ACTIVE" });
+  h.tx.store.count.mockResolvedValue(0);
 });
 
 describe("startStoreTransfer", () => {
@@ -615,5 +619,48 @@ describe("acceptStoreTransfer — finance settings ride with the store", () => {
     expect(h.tx.storeFinanceSettings.upsert.mock.calls[0][0].create.processingFeeOverrides).toBe(
       Prisma.JsonNull
     );
+  });
+});
+
+// A transferred store counts against the recipient's plan like a created one;
+// otherwise free accounts could each open a store and hand it to one
+// Operations owner, and the three-outlet cap would mean nothing.
+describe("acceptStoreTransfer — the recipient's store limit", () => {
+  beforeEach(() => {
+    h.prisma.verification.findFirst.mockResolvedValue(inviteRow());
+  });
+
+  const accept = () => acceptStoreTransfer({ token: TOKEN, recipient });
+
+  it("refuses when the recipient's plan is full, naming the plan that fits, and moves nothing", async () => {
+    h.tx.subscription.findUnique.mockResolvedValue({ plan: "OPERATIONS", status: "ACTIVE" });
+    h.tx.store.count.mockResolvedValue(3);
+
+    const error = await accept().catch((e) => e);
+
+    expect(error.code).toBe(ApiErrorCode.SUBSCRIPTION_LIMIT_EXCEEDED);
+    expect(error.statusCode).toBe(403);
+    expect(error.details).toMatchObject({ current: 3, limit: 3, requiredPlan: "ENTERPRISE" });
+    expect(error.message).toContain("Enterprise");
+    expect(h.tx.store.update).not.toHaveBeenCalled();
+  });
+
+  it("counts a lapsed subscription as Free (one store)", async () => {
+    h.tx.subscription.findUnique.mockResolvedValue({ plan: "OPERATIONS", status: "PAST_DUE" });
+    h.tx.store.count.mockResolvedValue(1);
+
+    const error = await accept().catch((e) => e);
+
+    expect(error.details).toMatchObject({ limit: 1, requiredPlan: "OPERATIONS" });
+    expect(h.tx.store.update).not.toHaveBeenCalled();
+  });
+
+  it("lets it through while the plan still has room", async () => {
+    h.tx.subscription.findUnique.mockResolvedValue({ plan: "OPERATIONS", status: "ACTIVE" });
+    h.tx.store.count.mockResolvedValue(2);
+
+    await accept();
+
+    expect(h.tx.store.update).toHaveBeenCalled();
   });
 });

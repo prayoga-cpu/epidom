@@ -20,28 +20,34 @@ import {
   Loader2,
 } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCurrency } from "@/components/providers/currency-provider";
+import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { getStatusColor, getStatusLabel } from "@/lib/utils/subscription-helpers";
-import { PLAN_PRICE_IDR } from "@/lib/constants/plan-pricing";
+import { PLAN_PRICING } from "@/lib/constants/plan-pricing";
 import { isLifetimePeriod, formatCurrency } from "@/lib/utils/formatting";
 import { getApiErrorMessage } from "@/lib/utils/api-error";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { BetaPlanSwitcher } from "./beta-plan-switcher";
+import { PlanCards, type PlanChangeMode } from "./plan-cards";
+import { isPaidPlan, resolvePriceCurrency } from "../lib/plan-price";
+import { minPlanForStores, PLAN_LABELS } from "@/lib/plans/entitlements";
 
-// Epidom's SaaS subscription is billed in IDR; the monthly IDR price per plan
-// lives in src/lib/constants/plan-pricing.ts, the single source the public
-// /pricing page is tested against. Every display currency is derived from that
-// IDR base via useCurrency(), the same IDR->userCurrency conversion the rest
-// of the dashboard already relies on.
+// Plan prices come from src/lib/constants/plan-pricing.ts, the single source
+// the public /pricing page and the Stripe Prices are built from. They are
+// quoted in the store's currency when Stripe has an exact price in it (EUR,
+// USD, IDR), never converted at a live rate — see resolvePriceCurrency.
 
 export function BillingContainer() {
-  const { t, formatDate } = useI18n();
-  const router = useRouter();
+  const { t, formatDate, locale, intlLocale } = useI18n();
   const params = useParams<{ storeId?: string }>();
   const storeId = params?.storeId;
   const searchParams = useSearchParams();
-  const { formatPrice } = useCurrency();
+  // The store's own currency, read from its finance settings rather than
+  // useCurrency(): that one reports IDR as a placeholder and stays loading
+  // through an exchange-rate fetch plan prices never use. Same query key as the
+  // currency provider's, so this is the cached answer, not a second request.
+  const { data: financeSettings, isLoading: financeLoading } = useFinanceSettings(storeId);
+  const priceCurrency = resolvePriceCurrency(financeSettings?.currency, locale);
   const { data, isLoading: loading, error: subscriptionError, refetch } = useSubscriptionStatus();
   const { confirm, confirmDialog } = useConfirm();
   const [actionLoading, setActionLoading] = useState(false);
@@ -103,8 +109,10 @@ export function BillingContainer() {
     }
   };
 
+  // Signed-in users stay in the app (the website is only reachable logged
+  // out), so the plans live on this page.
   const handleUpgrade = () => {
-    router.push("/pricing#plans");
+    document.getElementById("plans")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   /**
@@ -151,13 +159,13 @@ export function BillingContainer() {
     };
   }, [awaitingWebhook, refetch]);
 
-  if (loading) {
+  if (loading || financeLoading) {
     return <BillingLoadingSkeleton />;
   }
 
   if (error || subscriptionError) {
     return (
-      <div className="container mx-auto max-w-4xl py-8">
+      <div className="container mx-auto max-w-5xl py-8">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -173,12 +181,31 @@ export function BillingContainer() {
   }
 
   const { subscription, storeUsage } = data;
+  // "room" | "full" | "over" — only for a finite limit (Infinity arrives as
+  // null over JSON). Free's single store is the norm, not a warning, unless a
+  // downgrade left it with more.
+  const storeLimitState: "room" | "full" | "over" = (() => {
+    if (!storeUsage || storeUsage.limit == null || !Number.isFinite(storeUsage.limit)) {
+      return "room";
+    }
+    if (storeUsage.current > storeUsage.limit) return "over";
+    if (storeUsage.current === storeUsage.limit && subscription?.plan !== "FREE") return "full";
+    return "room";
+  })();
+  const currentPlan = subscription?.plan ?? "FREE";
 
   // Only show Stripe billing actions when they can actually succeed.
   const canManage = !!subscription?.canManagePayment;
   const canCancel = !!subscription?.canCancel && !subscription?.cancelAtPeriodEnd;
   // Admin-granted (BETA) accounts switch plans freestyle, with no Stripe billing.
   const isBeta = !!subscription?.isBeta;
+  // Mirrors /api/subscriptions/checkout, which sends an account already paying
+  // through Stripe to the Customer Portal instead of a second Checkout.
+  const planChangeMode: PlanChangeMode = isBeta
+    ? "beta"
+    : subscription?.status === "ACTIVE" && currentPlan !== "FREE" && canManage
+      ? "portal"
+      : "checkout";
 
   const labelForPlan = (value: string | null | undefined) =>
     value === "FREE"
@@ -204,7 +231,7 @@ export function BillingContainer() {
       : null;
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 py-8">
+    <div className="container mx-auto max-w-5xl space-y-6 py-8">
       {/* Success Alert */}
       {success && (
         <Alert className="border-green-200 bg-green-50">
@@ -299,10 +326,14 @@ export function BillingContainer() {
               </div>
               <p className="text-muted-foreground text-sm">
                 {customPriceLabel ??
-                  (subscription?.plan === "FREE"
+                  (currentPlan === "FREE"
                     ? "Free forever"
-                    : subscription?.plan && PLAN_PRICE_IDR[subscription.plan]
-                      ? `${formatPrice(PLAN_PRICE_IDR[subscription.plan])}${t("billing.perMonth")}`
+                    : isPaidPlan(currentPlan)
+                      ? `${formatCurrency(
+                          PLAN_PRICING[currentPlan][priceCurrency].monthly,
+                          priceCurrency,
+                          intlLocale
+                        )}${t("billing.perMonth")}`
                       : t("profile.subscription.pricing.enterprise"))}
               </p>
               {customPriceLabel && (
@@ -353,12 +384,28 @@ export function BillingContainer() {
                 <p className="text-sm font-medium">{t("billing.storeUsage")}</p>
                 <p className="text-muted-foreground text-sm">
                   {storeUsage.current} /{" "}
-                  {storeUsage.limit === Infinity ? t("billing.unlimited") : storeUsage.limit}{" "}
+                  {/* An unlimited plan's Infinity arrives as null: JSON has no Infinity. */}
+                  {storeUsage.limit == null || !Number.isFinite(storeUsage.limit)
+                    ? t("billing.unlimited")
+                    : storeUsage.limit}{" "}
                   {t("billing.stores")}
                 </p>
+                {storeLimitState !== "room" && (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {t("billing.moreStoresNeed").replace(
+                      "{plan}",
+                      PLAN_LABELS[minPlanForStores(storeUsage.current + 1)]
+                    )}
+                  </p>
+                )}
               </div>
-              {!storeUsage.canCreateMore && subscription?.plan === "POS" && (
-                <Badge variant="secondary">{t("billing.limitReached")}</Badge>
+              {/* Any paid plan can be full (Operations stops at three), and a
+                  business can sit OVER its limit after a downgrade — its stores
+                  keep working, it just can't add another. */}
+              {storeLimitState !== "room" && (
+                <Badge variant={storeLimitState === "over" ? "destructive" : "secondary"}>
+                  {storeLimitState === "over" ? t("billing.overLimit") : t("billing.limitReached")}
+                </Badge>
               )}
             </div>
           )}
@@ -406,8 +453,11 @@ export function BillingContainer() {
           ) : (
             <div className="space-y-3 border-t pt-6">
               <p className="text-muted-foreground text-sm">
-                {t("billing.notStripeManaged")?.replace("{plan}", planName) ||
-                  `You're on the ${planName} plan — there's no payment method or subscription to manage. Upgrade to unlock paid features.`}
+                {t(
+                  currentPlan === "FREE"
+                    ? "billing.notStripeManaged"
+                    : "billing.notStripeManagedPaid"
+                ).replace("{plan}", planName)}
               </p>
               {(subscription?.plan === "FREE" || subscription?.plan === "POS") && (
                 <Button onClick={handleUpgrade} className="gap-2">
@@ -420,19 +470,10 @@ export function BillingContainer() {
         </CardContent>
       </Card>
 
-      {/* Upgrade CTA */}
-      {subscription?.plan === "POS" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("billing.availablePlans")}</CardTitle>
-            <CardDescription>{t("billing.comparePlans")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleUpgrade} className="w-full">
-              {t("billing.viewPlans")}
-            </Button>
-          </CardContent>
-        </Card>
+      {/* An unpaid admin quote comes first: switching plans around it would
+          leave the quote dangling, so the plans wait until it is settled. */}
+      {!customPricePending && (
+        <PlanCards currentPlan={currentPlan} mode={planChangeMode} currency={priceCurrency} />
       )}
       {confirmDialog}
     </div>
@@ -441,7 +482,7 @@ export function BillingContainer() {
 
 function BillingLoadingSkeleton() {
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 py-8">
+    <div className="container mx-auto max-w-5xl space-y-6 py-8">
       <Card>
         <CardHeader>
           <Skeleton className="h-6 w-48" />
@@ -462,7 +503,7 @@ function NoSubscriptionState() {
   const { t } = useI18n();
 
   return (
-    <div className="container mx-auto max-w-4xl py-16">
+    <div className="container mx-auto max-w-5xl py-16">
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
           <CreditCard className="text-muted-foreground mb-4 h-16 w-16" />

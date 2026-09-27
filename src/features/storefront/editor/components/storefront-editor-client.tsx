@@ -16,6 +16,7 @@ import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscr
 import { planHasFeature, upgradeHrefFor, type PlanTier } from "@/lib/plans/entitlements";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { storeKeys } from "@/features/stores/stores/hooks/use-stores";
+import { PageIntro } from "@/features/guide/components/page-intro";
 
 interface StorefrontEditorClientProps {
   storeId: string;
@@ -111,6 +112,8 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
         <h1 className="text-2xl font-bold tracking-tight">{t("storefront.editor.title")}</h1>
         <p className="text-muted-foreground mt-1">{t("storefront.editor.subtitle")}</p>
       </div>
+
+      <PageIntro id="storefront" storeId={storeId} />
 
       <Tabs value={activeTab} onValueChange={setTab} className="space-y-2 sm:space-y-6">
         <TabsList className="border-border bg-muted/30 w-full overflow-x-auto border p-1 sm:inline-flex sm:w-auto">

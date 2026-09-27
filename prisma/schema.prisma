@@ -39,6 +39,10 @@ model User {
   stripeConnectOnboarded Boolean   @default(false)
   isAdmin                Boolean   @default(false)
   hasOnboarded           Boolean   @default(false)
+  // Per-user state of the in-app guide (src/features/guide): when the welcome
+  // tour was seen, which page intro cards and store checklists were dismissed.
+  // Shape: GuideState in src/lib/guide/contracts.ts. Null = nothing seen yet.
+  guideState             Json?
   // Set when the owner self-deactivates (or an admin does so on their behalf).
   // Self-service reactivation is allowed for 30 days after this; after that,
   // recovery requires a support-quoted fee up until purgeAt.
@@ -120,6 +124,17 @@ model Business {
   website         String?
   timezone        String                   @default("Asia/Jakarta")
   locale          String                   @default("id")
+  // Setup wizard (/onboarding) progress: the step the owner is on (1-3) while
+  // setting up, null before the wizard starts, for businesses created before
+  // it existed, and once it's finished (User.hasOnboarded). Only a non-null
+  // step sends a returning owner back to /onboarding.
+  onboardingStep  Int?
+  // What the owner said they want Epidom for, picked on the wizard's last
+  // step (OnboardingGoal in src/lib/onboarding/contracts.ts). Orders the
+  // Getting-started checklist.
+  onboardingGoals String[]                 @default([])
+  // Cafe, restaurant, bakery... (BusinessType in src/lib/onboarding/markets.ts).
+  businessType    String?
   // bcrypt hash of the owner's 4-digit PIN. Required once any StaffMember
   // exists, so a shared device can gate "switch back to Owner" behind
   // something only the real owner knows (staff never see this PIN).

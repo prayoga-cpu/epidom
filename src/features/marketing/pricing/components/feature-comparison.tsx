@@ -8,6 +8,15 @@ const CATEGORIES = [
   {
     labelKey: "redesign.pricingPage.cmpCat1",
     rows: [
+      // A limit, not a feature: the one row whose cells are values. Operations
+      // stops at three outlets (PLAN_MAX_STORES); a fourth is Enterprise.
+      {
+        labelKey: "redesign.pricingPage.cmp_outlets",
+        free: "1",
+        pos: "1",
+        ops: "3",
+        ent: "redesign.pricingPage.cmp_unlimited",
+      },
       {
         labelKey: "redesign.pricingPage.cmp_menu_items",
         free: true,
@@ -85,14 +94,14 @@ const CATEGORIES = [
         labelKey: "redesign.pricingPage.cmp_owner_dashboard",
         free: false,
         pos: false,
-        ops: false,
+        ops: true,
         ent: true,
       },
       {
         labelKey: "redesign.pricingPage.cmp_finance",
         free: false,
         pos: false,
-        ops: false,
+        ops: true,
         ent: true,
       },
     ],
@@ -151,8 +160,30 @@ function DashIcon() {
   );
 }
 
+/** A row cell: a tick or a dash — or, for a limit row, a short value (a
+ * number, or a locale key such as "Unlimited"). */
+function Cell({ value, label }: { value: boolean | string; label: (key: string) => string }) {
+  if (typeof value === "string") {
+    return (
+      <span
+        style={{
+          display: "block",
+          fontSize: 14,
+          fontWeight: 600,
+          color: "var(--epi-cream-100)",
+          fontFamily: "var(--epi-font-body)",
+        }}
+      >
+        {value.startsWith("redesign.") ? label(value) : value}
+      </span>
+    );
+  }
+  return value ? <CheckIcon /> : <DashIcon />;
+}
+
 export function FeatureComparison() {
   const { t, locale } = useI18n();
+  const label = (key: string) => t(key as Parameters<typeof t>[0]);
 
   return (
     <section className="epi-section" style={{ paddingTop: 40 }}>
@@ -274,10 +305,10 @@ export function FeatureComparison() {
                         {t(row.labelKey as Parameters<typeof t>[0])}
                       </td>
                       <td style={{ padding: "13px 12px", textAlign: "center" }}>
-                        {row.free ? <CheckIcon /> : <DashIcon />}
+                        <Cell value={row.free} label={label} />
                       </td>
                       <td style={{ padding: "13px 12px", textAlign: "center" }}>
-                        {row.pos ? <CheckIcon /> : <DashIcon />}
+                        <Cell value={row.pos} label={label} />
                       </td>
                       <td
                         style={{
@@ -288,10 +319,10 @@ export function FeatureComparison() {
                           borderRight: "1px solid rgba(217,174,59,0.12)",
                         }}
                       >
-                        {row.ops ? <CheckIcon /> : <DashIcon />}
+                        <Cell value={row.ops} label={label} />
                       </td>
                       <td style={{ padding: "13px 12px", textAlign: "center" }}>
-                        {row.ent ? <CheckIcon /> : <DashIcon />}
+                        <Cell value={row.ent} label={label} />
                       </td>
                     </tr>
                   ))}

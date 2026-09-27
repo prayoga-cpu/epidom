@@ -45,10 +45,11 @@ import {
 import { apiClient } from "@/lib/api/client";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useCustomProductsSettings } from "@/features/dashboard/data/custom-products/hooks/use-custom-products-settings";
-import { Download, FileText, Sheet, Pencil, Trash2, AlertCircle, Store } from "lucide-react";
+import { Download, FileText, Sheet, Pencil, Trash2 } from "lucide-react";
 import { useSortable, sortRows } from "@/features/dashboard/shared/hooks/use-sortable";
-import { SortIcon } from "@/features/dashboard/shared/components/sort-icon";
+import { SortableHead, ReportStatus, ReportStatusRow } from "./finance-report-parts";
 import { DateRangeField } from "@/components/ui/date-range-field";
+import { PageIntro } from "@/features/guide/components/page-intro";
 import {
   todayLocalISO,
   startOfMonthLocalISO,
@@ -206,9 +207,9 @@ interface FinanceClientProps {
   storeId: string;
   staff: StaffOption[];
   categories: CategoryOption[];
-  /** Shows a link to the cross-store /owner rollup — only meaningful when
-   * this store's business actually has more than one store. */
-  showOwnerLink?: boolean;
+  /** The "This outlet / All outlets" switch, rendered in the header when the
+   * viewer can see the roll-up — FinanceReport decides that, not this report. */
+  scopeSwitch?: ReactNode;
 }
 
 const ALL = "all";
@@ -234,95 +235,6 @@ const PAYMENT_METHOD_OPTIONS = [
   "GOOGLE_PAY",
   "OTHER",
 ] as const;
-
-function SortableHead({
-  active,
-  dir,
-  onClick,
-  children,
-  align,
-}: {
-  active: boolean;
-  dir: "asc" | "desc";
-  onClick: () => void;
-  children: ReactNode;
-  align?: "right";
-}) {
-  return (
-    <TableHead className={align === "right" ? "text-right" : undefined}>
-      <button
-        className={`hover:text-foreground flex items-center font-semibold ${
-          align === "right" ? "ml-auto" : ""
-        }`}
-        onClick={onClick}
-      >
-        {children}
-        <SortIcon active={active} dir={dir} />
-      </button>
-    </TableHead>
-  );
-}
-
-/**
- * A report tab/query must never go from "visible" to silently blank on
- * error — every `X.isLoading`/`X.isError` pair below renders through one of
- * these instead of a bare `{data && ...}`/`isLoading ? "Loading..." : ...`
- * that has no failure branch.
- */
-function ReportStatus({
-  isError,
-  onRetry,
-  loadingLabel,
-  errorLabel,
-  retryLabel,
-}: {
-  isError: boolean;
-  onRetry: () => void;
-  loadingLabel: string;
-  errorLabel: string;
-  retryLabel: string;
-}) {
-  if (!isError) return <>{loadingLabel}</>;
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <AlertCircle className="text-destructive h-5 w-5" />
-      <p>{errorLabel}</p>
-      <Button variant="outline" size="sm" onClick={onRetry}>
-        {retryLabel}
-      </Button>
-    </div>
-  );
-}
-
-function ReportStatusRow({
-  isError,
-  colSpan,
-  onRetry,
-  loadingLabel,
-  errorLabel,
-  retryLabel,
-}: {
-  isError: boolean;
-  colSpan: number;
-  onRetry: () => void;
-  loadingLabel: string;
-  errorLabel: string;
-  retryLabel: string;
-}) {
-  return (
-    <TableRow>
-      <TableCell colSpan={colSpan} className="text-muted-foreground py-8 text-center">
-        <ReportStatus
-          isError={isError}
-          onRetry={onRetry}
-          loadingLabel={loadingLabel}
-          errorLabel={errorLabel}
-          retryLabel={retryLabel}
-        />
-      </TableCell>
-    </TableRow>
-  );
-}
 
 /**
  * One label/value line inside a mobile cash-drawer card. The cash tab has far
@@ -372,7 +284,7 @@ function CashCardLine({
   );
 }
 
-export function FinanceClient({ storeId, staff, categories, showOwnerLink }: FinanceClientProps) {
+export function FinanceClient({ storeId, staff, categories, scopeSwitch }: FinanceClientProps) {
   const { t, formatDateTime, formatDayDate, formatTimeOnly } = useI18n();
   // formatPrice(value): real IDR->owner-currency conversion (its default
   // behavior), for genuinely IDR-stored figures (waste-entry cost
@@ -1096,20 +1008,13 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
           </h1>
           <p className="text-muted-foreground text-sm">{t("pages.financeDesc")}</p>
         </div>
-        <div className="flex shrink-0 gap-2">
-          {showOwnerLink && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => router.push(`/store/${storeId}/owner`)}
-            >
-              <Store className="mr-2 h-4 w-4" />
-              {t("pages.financeAllOutlets")}
-            </Button>
-          )}
+        {/* Not shrink-0: with the scope switch here the cluster must be able to
+            wrap under a long title (French) instead of squeezing it. */}
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+          {scopeSwitch}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline" className="shrink-0">
+              <Button size="sm" variant="outline" className="h-10 shrink-0">
                 <Download className="mr-2 h-4 w-4" />
                 {t("common.actions.export")}
               </Button>
@@ -1127,6 +1032,8 @@ export function FinanceClient({ storeId, staff, categories, showOwnerLink }: Fin
           </DropdownMenu>
         </div>
       </div>
+
+      <PageIntro id="finance" storeId={storeId} />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4">

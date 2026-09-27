@@ -8,14 +8,18 @@ If you add a feature, update this doc in the same PR. If a feature is in develop
 
 ## Tier overview
 
-| Tier           | Price (IDR/mo) | Who it's for                               | Phase delivered |
-| -------------- | -------------- | ------------------------------------------ | --------------- |
-| **FREE**       | Rp 0           | Any merchant who wants a public storefront | Phase 1-2       |
-| **POS**        | Rp 229,000     | Merchant with a cashier and >50 orders/day | Phase 3         |
-| **OPERATIONS** | Rp 459,000     | Multi-staff café or restaurant             | Phase 4         |
-| **ENTERPRISE** | Custom         | Multi-outlet brand, small manufacturer     | Phase 5         |
+| Tier           | Price (IDR/mo) | Who it's for                                          | Phase delivered |
+| -------------- | -------------- | ----------------------------------------------------- | --------------- |
+| **FREE**       | Rp 0           | Any merchant who wants a public storefront            | Phase 1-2       |
+| **POS**        | Rp 229,000     | Merchant with a cashier and >50 orders/day            | Phase 3         |
+| **OPERATIONS** | Rp 459,000     | Multi-staff café or restaurant, up to 3 outlets       | Phase 4-5       |
+| **ENTERPRISE** | Custom         | A group of 4+ outlets, or a custom build with us      | Service tier    |
 
 Each tier includes everything in the tier below. The upgrade always preserves data.
+
+Since 2026-09-26, ENTERPRISE is a consultation / custom-build service, not a feature tier: no self-serve feature is gated to it. Finance and the All outlets roll-up moved to OPERATIONS, and Custom Development requests opened to every paid plan. See the decision log at the end.
+
+Since 2026-09-27, outlets are capped per plan: FREE 1, POS 1, OPERATIONS up to 3, ENTERPRISE unlimited. A 4th outlet needs ENTERPRISE, which stays sales-led. See Multi-outlet management below.
 
 ---
 
@@ -136,6 +140,11 @@ For merchants who run service in-person. Everything in FREE, plus:
 - Orders queue locally and sync on reconnect
 - Conflict resolution on sync
 
+### Custom Development requests
+
+- Describe a custom build from `/custom-development`; requests reach the Prionation team by email and the admin triage page
+- Open to every paid plan (POS and up). It is how an ENTERPRISE engagement starts
+
 ### POS tier limits
 
 | Resource               | Limit       |
@@ -151,7 +160,7 @@ For merchants who run service in-person. Everything in FREE, plus:
 
 ## OPERATIONS tier (Rp 459,000/mo)
 
-For merchants with staff and ingredient cost concerns. Everything in POS, plus:
+For merchants with staff, ingredient cost concerns, or a second or third outlet. Everything in POS, plus:
 
 ### Shift management _(Phase 4)_
 
@@ -194,53 +203,36 @@ For merchants with staff and ingredient cost concerns. Everything in POS, plus:
 - Manual supplier order creation
 - Order receipt updates stock
 
-### Operations tier limits
-
-| Resource               | Limit       |
-| ---------------------- | ----------- |
-| Storefronts            | 1           |
-| Menu items             | Unlimited   |
-| Orders per month       | Unlimited   |
-| Storage                | 25 GB       |
-| WhatsApp notifications | 5,000/month |
-| POS terminals          | 5           |
-| Staff accounts         | 15          |
-
----
-
-## ENTERPRISE tier (custom pricing)
-
-For multi-outlet brands and small manufacturers. Everything in OPERATIONS, plus:
-
 ### Multi-outlet management _(Phase 5)_
 
-- Multiple stores under one business
-- Centralized menu management with per-outlet overrides
+- Multiple stores under one business: up to 3 outlets on OPERATIONS, unlimited on ENTERPRISE (FREE and POS are capped at one store). Source of truth: `PLAN_MAX_STORES` and `minPlanForStores(count)` in `src/lib/plans/entitlements.ts`, read by `getStoreLimit` / `canCreateStore` in `src/config/stripe.config.ts`
+- The limit is checked when a store is created (under a row lock) and when a store ownership transfer is accepted: a recipient already at their limit is refused with `SUBSCRIPTION_LIMIT_EXCEEDED` and `details.requiredPlan`, and the invite stays usable. Transferred stores are no longer grandfathered past the limit (2026-09-27)
+- A downgrade never removes or locks a store. A business above its new plan's limit keeps every store working but cannot create or receive another; the Billing page shows "Over your plan's limit" and which plan allows more stores
 - Per-outlet permissions for managers
-- Cross-outlet inventory transfers
+- Not built yet: centralized menu management with per-outlet overrides, cross-outlet inventory transfers
 
-### Aggregator dashboard _(Phase 5)_
-
-- Unified order queue across GoFood, GrabFood, ShopeeFood, direct
-- Per-channel revenue tracking
-- Commission and net margin per channel
-- Source-tagged orders for reporting
-- Email parsing ingestion (v1)
-- Direct API integrations (v2, partner-dependent)
-
-### Finance reports _(Phase 5)_
+### Finance reports _(Phase 5; OPERATIONS since 2026-09-26)_
 
 - Daily, weekly, monthly P&L
-- Revenue, COGS, gross margin
-- Per-channel profitability
-- Per-outlet rollup
+- Revenue, COGS, gross margin, item margin
+- Per-channel and per-payment-method breakdowns
+- By shift, by roster shift-block, waste by reason
 - Per-shift cash reconciliation
-- PDF and Excel export
+- **All outlets** scope: a "This outlet / All outlets" switch in the Finance header, shown only to the business owner (not staff personas) when the business has more than one store. Shows revenue, gross profit and margin, waste loss, net profit, outlet count and orders awaiting payment, plus a sortable By outlet table with a totals row and a link into each outlet's own report for the same dates. Each outlet uses the same calculation as its single-outlet report (net profit subtracts refunds, tax, processing fees, COGS and waste). Outlets in different currencies are shown in their own currency and never added together. Replaces the separate Owner dashboard: `/store/{id}/owner` now redirects to `/finance?scope=all`
+- PDF and Excel export (the All outlets view exports Excel)
 - Customizable date ranges
+- Enforced server-side too: the Finance report routes check the store owner's plan (`requireStoreFeatureApi(storeId, "finance")`). Top items, by department and finance settings stay open, because the main dashboard, storefront editor and POS use them on every plan
+
+### Aggregator channels _(Phase 5)_
+
+- Per-channel revenue, commission and net margin are Finance tabs (OPERATIONS)
+- Ingestion itself is **not plan-gated**: email parsing (v1, `src/app/api/webhooks/email/route.ts`) matches any storefront slug, and the source-tagged orders (GoFood, GrabFood, ShopeeFood, direct) land in the same order queue as every other order, on every plan
+- Direct API integrations (v2, partner-dependent, not built)
 
 ### Production batches _(Phase 5)_
 
 - Resurrected from the original schema for small manufacturers
+- Off by default per store (`Store.productionEnabled`); the plan sets the ceiling, the toggle the intent
 - Plan production runs
 - Track planned vs actual yield
 - Cost per batch
@@ -252,6 +244,42 @@ For multi-outlet brands and small manufacturers. Everything in OPERATIONS, plus:
 - Skips the Kitchen/Bar KDS workflow and material stock/recipe deduction entirely
 - Each item has two independent visibility switches — "Show on Menu" (the public Storefront) and "Show on Cashier" (the POS Cashier sell grid) — instead of the single shared toggle regular menu items use
 - Revenue rolls into the same integrated Finance Reports as every other sale
+
+### Operations tier limits
+
+| Resource               | Limit                      |
+| ---------------------- | -------------------------- |
+| Storefronts            | Up to 3 (one per outlet)   |
+| Outlets                | Up to 3                    |
+| Menu items             | Unlimited                  |
+| Orders per month       | Unlimited                  |
+| Storage                | 25 GB                      |
+| WhatsApp notifications | 5,000/month                |
+| POS terminals          | 5                          |
+| Staff accounts         | 15                         |
+
+A 4th outlet needs ENTERPRISE (since 2026-09-27; before that, one Operations subscription covered unlimited outlets). Prices are unchanged. Whether to publish an ENTERPRISE "from" price for that step is an open decision, not implemented.
+
+---
+
+## ENTERPRISE tier (custom pricing)
+
+Unlimited outlets plus a consultation and custom-build service; no self-serve feature is gated to it. Sales-led: "Talk to us" (WhatsApp) on `/pricing`, priced per engagement. Everything in OPERATIONS, plus:
+
+### Unlimited outlets
+
+- 4 or more outlets under one business (OPERATIONS stops at 3)
+
+### Your own system, built with us
+
+- Your own internal system or website, scoped and built with the Prionation team (the company behind Epidom; `/build-with-us` is its public custom-build page)
+- Built and hosted on Prionation infrastructure
+- Custom integrations (accounting, delivery apps, payments)
+- Priority support, onboarding and data migration
+- A dedicated account manager
+- Custom SLAs
+
+The way in is a Custom Development request (any paid plan) or a WhatsApp conversation. The items below are custom-build work of this kind, not self-serve switches.
 
 ### Stripe Connect 80/20 _(Phase 5+, optional)_
 
@@ -273,10 +301,12 @@ For multi-outlet brands and small manufacturers. Everything in OPERATIONS, plus:
 
 ### Enterprise tier limits
 
+Starting defaults; an engagement can set its own terms.
+
 | Resource               | Limit                                     |
 | ---------------------- | ----------------------------------------- |
 | Storefronts            | Unlimited (one per outlet)                |
-| Outlets                | Unlimited                                 |
+| Outlets                | Unlimited (4 and up)                      |
 | Menu items             | Unlimited                                 |
 | Orders                 | Unlimited                                 |
 | Storage                | 250 GB                                    |
@@ -328,7 +358,7 @@ These existed in the original codebase. They are not deleted — they're paused 
 | Cookie-bar-specific copy        | Removed in Phase 0                    | Will not return                                    |
 | Stripe Connect 80/20 (original) | Paused                                | Returns in Phase 5+ ENTERPRISE tier, pending legal |
 | French market positioning       | Paused                                | Re-evaluate after 5,000 paying IDN merchants       |
-| Production batch UI             | Hidden behind feature flag in Phase 0 | Returns in Phase 5 ENTERPRISE for manufacturers    |
+| Production batch UI             | Hidden behind feature flag in Phase 0 | Back on OPERATIONS, opt-in per store               |
 | AI CSV import for inventory     | Code retained, UI hidden              | Returns in Phase 4 OPERATIONS tier                 |
 | Maps (Leaflet, MapLibre)        | Removed in Phase 0                    | Not returning unless a clear use case emerges      |
 
@@ -367,6 +397,22 @@ The operational half of two-tier stock. Batch-produced items only stay in stock 
 - **Today's prep** suggests `minStock − currentStock`, netted against outstanding drawn-shortfall debt.
 - **One-tap logging** runs the whole start/complete cycle in one transaction, settlement-aware on both the materials and the finished-goods side.
 - **The count sheet** is the only mechanism that expenses finished-goods shrinkage under a sale-recognised COGS model. Anything produced and then binned is otherwise never costed.
+
+### 2026-09-26, Finance to OPERATIONS; ENTERPRISE becomes a service tier
+
+- **Finance moved from ENTERPRISE to OPERATIONS** (`FEATURE_MIN_PLAN.finance`). Operations already sells the recipe/COGS engine and unlimited outlets (capped at 3 on 2026-09-27, see below); Finance is where both pay off, and it sat behind a tier nobody could buy self-serve.
+- **The Owner dashboard merged into Finance** as the owner-only All outlets scope. One date range and one set of definitions: the roll-up now runs the exact per-store calculation the single-outlet report uses (the old roll-up's net profit skipped refunds, tax and processing fees). Mixed currencies are shown per outlet, never summed. The store switcher stays a separate control (pick one store vs. compare them all).
+- **Custom Development opened to every paid plan** (`FEATURE_MIN_PLAN.customDevelopment = "POS"`). Gating it behind ENTERPRISE meant only people who already had an engagement could ask for one.
+- **ENTERPRISE is now consultation / custom build** with the Prionation team, custom-priced. No self-serve feature is gated to it.
+- Prices unchanged. Per-outlet pricing for OPERATIONS is open, not decided (answered 2026-09-27 by the outlet cap, see below).
+
+### 2026-09-27, outlet limits per plan
+
+- **Outlets are capped per plan** (`PLAN_MAX_STORES`): FREE 1, POS 1, OPERATIONS up to 3, ENTERPRISE unlimited. `minPlanForStores(count)` names the lowest plan for a store count. Store creation checks the limit under a row lock in `createStore` (`business.service.ts`).
+- **A 4th outlet needs ENTERPRISE**, which stays sales-led ("Talk to us" on WhatsApp, custom price).
+- **Accepting a store ownership transfer checks the recipient's limit** (`acceptStoreTransfer` in `store-transfer.service.ts`). It is refused with `SUBSCRIPTION_LIMIT_EXCEEDED` and `details.requiredPlan`, inside the transaction, so the invite is not consumed. Before, transferred stores were grandfathered past the limit.
+- **Downgrades never remove or lock stores**, whatever the path (Stripe portal / webhook, cancel then activate Free, admin set-plan, beta switch). A business above its new plan's limit keeps every store working but cannot create or receive another. No schema change.
+- Prices unchanged. The cap answers the per-outlet pricing question for OPERATIONS. Still open: whether to publish an ENTERPRISE "from" price. Competitors sell the 4th outlet online, and sales-led tiers usually start at 10+ outlets.
 
 ### Future decisions to log here
 

@@ -1,21 +1,11 @@
-import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { OwnerDashboardClient } from "@/features/dashboard/owner/components/owner-dashboard-client";
-import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
-// Cross-store rollup for multi-outlet Enterprise businesses. storeId is
-// cosmetic for this page's own data (GET /api/owner/summary rolls up by
-// business, not by store) but real for the shell's StoreSwitcher/breadcrumb
-// context, same trade every non-single-store-specific page in this shell
-// already makes.
+// The Owner dashboard became Finance's "All outlets" scope. This route stays
+// so bookmarks, old nav cookies and the bare /owner → /go/owner hop still
+// land somewhere real; Finance's own layout and page apply the plan and
+// staff-access checks, and fall back to this outlet's report for a viewer
+// who can't see the roll-up.
 export default async function OwnerPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
-  const session = await getSession();
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-  await requireStaffPageAccess(storeId, "/owner");
-
-  return <OwnerDashboardClient />;
+  redirect(`/store/${storeId}/finance?scope=all`);
 }

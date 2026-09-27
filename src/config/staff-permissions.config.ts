@@ -11,6 +11,16 @@ import { getAllAppNavItems } from "./navigation.config";
 export const ALL_STAFF_PAGES: string[] = getAllAppNavItems().map((item) => item.href);
 
 /**
+ * Pages that used to be grantable and no longer exist as their own page. A
+ * staff row saved before the page was retired can still carry one in
+ * allowedPages, and the Staff dialog sends the stored list back on every save
+ * — so allowedPagesSchema DROPS these instead of rejecting the whole save as
+ * "Unknown page" (which would lock the owner out of editing that row).
+ * - "/owner": merged into Finance's All outlets scope (2026-09-26).
+ */
+export const RETIRED_STAFF_PAGES: readonly string[] = ["/owner"];
+
+/**
  * Default page access per role — the starting point shown (and editable) in
  * the Staff dialog's checklist. Owner-only surfaces (Profile, Billing,
  * Staff) are enforced separately by requireOwnerOnly and never granted here.
@@ -108,8 +118,9 @@ export const STAFF_ROLE_TEMPLATES: StaffRoleTemplate[] = [
     labelKey: "pages.staffJobFinance",
     // Narrow, reporting-only — a bookkeeper/accountant role. No Management
     // (stock), Production, Staff, or POS access at all. /finance itself is
-    // ENTERPRISE-plan-gated already (navigation.config.ts) — granting it on
-    // a lower-tier store is harmless, the plan gate still applies on top.
+    // plan-gated (FEATURE_MIN_PLAN.finance, Operations) — granting it on a
+    // lower-tier store is harmless, the plan gate still applies on top. It
+    // never reaches the All outlets roll-up, which is owner-only.
     allowedPages: ["/dashboard", "/finance", "/data", "/pos/schedule"],
   },
   { id: "cashier", role: "CASHIER", labelKey: "pages.staffRoleCashier", allowedPages: ROLE_DEFAULT_PAGES.CASHIER },

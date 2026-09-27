@@ -45,18 +45,30 @@ function storeIdFromPath(pathname: string): string | null {
 
 export default async function StoreLauncherPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ path: string[] }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { path } = await params;
   const requestedSection = `/${(path ?? []).join("/")}`;
+  // Carried onto the section it resolves to, so a deep link can name a view
+  // inside the page (the retired /owner bookmark → /go/finance?scope=all).
+  // Rebuilt through URLSearchParams, so it can only ever be a query string.
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries((await searchParams) ?? {})) {
+    for (const v of Array.isArray(value) ? value : value === undefined ? [] : [value]) {
+      query.append(key, v);
+    }
+  }
+  const queryString = query.toString() ? `?${query.toString()}` : "";
 
   const session = await getSession();
   if (!session?.user?.id) {
     // Carrying the launcher URL through login means a cold PWA launch on a
     // logged-out device still lands on the shortcut that was tapped, instead
     // of dumping the cashier on a generic dashboard afterwards.
-    redirect(`/login?callbackUrl=${encodeURIComponent(`/go${requestedSection}`)}`);
+    redirect(`/login?callbackUrl=${encodeURIComponent(`/go${requestedSection}${queryString}`)}`);
   }
 
   // One round trip for both halves of the answer: which stores this user
@@ -114,8 +126,10 @@ export default async function StoreLauncherPage({
       ? preferredStoreId
       : null) ?? stores[0].id;
 
+  // The query belongs to the section that was asked for — a fallback to the
+  // default landing page drops it rather than hand it to a page it wasn't for.
   const section = LAUNCHABLE_SECTIONS.has(requestedSection)
-    ? requestedSection
+    ? `${requestedSection}${queryString}`
     : `/${normalizeDefaultLanding(owner?.defaultLanding)}`;
 
   redirect(`/store/${storeId}${section}`);

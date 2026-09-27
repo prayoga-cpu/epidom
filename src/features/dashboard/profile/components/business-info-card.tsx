@@ -1,30 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil, Plus } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { EditBusinessInfoDialog } from "./edit-business-info-dialog";
+import { countryCodeFromName, countryDisplayName } from "@/lib/onboarding/markets";
+import {
+  EditBusinessInfoDialog,
+  type EditBusinessInfoDialogBusiness,
+} from "./edit-business-info-dialog";
+import { useBusinessTimezone } from "../hooks/use-business-timezone";
+import { formatTimezoneLabel } from "../lib/timezone-options";
 
 interface BusinessInfoCardProps {
-  business?: {
-    id: string;
-    name: string;
-    address?: string | null;
-    city?: string | null;
-    country?: string | null;
-    phone?: string | null;
-    email?: string | null;
-    website?: string | null;
-  } | null;
+  /**
+   * `timezone` is optional: the Profile pages' server-built profile doesn't
+   * carry it yet, in which case the card fetches it (useBusinessTimezone).
+   */
+  business?: EditBusinessInfoDialogBusiness | null;
   userId: string;
   onUpdate?: () => void;
 }
 
 export function BusinessInfoCard({ business, userId, onUpdate }: BusinessInfoCardProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [editOpen, setEditOpen] = useState(false);
+  const timezoneFromProfile = business?.timezone;
+  const { data: fetchedTimezone } = useBusinessTimezone(
+    business?.id,
+    !!business && timezoneFromProfile === undefined
+  );
+  const timezone = timezoneFromProfile !== undefined ? timezoneFromProfile : fetchedTimezone;
+  // Stable identity: the dialog must not see a "new" business on every render.
+  const businessForDialog = useMemo<EditBusinessInfoDialogBusiness | null>(
+    () => (business ? { ...business, timezone: timezone ?? undefined } : null),
+    [business, timezone]
+  );
 
   if (!business) {
     return (
@@ -55,6 +67,12 @@ export function BusinessInfoCard({ business, userId, onUpdate }: BusinessInfoCar
     );
   }
 
+  // A recognised country reads in the UI language ("Indonésie"); other text as saved.
+  const countryCode = countryCodeFromName(business.country);
+  const countryLabel = countryCode
+    ? countryDisplayName(countryCode, locale)
+    : business.country || "—";
+
   const infoItems = [
     { label: t("profile.business.name"), value: business.name },
     { label: t("common.email"), value: business.email || "—" },
@@ -62,7 +80,11 @@ export function BusinessInfoCard({ business, userId, onUpdate }: BusinessInfoCar
     { label: t("profile.business.website"), value: business.website || "—" },
     { label: t("profile.business.address"), value: business.address || "—" },
     { label: t("profile.business.city"), value: business.city || "—" },
-    { label: t("profile.business.country"), value: business.country || "—" },
+    { label: t("profile.business.country"), value: countryLabel },
+    {
+      label: t("profile.business.timezone"),
+      value: timezone ? formatTimezoneLabel(timezone) : "—",
+    },
   ];
 
   return (
@@ -95,7 +117,7 @@ export function BusinessInfoCard({ business, userId, onUpdate }: BusinessInfoCar
       <EditBusinessInfoDialog
         open={editOpen}
         onOpenChange={setEditOpen}
-        business={business}
+        business={businessForDialog}
         userId={userId}
         onUpdate={onUpdate}
       />

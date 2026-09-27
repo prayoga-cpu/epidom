@@ -20,6 +20,9 @@ import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import { getActiveStaffSession } from "@/lib/staff-session";
 import { subscriptionService } from "@/lib/services";
 import { planHasFeature } from "@/lib/plans/entitlements";
+import { getStoreViewer } from "@/lib/auth/store-viewer";
+import { isWithinNewStoreWindow } from "@/lib/services/setup-progress.service";
+import { staffPersonaMayReadFinance } from "@/lib/auth/require-finance-access";
 
 export default async function DashboardPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
@@ -35,7 +38,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ stor
     getActiveStaffSession(),
     prisma.store.findUnique({
       where: { id: storeId },
-      select: { productionEnabled: true },
+      select: { productionEnabled: true, createdAt: true },
     }),
   ]);
 
@@ -56,6 +59,27 @@ export default async function DashboardPage({ params }: { params: Promise<{ stor
   const showProductionHistory =
     planHasFeature(plan, "production") && (store?.productionEnabled ?? false);
   const showOperations = hasOperationsAccess && !isRestrictedStaff;
+  // The analytics block links into Finance for the same dates — only when the
+  // plan includes it and this viewer could open it (the Finance page and its
+  // routes apply the same persona rule), so the link never leads to a redirect.
+  const canOpenFinance =
+    planHasFeature(plan, "finance") && staffPersonaMayReadFinance(staffSession, storeId);
+
+  // In-app guide. The Getting-started checklist is for the owner or a MANAGER
+  // persona on the owner's device (the setup-progress API's own rule, so it
+  // never asks for a 403); the welcome tour opens by itself for the owner
+  // only. A linked staff account is never the owner. getStoreViewer is
+  // request-cached — requireStaffPageAccess above already paid for it.
+  const viewer = await getStoreViewer(storeId);
+  const guidePersonaRole =
+    staffSession && staffSession.storeId === storeId && staffSession.role !== "OWNER"
+      ? staffSession.role
+      : null;
+  const onOwnerAccount = viewer.kind === "owner";
+  const isOwner = onOwnerAccount && guidePersonaRole === null;
+  const showSetupGuide =
+    onOwnerAccount && (guidePersonaRole === null || guidePersonaRole === "MANAGER");
+  const isNewStore = store ? isWithinNewStoreWindow(store.createdAt) : false;
 
   // Stock levels and alerts back OPERATIONS-only cards — skip the queries
   // outright when the viewer can't see them.
@@ -72,6 +96,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ stor
       hasOperationsAccess={hasOperationsAccess}
       showProductionHistory={showProductionHistory}
       showOperations={showOperations}
+      canOpenFinance={canOpenFinance}
+      showSetupGuide={showSetupGuide}
+      isOwner={isOwner}
+      isNewStore={isNewStore}
     />
   );
 }

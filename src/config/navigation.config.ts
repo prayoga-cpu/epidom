@@ -20,7 +20,6 @@ import {
   Wrench,
   CalendarDays,
   CalendarClock,
-  Building2,
   ContactRound,
   Wallet,
   Scale,
@@ -61,8 +60,9 @@ export interface NavSection {
  * Dashboard navigation items — grouped by job-to-be-done within the plan-tier
  * skeleton (docs/back-office-revamp.md): General (always-visible product
  * surfaces), Operations (run the back-of-house, all OPERATIONS-tier),
- * Reports (pure reporting/rollup, all ENTERPRISE-tier), Account (your
- * relationship with Epidom as a platform — billing, support, profile).
+ * Reports (Shifts, and Finance with its All outlets roll-up — also
+ * OPERATIONS-tier), Account (your relationship with Epidom as a platform —
+ * billing, support, profile).
  *
  * /menu and POS Mode's own routes are deliberately absent — see
  * grantableOnlyNavItems and posModeNavItems below for why.
@@ -149,9 +149,16 @@ export const dashboardNavigation: NavSection[] = [
         requiredPlan: "OPERATIONS",
         lockedHintKey: "nav.lockedHint.schedule",
       },
+    ],
+  },
+  {
+    title: "Reports",
+    items: [
       {
-        // The manager's read-back of every till session. Attendance stays under
-        // Schedule; opening and finishing a shift is POS Mode's Operational page.
+        // The manager's read-back of every till session — a report, so it sits
+        // beside Finance, whose by-shift and cash tabs read the same sessions.
+        // Attendance stays under Schedule; opening and finishing a shift is
+        // POS Mode's Operational page.
         href: "/shifts",
         labelKey: "nav.shifts",
         icon: Wallet,
@@ -159,26 +166,15 @@ export const dashboardNavigation: NavSection[] = [
         requiredPlan: "OPERATIONS",
         lockedHintKey: "nav.lockedHint.shifts",
       },
-    ],
-  },
-  {
-    title: "Reports",
-    items: [
       {
+        // Also the All outlets roll-up (the retired /owner page, now a
+        // redirect into Finance's ?scope=all) — see FEATURE_MIN_PLAN.finance.
         href: "/finance",
         labelKey: "nav.finance",
         icon: BarChart3,
         showBadge: false,
-        requiredPlan: "ENTERPRISE",
+        requiredPlan: "OPERATIONS",
         lockedHintKey: "nav.lockedHint.finance",
-      },
-      {
-        href: "/owner",
-        labelKey: "nav.owner",
-        icon: Building2,
-        showBadge: false,
-        requiredPlan: "ENTERPRISE",
-        lockedHintKey: "nav.lockedHint.owner",
       },
     ],
   },
@@ -202,7 +198,7 @@ export const dashboardNavigation: NavSection[] = [
         labelKey: "nav.customDevelopment",
         icon: Wrench,
         showBadge: false,
-        requiredPlan: "ENTERPRISE",
+        requiredPlan: "POS",
         lockedHintKey: "nav.lockedHint.customDevelopment",
       },
     ],

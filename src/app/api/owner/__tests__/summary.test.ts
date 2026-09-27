@@ -1,158 +1,242 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
- * Pure logic tests for owner dashboard rollup calculations.
- * Mirrors the aggregation in /api/owner/summary/route.ts.
+ * GET /api/owner/summary — Finance's "All outlets" scope.
+ *
+ * Drives the real route. (This file used to re-implement the roll-up locally
+ * and assert against that copy, so it stayed green while the route's own
+ * arithmetic drifted from the single-outlet Finance report.) The per-outlet
+ * figures come from computeStoreFinanceSummary — tested on its own in
+ * src/lib/finance/__tests__/store-summary.test.ts — so here it is mocked and
+ * the route is held to: who may read it, which plan, and how rows roll up.
  */
 
-type StoreMetric = {
-  storeId: string;
-  name: string;
-  image: string | null;
-  revenue: number;
-  orderCount: number;
-  pendingOrders: number;
-};
-
-function rollup(stores: StoreMetric[]) {
-  const sorted = [...stores].sort((a, b) => b.revenue - a.revenue);
+vi.mock("@/lib/api-handler", async () => {
+  const { handleApiError } = await import("@/lib/utils/api-error-handler");
   return {
-    totalRevenue: Math.round(stores.reduce((s, m) => s + m.revenue, 0) * 100) / 100,
-    totalOrders: stores.reduce((s, m) => s + m.orderCount, 0),
-    totalPending: stores.reduce((s, m) => s + m.pendingOrders, 0),
-    storeCount: stores.length,
-    stores: sorted,
+    withApiHandler:
+      (handler: (req: Request, ctx: Record<string, unknown>) => Promise<Response>) =>
+      async (req: Request) => {
+        try {
+          return await handler(req, { userId: "owner-1" });
+        } catch (error) {
+          return handleApiError(error, { endpoint: "test" });
+        }
+      },
+  };
+});
+
+const prismaMock = vi.hoisted(() => ({
+  business: { findUnique: vi.fn() },
+  subscription: { findUnique: vi.fn() },
+  order: { count: vi.fn() },
+}));
+vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+
+const getActiveStaffSession = vi.fn();
+vi.mock("@/lib/staff-session", () => ({
+  getActiveStaffSession: (...a: unknown[]) => getActiveStaffSession(...a),
+}));
+
+const computeStoreFinanceSummary = vi.fn();
+vi.mock("@/lib/finance/store-summary", () => ({
+  computeStoreFinanceSummary: (...a: unknown[]) => computeStoreFinanceSummary(...a),
+}));
+
+import { GET } from "../summary/route";
+
+const get = (query = "?from=2026-09-01T00:00:00Z&to=2026-09-30T23:59:59Z") =>
+  (GET as unknown as (req: Request) => Promise<Response>)(
+    new Request(`http://localhost/api/owner/summary${query}`)
+  );
+
+/** A computeStoreFinanceSummary result with the money fields that matter here. */
+function outletSummary(
+  currency: string,
+  f: { revenue: number; cogs: number; wasteLoss: number; netProfit: number; orderCount: number }
+) {
+  const grossProfit = f.revenue - f.cogs;
+  return {
+    currency,
+    revenue: f.revenue,
+    cogs: f.cogs,
+    grossProfit,
+    grossMarginPct: f.revenue > 0 ? Math.round((grossProfit / f.revenue) * 10000) / 100 : 0,
+    wasteLoss: f.wasteLoss,
+    netProfit: f.netProfit,
+    orderCount: f.orderCount,
   };
 }
 
-const makeStore = (id: string, revenue: number, orders: number, pending: number): StoreMetric => ({
-  storeId: id,
-  name: `Store ${id}`,
-  image: null,
-  revenue,
-  orderCount: orders,
-  pendingOrders: pending,
-});
+const STORES = [
+  { id: "store-small", name: "Small", image: null },
+  { id: "store-big", name: "Big", image: null },
+];
 
-describe("owner dashboard rollup", () => {
-  it("sums revenue, orders, and pending across all stores", () => {
-    const result = rollup([
-      makeStore("A", 1_000_000, 10, 2),
-      makeStore("B", 500_000, 5, 1),
-      makeStore("C", 250_000, 3, 0),
-    ]);
-    expect(result.totalRevenue).toBe(1_750_000);
-    expect(result.totalOrders).toBe(18);
-    expect(result.totalPending).toBe(3);
-    expect(result.storeCount).toBe(3);
-  });
-
-  it("sorts stores by revenue descending", () => {
-    const result = rollup([
-      makeStore("low", 100_000, 1, 0),
-      makeStore("high", 900_000, 9, 0),
-      makeStore("mid", 500_000, 5, 0),
-    ]);
-    expect(result.stores[0].storeId).toBe("high");
-    expect(result.stores[1].storeId).toBe("mid");
-    expect(result.stores[2].storeId).toBe("low");
-  });
-
-  it("returns zeros for empty store list", () => {
-    const result = rollup([]);
-    expect(result.totalRevenue).toBe(0);
-    expect(result.totalOrders).toBe(0);
-    expect(result.totalPending).toBe(0);
-    expect(result.storeCount).toBe(0);
-    expect(result.stores).toHaveLength(0);
-  });
-
-  it("handles a single store correctly", () => {
-    const result = rollup([makeStore("only", 999_000, 7, 3)]);
-    expect(result.totalRevenue).toBe(999_000);
-    expect(result.storeCount).toBe(1);
-    expect(result.stores[0].storeId).toBe("only");
-  });
-
-  it("rounds totalRevenue to 2 decimal places", () => {
-    const result = rollup([
-      makeStore("A", 333.333, 1, 0),
-      makeStore("B", 333.333, 1, 0),
-      makeStore("C", 333.334, 1, 0),
-    ]);
-    expect(result.totalRevenue).toBe(1000);
-    expect(Number.isInteger(result.totalRevenue * 100)).toBe(true);
-  });
-
-  it("pending orders are not filtered by date range (current status only)", () => {
-    // pending is a live count, independent of revenue date range
-    const result = rollup([makeStore("X", 0, 0, 5)]);
-    expect(result.totalPending).toBe(5);
-    expect(result.totalOrders).toBe(0); // no orders in date range
-  });
-});
-
-describe("ENTERPRISE plan gating logic", () => {
-  const PLAN_ORDER = ["FREE", "POS", "OPERATIONS", "ENTERPRISE"] as const;
-  type Plan = (typeof PLAN_ORDER)[number];
-
-  function hasEnterpriseAccess(plan: Plan): boolean {
-    return PLAN_ORDER.indexOf(plan) >= PLAN_ORDER.indexOf("ENTERPRISE");
-  }
-
-  it("only ENTERPRISE plan passes the gate", () => {
-    expect(hasEnterpriseAccess("ENTERPRISE")).toBe(true);
-  });
-
-  it.each(["FREE", "POS", "OPERATIONS"] as Plan[])(
-    "%s plan is rejected (returns false)",
-    (plan) => {
-      expect(hasEnterpriseAccess(plan)).toBe(false);
-    }
+beforeEach(() => {
+  vi.clearAllMocks();
+  getActiveStaffSession.mockResolvedValue(null);
+  prismaMock.subscription.findUnique.mockResolvedValue({ plan: "OPERATIONS", status: "ACTIVE" });
+  prismaMock.business.findUnique.mockResolvedValue({ name: "Biz", stores: STORES });
+  prismaMock.order.count.mockResolvedValue(0);
+  computeStoreFinanceSummary.mockImplementation(async (storeId: string) =>
+    storeId === "store-big"
+      ? outletSummary("EUR", {
+          revenue: 1000,
+          cogs: 400,
+          wasteLoss: 50,
+          netProfit: 420,
+          orderCount: 40,
+        })
+      : outletSummary("EUR", {
+          revenue: 200,
+          cogs: 50,
+          wasteLoss: 10,
+          netProfit: 110,
+          orderCount: 8,
+        })
   );
 });
 
-describe("owner dashboard rollup — COGS/gross-profit/margin per store (Phase 4)", () => {
-  // Mirrors the batched-cogs-then-per-store-enrich logic in
-  // /api/owner/summary/route.ts: cogsByStore/wasteByStore are built from ONE
-  // cross-store query each, then merged into each store's own revenue.
-  function enrichStore(revenue: number, cogs: number, wasteLoss: number) {
-    const grossProfit = Math.round((revenue - cogs) * 100) / 100;
-    const grossMarginPct = revenue > 0 ? Math.round((grossProfit / revenue) * 1000) / 10 : 0;
-    const netProfit = Math.round((grossProfit - wasteLoss) * 100) / 100;
-    return { grossProfit, grossMarginPct, netProfit };
-  }
+describe("GET /api/owner/summary — who may read it", () => {
+  it("refuses a non-owner PIN persona before reading any business data", async () => {
+    getActiveStaffSession.mockResolvedValue({ storeId: "store-big", role: "MANAGER" });
 
-  it("computes gross profit and margin from revenue and COGS", () => {
-    const result = enrichStore(1_000_000, 400_000, 0);
-    expect(result.grossProfit).toBe(600_000);
-    expect(result.grossMarginPct).toBe(60);
+    const res = await get();
+
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("FORBIDDEN");
+    expect(computeStoreFinanceSummary).not.toHaveBeenCalled();
   });
 
-  it("net profit further subtracts waste loss from gross profit", () => {
-    const result = enrichStore(1_000_000, 400_000, 50_000);
-    expect(result.netProfit).toBe(550_000);
+  it("lets the OWNER persona through", async () => {
+    getActiveStaffSession.mockResolvedValue({ storeId: "store-big", role: "OWNER" });
+    expect((await get()).status).toBe(200);
   });
 
-  it("a store with zero revenue reports 0% margin, not NaN or Infinity", () => {
-    const result = enrichStore(0, 0, 0);
-    expect(result.grossMarginPct).toBe(0);
-    expect(Number.isFinite(result.grossMarginPct)).toBe(true);
+  it("answers 404 when the caller has no business of their own", async () => {
+    prismaMock.business.findUnique.mockResolvedValue(null);
+    expect((await get()).status).toBe(404);
   });
 
-  it("rolled-up totals across stores sum each store's already-computed figures", () => {
-    const stores = [
-      { revenue: 1_000_000, cogs: 400_000, wasteLoss: 10_000 },
-      { revenue: 500_000, cogs: 300_000, wasteLoss: 0 },
-    ].map((s) => ({ ...s, ...enrichStore(s.revenue, s.cogs, s.wasteLoss) }));
+  it("rejects an unparseable date range with 400", async () => {
+    expect((await get("?from=not-a-date")).status).toBe(400);
+  });
+});
 
-    const totalRevenue = stores.reduce((sum, s) => sum + s.revenue, 0);
-    const totalGrossProfit = stores.reduce((sum, s) => sum + s.grossProfit, 0);
-    const totalGrossMarginPct =
-      totalRevenue > 0 ? Math.round((totalGrossProfit / totalRevenue) * 1000) / 10 : 0;
+describe("GET /api/owner/summary — plan", () => {
+  it("is locked below Operations, naming the plan that unlocks it", async () => {
+    prismaMock.subscription.findUnique.mockResolvedValue({ plan: "POS", status: "ACTIVE" });
 
-    expect(totalRevenue).toBe(1_500_000);
-    expect(totalGrossProfit).toBe(800_000); // 600,000 + 200,000
-    expect(totalGrossMarginPct).toBeCloseTo(53.3, 1);
+    const res = await get();
+
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error.code).toBe("SUBSCRIPTION_FEATURE_LOCKED");
+    expect(body.error.details).toEqual({
+      feature: "finance",
+      requiredPlan: "OPERATIONS",
+      upgradeRequired: true,
+    });
+  });
+
+  it("treats a subscription that isn't ACTIVE as Free", async () => {
+    prismaMock.subscription.findUnique.mockResolvedValue({
+      plan: "ENTERPRISE",
+      status: "PAST_DUE",
+    });
+    expect((await get()).status).toBe(403);
+  });
+
+  it("opens on Operations and on Enterprise", async () => {
+    expect((await get()).status).toBe(200);
+    prismaMock.subscription.findUnique.mockResolvedValue({ plan: "ENTERPRISE", status: "ACTIVE" });
+    expect((await get()).status).toBe(200);
+  });
+});
+
+describe("GET /api/owner/summary — roll-up", () => {
+  it("builds every row from the same per-store summary as that outlet's own Finance page", async () => {
+    await get();
+
+    expect(computeStoreFinanceSummary).toHaveBeenCalledTimes(2);
+    for (const store of STORES) {
+      // No filters: the roll-up is the unfiltered report for the window.
+      expect(computeStoreFinanceSummary).toHaveBeenCalledWith(store.id, {
+        from: new Date("2026-09-01T00:00:00Z"),
+        to: new Date("2026-09-30T23:59:59Z"),
+      });
+    }
+  });
+
+  it("passes each outlet's net profit through untouched (refunds, tax and fees already out)", async () => {
+    const body = (await (await get()).json()).data;
+    const big = body.stores.find((s: { storeId: string }) => s.storeId === "store-big");
+    expect(big.netProfit).toBe(420);
+    expect(big.currency).toBe("EUR");
+  });
+
+  it("sorts outlets by revenue and adds up totals when they share a currency", async () => {
+    prismaMock.order.count.mockImplementation(async ({ where }: { where: { storeId: string } }) =>
+      where.storeId === "store-big" ? 3 : 1
+    );
+
+    const body = (await (await get()).json()).data;
+
+    expect(body.stores.map((s: { storeId: string }) => s.storeId)).toEqual([
+      "store-big",
+      "store-small",
+    ]);
+    expect(body.mixedCurrencies).toBe(false);
+    expect(body.currency).toBe("EUR");
+    expect(body.totals).toEqual({
+      revenue: 1200,
+      cogs: 450,
+      grossProfit: 750,
+      grossMarginPct: 62.5,
+      wasteLoss: 60,
+      netProfit: 530,
+    });
+    expect(body.totalOrders).toBe(48);
+    expect(body.totalPending).toBe(4);
+    expect(body.storeCount).toBe(2);
+  });
+
+  it("never adds money across currencies — totals are null, counts still add up", async () => {
+    computeStoreFinanceSummary.mockImplementation(async (storeId: string) =>
+      storeId === "store-big"
+        ? outletSummary("EUR", {
+            revenue: 1000,
+            cogs: 400,
+            wasteLoss: 0,
+            netProfit: 600,
+            orderCount: 40,
+          })
+        : outletSummary("IDR", {
+            revenue: 2_000_000,
+            cogs: 500_000,
+            wasteLoss: 0,
+            netProfit: 1_500_000,
+            orderCount: 8,
+          })
+    );
+
+    const body = (await (await get()).json()).data;
+
+    expect(body.mixedCurrencies).toBe(true);
+    expect(body.currency).toBeNull();
+    expect(body.currencies.sort()).toEqual(["EUR", "IDR"]);
+    expect(body.totals).toBeNull();
+    expect(body.totalOrders).toBe(48);
+    // Grouped by currency, not ranked by the raw number: Rp 2,000,000 does
+    // not outrank €1,000.
+    expect(body.stores.map((s: { currency: string }) => s.currency)).toEqual(["EUR", "IDR"]);
+  });
+
+  it("counts orders awaiting payment regardless of the date range", async () => {
+    await get();
+    const where = prismaMock.order.count.mock.calls[0][0].where;
+    expect(where.paymentStatus).toBe("PENDING");
+    expect(where.orderDate).toBeUndefined();
   });
 });

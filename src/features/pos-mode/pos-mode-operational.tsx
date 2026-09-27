@@ -11,6 +11,7 @@ import { MyScheduleList } from "@/features/dashboard/schedule/components/my-sche
 import { PublishedRoster } from "@/features/dashboard/schedule/components/published-roster";
 import { ClockInOutPanel } from "@/features/dashboard/shared/clock-in-out-panel";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
+import { PageIntro } from "@/features/guide/components/page-intro";
 import { isOperationalTab, type OperationalTab } from "./lib/operational-tabs";
 
 const TAB_META: Record<OperationalTab, { labelKey: string; icon: LucideIcon }> = {
@@ -124,6 +125,13 @@ export function PosModeOperational({
             })}
           </TabsList>
         </div>
+
+        <PageIntro
+          id="operational"
+          variant="compact"
+          storeId={storeId}
+          className="mx-3 mt-2 shrink-0 md:mx-6"
+        />
 
         {tabs.includes("shift") && (
           // ShiftPage owns its scroll (and the Finish screen's pinned footer), so

@@ -16,11 +16,22 @@ import { getStoreLimit, canCreateStore } from "@/config/stripe.config";
 import {
   BusinessNotFoundError,
   StoreNotFoundError,
-  StoreLimitExceededError,
   SubscriptionInactiveError,
   ConflictError,
   ForbiddenError,
 } from "@/lib/errors";
+import { resolveMarketDefaults } from "@/lib/onboarding/markets";
+import {
+  StoreLimitReachedError,
+  resolveStoreCountryCode,
+  resolveStoreCountryColumn,
+  resolveFinanceProvisioning,
+  provisionStoreInTransaction,
+  ensureDraftStorefront,
+} from "./store-provisioning";
+
+/** Optional Store columns the Edit store form can empty (sent as "", stored as null). */
+const CLEARABLE_STORE_FIELDS = new Set(["address", "city", "country", "phone", "email", "image"]);
 
 /**
  * Business Service
@@ -140,24 +151,38 @@ export class BusinessService {
 
   /**
    * Create a store for a business
-   * Uses transaction with lock to prevent race condition when checking store limit
-   * This ensures that concurrent requests cannot create more stores than allowed
+   * Locks the business row (SELECT ... FOR UPDATE) before the store-limit and
+   * name checks, so concurrent creates for one business run one after the
+   * other: they cannot create more stores than the plan allows, or two
+   * stores with the same name.
    *
-   * IMPORTANT: This method performs the store limit check within the transaction
-   * to prevent race conditions where multiple requests check the limit simultaneously
-   * and both pass validation before either creates a store.
+   * IMPORTANT: This method performs the store limit check within the transaction,
+   * after taking that lock, to prevent race conditions where multiple requests
+   * check the limit simultaneously and both pass validation before either
+   * creates a store.
+   *
+   * Every new store is provisioned (see store-provisioning.ts): an OWNER
+   * staff row and its finance settings inside the transaction, a draft
+   * storefront right after commit (best-effort).
    */
   async createStore(
     businessId: string,
     userId: string,
     input: CreateStoreInput
   ): Promise<StoreDto> {
+    const { countryCode: sentCountryCode, financeSource, ...details } = input;
+    // A caller that sends only the free-text country still gets that
+    // country's finance settings and its English name in Store.country.
+    const countryCode = resolveStoreCountryCode({
+      countryCode: sentCountryCode,
+      country: details.country,
+    });
+
     // Use transaction to ensure atomicity and prevent race condition
-    // ReadCommitted isolation level with transaction is sufficient to prevent race conditions
-    return prisma.$transaction(
+    // (ReadCommitted + the business row lock taken in step 2)
+    const created = await prisma.$transaction(
       async (tx) => {
         // 1. Verify business exists and belongs to user
-        // Using Prisma query (no raw SQL needed) - transaction ensures atomicity
         const business = await tx.business.findUnique({
           where: { id: businessId },
           select: { id: true, userId: true },
@@ -171,9 +196,14 @@ export class BusinessService {
           throw new Error("Unauthorized to create store for this business");
         }
 
-        // 2. Check subscription and store limit WITHIN transaction (prevents race condition)
-        // This is critical: we check the limit inside the transaction with lock
-        // so concurrent requests will wait for the lock and see the updated count
+        // 2. Lock the business row until commit. A concurrent create for this
+        // business waits here; once it gets the lock, its count and name checks
+        // below (each statement takes a fresh ReadCommitted snapshot) see the
+        // store this transaction committed. Onboarding locks the same row first
+        // too (its business upsert), so the two paths can't deadlock.
+        await tx.$queryRaw`SELECT id FROM businesses WHERE id = ${businessId} FOR UPDATE`;
+
+        // 3. Check subscription and store limit WITHIN transaction, under the lock
         const subscription = await tx.subscription.findUnique({
           where: { userId },
         });
@@ -182,7 +212,7 @@ export class BusinessService {
           throw new Error("No active subscription found. Please subscribe to create stores.");
         }
 
-        // Count current stores WITHIN transaction (with lock, this is accurate)
+        // Count current stores WITHIN transaction (accurate: the business row is locked)
         const currentStoreCount = await tx.store.count({
           where: {
             businessId,
@@ -194,12 +224,10 @@ export class BusinessService {
         const allowed = canCreateStore(subscription.plan, currentStoreCount);
 
         if (!allowed) {
-          throw new Error(
-            `You have reached your plan's store limit (${currentStoreCount}/${limit}). Upgrade to Pro to add more stores.`
-          );
+          throw new StoreLimitReachedError(currentStoreCount, limit);
         }
 
-        // 3. Check if store name already exists for this business (within transaction)
+        // 4. Check if store name already exists for this business (within transaction, under the lock)
         const nameExists = await tx.store.findFirst({
           where: {
             businessId,
@@ -214,25 +242,46 @@ export class BusinessService {
           throw new Error("A store with this name already exists in your business");
         }
 
-        // 4. Create store (within transaction)
+        // 5. Decide its finance settings (checks a copy source belongs to this business)
+        const finance = await resolveFinanceProvisioning(tx, {
+          businessId,
+          input: { countryCode, financeSource },
+        });
+
+        // 6. Create store (within transaction). Empty optional fields are stored as null.
         const store = await tx.store.create({
           data: {
             businessId,
-            ...input,
+            name: details.name,
+            address: details.address || undefined,
+            city: details.city || undefined,
+            country: resolveStoreCountryColumn({ countryCode, country: details.country }),
+            phone: details.phone || undefined,
+            email: details.email || undefined,
+            image: details.image || undefined,
+            ...(finance.kind === "sync" && { syncFinanceWithBusiness: true }),
           },
         });
+
+        // 7. OWNER staff row + finance-settings row (within transaction)
+        await provisionStoreInTransaction(tx, { storeId: store.id, userId, finance });
 
         return store as unknown as StoreDto;
       },
       {
         // Use ReadCommitted isolation level (safer than SERIALIZABLE)
         // SERIALIZABLE can cause deadlocks in production environments
-        // ReadCommitted with FOR UPDATE lock is sufficient for preventing race conditions
+        // ReadCommitted plus the business row lock (step 2) is sufficient for preventing race conditions
         isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
         maxWait: 5000, // Maximum time to wait for transaction to start (5s)
         timeout: 10000, // Maximum time for transaction to complete (10s)
       }
     );
+
+    // 8. Draft storefront, after commit. Never fails store creation.
+    await ensureDraftStorefront(created.id);
+
+    return created;
   }
 
   /**
@@ -274,6 +323,22 @@ export class BusinessService {
       throw new Error("Unauthorized to update this store");
     }
 
+    // PATCH /api/stores/[id] parses with createStoreSchema.partial(), which
+    // also admits the create-only countryCode / financeSource. Neither is a
+    // Store column (Prisma would reject the update): countryCode picks the
+    // stored country name, financeSource is ignored (finance settings are
+    // edited in Fees & Taxes).
+    const {
+      countryCode,
+      financeSource: _financeSource,
+      ...columns
+    } = input as UpdateStoreInput &
+      Partial<Pick<CreateStoreInput, "countryCode" | "financeSource">>;
+    if (countryCode) {
+      columns.country = resolveStoreCountryColumn({ countryCode, country: columns.country });
+    }
+    input = columns;
+
     // If updating name, check if new name already exists
     if (input.name) {
       const nameExists = await this.storeRepo.existsByName(
@@ -286,11 +351,13 @@ export class BusinessService {
       }
     }
 
-    // Sanitize input: convert empty strings to undefined so Prisma doesn't send them
+    // Sanitize input: an emptied optional field ("" from the Edit store form)
+    // clears its column; fields that weren't sent are left as they are. The
+    // name can't be emptied (the schema requires it), so "" there is dropped.
     const sanitizedInput = Object.fromEntries(
       Object.entries(input)
-        .filter(([_, value]) => value !== "")
-        .map(([key, value]) => [key, value || undefined])
+        .filter(([key, value]) => value !== undefined && (value !== "" || CLEARABLE_STORE_FIELDS.has(key)))
+        .map(([key, value]) => [key, value === "" ? null : value])
     );
 
     // Update store
@@ -410,15 +477,24 @@ export class BusinessService {
     let business = await this.businessRepo.findByUserId(userId);
 
     if (!business) {
+      // The store's country, when given (as a code or a recognizable name),
+      // is the best guess for the business's clock and language too (both
+      // editable later in Profile).
+      const storeCountryCode = resolveStoreCountryCode(input);
+      const defaults = storeCountryCode
+        ? resolveMarketDefaults({ countryCode: storeCountryCode })
+        : null;
       business = await this.businessRepo.create({
         userId,
         name: "My Business",
-        timezone: "UTC",
-        locale: "en",
+        timezone: defaults?.timezone ?? "UTC",
+        locale: defaults?.locale ?? "en",
+        ...(defaults?.countryName ? { country: defaults.countryName } : {}),
       });
     }
 
-    // 2. Check subscription and store limit
+    // 2. Check subscription and store limit. A fast path only: createStore
+    // re-checks both under the business row lock, and that check decides.
     const subscription = await subscriptionRepository.findByUserId(userId);
 
     if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
@@ -430,10 +506,11 @@ export class BusinessService {
     const allowed = canCreateStore(subscription.plan, currentStoreCount);
 
     if (!allowed) {
-      throw new StoreLimitExceededError(currentStoreCount, limit);
+      // A StoreLimitExceededError whose message names the Operations plan.
+      throw new StoreLimitReachedError(currentStoreCount, limit);
     }
 
-    // 3. Delegate to existing createStore method (handles transaction + name check)
+    // 3. Delegate to existing createStore method (handles transaction + name check + provisioning)
     return this.createStore(business.id, userId, input);
   }
 

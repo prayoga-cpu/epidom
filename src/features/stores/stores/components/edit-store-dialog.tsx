@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
-import { StoreForm } from "./store-form";
+import { EDIT_STORE_FORM_ID, StoreForm } from "./store-form";
 import { Store, useUpdateStore } from "../hooks/use-stores";
 import { CreateStoreInput } from "@/lib/validation/business.schemas";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -27,28 +27,38 @@ interface EditStoreDialogProps {
 }
 
 /**
- * Dialog for editing an existing store
- * Uses shared StoreForm component (DRY principle)
+ * Dialog for editing an existing store: the same StoreForm in edit mode.
+ * The country picker is pre-filled from the stored country; text the list
+ * doesn't recognise is kept (and shown) until the owner picks a country.
+ * Currency and payments are not edited here (Profile → Fees & Taxes).
  */
 export function EditStoreDialog({ store, trigger }: EditStoreDialogProps) {
   const [open, setOpen] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
   const { t } = useI18n();
   const { mutate: updateStore, isPending } = useUpdateStore(store.id);
+  // One dialog per store card: keep the form id unique on the page.
+  const formId = `${EDIT_STORE_FORM_ID}-${store.id}`;
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setIsImageUploading(false);
+  };
 
   const handleSubmit = (data: CreateStoreInput) => {
     updateStore(data, {
       onSuccess: () => {
-        toast.success(t("stores.editSuccess") || "Store updated successfully");
+        toast.success(t("stores.editSuccess"));
         setOpen(false);
       },
       onError: (error) => {
-        toast.error(error.message || t("stores.editError") || "Failed to update store");
+        toast.error(error.message || t("stores.editError"));
       },
     });
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="ghost" size="sm">
@@ -57,51 +67,54 @@ export function EditStoreDialog({ store, trigger }: EditStoreDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] flex-col overflow-hidden p-0 sm:h-[90dvh] sm:max-w-[550px]">
+      <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] flex-col overflow-hidden p-0 sm:max-w-[550px]">
         {/* Fixed Header */}
         <DialogHeader className="border-border shrink-0 border-b px-4 py-3 pr-10 sm:px-6 sm:py-4 sm:pr-6">
           <DialogTitle className="text-lg font-bold sm:text-xl md:text-2xl">
-            {t("stores.editStore") || "Edit Store"}
+            {t("stores.editStore")}
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm md:text-base">
-            {t("stores.editDescription") ||
-              "Update your store information. All fields except name are optional."}
+            {t("stores.editDescription")}
           </DialogDescription>
         </DialogHeader>
 
         {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
           <StoreForm
+            mode="edit"
+            formId={formId}
             defaultValues={store}
             onSubmit={handleSubmit}
             isLoading={isPending}
-            submitText={t("stores.updateStore") || "Update Store"}
-            onCancel={() => setOpen(false)}
+            onCancel={() => handleOpenChange(false)}
             showActions={false}
+            onUploadStateChange={setIsImageUploading}
           />
         </div>
 
         {/* Fixed Footer with Actions */}
         <div className="border-border shrink-0 border-t px-4 py-3 sm:px-6 sm:py-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+          <div className="flex gap-2 sm:justify-end sm:gap-3">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={isPending}
-              className="w-full sm:w-auto"
+              className="min-h-10 flex-1 sm:flex-none"
             >
               {t("actions.cancel")}
             </Button>
             <Button
               type="submit"
-              form="edit-store-form"
-              disabled={isPending}
-              className="w-full sm:w-auto"
+              form={formId}
+              disabled={isPending || isImageUploading}
+              className="min-h-10 flex-1 sm:flex-none"
             >
               {isPending
-                ? t("actions.saving") || "Saving..."
-                : t("stores.updateStore") || "Update Store"}
+                ? t("actions.saving")
+                : isImageUploading
+                  ? t("stores.form.uploadingImage")
+                  : t("stores.updateStore")}
             </Button>
           </div>
         </div>
