@@ -144,6 +144,32 @@ function isResumeExemptPath(basePath: string, req: NextRequest): boolean {
 }
 
 /**
+ * Pages that only a signed-out visitor ever sees: both send a live session
+ * straight to /stores (see their page.tsx).
+ */
+const SIGNED_OUT_ONLY_PATHS = new Set(["/login", "/register"]);
+
+/**
+ * Whether this request was navigated to from /login or /register — which
+ * proves the session cookie it carries is dead (revoked, expired, or its row
+ * wiped by the nightly dev-DB reset), since a live one would never have been
+ * shown those pages. Resuming such a visitor can only land back on /login:
+ * the auth page's logo went "/" -> last app page -> /login, and the homepage
+ * was unreachable. Same-origin requests carry the full Referer
+ * (Referrer-Policy is strict-origin-when-cross-origin, next.config.ts), both
+ * for a plain link and for the App Router's own RSC fetch.
+ */
+function isFromSignedOutOnlyPage(req: NextRequest): boolean {
+  const referer = req.headers.get("referer");
+  if (!referer) return false;
+  try {
+    return SIGNED_OUT_ONLY_PATHS.has(stripLocalePrefix(new URL(referer).pathname).basePath);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Authentication & Subscription Middleware
  *
  * Protects routes defined in matcher configuration.
@@ -232,7 +258,8 @@ export default async function proxy(req: NextRequest) {
     isLocalizedMarketingPath &&
     !isPrefetchRequest &&
     !!sessionCookie &&
-    !isResumeExemptPath(basePath, req)
+    !isResumeExemptPath(basePath, req) &&
+    !isFromSignedOutOnlyPage(req)
   ) {
     const remember = req.cookies.get(REMEMBER_PREF_COOKIE)?.value;
     const rawLastVisited = req.cookies.get(LAST_VISITED_COOKIE)?.value;

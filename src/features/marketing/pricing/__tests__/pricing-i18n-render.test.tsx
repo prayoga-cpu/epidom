@@ -365,6 +365,29 @@ describe("FeatureComparison", () => {
     }
   );
 
+  it.each([
+    ["en", en],
+    ["fr", fr],
+    ["id", id],
+  ] as const)(
+    "%s: custom dev, integrations and SLAs are ticked for Enterprise only",
+    (locale, dict) => {
+      state.locale = locale;
+      render(<FeatureComparison />);
+      expect(screen.getByText(pricing(dict).cmpCat5)).toBeTruthy();
+      for (const key of ["cmp_custom_dev", "cmp_integrations", "cmp_sla"] as const) {
+        const row = screen.getByText(pricing(dict)[key]).closest("tr") as HTMLElement;
+        const cells = within(row).getAllByRole("cell").slice(1);
+        expect(cells.map((c) => c.querySelector("svg")?.getAttribute("aria-label"))).toEqual([
+          "Not included",
+          "Not included",
+          "Not included",
+          "Included",
+        ]);
+      }
+    }
+  );
+
   it("does not leave the hardcoded English header in fr or id", () => {
     for (const locale of ["fr", "id"] as const) {
       state.locale = locale;

@@ -24,12 +24,25 @@ vi.mock("../../hooks/use-order-queue-state", () => ({
 import { PosOrdersTabs } from "../pos-orders-tabs";
 
 describe("PosOrdersTabs — Active Queue toggle", () => {
-  it("sits inset from the screen edge, lined up with the p-6 content below it", () => {
+  it("sits at the right end of the tabs' row, inset like the p-6 content below it", () => {
     render(<PosOrdersTabs storeId="store-1" canManageSettings />);
     const group = screen.getByText("pos.queue.activeQueueLabel").parentElement as HTMLElement;
-    // Flush against the edge when it wraps onto its own line on a narrow screen was the bug.
-    expect(group.className.split(/\s+/)).toContain("ml-6");
     expect(group).toContainElement(screen.getByRole("switch"));
+    // Same header as the Kitchen & Bar page: one row, toggle pushed right.
+    const row = group.parentElement as HTMLElement;
+    expect(row).toContainElement(screen.getByRole("tab", { name: /pos.history.logTab/ }));
+    // Flush against the edge when it wraps onto its own line on a narrow screen was the bug.
+    expect(row.className.split(/\s+/)).toEqual(expect.arrayContaining(["justify-between", "px-6"]));
+  });
+
+  it("sizes each tab to its label instead of stretching the bar across the screen", () => {
+    render(<PosOrdersTabs storeId="store-1" canManageSettings />);
+    for (const tab of screen.getAllByRole("tab")) {
+      expect(tab.className.split(/\s+/)).toContain("flex-none");
+    }
+    expect(
+      screen.getByRole("tablist", { name: "pos.queue.sourceTabsLabel" }).className
+    ).not.toMatch(/\bgrid\b/);
   });
 
   it("is not shown to a session that may not change the setting", () => {

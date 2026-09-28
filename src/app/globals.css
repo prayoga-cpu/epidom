@@ -593,6 +593,26 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
   background: linear-gradient(90deg, transparent, rgba(217, 174, 59, 0.6), transparent);
 }
 
+/* ---- Logo tile ----
+   The app icon's frame (EpidomMark) around an icon: the same navy diagonal
+   and its pale-gold hairline with a faint gold band just inside it, flat
+   like the logo. The glyph is cream; [data-active] turns it and the hairline
+   gold. */
+.epi-logo-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 23%;
+  border: 1px solid rgb(235 212 151 / 0.85);
+  box-shadow: inset 0 0 0 1px rgb(217 174 59 / 0.22);
+  color: var(--epi-cream-50);
+  background: linear-gradient(135deg, var(--epi-navy-700), var(--epi-navy-900));
+}
+.epi-logo-tile[data-active] {
+  border-color: var(--epi-gold-400);
+  color: var(--epi-gold-300);
+}
+
 /* ---- Warm cream section (Setup steps, Testimonials) ---- */
 .epi-warm-section {
   background:

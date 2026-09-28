@@ -34,10 +34,7 @@ export function PosOrderSourceTabs({
   };
 
   return (
-    <TabsList
-      aria-label={t("pos.queue.sourceTabsLabel")}
-      className={cn("grid grid-cols-2", listClassName)}
-    >
+    <TabsList aria-label={t("pos.queue.sourceTabsLabel")} className={listClassName}>
       {QUEUE_SOURCE_TABS.map((tab) => {
         const attention = tab === "ONLINE" && counts[tab] > 0;
         return (

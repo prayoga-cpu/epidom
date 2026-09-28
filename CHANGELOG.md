@@ -9,6 +9,16 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.3.1] - 2026-09-27 · ux
+
+Small fixes to the Orders page, POS Mode and the pricing page.
+
+- **The Epidom logo on the log-in page takes you home.** After a session had ended, clicking it could send you straight back to the log-in page instead of the homepage.
+- **A tidier Orders header.** The POS, Online ordering and Log tabs are now sized to their labels, and the Active Queue switch sits on the right, the same as on the Kitchen & Bar page.
+- **Status counts under the search.** On the Orders page, the status tiles now sit below the search, filter and sort controls.
+- **POS Mode's space switcher matches the app icon.** In the POS Mode menu, each space's icon sits in a frame styled like the Epidom app icon, in gold for the space you're in.
+- **Enterprise on the pricing comparison.** The feature table now lists what only Enterprise includes: custom development, custom integrations and custom SLAs.
+
 ## [3.3.0] - 2026-09-27 · feat
 
 A simpler way to set up your store, and a guide to everything inside Epidom.

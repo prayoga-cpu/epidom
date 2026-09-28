@@ -165,49 +165,6 @@ export function PosOrderQueueToolbar({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Status tiles — click to filter; click again to clear */}
-      {showStatusTiles && (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-          <button
-            type="button"
-            onClick={() => onStatusFilterChange("ALL")}
-            className={cn(
-              "border-border bg-card hover:border-foreground/20 rounded-lg border p-2.5 text-left transition-all",
-              statusFilter === "ALL" &&
-                "ring-primary/50 ring-offset-background ring-2 ring-offset-2"
-            )}
-          >
-            <div className="mb-1 flex items-center justify-between">
-              <p className="text-muted-foreground text-xs">{t("pos.queue.all")}</p>
-              <Inbox className="text-muted-foreground h-3.5 w-3.5" />
-            </div>
-            <p className="text-foreground text-lg font-bold">{statusCounts.ALL ?? 0}</p>
-          </button>
-          {QUEUE_STATUSES.map((status) => {
-            const meta = STATUS_META[status];
-            const Icon = meta.icon;
-            const active = statusFilter === status;
-            return (
-              <button
-                key={status}
-                type="button"
-                onClick={() => onStatusFilterChange(active ? "ALL" : status)}
-                className={cn(
-                  "border-border bg-card hover:border-foreground/20 rounded-lg border p-2.5 text-left transition-all",
-                  active && `ring-offset-background ring-2 ring-offset-2 ${meta.ring}`
-                )}
-              >
-                <div className="mb-1 flex items-center justify-between">
-                  <p className="text-muted-foreground truncate text-xs">{mapStatusLabel(status)}</p>
-                  <Icon className={cn("h-3.5 w-3.5 shrink-0", meta.color)} />
-                </div>
-                <p className="text-foreground text-lg font-bold">{statusCounts[status] ?? 0}</p>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* Search, filters, sort, view switcher */}
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -411,6 +368,49 @@ export function PosOrderQueueToolbar({
           ))}
         </div>
       </div>
+
+      {/* Status tiles — click to filter; click again to clear */}
+      {showStatusTiles && (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          <button
+            type="button"
+            onClick={() => onStatusFilterChange("ALL")}
+            className={cn(
+              "border-border bg-card hover:border-foreground/20 rounded-lg border p-2.5 text-left transition-all",
+              statusFilter === "ALL" &&
+                "ring-primary/50 ring-offset-background ring-2 ring-offset-2"
+            )}
+          >
+            <div className="mb-1 flex items-center justify-between">
+              <p className="text-muted-foreground text-xs">{t("pos.queue.all")}</p>
+              <Inbox className="text-muted-foreground h-3.5 w-3.5" />
+            </div>
+            <p className="text-foreground text-lg font-bold">{statusCounts.ALL ?? 0}</p>
+          </button>
+          {QUEUE_STATUSES.map((status) => {
+            const meta = STATUS_META[status];
+            const Icon = meta.icon;
+            const active = statusFilter === status;
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => onStatusFilterChange(active ? "ALL" : status)}
+                className={cn(
+                  "border-border bg-card hover:border-foreground/20 rounded-lg border p-2.5 text-left transition-all",
+                  active && `ring-offset-background ring-2 ring-offset-2 ${meta.ring}`
+                )}
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-muted-foreground truncate text-xs">{mapStatusLabel(status)}</p>
+                  <Icon className={cn("h-3.5 w-3.5 shrink-0", meta.color)} />
+                </div>
+                <p className="text-foreground text-lg font-bold">{statusCounts[status] ?? 0}</p>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

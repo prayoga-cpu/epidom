@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { History, Power } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { PosOrderQueue } from "./pos-order-queue";
 import { PosOrderSourceTabs } from "./pos-order-source-tabs";
 import { OrderHistoryTab } from "./order-history-tab";
@@ -32,10 +31,13 @@ interface OrdersTabState {
 /** The Tabs value of the Log (History) trigger; the queue's are "POS" / "ONLINE". */
 const LOG_TAB = "log";
 
-// Same look as the Stock page's Item | Delivery Order + Log bar (management-client.tsx).
-const TAB_LIST_CLASS = "bg-muted/50 h-auto gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm";
+// Same look as the Kitchen & Bar page's Kitchen | Bar switcher (kds-shell.tsx):
+// each tab as wide as its label, not stretched across the screen. The dark:
+// overrides beat TabsTrigger's own dark active style, which KDS's plain
+// buttons don't have.
+const TAB_LIST_CLASS = "h-auto gap-1 p-1";
 const TAB_TRIGGER_CLASS =
-  "data-[state=active]:bg-card h-10 w-full min-w-0 justify-center px-2 text-xs transition-all data-[state=active]:shadow-md md:px-3 md:text-sm";
+  "text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:bg-background dark:data-[state=active]:bg-background dark:data-[state=active]:border-transparent flex-none px-3 py-1.5 transition-colors";
 
 const ORDERS_TAB_DEFAULTS: OrdersTabState = { tab: "active" };
 
@@ -67,7 +69,9 @@ export function PosOrdersTabs({ storeId, canManageSettings }: PosOrdersTabsProps
   const handleToggle = async (checked: boolean) => {
     try {
       await updateSettings.mutateAsync(checked);
-      toast.success(checked ? t("pos.queue.activeQueueEnabledToast") : t("pos.queue.activeQueueDisabledToast"));
+      toast.success(
+        checked ? t("pos.queue.activeQueueEnabledToast") : t("pos.queue.activeQueueDisabledToast")
+      );
     } catch {
       toast.error(t("pos.kds.settingsUpdateFailed"));
     }
@@ -113,36 +117,38 @@ export function PosOrdersTabs({ storeId, canManageSettings }: PosOrdersTabsProps
       activationMode="manual"
       className="flex flex-1 flex-col"
     >
-      <div className="flex items-center gap-3">
-        <PosOrderSourceTabs
-          counts={queue.sourceCounts}
-          listClassName={cn(TAB_LIST_CLASS, "min-w-0 flex-1")}
-          triggerClassName={TAB_TRIGGER_CLASS}
-        />
-        {/* A second list under the same Tabs root: it drives the same value
-            and content panels, but reads as its own control. */}
-        <TabsList className={cn(TAB_LIST_CLASS, "shrink-0")}>
-          <TabsTrigger className={cn(TAB_TRIGGER_CLASS, "px-3")} value={LOG_TAB}>
-            <History />
-            {t("pos.history.logTab")}
-          </TabsTrigger>
-        </TabsList>
-      </div>
-
-      {canManageSettings && (
-        // ml-6 = the p-6 the queue/history content below uses, so it lines up
-        // with the search box beneath it instead of sitting flush against the
-        // edge of the screen.
-        <div className="mt-1 ml-6 flex items-center gap-2">
-          <Power className="text-muted-foreground h-4 w-4" />
-          <span className="text-muted-foreground text-sm">{t("pos.queue.activeQueueLabel")}</span>
-          <Switch
-            checked={activeQueueEnabled}
-            onCheckedChange={handleToggle}
-            disabled={updateSettings.isPending}
+      {/* Laid out like the Kitchen & Bar page's header: tabs on the left, the
+          toggle pushed to the right. px-6 = the p-6 the queue/history content
+          below uses, so both line up with the search box beneath them. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <PosOrderSourceTabs
+            counts={queue.sourceCounts}
+            listClassName={TAB_LIST_CLASS}
+            triggerClassName={TAB_TRIGGER_CLASS}
           />
+          {/* A second list under the same Tabs root: it drives the same value
+              and content panels, but reads as its own control. */}
+          <TabsList className={TAB_LIST_CLASS}>
+            <TabsTrigger className={TAB_TRIGGER_CLASS} value={LOG_TAB}>
+              <History />
+              {t("pos.history.logTab")}
+            </TabsTrigger>
+          </TabsList>
         </div>
-      )}
+
+        {canManageSettings && (
+          <div className="flex items-center gap-2">
+            <Power className="text-muted-foreground h-4 w-4" />
+            <span className="text-muted-foreground text-sm">{t("pos.queue.activeQueueLabel")}</span>
+            <Switch
+              checked={activeQueueEnabled}
+              onCheckedChange={handleToggle}
+              disabled={updateSettings.isPending}
+            />
+          </div>
+        )}
+      </div>
       {/* The queue's panel takes whichever source is picked, so switching POS ⇄
           Online keeps the same queue mounted (its search box included). */}
       <TabsContent value={queue.filters.sourceFilter}>

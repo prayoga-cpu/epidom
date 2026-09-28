@@ -144,7 +144,7 @@ interface SpaceRowProps {
 
 /**
  * One of POS Mode's spaces (Back Office, POS System, Operational): a MenuRow
- * scaled up — 48px tile, 24px icon, large label — with a muted description
+ * scaled up — 48px logo-framed tile, 24px icon, large label — with a muted description
  * under the label. The link is named by the label alone; the description is
  * its accessible description, so a screen reader doesn't read it as the name.
  */
@@ -174,11 +174,10 @@ function SpaceRow({
       {active && (
         <span className="bg-primary absolute inset-y-3 left-0 w-1 rounded-r-full" aria-hidden />
       )}
+      {/* Framed like the app icon — see .epi-logo-tile. */}
       <span
-        className={cn(
-          "flex size-12 shrink-0 items-center justify-center rounded-xl",
-          active ? "bg-primary/15" : "bg-muted"
-        )}
+        className="epi-logo-tile size-12 shrink-0"
+        data-active={active || undefined}
         aria-hidden
       >
         <Icon className="size-6" />
