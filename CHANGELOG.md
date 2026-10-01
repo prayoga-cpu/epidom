@@ -9,6 +9,12 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.3.3] - 2026-10-01 · fix
+
+A fix for the Recipes tab.
+
+- **Recipe cards show their orders again.** The number of orders in the last 30 days on each recipe card never loaded, because the request behind it failed every time. It now loads.
+
 ## [3.3.2] - 2026-10-01 · fix
 
 Bring a menu in from a photo or a PDF, and fixes for Smart Import, checkout at the till and the Data page.

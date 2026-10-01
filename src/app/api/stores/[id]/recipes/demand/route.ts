@@ -13,18 +13,23 @@ export const GET = withApiHandler(
   async (_request, { storeId }) => {
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    // Raw aggregation: recipe → its products → their menu items → delivered order items
+    // Raw aggregation: recipe → its products → their menu items → delivered order items.
+    //
+    // The tables are snake_case (@@map) but their COLUMNS keep Prisma's field
+    // names, so they are camelCase and must be quoted. This was written with
+    // snake_case columns (rp.product_id) and answered 503 "column does not
+    // exist" on every load of the Recipes tab.
     const rows = await prisma.$queryRaw<{ recipe_id: string; order_count: bigint }[]>`
-    SELECT rp.recipe_id, COUNT(oi.id) AS order_count
+    SELECT rp."recipeId" AS recipe_id, COUNT(oi.id) AS order_count
     FROM recipe_products rp
-    JOIN products p ON p.id = rp.product_id AND p.store_id = ${storeId}
-    JOIN menu_items mi ON mi.product_id = p.id
-    JOIN order_items oi ON oi.menu_item_id = mi.id
-    JOIN orders o ON o.id = oi.order_id
-      AND o.store_id = ${storeId}
+    JOIN products p ON p.id = rp."productId" AND p."storeId" = ${storeId}
+    JOIN menu_items mi ON mi."productId" = p.id
+    JOIN order_items oi ON oi."menuItemId" = mi.id
+    JOIN orders o ON o.id = oi."orderId"
+      AND o."storeId" = ${storeId}
       AND o.status = 'DELIVERED'
-      AND o.created_at >= ${since}
-    GROUP BY rp.recipe_id
+      AND o."createdAt" >= ${since}
+    GROUP BY rp."recipeId"
   `;
 
     const demand = rows.map((r) => ({
