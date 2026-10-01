@@ -28,6 +28,8 @@ import type { RecipeWithIngredients } from "@/features/dashboard/data/recipes/ho
 import type { Product } from "@/features/dashboard/data/products/hooks/use-products";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { useCustomProductsSettings } from "../custom-products/hooks/use-custom-products-settings";
+import { DataQuickStart } from "../import/components/data-quick-start";
+import type { EntityType } from "@/lib/ai/import/types";
 
 // ========================================
 // Lazy-Loaded Section Components
@@ -224,6 +226,14 @@ const DATA_TABS: DataTab[] = [
   "customProducts",
 ];
 
+/** What the quick start's prompt is preselected for on each tab (a menu elsewhere). */
+const TAB_ENTITY_TYPE: Partial<Record<DataTab, EntityType>> = {
+  materials: "material",
+  recipes: "recipe",
+  products: "product",
+  suppliers: "supplier",
+};
+
 function sanitizeTabState(raw: unknown, defaults: TabState): TabState {
   if (!raw || typeof raw !== "object") return defaults;
   const r = raw as Partial<TabState>;
@@ -325,102 +335,116 @@ export function DataViewClient({
     }
   };
 
-  return (
-    <Tabs
-      value={activeTab}
-      onValueChange={setActiveTab}
-      className="grid min-h-[calc((100vh-150px)/var(--app-zoom,1))] w-full gap-6"
-    >
-      <TabsList className="bg-muted/50 grid h-auto w-full max-w-full grid-cols-2 gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm md:inline-flex md:h-9 md:max-w-none md:grid-cols-none md:justify-start md:gap-0 md:p-1.5">
-        <TabsTrigger
-          className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-          value="materials"
-          onMouseEnter={() => handleTabHover("materials")}
-        >
-          {t("pages.materialsList")}
-        </TabsTrigger>
-        <TabsTrigger
-          className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-          value="recipes"
-          onMouseEnter={() => handleTabHover("recipes")}
-        >
-          {t("pages.recipesList")}
-        </TabsTrigger>
-        <TabsTrigger
-          className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-          value="products"
-          onMouseEnter={() => handleTabHover("products")}
-        >
-          {t("pages.productsList")}
-        </TabsTrigger>
-        <TabsTrigger
-          className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-          value="suppliers"
-          onMouseEnter={() => handleTabHover("suppliers")}
-        >
-          {t("pages.suppliersList")}
-        </TabsTrigger>
-        <TabsTrigger
-          className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-          value="promotions"
-        >
-          {t("promotions.tab")}
-        </TabsTrigger>
-        <TabsTrigger
-          className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
-          value="customProducts"
-          onMouseEnter={() => handleTabHover("customProducts")}
-        >
-          {customProductsSettings?.customProductsLabel || t("pages.customProductsList")}
-        </TabsTrigger>
-      </TabsList>
+  // The quick start opens by itself only while the lists are still empty;
+  // after that it is one row the owner can expand.
+  const listsAreEmpty =
+    (initialProductsTotal ?? initialProducts?.length ?? 0) === 0 &&
+    (initialMaterialsTotal ?? initialMaterials?.length ?? 0) === 0;
 
-      {/* Conditional rendering: Only render TabsContent for active tab
+  return (
+    <>
+      <DataQuickStart
+        storeId={storeId}
+        startOpen={listsAreEmpty}
+        defaultEntityType={TAB_ENTITY_TYPE[activeTab]}
+        className="mb-6"
+      />
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="grid min-h-[calc((100vh-150px)/var(--app-zoom,1))] w-full gap-6"
+      >
+        <TabsList className="bg-muted/50 grid h-auto w-full max-w-full grid-cols-2 gap-2 rounded-lg p-2 shadow-sm backdrop-blur-sm md:inline-flex md:h-9 md:max-w-none md:grid-cols-none md:justify-start md:gap-0 md:p-1.5">
+          <TabsTrigger
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
+            value="materials"
+            onMouseEnter={() => handleTabHover("materials")}
+          >
+            {t("pages.materialsList")}
+          </TabsTrigger>
+          <TabsTrigger
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
+            value="recipes"
+            onMouseEnter={() => handleTabHover("recipes")}
+          >
+            {t("pages.recipesList")}
+          </TabsTrigger>
+          <TabsTrigger
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
+            value="products"
+            onMouseEnter={() => handleTabHover("products")}
+          >
+            {t("pages.productsList")}
+          </TabsTrigger>
+          <TabsTrigger
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
+            value="suppliers"
+            onMouseEnter={() => handleTabHover("suppliers")}
+          >
+            {t("pages.suppliersList")}
+          </TabsTrigger>
+          <TabsTrigger
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
+            value="promotions"
+          >
+            {t("promotions.tab")}
+          </TabsTrigger>
+          <TabsTrigger
+            className="data-[state=active]:bg-card h-10 w-full min-w-0 justify-center truncate px-2 text-xs transition-all data-[state=active]:shadow-md md:h-[calc(100%-1px)] md:w-auto md:min-w-fit md:px-3 md:text-sm"
+            value="customProducts"
+            onMouseEnter={() => handleTabHover("customProducts")}
+          >
+            {customProductsSettings?.customProductsLabel || t("pages.customProductsList")}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Conditional rendering: Only render TabsContent for active tab
           This prevents all components from mounting simultaneously, which causes:
           - All data fetching to occur at once
           - High memory usage
           - Long initial load time */}
-      {activeTab === "materials" && (
-        <TabsContent value="materials" className="mt-0">
-          <MaterialsSection
-            initialMaterials={initialMaterials}
-            initialMaterialsTotal={initialMaterialsTotal}
-          />
-        </TabsContent>
-      )}
+        {activeTab === "materials" && (
+          <TabsContent value="materials" className="mt-0">
+            <MaterialsSection
+              initialMaterials={initialMaterials}
+              initialMaterialsTotal={initialMaterialsTotal}
+            />
+          </TabsContent>
+        )}
 
-      {activeTab === "recipes" && (
-        <TabsContent value="recipes" className="mt-0">
-          <RecipesSection initialRecipes={initialRecipes} />
-        </TabsContent>
-      )}
+        {activeTab === "recipes" && (
+          <TabsContent value="recipes" className="mt-0">
+            <RecipesSection initialRecipes={initialRecipes} />
+          </TabsContent>
+        )}
 
-      {activeTab === "products" && (
-        <TabsContent value="products" className="mt-0">
-          <ProductsSection
-            initialProducts={initialProducts}
-            initialProductsTotal={initialProductsTotal}
-          />
-        </TabsContent>
-      )}
+        {activeTab === "products" && (
+          <TabsContent value="products" className="mt-0">
+            <ProductsSection
+              initialProducts={initialProducts}
+              initialProductsTotal={initialProductsTotal}
+            />
+          </TabsContent>
+        )}
 
-      {activeTab === "suppliers" && (
-        <TabsContent value="suppliers" className="mt-0">
-          <SuppliersSection initialSuppliers={initialSuppliers} />
-        </TabsContent>
-      )}
+        {activeTab === "suppliers" && (
+          <TabsContent value="suppliers" className="mt-0">
+            <SuppliersSection initialSuppliers={initialSuppliers} />
+          </TabsContent>
+        )}
 
-      {activeTab === "promotions" && (
-        <TabsContent value="promotions" className="mt-0">
-          <PromotionsSection storeId={storeId} />
-        </TabsContent>
-      )}
+        {activeTab === "promotions" && (
+          <TabsContent value="promotions" className="mt-0">
+            <PromotionsSection storeId={storeId} />
+          </TabsContent>
+        )}
 
-      {activeTab === "customProducts" && (
-        <TabsContent value="customProducts" className="mt-0">
-          <CustomProductsSection storeId={storeId} />
-        </TabsContent>
-      )}
-    </Tabs>
+        {activeTab === "customProducts" && (
+          <TabsContent value="customProducts" className="mt-0">
+            <CustomProductsSection storeId={storeId} />
+          </TabsContent>
+        )}
+      </Tabs>
+    </>
   );
 }

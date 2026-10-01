@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { OrderStatus, OrderItemStatus, PaymentMethod, Department } from "@prisma/client";
 import {
+  CUSTOM_ITEM_MAX_UNIT_PRICE,
   isCustomOrderItem,
   type CreatePosOrderInput,
   type SelectedOptionInput,
@@ -66,8 +67,22 @@ export async function draftShortfallBatchesForConfirmedOrder(
   }
 }
 
+/** A requested line the menu can no longer sell (deleted, or switched off). */
+export interface UnavailableOrderLine {
+  menuItemId: string;
+  name: string;
+}
+
 /** Thrown when one or more requested menu items are missing/unavailable — callers map this to a 422. */
-export class OrderBuildError extends Error {}
+export class OrderBuildError extends Error {
+  constructor(
+    message: string,
+    /** Set only for the unavailable-lines case, so the client can act on the exact lines. */
+    readonly unavailable?: UnavailableOrderLine[]
+  ) {
+    super(message);
+  }
+}
 
 export interface BuiltOrderItem {
   /** null for a POS Custom Item — an ad-hoc line with no MenuItem behind it. */
@@ -100,12 +115,21 @@ export interface BuiltOrderItem {
  * menu row to reprice against, so the cashier's typed name/price ARE the
  * record. The Zod schema bounds both (≤80 chars, ≤ CUSTOM_ITEM_MAX_UNIT_PRICE)
  * because Order is an immutable ledger — a bad number here is permanent.
+ *
+ * `tolerant` is the offline-replay mode (see buildPosSettlement): the customer
+ * already paid on a disconnected till and the queue drops an entry after 5
+ * failed attempts, so a menu change made while the till was offline must not
+ * reject the sale. An item that was merely switched off is still repriced from
+ * its row; one that was deleted is recorded from the name and price the till
+ * charged, with a warning for Order.notes.
  */
 export async function validateAndBuildOrderItems(
   storeId: string,
-  items: CreatePosOrderInput["items"]
-): Promise<{ orderItems: BuiltOrderItem[]; subtotal: number }> {
+  items: CreatePosOrderInput["items"],
+  opts: { tolerant?: boolean } = {}
+): Promise<{ orderItems: BuiltOrderItem[]; subtotal: number; warnings: string[] }> {
   const menuLines = items.filter((i) => !isCustomOrderItem(i));
+  const warnings: string[] = [];
 
   // Dedupe: the cart can list the same menu item on multiple lines (e.g. two
   // orders of the same drink with different notes), and Prisma's `id: { in }`
@@ -121,7 +145,14 @@ export async function validateAndBuildOrderItems(
         where: {
           id: { in: uniqueMenuItemIds },
           storefront: { storeId },
-          isAvailable: true,
+          // Must agree with GET /pos/menu, which is what put the line in the
+          // cart. A CUSTOM-line item is always sellable at the till: its stored
+          // isAvailable is only the storefront's "Show on Menu" switch, and the
+          // menu route overrides it to true. Requiring the stored flag here
+          // rejected a sale the cashier screen had offered as a normal tile.
+          ...(!opts.tolerant && {
+            OR: [{ isAvailable: true }, { product: { productLine: "CUSTOM" } }],
+          }),
         },
         include: {
           product: { select: { productLine: true } },
@@ -129,15 +160,21 @@ export async function validateAndBuildOrderItems(
       })
     : [];
 
-  if (menuItems.length !== uniqueMenuItemIds.length) {
+  if (menuItems.length !== uniqueMenuItemIds.length && !opts.tolerant) {
     const foundIds = new Set(menuItems.map((m) => m.id));
     // Name the exact items so the cashier knows what to remove, rather than a
     // vague "something is wrong" — this is the common case when a held order
     // is resumed after the menu changed (item deleted / made unavailable).
-    const missingNames = menuLines
-      .filter((i) => !foundIds.has((i as { menuItemId: string }).menuItemId))
-      .map((i) => i.name);
-    throw new OrderBuildError(`No longer available, remove from cart: ${missingNames.join(", ")}`);
+    const unavailable = new Map<string, UnavailableOrderLine>();
+    for (const line of menuLines) {
+      const { menuItemId } = line as { menuItemId: string };
+      if (!foundIds.has(menuItemId)) unavailable.set(menuItemId, { menuItemId, name: line.name });
+    }
+    const lines = [...unavailable.values()];
+    throw new OrderBuildError(
+      `No longer available, remove from cart: ${lines.map((l) => l.name).join(", ")}`,
+      lines
+    );
   }
 
   const menuItemMap = new Map(menuItems.map((m) => [m.id, m]));
@@ -161,8 +198,31 @@ export async function validateAndBuildOrderItems(
       };
     }
 
-    const menuItem = menuItemMap.get(i.menuItemId)!;
+    const menuItem = menuItemMap.get(i.menuItemId);
     const modifierTotal = (i.selectedOptions ?? []).reduce((sum, m) => sum + m.priceAdjustment, 0);
+
+    // Only reachable on a tolerant replay (the strict path threw above): the
+    // row is gone, so the till's own name and price are the only record left.
+    // No menuItemId, like any line whose MenuItem was deleted after the sale.
+    if (!menuItem) {
+      // Bounded like a Custom Item's price: nothing is left to reprice against.
+      const unitPrice = Math.min(i.unitPrice + modifierTotal, CUSTOM_ITEM_MAX_UNIT_PRICE);
+      warnings.push(`"${i.name}" was no longer on the menu; recorded at the price charged`);
+      return {
+        menuItemId: null,
+        name: i.name,
+        quantity: i.quantity,
+        unit: "pcs",
+        unitPrice,
+        total: unitPrice * i.quantity,
+        notes: i.notes,
+        selectedOptions: i.selectedOptions,
+        isCustom: true,
+        department: null,
+        initialStatus: resolveInitialOrderItemStatus(null, { isCustom: true, department: null }),
+      };
+    }
+
     const unitPrice = Number(menuItem.price) + modifierTotal;
     const total = unitPrice * i.quantity;
     return {
@@ -182,5 +242,5 @@ export async function validateAndBuildOrderItems(
 
   const subtotal = orderItems.reduce((s, i) => s + i.total, 0);
 
-  return { orderItems, subtotal };
+  return { orderItems, subtotal, warnings: [...new Set(warnings)] };
 }

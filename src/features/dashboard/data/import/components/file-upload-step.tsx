@@ -20,12 +20,15 @@ import { Label } from "@/components/ui/label";
 import type { EntityType } from "@/lib/ai/import/types";
 
 import { useI18n } from "@/components/lang/i18n-provider";
+import { ImportPromptHelper } from "./import-prompt-helper";
 
 interface FileUploadStepProps {
   onFileSelect: (file: File) => void;
   selectedEntityType: EntityType | undefined;
   onEntityTypeChange: (type: EntityType | undefined) => void;
   isLoading: boolean;
+  /** Why the last analysis failed, shown under the drop zone. */
+  error?: string | null;
 }
 
 export function FileUploadStep({
@@ -33,6 +36,7 @@ export function FileUploadStep({
   selectedEntityType,
   onEntityTypeChange,
   isLoading,
+  error,
 }: FileUploadStepProps) {
   const { t } = useI18n();
   const [isDragActive, setIsDragActive] = useState(false);
@@ -194,8 +198,18 @@ export function FileUploadStep({
         </div>
       </div>
 
-      {/* Error message */}
-      {dragError && <p className="text-destructive text-center text-sm">{dragError}</p>}
+      {/* Error message: a file this step refused, or an analysis that failed */}
+      {(dragError || error) && (
+        <p role="alert" className="text-destructive text-center text-sm">
+          {dragError || error}
+        </p>
+      )}
+
+      {/* No file to drop yet: how to get one out of a menu photo or a PDF. */}
+      <div className="bg-muted/40 rounded-lg border p-4">
+        <p className="text-muted-foreground mb-3 text-sm">{t("import.quickStart.dialogHint")}</p>
+        <ImportPromptHelper entityType={selectedEntityType ?? "product"} />
+      </div>
     </div>
   );
 }

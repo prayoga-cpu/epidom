@@ -16,7 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wand2, Upload, Loader2, Check, AlertTriangle, X, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAnalyzeImport, useExecuteImport, type AnalyzeResponse } from "./hooks/use-ai-import";
+import {
+  useAnalyzeImport,
+  useExecuteImport,
+  ImportRequestError,
+  type AnalyzeResponse,
+  type ImportFailure,
+} from "./hooks/use-ai-import";
 import type { EntityType } from "@/lib/ai/import/types";
 
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -70,7 +76,12 @@ export function SmartImportDialog({
       totalSucceeded: number;
     };
     error?: string;
+    failures?: ImportFailure[];
+    skippedRows?: number;
   } | null>(null);
+  // Why the last analysis failed. Without it a failed analysis just dropped
+  // the merchant back on the upload step with no word of what happened.
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Mutations
   const analyzeMutation = useAnalyzeImport();
@@ -85,6 +96,7 @@ export function SmartImportDialog({
         setAnalysisResult(null);
         setEditedData([]);
         setImportResult(null);
+        setUploadError(null);
       }
       onOpenChange(open);
     },
@@ -95,6 +107,7 @@ export function SmartImportDialog({
   const handleFileSelect = useCallback(
     async (selectedFile: File) => {
       setFile(selectedFile);
+      setUploadError(null);
       setStep("analyzing");
 
       try {
@@ -116,10 +129,15 @@ export function SmartImportDialog({
         setStep("preview");
       } catch (error) {
         console.error("Analysis failed:", error);
+        setUploadError(
+          error instanceof ImportRequestError && error.timedOut
+            ? t("import.upload.analysisTimeout")
+            : t("import.upload.analysisFailed")
+        );
         setStep("upload");
       }
     },
-    [storeId, selectedEntityType, analyzeMutation]
+    [storeId, selectedEntityType, analyzeMutation, t]
   );
 
   // Handle import execution
@@ -133,6 +151,7 @@ export function SmartImportDialog({
         sessionId: analysisResult.sessionId,
         storeId,
         entityType: selectedEntityType || "material",
+        fallbackEntityType: selectedEntityType,
         data: editedData,
       });
 
@@ -142,11 +161,16 @@ export function SmartImportDialog({
       console.error("Import failed:", error);
       setImportResult({
         success: false,
-        error: error instanceof Error ? error.message : "Import failed",
+        error:
+          error instanceof ImportRequestError && error.timedOut
+            ? t("import.upload.importTimeout")
+            : error instanceof Error
+              ? error.message
+              : "Import failed",
       });
       setStep("results");
     }
-  }, [analysisResult, editedData, storeId, selectedEntityType, executeMutation]);
+  }, [analysisResult, editedData, storeId, selectedEntityType, executeMutation, t]);
 
   // Get current step index
   const getCurrentStepIndex = () => {
@@ -253,6 +277,7 @@ export function SmartImportDialog({
               selectedEntityType={selectedEntityType}
               onEntityTypeChange={setSelectedEntityType}
               isLoading={analyzeMutation.isPending}
+              error={uploadError}
             />
           )}
 

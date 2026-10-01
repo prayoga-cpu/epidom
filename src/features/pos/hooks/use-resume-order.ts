@@ -36,6 +36,10 @@ export async function resumeOrderIntoCart(storeId: string, order: ResumableOrder
     }
   }
 
+  // A bill resumed from the Orders page can reach the cart before the cashier
+  // screen has opened for this store; tie the cart to the store first, so the
+  // shell's own bindStore does not then take it for another store's cart.
+  usePosCart.getState().bindStore(storeId);
   usePosCart
     .getState()
     .hydrateFromOrder(

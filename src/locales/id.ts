@@ -1559,6 +1559,9 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
     smartImportFailedTitle: "Impor Gagal",
     smartImportFailedDesc: "Terjadi kesalahan saat mengimpor.",
     smartImportTryAgain: "Coba Lagi",
+    smartImportFailuresTitle: "Baris yang tidak diimpor",
+    smartImportFailureRow: "{entity}, baris {row}",
+    smartImportSkippedRows: "{count} baris tidak punya nama dan dilewati.",
     authForgotTitle: "Lupa kata sandi",
     authForgotDesc:
       "Masukkan alamat email Anda dan kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.",
@@ -5091,6 +5094,82 @@ lifetime: "Akses seumur hidup",
       preview: "Pratinjau",
       done: "Selesai",
     },
+    aiPrompt: {
+      intro:
+        "Saya melampirkan foto atau PDF. Ubah menjadi file CSV yang bisa saya impor ke Epidom, aplikasi manajemen restoran saya.",
+      headerIntro:
+        "Baris pertama file harus persis header ini. Biarkan nama kolom dalam bahasa Inggris, persis seperti tertulis:",
+      rulesTitle: "Aturan:",
+      output:
+        "Berikan hasilnya sebagai file CSV yang bisa diunduh, dengan nama {file}. Jika tidak bisa membuat file, tulis CSV dalam satu blok kode yang bisa saya salin. Jangan tambahkan penjelasan.",
+      rules: {
+        rows: "Satu baris per item. Masukkan semua item yang ada di dokumen dan jangan menambah apa pun yang tidak ada di dalamnya.",
+        names: "Salin nama persis seperti tertulis, dalam bahasa dokumen. Jangan diterjemahkan.",
+        numbers:
+          "Tulis angka hanya dengan digit: tanpa simbol mata uang, tanpa pemisah ribuan, dan gunakan titik untuk desimal (12000 atau 4.50).",
+        empty:
+          "Kosongkan sel jika dokumen tidak memberikan nilainya. Jangan menebak atau mengarang nilai.",
+        quotes: "Beri tanda kutip ganda pada nilai yang mengandung koma.",
+      },
+      product: {
+        task: "Ambil semua item di menu.",
+        category: "category: judul bagian tempat item itu tercantum, misalnya Kopi atau Kue.",
+        price:
+          'sellingPrice: harga di menu. Jika satu item punya beberapa ukuran atau harga, buat satu baris per ukuran dan tambahkan ukurannya ke nama, misalnya "Latte (Large)".',
+        description: "description: teks singkat di bawah item, jika ada.",
+        optional:
+          "costPrice, sku, dan unit (pcs, cup, porsi…): isi hanya jika dokumen mencantumkannya.",
+      },
+      material: {
+        task: "Ambil semua bahan baku atau perlengkapan.",
+        unit: "unit: cara menghitung atau menimbangnya, misalnya kg, g, L, ml, atau pcs.",
+        unitCost:
+          "unitCost: harga SATU unit. Jika dokumen memberikan harga per kemasan, bagi dengan jumlah isi kemasan.",
+        stock: "currentStock dan minStock: jumlahnya saja, dalam unit tersebut.",
+        supplier: "supplierName: dari siapa barang dibeli. sku: kode referensi, jika ada.",
+      },
+      supplier: {
+        task: "Ambil semua pemasok.",
+        contact:
+          "contactPerson, phone, email, address, city, dan country: satu nilai per sel. Tulis nomor telepon seperti aslinya, termasuk kode negara.",
+        notes:
+          "notes: informasi lain yang berguna, seperti hari pengiriman atau syarat pembayaran.",
+      },
+      recipe: {
+        task: "Ambil semua resep beserta bahan-bahannya.",
+        rows: "Gunakan satu baris per bahan, dan ulangi nama resep di setiap baris resep itu.",
+        yield:
+          "yieldQuantity dan yieldUnit: hasil satu kali produksi, misalnya 12 dan pcs. Isi di baris pertama setiap resep; jika dokumen tidak menyebutkannya, tulis 1 dan batch.",
+        ingredients:
+          "ingredient_name, ingredient_qty, dan ingredient_unit: nama bahan, jumlahnya dalam angka, dan satuannya (g, kg, ml, L, pcs).",
+        instructions: "instructions: cara membuatnya, hanya di baris pertama setiap resep.",
+      },
+    },
+    quickStart: {
+      title: "Impor dari foto atau PDF",
+      subtitle:
+        "Tidak punya spreadsheet? Asisten AI mana pun bisa mengubah foto menu, PDF, atau daftar harga menjadi file yang bisa diimpor ke Epidom.",
+      step1Title: "Salin prompt",
+      step1Body: "Pilih apa yang Anda impor, lalu salin prompt-nya.",
+      step2Title: "Tanyakan ke asisten AI",
+      step2Body:
+        "Tempel prompt ke ChatGPT, Claude, Gemini, atau asisten lain, lampirkan foto atau PDF Anda, lalu unduh file CSV yang diberikan.",
+      step3Title: "Impor file",
+      step3Body:
+        "Epidom menampilkan setiap baris sebelum disimpan. Periksa harganya, lalu konfirmasi.",
+      typeLabel: "Saya mengimpor",
+      copy: "Salin prompt",
+      copied: "Prompt disalin. Tempel ke asisten AI Anda.",
+      copyFailed: "Tidak bisa menyalin otomatis. Pilih teksnya lalu salin.",
+      showPrompt: "Lihat prompt",
+      hidePrompt: "Sembunyikan prompt",
+      promptLabel: "Prompt untuk ditempel ke asisten AI",
+      importCta: "Impor file",
+      showSteps: "Cara kerjanya",
+      hideSteps: "Sembunyikan langkah",
+      dialogHint:
+        "Belum punya file CSV? Salin prompt ini, tempel ke asisten AI mana pun bersama foto atau PDF menu Anda, lalu impor file yang diberikan.",
+    },
     upload: {
       label: "Saya mengimpor:",
       dropZone: "Seret & lepas file CSV Anda di sini",
@@ -5101,6 +5180,11 @@ lifetime: "Akses seumur hidup",
       dropToUpload: "Lepas file di sini",
       error: "Mohon unggah file CSV",
       errorSize: "File terlalu besar. Maksimal 10MB",
+      analysisFailed: "File ini tidak bisa dibaca. Pastikan filenya CSV, lalu coba lagi.",
+      analysisTimeout:
+        "Membaca file ini terlalu lama. Coba lagi, atau bagi file menjadi beberapa bagian yang lebih kecil.",
+      importTimeout:
+        "Impor terlalu lama selesai. Buka daftar Anda untuk melihat apa yang sudah masuk sebelum mencoba lagi.",
       autoDetectPlaceholder: "Deteksi Otomatis",
       entities: {
         auto: "Deteksi Otomatis (Disarankan)",
@@ -5581,6 +5665,13 @@ lifetime: "Akses seumur hidup",
       processing: "Memproses...",
       success: "Pesanan berhasil dibuat!",
       orderFailed: "Gagal membuat pesanan. Coba lagi.",
+      cartRepaired: {
+        title: "Keranjang diperbarui",
+        removed: "Sudah tidak ada di menu, dihapus: {names}.",
+        relinked: "Disesuaikan dengan menu saat ini: {names}.",
+        review: "Periksa totalnya, lalu coba lagi.",
+        emptied: "Tidak ada lagi item keranjang ini di menu, jadi keranjang dikosongkan.",
+      },
       payLater: "Bayar Nanti",
       payLaterNoteTitle: "Pelanggan bayar setelah pesanan diantar",
       payLaterNoteDesc:

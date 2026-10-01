@@ -15,6 +15,7 @@ import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { trackEvent } from "@/lib/analytics";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { useServerSnapshot } from "@/hooks/use-server-snapshot";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 export interface MaterialsResponse {
@@ -54,8 +55,12 @@ export function useMaterials(
     },
   });
 
+  const queryKey = materialKeys.list(storeId, normalizedFilters);
+  // Only the key the server rendered gets the snapshot; see useServerSnapshot.
+  const snapshot = useServerSnapshot(queryKey, initialData);
+
   return useQuery<MaterialsResponse>({
-    queryKey: materialKeys.list(storeId, normalizedFilters),
+    queryKey,
     queryFn: async () => {
       // Build query string
       const params = new URLSearchParams();
@@ -81,7 +86,7 @@ export function useMaterials(
       return data.data;
     },
     enabled: !!storeId,
-    initialData, // ✅ Accept initial data from Server Component
+    initialData: snapshot,
     // Real-time configuration: Pusher (see useRealtimeChannel below) is the
     // primary update path; this poll is only a safety net for when push
     // misses an event, so it doesn't need safety-net-grade CPU cost.

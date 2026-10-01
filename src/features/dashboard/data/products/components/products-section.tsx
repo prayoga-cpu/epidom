@@ -912,14 +912,14 @@ export function ProductsSection({
                         this? */}
                     <div className="flex justify-between gap-2">
                       <span className="shrink-0">
-                        {tr("data.products.howMade.label", "How it's made")}:
+                        {tr("common.howMade.label", "How it's made")}:
                       </span>
                       <span className="text-foreground min-w-0 text-right font-medium">
                         {product.stockMode === "MADE_TO_ORDER"
-                          ? tr("data.products.howMade.madeToOrder", "Cooked to order")
+                          ? tr("common.howMade.madeToOrder", "Cooked to order")
                           : product.stockMode === "UNTRACKED"
-                            ? tr("data.products.howMade.untracked", "Not tracked")
-                            : tr("data.products.howMade.batch", "Counted on a shelf")}
+                            ? tr("common.howMade.untracked", "Not tracked")
+                            : tr("common.howMade.batch", "Counted on a shelf")}
                       </span>
                     </div>
                     {product.department && (
@@ -964,17 +964,25 @@ export function ProductsSection({
                     </div>
                     <div className="flex justify-between">
                       <span>{t("common.profit")}:</span>
-                      <span
-                        className={`text-foreground font-medium ${
-                          profitMargin >= 50
-                            ? "text-green-600"
-                            : profitMargin >= 30
-                              ? "text-blue-600"
-                              : "text-orange-600"
-                        }`}
-                      >
-                        {profitMargin.toFixed(1)}%
-                      </span>
+                      {/* No cost entered yet (a freshly imported menu): a
+                          margin of "100%" would be a number about nothing. */}
+                      {Number(product.costPrice) > 0 ? (
+                        <span
+                          className={`text-foreground font-medium ${
+                            profitMargin >= 50
+                              ? "text-green-600"
+                              : profitMargin >= 30
+                                ? "text-blue-600"
+                                : "text-orange-600"
+                          }`}
+                        >
+                          {profitMargin.toFixed(1)}%
+                        </span>
+                      ) : (
+                        <span className="text-foreground font-medium">
+                          {t("common.notAvailable")}
+                        </span>
+                      )}
                     </div>
                     <div className="flex justify-between">
                       <span>{t("tables.supplier")}:</span>

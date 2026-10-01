@@ -1542,6 +1542,9 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
     smartImportFailedTitle: "Import Failed",
     smartImportFailedDesc: "Something went wrong during import.",
     smartImportTryAgain: "Try Again",
+    smartImportFailuresTitle: "Rows that were not imported",
+    smartImportFailureRow: "{entity}, row {row}",
+    smartImportSkippedRows: "{count} rows had no name and were left out.",
     authForgotTitle: "Forgot password",
     authForgotDesc: "Enter your email address and we will send you a link to reset your password.",
     authForgotLinkSent: "Password reset link sent to your email",
@@ -5053,6 +5056,84 @@ lifetime: "Lifetime access",
       preview: "Preview",
       done: "Done",
     },
+    aiPrompt: {
+      intro:
+        "I am attaching a photo or a PDF. Turn it into a CSV file that I can import into Epidom, my restaurant management software.",
+      headerIntro:
+        "The first line of the file must be exactly this header. Keep the column names in English, exactly as written:",
+      rulesTitle: "Rules:",
+      output:
+        "Give me the result as a CSV file to download, named {file}. If you cannot create a file, write the CSV in a single code block that I can copy. Do not add any explanation.",
+      rules: {
+        rows: "One row per item. Include every item in the document and add nothing that is not in it.",
+        names:
+          "Copy names exactly as written, in the language of the document. Do not translate them.",
+        numbers:
+          "Write numbers with digits only: no currency symbol, no thousands separator, and a dot for decimals (12000 or 4.50).",
+        empty:
+          "Leave a cell empty when the document does not give the value. Never guess or invent a value.",
+        quotes: "Put double quotes around any value that contains a comma.",
+      },
+      product: {
+        task: "Extract every item on the menu.",
+        category:
+          "category: the heading the item is listed under, for example Coffee or Pastries.",
+        price:
+          'sellingPrice: the price on the menu. If an item has several sizes or prices, make one row per size and add the size to the name, for example "Latte (Large)".',
+        description: "description: the short text under the item, if there is one.",
+        optional:
+          "costPrice, sku and unit (pcs, cup, plate…): fill them in only if the document shows them.",
+      },
+      material: {
+        task: "Extract every ingredient or supply.",
+        unit: "unit: how it is counted or weighed, for example kg, g, L, ml or pcs.",
+        unitCost:
+          "unitCost: the price of ONE unit. If the document gives the price of a pack, divide it by the quantity in the pack.",
+        stock: "currentStock and minStock: the quantity only, in that unit.",
+        supplier:
+          "supplierName: who it is bought from. sku: the reference code, if there is one.",
+      },
+      supplier: {
+        task: "Extract every supplier.",
+        contact:
+          "contactPerson, phone, email, address, city and country: one value per cell. Keep the phone number as written, including the country code.",
+        notes: "notes: anything else useful, such as delivery days or payment terms.",
+      },
+      recipe: {
+        task: "Extract every recipe with its ingredients.",
+        rows: "Use one row per ingredient, and repeat the recipe name on every row of that recipe.",
+        yield:
+          "yieldQuantity and yieldUnit: how much one batch makes, for example 12 and pcs. Fill them in on the first row of each recipe; if the document does not say, write 1 and batch.",
+        ingredients:
+          "ingredient_name, ingredient_qty and ingredient_unit: the ingredient, the quantity as a number, and its unit (g, kg, ml, L, pcs).",
+        instructions: "instructions: the method, on the first row of each recipe only.",
+      },
+    },
+    quickStart: {
+      title: "Import from a photo or a PDF",
+      subtitle:
+        "No spreadsheet? Any AI assistant can turn a photo of your menu, a PDF or a price list into a file Epidom can import.",
+      step1Title: "Copy the prompt",
+      step1Body: "Choose what you are importing, then copy the prompt.",
+      step2Title: "Ask any AI assistant",
+      step2Body:
+        "Paste the prompt into ChatGPT, Claude, Gemini or another assistant, attach your photo or PDF, and download the CSV file it gives you.",
+      step3Title: "Import the file",
+      step3Body:
+        "Epidom shows you every row before anything is saved. Check the prices, then confirm.",
+      typeLabel: "I am importing",
+      copy: "Copy prompt",
+      copied: "Prompt copied. Paste it into your AI assistant.",
+      copyFailed: "Could not copy automatically. Select the text and copy it.",
+      showPrompt: "Show the prompt",
+      hidePrompt: "Hide the prompt",
+      promptLabel: "Prompt to paste into an AI assistant",
+      importCta: "Import a file",
+      showSteps: "How it works",
+      hideSteps: "Hide the steps",
+      dialogHint:
+        "No CSV file yet? Copy this prompt, paste it into any AI assistant with a photo or PDF of your menu, and import the file it gives you.",
+    },
     upload: {
       label: "I am importing:",
       dropZone: "Drag & drop your CSV file here",
@@ -5063,6 +5144,11 @@ lifetime: "Lifetime access",
       dropToUpload: "Drop your file here",
       error: "Please upload a CSV file",
       errorSize: "File too large. Maximum size is 10MB",
+      analysisFailed: "This file could not be read. Check that it is a CSV file and try again.",
+      analysisTimeout:
+        "Reading this file took too long. Try again, or split the file into smaller parts.",
+      importTimeout:
+        "The import took too long to finish. Open your lists to see what was imported before trying again.",
       autoDetectPlaceholder: "Auto-detect",
       entities: {
         auto: "Auto-detect (Recommended)",
@@ -5550,6 +5636,13 @@ lifetime: "Lifetime access",
       processing: "Processing...",
       success: "Order created successfully!",
       orderFailed: "Failed to create order. Please try again.",
+      cartRepaired: {
+        title: "Cart updated",
+        removed: "No longer on the menu, removed: {names}.",
+        relinked: "Updated to the current menu: {names}.",
+        review: "Check the total, then try again.",
+        emptied: "Nothing in this cart is on the menu any more, so it was emptied.",
+      },
       payLater: "Pay Later",
       payLaterNoteTitle: "Customer pays after delivery",
       payLaterNoteDesc:

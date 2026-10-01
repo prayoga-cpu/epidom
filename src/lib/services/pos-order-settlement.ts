@@ -9,6 +9,7 @@ import {
 import type { PosOnlinePlatform } from "@/config/aggregator.config";
 import { prisma } from "@/lib/prisma";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
+import { ITEMS_UNAVAILABLE_REASON } from "@/lib/constants/pos";
 import type { CreatePosOrderInput } from "@/lib/validation/pos.schemas";
 import {
   computeOrderCharges,
@@ -165,12 +166,12 @@ export async function buildPosSettlement(args: {
   // Independent reads (both only need storeId) — run concurrently instead of
   // two sequential round trips on the critical checkout path.
   const [built, financeSettings] = await Promise.all([
-    validateAndBuildOrderItems(storeId, input.items),
+    validateAndBuildOrderItems(storeId, input.items, { tolerant }),
     resolveFinanceSettingsForOrder(storeId),
   ]);
   const { orderItems, subtotal } = built;
 
-  const warnings: string[] = [];
+  const warnings: string[] = [...built.warnings];
 
   let customer: SettlementCustomer | null = null;
   if (input.customerId) {
@@ -807,9 +808,17 @@ export function mapSettlementError(error: unknown): NextResponse | null {
     });
   }
   if (error instanceof OrderBuildError) {
-    return NextResponse.json(createErrorResponse(ApiErrorCode.INVALID_INPUT, error.message), {
-      status: 422,
-    });
+    return NextResponse.json(
+      createErrorResponse(
+        ApiErrorCode.INVALID_INPUT,
+        error.message,
+        // The exact lines, so the till can fix the cart rather than just report it.
+        error.unavailable?.length
+          ? { reason: ITEMS_UNAVAILABLE_REASON, items: error.unavailable }
+          : undefined
+      ),
+      { status: 422 }
+    );
   }
   if (error instanceof PromotionsPlanError) {
     return NextResponse.json(

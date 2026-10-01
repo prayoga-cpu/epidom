@@ -6,3 +6,11 @@
  * time via t().
  */
 export const UNCATEGORIZED_CATEGORY = "__uncategorized__";
+
+/**
+ * `error.details.reason` on the 422 a checkout / Save Bill gets back when cart
+ * lines point at menu items that are gone or switched off. `details.items`
+ * lists them as `{ menuItemId, name }`. The till matches on this to repair the
+ * cart (features/pos/lib/cart-repair.ts) instead of only showing the message.
+ */
+export const ITEMS_UNAVAILABLE_REASON = "ITEMS_UNAVAILABLE";

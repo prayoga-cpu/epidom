@@ -15,10 +15,18 @@ import { saveUserCorrections } from "@/lib/ai/memory/ai-memory.service";
 import { z } from "zod";
 import type { MemoryType } from "@/lib/ai/import/types";
 
+// Rows are written one at a time (each product: a duplicate check, the write,
+// its menu item). A full menu takes far longer than the platform default.
+export const maxDuration = 120;
+export const dynamic = "force-dynamic";
+
 const ExecuteRequestSchema = z.object({
   sessionId: z.string().cuid(),
   storeId: z.string().cuid(),
   entityType: z.enum(["material", "product", "supplier", "recipe"]),
+  // The type picked (or detected) in the dialog. Separate from `entityType`,
+  // which older clients fill with a placeholder when nothing was chosen.
+  fallbackEntityType: z.enum(["material", "product", "supplier", "recipe"]).optional(),
   data: z.array(z.record(z.unknown())),
   decisions: z
     .array(
@@ -63,7 +71,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { sessionId, storeId, entityType, data, decisions, mappingCorrections } = validation.data;
+    const {
+      sessionId,
+      storeId,
+      entityType,
+      fallbackEntityType,
+      data,
+      decisions,
+      mappingCorrections,
+    } = validation.data;
 
     // Verify store access
     const store = await prisma.store.findFirst({
@@ -120,7 +136,11 @@ export async function POST(request: NextRequest) {
       }
 
       // Execute bulk import
-      const result = await bulkImportMultiEntity({ storeId, data: dataToImport });
+      const result = await bulkImportMultiEntity({
+        storeId,
+        data: dataToImport,
+        fallbackEntityType,
+      });
 
       // Save mapping corrections as memories
       if (mappingCorrections && mappingCorrections.length > 0) {
@@ -137,7 +157,9 @@ export async function POST(request: NextRequest) {
       await prisma.aIImportSession.update({
         where: { id: sessionId },
         data: {
-          status: "completed",
+          // A run that wrote nothing is a failure in the session history too.
+          status: result.success ? "completed" : "failed",
+          ...(!result.success && { errorMessage: result.error ?? "Import failed" }),
           importResult: result as object,
           userCorrections: mappingCorrections as object[] | undefined,
         },

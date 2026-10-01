@@ -11,6 +11,7 @@ import { trackEvent } from "@/lib/analytics";
 import { ApiClientError } from "@/lib/api/client";
 import { unwrapApiData, unwrapApiError } from "@/lib/api/unwrap";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { useServerSnapshot } from "@/hooks/use-server-snapshot";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 // Types
@@ -395,11 +396,15 @@ export function useRecipes(
     },
   });
 
+  const queryKey = recipeKeys.list(storeId, normalizedFilters);
+  // Only the key the server rendered gets the snapshot; see useServerSnapshot.
+  const snapshot = useServerSnapshot(queryKey, initialData);
+
   return useQuery({
-    queryKey: recipeKeys.list(storeId, normalizedFilters),
+    queryKey,
     queryFn: () => fetchRecipes(storeId, normalizedFilters || filters),
     enabled: !!storeId,
-    initialData, // ✅ Accept initial data from Server Component
+    initialData: snapshot,
     // Real-time configuration: Pusher (see useRealtimeChannel below) is the
     // primary update path; this poll is only a safety net for when push
     // misses an event, so it doesn't need safety-net-grade CPU cost.

@@ -6,6 +6,9 @@ import { MovementType } from "@prisma/client";
 import { ENTITY_UNIQUE_FIELDS } from "@/lib/ai/import-schema";
 import { storefrontService } from "@/lib/services/storefront.service";
 import { parseImportedBarcode } from "@/lib/utils/barcode";
+import { skuFromName } from "@/lib/utils/sku-generator";
+import { parseGlobalNumber, parseImportedMoney } from "@/lib/utils/import-number";
+import { getCurrencyDecimals } from "@/features/pos/lib/currency-decimals";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -28,66 +31,6 @@ interface ImportResult {
     failed: number;
     errors: Array<{ index: number; message: string }>;
   };
-}
-
-// Helper to safely parse numbers from global formats (Rp 10.000, $5,000.00, 1.500,50 etc)
-function parseGlobalNumber(value: any): number {
-  if (value === undefined || value === null || value === "") return 0;
-  if (typeof value === "number") return value;
-
-  let str = String(value).trim();
-  // Remove currency symbols and non-numeric chars except . , -
-  str = str.replace(/[^0-9.,-]/g, "");
-
-  if (!str) return 0;
-
-  // Heuristic to detect format:
-  // If connection contains both . and , -> last one is usually decimal
-  // 10.000,00 -> remove thousand sep (.), replace decimal (,) with .
-  // 10,000.00 -> remove thousand sep (,), keep decimal (.)
-
-  if (str.includes(",") && str.includes(".")) {
-    const lastDot = str.lastIndexOf(".");
-    const lastComma = str.lastIndexOf(",");
-    if (lastComma > lastDot) {
-      // European/Indo format: 1.000,00 -> 1000.00
-      str = str.replace(/\./g, "").replace(",", ".");
-    } else {
-      // US format: 1,000.00 -> 1000.00
-      str = str.replace(/,/g, "");
-    }
-  } else if (str.includes(",")) {
-    // Ambiguous: 10,000 (ten thousand) vs 10,5 (ten point five)
-    // If we have 3 digits after comma, likely thousand separator (10,000)
-    // If 2 digits, likely decimal (10,50) - BUT THIS IS RISKY
-    // Safe bet for commerce: if comma is being used and no dots, treat as thousand separator IF it makes sense?
-    // Actually, widespread convention in data:
-    // If it looks like 10,000 it is 10000.
-    // If it looks like 5,5 it is 5.5.
-
-    // Safer approach: Standardize to US float for storage
-    // If >1 commas, it's definitely update separators (1,000,000) -> remove all
-    if ((str.match(/,/g) || []).length > 1) {
-      str = str.replace(/,/g, "");
-    } else {
-      // Single comma. 10,000 or 0,5?
-      // Check if followed by 3 digits exactly at end -> likely thousand sep
-      if (/,\d{3}$/.test(str)) {
-        str = str.replace(/,/g, "");
-      } else {
-        // Likely decimal
-        str = str.replace(",", ".");
-      }
-    }
-  }
-  // Remove remaining thousand separators (dots if used as such not handled above?)
-  // If we have multiple dots: 1.000.000 -> remove all
-  if ((str.match(/\./g) || []).length > 1) {
-    str = str.replace(/\./g, "");
-  }
-
-  const result = parseFloat(str);
-  return isNaN(result) ? 0 : result;
 }
 
 /**
@@ -189,6 +132,27 @@ function normalizeSupplierName(name: string): string {
 }
 
 /**
+ * A row failure in words a merchant can act on. Prisma's message is a
+ * multi-line dump of the whole invocation whose actual reason is its LAST line,
+ * so keeping the first 100 characters reported nothing useful.
+ */
+function describeImportError(error: unknown): string {
+  if (!(error instanceof Error)) return "Unknown error";
+  if ((error as { code?: string }).code === "P2002") {
+    const target = (error as { meta?: { target?: unknown } }).meta?.target;
+    const fields = Array.isArray(target) ? target.filter((f) => f !== "storeId").join(", ") : "";
+    return fields
+      ? `Already used by another item: ${fields}`
+      : "Duplicate of an item that already exists";
+  }
+  const lines = error.message
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return (lines[lines.length - 1] ?? "Unknown error").slice(0, 160);
+}
+
+/**
  * Import materials with createMany for efficiency
  */
 /** The Log row for stock an import brings in with a new material or product. */
@@ -284,7 +248,9 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
     // their own currency, so it has to be converted here or a non-IDR
     // store's imported materials silently mis-price by the exchange-rate
     // factor (e.g. a €5/kg ingredient stored as literally "5 IDR").
-    const { rate: importRate } = await storefrontService.getOwnerCurrencyAndRate(storeId);
+    const { currency: importCurrency, rate: importRate } =
+      await storefrontService.getOwnerCurrencyAndRate(storeId);
+    const moneyDecimals = getCurrencyDecimals(importCurrency);
 
     // Process each material individually to handle relationships properly
     for (let i = 0; i < validData.length; i++) {
@@ -297,11 +263,13 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
         }
 
         const unitCostBase = storefrontService.convertOwnerToBaseSync(
-          parseGlobalNumber(item.unitCost) || 0,
+          parseImportedMoney(item.unitCost, moneyDecimals) || 0,
           importRate
         );
         const supplierPriceBase = storefrontService.convertOwnerToBaseSync(
-          parseGlobalNumber(item.supplierPrice) || parseGlobalNumber(item.unitCost) || 0,
+          parseImportedMoney(item.supplierPrice, moneyDecimals) ||
+            parseImportedMoney(item.unitCost, moneyDecimals) ||
+            0,
           importRate
         );
 
@@ -348,7 +316,7 @@ async function importMaterials(data: any[], storeId: string): Promise<ImportResu
         // record others
         const msg = error instanceof Error ? error.message : "Unknown error";
         if (!msg.includes("Unique constraint")) {
-          errors.push({ index: i + 1, message: msg.slice(0, 100) });
+          errors.push({ index: i + 1, message: describeImportError(error) });
         }
       }
     }
@@ -396,14 +364,32 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
     // pasted in their own currency, so it has to be converted here or a
     // non-IDR store's imported products silently mis-price by the
     // exchange-rate factor (e.g. a €2.20 pastry stored as literally "2.2 IDR").
-    const { rate: importRate } = await storefrontService.getOwnerCurrencyAndRate(storeId);
+    const { currency: importCurrency, rate: importRate } =
+      await storefrontService.getOwnerCurrencyAndRate(storeId);
+    const moneyDecimals = getCurrencyDecimals(importCurrency);
+
+    // Product.sku is required and unique per store, but a menu sheet rarely
+    // has a SKU column. Without a fallback every new row failed Prisma's
+    // validation ("Argument `sku` is missing") and the import reported 0 of N.
+    // Loaded once, and only when some row actually needs a generated code.
+    let takenSkus: Set<string> | null = null;
+    const nextSku = async (name: string) => {
+      if (!takenSkus) {
+        const existing = await prisma.product.findMany({
+          where: { storeId },
+          select: { sku: true },
+        });
+        takenSkus = new Set(existing.map((p) => p.sku.toUpperCase()));
+      }
+      return skuFromName(name, takenSkus);
+    };
 
     // Process one by one to handle Updates (Upsert logic) and precise error reporting
     for (let i = 0; i < validData.length; i++) {
       const item = validData[i];
       try {
         const name = String(item.name).trim();
-        const sku = item.sku || undefined;
+        const sku = item.sku ? String(item.sku).trim() || undefined : undefined;
         // Optional scan code (a spreadsheet often hands it over as a NUMBER; a
         // blank cell means "none"). Held to the same rule as the product form.
         const { barcode, error: barcodeError } = parseImportedBarcode(item.barcode);
@@ -458,11 +444,11 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
           category: item.category || undefined,
           unit: item.unit || "pcs",
           costPrice: storefrontService.convertOwnerToBaseSync(
-            parseGlobalNumber(item.costPrice) || 0,
+            parseImportedMoney(item.costPrice, moneyDecimals) || 0,
             importRate
           ),
           sellingPrice: storefrontService.convertOwnerToBaseSync(
-            parseGlobalNumber(item.sellingPrice) || 0,
+            parseImportedMoney(item.sellingPrice, moneyDecimals) || 0,
             importRate
           ),
           // Left out when the sheet has no stock (column or cell), like the
@@ -503,6 +489,7 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
           const created = await prisma.product.create({
             data: {
               ...productData,
+              sku: sku ?? (await nextSku(name)),
               currentStock: openingStock,
               storeId,
               createdAt: item.createdAt || new Date(),
@@ -525,8 +512,7 @@ async function importProducts(data: any[], storeId: string): Promise<ImportResul
 
         successCount++;
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Unknown error";
-        errors.push({ index: i + 1, message: msg.slice(0, 100) });
+        errors.push({ index: i + 1, message: describeImportError(error) });
         console.error(`Product import error at row ${i + 1}:`, error);
       }
     }
@@ -760,6 +746,24 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
   const errors: Array<{ index: number; message: string }> = [];
   let successCount = 0;
 
+  // Costs are stored in IDR, the platform base currency, exactly as
+  // importMaterials / importProducts do. This path used to write the sheet's
+  // number as-is, so in a euro store an ingredient at 5.00 became "5 IDR" on
+  // the material it created, and every recipe cost built on it was wrong.
+  let toBase: (value: unknown) => number;
+  try {
+    const { currency, rate } = await storefrontService.getOwnerCurrencyAndRate(storeId);
+    const decimals = getCurrencyDecimals(currency);
+    toBase = (value) =>
+      storefrontService.convertOwnerToBaseSync(parseImportedMoney(value, decimals) || 0, rate);
+  } catch (error) {
+    console.error("Recipe import error:", error);
+    return {
+      success: false,
+      error: `Recipe import failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    };
+  }
+
   // 1. Group by Recipe Name + YieldQuantity to handle multi-row ingredients
   // Key format: "RecipeName|YieldQty" (e.g., "Roti Tawar|60" vs "Roti Tawar|30")
   const groups: Record<string, any[]> = {};
@@ -786,8 +790,10 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
       if (!groups[groupKey]) {
         nameCounts[name] = (nameCounts[name] || 0) + 1;
       }
-    } else if (lastGroupKey) {
-      // Continuation row
+    } else if (lastGroupKey && (!name || lastGroupKey.startsWith(`${name}|`))) {
+      // Continuation row: no name, or the same recipe's name repeated on each
+      // ingredient row. A DIFFERENT name with no yield is a new recipe; it used
+      // to fall in here and have its ingredients merged into the recipe above.
       groupKey = lastGroupKey;
     } else if (name) {
       // New recipe without yield specified (default 0)
@@ -855,7 +861,7 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
           const materialId = await resolveMaterialId(storeId, ingName, {
             unit: row.ingredient_unit || row.ingredientUnit,
             sku: row.ingredient_sku,
-            price: parseGlobalNumber(row.ingredient_price) || 0,
+            price: toBase(row.ingredient_price),
             stock: parseGlobalNumber(row.ingredient_stock) || 0,
             supplier: row.ingredient_supplier,
           });
@@ -908,7 +914,7 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
             yieldUnit,
             productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
             instructions: instructions || undefined,
-            costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+            costPerBatch: toBase(mainRow.costPerBatch),
             updatedAt: new Date(),
             // For ingredients, simpler to delete all and recreate for accuracy in sync
             ingredients: {
@@ -929,7 +935,7 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
             yieldUnit,
             productionTimeMinutes: parseGlobalNumber(mainRow.productionTimeMinutes) || 0,
             instructions: instructions || null,
-            costPerBatch: parseGlobalNumber(mainRow.costPerBatch) || 0,
+            costPerBatch: toBase(mainRow.costPerBatch),
             createdAt: mainRow.createdAt || new Date(),
             updatedAt: mainRow.updatedAt || new Date(),
             ingredients:
@@ -944,9 +950,8 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
 
       successCount += rows.length;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
       // Log error on the main row, but maybe applies to the whole group
-      errors.push({ index: mainRow.originalIndex, message: message.slice(0, 100) });
+      errors.push({ index: mainRow.originalIndex, message: describeImportError(error) });
     }
   }
 
@@ -970,9 +975,24 @@ async function importRecipes(data: any[], storeId: string): Promise<ImportResult
 const multiEntityImportSchema = z.object({
   storeId: z.string().min(1, "Store ID is required"),
   data: z.array(z.record(z.any())).min(1, "At least one record is required"),
+  /** What the import dialog says these rows are; decides a row nothing else identifies. */
+  fallbackEntityType: z.enum(["supplier", "material", "recipe", "product"]).optional(),
 });
 
 // Extended result type for multi-entity import
+type ImportEntity = "supplier" | "material" | "recipe" | "product";
+
+/** One row the import could not write, with the reason. */
+interface ImportFailure {
+  entity: ImportEntity;
+  /** 1-based position within that entity's rows; null for a whole-group failure. */
+  row: number | null;
+  message: string;
+}
+
+/** Enough to show the pattern; a sheet with one systematic problem repeats it on every row. */
+const MAX_REPORTED_FAILURES = 10;
+
 interface MultiEntityImportResult {
   success: boolean;
   error?: string;
@@ -983,6 +1003,10 @@ interface MultiEntityImportResult {
     products: { attempted: number; succeeded: number };
     totalSucceeded: number;
   };
+  /** Why rows were not imported (capped). Absent when every row went in. */
+  failures?: ImportFailure[];
+  /** Rows with no name at all (blank lines, totals), which no entity can take. */
+  skippedRows?: number;
 }
 
 /**
@@ -993,8 +1017,9 @@ interface MultiEntityImportResult {
  * Uses centralized field definitions from import-schema.ts (DRY principle)
  */
 function detectEntityType(
-  row: Record<string, unknown>
-): "supplier" | "material" | "recipe" | "product" | null {
+  row: Record<string, unknown>,
+  fallback?: ImportEntity
+): ImportEntity | null {
   const hasValue = (field: string) =>
     row[field] !== undefined && row[field] !== "" && row[field] !== null;
 
@@ -1013,8 +1038,10 @@ function detectEntityType(
   if (ENTITY_UNIQUE_FIELDS.product.some(hasValue)) return "product";
   if (ENTITY_UNIQUE_FIELDS.supplier.some(hasValue)) return "supplier";
 
-  // Default: if has 'name' only, treat as supplier (simplest entity)
-  if (hasValue("name")) return "supplier";
+  // Nothing in the row says what it is. Use the type chosen in the import
+  // dialog; without one, a bare name is a supplier (the simplest entity). A
+  // menu sheet whose rows have no price used to land in Suppliers this way.
+  if (hasValue("name")) return fallback ?? "supplier";
 
   return null;
 }
@@ -1059,7 +1086,7 @@ export async function bulkImportMultiEntity(
       };
     }
 
-    const { storeId, data } = validationResult.data;
+    const { storeId, data, fallbackEntityType } = validationResult.data;
 
     // 3. Verify store access
     const store = await prisma.store.findFirst({
@@ -1092,8 +1119,9 @@ export async function bulkImportMultiEntity(
     };
 
     const now = new Date();
+    let skippedRows = 0;
     for (const row of data) {
-      const entityType = detectEntityType(row);
+      const entityType = detectEntityType(row, fallbackEntityType);
       if (entityType) {
         grouped[entityType].push({
           ...row,
@@ -1101,17 +1129,30 @@ export async function bulkImportMultiEntity(
           createdAt: now,
           updatedAt: now,
         });
+      } else {
+        skippedRows++;
       }
     }
 
     // 5. Import in dependency order
     const summary = { ...defaultSummary };
 
+    // The per-entity importers already know why each row failed; this used to
+    // drop all of it and answer "success, 0 of 91" with no reason on screen.
+    const failures: ImportFailure[] = [];
+    const collectFailures = (entity: ImportEntity, result: ImportResult) => {
+      if (result.error) failures.push({ entity, row: null, message: result.error });
+      for (const e of result.details?.errors ?? []) {
+        failures.push({ entity, row: e.index, message: e.message });
+      }
+    };
+
     // 5a. Suppliers first (no dependencies)
     if (grouped.supplier.length > 0) {
       summary.suppliers.attempted = grouped.supplier.length;
       const result = await importSuppliers(grouped.supplier, storeId);
       summary.suppliers.succeeded = result.count || 0;
+      collectFailures("supplier", result);
     }
 
     // 5b. Materials second (may reference suppliers)
@@ -1119,6 +1160,7 @@ export async function bulkImportMultiEntity(
       summary.materials.attempted = grouped.material.length;
       const result = await importMaterials(grouped.material, storeId);
       summary.materials.succeeded = result.count || 0;
+      collectFailures("material", result);
     }
 
     // 5c. Recipes third (reference materials, may cascade-create materials & suppliers)
@@ -1126,6 +1168,7 @@ export async function bulkImportMultiEntity(
       summary.recipes.attempted = grouped.recipe.length;
       const result = await importRecipes(grouped.recipe, storeId);
       summary.recipes.succeeded = result.count || 0;
+      collectFailures("recipe", result);
     }
 
     // 5d. Products last (may reference recipes)
@@ -1133,6 +1176,7 @@ export async function bulkImportMultiEntity(
       summary.products.attempted = grouped.product.length;
       const result = await importProducts(grouped.product, storeId);
       summary.products.succeeded = result.count || 0;
+      collectFailures("product", result);
     }
 
     // 6. Calculate totals
@@ -1145,9 +1189,39 @@ export async function bulkImportMultiEntity(
     // 7. Revalidate cache
     revalidatePath(`/store/${storeId}/data`);
 
+    const attempted =
+      summary.suppliers.attempted +
+      summary.materials.attempted +
+      summary.recipes.attempted +
+      summary.products.attempted;
+    const reported = failures.slice(0, MAX_REPORTED_FAILURES);
+
+    // Nothing went in at all: that is a failed import, not a successful one
+    // that happened to import zero rows.
+    if (attempted > 0 && summary.totalSucceeded === 0 && failures.length > 0) {
+      return {
+        success: false,
+        error: failures[0].message,
+        summary,
+        failures: reported,
+        ...(skippedRows > 0 && { skippedRows }),
+      };
+    }
+    // Every row was blank or nameless: nothing was even attempted.
+    if (attempted === 0) {
+      return {
+        success: false,
+        error: "No row has a name, so there was nothing to import.",
+        summary,
+        skippedRows,
+      };
+    }
+
     return {
       success: true,
       summary,
+      ...(reported.length > 0 && { failures: reported }),
+      ...(skippedRows > 0 && { skippedRows }),
     };
   } catch (error) {
     console.error("Multi-Entity Import Error:", error);

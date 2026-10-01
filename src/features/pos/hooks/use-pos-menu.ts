@@ -4,7 +4,7 @@ import { apiClient } from "@/lib/api/client";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
-interface PosMenuData {
+export interface PosMenuData {
   categories: PosMenuCategory[];
   total: number;
   // The optional second product line (Product.productLine — e.g. a
@@ -15,14 +15,17 @@ interface PosMenuData {
   customProductsLabel: string | null;
 }
 
+export const posMenuKey = (storeId: string) => ["pos", "menu", storeId] as const;
+
+export const fetchPosMenu = (storeId: string) =>
+  apiClient.get<PosMenuData>(`/stores/${storeId}/pos/menu`);
+
 export function usePosMenu(storeId: string) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["pos", "menu", storeId],
-    queryFn: async () => {
-      return apiClient.get<PosMenuData>(`/stores/${storeId}/pos/menu`);
-    },
+    queryKey: posMenuKey(storeId),
+    queryFn: () => fetchPosMenu(storeId),
     enabled: !!storeId,
     // Prices, availability, and options can be edited from Data/Menu Editor
     // in a different tab/device while the cashier has this screen open — a

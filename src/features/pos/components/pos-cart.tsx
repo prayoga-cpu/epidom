@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { Info, Loader2, Menu, ReceiptText, Save, ShoppingBag } from "lucide-react";
 import { usePosCart } from "../hooks/use-pos-cart";
+import { useCartRepair } from "../hooks/use-cart-repair";
 import { PosCartItem } from "./pos-cart-item";
 import { PosCartHeader } from "./pos-cart-header";
 import { PosCartCustomer } from "./pos-cart-customer";
@@ -85,6 +86,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
   const [isMergeOpen, setIsMergeOpen] = useState(false);
   const [isSplitOpen, setIsSplitOpen] = useState(false);
   const holdOrder = useHoldOrder(storeId);
+  const repairCart = useCartRepair(storeId);
   // Saving a bill only makes sense with an Active Queue to park it in — when the
   // store has turned it off, every order settles straight to
   // DELIVERED/history instead (see resolveSettledOrderStatus), so Save Bill is
@@ -243,9 +245,19 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
       setIsHoldOpen(false);
       toast.success(t("cashierCart.saveBill.saved"));
     } catch (error) {
-      // Surface the server's real reason (e.g. a stale item that's no longer
-      // on the menu) instead of a blanket failure message, same as checkout.
-      const serverMessage = error instanceof ApiClientError ? error.response.error.message : null;
+      // A bill holding lines the menu no longer sells: fix the cart and close
+      // this dialog, so the cashier sees what is left before saving it again.
+      if (await repairCart(error)) {
+        setIsHoldOpen(false);
+        return;
+      }
+      // Any other refusal: surface the server's real reason instead of a
+      // blanket failure message, same as checkout. Not a 5xx's, which is
+      // whatever the server threw rather than a reason.
+      const serverMessage =
+        error instanceof ApiClientError && error.status < 500
+          ? error.response.error.message
+          : null;
       toast.error(serverMessage || t("cashierCart.saveBill.failed"));
     }
   };

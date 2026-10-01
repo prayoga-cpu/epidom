@@ -100,6 +100,21 @@ interface PosCartState {
   financeSettings: ResolvedFinanceSettings;
   /** Set while the cart holds a resumed HELD order — cleared by clearCart(). */
   resumingOrderId: string | null;
+  /**
+   * The store this cart belongs to. The cart is saved on the device, and its
+   * lines are one store's menu items: opened in another store, every line
+   * would be refused at checkout. Null only for a cart saved before carts
+   * were tied to a store.
+   */
+  boundStoreId: string | null;
+  /** Carts set aside while the till is open on another store, by store id. */
+  parkedCarts: Record<string, ParkedCart>;
+  /**
+   * Tie the cart to `storeId`. Called when the till opens for a store: a cart
+   * built in another store is parked under that store (never dropped, never
+   * carried across) and this store's own parked cart, if any, comes back.
+   */
+  bindStore: (storeId: string) => void;
   addItem: (
     menuItemId: string,
     name: string,
@@ -122,6 +137,8 @@ interface PosCartState {
    * whose remaining quantity reaches zero is removed. Recomputes once.
    */
   removeLines: (lines: Array<{ lineId: string; quantity: number }>) => void;
+  /** Swap the whole line list (a repaired cart, see lib/cart-repair.ts) and re-total. */
+  replaceItems: (items: CartItem[]) => void;
   clearCart: () => void;
   setResumingOrderId: (id: string | null) => void;
   setFinanceSettings: (settings: ResolvedFinanceSettings) => void;
@@ -164,7 +181,7 @@ interface PricingInput {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-const lineTotalFor = (unitPrice: number, modifiers: CartModifier[], quantity: number) =>
+export const lineTotalFor = (unitPrice: number, modifiers: CartModifier[], quantity: number) =>
   round2(
     (unitPrice + modifiers.reduce((sum: number, m: CartModifier) => sum + m.priceAdjustment, 0)) *
       quantity
@@ -253,6 +270,17 @@ const EMPTY_CART = {
   resumingOrderId: null as string | null,
 };
 
+/** One store's cart while the till is open elsewhere: every field clearCart() resets. */
+export type ParkedCart = typeof EMPTY_CART;
+
+const CART_KEYS = Object.keys(EMPTY_CART) as Array<keyof ParkedCart>;
+
+function pickCart(state: PosCartState): ParkedCart {
+  const cart: Partial<Record<keyof ParkedCart, unknown>> = {};
+  for (const key of CART_KEYS) cart[key] = state[key];
+  return cart as ParkedCart;
+}
+
 export const usePosCart = create<PosCartState>()(
   persist(
     (set: any, get: any) => {
@@ -266,6 +294,31 @@ export const usePosCart = create<PosCartState>()(
         ...EMPTY_CART,
         loyaltyRules: null as LoyaltyRules | null,
         financeSettings: DEFAULT_FINANCE_SETTINGS,
+        boundStoreId: null as string | null,
+        parkedCarts: {} as Record<string, ParkedCart>,
+
+        bindStore: (storeId: string) => {
+          const state: PosCartState = get();
+          if (state.boundStoreId === storeId) return;
+
+          // A cart from before carts knew their store: there is no telling
+          // whose it is, so it stays where it is and belongs here from now on.
+          if (!state.boundStoreId) {
+            set({ boundStoreId: storeId });
+            return;
+          }
+
+          const parkedCarts = { ...state.parkedCarts };
+          if (state.items.length > 0) parkedCarts[state.boundStoreId] = pickCart(state);
+          else delete parkedCarts[state.boundStoreId];
+
+          const restored = parkedCarts[storeId];
+          delete parkedCarts[storeId];
+
+          // Totals come back as they were saved; the shell's setFinanceSettings
+          // re-prices them against this store's tax and service settings.
+          set({ ...EMPTY_CART, ...(restored ?? {}), boundStoreId: storeId, parkedCarts });
+        },
 
         addItem: (menuItemId, name, unitPrice, quantity = 1, modifiers = [], imageUrl, notes) => {
           const { items } = get();
@@ -388,6 +441,10 @@ export const usePosCart = create<PosCartState>()(
                   }
             );
           }
+          apply({ items });
+        },
+
+        replaceItems: (items: CartItem[]) => {
           apply({ items });
         },
 

@@ -26,7 +26,9 @@ export default async function DataPage({ params }: { params: Promise<{ storeId: 
   // Fetch initial data for all tabs in parallel for better performance
   const [materialsResult, recipesResult, productsResult, suppliersResult] = await Promise.all([
     fetchMaterialsForPage(storeId),
-    fetchRecipesForPage(storeId),
+    // The Recipes tab lists up to 100 at once; a 20-row snapshot under that
+    // key showed 20 recipes until the tab refetched.
+    fetchRecipesForPage(storeId, { take: 100 }),
     fetchProductsForPage(storeId, { productLine: "STANDARD" }),
     fetchSuppliersForPage(storeId),
   ]);

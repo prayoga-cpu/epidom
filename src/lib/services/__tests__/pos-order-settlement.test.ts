@@ -54,10 +54,11 @@ import {
   mergeHeldOrdersInTx,
   settlePendingOrderInTx,
   SettlementError,
+  mapSettlementError,
   posOrderSource,
   resolveStoreTableId,
 } from "../pos-order-settlement";
-import { validateAndBuildOrderItems } from "../pos-order-builder";
+import { OrderBuildError, validateAndBuildOrderItems } from "../pos-order-builder";
 import { resolveOrderDiscount, type ResolvedOrderDiscount } from "../pos-discount.service";
 import { resolveFinanceSettingsForOrder } from "../finance-settings.service";
 import {
@@ -120,6 +121,7 @@ beforeEach(() => {
   vi.mocked(validateAndBuildOrderItems).mockResolvedValue({
     orderItems: [menuLine(100)],
     subtotal: 100,
+    warnings: [],
   });
   vi.mocked(resolveFinanceSettingsForOrder).mockResolvedValue({ ...NO_CHARGES });
   vi.mocked(resolveOrderDiscount).mockResolvedValue(noDiscount());
@@ -384,6 +386,7 @@ describe("buildSettlementOrderData", () => {
         } as any,
       ],
       subtotal: 120,
+      warnings: [],
     });
 
     const input = legacyInput({ couponCode: "SAVE20", splitGroupId: "split-1" });
@@ -860,5 +863,56 @@ describe("resolveStoreTableId — only this store's own tables", () => {
     await expect(resolveStoreTableId("s1", "t1", "DELIVERY")).resolves.toBeNull();
     await expect(resolveStoreTableId("s1", undefined, "DINE_IN")).resolves.toBeNull();
     expect(prismaMock.table.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe("mapSettlementError: lines the menu no longer sells", () => {
+  it("answers 422 with the refused lines, for the till to repair the cart from", async () => {
+    const response = mapSettlementError(
+      new OrderBuildError("No longer available, remove from cart: Flan", [
+        { menuItemId: "gone", name: "Flan" },
+      ])
+    );
+
+    expect(response?.status).toBe(422);
+    expect((await response!.json()).error).toMatchObject({
+      code: "INVALID_INPUT",
+      message: "No longer available, remove from cart: Flan",
+      details: { reason: "ITEMS_UNAVAILABLE", items: [{ menuItemId: "gone", name: "Flan" }] },
+    });
+  });
+
+  it("carries no details for any other build error", async () => {
+    const response = mapSettlementError(new OrderBuildError("Customer not found"));
+
+    expect(response?.status).toBe(422);
+    expect((await response!.json()).error.details).toBeUndefined();
+  });
+
+  it("passes the replay flag to the item validator and keeps its warnings", async () => {
+    vi.mocked(validateAndBuildOrderItems).mockResolvedValue({
+      orderItems: [menuLine(100)],
+      subtotal: 100,
+      warnings: ['"Flan" was no longer on the menu; recorded at the price charged'],
+    });
+
+    const settlement = await buildPosSettlement({
+      storeId: "s1",
+      store: STORE,
+      input: {
+        items: [{ menuItemId: "gone", name: "Flan", quantity: 1, unitPrice: 100 }],
+        orderType: "TAKEAWAY",
+        paymentMethod: "CASH",
+        amountTendered: 100,
+        clientRequestId: "offline-1",
+      } as any,
+    });
+
+    expect(vi.mocked(validateAndBuildOrderItems)).toHaveBeenCalledWith("s1", expect.anything(), {
+      tolerant: true,
+    });
+    expect(settlement.warnings).toContain(
+      '"Flan" was no longer on the menu; recorded at the price charged'
+    );
   });
 });

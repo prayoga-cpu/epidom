@@ -9,6 +9,24 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.3.2] - 2026-10-01 · fix
+
+Bring a menu in from a photo or a PDF, and fixes for Smart Import, checkout at the till and the Data page.
+
+- **From a photo or a PDF to your lists.** The Data page now opens with three steps: copy a ready-made prompt, give it to any AI assistant (ChatGPT, Claude, Gemini and others) with a photo or PDF of your menu, then import the file it returns. There is a prompt for products, raw materials, recipes and suppliers, in your language, and the same prompt is one tap away inside Smart Import.
+- **Smart Import works for a menu with no SKU column.** Importing products from a sheet that had no SKU column imported nothing and still said the import had succeeded. Each new product now gets a code made from its name, such as PATE-A-BANANA, which you can change afterwards. A SKU in your sheet is kept as it is.
+- **Smart Import tells you what went wrong.** The result screen lists the rows that were not imported and the reason for each, and counts rows that had no name. An import where nothing went in is shown as failed. A file that could not be read now says so on the upload step, where it used to return there without a word.
+- **Prices written "10.000" import as ten thousand.** In a store whose currency has no cents, such as rupiah or ariary, a price with dots between the thousands was read as a decimal: Rp 10.000 became Rp 10. Currencies with cents and quantities are unchanged: 1.500 kg is still one and a half.
+- **Rows go where you said.** A row with only a name, such as a menu item with no price, was imported as a supplier. It now follows the type you chose in Smart Import.
+- **Recipes import one by one.** A recipe whose first row gave no yield was merged into the recipe above it. In a store that does not use rupiah, ingredient prices and batch costs from an imported recipe were saved without converting the currency.
+- **The till fixes a cart that holds items no longer on the menu.** When you charge or save a bill and an item has since been removed from the menu or switched off, the till no longer just shows an error. It updates the cart from the current menu, takes out what can no longer be sold, tells you what changed, and you charge again. An item that was deleted and added back is recognised by its name and charged at its current price.
+- **Each store keeps its own cart.** The cart used to follow you from one store to another, where none of its items could be charged. A cart you leave in one store is now waiting there when you come back.
+- **Items from your second product line can always be charged.** One hidden from the online menu still appeared at the till but was refused at checkout.
+- **A sale made offline is kept when the menu changes.** If an item was removed from the menu before the till came back online, the sale was dropped. It is now recorded at the price charged, with a note on the order.
+- **Plain messages at the till.** When the server has a problem, the till says the order could not be created instead of showing a technical message.
+- **Pages, filters and sorting on the Data page respond straight away.** On Products, Materials and Recipes, going to the next page or changing a filter or the sort order could keep showing the first page for up to half a minute. The Recipes tab also showed only 20 recipes for a moment when a store had more.
+- **Product cards.** "How it's made" was shown in English whatever your language, and a product with no cost showed a margin of 100%. It now follows your language, and the margin stays empty until a cost is entered.
+
 ## [3.3.1] - 2026-09-27 · ux
 
 Small fixes to the Orders page, POS Mode and the pricing page.

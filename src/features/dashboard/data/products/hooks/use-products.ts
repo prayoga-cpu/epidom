@@ -11,6 +11,7 @@ import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { invalidateProductRelatedQueries } from "@/lib/utils/cache-helpers";
 import { trackEvent } from "@/lib/analytics";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { useServerSnapshot } from "@/hooks/use-server-snapshot";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 import { useCurrency } from "@/components/providers/currency-provider";
 
@@ -282,11 +283,15 @@ export function useProducts(
     },
   });
 
+  const queryKey = productKeys.list(storeId, normalizedFilters);
+  // Only the key the server rendered gets the snapshot; see useServerSnapshot.
+  const snapshot = useServerSnapshot(queryKey, initialData);
+
   return useQuery({
-    queryKey: productKeys.list(storeId, normalizedFilters),
+    queryKey,
     queryFn: () => fetchProducts(storeId, normalizedFilters || filters),
     enabled: !!storeId,
-    initialData, // ✅ Accept initial data from Server Component
+    initialData: snapshot,
     // Real-time configuration: Pusher (see useRealtimeChannel below) is the
     // primary update path; this poll is only a safety net for when push
     // misses an event, so it doesn't need safety-net-grade CPU cost.

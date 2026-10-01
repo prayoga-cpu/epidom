@@ -75,7 +75,7 @@ vi.mock("@/lib/services/pos-order-settlement", () => ({
 vi.mock("@/lib/services/pos-order-builder", () => ({
   deliverOrderImmediately: vi.fn(),
   draftShortfallBatchesForConfirmedOrder: vi.fn(),
-  validateAndBuildOrderItems: vi.fn(async () => ({ orderItems: [], subtotal: 0 })),
+  validateAndBuildOrderItems: vi.fn(async () => ({ orderItems: [], subtotal: 0, warnings: [] })),
 }));
 vi.mock("@/lib/services/order-status.helpers", () => ({ claimOrderTransition: vi.fn() }));
 vi.mock("@/lib/services/pos-discount.service", () => ({

@@ -70,6 +70,11 @@ vi.mock("@/lib/api/client", () => ({
 const queue = vi.hoisted(() => ({ enqueueOrder: vi.fn() }));
 vi.mock("@/lib/pwa/offline-queue", () => queue);
 
+// The repair itself (menu refetch, cart rewrite, toast) has its own suite; here
+// it is a probe for when checkout hands a failure over to it. Null = "not mine".
+const repair = vi.hoisted(() => ({ repairCart: vi.fn(async (): Promise<any> => null) }));
+vi.mock("../../hooks/use-cart-repair", () => ({ useCartRepair: () => repair.repairCart }));
+
 const analytics = vi.hoisted(() => ({ trackEvent: vi.fn() }));
 vi.mock("@/lib/analytics", () => analytics);
 
@@ -423,6 +428,58 @@ describe("PosCheckoutDialog — single-method sale keeps the exact legacy payloa
     expect(cart().items).toHaveLength(1);
     expect(complete.props).toHaveLength(0);
     expect(display.markCustomerDisplayPaid).not.toHaveBeenCalled();
+  });
+
+  it("never shows the cashier a raw server error: a 5xx gets the plain message", async () => {
+    api.post.mockRejectedValueOnce(
+      new api.ApiClientError(
+        {
+          error: {
+            message: "Transaction API error: A commit cannot be executed on an expired transaction",
+          },
+        },
+        500
+      )
+    );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    renderCheckout();
+    typeCash("30");
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("pos.checkout.orderFailed"));
+    expect(cart().items).toHaveLength(1);
+  });
+
+  it("hands a refused cart to the repair and stays open on what is left, with no error toast", async () => {
+    const refusal = new api.ApiClientError({ error: { message: "No longer available" } }, 422);
+    api.post.mockRejectedValueOnce(refusal);
+    repair.repairCart.mockResolvedValueOnce({
+      items: [{ id: "kept" }],
+      relinked: [],
+      removed: ["Flan"],
+    });
+    const { onOpenChange } = renderCheckout();
+    typeCash("30");
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(repair.repairCart).toHaveBeenCalledWith(refusal));
+    await waitFor(() => expect(confirmButton()).not.toBeDisabled());
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(complete.props).toHaveLength(0);
+  });
+
+  it("closes when the repair left nothing to charge", async () => {
+    api.post.mockRejectedValueOnce(
+      new api.ApiClientError({ error: { message: "No longer available" } }, 422)
+    );
+    repair.repairCart.mockResolvedValueOnce({ items: [], relinked: [], removed: ["Flan"] });
+    const { onOpenChange } = renderCheckout();
+    typeCash("30");
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   it("a fresh sale doesn't inherit the last one's tendered amount", () => {

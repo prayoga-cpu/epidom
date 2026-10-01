@@ -154,6 +154,98 @@ describe("validateAndBuildOrderItems", () => {
       ] as any)
     ).rejects.toThrow(OrderBuildError);
   });
+
+  it("names each refused line once, by id, so the till can repair the cart", async () => {
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      { id: "menu-1", name: "Croissant", price: 15000 },
+    ]);
+
+    const error = await validateAndBuildOrderItems("store-1", [
+      { menuItemId: "menu-1", name: "Croissant", quantity: 1, unitPrice: 1 },
+      { menuItemId: "gone", name: "Flan", quantity: 1, unitPrice: 1 },
+      { menuItemId: "gone", name: "Flan", quantity: 2, unitPrice: 1, notes: "warm" },
+    ] as any).catch((e) => e);
+
+    expect(error).toBeInstanceOf(OrderBuildError);
+    expect(error.unavailable).toEqual([{ menuItemId: "gone", name: "Flan" }]);
+    expect(error.message).toBe("No longer available, remove from cart: Flan");
+  });
+
+  // GET /pos/menu forces a CUSTOM-line item to isAvailable: true (its stored
+  // flag is only the storefront's "Show on Menu" switch). The validator used to
+  // require the stored flag, so the till offered a tile checkout always refused.
+  it("asks for custom-line items whatever their stored availability", async () => {
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      { id: "menu-1", name: "Haircut", price: 50000, product: { productLine: "CUSTOM" } },
+    ]);
+
+    await validateAndBuildOrderItems("store-1", [
+      { menuItemId: "menu-1", name: "Haircut", quantity: 1, unitPrice: 1 },
+    ] as any);
+
+    expect(prismaMock.menuItem.findMany.mock.calls[0][0].where).toEqual({
+      id: { in: ["menu-1"] },
+      storefront: { storeId: "store-1" },
+      OR: [{ isAvailable: true }, { product: { productLine: "CUSTOM" } }],
+    });
+  });
+
+  describe("tolerant (an offline sale the customer already paid for)", () => {
+    it("does not filter on availability: a switched-off item is still repriced from its row", async () => {
+      prismaMock.menuItem.findMany.mockResolvedValue([
+        { id: "menu-1", name: "Croissant", price: 15000 },
+      ]);
+
+      const { orderItems, warnings } = await validateAndBuildOrderItems(
+        "store-1",
+        [{ menuItemId: "menu-1", name: "Croissant", quantity: 1, unitPrice: 1 }] as any,
+        { tolerant: true }
+      );
+
+      expect(prismaMock.menuItem.findMany.mock.calls[0][0].where).toEqual({
+        id: { in: ["menu-1"] },
+        storefront: { storeId: "store-1" },
+      });
+      expect(orderItems[0]).toMatchObject({ menuItemId: "menu-1", unitPrice: 15000 });
+      expect(warnings).toEqual([]);
+    });
+
+    it("records a deleted item from what the till charged instead of rejecting the sale", async () => {
+      prismaMock.menuItem.findMany.mockResolvedValue([]);
+
+      const { orderItems, subtotal, warnings } = await validateAndBuildOrderItems(
+        "store-1",
+        [
+          {
+            menuItemId: "gone",
+            name: "Flan",
+            quantity: 2,
+            unitPrice: 15000,
+            selectedOptions: [{ name: "Caramel", priceAdjustment: 2000 }],
+          },
+        ] as any,
+        { tolerant: true }
+      );
+
+      expect(orderItems).toEqual([
+        {
+          menuItemId: null,
+          name: "Flan",
+          quantity: 2,
+          unit: "pcs",
+          unitPrice: 17000,
+          total: 34000,
+          notes: undefined,
+          selectedOptions: [{ name: "Caramel", priceAdjustment: 2000 }],
+          isCustom: true,
+          department: null,
+          initialStatus: "SERVED",
+        },
+      ]);
+      expect(subtotal).toBe(34000);
+      expect(warnings).toEqual(['"Flan" was no longer on the menu; recorded at the price charged']);
+    });
+  });
 });
 
 /**

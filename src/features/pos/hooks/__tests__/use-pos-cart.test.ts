@@ -34,6 +34,7 @@ const cart = () => usePosCart.getState();
 
 beforeEach(() => {
   localStorage.clear();
+  usePosCart.setState({ boundStoreId: null, parkedCarts: {} });
   cart().clearCart();
   cart().setFinanceSettings(noCharges);
   cart().setLoyaltyRules(null);
@@ -329,5 +330,76 @@ describe("usePosCart — order type, resume and clear", () => {
     expect(cart().draftTenders).toHaveLength(1);
     cart().clearCart();
     expect(cart().draftTenders).toEqual([]);
+  });
+});
+
+// The cart is saved on the device. Opened in another store, its lines are that
+// other store's menu items and checkout refuses every one of them.
+describe("usePosCart — one cart per store", () => {
+  it("adopts a cart saved before carts knew their store", () => {
+    cart().addItem("m1", "Ramen", 50_000, 1);
+
+    cart().bindStore("store-a");
+
+    expect(cart().boundStoreId).toBe("store-a");
+    expect(cart().items).toHaveLength(1);
+  });
+
+  it("does nothing when the till reopens on the same store", () => {
+    cart().bindStore("store-a");
+    cart().addItem("m1", "Ramen", 50_000, 2);
+
+    cart().bindStore("store-a");
+
+    expect(cart().items).toHaveLength(1);
+    expect(cart().parkedCarts).toEqual({});
+  });
+
+  it("parks a store's cart when another store opens, and gives it back on return", () => {
+    cart().bindStore("store-a");
+    cart().addItem("m1", "Ramen", 50_000, 2);
+    cart().setCustomer(alice);
+    cart().setTable({ id: "t1", label: "T1" });
+    cart().setResumingOrderId("order-9");
+
+    cart().bindStore("store-b");
+
+    // Store B starts clean: nothing of A's sale follows the cashier in.
+    expect(cart().items).toEqual([]);
+    expect(cart().total).toBe(0);
+    expect(cart().customer).toBeNull();
+    expect(cart().tableId).toBeNull();
+    expect(cart().resumingOrderId).toBeNull();
+
+    cart().addItem("b1", "Bagel", 20_000, 1);
+    cart().bindStore("store-a");
+
+    expect(cart().items.map((i) => [i.menuItemId, i.quantity])).toEqual([["m1", 2]]);
+    expect(cart().subtotal).toBe(100_000);
+    expect(cart().customer?.id).toBe("cust_1");
+    expect(cart().tableId).toBe("t1");
+    expect(cart().resumingOrderId).toBe("order-9");
+    // A's cart is live again, B's is the one set aside.
+    expect(Object.keys(cart().parkedCarts)).toEqual(["store-b"]);
+  });
+
+  it("does not keep an empty cart parked", () => {
+    cart().bindStore("store-a");
+    cart().bindStore("store-b");
+
+    expect(cart().parkedCarts).toEqual({});
+  });
+
+  it("clearing the cart keeps it tied to its store and leaves the parked ones alone", () => {
+    cart().bindStore("store-a");
+    cart().addItem("m1", "Ramen", 50_000, 1);
+    cart().bindStore("store-b");
+    cart().addItem("b1", "Bagel", 20_000, 1);
+
+    cart().clearCart();
+
+    expect(cart().items).toEqual([]);
+    expect(cart().boundStoreId).toBe("store-b");
+    expect(Object.keys(cart().parkedCarts)).toEqual(["store-a"]);
   });
 });

@@ -1479,6 +1479,9 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     smartImportFailedTitle: "Échec de l'Import",
     smartImportFailedDesc: "Une erreur s'est produite pendant l'import.",
     smartImportTryAgain: "Réessayer",
+    smartImportFailuresTitle: "Lignes non importées",
+    smartImportFailureRow: "{entity}, ligne {row}",
+    smartImportSkippedRows: "{count} lignes sans nom ont été ignorées.",
     authForgotTitle: "Mot de passe oublié",
     authForgotDesc:
       "Saisissez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.",
@@ -1912,6 +1915,13 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       processing: "Traitement en cours...",
       success: "Commande créée avec succès !",
       orderFailed: "Échec de la création de la commande. Veuillez réessayer.",
+      cartRepaired: {
+        title: "Panier mis à jour",
+        removed: "Plus à la carte, retiré : {names}.",
+        relinked: "Mis à jour selon la carte actuelle : {names}.",
+        review: "Vérifiez le total, puis réessayez.",
+        emptied: "Plus aucun article de ce panier n'est à la carte : il a été vidé.",
+      },
       payLater: "Paiement Différé",
       payLaterNoteTitle: "Le client paie après la livraison",
       payLaterNoteDesc:
@@ -5468,6 +5478,86 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       preview: "Aperçu",
       done: "Terminé",
     },
+    aiPrompt: {
+      intro:
+        "Je joins une photo ou un PDF. Transformez-le en fichier CSV que je pourrai importer dans Epidom, mon logiciel de gestion de restaurant.",
+      headerIntro:
+        "La première ligne du fichier doit être exactement cet en-tête. Gardez les noms de colonnes en anglais, tels quels :",
+      rulesTitle: "Règles :",
+      output:
+        "Donnez-moi le résultat sous forme de fichier CSV à télécharger, nommé {file}. Si vous ne pouvez pas créer de fichier, écrivez le CSV dans un seul bloc de code que je pourrai copier. N'ajoutez aucune explication.",
+      rules: {
+        rows: "Une ligne par article. Reprenez tous les articles du document et n'ajoutez rien qui n'y figure pas.",
+        names:
+          "Recopiez les noms tels qu'ils sont écrits, dans la langue du document. Ne les traduisez pas.",
+        numbers:
+          "Écrivez les nombres avec des chiffres uniquement : sans symbole monétaire, sans séparateur de milliers, et avec un point pour les décimales (12000 ou 4.50).",
+        empty:
+          "Laissez la cellule vide quand le document ne donne pas la valeur. Ne devinez et n'inventez jamais une valeur.",
+        quotes: "Mettez entre guillemets doubles toute valeur qui contient une virgule.",
+      },
+      product: {
+        task: "Relevez tous les articles de la carte.",
+        category:
+          "category : la rubrique sous laquelle l'article figure, par exemple Cafés ou Viennoiseries.",
+        price:
+          'sellingPrice : le prix affiché sur la carte. Si un article a plusieurs tailles ou plusieurs prix, faites une ligne par taille et ajoutez la taille au nom, par exemple "Latte (Grand)".',
+        description: "description : le court texte sous l'article, s'il y en a un.",
+        optional:
+          "costPrice, sku et unit (pcs, tasse, assiette…) : ne les remplissez que si le document les indique.",
+      },
+      material: {
+        task: "Relevez tous les ingrédients et fournitures.",
+        unit: "unit : la façon de le compter ou de le peser, par exemple kg, g, L, ml ou pcs.",
+        unitCost:
+          "unitCost : le prix d'UNE unité. Si le document donne le prix d'un lot, divisez-le par la quantité du lot.",
+        stock: "currentStock et minStock : la quantité seule, dans cette unité.",
+        supplier:
+          "supplierName : le fournisseur chez qui il est acheté. sku : la référence, s'il y en a une.",
+      },
+      supplier: {
+        task: "Relevez tous les fournisseurs.",
+        contact:
+          "contactPerson, phone, email, address, city et country : une valeur par cellule. Gardez le numéro de téléphone tel qu'il est écrit, indicatif compris.",
+        notes:
+          "notes : toute autre information utile, comme les jours de livraison ou les conditions de paiement.",
+      },
+      recipe: {
+        task: "Relevez toutes les recettes avec leurs ingrédients.",
+        rows: "Faites une ligne par ingrédient et répétez le nom de la recette sur chaque ligne de cette recette.",
+        yield:
+          "yieldQuantity et yieldUnit : ce que donne une fournée, par exemple 12 et pcs. Renseignez-les sur la première ligne de chaque recette ; si le document ne le dit pas, écrivez 1 et batch.",
+        ingredients:
+          "ingredient_name, ingredient_qty et ingredient_unit : l'ingrédient, la quantité en chiffres et son unité (g, kg, ml, L, pcs).",
+        instructions:
+          "instructions : la préparation, sur la première ligne de chaque recette uniquement.",
+      },
+    },
+    quickStart: {
+      title: "Importer depuis une photo ou un PDF",
+      subtitle:
+        "Pas de tableur ? N'importe quel assistant IA peut transformer une photo de votre carte, un PDF ou une liste de prix en fichier qu'Epidom sait importer.",
+      step1Title: "Copiez le prompt",
+      step1Body: "Choisissez ce que vous importez, puis copiez le prompt.",
+      step2Title: "Demandez à un assistant IA",
+      step2Body:
+        "Collez le prompt dans ChatGPT, Claude, Gemini ou un autre assistant, joignez votre photo ou votre PDF, puis téléchargez le fichier CSV obtenu.",
+      step3Title: "Importez le fichier",
+      step3Body:
+        "Epidom vous montre chaque ligne avant d'enregistrer quoi que ce soit. Vérifiez les prix, puis validez.",
+      typeLabel: "J'importe",
+      copy: "Copier le prompt",
+      copied: "Prompt copié. Collez-le dans votre assistant IA.",
+      copyFailed: "Copie automatique impossible. Sélectionnez le texte et copiez-le.",
+      showPrompt: "Voir le prompt",
+      hidePrompt: "Masquer le prompt",
+      promptLabel: "Prompt à coller dans un assistant IA",
+      importCta: "Importer un fichier",
+      showSteps: "Comment ça marche",
+      hideSteps: "Masquer les étapes",
+      dialogHint:
+        "Pas encore de fichier CSV ? Copiez ce prompt, collez-le dans n'importe quel assistant IA avec une photo ou un PDF de votre carte, puis importez le fichier obtenu.",
+    },
     upload: {
       label: "J'importe :",
       dropZone: "Glissez & déposez votre fichier CSV ici",
@@ -5478,6 +5568,12 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       dropToUpload: "Déposez votre fichier ici",
       error: "Veuillez télécharger un fichier CSV",
       errorSize: "Fichier trop volumineux. Taille maximale 10 Mo",
+      analysisFailed:
+        "Ce fichier n'a pas pu être lu. Vérifiez qu'il s'agit bien d'un fichier CSV, puis réessayez.",
+      analysisTimeout:
+        "La lecture de ce fichier a pris trop de temps. Réessayez, ou découpez le fichier en plusieurs parties.",
+      importTimeout:
+        "L'import a mis trop de temps à se terminer. Ouvrez vos listes pour voir ce qui a été importé avant de réessayer.",
       autoDetectPlaceholder: "Détection automatique",
       entities: {
         auto: "Détection automatique (Recommandé)",

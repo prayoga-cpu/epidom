@@ -44,8 +44,17 @@ describe("resolveDateRangePreset", () => {
   const today = todayLocalISO();
 
   it("is the exact inverse of describeDateRange for every preset", () => {
+    // Two presets can be the same dates: on the 1st "this month" IS "today",
+    // on the 7th it is "last 7 days", on the 30th "last 30 days". The range
+    // is then described as whichever preset comes first, so only the first
+    // preset with a given range can round-trip. Without this the test failed
+    // on those days of every month.
+    const seen = new Set<string>();
     for (const preset of DATE_RANGE_PRESETS) {
       const { from, to } = resolveDateRangePreset(preset);
+      const range = `${from}|${to}`;
+      if (seen.has(range)) continue;
+      seen.add(range);
       expect(describeDateRange(from, to)).toBe(preset);
     }
   });

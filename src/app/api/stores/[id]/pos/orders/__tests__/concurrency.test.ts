@@ -93,6 +93,7 @@ vi.mock("@/lib/services/pos-order-builder", async (importOriginal) => {
         },
       ],
       subtotal: 100,
+      warnings: [],
     })),
     deliverOrderImmediately: vi.fn(),
     draftShortfallBatchesForConfirmedOrder: vi.fn(),

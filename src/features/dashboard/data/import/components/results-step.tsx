@@ -10,6 +10,7 @@ import { Check, X, Package, ShoppingCart, Truck, ChefHat, AlertCircle } from "lu
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
+import type { ImportFailure } from "../hooks/use-ai-import";
 
 interface ResultsStepProps {
   result: {
@@ -22,13 +23,55 @@ interface ResultsStepProps {
       totalSucceeded: number;
     };
     error?: string;
+    failures?: ImportFailure[];
+    skippedRows?: number;
   };
   onClose: () => void;
 }
 
+const FAILURE_ENTITY_LABEL: Record<ImportFailure["entity"], string> = {
+  supplier: "pages.smartImportTabSuppliers",
+  material: "pages.smartImportTabMaterials",
+  recipe: "pages.smartImportTabRecipes",
+  product: "pages.smartImportTabProducts",
+};
+
 export function ResultsStep({ result, onClose }: ResultsStepProps) {
   const { t } = useI18n();
-  const { success, summary, error } = result;
+  const { success, summary, error, failures, skippedRows } = result;
+
+  // The reasons rows were skipped. Without this a partial (or empty) import
+  // only ever said "0 / 91", leaving the merchant to guess what to fix.
+  const hasFailures = !!failures && failures.length > 0;
+  const hasSkipped = !!skippedRows && skippedRows > 0;
+  const failureList =
+    hasFailures || hasSkipped ? (
+      <div className="mt-6 w-full max-w-md rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-left">
+        {hasFailures && (
+          <p className="mb-2 text-sm font-medium">{t("pages.smartImportFailuresTitle")}</p>
+        )}
+        <ul className="max-h-40 space-y-1.5 overflow-y-auto text-sm">
+          {hasSkipped && (
+            <li className="text-muted-foreground">
+              {t("pages.smartImportSkippedRows").replace("{count}", String(skippedRows))}
+            </li>
+          )}
+          {(failures ?? []).map((failure, index) => (
+            <li key={index} className="break-words">
+              <span className="font-medium">
+                {failure.row === null
+                  ? t(FAILURE_ENTITY_LABEL[failure.entity])
+                  : t("pages.smartImportFailureRow")
+                      .replace("{entity}", t(FAILURE_ENTITY_LABEL[failure.entity]))
+                      .replace("{row}", String(failure.row))}
+                :
+              </span>{" "}
+              <span className="text-muted-foreground">{failure.message}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
 
   // Entity display config
   const entities = [
@@ -123,6 +166,8 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
             })}
           </div>
 
+          {failureList}
+
           {/* Quick actions */}
           <div className="mt-8 flex gap-4">
             <Button variant="outline" onClick={onClose}>
@@ -146,10 +191,16 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
           </h3>
           <p className="text-muted-foreground mb-4">{t("pages.smartImportFailedDesc")}</p>
 
-          {error && (
-            <div className="mb-8 w-full max-w-md rounded-lg border border-red-500/20 bg-red-500/10 p-4">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            </div>
+          {/* The row list already carries the reason; the lone message is for
+              failures that never got as far as a row (auth, a network error). */}
+          {failureList ? (
+            <div className="mb-8 flex w-full justify-center">{failureList}</div>
+          ) : (
+            error && (
+              <div className="mb-8 w-full max-w-md rounded-lg border border-red-500/20 bg-red-500/10 p-4">
+                <p className="text-sm break-words text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )
           )}
 
           <div className="flex gap-4">

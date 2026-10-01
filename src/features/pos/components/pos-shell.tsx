@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { Store } from "@prisma/client";
 import { PosHeader } from "./pos-header";
@@ -76,6 +76,12 @@ export function PosShell({ store }: PosShellProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   const viewMode = usePosViewMode((s) => s.viewMode);
   const cart = usePosCart();
+  // The cart is saved on the device, so it would otherwise follow the cashier
+  // into whichever store they open next. See bindStore.
+  const bindCartToStore = usePosCart((s) => s.bindStore);
+  useEffect(() => {
+    bindCartToStore(store.id);
+  }, [bindCartToStore, store.id]);
   // Mirrors this cart onto the customer-facing display window (second
   // screen), if one is open. No-op when it isn't — the snapshot is just
   // written and broadcast with nobody listening.

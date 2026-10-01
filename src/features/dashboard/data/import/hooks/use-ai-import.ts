@@ -36,6 +36,17 @@ export interface ExecuteResponse {
     totalSucceeded: number;
   };
   error?: string;
+  /** Why rows were not imported (capped server-side). */
+  failures?: ImportFailure[];
+  /** Rows with no name (blank lines, totals) that were left out. */
+  skippedRows?: number;
+}
+
+export interface ImportFailure {
+  entity: "supplier" | "material" | "recipe" | "product";
+  /** 1-based row within that entity's rows; null when the whole group failed. */
+  row: number | null;
+  message: string;
 }
 
 export interface ImportSession {
@@ -74,6 +85,45 @@ export const aiImportKeys = {
 };
 
 // ============================================================================
+// Errors
+// ============================================================================
+
+/**
+ * A failed import request. `timedOut` is true when the platform cut the
+ * request off (a 504 / 408, or a gateway's HTML error page instead of the
+ * route's JSON), which the dialog words differently from a refusal.
+ */
+export class ImportRequestError extends Error {
+  constructor(
+    message: string,
+    readonly timedOut: boolean
+  ) {
+    super(message);
+    this.name = "ImportRequestError";
+  }
+}
+
+/**
+ * The route's own reason for a failed response. These routes answer
+ * `{ error, message }`; a timeout answers with a non-JSON page, and calling
+ * `response.json()` on that used to throw "Unexpected token '<'" in place of
+ * anything the merchant could act on.
+ */
+async function toImportError(response: Response, fallback: string): Promise<ImportRequestError> {
+  const timedOut = response.status === 504 || response.status === 408;
+  try {
+    const body = await response.json();
+    const reason =
+      (typeof body?.message === "string" && body.message) ||
+      (typeof body?.error === "string" && body.error) ||
+      fallback;
+    return new ImportRequestError(reason, timedOut);
+  } catch {
+    return new ImportRequestError(fallback, timedOut || response.status >= 500);
+  }
+}
+
+// ============================================================================
 // Hooks
 // ============================================================================
 
@@ -105,10 +155,7 @@ export function useAnalyzeImport() {
         body: formData,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Analysis failed");
-      }
+      if (!response.ok) throw await toImportError(response, "Analysis failed");
 
       return response.json();
     },
@@ -132,6 +179,8 @@ export function useExecuteImport() {
       sessionId: string;
       storeId: string;
       entityType: "material" | "product" | "supplier" | "recipe";
+      /** The type picked or detected in the dialog; omitted when it is unknown. */
+      fallbackEntityType?: "material" | "product" | "supplier" | "recipe";
       data: Array<Record<string, unknown>>;
       decisions?: Array<{
         rowIndex: number;
@@ -151,10 +200,7 @@ export function useExecuteImport() {
         body: JSON.stringify(params),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Import failed");
-      }
+      if (!response.ok) throw await toImportError(response, "Import failed");
 
       return response.json();
     },

@@ -7,6 +7,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { usePosCart } from "../hooks/use-pos-cart";
+import { useCartRepair } from "../hooks/use-cart-repair";
 import { useFinanceSettings } from "@/features/dashboard/profile/hooks/use-finance-settings";
 import { useReceiptSettings } from "@/features/dashboard/profile/hooks/use-receipt-settings";
 import { useKdsSettings } from "../hooks/use-kds-settings";
@@ -169,6 +170,7 @@ export function PosCheckoutDialog({
   const { print } = usePrintReceipt();
   // Kitchen / bar tickets and item labels — everything printed that is not the customer's receipt.
   const { printOrder } = usePrintOrder(storeId);
+  const repairCart = useCartRepair(storeId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completed, setCompleted] = useState<{
     result: OrderCompleteResult;
@@ -668,12 +670,30 @@ export function PosCheckoutDialog({
       finishSale({ orderId: orderId ?? null, orderNumber, server: created ?? undefined });
       toast.success(t("pos.checkout.success"));
     } catch (error) {
-      // Surface the server's actual reason (e.g. "item no longer available",
-      // "order is no longer held") instead of a blanket failure message —
-      // ApiClientError already carries it via apiClient's error handling.
-      // Fall back to the generic copy only for unexpected/network errors,
-      // which don't carry an actionable, cashier-facing reason.
-      const serverMessage = error instanceof ApiClientError ? error.response.error.message : null;
+      // Lines the menu no longer sells are fixed in the cart, not just named
+      // in a toast: this dialog stays open on the corrected total (or closes
+      // on an emptied cart) and the cashier charges again. Not for a split
+      // bill, whose lines are a share of a cart the split dialog still tracks
+      // by line id — that keeps the plain message below.
+      if (!basis) {
+        const repair = await repairCart(error);
+        if (repair) {
+          if (repair.items.length === 0) onOpenChange(false);
+          return;
+        }
+      }
+
+      // Surface the server's actual reason (e.g. "order is no longer held")
+      // instead of a blanket failure message — ApiClientError already carries
+      // it via apiClient's error handling. Fall back to the generic copy only
+      // for unexpected/network errors, which don't carry an actionable,
+      // cashier-facing reason.
+      // A 5xx carries whatever the server threw (a database message, a
+      // timeout dump): nothing a cashier can act on, so it gets the plain copy.
+      const serverMessage =
+        error instanceof ApiClientError && error.status < 500
+          ? error.response.error.message
+          : null;
       toast.error(serverMessage || t("pos.checkout.orderFailed"));
       console.error(error);
     } finally {
