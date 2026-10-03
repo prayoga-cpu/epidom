@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { trackEvent, trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 import { getLocalizedPath } from "@/lib/i18n-routing";
+import { LOCALE_PRICE_CURRENCY } from "@/lib/constants/plan-pricing";
 import { BoldText } from "./bold-text";
 
 const TIERS = [
@@ -221,7 +222,14 @@ export function PricingCards({
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: confirming.plan, trial: dialogTrial || undefined, yearly }),
+        body: JSON.stringify({
+          plan: confirming.plan,
+          trial: dialogTrial || undefined,
+          yearly,
+          // The currency this page quotes for the language. Without it Stripe
+          // charges in the one it picks from the visitor's IP.
+          ...(isPaid ? { currency: LOCALE_PRICE_CURRENCY[locale] } : {}),
+        }),
       });
 
       if (res.status === 401) {

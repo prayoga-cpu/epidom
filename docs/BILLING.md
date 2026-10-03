@@ -113,6 +113,19 @@ breaks. Checkout also drops it for a currency PayPal doesn't take (IDR). PayPal 
 and the webhook takes the status from the Stripe subscription, never from the payment method, so it
 needed no change.
 
+**The session currency decides the methods.** Left to itself, Hosted Checkout picks a Price's
+`currency_options` entry from the visitor's IP, so a visitor in Indonesia was charged in IDR and
+offered card only, even on a EUR store. Since 3.3.5 the page that starts the checkout sends the
+currency it quoted (`currency` in `POST /api/subscriptions/checkout`): the Billing page sends the
+store's currency (`resolvePriceCurrency`), `/pricing` sends the language's (`LOCALE_PRICE_CURRENCY`).
+The session is created with that `currency`, which turns the IP choice off. Two Stripe rules shape
+the code around it. Stripe won't mix currencies on one customer, and an **open** subscription
+Checkout counts. So `expireOpenCheckoutSessions` expires the customer's open subscription sessions
+before every new one; that also stops two open tabs from both being paid. A customer whose live
+subscription bills in another currency (incomplete or past due) can't be moved at all, so that one
+session is created without `currency` and Checkout uses the customer's existing currency. To test a
+location without a VPN, give the session a customer email like `test+location_ID@example.com`.
+
 ### Test mode setup
 
 Local `.env` uses a Stripe **sandbox** of the same account, never live keys: a checkout from localhost

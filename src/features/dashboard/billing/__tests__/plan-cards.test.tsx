@@ -165,6 +165,7 @@ describe("PlanCards actions", () => {
       plan: "POS",
       yearly: false,
       trial: true,
+      currency: "USD",
       cancelUrl: "https://app.test/store/s1/billing",
     });
     expect(analytics.trackConversion).toHaveBeenCalledWith(

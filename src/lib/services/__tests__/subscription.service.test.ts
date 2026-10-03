@@ -27,6 +27,8 @@ vi.mock("@/lib/stripe", () => ({
           id: "cs_123",
           url: "https://checkout.stripe.com/session",
         }),
+        list: vi.fn().mockResolvedValue({ data: [] }),
+        expire: vi.fn().mockResolvedValue({}),
       },
     },
     billingPortal: {
@@ -775,6 +777,135 @@ describe("SubscriptionService", () => {
       });
       expect(params).not.toHaveProperty("payment_method_types");
     });
+
+    it("charges in the currency the page quoted, not the one Stripe guesses from the IP", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+
+      await service.createCheckoutSession(
+        "user-1",
+        "POS",
+        "https://a/s",
+        "https://a/c",
+        false,
+        false,
+        "EUR"
+      );
+
+      expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+      expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: "eur", customer: "cus_123" })
+      );
+    });
+
+    it("leaves the currency to Stripe when none is given", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+
+      await service.createCheckoutSession("user-1", "POS", "https://a/s", "https://a/c");
+
+      const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(params).not.toHaveProperty("currency");
+    });
+
+    it("expires the customer's open subscription Checkouts first", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      vi.mocked(stripe.checkout.sessions.list).mockResolvedValueOnce({
+        data: [
+          { id: "cs_old_idr", mode: "subscription" },
+          { id: "cs_setup", mode: "setup" },
+        ],
+      } as any);
+
+      await service.createCheckoutSession(
+        "user-1",
+        "POS",
+        "https://a/s",
+        "https://a/c",
+        false,
+        false,
+        "EUR"
+      );
+
+      expect(stripe.checkout.sessions.list).toHaveBeenCalledWith({
+        customer: "cus_123",
+        status: "open",
+        limit: 100,
+      });
+      expect(stripe.checkout.sessions.expire).toHaveBeenCalledTimes(1);
+      expect(stripe.checkout.sessions.expire).toHaveBeenCalledWith("cs_old_idr");
+      expect(vi.mocked(stripe.checkout.sessions.expire).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(stripe.checkout.sessions.create).mock.invocationCallOrder[0]
+      );
+    });
+
+    it("still opens Checkout when the open sessions can't be listed", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      vi.mocked(stripe.checkout.sessions.list).mockRejectedValueOnce(new Error("rate limited"));
+
+      const session = await service.createCheckoutSession(
+        "user-1",
+        "POS",
+        "https://a/s",
+        "https://a/c",
+        false,
+        false,
+        "EUR"
+      );
+
+      expect(session.id).toBe("cs_123");
+    });
+
+    it("keeps the customer's existing currency when Stripe won't mix currencies", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      vi.mocked(stripe.checkout.sessions.create).mockRejectedValueOnce(
+        new Error(
+          "You cannot combine currencies on a single customer. This customer has an active subscription with currency idr."
+        )
+      );
+
+      const session = await service.createCheckoutSession(
+        "user-1",
+        "POS",
+        "https://a/s",
+        "https://a/c",
+        false,
+        false,
+        "EUR"
+      );
+
+      expect(session.id).toBe("cs_123");
+      const [first, retry] = vi
+        .mocked(stripe.checkout.sessions.create)
+        .mock.calls.map((call) => call[0] as Record<string, unknown>);
+      expect(first.currency).toBe("eur");
+      expect(retry).not.toHaveProperty("currency");
+    });
+
+    it("surfaces any other Stripe error", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      vi.mocked(stripe.checkout.sessions.create).mockRejectedValueOnce(new Error("No such price"));
+
+      await expect(
+        service.createCheckoutSession(
+          "user-1",
+          "POS",
+          "https://a/s",
+          "https://a/c",
+          false,
+          false,
+          "EUR"
+        )
+      ).rejects.toThrow("No such price");
+      expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("createCustomPriceCheckoutSession", () => {
@@ -825,6 +956,10 @@ describe("SubscriptionService", () => {
         unknown
       >;
       expect(params).not.toHaveProperty("payment_method_types");
+      // An open catalog Checkout in another currency would make Stripe refuse this one.
+      expect(stripe.checkout.sessions.list).toHaveBeenCalledWith(
+        expect.objectContaining({ customer: "cus_123", status: "open" })
+      );
     });
 
     it("rejects when no custom price is awaiting payment", async () => {

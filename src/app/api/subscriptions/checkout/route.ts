@@ -14,6 +14,7 @@ import { checkoutSchema } from "@/lib/validation/subscription.schemas";
  * - plan: "FREE" | "FREE" | "POS" | "OPERATIONS"
  * - successUrl?: string (optional, defaults to /checkout/success)
  * - cancelUrl?: string (optional, defaults to /checkout/failed)
+ * - currency?: "EUR" | "USD" | "IDR" (the currency the page quoted; see createCheckoutSession)
  *
  * Returns:
  * - sessionId: Stripe Checkout Session ID
@@ -23,7 +24,7 @@ export const POST = withApiHandler(
   async (request, { userId }) => {
     // Parse and validate request body
     const body = await request.json();
-    const { plan, successUrl, cancelUrl, yearly } = checkoutSchema.parse(body);
+    const { plan, successUrl, cancelUrl, yearly, currency } = checkoutSchema.parse(body);
 
     // Get origin for building absolute URLs
     const origin =
@@ -82,7 +83,8 @@ export const POST = withApiHandler(
       finalSuccessUrl,
       finalCancelUrl,
       applyTrial,
-      yearly
+      yearly,
+      currency
     );
 
     return NextResponse.json(

@@ -21,6 +21,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { ApiErrorCode } from "@/types/api/responses";
 import { planHasFeature, PLAN_LABELS, type PlanTier } from "@/lib/plans/entitlements";
+import type { PriceCurrency } from "@/lib/constants/plan-pricing";
 
 /**
  * Subscription Service
@@ -89,12 +90,43 @@ export class SubscriptionService {
   }
 
   /**
+   * Expires the customer's still-open subscription Checkouts before a new one
+   * opens. Stripe refuses a session in one currency while the same customer
+   * has an open subscription session in another ("You cannot combine
+   * currencies on a single customer"), and a tab left open could otherwise
+   * still be paid next to the new one, starting a second subscription.
+   * Best effort: a failure here never blocks the new checkout.
+   */
+  private async expireOpenCheckoutSessions(customerId: string): Promise<void> {
+    try {
+      const open = await stripe.checkout.sessions.list({
+        customer: customerId,
+        status: "open",
+        limit: 100,
+      });
+      await Promise.all(
+        open.data
+          .filter((session) => session.mode === "subscription")
+          .map((session) => stripe.checkout.sessions.expire(session.id))
+      );
+    } catch (error) {
+      logger.warn("Failed to expire open Checkout Sessions", {
+        customerId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
    * Create Stripe Checkout Session
    *
    * @param userId - User ID creating the subscription
    * @param plan - Subscription plan (POS or OPERATIONS)
    * @param successUrl - URL to redirect on successful payment
    * @param cancelUrl - URL to redirect if user cancels
+   * @param currency - The currency the page quoted the price in. Without it,
+   *   Hosted Checkout picks one from the visitor's IP: from Indonesia that is
+   *   IDR, which PayPal doesn't take, so PayPal never showed.
    * @returns Stripe Checkout Session
    */
   async createCheckoutSession(
@@ -103,7 +135,8 @@ export class SubscriptionService {
     successUrl: string,
     cancelUrl: string,
     trial?: boolean,
-    yearly: boolean = false
+    yearly: boolean = false,
+    currency?: PriceCurrency
   ): Promise<Stripe.Checkout.Session> {
     // Get user
     const user = await this.userRepo.findById(userId);
@@ -129,12 +162,14 @@ export class SubscriptionService {
     // Get price ID for plan
     const priceId = STRIPE_CONFIG.PRICE_IDS[plan][yearly ? "YEARLY" : "MONTHLY"];
 
+    await this.expireOpenCheckoutSessions(stripeCustomerId);
+
     // No payment_method_types: Checkout offers every method switched on in the
     // Stripe Dashboard (Settings → Payment methods) that can bill a subscription
     // in this currency — card, and PayPal once Stripe grants its recurring
     // payments. Listing methods here would hide PayPal, and naming one the
     // account can't use yet makes Stripe refuse the whole session.
-    const session = await stripe.checkout.sessions.create({
+    const params: Stripe.Checkout.SessionCreateParams = {
       customer: stripeCustomerId,
       mode: "subscription",
       line_items: [
@@ -160,7 +195,29 @@ export class SubscriptionService {
         userId: user.id,
         plan: plan,
       },
-    });
+    };
+
+    let session: Stripe.Checkout.Session;
+    if (!currency) {
+      session = await stripe.checkout.sessions.create(params);
+    } else {
+      try {
+        session = await stripe.checkout.sessions.create({
+          ...params,
+          currency: currency.toLowerCase(),
+        });
+      } catch (error) {
+        // A customer whose live subscription already bills in another
+        // currency can't be moved: Stripe won't mix currencies on one
+        // customer. Left without a currency, Checkout uses the customer's own.
+        if (!/combine currencies/i.test(error instanceof Error ? error.message : "")) throw error;
+        logger.warn("Checkout kept the customer's existing currency", {
+          userId,
+          requestedCurrency: currency,
+        });
+        session = await stripe.checkout.sessions.create(params);
+      }
+    }
 
     // DO NOT update subscription status yet - wait for webhook confirmation
     // Only create subscription record if it doesn't exist
@@ -648,6 +705,8 @@ export class SubscriptionService {
 
     const plan = subscription.customPricePlan;
     const stripeCustomerId = await this.resolveStripeCustomerId(user, subscription);
+
+    await this.expireOpenCheckoutSessions(stripeCustomerId);
 
     // Payment methods follow the Dashboard, as in createCheckoutSession.
     return stripe.checkout.sessions.create({

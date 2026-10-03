@@ -205,10 +205,23 @@ describe("PricingCards", () => {
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/subscriptions/checkout",
         expect.objectContaining({
-          body: JSON.stringify({ plan: "POS", trial: true, yearly: false }),
+          body: JSON.stringify({ plan: "POS", trial: true, yearly: false, currency: "EUR" }),
         })
       );
     });
+  });
+
+  it.each([
+    ["en", "USD"],
+    ["id", "IDR"],
+  ] as const)("a %s visitor is charged in %s, the currency the page quotes", async (lang, cur) => {
+    state.locale = lang;
+    mockFetch.mockResolvedValue(CHECKOUT_OK);
+    render(<PricingCards yearly={false} />);
+    fireEvent.click(screen.getByText("Start free trial"));
+    fireEvent.click(screen.getByText("Confirm"));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body).currency).toBe(cur);
   });
 
   it("on success redirects to Stripe Checkout URL for paid plans", async () => {
@@ -491,7 +504,9 @@ describe("PricingCards trial gating by current plan", () => {
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
           "/api/subscriptions/checkout",
-          expect.objectContaining({ body: JSON.stringify({ plan: "POS", yearly: false }) })
+          expect.objectContaining({
+            body: JSON.stringify({ plan: "POS", yearly: false, currency: "EUR" }),
+          })
         );
       });
       expect(mockFetch.mock.calls[0][1].body).not.toContain("trial");

@@ -12,6 +12,10 @@ export const checkoutSchema = z.object({
   cancelUrl: z.string().url("Invalid cancel URL").optional(),
   trial: z.boolean().optional(),
   yearly: z.boolean().optional().default(false),
+  // The currency the page quoted the price in. Every catalog Price has an exact
+  // EUR, USD and IDR amount, so this picks which one Stripe charges. Left out,
+  // Stripe picks from the visitor's IP instead.
+  currency: z.enum(["EUR", "USD", "IDR"]).optional(),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;

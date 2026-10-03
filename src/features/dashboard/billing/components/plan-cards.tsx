@@ -145,6 +145,10 @@ export function PlanCards({
           plan: pending.plan,
           yearly,
           trial: pending.kind === "trial" || undefined,
+          // Charge in the currency these cards quote, not the one Stripe would
+          // pick from the visitor's IP (IDR from Indonesia, where PayPal is
+          // never offered).
+          currency,
           // Backing out of Stripe lands here, not on the website's
           // /checkout/failed page. Success keeps the default /checkout/success,
           // which records the trial / paid conversion.

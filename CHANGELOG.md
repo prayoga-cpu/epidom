@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.3.5] - 2026-10-03 · fix
+
+Checkout charges in the currency you were shown, so PayPal can appear.
+
+- **You pay in the currency on the page.** Checkout for a plan picked its currency from where you were connecting. Someone in Indonesia was charged in rupiah even when their store and the Billing page used euros, and was offered card only. Checkout now uses the currency the Billing page quotes (your store's), or the one the pricing page shows for your language. PayPal works in euros and dollars but not in rupiah, so it can now appear on a euro or dollar plan once it is turned on.
+- **One checkout at a time.** A checkout you opened earlier and left open is closed when you start a new one, so you can't end up paying for two subscriptions.
+
 ## [3.3.4] - 2026-10-03 · feat
 
 PayPal for your Epidom plan.
