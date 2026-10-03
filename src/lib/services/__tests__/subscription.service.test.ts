@@ -730,6 +730,53 @@ describe("SubscriptionService", () => {
     });
   });
 
+  describe("createCheckoutSession", () => {
+    it("lets the Stripe Dashboard choose the payment methods, so PayPal can be offered", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+
+      await service.createCheckoutSession(
+        "user-1",
+        "OPERATIONS",
+        "https://app.test/checkout/success",
+        "https://app.test/checkout/failed?reason=canceled",
+        false,
+        true
+      );
+
+      expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customer: "cus_123",
+          mode: "subscription",
+          line_items: [{ price: expect.any(String), quantity: 1 }],
+          metadata: { userId: "user-1", plan: "OPERATIONS" },
+        })
+      );
+      const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(params).not.toHaveProperty("payment_method_types");
+    });
+
+    it("adds the 14-day trial when asked", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
+
+      await service.createCheckoutSession("user-1", "POS", "https://a/s", "https://a/c", true);
+
+      const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(params.subscription_data).toEqual({
+        metadata: { userId: "user-1", plan: "POS" },
+        trial_period_days: 14,
+      });
+      expect(params).not.toHaveProperty("payment_method_types");
+    });
+  });
+
   describe("createCustomPriceCheckoutSession", () => {
     const pendingSubscription = {
       ...mockSubscription,
@@ -773,6 +820,11 @@ describe("SubscriptionService", () => {
           },
         })
       );
+      const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(params).not.toHaveProperty("payment_method_types");
     });
 
     it("rejects when no custom price is awaiting payment", async () => {

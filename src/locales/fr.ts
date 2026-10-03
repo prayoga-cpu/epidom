@@ -5251,12 +5251,12 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       subtitle: "Nous n'avons pas pu traiter votre paiement",
       reason: "Raison",
       paymentFailed:
-        "Votre moyen de paiement a été refusé. Veuillez vérifier les détails de votre carte et réessayer.",
+        "Votre moyen de paiement a été refusé. Veuillez vérifier vos informations de paiement et réessayer.",
       canceled: "Vous avez annulé le processus de paiement. Aucun frais n'a été appliqué.",
       sessionExpired: "Votre session de paiement a expiré. Veuillez réessayer.",
       unknownError: "Une erreur inattendue s'est produite lors du traitement du paiement.",
       helpMessage:
-        "Votre carte n'a pas été débitée. Veuillez examiner l'erreur ci-dessus et réessayer. Si vous continuez à avoir des problèmes, veuillez contacter le support.",
+        "Aucun montant n'a été débité. Veuillez examiner l'erreur ci-dessus et réessayer. Si vous continuez à avoir des problèmes, veuillez contacter le support.",
       tryAgainButton: "Réessayer",
       chargeNotApplied: "Aucun frais n'a été appliqué à votre compte.",
       sessionId: "ID de session",

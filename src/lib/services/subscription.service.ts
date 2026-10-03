@@ -129,12 +129,14 @@ export class SubscriptionService {
     // Get price ID for plan
     const priceId = STRIPE_CONFIG.PRICE_IDS[plan][yearly ? "YEARLY" : "MONTHLY"];
 
-    // Calculate application fee (20% to platform)
-    // Stripe will automatically transfer remaining 80% to connected account
+    // No payment_method_types: Checkout offers every method switched on in the
+    // Stripe Dashboard (Settings → Payment methods) that can bill a subscription
+    // in this currency — card, and PayPal once Stripe grants its recurring
+    // payments. Listing methods here would hide PayPal, and naming one the
+    // account can't use yet makes Stripe refuse the whole session.
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: "subscription",
-      payment_method_types: ["card"],
       line_items: [
         {
           price: priceId,
@@ -647,10 +649,10 @@ export class SubscriptionService {
     const plan = subscription.customPricePlan;
     const stripeCustomerId = await this.resolveStripeCustomerId(user, subscription);
 
+    // Payment methods follow the Dashboard, as in createCheckoutSession.
     return stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: "subscription",
-      payment_method_types: ["card"],
       line_items: [
         {
           price_data: {

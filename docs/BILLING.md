@@ -98,6 +98,21 @@ ENTERPRISE has no catalog Price; each engagement is quoted per account (see "Adm
 dashboard (Settings → Billing → Customer portal): the code opens portal sessions without a
 configuration ID, so it needs the account's default configuration.
 
+### Payment methods
+
+Both subscription Checkouts (`createCheckoutSession` and `createCustomPriceCheckoutSession` in
+`src/lib/services/subscription.service.ts`) leave `payment_method_types` unset, so Checkout uses
+dynamic payment methods. It offers every method switched on in the account's default payment method
+configuration (Dashboard → Settings → Payment methods) that can bill a subscription in the session's
+currency. That list, not the code, decides what a customer sees. Don't set `payment_method_types`
+again: it hides PayPal, and naming a method the account can't use yet makes Stripe refuse the session.
+
+PayPal needs two things in the Dashboard: PayPal switched on, and its **Recurring payments** access
+requested and granted (Payment methods → PayPal). Until then Checkout leaves it out, and nothing
+breaks. Checkout also drops it for a currency PayPal doesn't take (IDR). PayPal confirms immediately,
+and the webhook takes the status from the Stripe subscription, never from the payment method, so it
+needed no change.
+
 ### Test mode setup
 
 Local `.env` uses a Stripe **sandbox** of the same account, never live keys: a checkout from localhost

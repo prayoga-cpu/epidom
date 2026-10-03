@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.3.4] - 2026-10-03 · feat
+
+PayPal for your Epidom plan.
+
+- **Paying for a plan is no longer card-only.** Checkout for POS or Operations, or for a price we quoted you, only ever offered a card. It now shows the payment methods Epidom has turned on with Stripe, so PayPal appears as soon as Stripe enables it for subscriptions. Your plan then renews on the method you paid with.
+- **The page after a cancelled or failed payment no longer assumes a card.** It said "Your card hasn't been charged" even if you paid another way. It now says you haven't been charged.
+
 ## [3.3.3] - 2026-10-01 · fix
 
 A fix for the Recipes tab.
