@@ -9,6 +9,14 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.9.0] - 2026-10-07 · infra
+
+Three new pages that present Epidom to coffee shops, and a way to see which one brings the most sign-ups.
+
+- **Three sales pages.** /sales-page-1, /sales-page-2 and /sales-page-3 each tell the story a different way, in French. Every "Commencer gratuitement" button opens sign-up.
+- **Which page wins.** Each page counts its visitors, how far they read and which button they press. The count uses no cookie and stores no IP address. When a visitor then creates an account, by email or with Google, the sign-up is credited to the page they came from. The comparison is in the admin panel, under Sales Pages.
+- **Cookie policy.** It now lists the epidom_sales_page cookie, which holds only the name of the sales page you opened, for 30 days.
+
 ## [3.8.0] - 2026-10-06 · feat
 
 Online orders are paid at the cashier, the POS gets the notification bell and a full-screen button, only the person who opened a shift can end it, and your guest WiFi can go on receipts.

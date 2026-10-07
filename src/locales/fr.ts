@@ -8003,7 +8003,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
   },
   cookiePolicy: {
     title: "Politique des cookies",
-    lastUpdatedDate: "20 septembre 2026",
+    lastUpdatedDate: "7 octobre 2026",
     intro: "Cette page explique ce qu'Epidom enregistre dans votre navigateur, quels outils tiers peuvent fonctionner sur le site et comment vous gardez la main. Elle s'applique au site web et à l'application Epidom.",
     footer: "Cette politique évolue lorsque les outils utilisés sur le site changent. La date en haut de page indique la dernière mise à jour.",
     s1: {
@@ -8031,6 +8031,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       item1: "epidom_locale_pref : mémorise la langue choisie avec le sélecteur de langue. Il est conservé 1 an.",
       item2: "epidom:lastVisitedUrl, epidom:lastVisitedBackOffice, epidom:lastVisitedPos et epidom:rememberLastVisited : déposés uniquement lorsque vous êtes connecté, pour que l'application vous ramène à la dernière page utilisée. Ils sont conservés jusqu'à 400 jours et supprimés lorsque vous changez de compte.",
       item3: "Stockage local : cookie-consent-preferences (votre choix de cookies et votre langue), locale et lang (votre langue) et des préférences d'interface comme le zoom d'affichage. Ces données restent sur votre appareil.",
+      item4: "epidom_sales_page : déposé lorsque vous ouvrez l'une de nos pages de présentation (/sales-page-1, /sales-page-2 ou /sales-page-3). Il contient uniquement le nom de cette page, sans aucun identifiant, pour que nous sachions de quelle page vous venez si vous créez un compte. Il est conservé 30 jours.",
     },
     s5: {
       title: "Mesure d'audience (avec votre consentement)",

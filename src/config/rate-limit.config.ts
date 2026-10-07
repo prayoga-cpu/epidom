@@ -334,6 +334,14 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 10 publish attempts per minute
   },
 
+  // Sales-page tracker (unauthenticated, IP-based). A visit sends at most a
+  // view, two scroll milestones and a click or two; shared IPs (offices,
+  // mobile carriers) need the headroom.
+  "/api/public/sales-pages/events": {
+    limit: 60,
+    window: 60, // 60 events per minute per IP
+  },
+
   // Feedback submission - generous limit, feedback is welcome; only blocks runaway bots
   "/api/feedback": {
     limit: 30,

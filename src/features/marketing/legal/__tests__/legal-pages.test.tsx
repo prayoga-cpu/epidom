@@ -146,6 +146,7 @@ describe("cookie policy", () => {
       "better-auth.session_token",
       "epidom-staff-session",
       "epidom_locale_pref",
+      "epidom_sales_page",
       "epidom:lastVisitedUrl",
       "cookie-consent-preferences",
     ]) {

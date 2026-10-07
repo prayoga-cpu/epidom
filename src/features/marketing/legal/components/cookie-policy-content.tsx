@@ -32,7 +32,7 @@ export function CookiePolicyContent() {
       id: "c4",
       title: t("cookiePolicy.s4.title"),
       body: t("cookiePolicy.s4.body"),
-      items: items("cookiePolicy.s4", 3),
+      items: items("cookiePolicy.s4", 4),
     },
     {
       id: "c5",

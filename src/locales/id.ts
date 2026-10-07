@@ -8336,7 +8336,7 @@ lifetime: "Akses seumur hidup",
   },
   cookiePolicy: {
     title: "Kebijakan Cookie",
-    lastUpdatedDate: "20 September 2026",
+    lastUpdatedDate: "7 Oktober 2026",
     intro: "Halaman ini menjelaskan apa saja yang disimpan Epidom di browser Anda, alat pihak ketiga apa yang dapat berjalan di situs, dan bagaimana Anda tetap memegang kendali. Berlaku untuk situs web dan aplikasi Epidom.",
     footer: "Kebijakan ini berubah ketika alat yang digunakan di situs berubah. Tanggal di bagian atas menunjukkan pembaruan terakhir.",
     s1: {
@@ -8364,6 +8364,7 @@ lifetime: "Akses seumur hidup",
       item1: "epidom_locale_pref: mengingat bahasa yang Anda pilih lewat pengalih bahasa. Disimpan selama 1 tahun.",
       item2: "epidom:lastVisitedUrl, epidom:lastVisitedBackOffice, epidom:lastVisitedPos dan epidom:rememberLastVisited: dipasang hanya saat Anda masuk, agar aplikasi dapat membawa Anda kembali ke layar terakhir yang digunakan. Disimpan hingga 400 hari dan dihapus saat Anda berganti akun.",
       item3: "Penyimpanan lokal: cookie-consent-preferences (pilihan cookie dan bahasa Anda), locale dan lang (bahasa Anda) serta preferensi tampilan seperti zoom layar. Data ini tetap berada di perangkat Anda.",
+      item4: "epidom_sales_page: dipasang saat Anda membuka salah satu halaman presentasi kami (/sales-page-1, /sales-page-2 atau /sales-page-3). Isinya hanya nama halaman tersebut, tanpa pengenal apa pun, agar kami tahu dari halaman mana Anda datang jika Anda membuat akun. Disimpan selama 30 hari.",
     },
     s5: {
       title: "Analitik (dengan persetujuan Anda)",

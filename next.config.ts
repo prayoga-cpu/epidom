@@ -84,6 +84,13 @@ const nextConfig: NextConfig = {
       ? process.env.VERCEL_DEPLOYMENT_ID
       : undefined,
 
+  // The /sales-page-N landing pages are static HTML in public/sales-pages/,
+  // served at their slug (see src/lib/sales-pages.ts). An N with no file is a
+  // plain 404. The proxy matcher skips these paths, so they need no session.
+  rewrites: async () => [
+    { source: "/:page(sales-page-\\d+)", destination: "/sales-pages/:page.html" },
+  ],
+
   // Security Headers for production
   headers: async () => [
     {

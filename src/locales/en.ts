@@ -8292,7 +8292,7 @@ lifetime: "Lifetime access",
   },
   cookiePolicy: {
     title: "Cookie Policy",
-    lastUpdatedDate: "September 20, 2026",
+    lastUpdatedDate: "October 7, 2026",
     intro: "This page explains what Epidom stores in your browser, which third-party tools can run on the site, and how you stay in control. It applies to the Epidom website and app.",
     footer: "This policy changes when the tools used on the site change. The date at the top shows the last update.",
     s1: {
@@ -8320,6 +8320,7 @@ lifetime: "Lifetime access",
       item1: "epidom_locale_pref: remembers the language you picked with the language switcher. It is kept for 1 year.",
       item2: "epidom:lastVisitedUrl, epidom:lastVisitedBackOffice, epidom:lastVisitedPos and epidom:rememberLastVisited: set only when you are signed in, so the app can bring you back to the last screen you used. They are kept for up to 400 days and cleared when you switch account.",
       item3: "Local storage: cookie-consent-preferences (your cookie choice and language), locale and lang (your language) and interface preferences such as the display zoom. These stay on your device.",
+      item4: "epidom_sales_page: set when you open one of our presentation pages (/sales-page-1, /sales-page-2 or /sales-page-3). It holds only the name of that page, no identifier, so that if you create an account we know which page you came from. It is kept for 30 days.",
     },
     s5: {
       title: "Analytics (with your consent)",

@@ -62,6 +62,8 @@ model User {
   // distinct from `business`, which is what this User owns. A User can
   // hold both at once (owns their own store, also works a shift elsewhere).
   staffMember               StaffMember?
+  // SIGNUP rows crediting this account to the /sales-page-N it came from.
+  salesPageEvents           SalesPageEvent[]
 
   @@map("user")
 }
@@ -2293,6 +2295,44 @@ model StorefrontEvent {
   @@index([storefrontId, type, createdAt])
   @@index([storefrontId, visitorHash, createdAt])
   @@map("storefront_events")
+}
+
+enum SalesPageEventType {
+  VIEW // page load
+  CTA_CLICK // click on a "Commencer gratuitement" button
+  SCROLL_50 // read past half of the page
+  SCROLL_90 // read to (nearly) the end
+  SIGNUP // account created by a visitor who saw the page (server-side, see src/lib/sales-pages.ts)
+}
+
+/// One tracked interaction on a /sales-page-N landing page (static HTML in
+/// public/sales-pages/), so the variants can be compared in /admin/sales-pages.
+/// Same privacy model as StorefrontEvent: visitorHash is hashVisitor()'s
+/// daily-rotating fingerprint, never a raw IP.
+model SalesPageEvent {
+  id          String             @id @default(cuid())
+  /// "sales-page-1"… A String, not an enum, so adding a page needs no migration.
+  page        String
+  type        SalesPageEventType
+  /// CTA_CLICK only: which button ("hero", "steps", "calculator", "final").
+  cta         String?
+  /// Null on SIGNUP, which is recorded by the auth hook, not the page.
+  visitorHash String?
+  /// SIGNUP only. SetNull keeps the count when the account is deleted.
+  userId      String?
+  /// Host of the referring site, VIEW only.
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  createdAt   DateTime           @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([page, type, createdAt])
+  @@index([createdAt])
+  @@index([userId])
+  @@map("sales_page_events")
 }
 
 model MenuCategory {

@@ -31,6 +31,7 @@ Table user {
   business businesses
   subscription subscriptions
   staffMember staff_members
+  salesPageEvents sales_page_events [not null]
 }
 
 Table session {
@@ -1252,6 +1253,26 @@ Table storefront_events {
   storefront storefronts [not null]
 }
 
+Table sales_page_events {
+  id String [pk]
+  page String [not null, note: '"sales-page-1"… A String, not an enum, so adding a page needs no migration.']
+  type SalesPageEventType [not null]
+  cta String [note: 'CTA_CLICK only: which button ("hero", "steps", "calculator", "final").']
+  visitorHash String [note: 'Null on SIGNUP, which is recorded by the auth hook, not the page.']
+  userId String [note: 'SIGNUP only. SetNull keeps the count when the account is deleted.']
+  referrer String [note: 'Host of the referring site, VIEW only.']
+  utmSource String
+  utmMedium String
+  utmCampaign String
+  createdAt DateTime [default: `now()`, not null]
+  user user
+
+  Note: 'One tracked interaction on a /sales-page-N landing page (static HTML in
+public/sales-pages/), so the variants can be compared in /admin/sales-pages.
+Same privacy model as StorefrontEvent: visitorHash is hashVisitor()\'s
+daily-rotating fingerprint, never a raw IP.'
+}
+
 Table menu_categories {
   id String [pk]
   storefrontId String [not null]
@@ -1757,6 +1778,14 @@ Enum StorefrontEventType {
   REVIEW_CLICK
 }
 
+Enum SalesPageEventType {
+  VIEW
+  CTA_CLICK
+  SCROLL_50
+  SCROLL_90
+  SIGNUP
+}
+
 Enum BackupRunStatus {
   RUNNING
   SUCCESS
@@ -2002,6 +2031,8 @@ Ref: ai_import_sessions.storeId > stores.id [delete: Cascade]
 Ref: storefronts.storeId - stores.id [delete: Cascade]
 
 Ref: storefront_events.storefrontId > storefronts.id [delete: Cascade]
+
+Ref: sales_page_events.userId > user.id [delete: Set Null]
 
 Ref: menu_categories.storefrontId > storefronts.id [delete: Cascade]
 

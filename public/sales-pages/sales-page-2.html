@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Epidom — Le moyen le plus simple de gérer votre coffee shop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon:ital@0;1&family=Jost:wght@400;500;600&family=Montserrat:ital,wght@1,800&display=swap">
+<style>
+:root{--n9:#0d1730;--n8:#091226;--n7:#15214a;--n5:#19254f;--n3:#46527e;--n2:#6c769b;--g1:#f3e2ad;--g3:#e7c66e;--g5:#d9ae3b;--g6:#c2922b;--g7:#a3781f;--c50:#fffdf3;--c200:#f6f1da;--no:#cf5340;
+--s1:#0f1a3a;--s2:#15214a;--mt:#aab2d0;--tx:#fffdf3;--gd:#d9ae3b;--gd2:#f3e2ad;--gd3:#a3781f;--ok:#4f9e6a;--ln:rgba(231,198,110,.16);
+--p:'Jost',system-ui,sans-serif;--d:'Montserrat',sans-serif;--s:'IM Fell French Canon',Georgia,serif;color-scheme:dark;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;min-height:100%;background:var(--n8);color:var(--tx);font:400 19px/1.65 var(--p);-webkit-font-smoothing:antialiased}
+section{padding:84px 20px;position:relative}
+.a{background:var(--n9)}.b{background:var(--n8)}
+.w{max-width:700px;margin:0 auto}.wide{max-width:1000px;margin:0 auto}
+p{margin:0 0 16px;color:#cfd5ec}
+.c{text-align:center}
+.t{font:italic 800 clamp(28px,4.8vw,46px)/1.12 var(--d);text-transform:uppercase;letter-spacing:-.01em;text-align:center;margin:0 0 30px;padding-right:.1em;text-wrap:balance;background:linear-gradient(180deg,var(--g1) 0%,var(--g5) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font:italic 800 clamp(20px,3vw,27px)/1.3 var(--d);text-transform:uppercase;text-align:center;color:var(--c50);margin:38px 0 22px;text-wrap:balance}
+.sub.g{color:var(--g3)}
+.soft{font:italic 400 clamp(22px,3.4vw,28px)/1.4 var(--s);color:var(--g1);text-align:center}
+.lead{font-weight:500;font-size:21px;color:var(--c50)}
+.btn{display:inline-flex;flex-direction:column;align-items:center;background:linear-gradient(180deg,var(--g3),var(--g5) 60%,var(--g6));color:var(--n9);text-decoration:none;font:500 18px/1.2 var(--p);padding:15px 44px;border-radius:12px;box-shadow:0 0 0 1px rgba(255,255,255,.3) inset,0 14px 40px rgba(217,174,59,.3),0 3px 0 var(--g7);transition:transform .15s,box-shadow .15s}
+.btn b{font-weight:600;font-size:19px;letter-spacing:.01em}.btn small{font-size:12.5px;opacity:.75;margin-top:3px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(255,255,255,.35) inset,0 20px 50px rgba(217,174,59,.45),0 3px 0 var(--g7)}
+.btn:focus-visible{outline:3px solid var(--g1);outline-offset:4px}
+mark{background:var(--g3);color:var(--n9);padding:0 .18em;border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+u{text-decoration-color:var(--g5);text-decoration-thickness:3px;text-underline-offset:6px}
+
+/* HERO */
+.hero{padding-top:64px;background:radial-gradient(800px 480px at 50% 0,rgba(217,174,59,.16),transparent 70%),linear-gradient(180deg,#14224f,var(--n9) 75%);overflow:hidden}
+h1{font:italic 800 clamp(24px,4.2vw,42px)/1.3 var(--d);text-transform:uppercase;letter-spacing:-.01em;text-align:center;margin:0 auto 42px;max-width:820px;color:var(--c50);text-wrap:balance;text-shadow:0 4px 30px rgba(0,0,0,.4)}
+.stage{max-width:860px;margin:0 auto;perspective:1600px}
+.video{aspect-ratio:16/9;position:relative;border-radius:18px;background:radial-gradient(520px 260px at 50% 42%,#27376f,transparent 75%),linear-gradient(160deg,var(--n7),#070d1f);border:1px solid var(--ln);box-shadow:0 60px 100px -20px rgba(0,0,0,.8),0 0 90px rgba(217,174,59,.14),inset 0 1px 0 rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:20px;transform:rotateX(5deg)}
+.video i{position:absolute;width:30px;height:30px;border:2px solid rgba(243,226,173,.6)}
+.video i:nth-of-type(1){left:7%;top:9%;border-right:0;border-bottom:0}.video i:nth-of-type(2){right:7%;top:9%;border-left:0;border-bottom:0}.video i:nth-of-type(3){left:7%;bottom:9%;border-right:0;border-top:0}.video i:nth-of-type(4){right:7%;bottom:9%;border-left:0;border-top:0}
+.play{width:88px;height:88px;border-radius:50%;border:0;padding:0;cursor:pointer;background:linear-gradient(180deg,var(--g3),var(--g5) 60%,var(--g6));box-shadow:0 0 0 10px rgba(217,174,59,.14),0 0 56px rgba(217,174,59,.5);position:relative;transition:transform .2s}
+.play:hover{transform:scale(1.06)}.play:focus-visible{outline:3px solid var(--g1);outline-offset:6px}
+.play::after{content:"";position:absolute;left:36px;top:26px;border:18px solid transparent;border-left:28px solid var(--n9);border-right:0}
+.video p{margin:0;font-weight:500;font-size:clamp(14px,2vw,17px);color:var(--g1)}
+.cta{margin-top:44px;text-align:center}
+@media(max-width:700px){.video{transform:none}.video i{display:none}}
+
+/* CONTENU */
+.tl{border-left:2px solid var(--ln);padding-left:26px;margin:0 0 20px 6px}
+.tl p{position:relative}.tl p::before{content:"";position:absolute;left:-33px;top:.7em;width:11px;height:11px;border-radius:50%;background:var(--n9);border:2px solid var(--g5)}
+.tl p.q{color:var(--c50);font-weight:600;font-size:21px}
+.mess{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:26px 0}
+.mess div{background:linear-gradient(165deg,var(--n7),var(--s1));border:1px solid var(--ln);border-radius:16px;padding:20px 22px;font-weight:500;color:var(--c50);box-shadow:0 24px 40px -10px rgba(0,0,0,.6)}
+.mess div::before{content:"❖";color:var(--g5);margin-right:12px}
+.mess div:nth-child(1){transform:rotate(-2deg)}.mess div:nth-child(2){transform:rotate(1.5deg) translateY(8px)}.mess div:nth-child(3){transform:rotate(1deg)}.mess div:nth-child(4){transform:rotate(-1.5deg) translateY(8px)}
+.tags{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:0 0 26px}
+.tags span{padding:11px 22px;border-radius:999px;border:1px solid var(--ln);background:var(--n7);font-weight:500;color:var(--c50)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin:30px 0 40px}
+.card{background:linear-gradient(165deg,var(--n7),var(--s1));border:1px solid var(--ln);border-radius:20px;padding:18px 18px 22px;box-shadow:0 30px 50px -10px rgba(0,0,0,.6);text-align:center}
+.card .ic{height:112px;border-radius:14px;margin-bottom:16px;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#27376f,#070d1f 80%);box-shadow:inset 0 0 0 1px var(--ln)}
+.card svg{width:64px;height:64px;color:var(--c50);--dt:#0d1730;filter:drop-shadow(0 10px 12px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(217,174,59,.35))}
+.card h3{font:italic 800 17px/1.2 var(--d);text-transform:uppercase;margin:0;color:var(--g3)}
+.flow{display:flex;align-items:stretch;justify-content:center;gap:0;margin:34px 0;perspective:1400px;flex-wrap:wrap}
+.flow>div{flex:1 1 140px;max-width:200px;padding:22px 12px;border-radius:18px;text-align:center;font:italic 800 16px/1.2 var(--d);text-transform:uppercase;color:var(--c50);background:linear-gradient(165deg,var(--n7),var(--s1));border:1px solid rgba(231,198,110,.35);box-shadow:0 30px 50px -10px rgba(0,0,0,.65);transform:rotateY(10deg)}
+.flow>div:nth-child(n+5){transform:rotateY(-10deg)}
+.flow>div:nth-child(7){border-color:var(--g5);box-shadow:0 30px 50px -10px rgba(0,0,0,.65),0 0 40px rgba(217,174,59,.25)}
+.flow em{flex:none;align-self:center;font-style:normal;color:var(--g5);font-size:26px;padding:0 8px}
+.have{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:36px auto 44px;max-width:640px}
+.have>div{text-align:center}
+.have span{display:grid;place-items:center;width:92px;height:92px;margin:0 auto 16px;border-radius:50%;border:1px solid rgba(231,198,110,.28);background:radial-gradient(circle at 50% 35%,rgba(39,55,111,.55),rgba(7,13,31,.2) 75%)}
+.have u{text-underline-offset:7px}
+.have svg{width:54px;height:54px;fill:none;stroke:var(--g3);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.have b{display:block;white-space:nowrap;font:500 17px/1.3 var(--p);color:var(--c50);letter-spacing:.01em}
+@media(max-width:620px){.have{grid-template-columns:repeat(2,1fr);gap:28px 10px;max-width:360px}}
+.no{list-style:none;padding:0;margin:0 0 20px;display:grid;gap:10px}
+.no li{padding:15px 20px 15px 58px;position:relative;background:var(--n7);border:1px solid var(--ln);border-radius:14px;color:var(--c50);font-weight:500}
+.no li::before{content:"✕";position:absolute;left:18px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(207,83,64,.14);color:var(--no);font-size:13px;font-weight:600}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:26px 0}
+.steps div{padding:22px 18px;border-radius:16px;background:linear-gradient(165deg,var(--n7),var(--s1));border:1px solid var(--ln);text-align:center;font-weight:500;color:var(--c50);position:relative}
+.steps div+div::before{content:"→";position:absolute;left:-13px;top:50%;transform:translateY(-50%);color:var(--g5);font-weight:600;background:var(--n9);border-radius:50%;width:24px;line-height:24px}
+.big{font:italic 800 clamp(34px,6vw,60px)/1.1 var(--d);text-transform:uppercase;text-align:center;color:var(--g5);margin:6px 0 30px;text-shadow:0 0 40px rgba(217,174,59,.35)}
+@media(max-width:620px){.mess,.steps{grid-template-columns:1fr}.steps div+div::before{content:"↓";left:50%;top:-14px;transform:translateX(-50%)}.flow em{flex-basis:100%;text-align:center;transform:rotate(90deg);padding:4px 0}.flow>div{transform:none!important;max-width:none}}
+
+.duo{display:flex;justify-content:center;align-items:center;perspective:1600px;margin:52px 0 8px;flex-wrap:wrap}
+.laptop{width:min(560px,92vw);transform:rotateY(12deg) rotateX(4deg);background:#080c17;border-radius:16px;border:1px solid rgba(255,255,255,.12);box-shadow:-30px 40px 80px rgba(0,0,0,.6),0 0 60px rgba(226,183,63,.1);padding:14px}
+.laptop .top{display:flex;gap:6px;margin-bottom:10px}.laptop .top i{width:8px;height:8px;border-radius:50%;background:#2a3350}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.kpis div{background:var(--s2);border-radius:10px;padding:9px 11px;font-size:11px;color:var(--mt)}
+.kpis b{display:block;font:700 18px var(--p);color:var(--tx)}.kpis em{font-style:normal;color:var(--ok);font-size:11px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:110px;background:var(--s2);border-radius:10px;padding:12px}
+.bars i{flex:1;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--gd2),var(--gd3))}
+.rows{margin-top:10px;font-size:11px;color:var(--mt)}.rows div{display:flex;justify-content:space-between;padding:7px 10px;background:var(--s2);border-radius:8px;margin-bottom:4px}
+.phone{width:220px;background:#f7f4ea;color:#0d1326;border-radius:36px;border:8px solid #141b30;box-shadow:30px 40px 80px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.1);padding:22px 14px 16px;position:relative}
+.phone::before{content:"";position:absolute;top:7px;left:50%;width:56px;height:6px;margin-left:-28px;background:#141b30;border-radius:4px}
+.duo .phone{margin:0 -30px;transform:rotateY(-14deg) rotateZ(2deg) translateY(20px);z-index:2}
+.phone h4{font:800 15px var(--p);margin:6px 0 12px}
+.it{display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:12px;font-weight:600}
+.it span{width:40px;height:40px;border-radius:10px;background:radial-gradient(circle,#fff 0 16%,#b9855a 17% 46%,#e9d3a6 47%);flex:none}
+.it small{display:block;font-weight:400;color:#5a6384}
+.phone .ord{background:var(--gd);border-radius:10px;text-align:center;padding:9px;font-weight:700;font-size:13px;margin-top:12px}
+.qr{width:150px;height:150px;background:#f7f4ea;border-radius:16px;padding:14px;transform:rotateY(18deg) rotateX(-6deg);box-shadow:20px 30px 50px rgba(0,0,0,.6);display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:140px 0 0 -20px}
+.qr i{background:#0d1326;border-radius:2px}.qr i.o{background:transparent}
+@media(max-width:760px){.qr{display:none}.duo .phone,
+
+/* CHAÎNE */
+.chain{max-width:540px;margin:34px auto 38px;display:flex;flex-direction:column;position:relative;perspective:1200px}
+.nd{width:46%;padding:15px 20px;border-radius:16px;font-weight:600;font-size:17px;line-height:1.3;color:var(--tx);background:linear-gradient(165deg,#1b2340,var(--s1));border:1px solid rgba(226,183,63,.35);box-shadow:0 24px 40px -8px rgba(0,0,0,.65),0 0 30px rgba(226,183,63,.08),inset 0 1px 0 rgba(255,255,255,.08);text-align:center;position:relative;z-index:1}
+.nd.l{align-self:flex-start;transform:rotateY(8deg)}.nd.r{align-self:flex-end;transform:rotateY(-8deg)}
+.lk{display:block;width:100%;height:auto;margin:2px 0;overflow:visible}
+.lk.rev{transform:scaleX(-1)}
+.lk path.fl{fill:none;stroke:var(--gd);stroke-width:2;stroke-linecap:round;stroke-dasharray:2 8;animation:flow 1.6s linear infinite;filter:drop-shadow(0 0 4px rgba(226,183,63,.6))}
+.lk path.hd{fill:none;stroke:var(--gd);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.lk circle{fill:var(--gd)}
+@keyframes flow{to{stroke-dashoffset:-20}}
+@media(max-width:560px){.nd{font-size:15px;padding:13px 12px}.nd.l,.nd.r{transform:none}}
+
+
+.duo{margin-top:56px}
+footer{padding:28px 20px;text-align:center;font-size:13px;color:var(--n2);background:#070d1f}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3e2ad"/><stop offset="1" stop-color="#c2922b"/></linearGradient>
+<symbol id="i-menu" viewBox="0 0 64 64"><rect x="12" y="4" width="40" height="56" rx="7" fill="currentColor"/><circle cx="32" cy="22" r="10" fill="url(#g)"/><rect x="20" y="38" width="24" height="3.5" rx="1.7" fill="var(--dt)"/><rect x="20" y="46" width="15" height="3.5" rx="1.7" fill="var(--dt)"/></symbol>
+<symbol id="i-phone" viewBox="0 0 64 64"><rect x="17" y="3" width="30" height="58" rx="8" fill="currentColor"/><rect x="21" y="11" width="22" height="38" rx="3" fill="var(--dt)"/><circle cx="32" cy="30" r="9" fill="url(#g)"/><path d="M27.5 30l3 3 6-6.5" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="i-card" viewBox="0 0 64 64"><rect x="3" y="12" width="58" height="40" rx="7" fill="currentColor"/><rect x="3" y="21" width="58" height="9" fill="url(#g)"/><rect x="10" y="38" width="18" height="5" rx="2.5" fill="var(--dt)"/><circle cx="50" cy="41" r="4" fill="url(#g)"/></symbol>
+<symbol id="i-reg" viewBox="0 0 64 64"><rect x="10" y="6" width="44" height="22" rx="5" fill="currentColor"/><rect x="14" y="10" width="36" height="14" rx="3" fill="var(--dt)"/><path d="M20 19l5-4 5 3 7-5 5 4" stroke="url(#g)" stroke-width="3" fill="none"/><rect x="4" y="32" width="56" height="26" rx="6" fill="currentColor"/><g fill="url(#g)"><rect x="12" y="38" width="10" height="6" rx="2"/><rect x="27" y="38" width="10" height="6" rx="2"/><rect x="42" y="38" width="10" height="6" rx="2"/></g><rect x="12" y="48" width="40" height="5" rx="2.5" fill="var(--dt)"/></symbol>
+<symbol id="i-ticket" viewBox="0 0 64 64"><path d="M12 3h40v58l-6.7-4.5L38.7 61 32 56.5 25.3 61l-6.6-4.5L12 61z" fill="currentColor"/><g fill="var(--dt)"><rect x="19" y="13" width="26" height="3.5" rx="1.7"/><rect x="19" y="21" width="20" height="3.5" rx="1.7"/><rect x="19" y="29" width="24" height="3.5" rx="1.7"/></g><rect x="19" y="39" width="26" height="8" rx="3" fill="url(#g)"/></symbol>
+<symbol id="i-box" viewBox="0 0 64 64"><path d="M32 4l25 13-25 13L7 17z" fill="url(#g)"/><path d="M7 17l25 13v30L7 47z" fill="currentColor"/><path d="M57 17v30L32 60V30z" fill="currentColor" opacity=".72"/><path d="M20 24l25 13" stroke="var(--dt)" stroke-width="3"/></symbol>
+<symbol id="i-bars" viewBox="0 0 64 64"><rect x="6" y="34" width="14" height="24" rx="4" fill="currentColor"/><rect x="25" y="20" width="14" height="38" rx="4" fill="url(#g)"/><rect x="44" y="6" width="14" height="52" rx="4" fill="currentColor"/></symbol>
+<symbol id="i-user" viewBox="0 0 64 64"><circle cx="32" cy="20" r="12" fill="url(#g)"/><path d="M8 60c0-15 10-24 24-24s24 9 24 24z" fill="currentColor"/></symbol>
+<symbol id="i-qr" viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="9" fill="currentColor"/><g fill="var(--dt)"><rect x="12" y="12" width="16" height="16" rx="3"/><rect x="36" y="12" width="16" height="16" rx="3"/><rect x="12" y="36" width="16" height="16" rx="3"/><rect x="36" y="36" width="7" height="7" rx="2"/><rect x="46" y="46" width="6" height="6" rx="2"/></g><g fill="url(#g)"><rect x="17" y="17" width="6" height="6" rx="1.5"/><rect x="41" y="17" width="6" height="6" rx="1.5"/><rect x="17" y="41" width="6" height="6" rx="1.5"/></g></symbol></defs></svg>
+
+<section class="hero"><div class="wide c">
+<h1>Le moyen le plus <mark>simple</mark> de gérer votre coffee shop <u>sans jongler</u> entre <mark>plusieurs outils.</mark></h1>
+<div class="stage"><div class="video"><i></i><i></i><i></i><i></i><button class="play" type="button" aria-label="Lire la vidéo"></button><p>[X minutes pour découvrir Epidom]</p></div></div>
+<div class="cta"><a class="btn" href="/register" data-cta="hero"><b>Commencer gratuitement →</b><small>Gratuit à vie. Sans carte bancaire</small></a></div>
+</div></section>
+
+<section class="b"><div class="w">
+<h2 class="t">Laissez-moi deviner…</h2>
+<div class="tl">
+<p>Quelqu’un découvre votre coffee shop sur Instagram.</p>
+<p>Il clique sur le lien dans votre bio.</p>
+<p>Il cherche le menu.</p>
+<p>Il trouve un PDF.</p>
+<p class="q">Et pour commander ?</p>
+<p>Il doit encore vous envoyer un DM.</p>
+<p class="q">Pour réserver ?</p>
+<p>Même histoire.</p>
+</div>
+<p class="lead c">Et pour le paiement… bon courage.</p>
+</div></section>
+
+<section class="a"><div class="w">
+<p class="lead c">Pendant ce temps, de votre côté :</p>
+<div class="mess"><div>un DM</div><div>un appel</div><div>une réservation</div><div>une commande</div></div>
+<p class="c">…et tout finit quelque part entre vos messages, votre téléphone et votre caisse.</p>
+<p class="soft" style="margin-top:36px">Alors oui, ça fonctionne.</p>
+<p class="soft">Enfin…jusqu’au jour où ça ne suffit plus.</p>
+<div class="tags" style="margin-top:28px"><span>Un samedi chargé.</span><span>Un week-end complet.</span><span>Quelques commandes qui s’accumulent.</span></div>
+<p class="sub">Et soudain, vous passez plus de temps à faire le lien entre vos outils qu’à gérer votre coffee shop.</p>
+</div></section>
+
+<section class="b"><div class="wide">
+<div class="w">
+<h2 class="t">Le plus frustrant ?</h2>
+<p class="lead c">Votre produit, lui, n’a rien à voir avec ce bazar.</p>
+<p class="c">Vous avez fait le plus dur.</p>
+</div>
+<div class="have">
+<div><span><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 20 9 8h30l3 12"/><path d="M6 20q4.5 5 9 0q4.5 5 9 0q4.5 5 9 0q4.5 5 9 0"/><path d="M9 26v14h30V26"/><path d="M20 40V30h8v10"/></svg></span><b><u>Votre lieu</u></b></div>
+<div><span><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="12" y="6" width="24" height="36" rx="3"/><path d="M18 16h12M18 22h12M18 28h7"/><circle cx="29" cy="35" r="2"/></svg></span><b><u>Votre carte</u></b></div>
+<div><span><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="18" cy="17" r="6"/><path d="M6 40c0-8 5-13 12-13s12 5 12 13"/><circle cx="34" cy="16" r="4.5"/><path d="M35 26c5 1 8 6 8 13"/></svg></span><b><u>Vos clients</u></b></div>
+<div><span><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M9 9h30a3 3 0 0 1 3 3v19a3 3 0 0 1-3 3H25l-8 7v-7H9a3 3 0 0 1-3-3V12a3 3 0 0 1 3-3z"/><path d="M24 28c-6-4-8-7-8-10a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 3-2 6-8 10z"/></svg></span><b><u>Votre communauté</u></b></div>
+</div>
+<div class="w">
+<p class="soft">Mais en ligne, l’expérience ne suit pas toujours.</p>
+<p class="c" style="margin-top:22px">Aujourd’hui, vos clients s’attendent à pouvoir trouver, choisir, commander et réserver sans devoir vous courir après.</p>
+</div>
+<div class="flow"><div>Instagram</div><em>→</em><div>Menu</div><em>→</em><div>Commande</div><em>→</em><div>Paiement</div></div>
+</div></section>
+
+<section class="a" id="go"><div class="wide">
+<div class="w">
+<h2 class="t">C’est là qu’Epidom change la donne.</h2>
+<ul class="no"><li>Pas besoin de refaire tout votre système.</li><li>Pas besoin de développer un site pendant 3 semaines.</li><li>Pas besoin d’empiler encore un nouvel outil.</li></ul>
+<p class="sub g">Vous avez simplement besoin d’un lien qui fait vraiment son travail.</p>
+<p class="lead c">Votre client arrive.</p>
+<div class="steps"><div>Il voit votre menu.</div><div>Il commande.</div><div>Il paie.</div></div>
+<p class="sub" style="margin-bottom:6px">Et vous ?</p>
+<div class="big">Vous recevez.</div>
+<p>Epidom vous donne une vitrine prête à l’emploi pour votre coffee shop, avec les commandes au même endroit et les informations essentielles de votre activité enfin accessibles sans devoir les chercher partout.</p>
+<p class="soft" style="margin-top:26px">Plus propre pour vos clients.</p>
+<p class="soft">Plus simple pour vous.</p>
+</div>
+<div class="duo"><div class="laptop">
+<div class="top"><i></i><i></i><i></i></div>
+<div class="kpis"><div>Ventes du jour<b>1 284 €</b><em>▲ 12%</em></div><div>Panier moyen<b>9,80 €</b><em>▲ 4%</em></div><div>Commandes<b>131</b><em>▲ 8%</em></div></div>
+<div class="bars"><i style="height:40%"></i><i style="height:55%"></i><i style="height:35%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:75%"></i></div>
+<div class="rows"><div><span>Flat white ×2</span><span>En cuisine</span></div><div><span>Croissant ×1</span><span>Payée</span></div></div>
+</div><div class="phone">
+<h4>Votre menu</h4>
+<div class="it"><span></span><div>Flat white<small>3,80 €</small></div></div>
+<div class="it"><span></span><div>Cappuccino<small>4,20 €</small></div></div>
+<div class="it"><span></span><div>Cookie maison<small>3,00 €</small></div></div>
+<div class="ord">Commander</div>
+</div><div class="qr" aria-hidden="true"><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i></div></div>
+</div></section>
+
+<section class="b"><div class="w c">
+<h2 class="t">Votre coffee shop mérite mieux qu’un PDF perdu dans un lien Instagram.</h2>
+<p class="lead">Et vous méritez mieux que de passer votre journée à répondre aux mêmes messages.</p>
+<p class="sub g" style="margin-top:30px">Découvrez Epidom.</p>
+<div class="cta" style="margin-top:20px"><a class="btn" href="/register" data-cta="final"><b>Commencer gratuitement →</b><small>Gratuit à vie. Sans carte bancaire</small></a></div>
+</div></section>
+
+<footer>© Epidom</footer>
+<script src="/sales-pages/tracker.js" data-page="sales-page-2" defer></script>
+</body>
+</html>

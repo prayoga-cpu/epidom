@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Epidom — Gérez tout votre coffee shop depuis un seul endroit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap">
+<style>
+:root{--bg:#05070d;--s1:#0b101c;--s2:#111829;--ln:rgba(255,255,255,.08);--gd:#e2b73f;--gd2:#f4dc90;--gd3:#a97c1c;--tx:#f5f2e8;--mt:#a3abc2;--ok:#5bb37c;--no:#d9604d;
+--p:'Poppins',system-ui,sans-serif;color-scheme:dark;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--tx);font:400 17px/1.7 var(--p);-webkit-font-smoothing:antialiased}
+section{padding:76px 20px;position:relative}
+section+section{border-top:1px solid var(--ln)}
+.w{max-width:680px;margin:0 auto}.wide{max-width:1040px;margin:0 auto}
+p{margin:0 0 18px;color:#d6d9e6}strong{color:var(--tx)}
+.c{text-align:center}
+.t{font-weight:800;font-size:clamp(28px,4.6vw,42px);line-height:1.15;letter-spacing:-.02em;margin:0 0 28px;text-wrap:balance;text-align:center}
+.sub{font-weight:700;font-size:clamp(21px,3.2vw,28px);line-height:1.35;letter-spacing:-.01em;color:var(--tx);text-wrap:balance;margin:34px 0 22px}
+.soft{font-style:italic;font-weight:500;font-size:20px;color:var(--gd2)}
+.gold{color:var(--gd)}
+mark{background:none;color:var(--gd);text-shadow:0 0 28px rgba(226,183,63,.35)}
+u{text-decoration-color:var(--gd);text-decoration-thickness:2px;text-underline-offset:6px}
+.btn{display:inline-block;background:linear-gradient(180deg,var(--gd2),var(--gd) 55%,var(--gd3));color:#151004;font:700 17px var(--p);padding:17px 40px;border-radius:14px;text-decoration:none;box-shadow:0 0 0 1px rgba(255,255,255,.25) inset,0 12px 40px rgba(226,183,63,.35),0 2px 0 #7c5a10;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(255,255,255,.3) inset,0 18px 48px rgba(226,183,63,.5),0 2px 0 #7c5a10}
+.btn:focus-visible{outline:3px solid var(--gd2);outline-offset:4px}
+.note{font-size:14px;color:var(--mt);margin:18px 0 0}
+.checks{list-style:none;padding:0;margin:0 0 26px}
+.checks li{padding:9px 0 9px 42px;position:relative;font-size:18px;color:var(--tx)}
+.checks li::before{content:"";position:absolute;left:0;top:11px;width:26px;height:26px;border-radius:50%;background:rgba(226,183,63,.12) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2b73f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/16px no-repeat;box-shadow:inset 0 0 0 1px rgba(226,183,63,.4)}
+.list{list-style:none;padding:0;margin:0 0 26px;display:grid;gap:8px}
+.list li{padding:14px 20px;background:var(--s1);border:1px solid var(--ln);border-radius:12px;font-weight:500;color:var(--tx)}
+.q{font-style:italic;font-weight:600;font-size:clamp(24px,4vw,34px);line-height:1.3;text-align:center;margin:40px 0;color:var(--gd);text-wrap:balance}
+
+/* HERO */
+.hero{padding-top:52px;overflow:hidden;background:radial-gradient(900px 520px at 50% -5%,rgba(226,183,63,.12),transparent 70%),var(--bg)}
+.kick{display:flex;justify-content:center;margin:0 0 26px}
+.kick span{display:inline-flex;align-items:center;gap:10px;max-width:100%;padding:9px 20px;border-radius:999px;border:1px solid rgba(226,183,63,.45);background:rgba(226,183,63,.07);color:var(--gd2);font-weight:600;font-size:clamp(10.5px,1.6vw,13px);letter-spacing:.04em;text-transform:uppercase;line-height:1.4;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,.4),0 0 30px rgba(226,183,63,.1)}
+.kick span::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--gd);box-shadow:0 0 10px var(--gd)}
+h1{font-weight:800;font-size:clamp(32px,5.8vw,58px);line-height:1.12;letter-spacing:-.025em;text-align:center;margin:0 auto 22px;max-width:860px;text-wrap:balance}
+h1 .lst{display:block;margin-top:20px;font-size:clamp(16px,2.5vw,23px);font-weight:600;letter-spacing:0;line-height:1.4;color:var(--gd2)}
+.lead{font-weight:500;font-size:clamp(16px,2.2vw,19px);text-align:center;max-width:640px;margin:0 auto;color:var(--tx)}
+.stage{perspective:1600px;margin:52px auto 0;max-width:880px;position:relative}
+.video{aspect-ratio:16/9;border-radius:20px;background:radial-gradient(520px 260px at 50% 40%,#1a2442,transparent 75%),linear-gradient(160deg,var(--s2),#070b15);border:1px solid rgba(226,183,63,.35);box-shadow:0 60px 100px -20px rgba(0,0,0,.8),0 0 90px rgba(226,183,63,.12),inset 0 1px 0 rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;transform:rotateX(6deg);text-align:center}
+.play{width:84px;height:84px;border-radius:50%;border:0;padding:0;cursor:pointer;background:linear-gradient(180deg,var(--gd2),var(--gd) 60%,var(--gd3));box-shadow:0 0 0 10px rgba(226,183,63,.12),0 0 50px rgba(226,183,63,.5);position:relative;transition:transform .2s}
+.play:hover{transform:scale(1.06)}.play:focus-visible{outline:3px solid var(--gd2);outline-offset:6px}
+.play::after{content:"";position:absolute;left:34px;top:25px;border:17px solid transparent;border-left:27px solid #151004;border-right:0}
+.video p{margin:0;font-weight:500;font-size:clamp(13px,2vw,16px);color:var(--gd2)}
+.chip{position:absolute;background:rgba(17,24,41,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--ln);color:var(--tx);border-radius:14px;padding:10px 16px;font-size:14px;font-weight:600;box-shadow:0 20px 40px rgba(0,0,0,.5);animation:fl 6s ease-in-out infinite}
+.chip small{display:block;font-weight:400;color:var(--mt);font-size:12px}
+.c1{left:-4%;top:14%}.c2{right:-4%;top:44%;animation-delay:-2s}.c3{left:5%;bottom:-7%;animation-delay:-4s}
+@keyframes fl{50%{transform:translateY(-8px)}}
+@media(max-width:760px){.chip{display:none}.video{transform:none}}
+
+/* MOCKUPS */
+.duo{display:flex;justify-content:center;align-items:center;perspective:1600px;margin:52px 0 8px;flex-wrap:wrap}
+.laptop{width:min(560px,92vw);transform:rotateY(12deg) rotateX(4deg);background:#080c17;border-radius:16px;border:1px solid rgba(255,255,255,.12);box-shadow:-30px 40px 80px rgba(0,0,0,.6),0 0 60px rgba(226,183,63,.1);padding:14px}
+.laptop .top{display:flex;gap:6px;margin-bottom:10px}.laptop .top i{width:8px;height:8px;border-radius:50%;background:#2a3350}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.kpis div{background:var(--s2);border-radius:10px;padding:9px 11px;font-size:11px;color:var(--mt)}
+.kpis b{display:block;font:700 18px var(--p);color:var(--tx)}.kpis em{font-style:normal;color:var(--ok);font-size:11px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:110px;background:var(--s2);border-radius:10px;padding:12px}
+.bars i{flex:1;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--gd2),var(--gd3))}
+.rows{margin-top:10px;font-size:11px;color:var(--mt)}.rows div{display:flex;justify-content:space-between;padding:7px 10px;background:var(--s2);border-radius:8px;margin-bottom:4px}
+.phone{width:220px;background:#f7f4ea;color:#0d1326;border-radius:36px;border:8px solid #141b30;box-shadow:30px 40px 80px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.1);padding:22px 14px 16px;position:relative}
+.phone::before{content:"";position:absolute;top:7px;left:50%;width:56px;height:6px;margin-left:-28px;background:#141b30;border-radius:4px}
+.duo .phone{margin:0 -30px;transform:rotateY(-14deg) rotateZ(2deg) translateY(20px);z-index:2}
+.phone h4{font:800 15px var(--p);margin:6px 0 12px}
+.it{display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:12px;font-weight:600}
+.it span{width:40px;height:40px;border-radius:10px;background:radial-gradient(circle,#fff 0 16%,#b9855a 17% 46%,#e9d3a6 47%);flex:none}
+.it small{display:block;font-weight:400;color:#5a6384}
+.phone .ord{background:var(--gd);border-radius:10px;text-align:center;padding:9px;font-weight:700;font-size:13px;margin-top:12px}
+.qr{width:150px;height:150px;background:#f7f4ea;border-radius:16px;padding:14px;transform:rotateY(18deg) rotateX(-6deg);box-shadow:20px 30px 50px rgba(0,0,0,.6);display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:140px 0 0 -20px}
+.qr i{background:#0d1326;border-radius:2px}.qr i.o{background:transparent}
+.solo{display:flex;justify-content:center;perspective:1600px;margin:40px 0}
+.solo .phone{transform:rotateY(-8deg)}
+.solo .laptop{width:100%;transform:rotateX(5deg)}
+@media(max-width:760px){.qr{display:none}.duo .phone,.solo .phone,.solo .laptop,.laptop{transform:none;margin:20px 0 0}}
+
+
+/* CHAÎNE */
+.chain{max-width:540px;margin:34px auto 38px;display:flex;flex-direction:column;position:relative;perspective:1200px}
+.nd{width:46%;padding:15px 20px;border-radius:16px;font-weight:600;font-size:17px;line-height:1.3;color:var(--tx);background:linear-gradient(165deg,#1b2340,var(--s1));border:1px solid rgba(226,183,63,.35);box-shadow:0 24px 40px -8px rgba(0,0,0,.65),0 0 30px rgba(226,183,63,.08),inset 0 1px 0 rgba(255,255,255,.08);text-align:center;position:relative;z-index:1}
+.nd.l{align-self:flex-start;transform:rotateY(8deg)}.nd.r{align-self:flex-end;transform:rotateY(-8deg)}
+.lk{display:block;width:100%;height:auto;margin:2px 0;overflow:visible}
+.lk.rev{transform:scaleX(-1)}
+.lk path.fl{fill:none;stroke:var(--gd);stroke-width:2;stroke-linecap:round;stroke-dasharray:2 8;animation:flow 1.6s linear infinite;filter:drop-shadow(0 0 4px rgba(226,183,63,.6))}
+.lk path.hd{fill:none;stroke:var(--gd);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.lk circle{fill:var(--gd)}
+@keyframes flow{to{stroke-dashoffset:-20}}
+@media(max-width:560px){.nd{font-size:15px;padding:13px 12px}.nd.l,.nd.r{transform:none}}
+
+/* BEFORE / AFTER */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:20px;perspective:1400px}
+.ba>div{padding:34px;border-radius:22px}
+.av{background:var(--s1);border:1px solid var(--ln);transform:rotateY(4deg) scale(.97)}
+.ap{background:linear-gradient(160deg,#1a2038,var(--s2));border:1px solid rgba(226,183,63,.5);transform:rotateY(-4deg);box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 60px rgba(226,183,63,.15)}
+.ba h3{font-weight:800;font-size:22px;margin:0 0 16px}.av h3{color:var(--mt)}.ap h3{color:var(--gd)}
+.ba ul{list-style:none;margin:0;padding:0}.ba li{padding:7px 0;display:flex;gap:12px;font-weight:500;font-size:16px;color:var(--tx)}.av li{color:var(--mt)}
+.av li::before{content:"✕";color:var(--no);font-weight:700}.ap li::before{content:"✓";color:var(--gd);font-weight:700}
+@media(max-width:700px){.ba{grid-template-columns:1fr}.av,.ap{transform:none}}
+
+/* FEATURES */
+.feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:0}
+.feat>div{background:linear-gradient(165deg,var(--s2),var(--s1));border:1px solid var(--ln);border-radius:22px;padding:26px;box-shadow:0 30px 60px rgba(0,0,0,.35)}
+.feat .ic{display:grid;place-items:center;height:116px;border-radius:16px;margin-bottom:20px;background:radial-gradient(circle at 50% 35%,#222d52,#080c17 78%);box-shadow:inset 0 0 0 1px rgba(226,183,63,.2)}
+.feat .ic svg{width:66px;height:66px;color:#f5f2e8;--dt:#0b101c;filter:drop-shadow(0 10px 12px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(226,183,63,.3))}
+.feat h3{font:700 19px var(--p);margin:0 0 8px}
+.feat p{margin:0;font-size:15.5px;color:var(--mt)}
+
+/* STEPS / PLANS */
+.steps{display:grid;gap:16px;margin:30px 0}
+.steps>div{display:grid;grid-template-columns:150px 1fr;gap:22px;align-items:center;background:linear-gradient(165deg,var(--s2),var(--s1));border:1px solid var(--ln);border-radius:22px;padding:22px;box-shadow:0 30px 60px rgba(0,0,0,.35)}
+.il{height:112px;border-radius:14px;background:radial-gradient(circle at 50% 35%,#222d52,#080c17 78%);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(226,183,63,.2)}
+.il svg{width:96px;filter:drop-shadow(0 8px 12px rgba(0,0,0,.6))}
+.steps h3{margin:0 0 4px;font-size:20px;font-weight:700}.steps h3 em{font-style:normal;color:var(--gd);margin-right:6px}
+.steps p{margin:0;color:var(--mt);font-size:16px}
+@media(max-width:560px){.steps>div{grid-template-columns:1fr}}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin:36px 0}
+.plan{background:var(--s1);border:1px solid var(--ln);border-radius:22px;padding:28px 22px}
+.plan.free{background:linear-gradient(165deg,#1a2038,var(--s2));border:1px solid rgba(226,183,63,.6);transform:translateY(-10px);box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 60px rgba(226,183,63,.18)}
+.plan h3{font:800 20px var(--p);margin:0 0 8px;letter-spacing:.02em}.plan.free h3{color:var(--gd)}
+.plan .pr{font:800 44px/1 var(--p);margin-bottom:12px}
+.plan p{font-size:15px;margin:0;color:var(--mt)}
+@media(max-width:560px){.plan.free{transform:none}}
+
+/* TESTIMONIALS */
+.vts{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:36px 0;perspective:1400px}
+.vt{aspect-ratio:9/16;border-radius:22px;border:1px solid var(--ln);background:radial-gradient(160px 220px at 50% 38%,#202b50,transparent 80%),linear-gradient(170deg,var(--s2),#070b15);box-shadow:0 40px 70px -10px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-size:13px;color:var(--mt)}
+.vt:nth-child(1){transform:rotateY(9deg)}.vt:nth-child(3){transform:rotateY(-9deg)}
+.vt b{width:54px;height:54px;border-radius:50%;background:linear-gradient(180deg,var(--gd2),var(--gd));box-shadow:0 0 0 7px rgba(226,183,63,.12),0 0 30px rgba(226,183,63,.4);position:relative}
+.vt b::after{content:"";position:absolute;left:21px;top:15px;border:12px solid transparent;border-left:19px solid #151004;border-right:0}
+@media(max-width:560px){.vts{gap:8px}.vt{font-size:10px;border-radius:14px}.vt b{width:34px;height:34px;box-shadow:none}.vt b::after{left:13px;top:9px;border-width:8px;border-left-width:13px}.vt:nth-child(n){transform:none}}
+.stars{color:var(--gd);font-size:28px;letter-spacing:6px;text-align:center}
+footer{padding:30px 20px;text-align:center;font-size:13px;color:var(--mt);border-top:1px solid var(--ln)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3e2ad"/><stop offset="1" stop-color="#c2922b"/></linearGradient>
+<symbol id="i-menu" viewBox="0 0 64 64"><rect x="12" y="4" width="40" height="56" rx="7" fill="currentColor"/><circle cx="32" cy="22" r="10" fill="url(#g)"/><rect x="20" y="38" width="24" height="3.5" rx="1.7" fill="var(--dt)"/><rect x="20" y="46" width="15" height="3.5" rx="1.7" fill="var(--dt)"/></symbol>
+<symbol id="i-phone" viewBox="0 0 64 64"><rect x="17" y="3" width="30" height="58" rx="8" fill="currentColor"/><rect x="21" y="11" width="22" height="38" rx="3" fill="var(--dt)"/><circle cx="32" cy="30" r="9" fill="url(#g)"/><path d="M27.5 30l3 3 6-6.5" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="i-card" viewBox="0 0 64 64"><rect x="3" y="12" width="58" height="40" rx="7" fill="currentColor"/><rect x="3" y="21" width="58" height="9" fill="url(#g)"/><rect x="10" y="38" width="18" height="5" rx="2.5" fill="var(--dt)"/><circle cx="50" cy="41" r="4" fill="url(#g)"/></symbol>
+<symbol id="i-reg" viewBox="0 0 64 64"><rect x="10" y="6" width="44" height="22" rx="5" fill="currentColor"/><rect x="14" y="10" width="36" height="14" rx="3" fill="var(--dt)"/><path d="M20 19l5-4 5 3 7-5 5 4" stroke="url(#g)" stroke-width="3" fill="none"/><rect x="4" y="32" width="56" height="26" rx="6" fill="currentColor"/><g fill="url(#g)"><rect x="12" y="38" width="10" height="6" rx="2"/><rect x="27" y="38" width="10" height="6" rx="2"/><rect x="42" y="38" width="10" height="6" rx="2"/></g><rect x="12" y="48" width="40" height="5" rx="2.5" fill="var(--dt)"/></symbol>
+<symbol id="i-ticket" viewBox="0 0 64 64"><path d="M12 3h40v58l-6.7-4.5L38.7 61 32 56.5 25.3 61l-6.6-4.5L12 61z" fill="currentColor"/><g fill="var(--dt)"><rect x="19" y="13" width="26" height="3.5" rx="1.7"/><rect x="19" y="21" width="20" height="3.5" rx="1.7"/><rect x="19" y="29" width="24" height="3.5" rx="1.7"/></g><rect x="19" y="39" width="26" height="8" rx="3" fill="url(#g)"/></symbol>
+<symbol id="i-box" viewBox="0 0 64 64"><path d="M32 4l25 13-25 13L7 17z" fill="url(#g)"/><path d="M7 17l25 13v30L7 47z" fill="currentColor"/><path d="M57 17v30L32 60V30z" fill="currentColor" opacity=".72"/><path d="M20 24l25 13" stroke="var(--dt)" stroke-width="3"/></symbol>
+<symbol id="i-bars" viewBox="0 0 64 64"><rect x="6" y="34" width="14" height="24" rx="4" fill="currentColor"/><rect x="25" y="20" width="14" height="38" rx="4" fill="url(#g)"/><rect x="44" y="6" width="14" height="52" rx="4" fill="currentColor"/></symbol>
+<symbol id="i-user" viewBox="0 0 64 64"><circle cx="32" cy="20" r="12" fill="url(#g)"/><path d="M8 60c0-15 10-24 24-24s24 9 24 24z" fill="currentColor"/></symbol>
+<symbol id="i-qr" viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="9" fill="currentColor"/><g fill="var(--dt)"><rect x="12" y="12" width="16" height="16" rx="3"/><rect x="36" y="12" width="16" height="16" rx="3"/><rect x="12" y="36" width="16" height="16" rx="3"/><rect x="36" y="36" width="7" height="7" rx="2"/><rect x="46" y="46" width="6" height="6" rx="2"/></g><g fill="url(#g)"><rect x="17" y="17" width="6" height="6" rx="1.5"/><rect x="41" y="17" width="6" height="6" rx="1.5"/><rect x="17" y="41" width="6" height="6" rx="1.5"/></g></symbol></defs></svg>
+
+<section class="hero">
+<div class="wide">
+<h1>Gérez <mark>TOUT</mark> votre coffee shop depuis <mark>un seul endroit :</mark><span class="lst">Menu, Commandes, Paiements, Caisse, Cuisine, Stocks et Rapports</span></h1>
+<p class="lead"><u>CENTRALISEZ</u> ce dont vous avez besoin sans jongler entre plusieurs outils.</p>
+<div class="stage">
+<div class="video"><button class="play" type="button" aria-label="Lire la vidéo"></button><p>[X minutes pour comprendre comment Epidom fonctionne]</p></div>
+<div class="chip c1">Nouvelle commande<small>Table 4 · 2 cappuccinos</small></div>
+<div class="chip c2">Paiement reçu<small>+ 12,50 €</small></div>
+<div class="chip c3">Stock bas<small>Lait d’avoine</small></div>
+</div>
+<p class="c" style="margin-top:56px"><a class="btn" href="/register" data-cta="hero">Commencer gratuitement →</a></p>
+<p class="c note">Gratuit à vie. Sans carte bancaire</p>
+</div>
+</section>
+
+<section><div class="w">
+<h2 class="t">Laissez-moi deviner…</h2>
+<p>Vous avez probablement déjà un outil pour votre caisse.</p>
+<p>Un autre pour votre menu.</p>
+<p>Les commandes arrivent parfois sur Instagram, parfois sur WhatsApp.</p>
+<p>Les réservations sont dans vos messages.</p>
+<p class="soft">Et oui…</p>
+<p>Pris séparément, chacun de ces outils fait son job.</p>
+<p><strong>Mais le problème…c’est qu’ils ne travaillent pas vraiment ensemble.</strong></p>
+</div></section>
+
+<section><div class="w">
+<p>Alors c’est à vous de faire le lien entre :</p>
+<div class="chain"><div class="nd l">Menu</div><svg class="lk" viewBox="0 0 540 64" aria-hidden="true"><circle cx="124" cy="4" r="4"/><path class="fl" d="M124 8C124 46 416 22 416 56"/><path class="hd" d="M407 46L416 58L425 46"/></svg><div class="nd r">Commandes</div><svg class="lk rev" viewBox="0 0 540 64" aria-hidden="true"><circle cx="124" cy="4" r="4"/><path class="fl" d="M124 8C124 46 416 22 416 56"/><path class="hd" d="M407 46L416 58L425 46"/></svg><div class="nd l">Caisse</div><svg class="lk" viewBox="0 0 540 64" aria-hidden="true"><circle cx="124" cy="4" r="4"/><path class="fl" d="M124 8C124 46 416 22 416 56"/><path class="hd" d="M407 46L416 58L425 46"/></svg><div class="nd r">Stocks</div><svg class="lk rev" viewBox="0 0 540 64" aria-hidden="true"><circle cx="124" cy="4" r="4"/><path class="fl" d="M124 8C124 46 416 22 416 56"/><path class="hd" d="M407 46L416 58L425 46"/></svg><div class="nd l">Chiffre d’affaires / rapports</div></div>
+<p>Et à force de devoir garder une vue d’ensemble sur tout votre coffee shop…</p>
+<p class="sub">C’est toute votre activité qui finit par reposer sur vous.</p>
+<p>Votre activité grandit, et cette gestion devient de plus en plus lourde à gérer.</p>
+</div></section>
+
+<section><div class="w">
+<p class="soft">Et pendant que vous gérez tout ça…</p>
+<ul class="checks"><li>Vos clients attendent leur commande.</li><li>Votre équipe vous pose des questions.</li><li>Il vous faut vérifier les stocks.</li><li>La caisse doit être à jour.</li><li>La cuisine doit savoir ce qui est en cours.</li></ul>
+<p>Et à la fin de la journée, vous voulez simplement savoir :</p>
+<div class="q">“Alors… combien j’ai gagné aujourd’hui ?”</div>
+<p>Mais au lieu d’avoir une réponse claire…</p>
+<p>Vous devez jongler à droite à gauche pour rassembler les informations.</p>
+<p class="sub">Et vous passez <mark>TOUT</mark> votre temps à gérer votre système au lieu de gérer votre coffee shop.</p>
+</div></section>
+
+<section><div class="wide"><div class="ba">
+<div class="av"><h3>Avant</h3><ul><li>Commandes dispersées</li><li>Menu séparé</li><li>Informations dans WhatsApp et Instagram</li><li>Stocks suivis à part</li><li>Chiffres difficiles à regrouper</li><li>Plusieurs outils à gérer au quotidien</li></ul></div>
+<div class="ap"><h3>Avec Epidom</h3><ul><li>Un seul endroit pour centraliser votre activité</li><li>Un lien pour votre menu</li><li>Des commandes directement dans Epidom</li><li>Les paiements au même endroit</li><li>La caisse et la cuisine connectées</li><li>Vos stocks, coûts et rapports accessibles depuis la même plateforme</li></ul></div>
+</div></div></section>
+
+<section><div class="wide">
+<div class="w">
+<h2 class="t">Et si vous n’aviez plus besoin de faire le lien vous-même ?</h2>
+<p class="soft c">(C’est exactement pour ça qu’Epidom existe 👀)</p>
+<p>Epidom centralise les différents éléments dont vous avez besoin pour gérer votre coffee shop.</p>
+<p>Vos clients peuvent consulter votre menu, commander et payer depuis leur téléphone.</p>
+<p>Et de votre côté, vous retrouvez directement les commandes, la caisse, la cuisine, les stocks et les chiffres dont vous avez besoin.</p>
+<p class="sub">Au lieu que ce soit vous qui fassiez le lien entre vos outils, Epidom le fait pour vous.</p>
+</div>
+<div class="duo"><div class="laptop">
+<div class="top"><i></i><i></i><i></i></div>
+<div class="kpis"><div>Ventes du jour<b>1 284 €</b><em>▲ 12%</em></div><div>Panier moyen<b>9,80 €</b><em>▲ 4%</em></div><div>Commandes<b>131</b><em>▲ 8%</em></div></div>
+<div class="bars"><i style="height:40%"></i><i style="height:55%"></i><i style="height:35%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:75%"></i></div>
+<div class="rows"><div><span>Flat white ×2</span><span>En cuisine</span></div><div><span>Croissant ×1</span><span>Payée</span></div></div>
+</div><div class="phone">
+<h4>Votre menu</h4>
+<div class="it"><span></span><div>Flat white<small>3,80 €</small></div></div>
+<div class="it"><span></span><div>Cappuccino<small>4,20 €</small></div></div>
+<div class="it"><span></span><div>Cookie maison<small>3,00 €</small></div></div>
+<div class="ord">Commander</div>
+</div><div class="qr" aria-hidden="true"><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i></div></div>
+</div></section>
+
+<section><div class="w">
+<p>Vous pouvez mettre votre lien Epidom dans votre bio Instagram.</p>
+<p>L’envoyer à vos clients sur WhatsApp.</p>
+<p>Ou simplement afficher votre QR code sur vos tables.</p>
+<p class="sub">Votre client clique ou scanne.</p>
+<ul class="checks"><li>Il découvre votre menu.</li><li>Il choisit ce qu’il veut.</li><li>Il commande.</li><li>Il paie.</li></ul>
+<p>Et vous recevez directement sa commande dans Epidom.</p>
+<div class="solo"><div class="phone">
+<h4>Votre menu</h4>
+<div class="it"><span></span><div>Flat white<small>3,80 €</small></div></div>
+<div class="it"><span></span><div>Cappuccino<small>4,20 €</small></div></div>
+<div class="it"><span></span><div>Cookie maison<small>3,00 €</small></div></div>
+<div class="ord">Commander</div>
+</div></div>
+<p>Pas besoin de télécharger une application.</p>
+<p>Pas besoin de passer par 15 étapes.</p>
+<p>Pas besoin de retranscrire la commande manuellement.</p>
+<p>Et pendant que vos clients commandent…</p>
+<h2 class="t gold" style="margin-top:34px">Vous gardez le contrôle.</h2>
+</div>
+<div class="wide" style="max-width:760px"><div class="solo"><div class="laptop">
+<div class="top"><i></i><i></i><i></i></div>
+<div class="kpis"><div>Ventes du jour<b>1 284 €</b><em>▲ 12%</em></div><div>Panier moyen<b>9,80 €</b><em>▲ 4%</em></div><div>Commandes<b>131</b><em>▲ 8%</em></div></div>
+<div class="bars"><i style="height:40%"></i><i style="height:55%"></i><i style="height:35%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:75%"></i></div>
+<div class="rows"><div><span>Flat white ×2</span><span>En cuisine</span></div><div><span>Croissant ×1</span><span>Payée</span></div></div>
+</div></div></div>
+<div class="w">
+<ul class="checks"><li>Vous voyez vos commandes.</li><li>Votre chiffre d’affaires.</li><li>Votre panier moyen.</li><li>Vos produits.</li><li>Vos coûts matières.</li></ul>
+<p class="sub">Tout ce dont vous avez besoin pour faire tourner votre coffee shop.</p>
+</div></section>
+
+<section><div class="wide"><div class="feat">
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-menu"/></svg></div><h3>Votre menu</h3><p>Créez une page menu à votre image avec vos produits, vos photos, vos descriptions, vos options et vos prix. Partagez-la avec un simple lien ou QR code.</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-phone"/></svg></div><h3>Vos commandes</h3><p>Laissez vos clients commander directement depuis leur téléphone et recevez les commandes dans Epidom.</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-card"/></svg></div><h3>Vos paiements</h3><p>Permettez à vos clients de payer directement depuis leur téléphone avec les moyens de paiement disponibles.</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-reg"/></svg></div><h3>Votre caisse</h3><p>Gérez votre caisse depuis votre téléphone, votre tablette ou votre terminal.</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-ticket"/></svg></div><h3>Votre cuisine</h3><p>Faites arriver les commandes directement côté cuisine et gardez une vue claire sur ce qui est en cours.</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-box"/></svg></div><h3>Vos stocks et vos coûts</h3><p>Suivez vos recettes, vos ingrédients et vos coûts matières pour mieux comprendre ce que vos ventes vous rapportent réellement.</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-bars"/></svg></div><h3>Vos chiffres</h3><p>Retrouvez vos ventes, vos coûts, vos revenus et vos rapports au même endroit.</p></div>
+</div></div></section>
+
+<section id="start"><div class="w">
+<h2 class="t">Vous pensez que ça va être compliqué à mettre en place ?</h2>
+<p class="sub c" style="margin-top:0">C’est justement le contraire.</p>
+<p class="c">Vous pouvez commencer gratuitement.</p>
+<div class="steps"><div><div class="il"><svg viewBox="0 0 120 90" fill="rgba(217,174,59,.14)" stroke="#e7c66e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="22" width="80" height="50" rx="8"/><path d="M20 30l40 26 40-26"/><circle cx="92" cy="26" r="12" fill="#4f9e6a" stroke="none"/><path d="M86 26l4 4 7-8" stroke="#fff"/></svg></div><span><h3><em>01</em> Créez votre compte.</h3><p>Inscrivez-vous avec votre adresse e-mail. Pas besoin de carte bancaire.</p></span></div><div><div class="il"><svg viewBox="0 0 120 90" fill="rgba(217,174,59,.14)" stroke="#e7c66e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="26" y="10" width="68" height="70" rx="8"/><path d="M38 28h30M38 42h30M38 56h20"/><circle cx="82" cy="30" r="5"/><circle cx="82" cy="44" r="5"/><circle cx="82" cy="58" r="5"/></svg></div><span><h3><em>02</em> Ajoutez votre menu.</h3><p>Ajoutez vos catégories, vos produits, vos prix et vos photos.</p></span></div><div><div class="il"><svg viewBox="0 0 120 90" fill="rgba(217,174,59,.14)" stroke="#e7c66e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="40" y="8" width="40" height="74" rx="8"/><rect x="50" y="26" width="20" height="20" rx="2"/><path d="M54 30h5v5h-5zM62 38h4v4h-4zM50 58h20M50 66h12M10 45h20M110 45H90"/></svg></div><span><h3><em>03</em> Partagez votre lien.</h3><p>Copiez votre URL personnalisée ou générez votre QR code. Ajoutez-le à votre bio Instagram ou imprimez-le pour vos tables.</p></span></div></div>
+<p class="sub c" style="margin-top:44px">Et vous êtes prêt à commencer ?</p>
+<p class="c"><a class="btn" href="/register" data-cta="steps">Commencer gratuitement →</a></p>
+</div></section>
+
+<section><div class="wide">
+<div class="w">
+<p>Avec la version gratuite, vous pouvez déjà :</p>
+<ul class="checks"><li>Créer votre page menu</li><li>Ajouter votre QR code</li><li>Recevoir des commandes en ligne</li><li>Permettre à vos clients de commander</li></ul>
+<p class="sub">Puis faites évoluer Epidom avec votre activité.</p>
+</div>
+<div class="plans">
+<div class="plan free"><h3>FREE</h3><div class="pr">0 €</div><p>Pour commencer avec votre menu, vos commandes en ligne et votre QR code.</p></div>
+<div class="plan"><h3>POS</h3><p>Pour ajouter la caisse, la gestion des tables, les tickets et les opérations en salle.</p></div>
+<div class="plan"><h3>OPERATIONS</h3><p>Pour aller plus loin avec votre équipe, vos recettes, vos coûts, vos stocks et vos rapports.</p></div>
+<div class="plan"><h3>ENTERPRISE</h3><p>Pour les établissements et réseaux qui ont besoin d’un pilotage plus avancé.</p></div>
+</div>
+<div class="w c"><p class="sub">Vous n’avez pas besoin de tout changer dès aujourd’hui.</p><p>Vous pouvez d’abord tester Epidom dans votre coffee shop.</p></div>
+</div></section>
+
+<section><div class="wide c">
+<h2 class="t">Ces coffee shops étaient exactement comme vous</h2>
+<p class="sub" style="margin-top:0">Ils nous ont fait confiance, voici leur retour :</p>
+<div class="vts"><div class="vt"><b></b>Témoignage 1</div><div class="vt"><b></b>Témoignage 2</div><div class="vt"><b></b>Témoignage 3</div></div>
+<div class="w c">
+<p>Et ils ne sont pas les seuls.</p>
+<p>De plus en plus de coffee shops utilisent déjà Epidom pour centraliser leur activité.</p>
+<div class="stars" aria-label="5 étoiles">★★★★★</div>
+<p class="sub" style="margin-top:40px">La seule question maintenant… c’est :</p>
+<h2 class="t gold">Est-ce que vous serez le prochain ?</h2>
+<p><a class="btn" href="/register" data-cta="final">Commencer gratuitement →</a></p>
+</div>
+</div></section>
+
+<footer>© Epidom</footer>
+<script src="/sales-pages/tracker.js" data-page="sales-page-1" defer></script>
+</body>
+</html>

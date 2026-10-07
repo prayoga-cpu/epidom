@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, Bug, Calendar, Check, ChevronDown, CircleDollarSign, Copy, Crown, Eye, EyeOff, Gauge, Infinity, KeyRound, LogIn, Power, PowerOff, RotateCcw, Search, Shield, ShieldCheck, ShieldOff, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
+import { Activity, Bug, Calendar, Check, ChevronDown, CircleDollarSign, Copy, Crown, Eye, EyeOff, Gauge, Infinity, KeyRound, LogIn, Megaphone, Power, PowerOff, RotateCcw, Search, Shield, ShieldCheck, ShieldOff, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -591,6 +591,10 @@ export function AdminDashboard() {
               <Button variant="outline" size="sm" onClick={() => router.push("/admin/capacity")}>
                 <Gauge className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Capacity & Usage</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => router.push("/admin/sales-pages")}>
+                <Megaphone className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Sales Pages</span>
               </Button>
               <Button
                 variant="outline"

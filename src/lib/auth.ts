@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { createHmac, timingSafeEqual } from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/services/email.service";
 import { isAdminEmail } from "@/lib/admin";
+import { recordSalesPageSignup } from "@/lib/services/sales-page.service";
 import {
   previewAuthCookiePrefix,
   resolveCrossSubDomainCookies,
@@ -80,7 +81,7 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        async after(user) {
+        async after(user, context) {
           if (isAdminEmail(user.email)) {
             await prisma.user
               .update({
@@ -89,6 +90,13 @@ export const auth = betterAuth({
               })
               .catch((err) => console.error("[auth] failed to set isAdmin on master email:", err));
           }
+          // Credit the signup to the /sales-page-N this browser came from, if
+          // any. The email signup POST and Google's OAuth callback both carry
+          // the page's cookie; a server-side create has no request, so no-op.
+          await recordSalesPageSignup(
+            user.id,
+            context?.headers?.get("cookie") ?? context?.request?.headers.get("cookie")
+          );
         },
       },
     },
