@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,10 +44,20 @@ function AuthFormSkeleton() {
  * does not: it is personal data and never belongs in a URL (see authModeHref).
  */
 export function AuthPage({ initialMode }: { initialMode: AuthMode }) {
-  const { t } = useI18n();
+  const { t, setLocale } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>(initialMode);
+
+  // The sales pages (public/sales-pages/lang-switch.js) send their sign-up
+  // buttons here with ?lang=<the page's language>, so the form opens in the
+  // language the visitor was reading. Stored the way the language switcher
+  // stores a pick. Only a signed-out visitor ever runs this: /login and
+  // /register send a live session to /stores before rendering.
+  const langParam = searchParams.get("lang");
+  useEffect(() => {
+    if (langParam === "fr" || langParam === "en" || langParam === "id") setLocale(langParam);
+  }, [langParam, setLocale]);
 
   const switchMode = (next: AuthMode) => {
     if (next === mode) return;

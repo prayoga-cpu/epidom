@@ -1,7 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { SALES_PAGES, salesPageFromCookieHeader, type SalesPage } from "@/lib/sales-pages";
+import {
+  SALES_PAGES,
+  salesPageFromCookieHeader,
+  type SalesPage,
+  type SalesPageLocale,
+} from "@/lib/sales-pages";
 import type {
   RecordSalesPageEventInput,
+  SalesPageReportLang,
   SalesPageReportRange,
 } from "@/lib/validation/sales-page.schemas";
 import type { SalesPageEventType } from "@prisma/client";
@@ -13,6 +19,7 @@ export async function recordSalesPageEvent(
   await prisma.salesPageEvent.create({
     data: {
       page: input.page,
+      locale: input.locale,
       type: input.type,
       cta: input.type === "CTA_CLICK" ? input.cta : undefined,
       visitorHash: input.visitorHash,
@@ -25,19 +32,22 @@ export async function recordSalesPageEvent(
 }
 
 /**
- * Credit a just-created account to the sales page its browser last opened,
- * from the cookie on the signup request (the email signup POST, or Google's
- * OAuth callback). Never throws: a tracking failure must not fail a signup.
+ * Credit a just-created account to the sales page (and language) its browser
+ * last opened, from the cookie on the signup request (the email signup POST,
+ * or Google's OAuth callback). Never throws: a tracking failure must not fail
+ * a signup.
  */
 export async function recordSalesPageSignup(
   userId: string,
   cookieHeader: string | null | undefined
-): Promise<SalesPage | null> {
-  const page = salesPageFromCookieHeader(cookieHeader);
-  if (!page) return null;
+): Promise<{ page: SalesPage; locale: SalesPageLocale } | null> {
+  const visit = salesPageFromCookieHeader(cookieHeader);
+  if (!visit) return null;
   try {
-    await prisma.salesPageEvent.create({ data: { page, type: "SIGNUP", userId } });
-    return page;
+    await prisma.salesPageEvent.create({
+      data: { page: visit.page, locale: visit.locale, type: "SIGNUP", userId },
+    });
+    return visit;
   } catch (err) {
     console.error("[sales-pages] failed to record signup:", err);
     return null;
@@ -72,6 +82,8 @@ export interface SalesPageRow {
 
 export interface SalesPageReport {
   range: SalesPageReportRange;
+  /** The language the figures are limited to, or "all". */
+  lang: SalesPageReportLang;
   since: string | null;
   pages: SalesPageRow[];
   /** Best signup rate, or best click rate while there are no signups yet. */
@@ -160,26 +172,28 @@ const RANGE_DAYS: Record<SalesPageReportRange, number | null> = {
 };
 
 /**
- * The comparison shown on /admin/sales-pages. Events are grouped down to one
- * row per page, type, button and visitor-day, so the payload grows with
- * visitors, not with clicks.
+ * The comparison shown on /admin/sales-pages, for one language or all of
+ * them. Events are grouped down to one row per page, type, button and
+ * visitor-day, so the payload grows with visitors, not with clicks.
  */
 export async function getSalesPageReport(
   range: SalesPageReportRange,
+  lang: SalesPageReportLang = "all",
   now: Date = new Date()
 ): Promise<SalesPageReport> {
   const days = RANGE_DAYS[range];
   const since = days === null ? null : new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   const createdAt = since ? { gte: since } : undefined;
+  const locale = lang === "all" ? undefined : lang;
 
   const [grouped, signupRows] = await Promise.all([
     prisma.salesPageEvent.groupBy({
       by: ["page", "type", "cta", "visitorHash"],
-      where: { type: { not: "SIGNUP" }, createdAt },
+      where: { type: { not: "SIGNUP" }, createdAt, locale },
       _count: { _all: true },
     }),
     prisma.salesPageEvent.findMany({
-      where: { type: "SIGNUP", createdAt },
+      where: { type: "SIGNUP", createdAt, locale },
       select: {
         page: true,
         user: { select: { business: { select: { _count: { select: { stores: true } } } } } },
@@ -199,5 +213,5 @@ export async function getSalesPageReport(
     hasStore: (s.user?.business?._count.stores ?? 0) > 0,
   }));
 
-  return { range, since: since?.toISOString() ?? null, ...summarizeSalesPages(groups, signups) };
+  return { range, lang, since: since?.toISOString() ?? null, ...summarizeSalesPages(groups, signups) };
 }

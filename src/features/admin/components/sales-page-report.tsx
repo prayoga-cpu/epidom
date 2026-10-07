@@ -4,7 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { SalesPageReport, SalesPageRow } from "@/lib/services/sales-page.service";
-import type { SalesPageReportRange } from "@/lib/validation/sales-page.schemas";
+import type {
+  SalesPageReportLang,
+  SalesPageReportRange,
+} from "@/lib/validation/sales-page.schemas";
 
 const RANGES: { value: SalesPageReportRange; label: string }[] = [
   { value: "7", label: "7 days" },
@@ -12,6 +15,57 @@ const RANGES: { value: SalesPageReportRange; label: string }[] = [
   { value: "90", label: "90 days" },
   { value: "all", label: "All time" },
 ];
+
+const LANGS: { value: SalesPageReportLang; label: string }[] = [
+  { value: "all", label: "All languages" },
+  { value: "fr", label: "FR" },
+  { value: "en", label: "EN" },
+  { value: "id", label: "ID" },
+];
+
+const reportHref = (range: SalesPageReportRange, lang: SalesPageReportLang) =>
+  `/admin/sales-pages?range=${range}&lang=${lang}`;
+
+/**
+ * The page in the report's language, so "open" shows what the figures are
+ * about. French opens the file itself: /sales-page-N would send an admin whose
+ * browser or saved language isn't French to /en or /id (the proxy's language
+ * redirect), and the file path never goes through the proxy.
+ */
+const pageHref = (page: string, lang: SalesPageReportLang) =>
+  lang === "en" || lang === "id" ? `/${lang}/${page}` : `/sales-pages/${page}.html`;
+
+/** What the link says: the public URL, not the file. */
+const pageUrlLabel = (page: string, lang: SalesPageReportLang) =>
+  lang === "en" || lang === "id" ? `/${lang}/${page}` : `/${page}`;
+
+function FilterTabs<T extends string>({
+  options,
+  active,
+  href,
+}: {
+  options: { value: T; label: string }[];
+  active: T;
+  href: (value: T) => string;
+}) {
+  return (
+    <div className="border-border bg-muted/40 flex items-center overflow-x-auto rounded-lg border p-0.5">
+      {options.map((o) => (
+        <Link
+          key={o.value}
+          href={href(o.value)}
+          className={`inline-flex min-h-9 items-center rounded-md px-2.5 text-xs font-bold whitespace-nowrap transition-colors ${
+            o.value === active
+              ? "bg-amber-500/20 text-amber-300"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {o.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 /** Below this many visitors on a page, one signup swings the rate too much to call. */
 const EARLY_VISITORS = 100;
@@ -32,19 +86,28 @@ function Stat({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function PageCard({ row, leading }: { row: SalesPageRow; leading: string | null }) {
+function PageCard({
+  row,
+  leading,
+  lang,
+}: {
+  row: SalesPageRow;
+  leading: string | null;
+  lang: SalesPageReportLang;
+}) {
+  const href = pageHref(row.page, lang);
   return (
     <Card className={leading ? "border-amber-500/50" : undefined}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">{pageLabel(row.page)}</CardTitle>
           <a
-            href={`/${row.page}`}
+            href={href}
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted-foreground hover:text-foreground inline-flex min-h-10 items-center gap-1 px-1 text-xs"
           >
-            /{row.page}
+            {pageUrlLabel(row.page, lang)}
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
@@ -128,21 +191,16 @@ export function SalesPageReportView({ report }: { report: SalesPageReport }) {
               </p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              <div className="border-border bg-muted/40 flex items-center overflow-x-auto rounded-lg border p-0.5">
-                {RANGES.map((r) => (
-                  <Link
-                    key={r.value}
-                    href={`/admin/sales-pages?range=${r.value}`}
-                    className={`inline-flex min-h-9 items-center rounded-md px-2.5 text-xs font-bold whitespace-nowrap transition-colors ${
-                      r.value === report.range
-                        ? "bg-amber-500/20 text-amber-300"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {r.label}
-                  </Link>
-                ))}
-              </div>
+              <FilterTabs
+                options={LANGS}
+                active={report.lang}
+                href={(lang) => reportHref(report.range, lang)}
+              />
+              <FilterTabs
+                options={RANGES}
+                active={report.range}
+                href={(range) => reportHref(range, report.lang)}
+              />
               <Button variant="outline" size="sm" asChild>
                 <Link href="/admin">← Back</Link>
               </Button>
@@ -166,7 +224,12 @@ export function SalesPageReportView({ report }: { report: SalesPageReport }) {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {report.pages.map((row) => (
-            <PageCard key={row.page} row={row} leading={leadingLabel(row.page)} />
+            <PageCard
+              key={row.page}
+              row={row}
+              leading={leadingLabel(row.page)}
+              lang={report.lang}
+            />
           ))}
         </div>
 
@@ -183,6 +246,12 @@ export function SalesPageReportView({ report }: { report: SalesPageReport }) {
           <p>
             Rates use the same date range for both sides, so a signup near the start of a range can
             belong to a visit just before it.
+          </p>
+          <p>
+            <strong>Languages:</strong> each page exists in French (/sales-page-N), English
+            (/en/…) and Indonesian (/id/…). A language filter counts the visits, clicks and signups
+            made on that language&apos;s page; a visitor who switches language counts on both.
+            Compare pages within one language when the traffic differs by language.
           </p>
         </div>
       </div>

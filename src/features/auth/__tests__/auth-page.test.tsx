@@ -7,6 +7,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 const h = vi.hoisted(() => ({
   search: "",
   replace: vi.fn(),
+  setLocale: vi.fn(),
 }));
 
 // A fresh URLSearchParams per call mirrors the real hook; each test sets h.search.
@@ -17,7 +18,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/components/lang/i18n-provider", () => ({
-  useI18n: () => ({ t: (key: string) => key }),
+  useI18n: () => ({ t: (key: string) => key, setLocale: h.setLocale }),
 }));
 
 // The forms and the marketing panel have their own tests. Stubbed here so this
@@ -47,6 +48,7 @@ function renderAt(initialMode: "login" | "register", search: string) {
 beforeEach(() => {
   h.search = "";
   h.replace.mockReset();
+  h.setLocale.mockReset();
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -154,5 +156,27 @@ describe("AuthPage: the Login <-> Register toggle keeps the query string", () =>
 
     expect(screen.getByTestId("login-form")).toBeInTheDocument();
     expect(screen.queryByTestId("register-form")).not.toBeInTheDocument();
+  });
+});
+
+describe("AuthPage: ?lang= from a sales page", () => {
+  it.each(["en", "id", "fr"])("opens in the sales page's language (%s)", (lang) => {
+    renderAt("register", `lang=${lang}`);
+
+    expect(h.setLocale).toHaveBeenCalledWith(lang);
+  });
+
+  it.each(["", "lang=de", "lang=EN", "lang="])("leaves the language alone for %j", (search) => {
+    renderAt("register", search);
+
+    expect(h.setLocale).not.toHaveBeenCalled();
+  });
+
+  it("keeps ?lang= when flipping to Login", () => {
+    renderAt("register", "lang=id");
+
+    fireEvent.click(toLogin());
+
+    expect(h.replace).toHaveBeenCalledWith("/login?lang=id", { scroll: false });
   });
 });

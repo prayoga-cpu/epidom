@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.10.0] - 2026-10-08 · infra
+
+The three sales pages now speak English and Indonesian too, with the website's language switcher.
+
+- **Three languages.** Each sales page is also at /en/sales-page-N and /id/sales-page-N, with prices in dollars and in rupiah. The French page stays at /sales-page-N, and a visitor whose phone is set to English or Indonesian is taken to their language, as everywhere else on the site.
+- **The site's language switcher.** The same FR · ID · EN switcher as on the website sits at the top right of every sales page, and a language picked there sticks on the rest of the site. Sign-up opens in the language the visitor was reading.
+- **Results per language.** The Sales Pages report in the admin panel can show one language at a time, so the pages are compared on the same audience.
+- **Cookie policy.** The epidom_sales_page cookie now holds the page's language as well as its name.
+
 ## [3.9.0] - 2026-10-07 · infra
 
 Three new pages that present Epidom to coffee shops, and a way to see which one brings the most sign-ups.

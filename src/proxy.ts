@@ -12,6 +12,8 @@ import {
   isLikelyBot,
 } from "./lib/i18n-routing";
 import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE, isResumableAppPath } from "./lib/last-visited";
+import { isSalesPagePath } from "./lib/sales-pages";
+import type { Locale } from "./components/lang/i18n-provider";
 
 // Next 16's App Router marks a client-side navigation with the `rsc: 1`
 // request header, adds `next-router-prefetch: 1` when it's only warming the
@@ -167,6 +169,37 @@ function isFromSignedOutOnlyPage(req: NextRequest): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * The language an unprefixed (fr) marketing URL is shown in for this visitor;
+ * anything but fr means "redirect to the prefixed URL". Shared by the
+ * marketing pages and the /sales-page-N landing pages.
+ *
+ * A visitor who has explicitly picked a language via LangSwitcher outranks
+ * everything: their own choice keeps winning on every future unprefixed visit
+ * (bookmark, logo click, bare domain), not just the page it was made on. An
+ * explicit fr pick stays, and skips the Accept-Language guess entirely, which
+ * would otherwise second-guess a deliberate pick for a browser whose language
+ * isn't French.
+ *
+ * With no explicit pick recorded yet: always follow the browser's device
+ * language, on every visit (not just the first), so a visitor whose
+ * OS/browser language changes, or who simply never opened LangSwitcher, keeps
+ * landing on the language their device currently reports. This stops the
+ * moment they pick a language via LangSwitcher, which records that choice in
+ * LOCALE_PREF_COOKIE and takes over permanently.
+ *
+ * Never for crawlers: they must always see the canonical fr content (Google's
+ * own guidance against language/geo auto-redirects breaking crawlability, see
+ * isLikelyBot).
+ */
+function preferredLocaleForUnprefixedVisit(req: NextRequest): Locale {
+  if (isLikelyBot(req.headers.get("user-agent"))) return DEFAULT_LOCALE;
+  const explicitChoice = req.cookies.get(LOCALE_PREF_COOKIE)?.value;
+  if (explicitChoice === "id" || explicitChoice === "en") return explicitChoice;
+  if (explicitChoice === DEFAULT_LOCALE) return DEFAULT_LOCALE;
+  return detectLocaleFromAcceptLanguage(req.headers.get("accept-language"));
 }
 
 /**
@@ -357,6 +390,25 @@ export default async function proxy(req: NextRequest) {
   // and the POS/storefront "View Receipt" actions point to.
   const isReceiptRoute = basePath.startsWith("/r/");
 
+  // The /sales-page-N landing pages (static HTML, see src/lib/sales-pages.ts)
+  // are public and come in the marketing site's languages: an unprefixed
+  // visit goes to the visitor's language exactly like a marketing page, and
+  // /en/… and /id/… stay put. The rewrites in next.config.ts then serve each
+  // URL from its file. Never resumed into the app (they are not in
+  // LOCALIZED_MARKETING_PATHS), so a signed-in team member checking an ad
+  // sees the page.
+  if (isSalesPagePath(basePath)) {
+    if (locale === DEFAULT_LOCALE) {
+      const preferred = preferredLocaleForUnprefixedVisit(req);
+      if (preferred !== DEFAULT_LOCALE) {
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = getLocalizedPath(basePath, preferred);
+        return markRedirectUncacheable(NextResponse.redirect(redirectUrl));
+      }
+    }
+    return response;
+  }
+
   // If it's a public route, storefront route, or receipt route, allow access
   // without authentication — attaching/rewriting for locale first.
   if (isPublicRoute || isStorefrontRoute || isReceiptRoute) {
@@ -371,43 +423,11 @@ export default async function proxy(req: NextRequest) {
     localizedRequestHeaders.set("x-request-id", requestId);
 
     if (locale === DEFAULT_LOCALE) {
-      // A visitor who has explicitly picked a language via LangSwitcher
-      // outranks everything below — their own choice should keep winning on
-      // every future unprefixed visit (bookmark, logo click, bare domain),
-      // not just the page it was made on. Never for crawlers, same
-      // reasoning as the Accept-Language guess below.
-      const explicitChoice = req.cookies.get(LOCALE_PREF_COOKIE)?.value;
-      if (!isLikelyBot(req.headers.get("user-agent"))) {
-        if (explicitChoice === "id" || explicitChoice === "en") {
-          const redirectUrl = req.nextUrl.clone();
-          redirectUrl.pathname = getLocalizedPath(basePath, explicitChoice);
-          return NextResponse.redirect(redirectUrl);
-        }
-        if (explicitChoice === DEFAULT_LOCALE) {
-          // Explicitly chose fr — stay, and skip the Accept-Language guess
-          // below entirely; it would otherwise second-guess a deliberate
-          // pick for a browser whose language isn't French.
-          return NextResponse.next({ request: { headers: localizedRequestHeaders } });
-        }
-      }
-
-      // No explicit pick recorded yet: always follow the browser's device
-      // language on the unprefixed (fr) site, on every visit — not just the
-      // first — so a visitor whose OS/browser language changes (or who
-      // simply never opened LangSwitcher) keeps landing on the language
-      // their device currently reports. Never for crawlers — they must
-      // always see the canonical fr content at "/" (Google's own guidance
-      // against language/geo auto-redirects breaking crawlability — see
-      // isLikelyBot). This stops the moment they pick a language via
-      // LangSwitcher, which records that choice in LOCALE_PREF_COOKIE above
-      // and takes over permanently.
-      if (!isLikelyBot(req.headers.get("user-agent"))) {
-        const detected = detectLocaleFromAcceptLanguage(req.headers.get("accept-language"));
-        if (detected !== DEFAULT_LOCALE) {
-          const redirectUrl = req.nextUrl.clone();
-          redirectUrl.pathname = getLocalizedPath(basePath, detected);
-          return NextResponse.redirect(redirectUrl);
-        }
+      const preferred = preferredLocaleForUnprefixedVisit(req);
+      if (preferred !== DEFAULT_LOCALE) {
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = getLocalizedPath(basePath, preferred);
+        return NextResponse.redirect(redirectUrl);
       }
       // fr has no prefix, so the path already resolves to the right route.
       return NextResponse.next({ request: { headers: localizedRequestHeaders } });
@@ -478,11 +498,12 @@ export const config = {
      * - llms.txt (public/llms.txt, same crawler-facing reasoning)
      * - .well-known (assetlinks.json for the Android app — Android's verifier
      *   fetches it anonymously; a login redirect breaks the app association)
-     * - sales-page (the /sales-page-N landing pages and their
-     *   public/sales-pages/ files: static HTML rewritten in next.config.ts,
-     *   for anonymous visitors from ads; see src/lib/sales-pages.ts)
+     * - sales-pages/ (the files behind the /sales-page-N landing pages:
+     *   their HTML, tracker.js and lang-switch.js, fetched by anonymous
+     *   visitors from ads; see src/lib/sales-pages.ts. The /sales-page-N
+     *   URLs themselves do come through here, for their language redirect.)
      * - public files (images, etc.)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|offline.html|manifest.webmanifest|sitemap.xml|robots.txt|llms.txt|\\.well-known|sales-page|.*\\.(?:svg|png|jpg|jpeg|gif|webp|txt|xml)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|offline.html|manifest.webmanifest|sitemap.xml|robots.txt|llms.txt|\\.well-known|sales-pages/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|txt|xml)$).*)",
   ],
 };

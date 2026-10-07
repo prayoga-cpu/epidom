@@ -42,5 +42,94 @@
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
   "prisma-smart-formatter.typescript.defaultFormatter": "esbenp.prettier-vscode",
-  "prisma-smart-formatter.typescriptreact.defaultFormatter": "esbenp.prettier-vscode"
+  "prisma-smart-formatter.typescriptreact.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Epidom brand theme (navy + gold), workspace-only. Surfaces match the POS /
+  // dashboard dark mode (sampled from the live POS): editor = main area,
+  // sidebar = order panel, title/tab bar = POS top bar, borders = its dividers,
+  // line highlight = its category cards. Gold/cream = --epi-gold-* / --epi-cream-*
+  // in src/app/globals.css.
+  "workbench.colorCustomizations": {
+    "focusBorder": "#d9ae3b",
+
+    "editor.background": "#080c16",
+    "editor.foreground": "#fbf9e4",
+    "editorLineNumber.foreground": "#474c51",
+    "editorLineNumber.activeForeground": "#e5c45c",
+    "editor.lineHighlightBackground": "#12161a",
+    "editor.lineHighlightBorder": "#12161a00",
+    "editor.selectionBackground": "#e5c45c4d",
+    "editor.findMatchBackground": "#e5c45c80",
+    "editor.findMatchHighlightBackground": "#e5c45c33",
+    "editorCursor.foreground": "#e5c45c",
+
+    "sideBar.background": "#080f1a",
+    "sideBar.foreground": "#e8e5c7",
+    "sideBar.border": "#1b212f",
+    "sideBarTitle.foreground": "#fbf9e4",
+    "sideBarSectionHeader.background": "#0e151e",
+    "sideBarSectionHeader.foreground": "#fbf9e4",
+    "sideBarSectionHeader.border": "#1b212f",
+
+    "activityBar.background": "#080f1a",
+    "activityBar.foreground": "#e5c45c",
+    "activityBar.inactiveForeground": "#949a9a",
+    "activityBar.border": "#1b212f",
+    "activityBar.activeBorder": "#e5c45c",
+    "activityBarBadge.background": "#e5c45c",
+    "activityBarBadge.foreground": "#080c16",
+
+    "editorGroupHeader.tabsBackground": "#0e151e",
+    "editorGroupHeader.tabsBorder": "#1b212f",
+    "tab.activeBackground": "#080c16",
+    "tab.activeForeground": "#fbf9e4",
+    "tab.activeBorder": "#e5c45c",
+    "tab.inactiveBackground": "#0e151e",
+    "tab.inactiveForeground": "#949a9a",
+    "tab.border": "#1b212f",
+
+    "statusBar.background": "#080f1a",
+    "statusBar.foreground": "#949a9a",
+    "statusBar.border": "#1b212f",
+    "statusBar.debuggingBackground": "#e5c45c",
+    "statusBar.debuggingForeground": "#080c16",
+    "statusBarItem.hoverBackground": "#12161a",
+
+    "titleBar.activeBackground": "#0e151e",
+    "titleBar.activeForeground": "#fbf9e4",
+    "titleBar.inactiveBackground": "#080c16",
+    "titleBar.inactiveForeground": "#949a9a",
+    "titleBar.border": "#1b212f",
+
+    "editorWidget.background": "#0e151e",
+    "editorWidget.border": "#1b212f",
+    "editorWidget.resizeBorder": "#e5c45c",
+    "input.background": "#12161a",
+    "input.foreground": "#fbf9e4",
+    "input.border": "#1b212f",
+    "input.placeholderForeground": "#949a9a",
+
+    "button.background": "#e5c45c",
+    "button.foreground": "#080c16",
+    "button.hoverBackground": "#d9ae3b",
+
+    "list.activeSelectionBackground": "#e5c45c26",
+    "list.activeSelectionForeground": "#fbf9e4",
+    "list.inactiveSelectionBackground": "#12161a",
+    "list.hoverBackground": "#12161a",
+    "list.focusBackground": "#e5c45c1a",
+
+    "panel.background": "#080c16",
+    "panel.border": "#1b212f",
+    "terminal.background": "#080c16",
+    "terminal.foreground": "#fbf9e4",
+    "terminalCursor.foreground": "#e5c45c",
+    "terminal.ansiBlue": "#5b88b2",
+    "terminal.ansiYellow": "#e5c45c",
+    "terminal.ansiBrightYellow": "#f4dc72",
+
+    "scrollbarSlider.background": "#e5c45c1a",
+    "scrollbarSlider.hoverBackground": "#e5c45c33",
+    "scrollbarSlider.activeBackground": "#e5c45c4d"
+  }
 }

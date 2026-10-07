@@ -2313,6 +2313,9 @@ model SalesPageEvent {
   id          String             @id @default(cuid())
   /// "sales-page-1"… A String, not an enum, so adding a page needs no migration.
   page        String
+  /// The page's language: "fr" (the original), "en" or "id". Rows from
+  /// before the pages had languages are "fr", which is all they were.
+  locale      String             @default("fr")
   type        SalesPageEventType
   /// CTA_CLICK only: which button ("hero", "steps", "calculator", "final").
   cta         String?

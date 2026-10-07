@@ -30,22 +30,31 @@ describe("recordSalesPageSignup", () => {
     create.mockResolvedValue({});
   });
 
-  it("credits the account to the page in the cookie", async () => {
-    const page = await recordSalesPageSignup(
+  it("credits the account to the page and language in the cookie", async () => {
+    const visit = await recordSalesPageSignup(
       "user_1",
-      "better-auth.session_token=abc; epidom_sales_page=sales-page-2; other=1"
+      "better-auth.session_token=abc; epidom_sales_page=sales-page-2.id; other=1"
     );
 
-    expect(page).toBe("sales-page-2");
+    expect(visit).toEqual({ page: "sales-page-2", locale: "id" });
     expect(create).toHaveBeenCalledWith({
-      data: { page: "sales-page-2", type: "SIGNUP", userId: "user_1" },
+      data: { page: "sales-page-2", locale: "id", type: "SIGNUP", userId: "user_1" },
     });
+  });
+
+  it("reads a cookie set before the pages had languages as French", async () => {
+    expect(await recordSalesPageSignup("user_1", "epidom_sales_page=sales-page-1")).toEqual({
+      page: "sales-page-1",
+      locale: "fr",
+    });
+    expect(create.mock.calls[0][0].data.locale).toBe("fr");
   });
 
   it.each([
     ["no cookie header", undefined],
     ["no sales-page cookie", "better-auth.session_token=abc"],
     ["a page that does not exist", "epidom_sales_page=sales-page-9"],
+    ["a language the pages don't have", "epidom_sales_page=sales-page-1.de"],
   ])("records nothing with %s", async (_label, header) => {
     expect(await recordSalesPageSignup("user_1", header)).toBeNull();
     expect(create).not.toHaveBeenCalled();
@@ -162,7 +171,7 @@ describe("getSalesPageReport", () => {
 
   it("limits both queries to the range and reads stores off the account", async () => {
     const now = new Date("2026-10-07T12:00:00Z");
-    const report = await getSalesPageReport("7", now);
+    const report = await getSalesPageReport("7", "all", now);
 
     const since = new Date("2026-09-30T12:00:00Z");
     expect(groupBy.mock.calls[0][0].where).toEqual({
@@ -171,13 +180,23 @@ describe("getSalesPageReport", () => {
     });
     expect(findMany.mock.calls[0][0].where).toEqual({ type: "SIGNUP", createdAt: { gte: since } });
     expect(report.since).toBe(since.toISOString());
+    expect(report.lang).toBe("all");
     expect(report.pages[0]).toMatchObject({ views: 2, visitors: 1, signups: 2, signupsWithStore: 1 });
   });
 
-  it("has no lower bound for all time", async () => {
-    const report = await getSalesPageReport("all");
+  it("limits both queries to one language when asked", async () => {
+    const report = await getSalesPageReport("30", "en");
+
+    expect(groupBy.mock.calls[0][0].where.locale).toBe("en");
+    expect(findMany.mock.calls[0][0].where.locale).toBe("en");
+    expect(report.lang).toBe("en");
+  });
+
+  it("has no lower bound for all time, and no language limit for all languages", async () => {
+    const report = await getSalesPageReport("all", "all");
 
     expect(groupBy.mock.calls[0][0].where.createdAt).toBeUndefined();
+    expect(groupBy.mock.calls[0][0].where.locale).toBeUndefined();
     expect(report.since).toBeNull();
   });
 });

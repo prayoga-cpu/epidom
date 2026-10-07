@@ -57,18 +57,26 @@ describe("POST /api/public/sales-pages/events", () => {
     expect(JSON.stringify(data)).not.toContain("203.0.113.");
   });
 
-  it("keeps the button name on a click", async () => {
-    await post({ page: "sales-page-3", type: "CTA_CLICK", cta: "calculator" });
+  it("keeps the button name and the page's language on a click", async () => {
+    await post({ page: "sales-page-3", locale: "id", type: "CTA_CLICK", cta: "calculator" });
 
     expect(create.mock.calls[0][0].data).toMatchObject({
       page: "sales-page-3",
+      locale: "id",
       type: "CTA_CLICK",
       cta: "calculator",
     });
   });
 
+  it("files an event without a language under French, from a tracker cached before languages", async () => {
+    await post({ page: "sales-page-1", type: "VIEW" });
+
+    expect(create.mock.calls[0][0].data.locale).toBe("fr");
+  });
+
   it.each([
     ["an unknown page", { page: "sales-page-9", type: "VIEW" }],
+    ["a language the pages don't have", { page: "sales-page-1", locale: "de", type: "VIEW" }],
     ["a SIGNUP, which only the auth hook may record", { page: "sales-page-1", type: "SIGNUP" }],
     ["an unknown event", { page: "sales-page-1", type: "PURCHASE" }],
     ["a button name that is not a slug", { page: "sales-page-1", type: "CTA_CLICK", cta: "<b>" }],

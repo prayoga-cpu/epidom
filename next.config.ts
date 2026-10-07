@@ -85,10 +85,16 @@ const nextConfig: NextConfig = {
       : undefined,
 
   // The /sales-page-N landing pages are static HTML in public/sales-pages/,
-  // served at their slug (see src/lib/sales-pages.ts). An N with no file is a
-  // plain 404. The proxy matcher skips these paths, so they need no session.
+  // served at their slug in French and under /en and /id in English and
+  // Indonesian (see src/lib/sales-pages.ts). An N with no file is a plain 404.
+  // The proxy lets these URLs through without a session and handles the
+  // unprefixed visit's language redirect before this runs.
   rewrites: async () => [
     { source: "/:page(sales-page-\\d+)", destination: "/sales-pages/:page.html" },
+    {
+      source: "/:locale(en|id)/:page(sales-page-\\d+)",
+      destination: "/sales-pages/:page.:locale.html",
+    },
   ],
 
   // Security Headers for production
