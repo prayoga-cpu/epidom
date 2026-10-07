@@ -78,6 +78,7 @@ function shiftState(overrides: Record<string, unknown> = {}) {
     allowed: true,
     known: true,
     staffMemberId: "clstaff000000000000000001",
+    canFinish: true,
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
@@ -96,9 +97,9 @@ beforeEach(() => {
 });
 
 describe("ShiftStatusCard", () => {
-  function renderCard() {
+  function renderCard({ canFinish = true }: { canFinish?: boolean } = {}) {
     const handlers = { onFinish: vi.fn(), onCashMovement: vi.fn(), onViewReport: vi.fn() };
-    render(<ShiftStatusCard shift={shift} {...handlers} />);
+    render(<ShiftStatusCard shift={shift} canFinish={canFinish} {...handlers} />);
     return handlers;
   }
 
@@ -121,6 +122,22 @@ describe("ShiftStatusCard", () => {
     expect(finish.className).toContain("h-12");
     fireEvent.click(finish);
     expect(onFinish).toHaveBeenCalled();
+  });
+
+  it("locks Finish for anyone but the opener, and says who can end it", () => {
+    const { onFinish } = renderCard({ canFinish: false });
+    const finish = screen.getByRole("button", { name: "pos.shift.finish" });
+    expect(finish).toBeDisabled();
+    fireEvent.click(finish);
+    expect(onFinish).not.toHaveBeenCalled();
+    // The i18n mock returns keys; the name is substituted into {name}.
+    expect(screen.getByText("pos.shift.onlyOpenerCanEnd")).toBeInTheDocument();
+  });
+
+  it("keeps cash in/out and the report open to a non-opener", () => {
+    renderCard({ canFinish: false });
+    expect(screen.getByRole("button", { name: /pages\.cashMovementTitle/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /pages\.shiftViewReport/ })).toBeEnabled();
   });
 
   it("cash in/out and the live report sit beside each other with flex-1, never w-full", () => {

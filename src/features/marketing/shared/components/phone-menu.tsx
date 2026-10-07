@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n, type Locale } from "@/components/lang/i18n-provider";
+import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 
 interface MenuItem {
   n: string;
@@ -19,6 +20,8 @@ const CONTENT: Record<
     cartLabel: string;
     cartTotal: string;
     payLabel: string;
+    /** Shown instead of payLabel while online payment is off (pay at the counter). */
+    orderLabel: string;
   }
 > = {
   fr: {
@@ -34,6 +37,7 @@ const CONTENT: Record<
     cartLabel: "2 articles",
     cartTotal: "8,00 €",
     payLabel: "Payer CB →",
+    orderLabel: "Commander →",
   },
   id: {
     shopName: "KAFE ANDA",
@@ -48,6 +52,7 @@ const CONTENT: Record<
     cartLabel: "2 items",
     cartTotal: "Rp 66k",
     payLabel: "Pay QRIS →",
+    orderLabel: "Pesan →",
   },
   en: {
     shopName: "YOUR CAFÉ",
@@ -62,6 +67,7 @@ const CONTENT: Record<
     cartLabel: "2 items",
     cartTotal: "$8.00",
     payLabel: "Pay Card →",
+    orderLabel: "Order →",
   },
 };
 
@@ -283,7 +289,7 @@ export function PhoneMenu() {
               whiteSpace: "nowrap",
             }}
           >
-            {content.payLabel}
+            {STOREFRONT_ONLINE_PAYMENTS_ENABLED ? content.payLabel : content.orderLabel}
           </div>
         </div>
 

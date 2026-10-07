@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -9,8 +9,9 @@ import {
   incrementTableQueueAttempts,
   tableQueueSize,
 } from "@/lib/pwa/offline-table-queue";
-import { apiClient, ApiClientError } from "@/lib/api/client";
+import { apiClient } from "@/lib/api/client";
 import { setLastSyncedAt } from "@/lib/pwa/sync-status";
+import { replayQueue } from "@/lib/pwa/replay-queue";
 import { useI18n } from "@/components/lang/i18n-provider";
 
 const MAX_ATTEMPTS = 5;
@@ -34,40 +35,48 @@ export function useOfflineTableQueue(storeId: string) {
     setPendingCount(await tableQueueSize());
   }, []);
 
+  const syncingRef = useRef(false);
+
   const syncQueue = useCallback(async () => {
-    if (isSyncing) return;
+    if (syncingRef.current) return;
     const queue = await listTableQueue();
     const mine = queue.filter((e) => e.storeId === storeId);
     if (mine.length === 0) return;
 
+    syncingRef.current = true;
     setIsSyncing(true);
-    let synced = 0;
     let conflicted = 0;
+    let synced = 0;
 
-    for (const entry of mine) {
-      if (entry.attempts >= MAX_ATTEMPTS) {
-        await removeFromTableQueue(entry.id);
-        continue;
-      }
-
-      try {
-        await apiClient.patch(`/stores/${storeId}/tables/${entry.tableId}`, {
-          status: entry.status,
-          expectedStatus: entry.expectedStatus,
-        });
-        await removeFromTableQueue(entry.id);
-        synced++;
-      } catch (err) {
-        if (err instanceof ApiClientError && err.status === 409) {
-          await removeFromTableQueue(entry.id);
-          conflicted++;
-          continue;
-        }
-        await incrementTableQueueAttempts(entry);
-      }
+    try {
+      // A dropped connection or a 5xx ends the pass and costs no attempt (see
+      // replayQueue). Only a real refusal counts — and a table's state goes
+      // stale, so at MAX_ATTEMPTS it's dropped rather than parked: replaying
+      // "seat table 4" an hour later is worse than not replaying it.
+      ({ synced } = await replayQueue(mine, {
+        send: (entry) =>
+          apiClient.patch(`/stores/${storeId}/tables/${entry.tableId}`, {
+            status: entry.status,
+            expectedStatus: entry.expectedStatus,
+          }),
+        remove: (entry) => removeFromTableQueue(entry.id),
+        reject: async (entry, failure) => {
+          if (failure.status === 409) {
+            await removeFromTableQueue(entry.id);
+            conflicted++;
+          } else if (entry.attempts + 1 >= MAX_ATTEMPTS) {
+            await removeFromTableQueue(entry.id);
+          } else {
+            await incrementTableQueueAttempts(entry);
+          }
+          return { parked: false };
+        },
+      }));
+    } finally {
+      syncingRef.current = false;
+      setIsSyncing(false);
     }
 
-    setIsSyncing(false);
     await refreshCount();
 
     if (synced > 0 || conflicted > 0) {
@@ -80,7 +89,7 @@ export function useOfflineTableQueue(storeId: string) {
     if (conflicted > 0) {
       toast(t("pos.offline.tablesConflicted").replace("{count}", String(conflicted)));
     }
-  }, [isSyncing, storeId, queryClient, refreshCount, t]);
+  }, [storeId, queryClient, refreshCount, t]);
 
   useEffect(() => {
     refreshCount();

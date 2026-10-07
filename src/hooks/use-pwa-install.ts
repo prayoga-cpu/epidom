@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { isDesktopShell } from "@/lib/pwa/desktop-shell";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -23,6 +24,8 @@ export function usePwaInstall() {
   useEffect(() => {
     // Detect if already running as an installed PWA
     const standalone =
+      // The Epidom desktop app counts as installed (see desktop-shell.ts).
+      isDesktopShell() ||
       window.matchMedia("(display-mode: standalone)").matches ||
       // Safari iOS
       (navigator as unknown as { standalone?: boolean }).standalone === true;

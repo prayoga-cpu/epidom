@@ -59,6 +59,14 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ...except for people who asked their system for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  html,
+  * {
+    scroll-behavior: auto;
+  }
+}
+
 /* ========================================
    TOUCH-FRIENDLY TAP BEHAVIOR (iOS Safari / iPad)
    ========================================
@@ -761,7 +769,9 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
     width 0.3s ease,
     background 0.3s ease;
 }
-@media (max-width: 1024px) {
+/* Below Tailwind's lg (1024px), where the header swaps its links for the menu
+   button. Ending at 1024px itself hid BOTH at exactly 1024 (iPad landscape). */
+@media (max-width: 1023.98px) {
   .epi-floating-nav {
     width: calc(100% - 32px);
     padding: 8px 8px 8px 16px;
@@ -773,6 +783,25 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
 @media (max-width: 720px) {
   .epi-floating-nav {
     top: 12px;
+  }
+}
+
+/* Home: the hero is a rounded card inset from the screen edges, and the header
+   sits inside it (hero-section.tsx), a little lower and narrower than on other
+   pages so it clears the card's edge. */
+.epidom-dark-page:has([data-hero-card]) .epi-floating-nav {
+  top: 40px;
+}
+@media (max-width: 1023.98px) {
+  .epidom-dark-page:has([data-hero-card]) .epi-floating-nav {
+    top: 28px;
+    width: calc(100% - 48px);
+  }
+}
+@media (max-width: 720px) {
+  .epidom-dark-page:has([data-hero-card]) .epi-floating-nav {
+    top: 16px;
+    width: calc(100% - 32px);
   }
 }
 
@@ -793,6 +822,10 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
    ======================================== */
 
 @custom-variant dark (&:is(.dark *));
+/* Short screens: a laptop browser window (~650-800px tall once tabs and the
+   address bar are drawn) or a phone held sideways. Used by the home hero to
+   keep the whole card in the first screen. */
+@custom-variant short (@media (max-height: 800px));
 
 @theme inline {
   --color-brand-primary: #444444;

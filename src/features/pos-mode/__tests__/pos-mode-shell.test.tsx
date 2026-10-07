@@ -7,6 +7,10 @@ import { render, screen } from "@testing-library/react";
 
 const nav = vi.hoisted(() => ({ pathname: "/store/store-1/pos" as string | null }));
 vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname }));
+// Has its own test; needs the router and a query client this layout test doesn't set up.
+vi.mock("@/features/dashboard/shared/notification-bell", () => ({
+  NotificationBell: () => null,
+}));
 
 vi.mock("../pos-mode-status-bar", () => ({
   PosModeStatusBar: () => <div data-testid="status-bar" />,

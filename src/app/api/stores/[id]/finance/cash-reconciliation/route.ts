@@ -68,6 +68,7 @@ export const GET = withApiHandler(
         openedAt: shift.openedAt,
         closedAt: shift.closedAt,
         staffMember: shift.staffMember,
+        closedFromBackOffice: shift.closedFromBackOffice,
         breakdown: await getShiftCashOnHand(storeId!, shift),
       }))
     );

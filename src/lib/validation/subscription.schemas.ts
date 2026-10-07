@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeInternalPath } from "@/lib/safe-redirect";
 
 /**
  * Subscription Checkout Schema
@@ -16,6 +17,13 @@ export const checkoutSchema = z.object({
   // EUR, USD and IDR amount, so this picks which one Stripe charges. Left out,
   // Stripe picks from the visitor's IP instead.
   currency: z.enum(["EUR", "USD", "IDR"]).optional(),
+  // Where the default success and cancel pages lead on to (the setup wizard
+  // passes the new store's dashboard). An app path only, never another site.
+  next: z
+    .string()
+    .max(512)
+    .refine((value) => safeInternalPath(value) !== null, "Must be an app path")
+    .optional(),
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;

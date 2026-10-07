@@ -3,6 +3,7 @@ import type { Locale } from "@/components/lang/i18n-provider";
 import { getRequestLocale } from "@/features/marketing/legal/metadata";
 import { LOCALE_PRICE_CURRENCY, formatPlanPrice } from "@/lib/constants/plan-pricing";
 import { buildLocalizedMetadata } from "@/lib/seo";
+import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 
 /**
  * Per-locale metadata for the marketing pages that are authored in fr, id and en
@@ -71,24 +72,27 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
     copy: {
       en: {
         title: "Epidom — Online Store, Menu & POS for F&B Businesses",
-        description:
-          "A menu page, online orders and payments in one link, plus a POS cashier. Storefront free forever; POS with a 14-day free trial. For cafés, restaurants and warungs.",
+        description: STOREFRONT_ONLINE_PAYMENTS_ENABLED
+          ? "A menu page, online orders and payments in one link, plus a POS cashier. Storefront free forever; POS with a 14-day free trial. For cafés, restaurants and warungs."
+          : "A menu page and online orders in one link, plus a POS cashier. Storefront free forever; POS with a 14-day free trial. For cafés, restaurants and warungs.",
         ogTitle: "Epidom — Online Store & POS for F&B",
         ogDescription:
           "Menu page, online orders and POS cashier in one link. Free storefront, forever.",
       },
       fr: {
         title: "Epidom — Vitrine en ligne, menu et caisse pour cafés et restaurants",
-        description:
-          "Une page menu, des commandes et des paiements en ligne dans un seul lien, plus une caisse POS. Vitrine gratuite à vie ; caisse POS avec 14 jours d'essai gratuit. Pour cafés, restaurants et warungs.",
+        description: STOREFRONT_ONLINE_PAYMENTS_ENABLED
+          ? "Une page menu, des commandes et des paiements en ligne dans un seul lien, plus une caisse POS. Vitrine gratuite à vie ; caisse POS avec 14 jours d'essai gratuit. Pour cafés, restaurants et warungs."
+          : "Une page menu et des commandes en ligne dans un seul lien, plus une caisse POS. Vitrine gratuite à vie ; caisse POS avec 14 jours d'essai gratuit. Pour cafés, restaurants et warungs.",
         ogTitle: "Epidom — Vitrine en ligne et caisse POS pour le F&B",
         ogDescription:
           "Page menu, commandes en ligne et caisse POS dans un seul lien. Vitrine gratuite à vie.",
       },
       id: {
         title: "Epidom — Toko Online, Menu & Kasir POS untuk Bisnis F&B",
-        description:
-          "Halaman menu, pesanan online, dan pembayaran dalam satu link, plus kasir POS. Halaman toko gratis selamanya; POS dengan uji coba gratis 14 hari. Untuk kafe, restoran, dan warung.",
+        description: STOREFRONT_ONLINE_PAYMENTS_ENABLED
+          ? "Halaman menu, pesanan online, dan pembayaran dalam satu link, plus kasir POS. Halaman toko gratis selamanya; POS dengan uji coba gratis 14 hari. Untuk kafe, restoran, dan warung."
+          : "Halaman menu dan pesanan online dalam satu link, plus kasir POS. Halaman toko gratis selamanya; POS dengan uji coba gratis 14 hari. Untuk kafe, restoran, dan warung.",
         ogTitle: "Epidom — Toko Online & Kasir POS untuk F&B",
         ogDescription:
           "Halaman menu, pesanan online, dan kasir POS dalam satu link. Halaman toko gratis selamanya.",

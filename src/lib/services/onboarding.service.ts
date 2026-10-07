@@ -30,6 +30,7 @@ import { LOCALE_HEADER, LOCALE_PREF_COOKIE } from "@/lib/i18n-routing";
 import {
   ONBOARDING_GOALS,
   ONBOARDING_STEP,
+  type OnboardingBilling,
   type OnboardingCompleteResult,
   type OnboardingGoal,
   type OnboardingState,
@@ -49,6 +50,7 @@ import type {
   OnboardingStoreStepInput,
   OnboardingStorefrontStepInput,
 } from "@/lib/validation/onboarding.schemas";
+import { posTrialApplies } from "@/lib/plans/pos-trial";
 import { getStorageAdapter } from "@/lib/storage";
 import { getFinanceSettings } from "./finance-settings.service";
 import { storefrontService } from "./storefront.service";
@@ -448,6 +450,24 @@ async function buildState(ctx: OnboardingContext): Promise<OnboardingState> {
 /** GET /api/onboarding/state */
 export async function getOnboardingState(userId: string): Promise<OnboardingState> {
   return buildState(await loadContext(userId));
+}
+
+/**
+ * Whether publishing may go on to a plan's Checkout, and whether a POS one
+ * would include the trial. Same rules as /api/subscriptions/checkout: the plan
+ * in force is an ACTIVE subscription's (Free otherwise), and the trial is for
+ * a first subscription only.
+ */
+export async function getOnboardingBilling(userId: string): Promise<OnboardingBilling> {
+  const subscription = await prisma.subscription.findUnique({
+    where: { userId },
+    select: { plan: true, status: true, stripeSubscriptionId: true, customPricePendingAt: true },
+  });
+  const paying = subscription?.status === "ACTIVE" && subscription.plan !== "FREE";
+  return {
+    canCheckout: !paying && !subscription?.customPricePendingAt,
+    posTrialEligible: posTrialApplies("POS", subscription),
+  };
 }
 
 // ============================================================================

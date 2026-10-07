@@ -54,3 +54,16 @@ export function mondayOfDateKey(dateKey: string): string {
   const offset = (day + 6) % 7; // days since Monday
   return addDaysToDateKey(dateKey, -offset);
 }
+
+/** The wall-clock "HH:mm" (24h, in `timeZone`) that `instant` falls on. */
+export function getBusinessTimeHHmm(instant: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(instant);
+  const map: Record<string, string> = {};
+  for (const part of parts) map[part.type] = part.value;
+  return `${map.hour}:${map.minute}`;
+}

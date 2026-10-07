@@ -775,6 +775,8 @@ describe("SubscriptionService", () => {
         metadata: { userId: "user-1", plan: "POS" },
         trial_period_days: 14,
       });
+      // The trial still takes a card: nothing charged today, renews on it after 14 days.
+      expect(params.payment_method_collection).toBe("always");
       expect(params).not.toHaveProperty("payment_method_types");
     });
 

@@ -136,13 +136,38 @@ export function useOfflineSync(storeId: string) {
     void runFullSync();
   });
 
+  // Parked entries (the server refused them repeatedly) stay on the device
+  // until a person retries, downloads or discards them. Tables are never
+  // parked — their state goes stale — so only sales and production logs.
+  const retryParked = useCallback(async () => {
+    await Promise.all([offlineQueue.retryParked(), productionQueue.retryParked()]);
+    await refreshLastSynced();
+  }, [offlineQueue, productionQueue, refreshLastSynced]);
+
+  const discardQueued = useCallback(
+    async (kind: QueuedEntryKind, id: string) => {
+      if (kind === "sale") await offlineQueue.discardEntry(id);
+      else await productionQueue.discardEntry(id);
+    },
+    [offlineQueue, productionQueue]
+  );
+
   return {
     lastSyncedAt,
     isSyncing: isPulling || offlineQueue.isSyncing || tableQueue.isSyncing || productionQueue.isSyncing,
     pendingCount: offlineQueue.pendingCount + tableQueue.pendingCount + productionQueue.pendingCount,
+    attentionCount: offlineQueue.attentionCount + productionQueue.attentionCount,
+    /** The last pass stopped on a 401: queued work waits for a fresh sign-in. */
+    needsSignIn: offlineQueue.needsSignIn || productionQueue.needsSignIn,
+    queuedSales: offlineQueue.entries,
+    queuedProductionLogs: productionQueue.entries,
+    retryParked,
+    discardQueued,
     syncNow: runFullSync,
     isOnline,
   };
 }
+
+export type QueuedEntryKind = "sale" | "production";
 
 export type OfflineSyncState = ReturnType<typeof useOfflineSync>;

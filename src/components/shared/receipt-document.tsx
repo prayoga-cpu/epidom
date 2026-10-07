@@ -18,11 +18,19 @@ function Divider() {
   return <div className="my-2 border-t border-dashed border-gray-300" />;
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
   return (
     <div className="flex justify-between gap-2">
       <span>{label}</span>
-      <span className="text-right">{value}</span>
+      <span className={cn("text-right", valueClassName)}>{value}</span>
     </div>
   );
 }
@@ -188,6 +196,28 @@ export function ReceiptDocument({ data, className }: ReceiptDocumentProps) {
           <p>
             {labels.notes}: {data.notes}
           </p>
+        </>
+      )}
+
+      {!isBill && data.wifiName && (
+        <>
+          <Divider />
+          <div className="space-y-0.5">
+            {/* A passphrase is one long "word" — let it break instead of
+                pushing the paper wider than the receipt. */}
+            <Row
+              label={labels.wifi}
+              value={data.wifiName}
+              valueClassName="min-w-0 break-all"
+            />
+            {data.wifiPassword && (
+              <Row
+                label={labels.wifiPassword}
+                value={data.wifiPassword}
+                valueClassName="min-w-0 break-all"
+              />
+            )}
+          </div>
         </>
       )}
 

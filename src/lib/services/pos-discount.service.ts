@@ -49,7 +49,7 @@ export interface ResolveOrderDiscountArgs {
   redeemPoints?: number;
   customerId?: string;
   /**
-   * Offline replay (the request carried a clientRequestId): the customer has
+   * Offline replay (a clientRequestId plus the sale's clientCreatedAt): the customer has
    * ALREADY been charged the discounted price on a disconnected till, and the
    * queue deletes an entry after 5 failed replays. Nothing in here may throw
    * in that mode — it degrades to the flat amount the customer got, skips the

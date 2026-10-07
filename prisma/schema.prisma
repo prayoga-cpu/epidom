@@ -231,7 +231,9 @@ model Store {
   staffSchedules                 StaffSchedule[]
   scheduleImages                 ScheduleImage[]
   attendanceRecords              AttendanceRecord[]
+  staffAllowances                StaffAllowance[]
   cashMovements                  CashMovement[]
+  expenses                       Expense[]
   customers                      Customer[]
   discountPresets                DiscountPreset[]
   coupons                        Coupon[]
@@ -292,6 +294,13 @@ model StoreReceiptSettings {
   // Per-store opt-out for the automatic "receipt sent via WhatsApp once
   // paymentStatus flips to PAID" flow — see send-customer-receipt.ts.
   autoSendWhatsappReceipt Boolean @default(true)
+  // Guest WiFi printed on the customer's receipt (and its /r/[orderId] link).
+  // Per store, not per business — every outlet runs its own network. Never on
+  // kitchen tickets or the pre-payment bill. Nothing prints until wifiName is
+  // filled in; showWifiOnReceipt hides it without losing the details.
+  wifiName                String?
+  wifiPassword            String?
+  showWifiOnReceipt       Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1705,6 +1714,11 @@ model StaffMember {
   // off-system payroll); reports must treat NONE as "unknown," not zero.
   payType           PayType            @default(NONE)
   payRate           Decimal?           @db.Decimal(12, 2)
+  // Pay per overtime hour — overtime being time worked past the day's
+  // expected hours (the published roster, else Store.standardWorkMinutesPerDay;
+  // see src/lib/attendance/hours-report.ts). Null: an HOURLY member's overtime
+  // is paid at payRate, anyone else's overtime is tracked but not paid.
+  overtimeRate      Decimal?           @db.Decimal(12, 2)
   // Employment type shown on the "Contract" card — purely descriptive,
   // doesn't feed into any cost calculation (see ContractType's own comment).
   contractType      ContractType?
@@ -1731,15 +1745,49 @@ model StaffMember {
   store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
   user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   staffInvites      StaffInvite[]
-  shifts            Shift[]
+  shifts            Shift[]            @relation("ShiftOpenedBy")
+  closedShifts      Shift[]            @relation("ShiftClosedBy")
   sessions          StaffSession[]
   staffSchedules    StaffSchedule[]
   attendanceRecords AttendanceRecord[]
   cashMovements     CashMovement[]
+  allowances        StaffAllowance[]
 
   @@unique([storeId, username])
   @@index([storeId])
   @@map("staff_members")
+}
+
+/// How a StaffAllowance accrues over a pay period (src/lib/attendance/payroll.ts).
+///   PER_DAY   — `amount` for every business day the staff member clocked in
+///               (meal or transport money, uang makan / uang transport).
+///   PER_MONTH — `amount` per calendar month, pro-rated by days for a period
+///               that covers only part of a month (a position allowance).
+enum AllowanceBasis {
+  PER_DAY
+  PER_MONTH
+}
+
+/// A named allowance the owner pays one staff member on top of their base pay.
+/// Set on the Staff page's Contract card, which saves the whole list at once
+/// (replace-all), so there is no per-row edit history: like payRate, the
+/// salary report always prices a period at today's values.
+model StaffAllowance {
+  id            String         @id @default(cuid())
+  storeId       String
+  staffMemberId String
+  name          String
+  // Literal amount in the store's own currency (never IDR-converted).
+  amount        Decimal        @db.Decimal(12, 2)
+  basis         AllowanceBasis @default(PER_DAY)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  store         Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember   StaffMember    @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([staffMemberId])
+  @@map("staff_allowances")
 }
 
 /// A single-use, time-limited token letting a StaffMember's contact email
@@ -1796,22 +1844,29 @@ model StaffSession {
 }
 
 model Shift {
-  id             String         @id @default(cuid())
-  storeId        String
-  staffMemberId  String
-  openedAt       DateTime       @default(now())
-  closedAt       DateTime?
-  openingCash    Decimal        @db.Decimal(12, 2)
-  closingCash    Decimal?       @db.Decimal(12, 2)
-  expectedCash   Decimal?       @db.Decimal(12, 2) // calculated from orders
-  cashDifference Decimal?       @db.Decimal(12, 2) // closingCash - expectedCash
-  notes          String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  store          Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  staffMember    StaffMember    @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
-  orders         Order[]
-  cashMovements  CashMovement[]
+  id                    String         @id @default(cuid())
+  storeId               String
+  staffMemberId         String
+  openedAt              DateTime       @default(now())
+  closedAt              DateTime?
+  openingCash           Decimal        @db.Decimal(12, 2)
+  closingCash           Decimal?       @db.Decimal(12, 2)
+  expectedCash          Decimal?       @db.Decimal(12, 2) // calculated from orders
+  cashDifference        Decimal?       @db.Decimal(12, 2) // closingCash - expectedCash
+  notes                 String?
+  // Who signed the till off. On the POS only the person who opened it may
+  // (staffMemberId); the owner can override from the Back Office /shifts page,
+  // which sets closedFromBackOffice so the report says the shift was ended for
+  // them. Null on shifts closed before this was recorded.
+  closedByStaffMemberId String?
+  closedFromBackOffice  Boolean        @default(false)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  store                 Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember           StaffMember    @relation("ShiftOpenedBy", fields: [staffMemberId], references: [id], onDelete: Cascade)
+  closedBy              StaffMember?   @relation("ShiftClosedBy", fields: [closedByStaffMemberId], references: [id], onDelete: SetNull)
+  orders                Order[]
+  cashMovements         CashMovement[]
 
   @@index([storeId])
   @@index([staffMemberId])
@@ -1889,6 +1944,41 @@ model CashMovement {
   @@index([shiftId])
   @@index([storeId, occurredAt])
   @@map("cash_movements")
+}
+
+/// What an operating cost was for, on the Finance Expenses ledger.
+enum ExpenseCategory {
+  RENT
+  UTILITIES
+  SALARIES
+  MARKETING
+  SUPPLIES
+  MAINTENANCE
+  INSURANCE
+  FEES
+  OTHER
+}
+
+/// An operating cost the owner records against a day — rent, electricity,
+/// wages paid, marketing. Finance subtracts these from net profit to reach
+/// profit after expenses. Ingredients bought for sale are NOT expenses here:
+/// they reach the P&L as COGS when sold, and recording them again would count
+/// them twice.
+model Expense {
+  id          String          @id @default(cuid())
+  storeId     String
+  /// The day the cost belongs to, as a calendar date.
+  date        DateTime        @db.Date
+  category    ExpenseCategory
+  description String?
+  /// Literal amount in the store's own currency, like Order money.
+  amount      Decimal         @db.Decimal(12, 2)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  store       Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, date])
+  @@map("expenses")
 }
 
 // =============================================================================

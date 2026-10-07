@@ -89,6 +89,7 @@ import {
   checkSlugAvailability,
   completeOnboarding,
   findAvailableSlug,
+  getOnboardingBilling,
   getOnboardingState,
   publicStorefrontUrl,
   saveStoreStep,
@@ -1393,6 +1394,47 @@ describe("getOnboardingState", () => {
 // ==========================================================================
 // Slug check, request locale, public URL
 // ==========================================================================
+
+describe("getOnboardingBilling", () => {
+  const sub = (over: Row) => ({
+    plan: "FREE",
+    status: "ACTIVE",
+    stripeSubscriptionId: null,
+    customPricePendingAt: null,
+    ...over,
+  });
+
+  it("a new account (no subscription yet, or the Free one step 1 adds) can start the POS trial", async () => {
+    h.db.subscription = null;
+    expect(await getOnboardingBilling(USER_ID)).toEqual({
+      canCheckout: true,
+      posTrialEligible: true,
+    });
+    h.db.subscription = sub({});
+    expect(await getOnboardingBilling(USER_ID)).toEqual({
+      canCheckout: true,
+      posTrialEligible: true,
+    });
+  });
+
+  it("an owner who subscribed before can check out again, without the trial", async () => {
+    h.db.subscription = sub({ status: "CANCELED", plan: "POS", stripeSubscriptionId: "sub_1" });
+    expect(await getOnboardingBilling(USER_ID)).toEqual({
+      canCheckout: true,
+      posTrialEligible: false,
+    });
+  });
+
+  it("an owner already paying for a plan is not sent to Checkout", async () => {
+    h.db.subscription = sub({ plan: "POS", stripeSubscriptionId: "sub_1" });
+    expect((await getOnboardingBilling(USER_ID)).canCheckout).toBe(false);
+  });
+
+  it("an admin-quoted price waiting to be paid blocks a self-serve Checkout", async () => {
+    h.db.subscription = sub({ customPricePendingAt: new Date() });
+    expect((await getOnboardingBilling(USER_ID)).canCheckout).toBe(false);
+  });
+});
 
 describe("checkSlugAvailability", () => {
   it("normalizes the input and reports a free link", async () => {

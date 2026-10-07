@@ -57,3 +57,13 @@ graphify-out/
 # Never commit real env files; .env.example is the one exception (AGENTS.md §7.6)
 .env*
 !.env.example
+
+# Electron desktop shell
+desktop/node_modules/
+desktop/dist/
+desktop/smoke.png
+
+# Android (Trusted Web Activity) build output and signing keys — never commit a keystore
+android/twa/
+*.keystore
+*.jks

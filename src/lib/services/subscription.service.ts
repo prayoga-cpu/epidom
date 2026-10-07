@@ -21,6 +21,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { ApiErrorCode } from "@/types/api/responses";
 import { planHasFeature, PLAN_LABELS, type PlanTier } from "@/lib/plans/entitlements";
+import { POS_TRIAL_DAYS } from "@/lib/plans/pos-trial";
 import type { PriceCurrency } from "@/lib/constants/plan-pricing";
 
 /**
@@ -187,8 +188,12 @@ export class SubscriptionService {
           userId: user.id,
           plan: plan,
         },
-        ...(trial ? { trial_period_days: 14 } : {}),
+        ...(trial ? { trial_period_days: POS_TRIAL_DAYS } : {}),
       },
+      // A trial still takes a card (Stripe's default, spelled out so it stays
+      // that way): nothing is charged today, and the plan renews on that card
+      // when the 14 days end unless it is cancelled first.
+      ...(trial ? { payment_method_collection: "always" as const } : {}),
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {

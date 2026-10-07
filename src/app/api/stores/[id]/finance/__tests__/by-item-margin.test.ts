@@ -53,4 +53,17 @@ describe("buildItemMarginRows", () => {
     ]);
     expect(rows.map((r) => r.name)).toEqual(["High Margin", "Low Margin", "Unknown Margin"]);
   });
+
+  it("adds the modifiers' cost to the line's cost, exactly as COGS does", () => {
+    const rows = buildItemMarginRows([
+      {
+        name: "Latte",
+        quantity: 2,
+        total: 100,
+        unitCostSnapshot: 10,
+        optionCostSnapshot: 5,
+      },
+    ]);
+    expect(rows[0]).toMatchObject({ totalCost: 30, margin: 70, marginPct: 70 });
+  });
 });

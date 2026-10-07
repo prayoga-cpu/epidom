@@ -11,7 +11,12 @@ import type { SettlePaymentMethod } from "../types/pos.types";
  * independent — pass either or both. `paymentMethod`/`paymentNote` are only
  * meaningful alongside `paymentStatus: "PAID"`.
  */
-export function useUpdateOrderStatus(storeId: string) {
+/**
+ * `atTill`: this screen is a POS till (order queue / history), so a "Mark as
+ * Paid" here took money into the open shift's drawer and the order joins that
+ * shift. The Back Office's settle-up leaves it off.
+ */
+export function useUpdateOrderStatus(storeId: string, { atTill = false }: { atTill?: boolean } = {}) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -33,6 +38,7 @@ export function useUpdateOrderStatus(storeId: string) {
         paymentStatus,
         paymentMethod,
         paymentNote,
+        ...(atTill && paymentStatus === "PAID" && { attachToOpenShift: true }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pos", "orders", storeId] });

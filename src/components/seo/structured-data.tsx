@@ -1,5 +1,6 @@
 import React from "react";
 import { generateStructuredData } from "@/lib/seo";
+import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 
 interface StructuredDataProps {
   type: "website" | "organization" | "product" | "service";
@@ -62,12 +63,16 @@ export function ProductStructuredData() {
           price: "0",
           priceCurrency: "USD",
           availability: "https://schema.org/InStock",
-          description: "Free public storefront, digital menu, QR ordering, and online payments.",
+          description: STOREFRONT_ONLINE_PAYMENTS_ENABLED
+            ? "Free public storefront, digital menu, QR ordering, and online payments."
+            : "Free public storefront, digital menu, and QR ordering paid at the counter.",
         },
         featureList: [
           "Free public online storefront (menu page)",
           "WhatsApp order notifications",
-          "Card and local online payments",
+          STOREFRONT_ONLINE_PAYMENTS_ENABLED
+            ? "Card and local online payments"
+            : "Online ordering, paid at the counter",
           "POS cashier and receipts",
           "Kitchen display system",
           "Staff shift management",
@@ -267,7 +272,7 @@ export function BlogPostingStructuredData({
 
 /**
  * FAQPage JSON-LD for AEO/GEO — question/answer text must stay in sync
- * with the visible copy at redesign.faq.q1-q6/a1-a6 (see faq-section.tsx).
+ * with the visible copy of the FAQ that renders it (see faq-section.tsx).
  * Schema without matching visible text is a Google structured-data
  * violation, so this takes the rendered strings as props rather than
  * duplicating translation keys here.

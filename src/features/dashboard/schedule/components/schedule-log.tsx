@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,17 +34,19 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api/client";
-import { todayLocalISO, startOfMonthLocalISO } from "@/lib/utils/date-range";
+import { todayLocalISO, startOfMonthLocalISO, parseLocalISO } from "@/lib/utils/date-range";
 import { toast } from "sonner";
 import { MapPin, ImageOff, Printer } from "lucide-react";
 import { DateRangeField } from "@/components/ui/date-range-field";
 import type { StaffRole } from "@prisma/client";
-
-function formatMinutes(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${h}h ${m}m`;
-}
+import type { HoursReportRow } from "@/lib/attendance/hours-report";
+import {
+  SelfiePreviewDialog,
+  type SelfiePreviewItem,
+} from "@/features/dashboard/shared/selfie-preview-dialog";
+import { DayStatus, DayTimes, LongPairWarning } from "./payroll-breakdown";
+import { PayrollPanel } from "./payroll-panel";
+import { differenceTone, useHoursFormat } from "./use-hours-format";
 
 interface StaffOption {
   id: string;
@@ -52,6 +55,7 @@ interface StaffOption {
 }
 
 type LogType = "CLOCK_IN" | "CLOCK_OUT" | "ABSENCE";
+type LogTab = "log" | "hours" | "salary";
 
 /** Everything this log shows. Till cash is the Shifts page's, not attendance. */
 const ATTENDANCE_TYPES: LogType[] = ["CLOCK_IN", "CLOCK_OUT", "ABSENCE"];
@@ -66,13 +70,8 @@ interface AttendanceLogRow {
   locationLabel: string | null;
 }
 
-interface DailyHoursRow {
-  staffMemberId: string;
+interface HoursDayRow extends HoursReportRow {
   staff: StaffOption | null;
-  date: string;
-  totalMinutes: number;
-  regularMinutes: number;
-  overtimeMinutes: number;
 }
 
 interface MissingClockOutRow {
@@ -83,26 +82,37 @@ interface MissingClockOutRow {
   isOpen: boolean;
 }
 
+interface ScheduleLogProps {
+  storeId: string;
+  staff: StaffOption[];
+  /** The Salary tab — the real owner only (the payroll API enforces the same). */
+  canSeePayroll?: boolean;
+}
+
 /**
  * The Schedule page's manager-facing Log & History section: the attendance log
- * (clock-ins, clock-outs, absences) and the hours / overtime it adds up to —
- * what used to be the standalone /attendance page.
+ * (clock-ins, clock-outs, absences), the hours it adds up to against what each
+ * person was expected to work, and — for the owner — the salary it earns.
  *
  * Till cash — a shift's opening float, its closing count, tips and paid-outs —
  * is deliberately NOT here. That is the Shifts page's report (/shifts): who was
  * on the clock and what was in the drawer are different questions and were
  * being read off one mixed timeline.
  */
-export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffOption[] }) {
-  const { t, formatDateTime } = useI18n();
+export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleLogProps) {
+  const { t, formatDateTime, dateLocale } = useI18n();
+  const { duration, signedDuration } = useHoursFormat();
   const queryClient = useQueryClient();
   const [from, setFrom] = useState(startOfMonthLocalISO());
   const [to, setTo] = useState(todayLocalISO());
   const [staffId, setStaffId] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [closingId, setClosingId] = useState<string | null>(null);
+  const [closing, setClosing] = useState<{ attendanceId: string; clockInAt: string } | null>(null);
   const [correctionNotes, setCorrectionNotes] = useState("");
-  const [activeTab, setActiveTab] = useState<"log" | "hours">("log");
+  // "yyyy-MM-ddTHH:mm" in the viewer's own clock, what <input type="datetime-local"> takes.
+  const [closeAt, setCloseAt] = useState("");
+  const [activeTab, setActiveTab] = useState<LogTab>("log");
+  const [selfieIndex, setSelfieIndex] = useState<number | null>(null);
 
   const { data: logData, isLoading: logLoading } = useQuery({
     queryKey: ["schedule-log", storeId, from, to, staffId, typeFilter],
@@ -121,7 +131,7 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
     queryKey: ["attendance-hours", storeId, from, to, staffId],
     queryFn: () =>
       apiClient.get<{
-        dailyRows: DailyHoursRow[];
+        days: HoursDayRow[];
         missingClockOuts: MissingClockOutRow[];
         standardWorkMinutesPerDay: number;
       }>(`/stores/${storeId}/attendance/hours`, {
@@ -130,55 +140,6 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
         ...(staffId !== "all" && { staffId }),
       }),
   });
-
-  const [hoursInput, setHoursInput] = useState<string>("");
-  const [minutesInput, setMinutesInput] = useState<string>("");
-
-  // "Standard work minutes per day" is a duration (e.g. 8h 0m), not a time
-  // of day — the fields below are hours/minutes counters, not a wall-clock
-  // picker, so there's no AM/PM to misread.
-  const standardMinutes = hoursData?.standardWorkMinutesPerDay ?? 480;
-  const hoursValue = hoursInput !== "" ? hoursInput : String(Math.floor(standardMinutes / 60));
-  const minutesValue = minutesInput !== "" ? minutesInput : String(standardMinutes % 60);
-
-  const saveThreshold = async () => {
-    const h = Number(hoursValue);
-    const m = Number(minutesValue);
-    if (!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || m < 0 || m > 59) return;
-    const value = h * 60 + m;
-    if (value < 1 || value > 1440) return;
-    try {
-      await apiClient.patch(`/stores/${storeId}/attendance/settings`, {
-        standardWorkMinutesPerDay: value,
-      });
-      toast.success(t("pages.attendanceSettingsSaved"));
-      queryClient.invalidateQueries({ queryKey: ["attendance-hours", storeId] });
-    } catch {
-      toast.error(t("common.error"));
-    }
-  };
-
-  const openPrintView = () => {
-    const params = new URLSearchParams({ from, to, tab: activeTab });
-    if (staffId !== "all") params.set("staffId", staffId);
-    window.open(`/store/${storeId}/attendance/print?${params.toString()}`, "_blank");
-  };
-
-  const submitCorrection = async () => {
-    if (!closingId || !correctionNotes.trim()) return;
-    try {
-      await apiClient.post(`/stores/${storeId}/attendance/${closingId}/close`, {
-        notes: correctionNotes,
-      });
-      toast.success(t("pages.attendanceCorrectionSaved"));
-      setClosingId(null);
-      setCorrectionNotes("");
-      queryClient.invalidateQueries({ queryKey: ["attendance-hours", storeId] });
-      queryClient.invalidateQueries({ queryKey: ["schedule-log", storeId] });
-    } catch {
-      toast.error(t("common.error"));
-    }
-  };
 
   const typeLabel = (type: LogType) => {
     switch (type) {
@@ -191,6 +152,101 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
     }
   };
 
+  // Every selfie in the current log, in the table's order — what the preview
+  // steps through with Previous / Next.
+  const records = useMemo(() => logData?.records ?? [], [logData]);
+  const selfies = useMemo<SelfiePreviewItem[]>(
+    () =>
+      records
+        .filter((r): r is AttendanceLogRow & { selfieUrl: string } => !!r.selfieUrl)
+        .map((r) => ({
+          id: r.id,
+          selfieUrl: r.selfieUrl,
+          staffName: r.staffName,
+          typeLabel: typeLabel(r.type),
+          timestamp: r.timestamp,
+          locationLabel: r.locationLabel,
+        })),
+    // typeLabel only reads `t`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [records, t]
+  );
+
+  const [hoursInput, setHoursInput] = useState<string>("");
+  const [minutesInput, setMinutesInput] = useState<string>("");
+
+  // "Standard work minutes per day" is a duration (e.g. 8h 0m), not a time
+  // of day — the fields below are hours/minutes counters, not a wall-clock
+  // picker, so there's no AM/PM to misread.
+  const standardMinutes = hoursData?.standardWorkMinutesPerDay ?? 480;
+  const hoursValue = hoursInput !== "" ? hoursInput : String(Math.floor(standardMinutes / 60));
+  const minutesValue = minutesInput !== "" ? minutesInput : String(standardMinutes % 60);
+
+  // Salary is priced off the same hours, so anything that changes them
+  // (the standard, a clock-out correction) refreshes it too.
+  const invalidateHours = () => {
+    queryClient.invalidateQueries({ queryKey: ["attendance-hours", storeId] });
+    queryClient.invalidateQueries({ queryKey: ["payroll", storeId] });
+  };
+
+  const saveThreshold = async () => {
+    const h = Number(hoursValue);
+    const m = Number(minutesValue);
+    if (!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || m < 0 || m > 59) return;
+    const value = h * 60 + m;
+    if (value < 1 || value > 1440) return;
+    try {
+      await apiClient.patch(`/stores/${storeId}/attendance/settings`, {
+        standardWorkMinutesPerDay: value,
+      });
+      toast.success(t("pages.attendanceSettingsSaved"));
+      invalidateHours();
+    } catch {
+      toast.error(t("common.error"));
+    }
+  };
+
+  const openPrintView = () => {
+    const params = new URLSearchParams({ from, to, tab: activeTab });
+    if (staffId !== "all") params.set("staffId", staffId);
+    window.open(`/store/${storeId}/attendance/print?${params.toString()}`, "_blank");
+  };
+
+  // Closing a forgotten clock-in at "now" — the old behaviour — turned a missed
+  // clock-out into days of worked time, and now of overtime pay. The dialog
+  // starts at the end of that day's expected hours instead, never in the future.
+  const startClosing = (attendanceId: string, clockInAt: string) => {
+    const day = hoursData?.days.find((d) => d.openClockIn?.attendanceId === attendanceId);
+    const minutes = day && day.expectedMinutes > 0 ? day.expectedMinutes : standardMinutes;
+    const end = Math.min(new Date(clockInAt).getTime() + minutes * 60_000, Date.now());
+    setClosing({ attendanceId, clockInAt });
+    setCloseAt(format(new Date(end), "yyyy-MM-dd'T'HH:mm"));
+  };
+  const closeAtDate = closeAt ? new Date(closeAt) : null;
+  const closeAtValid =
+    !!closing &&
+    !!closeAtDate &&
+    !Number.isNaN(closeAtDate.getTime()) &&
+    closeAtDate.getTime() > new Date(closing.clockInAt).getTime() &&
+    closeAtDate.getTime() <= Date.now() + 60_000;
+
+  const submitCorrection = async () => {
+    if (!closing || !correctionNotes.trim() || !closeAtValid) return;
+    try {
+      await apiClient.post(`/stores/${storeId}/attendance/${closing.attendanceId}/close`, {
+        notes: correctionNotes,
+        timestamp: closeAtDate!.toISOString(),
+      });
+      toast.success(t("pages.attendanceCorrectionSaved"));
+      setClosing(null);
+      setCorrectionNotes("");
+      invalidateHours();
+      queryClient.invalidateQueries({ queryKey: ["schedule-log", storeId] });
+    } catch {
+      toast.error(t("common.error"));
+    }
+  };
+
   const typeBadgeVariant = (type: LogType): "default" | "secondary" | "destructive" | "outline" => {
     switch (type) {
       case "ABSENCE":
@@ -200,6 +256,15 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
       default:
         return "secondary";
     }
+  };
+
+  const expectedSourceLabel = (day: HoursDayRow) => {
+    if (day.expectedSource === "roster") {
+      return day.expectedWindows.map((w) => `${w.start}–${w.end}`).join(", ");
+    }
+    return day.expectedSource === "dayOff"
+      ? t("pages.attendanceExpectedDayOff")
+      : t("pages.attendanceExpectedStandard");
   };
 
   return (
@@ -262,10 +327,11 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
         )}
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "log" | "hours")}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as LogTab)}>
         <TabsList className="overflow-x-auto">
           <TabsTrigger value="log">{t("pages.attendanceLogTab")}</TabsTrigger>
           <TabsTrigger value="hours">{t("pages.attendanceHoursTab")}</TabsTrigger>
+          {canSeePayroll && <TabsTrigger value="salary">{t("pages.payrollTab")}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="log">
@@ -289,14 +355,14 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
                           {t("common.loading")}
                         </TableCell>
                       </TableRow>
-                    ) : (logData?.records.length ?? 0) === 0 ? (
+                    ) : records.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-muted-foreground text-center">
                           {t("pages.noData")}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      logData!.records.map((record) => (
+                      records.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="whitespace-nowrap">
                             {formatDateTime(record.timestamp)}
@@ -309,12 +375,20 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
                           </TableCell>
                           <TableCell>
                             {record.selfieUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={record.selfieUrl}
-                                alt=""
-                                className="h-10 w-10 rounded-md object-cover"
-                              />
+                              <button
+                                type="button"
+                                className="focus-visible:ring-ring block h-11 w-11 overflow-hidden rounded-md transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:outline-none"
+                                aria-label={t("pages.attendanceSelfieOpen").replace("{name}", record.staffName)}
+                                onClick={() => setSelfieIndex(selfies.findIndex((s) => s.id === record.id))}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={record.selfieUrl}
+                                  alt=""
+                                  loading="lazy"
+                                  className="h-full w-full object-cover"
+                                />
+                              </button>
                             ) : (
                               <ImageOff className="text-muted-foreground/40 h-5 w-5" />
                             )}
@@ -343,10 +417,10 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
 
         <TabsContent value="hours" className="space-y-4">
           <Card>
-            <CardContent className="flex flex-wrap items-end gap-3 pt-4">
+            <CardContent className="space-y-3 pt-4">
               <div className="space-y-1">
                 <Label>{t("pages.attendanceStandardHoursLabel")}</Label>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1">
                     <Input
                       type="number"
@@ -373,6 +447,7 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
                   </Button>
                 </div>
               </div>
+              <p className="text-muted-foreground max-w-2xl text-xs">{t("pages.attendanceDifferenceHint")}</p>
             </CardContent>
           </Card>
 
@@ -380,9 +455,9 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
             <Card className="border-amber-500/40">
               <CardContent className="space-y-2 pt-4">
                 <p className="text-sm font-medium">{t("pages.attendanceMissingClockOut")}</p>
-                {hoursData!.missingClockOuts.map((m, i) => (
+                {hoursData!.missingClockOuts.map((m) => (
                   <div
-                    key={i}
+                    key={m.attendanceId}
                     className="flex flex-wrap items-center justify-between gap-2 text-sm"
                   >
                     <span>
@@ -391,7 +466,7 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setClosingId(m.attendanceId)}
+                      onClick={() => startClosing(m.attendanceId, m.clockInAt)}
                     >
                       {t("pages.attendanceManuallyClose")}
                     </Button>
@@ -404,37 +479,61 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
           <Card>
             <CardContent className="pt-4">
               <div className="-mx-4 overflow-x-auto sm:mx-0">
-                <Table className="min-w-[640px]">
+                <Table className="min-w-[820px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("common.date") ?? "Date"}</TableHead>
                       <TableHead>{t("pages.staff") ?? "Staff"}</TableHead>
-                      <TableHead>{t("pages.attendanceRegularMinutes")}</TableHead>
+                      <TableHead>{t("pages.attendanceInOutColumn")}</TableHead>
+                      <TableHead>{t("pages.attendanceExpectedColumn")}</TableHead>
+                      <TableHead>{t("pages.attendanceWorkedColumn")}</TableHead>
+                      <TableHead>{t("pages.attendanceDifferenceColumn")}</TableHead>
                       <TableHead>{t("pages.attendanceOvertimeMinutes")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {hoursLoading ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-muted-foreground text-center">
+                        <TableCell colSpan={7} className="text-muted-foreground text-center">
                           {t("common.loading")}
                         </TableCell>
                       </TableRow>
-                    ) : (hoursData?.dailyRows.length ?? 0) === 0 ? (
+                    ) : (hoursData?.days.length ?? 0) === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-muted-foreground text-center">
+                        <TableCell colSpan={7} className="text-muted-foreground text-center">
                           {t("pages.noData")}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      hoursData!.dailyRows.map((row, i) => (
-                        <TableRow key={i}>
-                          <TableCell>{row.date}</TableCell>
-                          <TableCell>{row.staff?.name ?? row.staffMemberId}</TableCell>
-                          <TableCell>{formatMinutes(row.regularMinutes)}</TableCell>
+                      hoursData!.days.map((day) => (
+                        <TableRow key={`${day.staffMemberId}:${day.date}`}>
+                          <TableCell className="whitespace-nowrap">
+                            {format(parseLocalISO(day.date), "EEE d MMM", { locale: dateLocale })}
+                          </TableCell>
+                          <TableCell>{day.staff?.name ?? day.staffMemberId}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs tabular-nums">
+                            <DayTimes day={day} />
+                            {day.hasLongPair && <LongPairWarning />}
+                          </TableCell>
                           <TableCell>
-                            {row.overtimeMinutes > 0 ? (
-                              <Badge variant="secondary">{formatMinutes(row.overtimeMinutes)}</Badge>
+                            <span className="tabular-nums">{duration(day.expectedMinutes)}</span>
+                            <span className="text-muted-foreground block text-xs">
+                              {expectedSourceLabel(day)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="tabular-nums">
+                            <DayStatus day={day} fallback={duration(day.workedMinutes)} />
+                          </TableCell>
+                          <TableCell
+                            className={`font-medium whitespace-nowrap tabular-nums ${
+                              day.differenceMinutes !== null ? differenceTone(day.differenceMinutes) : ""
+                            }`}
+                          >
+                            {day.differenceMinutes !== null ? signedDuration(day.differenceMinutes) : "—"}
+                          </TableCell>
+                          <TableCell>
+                            {day.overtimeMinutes > 0 ? (
+                              <Badge variant="secondary">{duration(day.overtimeMinutes)}</Badge>
                             ) : (
                               "—"
                             )}
@@ -448,14 +547,41 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
             </CardContent>
           </Card>
         </TabsContent>
+
+        {canSeePayroll && (
+          <TabsContent value="salary">
+            <PayrollPanel
+              storeId={storeId}
+              from={from}
+              to={to}
+              staffId={staffId !== "all" ? staffId : null}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
-      <Dialog open={!!closingId} onOpenChange={(open) => !open && setClosingId(null)}>
+      <SelfiePreviewDialog items={selfies} index={selfieIndex} onIndexChange={setSelfieIndex} />
+
+      <Dialog open={!!closing} onOpenChange={(open) => !open && setClosing(null)}>
         <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] max-w-sm overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("pages.attendanceManuallyClose")}</DialogTitle>
             <DialogDescription>{t("pages.attendanceCorrectionReasonRequired")}</DialogDescription>
           </DialogHeader>
+          {closing && (
+            <div className="space-y-1">
+              <Label htmlFor="attendance-close-at">{t("pages.attendanceCloseTimeLabel")}</Label>
+              <Input
+                id="attendance-close-at"
+                type="datetime-local"
+                value={closeAt}
+                onChange={(e) => setCloseAt(e.target.value)}
+              />
+              <p className={closeAtValid ? "text-muted-foreground text-xs" : "text-destructive text-xs"}>
+                {closeAtValid ? t("pages.attendanceCloseTimeHint") : t("pages.attendanceCloseTimeInvalid")}
+              </p>
+            </div>
+          )}
           <Textarea
             value={correctionNotes}
             onChange={(e) => setCorrectionNotes(e.target.value)}
@@ -466,7 +592,7 @@ export function ScheduleLog({ storeId, staff }: { storeId: string; staff: StaffO
           <Button
             type="button"
             className="h-11 w-full"
-            disabled={!correctionNotes.trim()}
+            disabled={!correctionNotes.trim() || !closeAtValid}
             onClick={submitCorrection}
           >
             {t("common.actions.save")}

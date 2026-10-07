@@ -3,6 +3,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { PWAInstallElement } from "@khmyznikov/pwa-install";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { isDesktopShell } from "@/lib/pwa/desktop-shell";
 
 /**
  * The single app-wide `<pwa-install>` instance.
@@ -51,6 +52,7 @@ const subscribers = new Set<() => void>();
 function detectStandalone() {
   if (typeof window === "undefined") return true;
   return (
+    isDesktopShell() ||
     window.matchMedia("(display-mode: standalone)").matches ||
     window.matchMedia("(display-mode: minimal-ui)").matches ||
     window.matchMedia("(display-mode: fullscreen)").matches ||
@@ -167,7 +169,12 @@ export function PwaInstall() {
     // import failed) `isUnderStandaloneMode` is undefined, and coercing that to
     // false would show an install button whose dialog can never open.
     const check = () => {
-      if (!cancelled) setStandalone(installElement?.isUnderStandaloneMode ?? detectStandalone());
+      // The desktop app first: the library knows nothing about Electron and
+      // would report a plain browser window.
+      if (!cancelled)
+        setStandalone(
+          isDesktopShell() || (installElement?.isUnderStandaloneMode ?? detectStandalone())
+        );
     };
 
     // `isUnderStandaloneMode` is only populated once the custom element has

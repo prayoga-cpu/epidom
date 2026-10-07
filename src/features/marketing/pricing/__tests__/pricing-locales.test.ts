@@ -19,7 +19,7 @@ function get(node: Node, path: string): Node | undefined {
 
 // t() falls back to English silently, so a key missing from fr or id never
 // fails loudly: it just ships English text to a French or Indonesian visitor.
-describe.each(["pricingPage", "pricingTeaser", "faq"])("redesign.%s locale parity", (section) => {
+describe.each(["pricingPage", "faq"])("redesign.%s locale parity", (section) => {
   const enLeaves = leaves(root(en)[section]);
 
   it.each([
@@ -63,23 +63,9 @@ describe("one plan is marked most popular", () => {
     ["fr", fr],
     ["id", id],
   ] as const)("Operations' tag in %s says nothing about popularity", (_name, dict) => {
-    const r = root(dict);
-    for (const tag of [
-      (r.pricingPage as Record<string, string>).t3tag,
-      (r.pricingTeaser as Record<string, string>).t3tag,
-    ]) {
-      expect(tag).toBeTruthy();
-      expect(tag).not.toMatch(/popul/i);
-    }
-  });
-
-  it("the teaser and the page use the same Operations tag", () => {
-    for (const dict of [en, fr, id]) {
-      const r = root(dict);
-      expect((r.pricingTeaser as Record<string, string>).t3tag).toBe(
-        (r.pricingPage as Record<string, string>).t3tag
-      );
-    }
+    const tag = (root(dict).pricingPage as Record<string, string>).t3tag;
+    expect(tag).toBeTruthy();
+    expect(tag).not.toMatch(/popul/i);
   });
 });
 

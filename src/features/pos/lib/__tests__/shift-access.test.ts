@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canManageShift } from "../shift-access";
+import { canFinishShift, canManageShift } from "../shift-access";
 
 describe("canManageShift", () => {
   it("cashiers and managers with the POS page can hold a till", () => {
@@ -33,5 +33,30 @@ describe("canManageShift", () => {
     expect(
       canManageShift({ staffRole: "CASHIER", allowedPages: undefined as unknown as null })
     ).toBe(true);
+  });
+});
+
+describe("canFinishShift — only the opener", () => {
+  const cashierShift = { id: "cashier-a", role: "CASHIER" };
+  const ownerShift = { id: "owner-row", role: "OWNER" };
+
+  it("lets the persona who opened it finish it", () => {
+    expect(canFinishShift({ staffMemberId: "cashier-a", isOwner: false }, cashierShift)).toBe(true);
+  });
+
+  it("locks it for every other persona, managers included", () => {
+    expect(canFinishShift({ staffMemberId: "cashier-b", isOwner: false }, cashierShift)).toBe(
+      false
+    );
+    expect(canFinishShift({ staffMemberId: "manager", isOwner: false }, cashierShift)).toBe(false);
+  });
+
+  it("gives the owner their own shifts, and only those", () => {
+    expect(canFinishShift({ staffMemberId: "owner-row", isOwner: true }, ownerShift)).toBe(true);
+    expect(canFinishShift({ staffMemberId: "owner-row", isOwner: true }, cashierShift)).toBe(false);
+  });
+
+  it("locks a shift whose opener is unknown", () => {
+    expect(canFinishShift({ staffMemberId: "cashier-a", isOwner: false }, null)).toBe(false);
   });
 });

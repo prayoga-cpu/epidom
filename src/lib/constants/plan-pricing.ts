@@ -11,11 +11,12 @@ import type { Locale } from "@/components/lang/i18n-provider";
  * The profile subscription card still converts PLAN_PRICE_IDR below at the
  * live exchange rate.
  *
- * The /pricing page and the home teaser still carry each locale's price as a
- * literal string (redesign.pricingPage.t2price_mo, ...) because the locale
- * files are shipped as plain data. plan-pricing.test.ts fails when any of those
- * strings stops matching this table, so a price change is: edit here, then let
- * the test list every string that has to follow.
+ * The home page's pricing section and calculator read this table directly.
+ * The /pricing page still carries each locale's price as a literal string
+ * (redesign.pricingPage.t2price_mo, ...) because the locale files are shipped
+ * as plain data. plan-pricing.test.ts fails when any of those strings stops
+ * matching this table, so a price change is: edit here, then let the test list
+ * every string that has to follow.
  *
  * Which currency each language shows (fr -> EUR, en -> USD, id -> IDR) is a
  * marketing decision, not a billing one: whatever Stripe Checkout charges is

@@ -60,15 +60,25 @@ const api = vi.hoisted(() => {
       super(response.error.message);
     }
   }
-  return { post: vi.fn(), ApiClientError };
+  class ApiNetworkError extends Error {}
+  return { post: vi.fn(), ApiClientError, ApiNetworkError };
 });
 vi.mock("@/lib/api/client", () => ({
   apiClient: { post: api.post },
   ApiClientError: api.ApiClientError,
+  ApiNetworkError: api.ApiNetworkError,
 }));
 
-const queue = vi.hoisted(() => ({ enqueueOrder: vi.fn() }));
+const queue = vi.hoisted(() => ({
+  enqueueOrder: vi.fn(),
+  offlineOrderNumber: (id: string) => `OFFLINE-${id.slice(0, 8).toUpperCase()}`,
+}));
 vi.mock("@/lib/pwa/offline-queue", () => queue);
+
+// The app's own reachability probe — what checkout trusts over navigator.onLine.
+const net = vi.hoisted(() => ({ reachable: true, reportNetworkFailure: vi.fn() }));
+vi.mock("@/hooks/use-network-status", () => ({ useOnlineStatus: () => net.reachable }));
+vi.mock("@/lib/pwa/reachability", () => ({ reportNetworkFailure: net.reportNetworkFailure }));
 
 // The repair itself (menu refetch, cart rewrite, toast) has its own suite; here
 // it is a probe for when checkout hands a failure over to it. Null = "not mine".
@@ -187,6 +197,7 @@ beforeEach(() => {
   api.post.mockResolvedValue({ orderId: "order-1", orderNumber: "#101" });
   queue.enqueueOrder.mockResolvedValue("abcdef12-0000-4000-8000-000000000000");
   setOnline(true);
+  net.reachable = true;
   useLastReceipt.getState().clear();
 });
 afterEach(() => setOnline(true));
@@ -280,6 +291,9 @@ describe("PosCheckoutDialog — single-method sale keeps the exact legacy payloa
     const [endpoint, body] = api.post.mock.calls[0];
     expect(endpoint).toBe("/stores/store-1/pos/orders");
     expect(body).toStrictEqual({
+      // So a request that times out after reaching the server can be queued safely.
+      clientRequestId: expect.any(String),
+      liveCheckout: true,
       items: [
         { menuItemId: RAMEN, name: "Ramen", quantity: 2, unitPrice: 12.5, selectedOptions: [] },
       ],
@@ -363,6 +377,8 @@ describe("PosCheckoutDialog — single-method sale keeps the exact legacy payloa
     chooseMethod("publicOrder.paymentMethods.QRIS");
     await submit();
     expect(api.post.mock.calls[0][1]).toStrictEqual({
+      clientRequestId: expect.any(String),
+      liveCheckout: true,
       items: [
         { menuItemId: RAMEN, name: "Ramen", quantity: 2, unitPrice: 12.5, selectedOptions: [] },
       ],
@@ -613,6 +629,8 @@ describe("PosCheckoutDialog — split payment", () => {
     await submit();
 
     expect(api.post.mock.calls[0][1]).toStrictEqual({
+      clientRequestId: expect.any(String),
+      liveCheckout: true,
       items: [
         { menuItemId: RAMEN, name: "Ramen", quantity: 2, unitPrice: 12.5, selectedOptions: [] },
       ],
@@ -723,15 +741,10 @@ describe("PosCheckoutDialog — offline", () => {
       discountAmount: previewed.amount,
       discountReason: previewed.reason,
       paymentMethod: "QRIS",
+      // Linked on replay only to this same shift, and only while it's open.
+      shiftId: SHIFT,
     });
-    for (const dropped of [
-      "customerId",
-      "presetId",
-      "couponCode",
-      "redeemPoints",
-      "shiftId",
-      "payments",
-    ]) {
+    for (const dropped of ["customerId", "presetId", "couponCode", "redeemPoints", "payments"]) {
       expect(body).not.toHaveProperty(dropped);
     }
   });
@@ -761,6 +774,64 @@ describe("PosCheckoutDialog — offline", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("pos.cart.holdOffline"));
     expect(queue.enqueueOrder).not.toHaveBeenCalled();
     expect(cart().items).toHaveLength(1);
+  });
+
+  // The browser says "online" on wifi whose internet is down; the probe knows better.
+  it("wifi up but the internet down: queued, never attempted online", async () => {
+    net.reachable = false;
+    renderCheckout();
+    typeCash("25");
+    await submit();
+
+    expect(api.post).not.toHaveBeenCalled();
+    expect(queue.enqueueOrder).toHaveBeenCalledTimes(1);
+    expect(lastComplete().result.orderNumber).toBe("OFFLINE-ABCDEF12");
+  });
+
+  it("the connection dying mid-sale queues it under the key the online attempt used", async () => {
+    api.post.mockRejectedValueOnce(new api.ApiNetworkError("Failed to fetch"));
+    renderCheckout();
+    typeCash("25");
+    await submit();
+
+    const sentKey = api.post.mock.calls[0][1].clientRequestId;
+    expect(sentKey).toEqual(expect.any(String));
+    expect(api.post.mock.calls[0][2]).toEqual({ timeoutMs: expect.any(Number) });
+    expect(queue.enqueueOrder).toHaveBeenCalledTimes(1);
+    const [storeId, body, key] = queue.enqueueOrder.mock.calls[0];
+    expect(storeId).toBe("store-1");
+    expect(key).toBe(sentKey);
+    // Queued like any offline sale: the idempotency key travels as the entry id.
+    expect(body).not.toHaveProperty("clientRequestId");
+    expect(body).toMatchObject({ paymentMethod: "CASH", amountTendered: 25, shiftId: SHIFT });
+    expect(net.reportNetworkFailure).toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(lastComplete().result.orderId).toBeNull();
+    expect(cart().items).toHaveLength(0);
+  });
+
+  it("a server refusal is shown, never queued", async () => {
+    api.post.mockRejectedValueOnce(
+      new api.ApiClientError({ error: { message: "Invalid order data" } }, 400)
+    );
+    renderCheckout();
+    typeCash("25");
+    await submit();
+
+    expect(queue.enqueueOrder).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("Invalid order data");
+  });
+
+  it("a resumed Saved bill that loses the connection mid-finalize is not queued", async () => {
+    cart().setResumingOrderId("order-9");
+    api.post.mockRejectedValueOnce(new api.ApiNetworkError("Failed to fetch"));
+    renderCheckout();
+    typeCash("25");
+    await submit();
+
+    expect(api.post.mock.calls[0][1]).not.toHaveProperty("clientRequestId");
+    expect(queue.enqueueOrder).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
   });
 
   it("a split payment queues as payments[]", async () => {
@@ -807,6 +878,8 @@ describe("PosCheckoutDialog — one bill of a split by items (basis)", () => {
 
     expect(api.post.mock.calls[0][0]).toBe("/stores/store-1/pos/orders");
     expect(api.post.mock.calls[0][1]).toStrictEqual({
+      clientRequestId: expect.any(String),
+      liveCheckout: true,
       items: [
         { menuItemId: RAMEN, name: "Ramen", quantity: 1, unitPrice: 12.5, selectedOptions: [] },
       ],

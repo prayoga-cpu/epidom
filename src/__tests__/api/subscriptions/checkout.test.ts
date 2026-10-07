@@ -69,7 +69,7 @@ describe("POST /api/subscriptions/checkout", () => {
       "user-1",
       "POS",
       "https://app.test/checkout/success?plan=POS&trial=true",
-      "https://app.test/checkout/failed?reason=canceled",
+      "https://app.test/checkout/failed?reason=canceled&plan=POS&billing=monthly",
       true,
       false,
       "EUR"
@@ -90,6 +90,43 @@ describe("POST /api/subscriptions/checkout", () => {
       undefined
     );
   });
+
+  it("sends both default pages on to `next`, and the cancel page back to the plan", async () => {
+    await POST(
+      makeReq({ plan: "POS", yearly: true, next: "/store/s1/dashboard?tour=1" }),
+      {} as any
+    );
+
+    const [, , successUrl, cancelUrl] = mockCreateCheckoutSession.mock.calls[0];
+    const next = encodeURIComponent("/store/s1/dashboard?tour=1");
+    expect(successUrl).toBe(`https://app.test/checkout/success?plan=POS&trial=true&next=${next}`);
+    expect(cancelUrl).toBe(
+      `https://app.test/checkout/failed?reason=canceled&plan=POS&billing=yearly&next=${next}`
+    );
+  });
+
+  it("no trial for an account that had a Stripe subscription before", async () => {
+    mockFindByUserId.mockResolvedValue({
+      plan: "FREE",
+      status: "CANCELED",
+      stripeCustomerId: "cus_1",
+      stripeSubscriptionId: "sub_old",
+    });
+    await POST(makeReq({ plan: "POS" }), {} as any);
+
+    const [, , successUrl, , trial] = mockCreateCheckoutSession.mock.calls[0];
+    expect(trial).toBe(false);
+    expect(successUrl).toContain("trial=false");
+  });
+
+  it.each(["https://evil.test/x", "//evil.test", "store/s1"])(
+    "refuses a `next` that isn't an app path (%s)",
+    async (next) => {
+      const res = await POST(makeReq({ plan: "POS", next }), {} as any);
+      expect(res.status).toBe(400);
+      expect(mockCreateCheckoutSession).not.toHaveBeenCalled();
+    }
+  );
 
   it("refuses a currency the catalog Prices have no amount in", async () => {
     const res = await POST(makeReq({ plan: "POS", currency: "GBP" }), {} as any);

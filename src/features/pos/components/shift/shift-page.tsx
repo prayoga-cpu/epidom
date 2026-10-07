@@ -24,7 +24,7 @@ import { ShiftStatusCard } from "./shift-status-card";
  */
 export function ShiftPage({ storeId }: { storeId: string }) {
   const { t } = useI18n();
-  const { shift, allowed, known, staffMemberId, isLoading, isError, refetch } =
+  const { shift, allowed, known, staffMemberId, canFinish, isLoading, isError, refetch } =
     useActiveShift(storeId);
   // The owner's persona is logged in one tick after first render on stores that
   // skip the staff picker — that gap is "not known yet", not "your role can't".
@@ -95,6 +95,7 @@ export function ShiftPage({ storeId }: { storeId: string }) {
           {shift ? (
             <ShiftStatusCard
               shift={shift}
+              canFinish={canFinish}
               onFinish={() => setFinishing(true)}
               onCashMovement={() => setMovementOpen(true)}
               // A new tab, not an inline view: it is the standalone printable

@@ -45,8 +45,22 @@ export function departmentFilter(department: string | null): Prisma.OrderItemWhe
   if (department === UNCATEGORIZED) {
     return { menuItemId: null };
   }
-  return { menuItem: { department: department as Department } };
+  // The custom product line (Product.productLine) is its own bucket in the
+  // Department split — its items keep an inert stored department, so they
+  // are matched by product line, and Kitchen/Bar leave them out.
+  if (department === CUSTOM_DEPARTMENT) {
+    return { menuItem: { product: { productLine: "CUSTOM" } } };
+  }
+  return {
+    menuItem: {
+      department: department as Department,
+      NOT: { product: { productLine: "CUSTOM" } },
+    },
+  };
 }
+
+/** Query value for the custom product line's Department-split bucket. */
+export const CUSTOM_DEPARTMENT = "CUSTOM";
 
 /**
  * `Order` where-clause fragment for the sales-channel filter (Order.source —
@@ -82,4 +96,35 @@ export function paymentMethodFilter(method: string | null): Prisma.OrderWhereInp
       { payments: { some: { method: method as PaymentMethod } } },
     ],
   };
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * One end of a report window from a query string value. The report sends
+ * whole days as "YYYY-MM-DD" and a till session's window as full ISO
+ * datetimes; a bare date must be widened to the whole day, the way the
+ * on-screen report does (`T00:00:00Z` … `T23:59:59Z`). `new Date("2026-10-05")`
+ * alone is midnight at the START of the 5th, which made the PDF leave the last
+ * day of every range out — by default, today. Returns null for a missing or
+ * unparseable value.
+ */
+export function parseReportBound(value: string | null, edge: "start" | "end"): Date | null {
+  if (!value) return null;
+  const iso = DATE_ONLY.test(value)
+    ? `${value}${edge === "start" ? "T00:00:00Z" : "T23:59:59Z"}`
+    : value;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * The calendar days a report window covers, as "YYYY-MM-DD" keys. The report
+ * asks for whole days as `T00:00:00Z`…`T23:59:59Z` — UTC days, the same days
+ * the Daily tab and the Expenses ledger use. Reading those instants in the
+ * business time zone instead adds a day: in Jakarta, 23:59:59Z on the 31st is
+ * already 07:00 on the 1st.
+ */
+export function reportDayRange(from: Date, to: Date): { fromKey: string; toKey: string } {
+  return { fromKey: from.toISOString().slice(0, 10), toKey: to.toISOString().slice(0, 10) };
 }

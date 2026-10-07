@@ -2,15 +2,25 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OnboardingContent } from "@/features/onboarding/components/onboarding-content";
-import { resolveOnboardingRedirect } from "@/features/onboarding/lib/resolve-onboarding-redirect";
+import {
+  onboardingPathFor,
+  parsePlanIntent,
+  pricingHrefFor,
+} from "@/features/onboarding/lib/plan-intent";
+import {
+  ONBOARDING_EXIT_PATH,
+  resolveOnboardingRedirect,
+} from "@/features/onboarding/lib/resolve-onboarding-redirect";
 import { getSession } from "@/lib/auth";
 import { getLinkedStaffForUser } from "@/lib/auth/staff-link";
 import { NotFoundError } from "@/lib/errors";
 import type { OnboardingState } from "@/lib/onboarding/contracts";
 import { prisma } from "@/lib/prisma";
-import { getOnboardingState } from "@/lib/services/onboarding.service";
+import { getOnboardingBilling, getOnboardingState } from "@/lib/services/onboarding.service";
 
-const LOGIN_PATH = "/login?callbackUrl=/onboarding";
+interface OnboardingPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
 
 /** Same frame as the wizard (see WizardFrame): full-bleed on phones, a centred card from sm. */
 function OnboardingSkeleton() {
@@ -45,11 +55,22 @@ function OnboardingSkeleton() {
   );
 }
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(await searchParams)) {
+    if (typeof value === "string") query.set(key, value);
+  }
+  // A paid plan picked on the pricing or home page before signing up (see
+  // plan-intent.ts). It survives the sign-in bounce below.
+  const planIntent = parsePlanIntent(query);
+  const loginPath = `/login?callbackUrl=${encodeURIComponent(
+    planIntent ? onboardingPathFor(planIntent) : "/onboarding"
+  )}`;
+
   const session = await getSession();
 
   if (!session) {
-    redirect(LOGIN_PATH);
+    redirect(loginPath);
   }
 
   const userId = session.user.id;
@@ -61,13 +82,14 @@ export default async function OnboardingPage() {
     if (!(error instanceof NotFoundError)) throw error;
   }
   if (!state) {
-    redirect(LOGIN_PATH);
+    redirect(loginPath);
   }
 
-  const [business, staffLink] = await Promise.all([
+  const [business, staffLink, billing] = await Promise.all([
     prisma.business.findUnique({ where: { userId }, select: { onboardingStep: true } }),
     // Only an account without a business can be "staff, not an owner".
     state.business ? Promise.resolve(null) : getLinkedStaffForUser(userId),
+    getOnboardingBilling(userId),
   ]);
 
   // Who gets the wizard and who goes to /stores lives in
@@ -86,12 +108,20 @@ export default async function OnboardingPage() {
     isLinkedStaff: Boolean(staffLink),
   });
   if (target) {
-    redirect(target);
+    // An owner whose setup is long done, signing in from a plan button (the
+    // register page's "Log in" keeps its `next`): the plan's confirm on
+    // /pricing rather than a store list that forgets it. Never for a linked
+    // staff login, which has no plan to buy.
+    redirect(
+      planIntent && target === ONBOARDING_EXIT_PATH && !staffLink
+        ? pricingHrefFor(planIntent)
+        : target
+    );
   }
 
   return (
     <Suspense fallback={<OnboardingSkeleton />}>
-      <OnboardingContent initialState={state} />
+      <OnboardingContent initialState={state} billing={billing} planIntent={planIntent} />
     </Suspense>
   );
 }

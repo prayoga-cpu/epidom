@@ -8,6 +8,8 @@ import { PAYMENT_METHODS } from "@/features/marketing/shared/content/payment-met
 import { INTEGRATIONS } from "@/features/marketing/shared/content/integrations";
 import { SHOWCASE_SAMPLES } from "../content/showcase-samples";
 import { CheckMark, PlanPill } from "./plan-pill";
+import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
+import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 
 type T = (k: string) => string;
 
@@ -52,25 +54,29 @@ function OrderVisual({ t, locale }: { t: T; locale: Locale }) {
   return (
     <div style={mockCard}>
       <MockEyebrow>{t("redesign.servicesPage.checkoutSim")}</MockEyebrow>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-        {PAYMENT_METHODS[locale].map((p, i) => (
-          <div
-            key={i}
-            style={{
-              padding: "20px 14px",
-              borderRadius: 12,
-              background: `linear-gradient(140deg, ${p.c}, rgba(6,15,27,0.4))`,
-              border: "1px solid rgba(245,244,220,0.10)",
-              fontSize: 13,
-              color: "var(--epi-cream-50)",
-              textAlign: "center",
-              fontWeight: 500,
-            }}
-          >
-            {p.n}
-          </div>
-        ))}
-      </div>
+      {/* The method tiles only while online payment is on: storefront orders
+          are paid at the counter otherwise (storefront-ordering.config.ts). */}
+      {STOREFRONT_ONLINE_PAYMENTS_ENABLED && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+          {PAYMENT_METHODS[locale].map((p, i) => (
+            <div
+              key={i}
+              style={{
+                padding: "20px 14px",
+                borderRadius: 12,
+                background: `linear-gradient(140deg, ${p.c}, rgba(6,15,27,0.4))`,
+                border: "1px solid rgba(245,244,220,0.10)",
+                fontSize: 13,
+                color: "var(--epi-cream-50)",
+                textAlign: "center",
+                fontWeight: 500,
+              }}
+            >
+              {p.n}
+            </div>
+          ))}
+        </div>
+      )}
       <div
         style={{
           marginTop: 18,
@@ -714,7 +720,11 @@ export function FeaturesShowcaseSection() {
                     marginTop: 20,
                   }}
                 >
-                  {t(`redesign.servicesPage.${key}body`)}
+                  {t(
+                    key === "r2"
+                      ? onlinePaymentCopyKey("redesign.servicesPage.r2body")
+                      : `redesign.servicesPage.${key}body`
+                  )}
                 </p>
                 <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 10 }}>
                   {[1, 2, 3, 4].map((n) => (
@@ -730,7 +740,11 @@ export function FeaturesShowcaseSection() {
                       }}
                     >
                       <CheckMark />
-                      {t(`redesign.servicesPage.${key}b${n}`)}
+                      {t(
+                        key === "r2" && n === 2
+                          ? onlinePaymentCopyKey("redesign.servicesPage.r2b2")
+                          : `redesign.servicesPage.${key}b${n}`
+                      )}
                     </div>
                   ))}
                 </div>

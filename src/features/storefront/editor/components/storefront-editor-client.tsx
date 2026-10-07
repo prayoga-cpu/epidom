@@ -17,6 +17,8 @@ import { planHasFeature, upgradeHrefFor, type PlanTier } from "@/lib/plans/entit
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { storeKeys } from "@/features/stores/stores/hooks/use-stores";
 import { PageIntro } from "@/features/guide/components/page-intro";
+import { PosMenuNotice } from "@/features/pos/components/pos-menu-notice";
+import { Button } from "@/components/ui/button";
 
 interface StorefrontEditorClientProps {
   storeId: string;
@@ -101,6 +103,7 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
             {hasPos ? t("storefront.editor.tabs.menu") : t("storefront.editor.tabs.storeMenu")}
           </h1>
         </div>
+        <PosMenuNotice storeId={storeId} />
         <MenuManager storeId={storeId} />
       </div>
     );
@@ -112,6 +115,22 @@ export function StorefrontEditorClient({ storeId }: StorefrontEditorClientProps)
         <h1 className="text-2xl font-bold tracking-tight">{t("storefront.editor.title")}</h1>
         <p className="text-muted-foreground mt-1">{t("storefront.editor.subtitle")}</p>
       </div>
+
+      {/* Sent here by an empty till on a plan without the Data page (?from=pos). */}
+      <PosMenuNotice
+        storeId={storeId}
+        action={
+          activeTab !== "menu" ? (
+            <Button
+              type="button"
+              className="h-11 w-full sm:w-auto"
+              onClick={() => setTab("menu")}
+            >
+              {hasPos ? t("storefront.editor.tabs.menu") : t("storefront.editor.tabs.storeMenu")}
+            </Button>
+          ) : null
+        }
+      />
 
       <PageIntro id="storefront" storeId={storeId} />
 

@@ -124,7 +124,7 @@ export function PricingPageClient() {
         </div>
       </section>
 
-      <PricingCards yearly={yearly} currentPlan={currentPlan} />
+      <PricingCards yearly={yearly} currentPlan={currentPlan} onYearlyChange={setYearly} />
       <FeatureComparison />
       <PricingFaq />
       <PricingCta />

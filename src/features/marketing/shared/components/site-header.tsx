@@ -181,7 +181,7 @@ export const SiteHeader = memo(function SiteHeader({
           <Link
             href={backHref}
             aria-label={t("common.actions.back")}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
           >
             <ArrowLeft className="h-4 w-4 text-[var(--epi-cream-50)]" />
           </Link>
@@ -211,7 +211,7 @@ export const SiteHeader = memo(function SiteHeader({
         {/* Mobile hamburger */}
         {!mounted ? (
           <button
-            className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-white/10 lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/10 lg:hidden"
             aria-label={t("common.nav.openMenu")}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -227,7 +227,7 @@ export const SiteHeader = memo(function SiteHeader({
           <Sheet>
             <SheetTrigger asChild>
               <button
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-white/10 lg:hidden"
+                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-white/10 lg:hidden"
                 aria-label={t("common.nav.openMenu")}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">

@@ -106,10 +106,10 @@ describe("/pos/operational", () => {
     expect(db.findMany).not.toHaveBeenCalled();
   });
 
-  it("a kitchen persona gets its own schedule and the clock — not the whole team's roster", async () => {
+  it("a kitchen persona gets its own schedule, its own pay and the clock — not the whole team's roster", async () => {
     staff.getActiveStaffSession.mockResolvedValue(session());
     expect(await renderProps()).toMatchObject({
-      tabs: ["schedule", "clock"],
+      tabs: ["schedule", "pay", "clock"],
       scheduleStaffMemberId: "staff-1",
       renderedFor: "staff-1",
       rosterStaff: [],

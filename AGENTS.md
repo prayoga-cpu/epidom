@@ -163,7 +163,7 @@ These five bug classes have each caused real, shipped breakage on iPad Safari. C
 **Changelog & versioning**
 
 - Every user-facing change MUST add an entry to `CHANGELOG.md` under a new or the most-recent version header, formatted `## [x.y.z] - YYYY-MM-DD · tag`, where `tag` ∈ `feat | fix | infra | ux`.
-- Bump the version in `package.json` AND `src/lib/version.ts` (`APP_VERSION`) so both match that header.
+- Bump the version in `package.json` AND `src/lib/version.ts` (`APP_VERSION`, and `APP_RELEASE_DATE` to the header's date) so both match that header. `src/lib/__tests__/version.test.ts` fails when they drift.
 - The build syncs `CHANGELOG.md` → the `Release` table automatically via `scripts/sync-changelog.ts`; never edit that table by hand.
 
 **Graceful Degradation (Dummy Data)**

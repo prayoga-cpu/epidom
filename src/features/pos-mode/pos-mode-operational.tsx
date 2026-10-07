@@ -2,13 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarClock, CalendarDays, KeyRound, Wallet, type LucideIcon } from "lucide-react";
+import { Banknote, CalendarClock, CalendarDays, KeyRound, Wallet, type LucideIcon } from "lucide-react";
 import type { StaffRole } from "@prisma/client";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShiftPage } from "@/features/pos/components/shift/shift-page";
 import { MyScheduleList } from "@/features/dashboard/schedule/components/my-schedule-list";
 import { PublishedRoster } from "@/features/dashboard/schedule/components/published-roster";
+import { MyPayPanel } from "@/features/dashboard/schedule/components/my-pay-panel";
 import { ClockInOutPanel } from "@/features/dashboard/shared/clock-in-out-panel";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { PageIntro } from "@/features/guide/components/page-intro";
@@ -17,6 +18,7 @@ import { isOperationalTab, type OperationalTab } from "./lib/operational-tabs";
 const TAB_META: Record<OperationalTab, { labelKey: string; icon: LucideIcon }> = {
   shift: { labelKey: "pos.shift.title", icon: Wallet },
   schedule: { labelKey: "pages.scheduleMyScheduleTitle", icon: CalendarClock },
+  pay: { labelKey: "pos.operational.payTab", icon: Banknote },
   roster: { labelKey: "pos.operational.rosterTab", icon: CalendarDays },
   clock: { labelKey: "clockInOut.dialogTitle", icon: KeyRound },
 };
@@ -155,6 +157,13 @@ export function PosModeOperational({
               // clock on top of this page.
               onClockInOut={tabs.includes("clock") ? () => select("clock") : undefined}
             />
+          </TabsContent>
+        )}
+
+        {tabs.includes("pay") && (
+          // Unmounted when left: coming back re-reads today's clock-ins.
+          <TabsContent value="pay" className="min-h-0 overflow-y-auto md:px-2">
+            <MyPayPanel storeId={storeId} />
           </TabsContent>
         )}
 

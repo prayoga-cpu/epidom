@@ -100,6 +100,26 @@ export function ReceiptSettingsCard({ storeId, storeName }: ReceiptSettingsCardP
                 </div>
               </div>
 
+              <div className="min-w-0 space-y-1 sm:col-span-2">
+                <p className="text-muted-foreground text-sm font-medium">
+                  {t("profile.receiptSettings.wifiTitle")}
+                </p>
+                {settings.wifiName ? (
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm">{settings.wifiName}</span>
+                    <Badge variant={settings.showWifiOnReceipt ? "default" : "secondary"}>
+                      {settings.showWifiOnReceipt
+                        ? t("profile.feesAndTaxes.enabled")
+                        : t("profile.feesAndTaxes.disabled")}
+                    </Badge>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    {t("profile.receiptSettings.wifiNotSet")}
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-1 sm:col-span-2">
                 <p className="text-muted-foreground text-sm font-medium">
                   {t("profile.receiptSettings.footerMessage")}

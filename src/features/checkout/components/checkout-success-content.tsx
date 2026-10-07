@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supplierOrderKeys } from "@/features/dashboard/shared/hooks/use-supplier-orders";
 import { useSession } from "@/lib/auth-client";
 import { trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
+import { safeInternalPath } from "@/lib/safe-redirect";
 
 export function CheckoutSuccessContent() {
   const { t } = useI18n();
@@ -21,6 +22,9 @@ export function CheckoutSuccessContent() {
   const planName = searchParams.get("plan");
   const sessionId = searchParams.get("session_id");
   const isTrial = searchParams.get("trial") === "true";
+  // Set by /api/subscriptions/checkout when the setup wizard opened Checkout:
+  // the new store's dashboard, instead of the profile page.
+  const next = safeInternalPath(searchParams.get("next"));
   const trackedRef = useRef(false);
 
   // Invalidate subscription-gated caches when subscription changes (after upgrade)
@@ -88,7 +92,7 @@ export function CheckoutSuccessContent() {
 
   const handleContinue = () => {
     setIsLoading(true);
-    router.push("/profile");
+    router.push(next ?? "/profile");
   };
 
   return (
@@ -106,9 +110,11 @@ export function CheckoutSuccessContent() {
           {/* Title */}
           <div className="space-y-3">
             <h1 className="text-foreground text-4xl font-bold tracking-tight">
-              {t("checkout.success.title")}
+              {t(isTrial ? "checkout.success.trialTitle" : "checkout.success.title")}
             </h1>
-            <p className="text-muted-foreground">{t("checkout.success.subtitle")}</p>
+            <p className="text-muted-foreground">
+              {t(isTrial ? "checkout.success.trialSubtitle" : "checkout.success.subtitle")}
+            </p>
           </div>
 
           {/* Details */}
@@ -136,7 +142,7 @@ export function CheckoutSuccessContent() {
                 {t("checkout.success.status")}
               </span>
               <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-500">
-                {t("checkout.success.active")}
+                {t(isTrial ? "checkout.success.trialStatus" : "checkout.success.active")}
               </span>
             </div>
           </div>
@@ -144,7 +150,7 @@ export function CheckoutSuccessContent() {
           {/* Message */}
           <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
             <p className="text-sm text-blue-600 dark:text-blue-400">
-              {t("checkout.success.message")}
+              {t(isTrial ? "checkout.success.trialMessage" : "checkout.success.message")}
             </p>
           </div>
 
@@ -156,14 +162,20 @@ export function CheckoutSuccessContent() {
               className="h-12 w-full rounded-xl text-base"
               size="lg"
             >
-              {isLoading ? t("common.loading") : t("checkout.success.continueToProfile")}
+              {isLoading
+                ? t("common.loading")
+                : next
+                  ? t("checkout.success.continueToStore")
+                  : t("checkout.success.continueToProfile")}
             </Button>
           </div>
 
-          {/* Footer Note */}
-          <p className="text-muted-foreground pt-2 text-xs">
-            {t("checkout.success.confirmationEmail")}
-          </p>
+          {/* Footer Note: a trial paid nothing, so there is no receipt to mention. */}
+          {!isTrial && (
+            <p className="text-muted-foreground pt-2 text-xs">
+              {t("checkout.success.confirmationEmail")}
+            </p>
+          )}
         </div>
       </div>
     </div>

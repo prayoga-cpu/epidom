@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createPublicOrderSchema } from "@/lib/validation/public-orders.schemas";
 import { initiatePayment } from "@/lib/payments";
@@ -19,6 +19,9 @@ import { STRIPE_CONFIG } from "@/config/stripe.config";
 import { planHasFeature } from "@/lib/plans/entitlements";
 import { getFinanceSettings } from "@/lib/services";
 import { computeOrderCharges } from "@/lib/finance/order-charges";
+import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
+import { sendPushToStore } from "@/lib/push/send";
+import { storefrontOrderPushPayload } from "@/lib/push/order-alert";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -39,6 +42,15 @@ export async function POST(request: Request) {
     }
 
     const input = parsed.data;
+
+    // Pay at the cashier (STOREFRONT_ONLINE_PAYMENTS_ENABLED is off): whatever
+    // the page sent — a tab opened before the switch can still post QRIS or a
+    // card — the order is placed as cash to be collected at the counter. Not
+    // rejected: refusing it would lose the customer's order over a choice the
+    // store no longer offers.
+    const paymentMethod: PaymentMethod = STOREFRONT_ONLINE_PAYMENTS_ENABLED
+      ? (input.paymentMethod as PaymentMethod)
+      : "CASH";
 
     // Load storefront + store
     const storefront = await prisma.storefront.findUnique({
@@ -85,7 +97,7 @@ export async function POST(request: Request) {
     // before any order is created.
     const merchant = storefront.store.business.user;
     if (
-      input.paymentMethod === "STRIPE_CARD" &&
+      paymentMethod === "STRIPE_CARD" &&
       !(merchant.stripeConnectOnboarded && merchant.stripeConnectAccountId)
     ) {
       return NextResponse.json(
@@ -151,7 +163,7 @@ export async function POST(request: Request) {
     const financeSettings = await getFinanceSettings(storefront.storeId);
     const charges = computeOrderCharges({
       itemsTotal: subtotal,
-      paymentMethod: input.paymentMethod as PaymentMethod,
+      paymentMethod,
       settings: financeSettings,
     });
 
@@ -160,7 +172,7 @@ export async function POST(request: Request) {
     // awaiting webhook confirmation) resolves to CONFIRMED/DELIVERED the
     // same way. See resolveSettledOrderStatus.
     const settledStatus = resolveSettledOrderStatus(
-      input.paymentMethod as PaymentMethod,
+      paymentMethod,
       storefront.store.kitchenDisplayEnabled
     );
     const immediatelyDelivered = settledStatus === "DELIVERED";
@@ -182,8 +194,13 @@ export async function POST(request: Request) {
           customerPhone: input.customerPhone,
           orderType: input.orderType as OrderType,
           tableNumber: input.tableNumber,
-          paymentMethod: input.paymentMethod as PaymentMethod,
-          paymentStatus: input.paymentMethod === "CASH" ? "PAID" : "PENDING",
+          paymentMethod,
+          // Always unpaid at placement. A gateway method turns PAID on its
+          // webhook; "pay at the cashier" (CASH) turns PAID when the cashier
+          // takes the money ("Mark as Paid" on the POS). It used to be PAID
+          // from the start — revenue for money nobody had collected, and no
+          // prompt at the till to collect it.
+          paymentStatus: "PENDING",
           status: settledStatus,
           ...(immediatelyDelivered && { deliveredDate: new Date() }),
           source: "STOREFRONT",
@@ -228,10 +245,10 @@ export async function POST(request: Request) {
     let paymentUrl: string | null = null;
     let qrString: string | null = null;
 
-    if (input.paymentMethod !== "CASH") {
+    if (paymentMethod !== "CASH") {
       try {
         const user = storefront.store.business.user;
-        const isStripe = input.paymentMethod === "STRIPE_CARD";
+        const isStripe = paymentMethod === "STRIPE_CARD";
         const isConnectReady = user.stripeConnectOnboarded && user.stripeConnectAccountId;
         
         let stripeAccountId: string | undefined = undefined;
@@ -247,7 +264,7 @@ export async function POST(request: Request) {
           customerName: input.customerName,
           customerPhone: input.customerPhone,
           description: `Pesanan ${orderNumber} - ${storefront.displayName}`,
-          paymentMethod: input.paymentMethod as PaymentMethod,
+          paymentMethod,
           bankCode: input.bankCode as import("@/lib/payments").XenditVABankCode | undefined,
           successUrl: `${appUrl}/@${slug}/order/${order.id}?status=success`,
           cancelUrl: `${appUrl}/@${slug}/order/${order.id}?status=cancelled`,
@@ -298,7 +315,7 @@ export async function POST(request: Request) {
           customerName: input.customerName,
           totalAmount: charges.total,
           currency: financeSettings.currency,
-          paymentMethod: input.paymentMethod,
+          paymentMethod,
           items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity })),
           merchantPhone: store.phone ?? null,
           storeName: store.name,
@@ -308,9 +325,26 @@ export async function POST(request: Request) {
       console.error("[public/orders] Inngest event failed:", err);
     }
 
-    // Merchant alert (new order) now fires from the send-order-notification
-    // Inngest function above, via MagicBell — single trigger point instead
-    // of a second direct push call here.
+    // The owner's alert (new order) fires from the send-order-notification
+    // Inngest function above, via MagicBell — that reaches the owner's account.
+    // The TILL is told directly here instead: an OS push to every device of
+    // this store that switched it on from the POS bell (src/lib/push/send.ts —
+    // per device, opt-in, a no-op until the VAPID keys are set), so a "pay at
+    // the cashier" order is noticed even with the POS tab in the background,
+    // and without depending on the job runner. Open POS tabs also hear the
+    // realtime event published above.
+    // after(): delivered once the response is out, without being cut off
+    // when the function is frozen.
+    const pushPayload = storefrontOrderPushPayload({
+      locale: storefront.store.business.locale,
+      storeId: storefront.storeId,
+      orderId: order.id,
+      orderNumber,
+      queueNumber: order.queueNumber,
+      customerName: input.customerName,
+      unpaid: order.paymentStatus !== "PAID",
+    });
+    after(() => sendPushToStore(storefront.storeId, pushPayload));
 
     return NextResponse.json(
       createSuccessResponse({

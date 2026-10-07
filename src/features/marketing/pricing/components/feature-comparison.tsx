@@ -45,7 +45,8 @@ const CATEGORIES = [
   {
     labelKey: "redesign.pricingPage.cmpCat2",
     rows: [
-      { labelKey: "redesign.pricingPage.cmp_qris", free: true, pos: true, ops: true, ent: true },
+      // Not on Free: the free storefront takes no orders, so no payment either.
+      { labelKey: "redesign.pricingPage.cmp_qris", free: false, pos: true, ops: true, ent: true },
       { labelKey: "redesign.pricingPage.cmp_gopay", free: false, pos: true, ops: true, ent: true },
       { labelKey: "redesign.pricingPage.cmp_fee", free: true, pos: true, ops: true, ent: true },
     ],

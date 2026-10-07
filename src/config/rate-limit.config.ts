@@ -217,6 +217,30 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 100,
     window: 60,
   },
+  "/api/stores/[id]/finance/sales-patterns": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/finance/adjustments": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/finance/tax": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/finance/labour": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/finance/expenses": {
+    limit: 100,
+    window: 60,
+  },
+  "/api/stores/[id]/finance/expenses/[expenseId]": {
+    limit: 100,
+    window: 60,
+  },
 
   // Stock operations
   "/api/stores/[id]/stock/adjust": {

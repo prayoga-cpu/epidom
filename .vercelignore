@@ -5,3 +5,6 @@ graphify-out
 coverage
 *.tsbuildinfo
 .DS_Store
+
+desktop/
+android/

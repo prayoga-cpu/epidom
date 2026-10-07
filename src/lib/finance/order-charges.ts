@@ -150,3 +150,19 @@ export function computeRefund({ total, alreadyRefunded, amount }: RefundInput): 
   const newRefundTotal = round2(alreadyRefunded + amount);
   return { ok: true, newRefundTotal, isFullyRefunded: newRefundTotal >= total };
 }
+
+/**
+ * The tax share of one order's refund. `refundAmount` is a slice of
+ * `Order.total`, which includes tax, so a refunded sale gives back its tax too;
+ * the share is proportional because a partial refund has no line breakdown.
+ */
+export function refundedTaxPortion(order: {
+  total: number | string | { toString(): string };
+  tax: number | string | { toString(): string };
+  refundAmount: number | string | { toString(): string };
+}): number {
+  const total = Number(order.total);
+  const refund = Number(order.refundAmount);
+  if (!(total > 0) || !(refund > 0)) return 0;
+  return (Math.min(refund, total) * Number(order.tax)) / total;
+}

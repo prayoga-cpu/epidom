@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +30,20 @@ import type { SupplierWithRelations } from "@/lib/repositories/supplier.reposito
 import { useCustomProductsSettings } from "../custom-products/hooks/use-custom-products-settings";
 import { DataQuickStart } from "../import/components/data-quick-start";
 import type { EntityType } from "@/lib/ai/import/types";
+import { Button } from "@/components/ui/button";
+import { PageIntro } from "@/features/guide/components/page-intro";
+import { PosMenuNotice } from "@/features/pos/components/pos-menu-notice";
+import { DataSetupChooser } from "../setup/components/data-setup-chooser";
+import { DataSetupImport } from "../setup/components/data-setup-import";
+import { DataSetupGuide, DataSetupMenuReady } from "../setup/components/data-setup-card";
+import { useDataSetupCounts, useDataSetupState } from "../setup/hooks/use-data-setup";
+import {
+  isDataEmpty,
+  resolveDataSetupCard,
+  resolveDataSetupView,
+  type DataSetupCounts,
+  type DataSetupPath,
+} from "../setup/lib/data-setup";
 
 // ========================================
 // Lazy-Loaded Section Components
@@ -246,6 +260,7 @@ interface DataViewClientProps {
   // see MaterialsSection/ProductsSection's own prop docs for why.
   initialMaterialsTotal?: number;
   initialRecipes?: RecipeWithIngredients[];
+  initialRecipesTotal?: number;
   initialProducts?: Product[];
   initialProductsTotal?: number;
   initialSuppliers?: SupplierWithRelations[];
@@ -270,6 +285,7 @@ export function DataViewClient({
   initialMaterials,
   initialMaterialsTotal,
   initialRecipes,
+  initialRecipesTotal,
   initialProducts,
   initialProductsTotal,
   initialSuppliers,
@@ -335,21 +351,126 @@ export function DataViewClient({
     }
   };
 
+  // First run (src/features/dashboard/data/setup): an empty store picks how to
+  // fill the page before seeing it. The totals start from the server's and go
+  // live while the setup needs them, so the page moves on the moment the first
+  // item is saved.
+  const initialCounts: DataSetupCounts = {
+    products: initialProductsTotal ?? initialProducts?.length ?? 0,
+    materials: initialMaterialsTotal ?? initialMaterials?.length ?? 0,
+    recipes: initialRecipesTotal ?? initialRecipes?.length ?? 0,
+  };
+  const setup = useDataSetupState(storeId);
+  // Skipping the choice holds for this visit only: an empty store asks again.
+  const [setupSkipped, setSetupSkipped] = useState(false);
+  const counts = useDataSetupCounts(
+    storeId,
+    initialCounts,
+    isDataEmpty(initialCounts) || (setup.state.path !== null && !setup.state.cardHidden)
+  );
+  const setupView = resolveDataSetupView(setup.state, counts, setupSkipped);
+  const setupCard = setupView === "lists" ? resolveDataSetupCard(setup.state, counts) : null;
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  const goToTab = (tab: DataTab) => {
+    setActiveTab(tab);
+    tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const choosePath = (path: DataSetupPath) => {
+    setup.setState({ path, cardHidden: false });
+    if (path === "guided") setActiveTab("materials");
+  };
+  const hideSetupCard = () => setup.setState({ ...setup.state, cardHidden: true });
+
   // The quick start opens by itself only while the lists are still empty;
   // after that it is one row the owner can expand.
-  const listsAreEmpty =
-    (initialProductsTotal ?? initialProducts?.length ?? 0) === 0 &&
-    (initialMaterialsTotal ?? initialMaterials?.length ?? 0) === 0;
+  const listsAreEmpty = counts.products === 0 && counts.materials === 0;
+
+  // Sent here by an empty till (?from=pos): the way to the menu on this page.
+  const menuNotice = (
+    <PosMenuNotice
+      storeId={storeId}
+      className="mb-4"
+      action={
+        setupView === "lists" && activeTab !== "products" ? (
+          <Button
+            type="button"
+            className="h-11 w-full sm:w-auto"
+            onClick={() => goToTab("products")}
+          >
+            {t("pos.menuNotice.goToProducts")}
+          </Button>
+        ) : null
+      }
+    />
+  );
+
+  // The saved choice is read after mount: until then an empty store can't tell
+  // "never picked" from "picked", so it shows neither.
+  if (setupView !== "lists" && !setup.ready) {
+    return <Skeleton className="h-96 w-full rounded-lg" />;
+  }
+
+  if (setupView === "choose") {
+    return (
+      <>
+        {menuNotice}
+        <DataSetupChooser onChoose={choosePath} onSkip={() => setSetupSkipped(true)} />
+      </>
+    );
+  }
+
+  if (setupView === "import") {
+    return (
+      <>
+        {menuNotice}
+        <DataSetupImport
+          storeId={storeId}
+          onBack={() => setup.setState({ path: null, cardHidden: false })}
+          onAddManually={() => {
+            setSetupSkipped(true);
+            setActiveTab("products");
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <>
-      <DataQuickStart
-        storeId={storeId}
-        startOpen={listsAreEmpty}
-        defaultEntityType={TAB_ENTITY_TYPE[activeTab]}
-        className="mb-6"
-      />
+      {menuNotice}
+      {setupCard === "guide" ? (
+        <DataSetupGuide
+          storeId={storeId}
+          counts={counts}
+          onGoToTab={goToTab}
+          onHide={hideSetupCard}
+          onSwitchToImport={() => setup.setState({ path: "import", cardHidden: false })}
+          className="mb-6"
+        />
+      ) : setupCard === "menuReady" ? (
+        <DataSetupMenuReady
+          storeId={storeId}
+          onContinueGuided={() => choosePath("guided")}
+          onHide={hideSetupCard}
+          className="mb-6"
+        />
+      ) : (
+        // The page tip and the quick start step aside while a setup card
+        // shows: one thing to do at a time.
+        <>
+          {/* The page has no header of its own: the intro sits above the tabs. */}
+          <PageIntro id="data" storeId={storeId} className="mb-4" />
+          <DataQuickStart
+            storeId={storeId}
+            startOpen={listsAreEmpty}
+            defaultEntityType={TAB_ENTITY_TYPE[activeTab]}
+            className="mb-6"
+          />
+        </>
+      )}
       <Tabs
+        ref={tabsRef}
         value={activeTab}
         onValueChange={setActiveTab}
         className="grid min-h-[calc((100vh-150px)/var(--app-zoom,1))] w-full gap-6"

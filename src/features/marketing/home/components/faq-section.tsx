@@ -19,25 +19,17 @@ export interface FaqItem {
 }
 
 /**
- * The homepage questions, in order: what <FaqSection /> shows when a page does
- * not pass its own `items` (/pricing does).
+ * An accordion of questions with the "still have questions?" contact line.
+ * Each page passes its own questions: the home page's switcher FAQ, /pricing's
+ * buyer questions.
  */
-function useHomeFaqItems(): FaqItem[] {
-  const { t } = useI18n();
-  return [1, 2, 3, 4, 5, 6].map((n) => ({
-    q: t(`redesign.faq.q${n}` as const),
-    a: t(`redesign.faq.a${n}` as const),
-  }));
-}
-
-export function FaqSection({ items }: { items?: FaqItem[] }) {
+export function FaqSection({ items }: { items: FaqItem[] }) {
   const { t, locale } = useI18n();
   const [open, setOpen] = useState<number>(0);
   // Per-instance prefix: two FaqSections on one page must not share element ids.
   const uid = useId();
   const waOptions = getWhatsAppOptions(locale);
-  const homeItems = useHomeFaqItems();
-  const faqs = items ?? homeItems;
+  const faqs = items;
 
   return (
     <section className="epi-section">
@@ -89,6 +81,8 @@ export function FaqSection({ items }: { items?: FaqItem[] }) {
                     href={whatsappHref(opt.number)}
                     target="_blank"
                     rel="noopener noreferrer"
+                    // Inline in the sentence, so the 44px tap area is a pseudo-element.
+                    className="relative before:absolute before:inset-x-0 before:-inset-y-3 before:content-['']"
                     style={{
                       color: "#25D366",
                       borderBottom: "1px solid #25D366",
@@ -103,6 +97,7 @@ export function FaqSection({ items }: { items?: FaqItem[] }) {
               {t("redesign.faq.helpOr")}{" "}
               <a
                 href={SUPPORT_MAILTO}
+                className="relative before:absolute before:inset-x-0 before:-inset-y-3 before:content-['']"
                 style={{
                   color: "var(--epi-gold-400)",
                   borderBottom: "1px solid var(--epi-gold-500)",

@@ -3,8 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { closeShiftSchema } from "@/lib/validation/operations.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
-import { toDecimal } from "@/lib/utils/types.server";
-import { getShiftCashOnHand } from "@/lib/services/cash-drawer.service";
+import {
+  closeTillShift,
+  isShiftOpener,
+  resolveShiftActor,
+} from "@/lib/services/shift-close.service";
+import { NOT_SHIFT_OPENER } from "@/lib/constants/shift-close";
 
 export const dynamic = "force-dynamic";
 
@@ -40,12 +44,15 @@ export const GET = withApiHandler(
 );
 
 export const PATCH = withApiHandler(
-  async (request, { storeId, params }) => {
+  async (request, { storeId, params, access }) => {
     const { shiftId } = params as { shiftId: string };
 
     // No `orders` include: getShiftCashOnHand runs its own scoped queries, and
     // pulling every order of the session just to sum a subset was wasted work.
-    const shift = await prisma.shift.findUnique({ where: { id: shiftId } });
+    const shift = await prisma.shift.findUnique({
+      where: { id: shiftId },
+      include: { staffMember: { select: { id: true, name: true, role: true } } },
+    });
 
     if (!shift || shift.storeId !== storeId) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Shift not found"), {
@@ -57,6 +64,26 @@ export const PATCH = withApiHandler(
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.CONFLICT, "Shift is already closed"),
         { status: 409 }
+      );
+    }
+
+    // Only the person who opened the till signs it off here. Everyone else —
+    // including a manager, and the owner's POS persona for a cashier's shift —
+    // is sent to the owner, who can close it from the Back Office
+    // (POST /shifts/[shiftId]/close). Decided from the session and PIN cookie,
+    // never from anything in the body.
+    const actor = await resolveShiftActor(storeId!, access);
+    if (!isShiftOpener(actor, shift.staffMember)) {
+      const openedBy = shift.staffMember?.name ?? null;
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.FORBIDDEN,
+          openedBy
+            ? `Only ${openedBy} can end this shift. The owner can close it from the Back Office.`
+            : "Only the person who opened this shift can end it. The owner can close it from the Back Office.",
+          { reason: NOT_SHIFT_OPENER, openedBy }
+        ),
+        { status: 403 }
       );
     }
 
@@ -73,37 +100,21 @@ export const PATCH = withApiHandler(
       );
     }
 
-    const { closingCash, notes } = parsed.data;
-
-    // One shared computation with the daily report, the Finance cash tab and
-    // the dashboard card — see lib/finance/cash-drawer.ts. The formula that
-    // used to live here counted DELIVERED-but-unpaid cash orders as money in
-    // the drawer, never subtracted refunds, and knew nothing about tips, float
-    // top-ups, paid-outs or safe drops, so it reported a false over/short on
-    // any day those happened.
-    //
-    // The persisted expectedCash/cashDifference are a snapshot of the moment of
-    // closing. The report recomputes live, so a movement backdated into this
-    // window after the fact shows up there without rewriting this row.
-    const breakdown = await getShiftCashOnHand(storeId!, shift, closingCash);
-    const expectedCash = breakdown.expectedCash;
-    // Non-null in practice: closingCash was passed as the override above, so the
-    // breakdown always has a count to compare against. Recomputed rather than
-    // `?? 0` because toDecimal(null) silently writes 0.00, which would read as
-    // "the drawer balanced perfectly" — the one wrong answer this must not give.
-    const cashDifference = breakdown.cashDifference ?? closingCash - expectedCash;
-
-    const closed = await prisma.shift.update({
-      where: { id: shiftId },
-      data: {
-        closedAt: new Date(),
-        closingCash: toDecimal(closingCash),
-        expectedCash: toDecimal(expectedCash),
-        cashDifference: toDecimal(cashDifference),
-        notes,
-      },
-      include: { staffMember: { select: { id: true, name: true } } },
+    const closed = await closeTillShift({
+      storeId: storeId!,
+      shift,
+      closingCash: parsed.data.closingCash,
+      notes: parsed.data.notes,
+      // The owner may only reach this line for a shift the owner opened.
+      closedByStaffMemberId: actor.kind === "staff" ? actor.staffMemberId : shift.staffMemberId,
+      fromBackOffice: false,
     });
+    if (!closed) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.CONFLICT, "Shift is already closed"),
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json(createSuccessResponse({ shift: closed }));
   },

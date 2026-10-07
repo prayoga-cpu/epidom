@@ -9,6 +9,98 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.8.0] - 2026-10-06 · feat
+
+Online orders are paid at the cashier, the POS gets the notification bell and a full-screen button, only the person who opened a shift can end it, and your guest WiFi can go on receipts.
+
+- **Online orders are paid at the cashier.** Customers still order from your storefront and the order still goes to the kitchen, but every order is now placed unpaid and paid at the counter. Online payment (QRIS, e-wallets, bank transfer, card) is switched off for now. The customer's order page shows the number to give the cashier and turns to Paid once they have paid. "Pay at Cashier" orders used to be recorded as paid the moment they were placed, before anyone had taken the money. They now stay unpaid until the cashier marks them paid. While online payment is off, the website (homepage, features, pricing and the guides) says customers pay at the counter.
+- **The till hears about it straight away.** The notification bell is now on the POS too, with the same notification switch and sound settings. It rings the moment an online order arrives and marks the ones still to be paid. With notifications switched on for that device, it also gets a notification while the POS is in the background.
+- **Payment taken at the till counts in the till.** An online order paid at the counter joins the open shift, so its cash is part of that shift's expected cash instead of the "cash sales not on a till" line. The customer's WhatsApp or email receipt is sent when it is paid (the same now goes for a Pay Later tab). An order marked paid from the Back Office stays off every till, and its payment fee follows the way it was actually paid, such as QRIS or card. A cancelled order can no longer be marked paid.
+- **Full screen for the till.** A new button in the POS top bar, next to the bell, puts the POS in full screen with no tabs or address bar, the same as the customer display's. It shows on tablets and computers. iPhones don't allow full screen, so it isn't shown there.
+- **Only the person who opened a shift can end it.** On the POS, Finish shift is locked for everyone else and says who can end it. The owner can still close any open shift from Shifts in the Back Office, after counting the drawer, and it shows as closed by the owner.
+- **Your guest WiFi on the receipt.** Add the WiFi name and password under Profile → Receipt & WhatsApp. They print on every customer receipt and show on its receipt link, never on kitchen tickets or a bill. Each outlet has its own.
+
+## [3.7.0] - 2026-10-06 · feat
+
+Salaries worked out from attendance, hours that show how far over or under, and selfies you can open.
+
+- **See what each person has earned.** The Schedule page's Log & History has a new Salary tab for the owner. For any period it shows each staff member's base pay, allowances and overtime pay, worked out from their clock-ins, and the total for the store. Open a row to see how it adds up and the days behind it, or print the whole report.
+- **Allowances for each staff member.** Each person's Contract card on the Staff page now takes allowances, such as meal money for every day worked or a monthly position allowance, and an overtime rate per hour. A monthly salary or allowance is counted pro rata for part of a month. No deductions are made for absences: they are listed so you can decide.
+- **Staff see their own pay at the till.** POS Mode's Operational page has a My Pay tab with what you have earned this month so far, and in earlier months. It only ever shows the pay of the person signed in.
+- **Hours show how far over or under.** The Hours tab now shows each day's clock-in and clock-out times, the hours expected, the hours worked, and the difference, such as +1h 2m or −2h 30m. Expected hours come from the published roster for that day, or from your standard hours when there is no roster. Days someone was rostered but never clocked in, reported absences and days still missing a clock-out now appear too. They used to be left out.
+- **Overtime follows the roster.** Overtime is time worked past the shift someone was rostered for, not past the standard day, so a 4-hour shift worked for 5 hours shows an hour of overtime. Hours worked on a rostered day off all count as overtime.
+- **Closing a forgotten clock-out asks when they left.** Closing a clock-in someone forgot to end used to record the clock-out at the moment you corrected it, so a correction made two days later counted two days of work. The correction now asks for the time they left, starting at the end of their expected hours.
+- **Suspiciously long days are flagged.** A day with more than 16 hours between clock-in and clock-out, usually a clock-out done much later, is marked on the Hours tab and in the salary breakdown so you can check it. Its hours still count as recorded.
+- **Open a selfie.** Tap a clock-in or clock-out selfie in the log to see it full size, with who, when and where, and step through the others. The same works in your own history on POS My Schedule.
+- **Only the owner can change staff details.** Adding, editing or deactivating a staff member, including their pay, now needs the owner's own login, not a staff persona on the owner's device. Pay rates, allowances and contract details are shown only to the owner, too.
+
+## [3.6.0] - 2026-10-06 · feat
+
+Finance reports that add up: totals and subtotals on every report, a P&L you can check line by line, and five new reports.
+
+- **Every report has its totals.** By Channel, Payment Method, Top Items, Item Margin, By Category, By Shift, By Shift Block, Daily and Waste now end with a total row (a totals card on a phone), and the Department split shows its total and each department's share. Top Items shows the top 20, everything else, and all items sold. By Category goes from the items subtotal to your revenue through one line for order discounts, service charge, tax and delivery fees.
+- **A P&L that adds up.** The statement now reads Gross revenue → Discounts → Revenue → Refunds → Tax → Net sales → COGS → Gross profit → Processing fees → Platform commission → Waste → Net profit, every subtotal is the line above it minus what's in between, and each line shows its share of net sales. Below net profit come your recorded expenses, down to profit after expenses.
+- **Gross profit no longer counts tax as profit.** Gross profit and margin are now measured on net sales (after refunds, without tax). Before, a store charging 11% tax saw its margin overstated. Net profit is unchanged except for the next two points.
+- **Delivery-app commission is in net profit.** What GoFood, GrabFood and the other platforms keep (estimated from each platform's standard rate) is now subtracted from net profit, as it already was on the By Channel report.
+- **Tax on a refunded sale is no longer taken off twice.** A refund already gives the tax back, so the Tax figure is now what you owe after refunds.
+- **New: Expenses.** Record rent, electricity, wages paid, marketing and other running costs per day; the P&L subtracts them to show profit after expenses. Managers and owners can add, correct and delete them.
+- **New: Sales Patterns.** Revenue by order type (dine-in, takeaway, delivery), a day-by-hour heatmap in your own time zone, your busiest hour and day, and revenue per guest.
+- **New: Discounts & Refunds.** Discounts by reason or coupon, refunds by reason, cancelled orders and the most voided items, to spot leaks.
+- **New: Tax.** Tax grouped by rate, with the taxable amount, tax charged, tax refunded and tax owed, ready for a PPN or TVA return.
+- **New: Labour.** An estimated labour cost from each person's pay setup and the hours they clocked, with labour % and prime cost (COGS + labour) as a share of net sales. Each person's pay rate and cost are shown to the owner only; managers see the totals.
+- **More on the cards.** The eight headline cards follow the P&L: revenue with orders and average ticket, net sales, gross profit with margin, net profit, COGS, tax owed, fees & commission, and waste. Orders still waiting for payment are flagged.
+- **Item Margin includes modifier costs** (extra shot, toppings), as COGS always did, and labels each item Star, Workhorse, Puzzle or Dog (menu engineering).
+- **Each report says which filters it ignores.** For example, By Channel isn't filtered by channel; the report now says so instead of quietly showing unfiltered figures. The Department split follows the channel and payment filters like the cards above it, and the department filter can pick your custom product line.
+- **Fixed: the PDF left out the last day** of the date range (by default, today). It now covers the same dates and filters as the screen, and adds the Payment Method and Item Margin sections.
+- **Fixed: the Waste tab failed** whenever a till session was picked.
+- **Excel export** has the same totals, the new reports as their own sheets, and the P&L with each line's share of net sales.
+- **On a phone,** the sixteen reports are picked from a list; on a wider screen the tab bar wraps instead of scrolling. The open report is kept in the address, so a refresh or a shared link opens the same one.
+
+## [3.5.0] - 2026-10-06 · feat
+
+Your menu comes first: a guided start on the Data page, and the POS takes you there when its menu is empty.
+
+- **Choose how to fill your Data page.** A store with nothing in its lists now opens the Data page on a choice instead of empty tabs. Import your menu from a photo or a PDF with any AI assistant: the fastest way, and the one we recommend, because the POS sells from your menu. Or build everything step by step from raw materials: slower, but stock, costs and margins then add up from purchase to sale. Each option says how it works, what you get and what to know first. You can skip the choice and go straight to the lists.
+- **Menu import on its own screen.** Choosing the photo or PDF option opens the three import steps with Products already selected. Once the import is saved, the page tells you your menu is on the POS and your storefront, with a button to open the POS and one to add the raw materials and recipes behind it.
+- **A step-by-step guide.** The other option shows raw materials, recipes and menu items as three steps. Each one ticks itself off as you add items, the next one is highlighted, and the menu step is marked "Needed for the POS".
+- **The POS sends you to add your menu.** Opening the POS with an empty menu now takes you to the Data page, or to the storefront's Menu tab on the POS plan, with a note saying why. As soon as your first item is saved, the note offers to open the POS. Staff who can't edit the menu see who to ask instead of an empty screen.
+- **Imports reach the POS sooner.** After a Smart Import, the POS menu refreshes straight away instead of at its next 30-second check.
+
+## [3.4.0] - 2026-10-06 · feat
+
+A new homepage, built around protecting your margin and switching at your own pace.
+
+- **A homepage about your margin.** It opens on a full-screen photo of a real café counter with one line, "from the order to the margin", the 14-day POS trial and a margin calculator side by side, a way in for anyone who already has a till, and three plain facts: the free storefront, WhatsApp support and the latest Epidom release.
+- **Pick the problem that costs you most.** Commissions, margin, stock, internet drops, queues, staff or too many apps: pick one to see what it costs, how Epidom fixes it and which plan does it. Every figure links to its source at the bottom of the page.
+- **A margin calculator.** Enter your revenue, your share from delivery apps and their commission to see what moving some orders to your own link could save each month and each year, after payment fees and the plan price. It works in your currency, saves nothing, and says plainly when Epidom would cost you more.
+- **Already have a till?** Three quick questions (what you use today, how you want to start, how many outlets) recommend a plan and say what you keep, what changes and what to know first.
+- **The plan you pick comes with you through setup.** Choose POS or Operations on the pricing page or the homepage before you have an account: sign-up and store setup follow, with that plan already ticked on the last step. Publishing your store then goes straight to checkout for it. Ticking POS or Operations during setup does the same, and the last step says so before you publish. Leave both unticked to stay on Free.
+- **The 14-day POS trial: add a card, pay nothing today.** Checkout saves your card and charges nothing for 14 days; cancel from Billing before then and you are never charged. The page after checkout now says your free trial has started and nothing was charged, instead of "Payment Successful!", and takes you on to your new store. If checkout doesn't open, or you come back from it, the "Your store is live" screen keeps a button to try again.
+- **Leaving checkout is not a failed payment.** Backing out of checkout now reads "Checkout canceled" instead of "Payment Failed", "Try again" reopens the plan you were buying, and an owner who was setting up their store goes on to it.
+- **Already set up?** Signing in from a plan button opens that plan's confirmation on the pricing page, on the same monthly or yearly billing.
+- **Clearer about the Free plan.** Free is your storefront and its QR code; online ordering and payment are part of the POS plan. The pricing page and its FAQ now say so too.
+- **The website menu on an iPad held sideways.** At exactly 1024 pixels wide the header showed neither its links nor the menu button; it now shows the links. On phones the menu button is bigger and easier to tap.
+- **The POS menu: the stock count no longer covers the item name.** On items without a photo, the "5 counted" tag sat in the corner on top of a long name like "Cream Cheese Honey Chilli". It now sits next to the price, and moves under the price when a tile is too narrow for both.
+- **Removed:** the old homepage sections (how it works, before and after, feature lists, use cases, setup steps, dashboard preview) and the closing email box. Smooth scrolling is now off for anyone whose device asks for less motion.
+
+## [3.3.7] - 2026-10-06 · fix
+
+Sales made without internet are no longer lost, and they land on the right day.
+
+- **A sale is kept when the internet drops mid-sale.** If the wifi was connected but the internet wasn't, or the connection died while a sale was being saved, the till said the order failed. The sale is now saved on the device and sent when the connection is back, and it can't be recorded twice.
+- **Offline sales land on the right day and the right shift.** A sale made offline was recorded at the moment it synced, so one rung up at 23:50 and synced the next morning counted towards the next day. It never counted towards the shift's cash drawer either. It now keeps the time it was rung up, and counts towards the shift it was made in while that shift is still open.
+- **Nothing is deleted from the device without you.** A sale or production log the server refused five times used to be deleted, even when the device had only lost its connection five times or its sign-in had expired while offline. Connection problems no longer count, an expired sign-in asks you to sign in again, and an entry the server really refuses is kept and marked "Needs attention". Review it from the offline banner, the POS menu or Offline & Sync: try again, download a copy, or discard it.
+- **The offline banner tells the truth.** It now uses the app's own connection check, so it also shows when the wifi is up but the internet is down.
+
+## [3.3.6] - 2026-10-05 · fix
+
+The customer screen no longer gets stuck saying it is off.
+
+- **The customer screen finds the till again on its own.** When a till tab closed or reloaded, including the automatic reload after an update or a staff PIN switch, the customer screen could stay on "Customer display is off" with the setting still on. The order and the WhatsApp button stayed hidden until the cashier next changed the cart. The screen now keeps checking for the till and comes back by itself within a few seconds.
+- **"Off" only when it is off.** When no till is driving it, the screen now says it is waiting for the till and what to open, instead of claiming it was switched off. When it really is switched off, it says where to turn it back on.
+- **Asking for the customer's number wakes the screen.** "Ask customer for details" now brings a customer screen out of standby and opens the number pad, where it used to be ignored.
+- **Clearer setup.** The till now says the customer screen works on the same computer and in the same browser as the till, and the screen's browser tab is named "Epidom — Customer display" instead of showing a bare link.
+
 ## [3.3.5] - 2026-10-03 · fix
 
 Checkout charges in the currency you were shown, so PayPal can appear.

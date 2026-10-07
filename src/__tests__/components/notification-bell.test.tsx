@@ -14,16 +14,19 @@ vi.mock("@/features/dashboard/shared/hooks/use-current-store", () => ({
 }));
 
 const mockNotifications = vi.fn();
+const lastQuery: { queryFn?: () => Promise<unknown> } = {};
 vi.mock("@tanstack/react-query", () => ({
   useQuery: ({ queryFn }: { queryFn: () => Promise<unknown> }) => {
+    lastQuery.queryFn = queryFn;
     const result = mockNotifications();
     return { data: result, isLoading: false };
   },
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
 
+const mockApiGet = vi.fn();
 vi.mock("@/lib/api/client", () => ({
-  apiClient: { get: vi.fn() },
+  apiClient: { get: (...args: unknown[]) => mockApiGet(...args) },
 }));
 
 vi.mock("date-fns", () => ({
@@ -172,5 +175,63 @@ describe("NotificationBell", () => {
     // "Clear all" dismisses every visible item, including the changelog history item
     fireEvent.click(screen.getByText("Clear all"));
     expect(screen.getByText("All caught up!")).toBeTruthy();
+  });
+});
+
+describe("NotificationBell — POS variant", () => {
+  const unpaidOnlineOrder = {
+    id: "order-o1",
+    type: "order" as const,
+    title: "New online order · unpaid",
+    body: "STO-0042 · STOREFRONT",
+    href: "/store/store-1/pos/orders",
+    createdAt: new Date().toISOString(),
+    orderNumber: "STO-0042",
+    source: "STOREFRONT",
+    unpaid: true,
+  };
+
+  beforeEach(() => {
+    mockPush.mockClear();
+    mockApiGet.mockReset();
+    // Unseen on purpose: the POS bell must still leave the changelog prompt out.
+    localStorage.removeItem("epidom:lastSeenVersion");
+  });
+
+  it("asks the API for the POS scope", async () => {
+    mockNotifications.mockReturnValue({ notifications: [] });
+    render(<NotificationBell variant="pos" />);
+    await lastQuery.queryFn?.();
+    expect(mockApiGet).toHaveBeenCalledWith("/stores/store-1/notifications", { scope: "pos" });
+  });
+
+  it("the Back Office bell keeps asking without a scope", async () => {
+    mockNotifications.mockReturnValue({ notifications: [] });
+    render(<NotificationBell />);
+    await lastQuery.queryFn?.();
+    expect(mockApiGet).toHaveBeenCalledWith("/stores/store-1/notifications", undefined);
+  });
+
+  it("leaves out the Back Office-only changelog prompt", () => {
+    mockNotifications.mockReturnValue({ notifications: [] });
+    render(<NotificationBell variant="pos" />);
+    expect(screen.queryByText("changelog.whatsNew")).toBeNull();
+    expect(screen.getByText("All caught up!")).toBeTruthy();
+  });
+
+  it("words an unpaid online order as one to collect at the cashier", () => {
+    mockNotifications.mockReturnValue({ notifications: [unpaidOnlineOrder] });
+    render(<NotificationBell variant="pos" />);
+    expect(screen.getByText("notifications.order.unpaidTitle")).toBeTruthy();
+    expect(screen.getByText("notifications.order.unpaidBody")).toBeTruthy();
+    fireEvent.click(screen.getByText("notifications.order.unpaidTitle"));
+    expect(mockPush).toHaveBeenCalledWith("/store/store-1/pos/orders");
+  });
+
+  it("'View all orders' opens the POS order queue", () => {
+    mockNotifications.mockReturnValue({ notifications: [unpaidOnlineOrder] });
+    render(<NotificationBell variant="pos" />);
+    fireEvent.click(screen.getByText(/view all orders/i));
+    expect(mockPush).toHaveBeenCalledWith("/store/store-1/pos/orders");
   });
 });

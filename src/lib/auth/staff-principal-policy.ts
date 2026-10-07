@@ -158,11 +158,20 @@ const POLICY: Record<string, StaffRoutePolicy> = {
   "PATCH /api/stores/*/shifts/*": post(POS),
   "GET /api/stores/*/reports/shift-report": post(POS),
   "GET /api/stores/*/notifications": post(["/pos", "/pos/orders", "/pos/kds", "/tables"]),
+  // The bell's push switch on the POS. A subscription is a DEVICE's and is fanned
+  // out per store (src/lib/push/send.ts), so it grants nothing beyond the bell list
+  // above — same pages.
+  "POST /api/stores/*/push/subscribe": post(["/pos", "/pos/orders", "/pos/kds", "/tables"]),
+  "DELETE /api/stores/*/push/unsubscribe": post(["/pos", "/pos/orders", "/pos/kds", "/tables"]),
   // Read-only. Every store page mounts CurrencyProvider, which reads the
   // store's currency from here, and the till prices each bill with the same
   // tax / service-charge settings — denied, a staffer would see the wrong
   // currency and ring up wrong totals. The PATCH stays owner-only.
   "GET /api/stores/*/finance/settings": post(ALL_POS_PAGES),
+  // Read-only: the till prints the store's branding, footer and guest WiFi on
+  // every receipt (useReceiptSettings in the checkout and the bill). Denied, a
+  // staff account's receipts went out bare. The PATCH stays owner-only.
+  "GET /api/stores/*/receipt-settings": post(POS),
   // (Realtime channel auth, POST /api/pusher/auth, is not listed: it resolves
   // its own identity from the PIN persona — see resolveIdentity there — and
   // never goes through this table.)
@@ -175,6 +184,10 @@ const POLICY: Record<string, StaffRoutePolicy> = {
   "POST /api/stores/*/attendance/absence": post(MY_SCHEDULE, { selfRequired: true }),
   "POST /api/stores/*/attendance/*/retake-photo": post(MY_SCHEDULE),
   "GET /api/stores/*/schedule/my-log": post(MY_SCHEDULE, { selfRequired: true }),
+  // My Pay. No selfRequired: the route takes no staff id at all — it reads
+  // whose pay from the PIN persona, which post-pin already pins to this person.
+  // The owner's Salary report (GET /payroll) is deliberately not listed.
+  "GET /api/stores/*/payroll/me": post(MY_SCHEDULE),
   "GET /api/stores/*/staff-schedules": post(MY_SCHEDULE, { selfRequired: true }),
   "GET /api/stores/*/schedule-shifts": post(MY_SCHEDULE),
   // A roster image is the same for the whole team, so any persona with My

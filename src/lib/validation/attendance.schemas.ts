@@ -69,3 +69,15 @@ export const attendanceSettingsSchema = z.object({
   standardWorkMinutesPerDay: z.number().int().min(1).max(1440),
 });
 export type AttendanceSettingsInput = z.infer<typeof attendanceSettingsSchema>;
+
+/**
+ * Query of the salary report (GET /payroll) and My Pay (GET /payroll/me —
+ * which takes no staffId: whose pay comes from the PIN persona). from/to are
+ * business-local "YYYY-MM-DD" keys, or an ISO datetime read as the business
+ * day it falls on (resolveReportRange checks order and span).
+ */
+export const payrollQuerySchema = z.object({
+  from: z.string().min(1).max(40).optional(),
+  to: z.string().min(1).max(40).optional(),
+  staffId: z.string().cuid().optional(),
+});

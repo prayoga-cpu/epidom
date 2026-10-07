@@ -57,3 +57,6 @@ prisma/generated
 # Coverage
 coverage
 *.lcov
+
+desktop/node_modules
+desktop/dist

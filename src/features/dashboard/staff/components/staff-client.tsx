@@ -44,6 +44,7 @@ import {
   Loader2,
   ChevronDown,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,8 @@ interface StaffMember {
   inviteStatus: string | null;
   payType: "HOURLY" | "MONTHLY" | "SALES" | "NONE";
   payRate: number | null;
+  overtimeRate: number | null;
+  allowances: StaffAllowance[];
   contractType: "FREELANCE" | "PART_TIME" | "FULL_TIME" | "CONTRACT" | null;
   /** A real Epidom sign-in is linked to this member (their emailed invite was
    * claimed, which is what verifies the email). Derived server-side. */
@@ -82,6 +85,23 @@ interface StaffMember {
   /** A sign-in invite was sent and hasn't been claimed or expired yet. */
   hasPendingAccountInvite?: boolean;
   createdAt: string;
+}
+
+type AllowanceBasis = "PER_DAY" | "PER_MONTH";
+
+interface StaffAllowance {
+  id: string;
+  name: string;
+  amount: number;
+  basis: AllowanceBasis;
+}
+
+/** An allowance row being edited — strings, so a half-typed amount isn't coerced. */
+interface AllowanceDraft {
+  key: string;
+  name: string;
+  amount: string;
+  basis: AllowanceBasis;
 }
 
 interface StaffClientProps {
@@ -246,6 +266,10 @@ export function StaffClient({
   const [editTemplateId, setEditTemplateId] = useState("cashier");
   const [editPayType, setEditPayType] = useState<"HOURLY" | "MONTHLY" | "SALES" | "NONE">("NONE");
   const [editPayRate, setEditPayRate] = useState("");
+  const [editOvertimeRate, setEditOvertimeRate] = useState("");
+  const [editAllowances, setEditAllowances] = useState<AllowanceDraft[]>([]);
+  const allowanceKeySeq = useRef(0);
+  const newAllowanceKey = () => `new-${++allowanceKeySeq.current}`;
   const [editContractType, setEditContractType] = useState<
     "FREELANCE" | "PART_TIME" | "FULL_TIME" | "CONTRACT" | ""
   >("");
@@ -263,8 +287,11 @@ export function StaffClient({
   const [editContractOpen, setEditContractOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["staff", storeId],
-    queryFn: () => apiClient.get<{ staff: StaffMember[] }>(`/stores/${storeId}/staff`),
+    // Its own key, with the pay setup (?include=pay). ["staff", storeId] is the
+    // pay-free list the PIN pickers share and the device caches offline.
+    queryKey: ["staff-admin", storeId],
+    queryFn: () =>
+      apiClient.get<{ staff: StaffMember[] }>(`/stores/${storeId}/staff`, { include: "pay" }),
   });
 
   const staff = data?.staff ?? [];
@@ -317,6 +344,7 @@ export function StaffClient({
       apiClient.post(`/stores/${storeId}/staff`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["staff-admin", storeId] });
       setAddOpen(false);
       reset();
       setAddCustomRoleActive(false);
@@ -333,6 +361,7 @@ export function StaffClient({
       apiClient.post(`/stores/${storeId}/staff/${staffId}/invite`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["staff-admin", storeId] });
       toast.success(t("pages.staffInviteSentToast"));
     },
     onError: (err: Error) => toast.error(describeStaffError(err, t("pages.staffInviteFailedToast"))),
@@ -342,6 +371,7 @@ export function StaffClient({
     mutationFn: (staffId: string) => apiClient.delete(`/stores/${storeId}/staff/${staffId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["staff-admin", storeId] });
       toast.success(t("pages.staffDeactivated"));
     },
     onError: (err: Error) => toast.error(err.message || t("pages.staffDeactivateFailed")),
@@ -381,12 +411,26 @@ export function StaffClient({
     }
     setEditPayType(member.payType);
     setEditPayRate(member.payRate != null ? String(member.payRate) : "");
+    setEditOvertimeRate(member.overtimeRate != null ? String(member.overtimeRate) : "");
+    setEditAllowances(
+      (member.allowances ?? []).map((a) => ({
+        key: a.id,
+        name: a.name,
+        amount: String(a.amount),
+        basis: a.basis,
+      }))
+    );
     setEditContractType(member.contractType ?? "");
     // Optional cards open by default only when there's already something in
     // them — an empty one stays a one-line collapsed header until the owner
     // chooses to fill it in.
     setEditContactOpen(!!(member.email || member.whatsapp));
-    setEditContractOpen(member.payType !== "NONE" || !!member.contractType);
+    setEditContractOpen(
+      member.payType !== "NONE" ||
+        !!member.contractType ||
+        member.overtimeRate != null ||
+        (member.allowances ?? []).length > 0
+    );
     setEditAllowedPages(
       member.allowedPages.length > 0 ? member.allowedPages : ROLE_DEFAULT_PAGES[member.role]
     );
@@ -430,10 +474,22 @@ export function StaffClient({
         customRoleLabel: editCustomRoleLabel,
         allowedPages: editAllowedPages,
         isActive: editIsActive,
-        payType: editPayType,
-        payRate: editPayType === "NONE" || editPayRate.trim() === "" ? null : Number(editPayRate),
-        contractType: editContractType === "" ? null : editContractType,
       };
+      // Only when the pay setup was actually loaded: a row without it (the list
+      // came back without pay) must not save its blank form over the real pay.
+      if (editTarget.payType !== undefined) {
+        Object.assign(body, {
+          payType: editPayType,
+          payRate: editPayType === "NONE" || editPayRate.trim() === "" ? null : Number(editPayRate),
+          overtimeRate: editOvertimeRate.trim() === "" ? null : Number(editOvertimeRate),
+          // A row left completely blank is dropped rather than rejected — the
+          // "Add allowance" button shouldn't make Save fail if it's never filled in.
+          allowances: editAllowances
+            .filter((a) => a.name.trim() !== "" || a.amount.trim() !== "")
+            .map((a) => ({ name: a.name.trim(), amount: Number(a.amount || 0), basis: a.basis })),
+          contractType: editContractType === "" ? null : editContractType,
+        });
+      }
       if (editRemovePin) {
         body.pin = "";
       } else if (editPin.length === 4) {
@@ -442,6 +498,7 @@ export function StaffClient({
       }
       await apiClient.patch(`/stores/${storeId}/staff/${editTarget.id}`, body);
       queryClient.invalidateQueries({ queryKey: ["staff", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["staff-admin", storeId] });
       setEditTarget(null);
       toast.success(t("pages.staffUpdated"));
       if (editPin.length === 4 && editSendPin && editEmail) {
@@ -1180,6 +1237,100 @@ export function StaffClient({
                       />
                     </div>
                   )}
+                  <div className="space-y-1">
+                    <Label htmlFor="staff-overtime-rate">{t("pages.staffOvertimeRate")}</Label>
+                    <Input
+                      id="staff-overtime-rate"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      value={editOvertimeRate}
+                      onChange={(e) => setEditOvertimeRate(e.target.value)}
+                    />
+                    <p className="text-muted-foreground text-xs">{t("pages.staffOvertimeRateHint")}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <Label>{t("pages.staffAllowancesTitle")}</Label>
+                      <p className="text-muted-foreground text-xs">{t("pages.staffAllowancesHint")}</p>
+                    </div>
+                    {editAllowances.map((allowance, index) => {
+                      const update = (patch: Partial<AllowanceDraft>) =>
+                        setEditAllowances((rows) =>
+                          rows.map((row) => (row.key === allowance.key ? { ...row, ...patch } : row))
+                        );
+                      return (
+                        <div key={allowance.key} className="space-y-2 rounded-md border p-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              aria-label={`${t("pages.staffAllowanceName")} ${index + 1}`}
+                              placeholder={t("pages.staffAllowanceNamePlaceholder")}
+                              maxLength={60}
+                              className="flex-1"
+                              value={allowance.name}
+                              onChange={(e) => update({ name: e.target.value })}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10 shrink-0"
+                              aria-label={t("pages.staffAllowanceRemove")}
+                              onClick={() =>
+                                setEditAllowances((rows) => rows.filter((row) => row.key !== allowance.key))
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              aria-label={`${t("pages.staffAllowanceAmount")} ${index + 1}`}
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              placeholder={t("pages.staffAllowanceAmount")}
+                              className="flex-1"
+                              value={allowance.amount}
+                              onChange={(e) => update({ amount: e.target.value })}
+                            />
+                            <Select
+                              value={allowance.basis}
+                              onValueChange={(v) => update({ basis: v as AllowanceBasis })}
+                            >
+                              <SelectTrigger
+                                className="w-40 shrink-0"
+                                aria-label={`${t("pages.staffAllowanceBasis")} ${index + 1}`}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="PER_DAY">{t("pages.staffAllowancePerDay")}</SelectItem>
+                                <SelectItem value="PER_MONTH">{t("pages.staffAllowancePerMonth")}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {editAllowances.length < 20 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-10"
+                        onClick={() =>
+                          setEditAllowances((rows) => [
+                            ...rows,
+                            { key: newAllowanceKey(), name: "", amount: "", basis: "PER_DAY" },
+                          ])
+                        }
+                      >
+                        <Plus className="mr-1 h-4 w-4" />
+                        {t("pages.staffAllowanceAdd")}
+                      </Button>
+                    )}
+                  </div>
                 </CollapsibleCard>
               )}
 

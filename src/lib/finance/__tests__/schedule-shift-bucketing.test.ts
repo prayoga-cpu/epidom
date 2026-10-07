@@ -2,19 +2,30 @@ import { describe, it, expect } from "vitest";
 import {
   bucketOrdersByScheduleShift,
   enumerateDateKeys,
+  summarizeScheduleShiftCoverage,
   type ScheduleShiftBucketDef,
 } from "../schedule-shift-bucketing";
 
 const TZ = "Asia/Jakarta"; // UTC+7
 
-const shift1: ScheduleShiftBucketDef = { id: "s1", name: "Shift 1", startTime: "08:00", endTime: "16:00" };
+const shift1: ScheduleShiftBucketDef = {
+  id: "s1",
+  name: "Shift 1",
+  startTime: "08:00",
+  endTime: "16:00",
+};
 const shift2Middle: ScheduleShiftBucketDef = {
   id: "s2",
   name: "Shift 2 Middle",
   startTime: "12:00",
   endTime: "20:00",
 };
-const shift4: ScheduleShiftBucketDef = { id: "s4", name: "Shift 4", startTime: "20:00", endTime: "04:00" };
+const shift4: ScheduleShiftBucketDef = {
+  id: "s4",
+  name: "Shift 4",
+  startTime: "20:00",
+  endTime: "04:00",
+};
 
 describe("enumerateDateKeys", () => {
   it("includes both endpoints", () => {
@@ -68,5 +79,47 @@ describe("bucketOrdersByScheduleShift", () => {
     const orders = [{ total: 75, orderDate: "2026-08-10T19:00:00.000Z" }];
     const rows = bucketOrdersByScheduleShift(orders, [shift4], ["2026-08-11"], TZ);
     expect(rows[0].orderCount).toBe(0);
+  });
+});
+
+describe("summarizeScheduleShiftCoverage", () => {
+  // 08:00-16:00 and 12:00-20:00 WIB overlap from 12:00 to 16:00.
+  const blocks = [shift1, shift2Middle];
+  const at = (iso: string, total: number) => ({ orderDate: iso, total });
+
+  it("counts an order in the overlap once, and finds the ones outside every block", () => {
+    const totals = summarizeScheduleShiftCoverage(
+      [
+        at("2026-09-01T06:00:00Z", 100), // 13:00 WIB — in both blocks
+        at("2026-09-01T02:00:00Z", 50), // 09:00 WIB — Shift 1 only
+        at("2026-09-01T15:00:00Z", 30), // 22:00 WIB — outside both
+      ],
+      blocks,
+      ["2026-09-01"],
+      TZ
+    );
+    expect(totals).toEqual({
+      orderCount: 3,
+      revenue: 180,
+      outsideOrderCount: 1,
+      outsideRevenue: 30,
+    });
+  });
+
+  it("covers the early hours of the range with a block that crosses midnight the day before", () => {
+    const night: ScheduleShiftBucketDef = {
+      id: "n",
+      name: "Night",
+      startTime: "20:00",
+      endTime: "04:00",
+    };
+    // 02:00 WIB on 1 Sept belongs to the night block that opened on 31 Aug.
+    const totals = summarizeScheduleShiftCoverage(
+      [at("2026-08-31T19:00:00Z", 40)],
+      [night],
+      ["2026-09-01"],
+      TZ
+    );
+    expect(totals.outsideOrderCount).toBe(0);
   });
 });

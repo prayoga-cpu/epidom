@@ -24,6 +24,31 @@ export class ApiClientError extends Error {
 }
 
 /**
+ * The request never got a proper answer from our API: no connection, a
+ * timeout, or something in between answered instead (a captive portal's HTML
+ * page, a gateway's 502 page). Unlike `ApiClientError`, the server may or may
+ * not have acted on it — a caller that retries must send the same idempotency
+ * key, or the retry can repeat the write.
+ */
+export class ApiNetworkError extends Error {
+  constructor(
+    message: string,
+    /** True when our own `timeoutMs` gave up waiting, not the network. */
+    public readonly timedOut: boolean = false,
+    /** HTTP status of a non-JSON answer, when there was one. */
+    public readonly status: number | null = null
+  ) {
+    super(message);
+    this.name = "ApiNetworkError";
+  }
+}
+
+export interface ApiRequestOptions {
+  /** Give up after this long and throw `ApiNetworkError` with `timedOut`. */
+  timeoutMs?: number;
+}
+
+/**
  * Base API Client
  *
  * Provides type-safe HTTP methods for making API calls.
@@ -64,20 +89,54 @@ export class ApiClient {
   /**
    * Make HTTP request
    */
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    { timeoutMs }: ApiRequestOptions = {}
+  ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
+
+    const controller = timeoutMs ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
     const config: RequestInit = {
       ...options,
+      ...(controller ? { signal: controller.signal } : {}),
       headers: {
         ...this.headers,
         ...options.headers,
       },
     };
 
+    let response: Response;
     try {
-      const response = await fetch(url, config);
-      const data: ApiResponse<T> = await response.json();
+      response = await fetch(url, config);
+    } catch (error) {
+      if (timer) clearTimeout(timer);
+      const timedOut = controller?.signal.aborted ?? false;
+      throw new ApiNetworkError(
+        timedOut
+          ? "Request timed out"
+          : error instanceof Error
+            ? error.message
+            : "Network error occurred",
+        timedOut
+      );
+    }
+
+    try {
+      let data: ApiResponse<T>;
+      try {
+        data = await response.json();
+      } catch (error) {
+        // Not our API answering: a captive portal, a gateway error page, or a
+        // body cut off by the timeout above.
+        throw new ApiNetworkError(
+          error instanceof Error ? error.message : "Unreadable response",
+          controller?.signal.aborted ?? false,
+          response.status
+        );
+      }
 
       // Check if response is an error
       if (isApiError(data)) {
@@ -86,14 +145,8 @@ export class ApiClient {
 
       // Return the data payload
       return data.data;
-    } catch (error) {
-      // If it's already an ApiClientError, rethrow it
-      if (error instanceof ApiClientError) {
-        throw error;
-      }
-
-      // Handle network errors or JSON parsing errors
-      throw new Error(error instanceof Error ? error.message : "Network error occurred");
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 
@@ -110,11 +163,15 @@ export class ApiClient {
   /**
    * POST request
    */
-  async post<T>(endpoint: string, body?: unknown): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: "POST",
-      body: body ? JSON.stringify(body) : undefined,
-    });
+  async post<T>(endpoint: string, body?: unknown, options?: ApiRequestOptions): Promise<T> {
+    return this.request<T>(
+      endpoint,
+      {
+        method: "POST",
+        body: body ? JSON.stringify(body) : undefined,
+      },
+      options
+    );
   }
 
   /**

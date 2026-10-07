@@ -244,15 +244,16 @@ describe("PricingCards", () => {
     });
   });
 
-  // Behaviour change: a 401 used to drop the visitor on a bare /register, losing
-  // which plan they had picked. It now carries the same `next` as a signed-out click.
-  it("on 401 redirects to /register carrying the trial intent", async () => {
+  // A 401 carries the same `next` as a signed-out click, so the plan survives.
+  it("on 401 redirects to /register carrying the POS plan through setup", async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 401 });
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Start free trial"));
     fireEvent.click(screen.getByText("Confirm"));
     await waitFor(() => {
-      expect(window.location.href).toBe("/register?next=%2Fpricing%3Ftrial%3Dtrue");
+      expect(window.location.href).toBe(
+        "/register?next=%2Fonboarding%3Fplan%3DPOS%26billing%3Dmonthly"
+      );
     });
   });
 
@@ -290,20 +291,22 @@ describe("PricingCards signed out", () => {
     state.loading = false;
   });
 
-  it("the trial bar sends a signed-out visitor to sign-up with the trial intent in `next`", () => {
+  it("the trial bar sends a signed-out visitor to sign-up, then setup with POS picked", () => {
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Start free"));
 
     expect(window.location.href).toBe(
-      "/register?next=" + encodeURIComponent("/pricing?trial=true")
+      "/register?next=" + encodeURIComponent("/onboarding?plan=POS&billing=monthly")
     );
-    // The "?" inside the target must not split the value, and the sign-up form must
-    // accept it: it reads `next` through safeInternalPath, not `callbackURL`.
+    // The "?" and "&" inside the target must not split the value, and the sign-up
+    // form must accept it: it reads `next` through safeInternalPath, not `callbackURL`.
     const url = new URL(window.location.href, "http://localhost");
     expect(url.pathname).toBe("/register");
     expect(url.searchParams.get("callbackURL")).toBeNull();
-    expect(url.searchParams.get("next")).toBe("/pricing?trial=true");
-    expect(safeInternalPath(url.searchParams.get("next"))).toBe("/pricing?trial=true");
+    expect(url.searchParams.get("next")).toBe("/onboarding?plan=POS&billing=monthly");
+    expect(safeInternalPath(url.searchParams.get("next"))).toBe(
+      "/onboarding?plan=POS&billing=monthly"
+    );
     expect(analytics.trackEvent).toHaveBeenCalledWith("cta_click", {
       event_category: "engagement",
       event_label: "pricing_trial_bar",
@@ -311,28 +314,31 @@ describe("PricingCards signed out", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("the trial bar keeps the visitor's language in the return path", () => {
-    state.locale = "en";
-    render(<PricingCards yearly={false} />);
+  it("the trial bar keeps the Yearly toggle for when the trial ends", () => {
+    render(<PricingCards yearly />);
     fireEvent.click(screen.getByText("Start free"));
     expect(window.location.href).toBe(
-      "/register?next=" + encodeURIComponent("/en/pricing?trial=true")
+      "/register?next=" + encodeURIComponent("/onboarding?plan=POS&billing=yearly")
     );
   });
 
-  it("the POS card skips the dialog and goes to sign-up wanting the trial back", () => {
+  it("the POS card skips the dialog and goes to sign-up, then setup with POS picked", () => {
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Start free trial"));
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(window.location.href).toBe("/register?next=%2Fpricing%3Ftrial%3Dtrue");
+    expect(window.location.href).toBe(
+      "/register?next=%2Fonboarding%3Fplan%3DPOS%26billing%3Dmonthly"
+    );
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("the Operations card returns to /pricing after sign-up, with no trial", () => {
+  it("the Operations card goes to sign-up, then setup with Operations picked", () => {
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Get Operations"));
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(window.location.href).toBe("/register?next=%2Fpricing");
+    expect(window.location.href).toBe(
+      "/register?next=" + encodeURIComponent("/onboarding?plan=OPERATIONS&billing=monthly")
+    );
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -343,11 +349,13 @@ describe("PricingCards signed out", () => {
     expect(window.location.href).toBe("/register");
   });
 
-  it("id visitors come back to /id/pricing", () => {
+  it("the Operations card keeps the Yearly toggle, in every language", () => {
     state.locale = "id";
-    render(<PricingCards yearly={false} />);
+    render(<PricingCards yearly />);
     fireEvent.click(screen.getByText("Get Operations"));
-    expect(window.location.href).toBe("/register?next=%2Fid%2Fpricing");
+    expect(window.location.href).toBe(
+      "/register?next=" + encodeURIComponent("/onboarding?plan=OPERATIONS&billing=yearly")
+    );
   });
 
   it("Enterprise still opens WhatsApp rather than sign-up", () => {
@@ -452,6 +460,48 @@ describe("PricingCards ?trial=true deep link", () => {
     fireEvent.click(screen.getByText("Cancel"));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.activeElement).toBe(ctaOf(container, "POS"));
+  });
+});
+
+describe("PricingCards ?plan= deep link", () => {
+  beforeEach(() => {
+    mockFetch.mockReset();
+    replaceState.mockClear();
+    window.location.href = "";
+    state.locale = "fr";
+    state.user = { id: "u1" };
+    state.loading = false;
+  });
+
+  it("opens the plan's confirm, sets the toggle to its billing interval and cleans the query", () => {
+    window.location.search = "?plan=OPERATIONS&billing=monthly";
+    const onYearlyChange = vi.fn();
+    render(<PricingCards yearly onYearlyChange={onYearlyChange} />);
+    expect(within(screen.getByRole("dialog")).getByText("Switch to Operations")).toBeTruthy();
+    expect(onYearlyChange).toHaveBeenCalledWith(false);
+    expect(replaceState).toHaveBeenCalledWith({}, "", "/pricing");
+  });
+
+  it("POS opens the trial confirm", () => {
+    window.location.search = "?plan=POS&billing=yearly";
+    const onYearlyChange = vi.fn();
+    render(<PricingCards yearly={false} onYearlyChange={onYearlyChange} />);
+    expect(within(screen.getByRole("dialog")).getByText("Start POS free trial")).toBeTruthy();
+    expect(onYearlyChange).toHaveBeenCalledWith(true);
+  });
+
+  it("opens nothing for someone already on that plan", () => {
+    window.location.search = "?plan=OPERATIONS&billing=yearly";
+    render(<PricingCards yearly currentPlan="OPERATIONS" />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(replaceState).toHaveBeenCalledWith({}, "", "/pricing");
+  });
+
+  it("ignores a plan the page can't sell from a link", () => {
+    window.location.search = "?plan=ENTERPRISE";
+    render(<PricingCards yearly />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(replaceState).not.toHaveBeenCalled();
   });
 });
 

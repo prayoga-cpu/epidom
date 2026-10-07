@@ -40,6 +40,7 @@ vi.mock("@/lib/prisma", () => {
     orderItem: { deleteMany: vi.fn(), updateMany: vi.fn(), findMany: vi.fn() },
     orderPayment: { deleteMany: vi.fn(), create: vi.fn() },
     table: { updateMany: vi.fn() },
+    shift: { findFirst: vi.fn().mockResolvedValue(null) },
   };
   prismaMock = {
     order: { findFirst: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
@@ -155,6 +156,7 @@ import {
   reverseLoyaltyForOrder,
 } from "@/lib/services/loyalty.service";
 import { resolveOrderDiscount } from "@/lib/services/pos-discount.service";
+import { inngest } from "@/lib/inngest/client";
 
 function jsonRequest(body: unknown): Request {
   return new Request("http://localhost/api", {
@@ -287,7 +289,12 @@ describe("PATCH /pos/orders/[orderId] — paid and cancel claims", () => {
 
     expect(res.status).toBe(200);
     expect(txMock.order.updateMany).toHaveBeenCalledWith({
-      where: { paymentStatus: { not: "PAID" }, id: "ord-1", storeId: "store-1" },
+      where: {
+        paymentStatus: { not: "PAID" },
+        status: { notIn: ["CANCELLED", "HELD"] },
+        id: "ord-1",
+        storeId: "store-1",
+      },
       data: { paymentStatus: "PAID" },
     });
     expect(txMock.orderPayment.create).toHaveBeenCalledTimes(1);
@@ -306,6 +313,72 @@ describe("PATCH /pos/orders/[orderId] — paid and cancel claims", () => {
     // double the money in the drawer.
     expect(res.status).toBe(200);
     expect(txMock.orderPayment.create).not.toHaveBeenCalled();
+    // ...nor send the customer a second receipt.
+    expect(inngest.send).not.toHaveBeenCalled();
+  });
+
+  it("refuses to mark a cancelled order paid, and writes nothing", async () => {
+    prismaMock.order.findFirst.mockResolvedValue({
+      ...HELD_ORDER,
+      status: "CANCELLED",
+      paymentMethod: "CASH",
+      table: null,
+      payments: [],
+    });
+    const res = await patch({ paymentStatus: "PAID", paymentMethod: "QRIS" });
+    expect(res.status).toBe(400);
+    expect(txMock.order.updateMany).not.toHaveBeenCalled();
+    expect(txMock.orderPayment.create).not.toHaveBeenCalled();
+    expect(inngest.send).not.toHaveBeenCalled();
+  });
+
+  it("keeps the payment fields off an order a concurrent cancel won, and says so", async () => {
+    // The claim refuses it (status is now CANCELLED): the plain update must not
+    // set paymentStatus PAID behind its back, and the till must not toast success.
+    txMock.order.updateMany.mockResolvedValue({ count: 0 });
+    txMock.order.update.mockResolvedValue({
+      ...HELD_ORDER,
+      status: "CANCELLED",
+      paymentStatus: "PENDING",
+    });
+    const res = await patch({ paymentStatus: "PAID", paymentMethod: "QRIS" });
+    const data = txMock.order.update.mock.calls.at(-1)[0].data;
+    expect(data).not.toHaveProperty("paymentStatus");
+    expect(data).not.toHaveProperty("paymentMethod");
+    expect(res.status).toBe(409);
+  });
+
+  it("refuses paying and cancelling in one request", async () => {
+    const res = await patch({ paymentStatus: "PAID", status: "CANCELLED" });
+    expect(res.status).toBe(400);
+    expect(txMock.order.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("joins the open till only when the POS says it was taken at the till", async () => {
+    txMock.shift.findFirst.mockResolvedValue({ id: "shift-open" });
+
+    await patch({ paymentStatus: "PAID", paymentMethod: "CASH" });
+    // The Back Office's settle-up: not filed under anyone's drawer.
+    expect(txMock.shift.findFirst).not.toHaveBeenCalled();
+
+    await patch({ paymentStatus: "PAID", paymentMethod: "CASH", attachToOpenShift: true });
+    expect(txMock.order.updateMany).toHaveBeenCalledWith({
+      where: { id: "ord-1", storeId: "store-1", shiftId: null },
+      data: { shiftId: "shift-open" },
+    });
+  });
+
+  it("tells the receipt jobs the order is paid — once, from the winning settle", async () => {
+    // A "pay at the cashier" storefront order only becomes PAID here, so this
+    // is the only thing that gets its WhatsApp / e-mail receipt sent.
+    const res = await patch({ paymentStatus: "PAID", paymentMethod: "CASH" });
+
+    expect(res.status).toBe(200);
+    expect(inngest.send).toHaveBeenCalledTimes(1);
+    expect(inngest.send).toHaveBeenCalledWith({
+      name: "order/payment.confirmed",
+      data: { orderId: "ord-1", storeId: "store-1" },
+    });
   });
 
   it("never invents a CASH tender when the method cannot be named", async () => {

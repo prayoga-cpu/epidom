@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Select a printer</title>
+<style>
+  body{margin:0;font:16px system-ui,sans-serif;display:flex;flex-direction:column;height:100vh;background:#fff;color:#111}
+  h1{font-size:18px;margin:0;padding:16px}
+  #status{padding:0 16px 8px;color:#666;font-size:14px}
+  #list{flex:1;overflow:auto;padding:0 12px}
+  button{font:inherit}
+  .row{display:block;width:100%;min-height:56px;text-align:left;padding:12px 16px;margin:0 0 8px;border:1px solid #ccc;border-radius:10px;background:#f7f7f7;cursor:pointer}
+  .row:hover,.row:focus{background:#e8f0fe;border-color:#4285f4}
+  footer{padding:12px;border-top:1px solid #ddd}
+  #cancel{width:100%;min-height:48px;border:1px solid #bbb;border-radius:10px;background:#fff;cursor:pointer}
+</style></head><body>
+<h1>Select a Bluetooth printer</h1>
+<div id="status">Searching for devices...</div>
+<div id="list"></div>
+<footer><button id="cancel">Cancel</button></footer>
+<script>
+  const list = document.getElementById("list"), status = document.getElementById("status");
+  let count = 0;
+  window.pickerApi.onDevices((devices) => {
+    list.textContent = "";
+    count = devices.length;
+    devices.forEach((d) => {
+      const b = document.createElement("button");
+      b.className = "row";
+      b.textContent = d.deviceName || "Unnamed device (" + d.deviceId.slice(0, 8) + ")";
+      b.onclick = () => window.pickerApi.choose(d.deviceId);
+      list.appendChild(b);
+    });
+  });
+  window.pickerApi.onDone(() => {
+    status.textContent = count ? "Tap a printer to connect." : "No printers found. Make sure the printer is on and in range, then cancel and try again.";
+  });
+  document.getElementById("cancel").onclick = () => window.pickerApi.cancel();
+</script></body></html>

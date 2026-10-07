@@ -1,4 +1,5 @@
 import type { Article } from "@/features/marketing/shared/content/article-types";
+import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 
 export const frGuides: Article[] = [
   {
@@ -104,7 +105,9 @@ export const frGuides: Article[] = [
       { type: "h2", text: "Paiement" },
       {
         type: "p",
-        text: "Selon votre marché, vous pouvez activer le paiement par carte, ou laisser le règlement en espèces à la remise de la commande. Vous configurez les moyens de paiement acceptés dans les réglages de votre vitrine.",
+        text: STOREFRONT_ONLINE_PAYMENTS_ENABLED
+          ? "Selon votre marché, vous pouvez activer le paiement par carte, ou laisser le règlement en espèces à la remise de la commande. Vous configurez les moyens de paiement acceptés dans les réglages de votre vitrine."
+          : "Les commandes de la vitrine se règlent au comptoir : chacune arrive sur la caisse marquée à encaisser, et le caissier encaisse puis la marque payée.",
       },
     ],
   },

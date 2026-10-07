@@ -4,12 +4,15 @@ const { mockQueue } = vi.hoisted(() => ({
   mockQueue: {
     listProductionQueue: vi.fn(),
     removeFromProductionQueue: vi.fn(),
-    incrementProductionQueueAttempts: vi.fn(),
-    productionQueueSize: vi.fn(),
+    recordProductionRejection: vi.fn(),
+    requeueParkedProduction: vi.fn(),
   },
 }));
 
 vi.mock("@/lib/pwa/offline-production-queue", () => mockQueue);
+
+// The replay loop pings the probe on a dropped connection; keep it inert here.
+vi.mock("@/lib/pwa/reachability", () => ({ reportNetworkFailure: vi.fn() }));
 
 vi.mock("@/components/lang/i18n-provider", () => ({
   useI18n: () => ({ t: (k: string) => k }),
@@ -32,7 +35,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api/client";
+import { apiClient, ApiClientError, ApiNetworkError } from "@/lib/api/client";
 import { useOfflineProductionQueue } from "../use-offline-production-queue";
 
 function makeWrapper(qc: QueryClient) {
@@ -54,9 +57,14 @@ function entry(overrides: Partial<Record<string, unknown>> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockQueue.productionQueueSize.mockResolvedValue(0);
   mockQueue.listProductionQueue.mockResolvedValue([]);
 });
+
+const refusal = () =>
+  new ApiClientError(
+    { success: false, error: { code: "INVALID_INPUT", message: "Product not found" } } as never,
+    404
+  );
 
 describe("useOfflineProductionQueue", () => {
   it("replays a queued quick-log with its id as the idempotency key", async () => {
@@ -81,9 +89,9 @@ describe("useOfflineProductionQueue", () => {
     expect(toast.success).toHaveBeenCalled();
   });
 
-  it("keeps a failed entry queued for retry rather than dropping it", async () => {
+  it("a dropped connection leaves the entry exactly as it was", async () => {
     mockQueue.listProductionQueue.mockResolvedValue([entry()]);
-    vi.spyOn(apiClient, "post").mockRejectedValue(new Error("network error"));
+    vi.spyOn(apiClient, "post").mockRejectedValue(new ApiNetworkError("Failed to fetch"));
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     const { result } = renderHook(() => useOfflineProductionQueue("store-1"), {
@@ -95,11 +103,36 @@ describe("useOfflineProductionQueue", () => {
     });
 
     expect(mockQueue.removeFromProductionQueue).not.toHaveBeenCalled();
-    expect(mockQueue.incrementProductionQueueAttempts).toHaveBeenCalled();
+    expect(mockQueue.recordProductionRejection).not.toHaveBeenCalled();
   });
 
-  it("drops an entry that exhausted its retry budget without ever sending it", async () => {
-    mockQueue.listProductionQueue.mockResolvedValue([entry({ attempts: 5 })]);
+  it("a refusal is recorded, and parking it warns rather than deleting it", async () => {
+    mockQueue.listProductionQueue.mockResolvedValue([entry({ attempts: 4 })]);
+    mockQueue.recordProductionRejection.mockResolvedValue(
+      entry({ attempts: 5, needsAttention: true })
+    );
+    vi.spyOn(apiClient, "post").mockRejectedValue(refusal());
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { result } = renderHook(() => useOfflineProductionQueue("store-1"), {
+      wrapper: makeWrapper(qc),
+    });
+
+    await act(async () => {
+      await result.current.syncQueue();
+    });
+
+    expect(mockQueue.recordProductionRejection).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "p1" }),
+      expect.objectContaining({ status: 404, message: "Product not found" }),
+      5
+    );
+    expect(mockQueue.removeFromProductionQueue).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it("never replays a parked entry on its own", async () => {
+    mockQueue.listProductionQueue.mockResolvedValue([entry({ attempts: 5, needsAttention: true })]);
     const postSpy = vi.spyOn(apiClient, "post");
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
@@ -112,17 +145,23 @@ describe("useOfflineProductionQueue", () => {
     });
 
     expect(postSpy).not.toHaveBeenCalled();
-    expect(mockQueue.removeFromProductionQueue).toHaveBeenCalledWith("p1");
+    expect(mockQueue.removeFromProductionQueue).not.toHaveBeenCalled();
   });
 
-  it("reflects queue size as pendingCount", async () => {
-    mockQueue.productionQueueSize.mockResolvedValue(2);
+  it("counts only this store's entries, parked ones separately", async () => {
+    mockQueue.listProductionQueue.mockResolvedValue([
+      entry({ id: "a" }),
+      entry({ id: "b", needsAttention: true }),
+      entry({ id: "c", storeId: "store-2" }),
+    ]);
+    vi.spyOn(apiClient, "post").mockRejectedValue(new ApiNetworkError("offline"));
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     const { result } = renderHook(() => useOfflineProductionQueue("store-1"), {
       wrapper: makeWrapper(qc),
     });
 
-    await waitFor(() => expect(result.current.pendingCount).toBe(2));
+    await waitFor(() => expect(result.current.pendingCount).toBe(1));
+    expect(result.current.attentionCount).toBe(1);
   });
 });

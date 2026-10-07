@@ -21,6 +21,8 @@ import {
   CloudUpload,
   WifiOff,
   Cable,
+  AlertTriangle,
+  LogIn,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
@@ -32,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { useCustomerDisplaySettings } from "@/features/pos/hooks/use-customer-display-settings";
 import { openCustomerDisplay } from "@/features/pos/lib/open-customer-display";
 import { HardwareSettingsDialog } from "@/features/pos/components/hardware-settings-dialog";
+import { OfflineQueueDialog } from "@/features/pos/components/offline-queue-review";
 import { FeedbackDialog } from "@/features/dashboard/feedback/components/feedback-dialog";
 import { useAccountSwitcher } from "@/features/dashboard/shared/hooks/use-account-switcher";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
@@ -230,7 +233,17 @@ export function PosModeOverflowMenu({
   const pathname = usePathname();
   const { user } = useUser();
   const { store } = useCurrentStore();
-  const { isOnline, isSyncing, pendingCount, syncNow } = useOfflineSyncContext();
+  const {
+    isOnline,
+    isSyncing,
+    pendingCount,
+    attentionCount,
+    needsSignIn,
+    syncNow,
+    queuedSales,
+    queuedProductionLogs,
+  } = useOfflineSyncContext();
+  const [queueReviewOpen, setQueueReviewOpen] = useState(false);
   const displayEnabled = useCustomerDisplaySettings((state) => state.enabled);
   const setDisplayEnabled = useCustomerDisplaySettings((state) => state.setEnabled);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -327,17 +340,27 @@ export function PosModeOverflowMenu({
             ? t("pages.posOfflineMessageWithPending").replace("{count}", String(pendingCount))
             : t("pages.posOfflineMessageNoPending"),
       }
-    : pendingCount > 0
+    : attentionCount > 0
       ? {
-          icon: CloudUpload,
-          className: "bg-amber-500 text-black",
-          label: t("pages.posOfflineSyncPending").replace("{count}", String(pendingCount)),
+          icon: AlertTriangle,
+          className: "bg-destructive text-white",
+          label: t("pos.offline.needsAttentionShort").replace("{count}", String(attentionCount)),
         }
-      : {
-          icon: CheckCircle2,
-          className: "bg-emerald-600 text-white",
-          label: t("pages.posAllSalesSynced"),
-        };
+      : pendingCount > 0
+        ? {
+            icon: needsSignIn ? LogIn : CloudUpload,
+            className: "bg-amber-500 text-black",
+            label: needsSignIn
+              ? t("pos.offline.signInNeeded").replace("{count}", String(pendingCount))
+              : t("pages.posOfflineSyncPending").replace("{count}", String(pendingCount)),
+          }
+        : {
+            icon: CheckCircle2,
+            className: "bg-emerald-600 text-white",
+            label: t("pages.posAllSalesSynced"),
+          };
+  // Sales and production logs still on the device open in the review list.
+  const canReviewQueue = (queuedSales?.length ?? 0) + (queuedProductionLogs?.length ?? 0) > 0;
   const SyncStatusIcon = syncStatus.icon;
 
   return (
@@ -432,6 +455,19 @@ export function PosModeOverflowMenu({
               >
                 <SyncStatusIcon className="size-3 shrink-0" aria-hidden />
                 <span className="truncate">{syncStatus.label}</span>
+                {/* Anything still on the device opens in the review list. */}
+                {canReviewQueue && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      close();
+                      setQueueReviewOpen(true);
+                    }}
+                    className="-my-1 ml-1 min-h-8 shrink-0 px-2 underline underline-offset-2"
+                  >
+                    {t("pos.offline.review")}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -609,6 +645,7 @@ export function PosModeOverflowMenu({
       </Sheet>
 
       <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+      <OfflineQueueDialog open={queueReviewOpen} onOpenChange={setQueueReviewOpen} />
       <HardwareSettingsDialog
         storeId={storeId}
         open={hardwareOpen}

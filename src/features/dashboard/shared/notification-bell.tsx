@@ -6,6 +6,7 @@ import {
   Bell,
   BellRing,
   BellOff,
+  Banknote,
   ShoppingBag,
   CalendarClock,
   CheckCircle2,
@@ -50,6 +51,9 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { APP_VERSION } from "@/lib/version";
 import { getLastSeenVersion, setLastSeenVersion } from "@/lib/last-seen-version";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
+import { cn } from "@/lib/utils";
 
 // The pinned "What's new" prompt uses a local "changelog" type that widens the
 // notifications route's NotificationItem union (which we must not edit).
@@ -70,8 +74,23 @@ const TYPE_COLOR = {
   onboarding: "text-violet-400 bg-violet-500/10 border-violet-500/20",
   changelog: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
 };
+// An online order nobody has paid for yet: the one item the cashier must act on.
+const UNPAID_COLOR = "text-red-500 bg-red-500/10 border-red-500/30";
 
-export function NotificationBell() {
+interface NotificationBellProps {
+  /**
+   * "topbar" — the Back Office's navy top bar (cream icon).
+   * "pos" — POS Mode's status bar: theme-coloured 40px trigger, only orders that
+   * ARRIVE (storefront, delivery platforms — not the till's own sales), links
+   * into the POS order queue, and none of the Back Office-only items (setup
+   * reminders, the changelog prompt) a staff persona can't open.
+   * Same settings either way — push and sound are per device.
+   */
+  variant?: "topbar" | "pos";
+}
+
+export function NotificationBell({ variant = "topbar" }: NotificationBellProps = {}) {
+  const isPos = variant === "pos";
   const router = useRouter();
   const { storeId } = useCurrentStore();
   const queryClient = useQueryClient();
@@ -147,27 +166,61 @@ export function NotificationBell() {
   const dateLocale = dateLocaleMap[locale] ?? id;
 
   const { data } = useQuery({
-    queryKey: ["notifications", storeId],
+    // The scope is in the key so the two variants never share a cached list;
+    // invalidating ["notifications", storeId] still refreshes both.
+    queryKey: ["notifications", storeId, variant],
     queryFn: () =>
-      apiClient.get<{ notifications: NotificationItem[] }>(`/stores/${storeId}/notifications`),
+      apiClient.get<{ notifications: NotificationItem[] }>(
+        `/stores/${storeId}/notifications`,
+        isPos ? { scope: "pos" } : undefined
+      ),
     enabled: !!storeId,
-    refetchInterval: 30_000, // poll every 30s
+    // The till is where a new online order has to be noticed; the poll is only
+    // the fallback for when realtime (below) isn't configured.
+    refetchInterval: isPos ? 15_000 : 30_000,
+  });
+
+  // A new order chimes the moment it lands instead of on the next poll.
+  // Refcounted, so sharing the store channel with the POS order list is fine.
+  useRealtimeChannel(storeId, {
+    [REALTIME_EVENTS.ORDER_CREATED]: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", storeId] });
+    },
   });
 
   // Pinned "What's new in vX" prompt — always kept in the list as history, but
   // only counts as unread until the user opens the changelog (marked read then).
   // Uses new Date(0) so the relative-date row hides (matches onboarding items).
-  const pinned: BellItem[] = [
-    {
-      id: `changelog-${APP_VERSION}`,
-      type: "changelog",
-      title: t("changelog.whatsNew").replace("{v}", APP_VERSION),
-      body: t("changelog.whatsNewBody"),
-      href: `/store/${storeId}/changelog`,
-      createdAt: new Date(0).toISOString(),
-      read: !hasUnseen,
-    },
-  ];
+  // Not on the POS: the changelog is a Back Office page.
+  const pinned: BellItem[] = isPos
+    ? []
+    : [
+        {
+          id: `changelog-${APP_VERSION}`,
+          type: "changelog",
+          title: t("changelog.whatsNew").replace("{v}", APP_VERSION),
+          body: t("changelog.whatsNewBody"),
+          href: `/store/${storeId}/changelog`,
+          createdAt: new Date(0).toISOString(),
+          read: !hasUnseen,
+        },
+      ];
+
+  // Order rows are worded here, in the viewer's language; the route's English
+  // title/body stay as the fallback for anything else.
+  const display = (n: BellItem) => {
+    if (n.type !== "order" || !n.orderNumber) return { title: n.title, body: n.body };
+    if (n.unpaid) {
+      return {
+        title: t("notifications.order.unpaidTitle"),
+        body: t("notifications.order.unpaidBody").replace("{number}", n.orderNumber),
+      };
+    }
+    return {
+      title: t("notifications.order.title"),
+      body: [n.orderNumber, n.source].filter(Boolean).join(" · "),
+    };
+  };
 
   const all: BellItem[] = [...pinned, ...(data?.notifications ?? [])].filter(
     (n) => !dismissed.has(n.id)
@@ -214,11 +267,16 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-9 w-9 shrink-0 hover:bg-white/10"
-          style={{ color: "var(--epi-cream-50)" }}
+          className={cn(
+            "relative shrink-0",
+            // POS: a ≥40px touch target in the theme's own colours (the status
+            // bar is bg-background, not the Back Office's navy).
+            isPos ? "size-10" : "h-9 w-9 hover:bg-white/10"
+          )}
+          style={isPos ? undefined : { color: "var(--epi-cream-50)" }}
           aria-label={t("notifications.title")}
         >
-          <Bell className="size-4" />
+          <Bell className={isPos ? "size-5" : "size-4"} />
           {unread > 0 && (
             <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
               {unread > 9 ? "9+" : unread}
@@ -376,9 +434,10 @@ export function NotificationBell() {
           ) : (
             <ul className="divide-border divide-y">
               {all.map((n) => {
-                const Icon = TYPE_ICON[n.type];
-                const color = TYPE_COLOR[n.type];
+                const Icon = n.unpaid ? Banknote : TYPE_ICON[n.type];
+                const color = n.unpaid ? UNPAID_COLOR : TYPE_COLOR[n.type];
                 const isZeroDate = new Date(n.createdAt).getFullYear() === 1970;
+                const { title, body } = display(n);
 
                 return (
                   <li key={n.id}>
@@ -395,9 +454,9 @@ export function NotificationBell() {
                         <Icon className="h-3.5 w-3.5" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-foreground text-xs font-semibold">{n.title}</p>
+                        <p className="text-foreground text-xs font-semibold">{title}</p>
                         <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
-                          {n.body}
+                          {body}
                         </p>
                         {!isZeroDate && (
                           <p className="text-muted-foreground/60 mt-1 text-[10px]">
@@ -432,7 +491,7 @@ export function NotificationBell() {
             <button
               onClick={() => {
                 setOpen(false);
-                if (storeId) router.push(`/store/${storeId}/pos`);
+                if (storeId) router.push(`/store/${storeId}/${isPos ? "pos/orders" : "pos"}`);
               }}
               className="text-muted-foreground hover:text-foreground text-[11px] transition-colors"
             >

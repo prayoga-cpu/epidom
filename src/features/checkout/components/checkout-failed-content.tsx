@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { SUPPORT_MAILTO } from "@/lib/constants/contact";
-import { AlertCircle, Home } from "lucide-react";
+import { safeInternalPath } from "@/lib/safe-redirect";
+import { parsePlanIntent, pricingHrefFor } from "@/features/onboarding/lib/plan-intent";
+import { AlertCircle, Home, LayoutDashboard } from "lucide-react";
 
 export function CheckoutFailedContent() {
   const { t } = useI18n();
@@ -15,6 +17,11 @@ export function CheckoutFailedContent() {
 
   const reason = searchParams.get("reason");
   const sessionId = searchParams.get("session_id");
+  const canceled = reason === "canceled";
+  // Set by /api/subscriptions/checkout: the plan, so "Try again" reopens it on
+  // /pricing, and `next`, the store an owner who just finished setup goes on to.
+  const intent = parsePlanIntent(searchParams);
+  const next = safeInternalPath(searchParams.get("next"));
 
   const getErrorMessage = () => {
     switch (reason) {
@@ -31,12 +38,12 @@ export function CheckoutFailedContent() {
 
   const handleRetry = () => {
     setIsLoading(true);
-    router.push("/pricing");
+    router.push(intent ? pricingHrefFor(intent) : "/pricing");
   };
 
   const handleGoHome = () => {
     setIsLoading(true);
-    router.push("/");
+    router.push(next ?? "/");
   };
 
   const handleContact = () => {
@@ -61,9 +68,11 @@ export function CheckoutFailedContent() {
           {/* Title */}
           <div className="space-y-3">
             <h1 className="text-foreground text-4xl font-bold tracking-tight">
-              {t("checkout.failed.title")}
+              {t(canceled ? "checkout.failed.canceledTitle" : "checkout.failed.title")}
             </h1>
-            <p className="text-muted-foreground text-base">{t("checkout.failed.subtitle")}</p>
+            <p className="text-muted-foreground text-base">
+              {t(canceled ? "checkout.failed.canceledSubtitle" : "checkout.failed.subtitle")}
+            </p>
           </div>
 
           {/* Error Details */}
@@ -110,8 +119,16 @@ export function CheckoutFailedContent() {
               className="btn-smooth h-12 w-full rounded-xl text-base font-semibold"
               size="lg"
             >
-              <Home className="mr-2 h-4 w-4" />
-              {isLoading ? t("common.loading") : t("common.goHome")}
+              {next ? (
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+              ) : (
+                <Home className="mr-2 h-4 w-4" />
+              )}
+              {isLoading
+                ? t("common.loading")
+                : next
+                  ? t("checkout.failed.continueToStore")
+                  : t("common.goHome")}
             </Button>
           </div>
 

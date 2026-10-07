@@ -6,6 +6,8 @@ import { withApiHandler } from "@/lib/api-handler";
 import { hash } from "bcryptjs";
 import { sendStaffPinEmail } from "@/lib/services/email.service";
 import { ALL_STAFF_PAGES } from "@/config/staff-permissions.config";
+import { canSeeStaffPay, requireOwnerWithoutStaffPersonaApi } from "@/lib/auth/require-owner-only";
+import { staffListQuerySchema } from "@/lib/validation/staff-list.schemas";
 
 const OWNER_ONLY_PAGES = new Set(["/profile", "/billing", "/staff"]);
 function sanitizeAllowedPages(pages: string[] | undefined): string[] | undefined {
@@ -16,7 +18,17 @@ function sanitizeAllowedPages(pages: string[] | undefined): string[] | undefined
 export const dynamic = "force-dynamic";
 
 export const GET = withApiHandler(
-  async (_req, { storeId, access }) => {
+  async (req, { storeId, access }) => {
+    const query = staffListQuerySchema.safeParse(
+      Object.fromEntries(new URL(req.url).searchParams)
+    );
+    if (!query.success) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.INVALID_INPUT, "Invalid query", query.error.flatten()),
+        { status: 400 }
+      );
+    }
+
     // A linked staff account (its own login) reaches this route only to fill
     // the PIN picker — and the picker for THEM is just themselves. It must
     // not receive a coworker's contact details, pay rate, or PIN status, so
@@ -65,6 +77,11 @@ export const GET = withApiHandler(
         inviteStatus: true,
         payType: true,
         payRate: true,
+        overtimeRate: true,
+        allowances: {
+          select: { id: true, name: true, amount: true, basis: true },
+          orderBy: { createdAt: "asc" },
+        },
         contractType: true,
         createdAt: true,
         updatedAt: true,
@@ -91,21 +108,39 @@ export const GET = withApiHandler(
 
     // userId is a Better Auth account id — the client only needs to know
     // whether one is linked, not which.
-    const staffResponse = staff.map(({ pin, payRate, userId, ...s }) => ({
-      ...s,
-      hasPin: pin !== null,
-      payRate: payRate !== null ? Number(payRate) : null,
-      hasLinkedAccount: userId !== null,
-      hasPendingAccountInvite: userId === null && pendingIds.has(s.id),
-    }));
+    // Pay is the owner's to see — the Staff page and the Salary tab are both
+    // owner-only. The list itself also feeds the PIN pickers, rosters and the
+    // device's offline cache (["staff", storeId] is persisted to IndexedDB), so
+    // pay comes only when asked for (?include=pay, the Staff page) AND the
+    // caller is the owner as themselves.
+    const showPay = query.data.include === "pay" && (await canSeeStaffPay(storeId!));
+    const staffResponse = staff.map(
+      ({ pin, payRate, overtimeRate, allowances, userId, payType, contractType, ...s }) => ({
+        ...s,
+        hasPin: pin !== null,
+        ...(showPay && {
+          payType,
+          contractType,
+          payRate: payRate !== null ? Number(payRate) : null,
+          overtimeRate: overtimeRate !== null ? Number(overtimeRate) : null,
+          allowances: allowances.map((a) => ({ ...a, amount: Number(a.amount) })),
+        }),
+        hasLinkedAccount: userId !== null,
+        hasPendingAccountInvite: userId === null && pendingIds.has(s.id),
+      })
+    );
 
     return NextResponse.json(createSuccessResponse({ staff: staffResponse }));
   },
   { rateLimitEndpoint: "/api/stores/[id]/staff", requireStoreAuth: true }
 );
 
+// Owner only, like the Staff page that is the sole caller — a new member's
+// role and page access are the owner's to grant, not a PIN persona's.
 export const POST = withApiHandler(
   async (request, { storeId }) => {
+    const guard = await requireOwnerWithoutStaffPersonaApi(storeId!);
+    if (guard) return guard;
     const body = await request.json();
     const parsed = createStaffSchema.safeParse(body);
     if (!parsed.success) {

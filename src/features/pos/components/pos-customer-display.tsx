@@ -1,8 +1,16 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
-import { Check, Maximize2, Minimize2, MessageCircle, MonitorOff, ShoppingBag } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Check,
+  Hourglass,
+  Maximize2,
+  Minimize2,
+  MessageCircle,
+  MonitorOff,
+  ShoppingBag,
+} from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { EpidomMark, EpidomWordmark } from "@/features/marketing/shared/components/epidom-logo";
@@ -12,7 +20,15 @@ import {
   useCustomerDisplaySnapshot,
   useCustomerIntakeChannel,
 } from "../hooks/use-customer-display";
+import { isCustomerDisplayStandby } from "../lib/customer-display";
 import { PosCustomerDisplayPhone } from "./pos-customer-display-phone";
+import { useFullscreen } from "@/hooks/use-fullscreen";
+
+/** How long a till's "ask the customer" stays worth acting on while this
+ * screen is on standby. A standby is retried within a few seconds (see
+ * useCustomerDisplaySnapshot), so a fresh ask opens the pad as soon as the
+ * till answers — an old one must not pop it open in front of a later customer. */
+const ASK_FRESH_MS = 10_000;
 
 interface PosCustomerDisplayProps {
   storeId: string;
@@ -54,7 +70,7 @@ export function PosCustomerDisplay({
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 
   // Starts null and fills in on the client: seeding it with `new Date()` would
   // render a server clock that never matches the browser's on hydration.
@@ -63,29 +79,6 @@ export function PosCustomerDisplay({
     const timer = setInterval(() => setNow(new Date()), 15_000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    const syncFullscreen = () => setIsFullscreen(!!document.fullscreenElement);
-    syncFullscreen();
-    document.addEventListener("fullscreenchange", syncFullscreen);
-    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
-  }, []);
-
-  const toggleFullscreen = () => {
-    // Both calls are feature-checked, not just try/caught: where the method is
-    // undefined the call throws *synchronously*, so a bare `.catch()` never
-    // runs and the TypeError escapes the click handler.
-    try {
-      if (document.fullscreenElement) {
-        void document.exitFullscreen?.()?.catch(() => {});
-        return;
-      }
-      void document.documentElement.requestFullscreen?.()?.catch(() => {});
-    } catch {
-      // Fullscreen unavailable (iOS Safari, an embedded webview, a policy
-      // block). The display is perfectly usable windowed.
-    }
-  };
 
   const theme = getPremiumTheme(themeColor || "#FF6B35");
   const ink = getContrastingInk(theme);
@@ -125,16 +118,28 @@ export function PosCustomerDisplay({
     setSubmittedPhone(null);
     setPhoneOpen(false);
   }, [isPaid]);
-  // The cashier switched the display off. Standby rather than a frozen last
-  // order — a customer must never be shown a total that stopped tracking.
-  const isOff = snapshot.phase === "off";
+  // Standby rather than a frozen last order — a customer must never be shown
+  // a total that stopped tracking. Two kinds, told apart on screen so staff
+  // know what to fix: `off` — the cashier switched the display off; `closed`
+  // — the setting is on but no till is driving this screen right now.
+  const isStandby = isCustomerDisplayStandby(snapshot.phase);
+  const isClosed = snapshot.phase === "closed";
 
   // The cashier asked for the customer's details: open the pad for them, the
-  // same one the WhatsApp button opens. Not on standby or over a thank-you.
+  // same one the WhatsApp button opens. Never over a thank-you. On standby the
+  // ask is held, not dropped: it comes from a live till, so the standby is
+  // stale and about to be replaced — the pad opens the moment it is.
+  const handledAskRef = useRef(0);
   useEffect(() => {
-    if (askedAt > 0 && !isOff && !isPaid) setPhoneOpen(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [askedAt]);
+    if (askedAt === 0 || handledAskRef.current === askedAt) return;
+    if (isPaid) {
+      handledAskRef.current = askedAt;
+      return;
+    }
+    if (isStandby) return;
+    handledAskRef.current = askedAt;
+    if (Date.now() - askedAt <= ASK_FRESH_MS) setPhoneOpen(true);
+  }, [askedAt, isStandby, isPaid]);
 
   return (
     <div
@@ -164,7 +169,7 @@ export function PosCustomerDisplay({
         </div>
       </header>
 
-      {isOff ? (
+      {isStandby ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-5 rounded-3xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] p-8 text-center">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -176,9 +181,24 @@ export function PosCustomerDisplay({
           ) : (
             <EpidomMark size={96} />
           )}
-          <div className="flex items-center gap-2 opacity-60">
-            <MonitorOff className="h-4 w-4 shrink-0" />
-            <p className="text-sm sm:text-base">{t("pos.customerDisplay.standby")}</p>
+          <div className="flex max-w-md flex-col items-center gap-1.5">
+            <div className="flex items-center gap-2 opacity-60">
+              {isClosed ? (
+                <Hourglass className="h-4 w-4 shrink-0" />
+              ) : (
+                <MonitorOff className="h-4 w-4 shrink-0" />
+              )}
+              <p className="text-sm sm:text-base">
+                {t(isClosed ? "pos.customerDisplay.waitingTill" : "pos.customerDisplay.standby")}
+              </p>
+            </div>
+            {/* For staff setting the screen up — the customer has nothing to do
+                here, so it stays small and quiet. */}
+            <p className="text-xs opacity-45 sm:text-sm">
+              {t(
+                isClosed ? "pos.customerDisplay.waitingTillHint" : "pos.customerDisplay.standbyHint"
+              )}
+            </p>
           </div>
         </div>
       ) : isPaid ? (

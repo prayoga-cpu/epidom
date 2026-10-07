@@ -1,7 +1,7 @@
 import { canManageShift } from "@/features/pos/lib/shift-access";
 
 /** The Operational page's tabs, in the order they are shown. */
-export const OPERATIONAL_TABS = ["shift", "schedule", "roster", "clock"] as const;
+export const OPERATIONAL_TABS = ["shift", "schedule", "pay", "roster", "clock"] as const;
 export type OperationalTab = (typeof OPERATIONAL_TABS)[number];
 
 export function isOperationalTab(value: string | null | undefined): value is OperationalTab {
@@ -31,6 +31,10 @@ export interface OperationalAccess {
  *  - My Schedule: a staff persona with the "/pos/schedule" grant. It shows that
  *    staff member's own roster, so the owner, who has no staff session, gets no
  *    tab (the old page sent the owner to the Back Office roster instead).
+ *  - My Pay: the same persona as My Schedule — it is that staff member's own
+ *    earnings (GET /payroll/me reads whose from the PIN persona). Not the
+ *    owner, who has no wage here and reads everyone's on Back Office's Salary
+ *    tab, and only on plans with staff operations, like that tab.
  *  - Team Schedule: the whole team's PUBLISHED roster and schedule images, read
  *    only — for whoever already sees that roster in Back Office /schedule: the
  *    owner, or a Manager persona on the owner's device holding "/schedule". Not
@@ -62,6 +66,7 @@ export function resolveOperationalTabs(access: OperationalAccess): OperationalTa
   const tabs: OperationalTab[] = [];
   if (holdsTill) tabs.push("shift");
   if (session && hasScheduleGrant) tabs.push("schedule");
+  if (session && session.role !== "OWNER" && hasScheduleGrant && access.staffOperations) tabs.push("pay");
   if (access.staffOperations && seesTeamRoster) tabs.push("roster");
   if (access.hasClockableStaff && (viewer === "owner" || hasScheduleGrant)) tabs.push("clock");
   return tabs;

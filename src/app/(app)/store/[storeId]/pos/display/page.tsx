@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,12 @@ import { PosCustomerDisplay } from "@/features/pos/components/pos-customer-displ
 // (dashboard)/pos/layout.tsx, so the POS plan gate is applied here directly.
 // It still inherits I18nProvider and CurrencyProvider from the (app) layout.
 
+// Outside (pos-mode) it gets no "Epidom — POS" title either, and without one
+// the tab shows a bare /store/<id>/… URL — indistinguishable from any other
+// store's tab when staff are setting up the second screen.
+export const metadata: Metadata = {
+  title: "Epidom — Customer display",
+};
 
 /**
  * `Store.country` is free text — it is matched elsewhere with `/indonesia/i`

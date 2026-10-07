@@ -8,6 +8,13 @@ vi.mock("@/lib/api-handler", () => ({
 }));
 vi.mock("@/lib/services/email.service", () => ({ sendStaffPinEmail: vi.fn() }));
 vi.mock("bcryptjs", () => ({ hash: vi.fn() }));
+// Whether the caller is the owner acting as themselves (no cashier/manager PIN
+// persona on top) — decides whether pay is in the roster.
+const owner = vi.hoisted(() => ({ acting: true }));
+vi.mock("@/lib/auth/require-owner-only", () => ({
+  canSeeStaffPay: async () => owner.acting,
+  requireOwnerWithoutStaffPersonaApi: async () => null,
+}));
 
 const staffFindFirst = vi.fn();
 const staffFindMany = vi.fn();
@@ -25,8 +32,11 @@ vi.mock("@/lib/prisma", () => ({
 import { GET } from "../route";
 
 const STORE = "store_abc12345";
-const get = (ctx: Record<string, unknown>) =>
-  GET(new Request(`http://localhost/api/stores/${STORE}/staff`), { storeId: STORE, ...ctx } as never);
+const get = (ctx: Record<string, unknown>, query = "") =>
+  GET(new Request(`http://localhost/api/stores/${STORE}/staff${query}`), {
+    storeId: STORE,
+    ...ctx,
+  } as never);
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: "s1",
@@ -41,6 +51,8 @@ const row = (over: Record<string, unknown> = {}) => ({
   inviteStatus: "none",
   payType: "HOURLY",
   payRate: "12.5",
+  overtimeRate: null,
+  allowances: [],
   contractType: "PART_TIME",
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -51,6 +63,7 @@ const row = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  owner.acting = true;
   inviteFindMany.mockResolvedValue([]);
 });
 
@@ -109,7 +122,8 @@ describe("GET /api/stores/[id]/staff — the owner's roster", () => {
   it("lists everyone, without leaking the PIN hash or the linked account's id", async () => {
     staffFindMany.mockResolvedValue([row({ userId: "user_secret_123" })]);
 
-    const res = await get(ownerCtx);
+    // The owner's Staff page asks for the pay setup.
+    const res = await get(ownerCtx, "?include=pay");
     const text = await res.text();
     const [s] = JSON.parse(text).data.staff;
 
@@ -118,6 +132,31 @@ describe("GET /api/stores/[id]/staff — the owner's roster", () => {
     expect(s).not.toHaveProperty("pin");
     expect(s).not.toHaveProperty("userId");
     expect(s).toMatchObject({ hasPin: true, payRate: 12.5, contractType: "PART_TIME", hasLinkedAccount: true });
+  });
+
+  it("leaves the pay setup out unless the owner's Staff page asks for it", async () => {
+    // The default list feeds the PIN pickers and the device's offline cache.
+    staffFindMany.mockResolvedValue([row()]);
+    const [s] = (await (await get(ownerCtx)).json()).data.staff;
+    expect(s).not.toHaveProperty("payRate");
+    expect(s).not.toHaveProperty("allowances");
+  });
+
+  it("leaves the pay setup out for a cashier or manager PIN persona, even when asked", async () => {
+    // The Staff page and Salary tab are owner-only; the roster still reaches a
+    // persona (PIN picker, rosters), but without anyone's pay.
+    owner.acting = false;
+    staffFindMany.mockResolvedValue([row({ overtimeRate: "20", allowances: [] })]);
+    const [s] = (await (await get(ownerCtx, "?include=pay")).json()).data.staff;
+    for (const field of ["payRate", "overtimeRate", "allowances", "payType", "contractType"]) {
+      expect(s).not.toHaveProperty(field);
+    }
+    expect(s).toMatchObject({ id: "s1", name: "Jane", role: "CASHIER", hasPin: true });
+  });
+
+  it("rejects an unknown include value", async () => {
+    const res = await get(ownerCtx, "?include=everything");
+    expect(res.status).toBe(400);
   });
 
   it("an owner request with no access context at all behaves as the owner (unchanged route contract)", async () => {

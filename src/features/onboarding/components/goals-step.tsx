@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import {
   ONBOARDING_GOALS,
+  type OnboardingBilling,
   type OnboardingCompleteResult,
   type OnboardingGoal,
   type OnboardingState,
@@ -26,6 +27,13 @@ import { cn } from "@/lib/utils";
 import { useCompleteOnboarding } from "../hooks/use-onboarding-steps";
 import { useStepErrorHandler } from "../hooks/use-step-error-handler";
 import { trackOnboardingCompleted, trackStepCompleted } from "../lib/onboarding-analytics";
+import {
+  GOAL_PLAN,
+  INTENT_GOAL,
+  checkoutAfterPublish,
+  type PlanCheckout,
+  type PlanIntent,
+} from "../lib/plan-intent";
 import {
   PRIMARY_BUTTON_CLASS,
   StepBody,
@@ -37,21 +45,29 @@ import {
 interface GoalOption {
   goal: OnboardingGoal;
   icon: LucideIcon;
-  plan: PlanTier;
 }
 
-/** The three spaces of Epidom, each with the plan that unlocks it. */
+/** The three spaces of Epidom; GOAL_PLAN names the plan that unlocks each. */
 const GOAL_OPTIONS: GoalOption[] = [
-  { goal: "storefront", icon: Globe, plan: "FREE" },
-  { goal: "counter", icon: MonitorSmartphone, plan: "POS" },
-  { goal: "operations", icon: Boxes, plan: "OPERATIONS" },
+  { goal: "storefront", icon: Globe },
+  { goal: "counter", icon: MonitorSmartphone },
+  { goal: "operations", icon: Boxes },
 ];
+
+/** What the hint under the cards says publishing leads to. */
+function nextStepKey(checkout: PlanCheckout): string {
+  if (checkout.trial) return "onboarding.goals.next.trial";
+  return checkout.plan === "POS" ? "onboarding.goals.next.pos" : "onboarding.goals.next.operations";
+}
 
 const goalsSchema = z.object({ goals: z.array(z.enum(ONBOARDING_GOALS)) });
 type GoalsFormValues = z.infer<typeof goalsSchema>;
 
 export interface GoalsStepProps {
   state: OnboardingState;
+  billing: OnboardingBilling;
+  /** A plan picked before signing up: its goal starts ticked when nothing is saved yet. */
+  planIntent?: PlanIntent | null;
   onBack: () => void;
   onPublished: (result: OnboardingCompleteResult) => void;
   onStepOrder: () => void;
@@ -60,14 +76,27 @@ export interface GoalsStepProps {
 /**
  * Step 3, "What do you want Epidom to help with?": pick any of the three
  * spaces (or none), then publish. The picks order the Getting-started
- * checklist; they never lock or unlock anything.
+ * checklist, and a POS or Operations pick goes on to that plan's Checkout
+ * after publishing (the POS trial: a card, nothing charged today). The hint
+ * under the cards says so before the owner presses Publish.
  */
-export function GoalsStep({ state, onBack, onPublished, onStepOrder }: GoalsStepProps) {
+export function GoalsStep({
+  state,
+  billing,
+  planIntent = null,
+  onBack,
+  onPublished,
+  onStepOrder,
+}: GoalsStepProps) {
   const { t } = useI18n();
   const form = useForm<GoalsFormValues>({
     resolver: zodResolver(goalsSchema),
-    defaultValues: { goals: state.goals },
+    defaultValues: {
+      goals: state.goals.length === 0 && planIntent ? [INTENT_GOAL[planIntent.plan]] : state.goals,
+    },
   });
+  const pickedGoals = form.watch("goals");
+  const checkout = checkoutAfterPublish(pickedGoals, billing, planIntent);
   const mutation = useCompleteOnboarding();
   const handleError = useStepErrorHandler({ onStepOrder });
   const pending = mutation.isPending;
@@ -106,7 +135,8 @@ export function GoalsStep({ state, onBack, onPublished, onStepOrder }: GoalsStep
             render={({ field }) => (
               <fieldset className="grid gap-3" disabled={pending}>
                 <legend className="sr-only">{t("onboarding.goals.title")}</legend>
-                {GOAL_OPTIONS.map(({ goal, icon: Icon, plan }) => {
+                {GOAL_OPTIONS.map(({ goal, icon: Icon }) => {
+                  const plan = GOAL_PLAN[goal];
                   const checked = field.value.includes(goal);
                   const toggle = () =>
                     field.onChange(
@@ -158,7 +188,7 @@ export function GoalsStep({ state, onBack, onPublished, onStepOrder }: GoalsStep
                         >
                           {t(`onboarding.goals.options.${goal}.description`)}
                         </span>
-                        {goal === "counter" ? (
+                        {goal === "counter" && billing.posTrialEligible ? (
                           <span className="block text-xs font-medium text-[var(--epi-gold-600)]">
                             {t("onboarding.goals.options.counter.trial")}
                           </span>
@@ -182,7 +212,17 @@ export function GoalsStep({ state, onBack, onPublished, onStepOrder }: GoalsStep
             )}
           />
 
-          <p className="text-muted-foreground text-sm">{t("onboarding.goals.publishHint")}</p>
+          <div aria-live="polite" className="space-y-2">
+            {checkout ? (
+              <p
+                data-testid="goals-next-step"
+                className="rounded-lg border border-[var(--epi-gold-500)]/40 bg-[var(--epi-gold-500)]/8 px-3 py-2 text-sm"
+              >
+                {t(nextStepKey(checkout))} {t("onboarding.goals.next.stayFree")}
+              </p>
+            ) : null}
+            <p className="text-muted-foreground text-sm">{t("onboarding.goals.publishHint")}</p>
+          </div>
         </StepBody>
 
         <WizardActions onBack={onBack} backDisabled={pending}>

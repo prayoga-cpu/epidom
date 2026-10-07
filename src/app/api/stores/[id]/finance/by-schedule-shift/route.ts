@@ -16,7 +16,11 @@ import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { requireFinanceReportAccessApi } from "@/lib/auth/require-finance-access";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
-import { bucketOrdersByScheduleShift, enumerateDateKeys } from "@/lib/finance/schedule-shift-bucketing";
+import {
+  bucketOrdersByScheduleShift,
+  enumerateDateKeys,
+  summarizeScheduleShiftCoverage,
+} from "@/lib/finance/schedule-shift-bucketing";
 import { getBusinessDateKey, businessDateKeyToDate } from "@/lib/attendance/business-date";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +59,7 @@ export const GET = withApiHandler(
     const dateKeys = enumerateDateKeys(fromKey, toKey);
 
     const rows = bucketOrdersByScheduleShift(orders, scheduleShifts, dateKeys, timezone);
+    const totals = summarizeScheduleShiftCoverage(orders, scheduleShifts, dateKeys, timezone);
 
     const rosterRows = await prisma.staffSchedule.findMany({
       where: {
@@ -86,6 +91,7 @@ export const GET = withApiHandler(
       createSuccessResponse({
         from: from.toISOString(),
         to: to.toISOString(),
+        totals,
         rows: rows.map((row) => ({
           ...row,
           color: colorByShiftId.get(row.scheduleShiftId) ?? null,

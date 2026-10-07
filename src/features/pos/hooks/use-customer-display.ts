@@ -10,11 +10,13 @@ import { createCustomer, findCustomerByPhone, toCartCustomer } from "./use-custo
 import {
   CUSTOMER_DETAILS_NAME_MAX,
   CUSTOMER_DISPLAY_PAID_MS,
+  CUSTOMER_DISPLAY_RETRY_MS,
   EMPTY_CUSTOMER_DISPLAY_SNAPSHOT,
   buildCustomerDisplayBuildingSnapshot,
   customerDisplayChannelName,
   customerDisplaySnapshotKey,
   firstNameOf,
+  isCustomerDisplayStandby,
   isPlausibleEmail,
   parseCustomerDisplaySnapshot,
   resolveHighlight,
@@ -215,9 +217,22 @@ export function useCustomerDisplayPublisher(storeId: string): void {
 
     const channel = new BroadcastChannel(customerDisplayChannelName(storeId));
     channelRef.current = channel;
+    // Answers carry a fresh timestamp rather than the one the snapshot was
+    // published with. The display never accepts anything older than what it
+    // already holds, and what it holds may be a goodbye written AFTER this
+    // till last published — by a second till tab of the same store closing,
+    // or by this very page on its way into the back/forward cache. Re-sent
+    // with its original time, the live state lost to that stale goodbye and
+    // the customer screen sat on standby until the next cart change.
+    const announce = () => {
+      channel.postMessage({
+        type: "state",
+        snapshot: { ...snapshotRef.current, updatedAt: Date.now() },
+      });
+    };
     channel.onmessage = (event: MessageEvent<CustomerDisplayMessage>) => {
       if (event.data?.type === "request") {
-        channel.postMessage({ type: "state", snapshot: snapshotRef.current });
+        announce();
         return;
       }
       // Straight into a store the cashier's customer row and checkout read —
@@ -239,19 +254,37 @@ export function useCustomerDisplayPublisher(storeId: string): void {
     // route change, which is exactly the distinction wanted: stepping over to
     // the order queue re-mounts this publisher a moment later, closing the
     // till does not.
+    //
+    // `closed`, not `off`: the setting is still on, nobody switched anything
+    // off. It also covers every reload the till does on its own — a PIN or
+    // staff switch, the stale-chunk reload after a deploy — so the display
+    // says it is waiting for the till instead of claiming it was turned off.
+    // `snapshotRef` is deliberately left alone: it is what a back/forward
+    // cache restore (below) re-announces.
     const sayGoodbye = () => {
       const farewell: CustomerDisplaySnapshot = {
         ...EMPTY_CUSTOMER_DISPLAY_SNAPSHOT,
-        phase: "off",
+        phase: "closed",
         updatedAt: Date.now(),
       };
       writeSnapshot(storeId, farewell);
       channel.postMessage({ type: "state", snapshot: farewell });
     };
+    // Restored from the back/forward cache: no effect re-runs, so nothing
+    // would otherwise take back the goodbye this page just sent.
+    const sayHelloAgain = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      const snapshot = { ...snapshotRef.current, updatedAt: Date.now() };
+      snapshotRef.current = snapshot;
+      writeSnapshot(storeId, snapshot);
+      channel.postMessage({ type: "state", snapshot });
+    };
     window.addEventListener("pagehide", sayGoodbye);
+    window.addEventListener("pageshow", sayHelloAgain);
 
     return () => {
       window.removeEventListener("pagehide", sayGoodbye);
+      window.removeEventListener("pageshow", sayHelloAgain);
       channel.close();
       channelRef.current = null;
     };
@@ -547,6 +580,12 @@ export function useCustomerDisplaySnapshot(storeId: string): CustomerDisplaySnap
   const [snapshot, setSnapshot] = useState<CustomerDisplaySnapshot>(
     EMPTY_CUSTOMER_DISPLAY_SNAPSHOT
   );
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  const standby = isCustomerDisplayStandby(snapshot.phase);
+  const standbyRef = useRef(standby);
+  useEffect(() => {
+    standbyRef.current = standby;
+  }, [standby]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -571,13 +610,22 @@ export function useCustomerDisplaySnapshot(storeId: string): CustomerDisplaySnap
 
     let channel: BroadcastChannel | null = null;
     if (typeof BroadcastChannel !== "undefined") {
-      channel = new BroadcastChannel(customerDisplayChannelName(storeId));
-      channel.onmessage = (event: MessageEvent<CustomerDisplayMessage>) => {
-        if (event.data?.type === "state") accept(event.data.snapshot);
+      const live = new BroadcastChannel(customerDisplayChannelName(storeId));
+      channel = live;
+      channelRef.current = live;
+      live.onmessage = (event: MessageEvent<CustomerDisplayMessage>) => {
+        const type = event.data?.type;
+        if (type === "state") {
+          accept(event.data.snapshot);
+        } else if ((type === "ask-details" || type === "customer-status") && standbyRef.current) {
+          // Only a live till sends these, so the standby on screen is stale:
+          // ask for the real state now rather than at the next retry.
+          live.postMessage({ type: "request" });
+        }
       };
       // Broadcasts aren't replayed, so ask the cashier window for the state
       // it published before this window existed.
-      channel.postMessage({ type: "request" });
+      live.postMessage({ type: "request" });
     }
 
     const handleStorage = (event: StorageEvent) => {
@@ -588,9 +636,32 @@ export function useCustomerDisplaySnapshot(storeId: string): CustomerDisplaySnap
 
     return () => {
       channel?.close();
+      channelRef.current = null;
       window.removeEventListener("storage", handleStorage);
     };
   }, [storeId]);
+
+  // Standby is the one state the display cannot trust to be current: the
+  // mount-time request above may have gone unanswered (the cashier was on the
+  // Orders or Kitchen screen, or at the PIN picker after a reload), or been
+  // answered by a till tab that has since closed while another kept ringing
+  // up. Keep asking until a till answers — cheap, and only while on standby,
+  // so two live tills never take turns repainting an order in progress.
+  useEffect(() => {
+    if (!standby) return;
+    const ask = () => channelRef.current?.postMessage({ type: "request" });
+    const askWhenVisible = () => {
+      if (document.visibilityState === "visible") ask();
+    };
+    const timer = setInterval(ask, CUSTOMER_DISPLAY_RETRY_MS);
+    document.addEventListener("visibilitychange", askWhenVisible);
+    window.addEventListener("focus", ask);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", askWhenVisible);
+      window.removeEventListener("focus", ask);
+    };
+  }, [standby, storeId]);
 
   // If the cashier window closes (or reloads) mid-thank-you, nothing will
   // ever publish the follow-up idle snapshot — so expire it here too rather

@@ -9,14 +9,14 @@
  * Product.productLine) get their own real "CUSTOM" bucket, labeled
  * client-side with the store's own Store.customProductsLabel.
  *
- * Query params: from, to, staffId, shiftId
+ * Query params: from, to, staffId, shiftId, channel, paymentMethod
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
-import { shiftFilter } from "@/lib/finance/report-filters";
+import { shiftFilter, channelFilter, paymentMethodFilter } from "@/lib/finance/report-filters";
 import { bucketItemsByDepartment, type DepartmentValue } from "@/lib/finance/report-aggregation";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +38,10 @@ export const GET = withApiHandler(
           status: { notIn: NON_REVENUE_STATUSES },
           orderDate: { gte: from, lte: to },
           ...shiftWhere,
+          // Finance shows this split above KPI cards that honour the channel
+          // and payment filters; without them the two disagreed on screen.
+          ...channelFilter(searchParams.get("channel")),
+          ...paymentMethodFilter(searchParams.get("paymentMethod")),
         },
       },
       select: {

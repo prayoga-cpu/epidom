@@ -9,6 +9,7 @@ import { trackEvent, trackConversion, trackMetaPixelEvent } from "@/lib/analytic
 import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { LOCALE_PRICE_CURRENCY } from "@/lib/constants/plan-pricing";
+import { parsePlanIntent, registerHrefFor } from "@/features/onboarding/lib/plan-intent";
 import { BoldText } from "./bold-text";
 
 const TIERS = [
@@ -36,9 +37,12 @@ const FOCUSABLE =
 export function PricingCards({
   yearly,
   currentPlan,
+  onYearlyChange,
 }: {
   yearly: boolean;
   currentPlan?: string | null;
+  /** A `?plan=…&billing=…` deep link sets the page's Monthly / Yearly toggle to match. */
+  onYearlyChange?: (yearly: boolean) => void;
 }) {
   const { t, locale } = useI18n();
   const { user, loading: userLoading } = useUser();
@@ -70,26 +74,34 @@ export function PricingCards({
   // the plan arrives, so eligibility is applied at render, not only at open.
   const dialogTrial = !!confirming?.trial && trialEligible;
 
+  // Deep links that open a plan's confirm for a signed-in visitor:
+  // `?trial=true` (the POS trial), and `?plan=POS|OPERATIONS&billing=…` (a
+  // plan picked before signing in, see plan-intent.ts, or "Try again" after a
+  // cancelled Checkout).
   useEffect(() => {
     if (!userLoading && user && typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("trial") === "true") {
+      const intent = parsePlanIntent(urlParams);
+      const plan = intent?.plan ?? (urlParams.get("trial") === "true" ? "POS" : null);
+      if (plan) {
         window.history.replaceState({}, "", window.location.pathname);
-        // Already on POS: there is nothing to start or switch to.
-        if (currentPlan === "POS") return;
+        // Already on that plan: there is nothing to start or switch to.
+        if (currentPlan === plan) return;
+        if (intent) onYearlyChange?.(intent.yearly);
         setErrorMsg(null);
-        // No click opened this one; hand focus back to the POS card's CTA.
+        const tier = plan === "POS" ? "t2" : "t3";
+        // No click opened this one; hand focus back to the plan card's CTA.
         triggerRef.current =
-          sectionRef.current?.querySelector<HTMLElement>('[data-plan="POS"] button') ?? null;
+          sectionRef.current?.querySelector<HTMLElement>(`[data-plan="${plan}"] button`) ?? null;
         setConfirming({
-          key: "t2",
-          plan: "POS",
-          name: t("redesign.pricingPage.t2name") as string,
-          trial: true,
+          key: tier,
+          plan,
+          name: t(`redesign.pricingPage.${tier}name`) as string,
+          trial: plan === "POS",
         });
       }
     }
-  }, [user, userLoading, t, currentPlan]);
+  }, [user, userLoading, t, currentPlan, onYearlyChange]);
 
   // Focus moves into the dialog when it opens and back to the CTA that opened it
   // when it closes.
@@ -145,16 +157,14 @@ export function PricingCards({
   }, [isOpen, isActivating]);
 
   /**
-   * Where a visitor who is not signed in goes to sign up. The sign-up form (and
-   * the verify-email flow after it) reads `next`, not `callbackURL`, so the
-   * pricing page and trial intent ride in `next`, encoded so the "?" inside it
-   * does not split the value. FREE has no intent to keep.
+   * Where a visitor who is not signed in goes to sign up: setup, carrying the
+   * plan and billing interval (see plan-intent.ts). The wizard ticks the plan's
+   * goal and, once the store is published, opens its Checkout (for POS: the
+   * 14-day trial, a card and nothing charged today). FREE has no plan to keep.
    */
-  function registerHref(plan: string, trial?: boolean) {
-    if (plan === "FREE") return "/register";
-    const back =
-      getLocalizedPath("/pricing", locale) + (plan === "POS" && trial ? "?trial=true" : "");
-    return `/register?next=${encodeURIComponent(back)}`;
+  function registerHref(plan: string) {
+    if (plan !== "POS" && plan !== "OPERATIONS") return "/register";
+    return registerHrefFor({ plan, yearly });
   }
 
   function getPrice(tierKey: string) {
@@ -202,7 +212,7 @@ export function PricingCards({
     // "switch": skip the confirm dialog (its wording assumes an existing plan and
     // its checkout call would only 401) and go to sign-up carrying the intent.
     if (!userLoading && !user) {
-      window.location.href = registerHref(plan, trial);
+      window.location.href = registerHref(plan);
       return;
     }
     const name = t(`redesign.pricingPage.${tierKey}name` as const);
@@ -235,7 +245,7 @@ export function PricingCards({
       if (res.status === 401) {
         // The session lapsed after the dialog opened: same sign-up hand-off as a
         // signed-out click, so the plan intent survives.
-        window.location.href = registerHref(confirming.plan, dialogTrial);
+        window.location.href = registerHref(confirming.plan);
         return;
       }
 
@@ -615,7 +625,7 @@ export function PricingCards({
                       event_category: "engagement",
                       event_label: "pricing_trial_bar",
                     });
-                    window.location.href = registerHref("POS", true);
+                    window.location.href = registerHref("POS");
                   } else {
                     handleCta("t2", "POS", true, e.currentTarget);
                   }

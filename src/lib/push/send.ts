@@ -46,7 +46,12 @@ export interface PushPayload {
   tag?: string;
 }
 
-export function sendPushToStore(storeId: string, payload: PushPayload): void {
+/**
+ * Resolves once delivery is done (never rejects), so a route can hand it to
+ * `after()` — fired and forgotten, a serverless function may be frozen the
+ * moment its response is sent, before the push leaves.
+ */
+export function sendPushToStore(storeId: string, payload: PushPayload): Promise<void> {
   if (!ensureVapidConfigured()) {
     if (!warnedOnce && process.env.NODE_ENV === "development") {
       warnedOnce = true;
@@ -54,10 +59,10 @@ export function sendPushToStore(storeId: string, payload: PushPayload): void {
         "[push] VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY/VAPID_SUBJECT not set — web push disabled, falling back to polling. See docs/ENVIRONMENT.md."
       );
     }
-    return;
+    return Promise.resolve();
   }
 
-  void deliver(storeId, payload).catch((err) => {
+  return deliver(storeId, payload).catch((err) => {
     console.error(`[push] delivery failed for store=${storeId}:`, err);
   });
 }

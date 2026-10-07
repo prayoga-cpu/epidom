@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,51 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { useCustomProductsSettings } from "@/features/dashboard/data/custom-products/hooks/use-custom-products-settings";
 import { Download, FileText, Sheet, Pencil, Trash2 } from "lucide-react";
 import { useSortable, sortRows } from "@/features/dashboard/shared/hooks/use-sortable";
-import { SortableHead, ReportStatus, ReportStatusRow } from "./finance-report-parts";
+import {
+  SortableHead,
+  ReportStatus,
+  ReportStatusRow,
+  TotalsCard,
+  FilterScopeNote,
+} from "./finance-report-parts";
+import { FinancePnlStatement } from "./finance-pnl-statement";
+import { FinanceExpensesTab } from "./finance-expenses-tab";
+import { AdjustmentsTab, LabourTab, SalesPatternsTab, TaxTab } from "./finance-insight-tabs";
+import { useFinanceExpenses } from "../hooks/use-finance-expenses";
+import {
+  adjustmentsQuery,
+  labourQuery,
+  salesPatternsQuery,
+  taxQuery,
+  type FinanceQueryScope,
+} from "../finance-queries";
+import type {
+  CashReconciliationRow,
+  CategoryRow,
+  CategoryTotals,
+  ChannelRow,
+  DepartmentRow,
+  ItemMarginRow,
+  PaymentMethodRow,
+  ScheduleShiftBucketRow,
+  ScheduleShiftTotals,
+  ShiftRow,
+  SummaryData,
+  TopItem,
+  TopItemsTotals,
+  WasteReasonRow,
+} from "../finance-types";
+import {
+  averageTicket,
+  buildPnlLines,
+  classifyMenuItems,
+  itemMarginTotals,
+  scheduleBlockSubtotals,
+  sharePct,
+  sumColumns,
+  topItemsBreakdown,
+  type MenuClass,
+} from "@/lib/finance/report-totals";
 import { DateRangeField } from "@/components/ui/date-range-field";
 import { PageIntro } from "@/features/guide/components/page-intro";
 import {
@@ -68,128 +112,6 @@ import {
   useDeleteWasteEntry,
   type WasteEntryWithRelations,
 } from "@/features/dashboard/management/waste/hooks/use-waste";
-
-interface SummaryData {
-  from: string;
-  to: string;
-  revenue: number;
-  grossRevenue: number;
-  discountAmount: number;
-  refundAmount: number;
-  cogs: number;
-  grossProfit: number;
-  grossMarginPct: number;
-  // Order lines with no cost source at all. Delivery-app orders arrive with
-  // neither a menu item nor a product attached, so they can never acquire a
-  // cost snapshot — their cost is genuinely unknown. Surfaced rather than
-  // rendered as zero, which would imply they sold at 100% margin.
-  unknownCostLines?: number;
-  unknownCostRevenue?: number;
-  wasteLoss: number;
-  taxCollected: number;
-  serviceCharge: number;
-  processingFee: number;
-  netRevenue: number;
-  netProfit: number;
-  orderCount: number;
-  buckets: { date: string; revenue: number }[];
-}
-
-interface WasteReasonRow {
-  reason: string;
-  label: string;
-  entryCount: number;
-  totalQuantity: number;
-  totalValue: number;
-}
-
-interface ChannelRow {
-  source: string;
-  label: string;
-  orderCount: number;
-  revenue: number;
-  commissionPct: number;
-  commissionAmount: number;
-  taxAmount: number;
-  processingFeeAmount: number;
-  netRevenue: number;
-}
-
-interface TopItem {
-  name: string;
-  orderCount: number;
-  totalQuantity: number;
-  totalRevenue: number;
-}
-
-interface CategoryRow {
-  categoryId: string | null;
-  categoryName: string;
-  orderItemCount: number;
-  totalQuantity: number;
-  totalRevenue: number;
-}
-
-interface DepartmentRow {
-  // "CUSTOM" is the optional second product line (Product.productLine),
-  // labeled client-side with the store's own customProductsLabel.
-  department: "KITCHEN" | "BAR" | "CUSTOM" | null;
-  orderItemCount: number;
-  totalQuantity: number;
-  totalRevenue: number;
-}
-
-interface ShiftRow {
-  shiftId: string | null;
-  staffName: string;
-  staffId: string | null;
-  openedAt: string | null;
-  closedAt: string | null;
-  isOpen: boolean;
-  orderCount: number;
-  revenue: number;
-}
-
-interface ScheduleShiftBucketRow {
-  scheduleShiftId: string;
-  name: string;
-  date: string;
-  orderCount: number;
-  revenue: number;
-  color: string | null;
-  staffOnDuty: { staffMemberId: string; name: string; department: string | null }[];
-}
-
-interface PaymentMethodRow {
-  paymentMethod: string;
-  orderCount: number;
-  revenue: number;
-  percentOfTotal: number;
-}
-
-/** Mirrors CashReconciliationRow in lib/finance/report-aggregation.ts: the
- * whole CashOnHandBreakdown (float, sales, refunds, tips, float top-ups,
- * paid-outs, safe drops, tip payouts) plus who/when. `expectedCash` is no
- * longer nullable — it is computed live, so an open till has one too. */
-interface CashReconciliationRow extends CashOnHandBreakdown {
-  shiftId: string;
-  staffName: string;
-  staffId: string;
-  openedAt: string;
-  closedAt: string | null;
-  isOpen: boolean;
-  isFlagged: boolean;
-}
-
-interface ItemMarginRow {
-  name: string;
-  orderCount: number;
-  totalQuantity: number;
-  totalRevenue: number;
-  totalCost: number | null;
-  margin: number | null;
-  marginPct: number | null;
-}
 
 interface StaffOption {
   id: string;
@@ -235,6 +157,128 @@ const PAYMENT_METHOD_OPTIONS = [
   "GOOGLE_PAY",
   "OTHER",
 ] as const;
+
+/** One headline figure: label, value, optional period-over-period badge and
+ * the context lines that explain it. */
+function KpiCard({
+  label,
+  value,
+  delta,
+  sub,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  delta?: ReactNode;
+  sub?: ReactNode;
+  valueClassName?: string;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-1">
+        <CardTitle className="text-muted-foreground text-sm font-medium">{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <p className={`text-2xl font-bold tabular-nums ${valueClassName ?? ""}`}>{value}</p>
+          {delta}
+        </div>
+        {sub && <div className="text-muted-foreground mt-0.5 space-y-0.5 text-xs">{sub}</div>}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** A phone-layout tab's loading or error state. */
+function MobileStatus({ isError, onRetry }: { isError: boolean; onRetry: () => void }) {
+  const { t } = useI18n();
+  return (
+    <div className="text-muted-foreground py-8 text-center text-sm">
+      <ReportStatus
+        isError={isError}
+        onRetry={onRetry}
+        loadingLabel={t("common.loading")}
+        errorLabel={t("pages.financeLoadError")}
+        retryLabel={t("common.actions.retry")}
+      />
+    </div>
+  );
+}
+
+/** A table body's "nothing in this period" row. */
+function EmptyRow({ colSpan }: { colSpan: number }) {
+  const { t } = useI18n();
+  return (
+    <TableRow>
+      <TableCell colSpan={colSpan} className="text-muted-foreground py-8 text-center">
+        {t("pages.noData")}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+/** One label/value line of a phone row card. */
+function CardLine({
+  label,
+  value,
+  strong,
+  tone,
+}: {
+  label: string;
+  value: ReactNode;
+  strong?: boolean;
+  tone?: "cost";
+}) {
+  return (
+    <div className={`flex justify-between gap-3 text-sm ${strong ? "font-semibold" : ""}`}>
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`tabular-nums ${tone === "cost" ? "text-orange-600" : ""}`}>{value}</span>
+    </div>
+  );
+}
+
+type FilterKey = "staff" | "category" | "department" | "channel" | "paymentMethod";
+
+const ORDER_FILTERS: FilterKey[] = ["staff", "channel", "paymentMethod"];
+
+/**
+ * Every report tab, in the order the tab bar shows them, with the page filters
+ * each one applies. A tab says so when an active filter isn't one of its own
+ * (FilterScopeNote), instead of silently showing unfiltered figures.
+ */
+const REPORT_TABS: { value: string; labelKey: string; filters: FilterKey[] }[] = [
+  { value: "pl", labelKey: "pages.financePLStatement", filters: ORDER_FILTERS },
+  { value: "daily", labelKey: "pages.financeDaily", filters: ORDER_FILTERS },
+  { value: "expenses", labelKey: "pages.financeExpenses", filters: [] },
+  { value: "channels", labelKey: "pages.financeChannels", filters: ["staff", "paymentMethod"] },
+  { value: "paymentMethod", labelKey: "pages.financePaymentMethod", filters: ["staff", "channel"] },
+  { value: "patterns", labelKey: "pages.financeSalesPatterns", filters: ORDER_FILTERS },
+  {
+    value: "items",
+    labelKey: "pages.financeTopItems",
+    filters: [...ORDER_FILTERS, "category", "department"],
+  },
+  {
+    value: "margin",
+    labelKey: "pages.financeItemMargin",
+    filters: [...ORDER_FILTERS, "category", "department"],
+  },
+  { value: "category", labelKey: "pages.financeByCategory", filters: ORDER_FILTERS },
+  { value: "adjustments", labelKey: "pages.financeAdjustments", filters: ORDER_FILTERS },
+  { value: "tax", labelKey: "pages.financeTaxReport", filters: ORDER_FILTERS },
+  { value: "waste", labelKey: "pages.financeWaste", filters: [] },
+  { value: "cash", labelKey: "pages.financeCashReconciliation", filters: ["staff"] },
+  { value: "shift", labelKey: "pages.financeByShift", filters: ["staff"] },
+  { value: "scheduleShift", labelKey: "pages.financeScheduleShiftBlock", filters: [] },
+  { value: "labour", labelKey: "pages.financeLabour", filters: [] },
+];
+
+const MENU_CLASS_STYLE: Record<MenuClass, string> = {
+  star: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  plowhorse: "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+  puzzle: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  dog: "border-muted-foreground/30 text-muted-foreground",
+};
 
 /**
  * One label/value line inside a mobile cash-drawer card. The cash tab has far
@@ -324,14 +368,16 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
   const [categoryId, setCategoryIdState] = useState(searchParams.get("category") ?? ALL);
   const [department, setDepartmentState] = useState(searchParams.get("department") ?? ALL);
   const [channel, setChannelState] = useState(searchParams.get("channel") ?? ALL);
-  const [paymentMethod, setPaymentMethodState] = useState(
-    searchParams.get("paymentMethod") ?? ALL
-  );
-  const [comparePrevious, setComparePreviousState] = useState(
-    searchParams.get("compare") === "1"
-  );
+  const [paymentMethod, setPaymentMethodState] = useState(searchParams.get("paymentMethod") ?? ALL);
+  const [comparePrevious, setComparePreviousState] = useState(searchParams.get("compare") === "1");
+
+  const [tab, setTabState] = useState(() => {
+    const requested = searchParams.get("tab");
+    return REPORT_TABS.some((r) => r.value === requested) ? (requested as string) : "pl";
+  });
 
   const shifts = useStoreShifts(storeId);
+  const queryClient = useQueryClient();
 
   // Reflects the current filter set into the URL — a filtered report view is
   // then shareable/bookmarkable and survives a refresh. Same pattern as
@@ -406,6 +452,12 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
   const setComparePrevious = (v: boolean) => {
     setComparePreviousState(v);
     syncUrl({ compare: v ? "1" : null });
+  };
+  // The open report rides in the URL too, so a refresh or a shared link lands
+  // on the same tab.
+  const setTab = (v: string) => {
+    setTabState(v);
+    syncUrl({ tab: v === "pl" ? null : v });
   };
 
   const channelLabel = (source: string) => orderSourceLabel(t, source);
@@ -485,24 +537,24 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
       paymentMethod,
     ],
     queryFn: () =>
-      apiClient.get<{ items: TopItem[] }>(
-        `${base}/top-items?${dateParams}${staffParam}${categoryParam}${departmentParam}${channelParam}${paymentMethodParam}&limit=20`
+      apiClient.get<{ items: TopItem[]; totals?: TopItemsTotals }>(
+        `${base}/top-items?${dateParams}${staffParam}${categoryParam}${departmentParam}${channelParam}${paymentMethodParam}&limit=20&includeTotals=1`
       ),
   });
 
   const byCategory = useQuery({
     queryKey: ["finance-by-category", storeId, from, to, staffId, channel, paymentMethod],
     queryFn: () =>
-      apiClient.get<{ categories: CategoryRow[] }>(
+      apiClient.get<{ categories: CategoryRow[]; totals?: CategoryTotals }>(
         `${base}/by-category?${dateParams}${staffParam}${channelParam}${paymentMethodParam}`
       ),
   });
 
   const byDepartment = useQuery({
-    queryKey: ["finance-by-department", storeId, from, to, staffId],
+    queryKey: ["finance-by-department", storeId, from, to, staffId, channel, paymentMethod],
     queryFn: () =>
       apiClient.get<{ departments: DepartmentRow[] }>(
-        `${base}/by-department?${dateParams}${staffParam}`
+        `${base}/by-department?${dateParams}${staffParam}${channelParam}${paymentMethodParam}`
       ),
   });
 
@@ -515,7 +567,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
   const byScheduleShift = useQuery({
     queryKey: ["finance-by-schedule-shift", storeId, from, to],
     queryFn: () =>
-      apiClient.get<{ rows: ScheduleShiftBucketRow[] }>(
+      apiClient.get<{ rows: ScheduleShiftBucketRow[]; totals?: ScheduleShiftTotals }>(
         `${base}/by-schedule-shift?${dateParams}`
       ),
   });
@@ -563,11 +615,32 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
       apiClient.get<{ reasons: WasteReasonRow[] }>(`${base}/by-waste-reason?${dateParams}`),
   });
 
+  // rangeFrom/rangeTo, not `${from}T00:00:00Z`: with a till session picked,
+  // from/to are already full datetimes and the suffix made the request invalid.
   const wasteEntries = useWasteEntries(storeId, {
-    from: `${from}T00:00:00Z`,
-    to: `${to}T23:59:59Z`,
+    from: rangeFrom,
+    to: rangeTo,
     take: 100,
   });
+
+  const expenses = useFinanceExpenses(storeId, rangeFrom, rangeTo);
+
+  // The tabs that load their own report (patterns, adjustments, tax, labour).
+  // Expenses and labour belong to the whole store and to whole days. Set
+  // against a figure narrowed by staff, channel, payment method or a till
+  // session they'd compare unlike with unlike (all the rent against GoFood's
+  // profit alone), so the lines that combine them only show unfiltered.
+  const wholeStoreView =
+    staffId === ALL && channel === ALL && paymentMethod === ALL && shiftId === ALL;
+
+  const insightScope: FinanceQueryScope = {
+    storeId,
+    rangeFrom,
+    rangeTo,
+    staffId: staffId !== ALL ? staffId : null,
+    channel: channel !== ALL ? channel : null,
+    paymentMethod: paymentMethod !== ALL ? paymentMethod : null,
+  };
 
   const deleteWasteEntry = useDeleteWasteEntry(storeId);
   const [wasteDialogOpen, setWasteDialogOpen] = useState(false);
@@ -615,7 +688,8 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
     () =>
       sortRows(byShift.data?.shifts ?? [], shiftSort.sortDir, (s) => {
         if (shiftSort.sortField === "staffName") return s.staffName;
-        if (shiftSort.sortField === "openedAt") return s.openedAt ? new Date(s.openedAt).getTime() : 0;
+        if (shiftSort.sortField === "openedAt")
+          return s.openedAt ? new Date(s.openedAt).getTime() : 0;
         return s[shiftSort.sortField];
       }),
     [byShift.data, shiftSort.sortField, shiftSort.sortDir]
@@ -663,96 +737,448 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
     [itemMargin.data, marginSort.sortField, marginSort.sortDir]
   );
 
+  // ─── Totals and subtotals, one per table (see lib/finance/report-totals.ts —
+  // the Excel export and the PDF use the same helpers). ───
+  const channelTotals = sumColumns(channels.data?.channels ?? [], [
+    "orderCount",
+    "revenue",
+    "refundAmount",
+    "taxAmount",
+    "commissionAmount",
+    "processingFeeAmount",
+    "netRevenue",
+  ] as const);
+  const paymentTotals = sumColumns(byPaymentMethod.data?.methods ?? [], [
+    "orderCount",
+    "revenue",
+  ] as const);
+  const itemsBreakdown = topItemsBreakdown(topItems.data?.items ?? [], topItems.data?.totals);
+  const marginTotals = itemMarginTotals(itemMargin.data?.items ?? []);
+  const menuClasses = useMemo(
+    () => classifyMenuItems(itemMargin.data?.items ?? []),
+    [itemMargin.data]
+  );
+  const categoryTotals = byCategory.data?.totals ?? null;
+  const departmentTotals = sumColumns(byDepartment.data?.departments ?? [], [
+    "totalQuantity",
+    "totalRevenue",
+  ] as const);
+  const shiftTotals = sumColumns(byShift.data?.shifts ?? [], ["orderCount", "revenue"] as const);
+  const blockSubtotals = useMemo(
+    () => scheduleBlockSubtotals(byScheduleShift.data?.rows ?? []),
+    [byScheduleShift.data]
+  );
+  const dailyTotals = sumColumns(summary.data?.buckets ?? [], [
+    "orderCount",
+    "revenue",
+    "discountAmount",
+    "refundAmount",
+    "taxCollected",
+    "netSales",
+  ] as const);
+
+  // Which active page filters a tab doesn't apply — see REPORT_TABS.
+  const activeFilters: { key: FilterKey; label: string }[] = [
+    { key: "staff" as const, label: t("pages.financeStaff"), on: staffId !== ALL },
+    { key: "category" as const, label: t("pages.financeCategory"), on: categoryId !== ALL },
+    { key: "department" as const, label: t("common.department"), on: department !== ALL },
+    { key: "channel" as const, label: t("pages.financeChannel"), on: channel !== ALL },
+    {
+      key: "paymentMethod" as const,
+      label: t("pages.financePaymentMethod"),
+      on: paymentMethod !== ALL,
+    },
+  ]
+    .filter((f) => f.on)
+    .map(({ key, label }) => ({ key, label }));
+  const ignoredFilters = (tabValue: string) => {
+    const applies = REPORT_TABS.find((r) => r.value === tabValue)?.filters ?? [];
+    return activeFilters.filter((f) => !applies.includes(f.key)).map((f) => f.label);
+  };
+  const scopeNote = (tabValue: string) => (
+    <FilterScopeNote
+      ignored={ignoredFilters(tabValue)}
+      template={t("pages.financeFilterIgnored")}
+    />
+  );
+
   async function exportXlsx() {
     const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
+    const used = new Set<string>();
+    // Sheet names: at most 31 characters, no []:*?/\, and unique.
+    const addSheet = (name: string, rows: (string | number | null)[][]) => {
+      let sheetName = name.replace(/[[\]:*?/\\]/g, " ").slice(0, 31);
+      for (let n = 2; used.has(sheetName); n++) sheetName = `${sheetName.slice(0, 28)} ${n}`;
+      used.add(sheetName);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sheetName);
+    };
+    const total = t("pages.financeTotal");
+    const pctOfNet = (value: number) =>
+      summary.data && summary.data.netSales > 0 ? sharePct(value, summary.data.netSales) : "";
 
     if (summary.data) {
-      const s = summary.data;
-      const rows = [
-        [t("pages.financePeriod"), `${from} — ${to}`],
-        [t("pages.financeOrders"), s.orderCount],
-        [t("pages.financeGrossRevenue"), s.grossRevenue],
-        [t("pages.financeDiscount"), s.discountAmount],
-        [t("pages.financeRevenue"), s.revenue],
-        [t("pages.financeRefund"), s.refundAmount],
-        [t("pages.financeCogs"), s.cogs],
-        [t("pages.financeGrossProfit"), s.grossProfit],
-        [t("pages.financeMargin"), s.grossMarginPct],
-        [t("pages.financeTax"), s.taxCollected],
-        [t("pages.financeServiceCharge"), s.serviceCharge],
-        [t("pages.financeProcessingFee"), s.processingFee],
-        [t("pages.financeNetRevenue"), s.netRevenue],
-        [t("pages.financeWasteLoss"), s.wasteLoss],
-        [t("pages.financeNetProfit"), s.netProfit],
+      const sd = summary.data;
+      const expensesTotal = wholeStoreView ? (expenses.data?.total ?? null) : null;
+      const rows: (string | number | null)[][] = [
+        [t("pages.financePeriod"), `${from} — ${to}`, ""],
+        ["", "", t("pages.financePctOfNetSales")],
+        ...buildPnlLines(sd).map((line) => [t(line.labelKey), line.value, pctOfNet(line.value)]),
       ];
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet(rows),
-        t("pages.financeSummarySheet")
+      if (expensesTotal != null) {
+        rows.push([t("pages.financeOperatingExpenses"), -expensesTotal, pctOfNet(-expensesTotal)]);
+        const after = Math.round((sd.netProfit - expensesTotal) * 100) / 100;
+        rows.push([t("pages.financeProfitAfterExpenses"), after, pctOfNet(after)]);
+      }
+      rows.push(
+        [],
+        [t("pages.financeOrders"), sd.orderCount, ""],
+        [t("pages.financeAvgTicket"), averageTicket(sd.revenue, sd.orderCount), ""],
+        [t("pages.financeMargin"), `${sd.grossMarginPct}%`, ""],
+        [t("pages.financeServiceCharge"), sd.serviceCharge, ""],
+        [t("pages.financeDeliveryFees"), sd.deliveryFee, ""],
+        [t("pages.financeAwaitingPayment"), sd.awaitingPaymentAmount, sd.awaitingPaymentCount]
       );
+      addSheet(t("pages.financeSummarySheet"), rows);
+
+      const days = sd.buckets;
+      if (days.length) {
+        addSheet(t("pages.financeDaily"), [
+          [
+            t("common.date"),
+            t("pages.financeOrders"),
+            t("pages.financeRevenue"),
+            t("pages.financeDiscount"),
+            t("pages.financeRefund"),
+            t("pages.financeTax"),
+            t("pages.financeNetSales"),
+            t("pages.financeAvgTicket"),
+          ],
+          ...days.map((b) => [
+            b.date,
+            b.orderCount,
+            b.revenue,
+            b.discountAmount,
+            b.refundAmount,
+            b.taxCollected,
+            b.netSales,
+            averageTicket(b.revenue, b.orderCount),
+          ]),
+          [
+            total,
+            dailyTotals.orderCount,
+            dailyTotals.revenue,
+            dailyTotals.discountAmount,
+            dailyTotals.refundAmount,
+            dailyTotals.taxCollected,
+            dailyTotals.netSales,
+            averageTicket(dailyTotals.revenue, dailyTotals.orderCount),
+          ],
+        ]);
+      }
+    }
+
+    if (expenses.data?.expenses.length) {
+      addSheet(t("pages.financeExpenses"), [
+        [
+          t("common.date"),
+          t("pages.financeCategory"),
+          t("pages.financeDescription"),
+          t("pages.financeAmount"),
+        ],
+        ...expenses.data.expenses.map((e) => [
+          e.date,
+          t(`pages.financeExpenseCategory.${e.category}`),
+          e.description ?? "",
+          e.amount,
+        ]),
+        [],
+        ...expenses.data.byCategory.map((c) => [
+          "",
+          t(`pages.financeExpenseCategory.${c.category}`),
+          `${c.count}`,
+          c.amount,
+        ]),
+        [total, "", "", expenses.data.total],
+      ]);
+    }
+
+    if (channels.data?.channels?.length) {
+      addSheet(t("pages.financeChannels"), [
+        [
+          t("pages.financeChannel"),
+          t("pages.financeOrders"),
+          t("pages.financeRevenue"),
+          t("pages.financeRefund"),
+          t("pages.financeTax"),
+          t("pages.financeCommission") + " (%)",
+          t("pages.financeCommission"),
+          t("pages.financeProcessingFee"),
+          t("pages.financeNetRevenue"),
+        ],
+        ...channels.data.channels.map((c) => [
+          c.label,
+          c.orderCount,
+          c.revenue,
+          c.refundAmount,
+          c.taxAmount,
+          c.commissionPct,
+          c.commissionAmount,
+          c.processingFeeAmount,
+          c.netRevenue,
+        ]),
+        [
+          total,
+          channelTotals.orderCount,
+          channelTotals.revenue,
+          channelTotals.refundAmount,
+          channelTotals.taxAmount,
+          "",
+          channelTotals.commissionAmount,
+          channelTotals.processingFeeAmount,
+          channelTotals.netRevenue,
+        ],
+      ]);
     }
 
     if (byPaymentMethod.data?.methods?.length) {
-      const header = [
-        t("pages.financePaymentMethod"),
-        t("pages.financeOrders"),
-        t("pages.financeRevenue"),
-        "%",
-      ];
-      const rows = byPaymentMethod.data.methods.map((m) => [
-        paymentMethodLabel(m.paymentMethod),
-        m.orderCount,
-        m.revenue,
-        m.percentOfTotal,
+      addSheet(t("pages.financePaymentMethod"), [
+        [
+          t("pages.financePaymentMethod"),
+          t("pages.financePayments"),
+          t("pages.financeRevenue"),
+          "%",
+        ],
+        ...byPaymentMethod.data.methods.map((m) => [
+          paymentMethodLabel(m.paymentMethod),
+          m.orderCount,
+          m.revenue,
+          m.percentOfTotal,
+        ]),
+        [total, paymentTotals.orderCount, paymentTotals.revenue, 100],
       ]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financePaymentMethod")
-      );
+    }
+
+    if (topItems.data?.items?.length) {
+      const all = itemsBreakdown.all;
+      const share = (value: number) => (all ? sharePct(value, all.totalRevenue) : "");
+      const rows: (string | number | null)[][] = [
+        [
+          t("common.item"),
+          t("pages.financeOrders"),
+          t("pages.financeQtySold"),
+          t("pages.financeRevenue"),
+          t("pages.financeShare") + " (%)",
+        ],
+        ...topItems.data.items.map((i) => [
+          i.name,
+          i.orderCount,
+          i.totalQuantity,
+          i.totalRevenue,
+          share(i.totalRevenue),
+        ]),
+        [
+          t("pages.financeTopSubtotal").replace("{count}", String(itemsBreakdown.shown.itemCount)),
+          "",
+          itemsBreakdown.shown.totalQuantity,
+          itemsBreakdown.shown.totalRevenue,
+          share(itemsBreakdown.shown.totalRevenue),
+        ],
+      ];
+      if (itemsBreakdown.other) {
+        rows.push([
+          t("pages.financeOtherItems").replace("{count}", String(itemsBreakdown.other.itemCount)),
+          "",
+          itemsBreakdown.other.totalQuantity,
+          itemsBreakdown.other.totalRevenue,
+          share(itemsBreakdown.other.totalRevenue),
+        ]);
+      }
+      if (all)
+        rows.push([t("pages.financeAllItems"), "", all.totalQuantity, all.totalRevenue, 100]);
+      addSheet(t("pages.financeTopItems"), rows);
     }
 
     if (itemMargin.data?.items?.length) {
-      const header = [
-        t("common.name"),
-        t("pages.financeQtySold"),
-        t("pages.financeRevenue"),
-        t("pages.financeCost"),
-        t("pages.financeMarginAmount"),
-        t("pages.financeMargin"),
+      const rows: (string | number | null)[][] = [
+        [
+          t("common.name"),
+          t("pages.financeQtySold"),
+          t("pages.financeRevenue"),
+          t("pages.financeCost"),
+          t("pages.financeMarginAmount"),
+          t("pages.financeMargin"),
+          t("pages.financeMenuClass"),
+        ],
+        ...itemMargin.data.items.map((i) => {
+          const menuClass = menuClasses.get(i.name);
+          return [
+            i.name,
+            i.totalQuantity,
+            i.totalRevenue,
+            i.totalCost ?? "—",
+            i.margin ?? "—",
+            i.marginPct != null ? `${i.marginPct}%` : "—",
+            menuClass ? t(`pages.financeMenuClasses.${menuClass}`) : "",
+          ];
+        }),
+        [
+          t("pages.financeCostedTotal"),
+          "",
+          marginTotals.costedRevenue,
+          marginTotals.totalCost,
+          marginTotals.margin,
+          `${marginTotals.marginPct}%`,
+          "",
+        ],
       ];
-      const rows = itemMargin.data.items.map((i) => [
-        i.name,
-        i.totalQuantity,
-        i.totalRevenue,
-        i.totalCost ?? "—",
-        i.margin ?? "—",
-        i.marginPct != null ? `${i.marginPct}%` : "—",
+      if (marginTotals.uncostedCount > 0) {
+        rows.push([
+          t("pages.financeUncostedItems").replace("{count}", String(marginTotals.uncostedCount)),
+          "",
+          marginTotals.uncostedRevenue,
+          "—",
+          "—",
+          "—",
+          "",
+        ]);
+      }
+      addSheet(t("pages.financeItemMargin"), rows);
+    }
+
+    if (byCategory.data?.categories?.length) {
+      const itemsSubtotal = categoryTotals?.totalRevenue ?? 0;
+      const rows: (string | number | null)[][] = [
+        [
+          t("pages.financeCategory"),
+          t("pages.financeOrders"),
+          t("pages.financeQtySold"),
+          t("pages.financeRevenue"),
+          t("pages.financeShare") + " (%)",
+        ],
+        ...byCategory.data.categories.map((c) => [
+          c.categoryId ? c.categoryName : t("pages.financeUncategorized"),
+          c.orderCount,
+          c.totalQuantity,
+          c.totalRevenue,
+          sharePct(c.totalRevenue, itemsSubtotal),
+        ]),
+      ];
+      if (categoryTotals) {
+        rows.push([
+          t("pages.financeItemsSubtotal"),
+          categoryTotals.orderCount,
+          categoryTotals.totalQuantity,
+          categoryTotals.totalRevenue,
+          100,
+        ]);
+        if (summary.data) {
+          rows.push(
+            [
+              t("pages.financeOrderAdjustments"),
+              "",
+              "",
+              Math.round((summary.data.revenue - itemsSubtotal) * 100) / 100,
+              "",
+            ],
+            [t("pages.financeRevenue"), summary.data.orderCount, "", summary.data.revenue, ""]
+          );
+        }
+      }
+      addSheet(t("pages.financeByCategory"), rows);
+    }
+
+    if (byDepartment.data?.departments?.length) {
+      addSheet(t("pages.financeDepartmentSplit"), [
+        [
+          t("common.department"),
+          t("pages.financeQtySold"),
+          t("pages.financeRevenue"),
+          t("pages.financeShare") + " (%)",
+        ],
+        ...byDepartment.data.departments.map((d) => [
+          departmentLabel(d.department),
+          d.totalQuantity,
+          d.totalRevenue,
+          sharePct(d.totalRevenue, departmentTotals.totalRevenue),
+        ]),
+        [
+          t("pages.financeItemsSubtotal"),
+          departmentTotals.totalQuantity,
+          departmentTotals.totalRevenue,
+          100,
+        ],
       ]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financeItemMargin")
+    }
+
+    if (byShift.data?.shifts?.length) {
+      addSheet(t("pages.financeByShift"), [
+        [
+          t("pages.financeCashier"),
+          t("pages.financeShiftPeriod"),
+          t("pages.financeOrders"),
+          t("pages.financeRevenue"),
+          t("pages.financeAvgTicket"),
+        ],
+        ...byShift.data.shifts.map((sh) => [
+          sh.shiftId ? sh.staffName : t("pages.financeUnassigned"),
+          sh.openedAt
+            ? `${formatDateTime(sh.openedAt)} — ${sh.closedAt ? formatDateTime(sh.closedAt) : "—"}`
+            : "—",
+          sh.orderCount,
+          sh.revenue,
+          averageTicket(sh.revenue, sh.orderCount),
+        ]),
+        [
+          total,
+          "",
+          shiftTotals.orderCount,
+          shiftTotals.revenue,
+          averageTicket(shiftTotals.revenue, shiftTotals.orderCount),
+        ],
+      ]);
+    }
+
+    if (byScheduleShift.data?.rows?.length) {
+      const totals = byScheduleShift.data.totals;
+      const rows: (string | number | null)[][] = [
+        [
+          t("pages.financeScheduleShiftBlock"),
+          t("pages.financeActiveDays"),
+          t("pages.financeOrders"),
+          t("pages.financeRevenue"),
+        ],
+        ...blockSubtotals.map((b) => [b.name, b.activeDays, b.orderCount, b.revenue]),
+      ];
+      if (totals) {
+        rows.push(
+          [t("pages.financeOutsideBlocks"), "", totals.outsideOrderCount, totals.outsideRevenue],
+          [t("pages.financeAllOrdersOnce"), "", totals.orderCount, totals.revenue]
+        );
+      }
+      rows.push(
+        [],
+        [
+          t("pages.financeScheduleShiftBlock"),
+          t("common.date"),
+          t("pages.financeOrders"),
+          t("pages.financeRevenue"),
+          t("pages.financeStaffOnDuty"),
+        ],
+        ...byScheduleShift.data.rows
+          .filter((r) => r.orderCount > 0)
+          .map((r) => [
+            r.name,
+            r.date,
+            r.orderCount,
+            r.revenue,
+            r.staffOnDuty.map((member) => member.name).join(", "),
+          ])
       );
+      addSheet(t("pages.financeScheduleShiftBlock"), rows);
     }
 
     if (cashReconciliation.data?.shifts?.length) {
-      const header = [
-        t("pages.financeCashier"),
-        t("pages.financeShiftPeriod"),
-        t("pages.financeOpeningCash"),
-        t("pages.financeCashSales"),
-        t("pages.financeCashRefunds"),
-        t("pages.financeCashTips"),
-        t("pages.financeCashPettyIn"),
-        t("pages.financeCashPettyOut"),
-        t("pages.financeCashDrops"),
-        t("pages.financeCashTipPayouts"),
-        t("pages.financeExpectedCash"),
-        t("pages.financeClosingCash"),
-        t("pages.financeCashDifference"),
-      ];
       // Same column order as the on-screen table, so the sheet reads as the
       // drawer's arithmetic left-to-right: float in, what moved, what should
       // be there, what was counted, the gap.
@@ -769,181 +1195,223 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
         row.closingCash ?? "—",
         row.cashDifference ?? "—",
       ];
-      const rows = cashReconciliation.data.shifts.map((row) => [
+      const rows: (string | number | null)[][] = cashReconciliation.data.shifts.map((row) => [
         row.staffName,
         `${formatDateTime(row.openedAt)}${row.closedAt ? ` — ${formatDateTime(row.closedAt)}` : ""}`,
         ...cashCells(row),
       ]);
       if (cashTotals) rows.push([t("pages.financeCashTotals"), "", ...cashCells(cashTotals)]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financeCashReconciliation")
-      );
-    }
-
-    if (channels.data?.channels?.length) {
-      const header = [
-        t("pages.financeChannel"),
-        t("pages.financeOrders"),
-        t("pages.financeRevenue"),
-        t("pages.financeCommission") + " (%)",
-        t("pages.financeCommission"),
-        t("pages.financeTax"),
-        t("pages.financeProcessingFee"),
-        t("pages.financeNetRevenue"),
-      ];
-      const rows = channels.data.channels.map((c) => [
-        c.label,
-        c.orderCount,
-        c.revenue,
-        c.commissionPct,
-        c.commissionAmount,
-        c.taxAmount,
-        c.processingFeeAmount,
-        c.netRevenue,
+      addSheet(t("pages.financeCashReconciliation"), [
+        [
+          t("pages.financeCashier"),
+          t("pages.financeShiftPeriod"),
+          t("pages.financeOpeningCash"),
+          t("pages.financeCashSales"),
+          t("pages.financeCashRefunds"),
+          t("pages.financeCashTips"),
+          t("pages.financeCashPettyIn"),
+          t("pages.financeCashPettyOut"),
+          t("pages.financeCashDrops"),
+          t("pages.financeCashTipPayouts"),
+          t("pages.financeExpectedCash"),
+          t("pages.financeClosingCash"),
+          t("pages.financeCashDifference"),
+        ],
+        ...rows,
       ]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financeChannels")
-      );
-    }
-
-    if (topItems.data?.items?.length) {
-      const header = [
-        t("common.item"),
-        t("pages.financeOrders"),
-        t("pages.financeQtySold"),
-        t("pages.financeRevenue"),
-      ];
-      const rows = topItems.data.items.map((i) => [
-        i.name,
-        i.orderCount,
-        i.totalQuantity,
-        i.totalRevenue,
-      ]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financeTopItems")
-      );
-    }
-
-    if (byCategory.data?.categories?.length) {
-      const header = [
-        t("pages.financeCategory"),
-        t("pages.financeQtySold"),
-        t("pages.financeRevenue"),
-      ];
-      const rows = byCategory.data.categories.map((c) => [
-        c.categoryName,
-        c.totalQuantity,
-        c.totalRevenue,
-      ]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financeByCategory")
-      );
-    }
-
-    if (byDepartment.data?.departments?.length) {
-      const header = [
-        t("common.department"),
-        t("pages.financeQtySold"),
-        t("pages.financeRevenue"),
-      ];
-      const rows = byDepartment.data.departments.map((d) => [
-        departmentLabel(d.department),
-        d.totalQuantity,
-        d.totalRevenue,
-      ]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financeDepartmentSplit")
-      );
-    }
-
-    if (byShift.data?.shifts?.length) {
-      const header = [
-        t("pages.financeCashier"),
-        t("pages.financeShiftPeriod"),
-        t("pages.financeOrders"),
-        t("pages.financeRevenue"),
-      ];
-      const rows = byShift.data.shifts.map((s) => [
-        s.staffName,
-        s.openedAt
-          ? `${formatDateTime(s.openedAt)} — ${s.closedAt ? formatDateTime(s.closedAt) : "—"}`
-          : "—",
-        s.orderCount,
-        s.revenue,
-      ]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financeByShift")
-      );
-    }
-
-    if (byScheduleShift.data?.rows?.length) {
-      const header = [
-        t("pages.financeScheduleShiftBlock"),
-        t("common.date") || "Date",
-        t("pages.financeOrders"),
-        t("pages.financeRevenue"),
-        t("pages.financeStaffOnDuty"),
-      ];
-      const rows = byScheduleShift.data.rows.map((r) => [
-        r.name,
-        r.date,
-        r.orderCount,
-        r.revenue,
-        r.staffOnDuty.map((s) => s.name).join(", "),
-      ]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financeScheduleShiftBlock")
-      );
     }
 
     if (wasteEntries.data?.entries?.length) {
-      const header = [
-        t("waste.table.date") || "Date",
-        t("waste.table.item") || "Item",
-        t("waste.table.reason") || "Reason",
-        t("waste.table.quantity") || "Quantity",
-        t("waste.table.unitCost") || "Unit cost",
-        t("waste.table.totalValue") || "Total value",
-        t("waste.table.notes") || "Notes",
-      ];
-      const rows = wasteEntries.data.entries.map((entry) => [
-        formatDateTime(entry.createdAt),
-        entry.material?.name ?? entry.product?.name ?? "—",
-        entry.reason === "OTHER" ? (entry.customReason ?? entry.reason) : entry.reason,
-        entry.quantity,
-        entry.unitCostSnapshot,
-        entry.totalValue,
-        entry.notes ?? "",
+      addSheet(t("pages.financeWaste") || "Waste", [
+        [
+          t("waste.table.date") || "Date",
+          t("waste.table.item") || "Item",
+          t("waste.table.reason") || "Reason",
+          t("waste.table.quantity") || "Quantity",
+          t("waste.table.unitCost") || "Unit cost",
+          t("waste.table.totalValue") || "Total value",
+          t("waste.table.notes") || "Notes",
+        ],
+        ...wasteEntries.data.entries.map((entry) => [
+          formatDateTime(entry.createdAt),
+          entry.material?.name ?? entry.product?.name ?? "—",
+          entry.reason === "OTHER" ? (entry.customReason ?? entry.reason) : entry.reason,
+          Number(entry.quantity),
+          Number(entry.unitCostSnapshot),
+          Number(entry.totalValue),
+          entry.notes ?? "",
+        ]),
+        [
+          total,
+          `${wasteEntries.data.entries.length} / ${wasteEntries.data.total}`,
+          "",
+          "",
+          "",
+          wasteEntries.data.sumValue,
+          "",
+        ],
       ]);
-      XLSX.utils.book_append_sheet(
-        wb,
-        XLSX.utils.aoa_to_sheet([header, ...rows]),
-        t("pages.financeWaste") || "Waste"
-      );
+    }
+
+    // The tabs that load on their own: reuse what's cached, fetch what isn't.
+    // A sheet the viewer may not see (Labour is manager-only) is left out.
+    const fetchOrNull = async <T,>(options: { queryKey: unknown[]; queryFn: () => Promise<T> }) => {
+      try {
+        return await queryClient.fetchQuery(options);
+      } catch {
+        return null;
+      }
+    };
+    const [patterns, adjustments, tax, labour] = await Promise.all([
+      fetchOrNull(salesPatternsQuery(insightScope)),
+      fetchOrNull(adjustmentsQuery(insightScope)),
+      fetchOrNull(taxQuery(insightScope)),
+      fetchOrNull(labourQuery(insightScope)),
+    ]);
+
+    if (patterns?.byOrderType.length) {
+      const typeTotals = sumColumns(patterns.byOrderType, [
+        "orderCount",
+        "revenue",
+        "guests",
+      ] as const);
+      addSheet(t("pages.financeSalesPatterns"), [
+        [
+          t("pages.financeOrderType"),
+          t("pages.financeOrders"),
+          t("pages.financeRevenue"),
+          t("pages.financeAvgTicket"),
+          t("pages.financeGuests"),
+        ],
+        ...patterns.byOrderType.map((r) => [
+          r.orderType,
+          r.orderCount,
+          r.revenue,
+          averageTicket(r.revenue, r.orderCount),
+          r.guests,
+        ]),
+        [
+          total,
+          typeTotals.orderCount,
+          typeTotals.revenue,
+          averageTicket(typeTotals.revenue, typeTotals.orderCount),
+          typeTotals.guests,
+        ],
+        [],
+        [t("pages.financeHour"), t("pages.financeOrders"), t("pages.financeRevenue")],
+        ...patterns.byHour
+          .filter((h) => h.orderCount > 0)
+          .map((h) => [`${String(h.hour).padStart(2, "0")}:00`, h.orderCount, h.revenue]),
+      ]);
+    }
+
+    if (adjustments) {
+      const reasonRows = (rows: typeof adjustments.discounts) =>
+        rows.map((r) => [
+          r.isCoupon
+            ? `${t("pages.financeCoupon")} ${r.label}`
+            : (r.label ?? t("pages.financeNoReason")),
+          r.orderCount,
+          r.amount,
+        ]);
+      const discountTotals = sumColumns(adjustments.discounts, ["orderCount", "amount"] as const);
+      const refundTotals = sumColumns(adjustments.refunds, ["orderCount", "amount"] as const);
+      addSheet(t("pages.financeAdjustments"), [
+        [t("pages.financeDiscountsByReason"), t("pages.financeOrders"), t("pages.financeAmount")],
+        ...reasonRows(adjustments.discounts),
+        [total, discountTotals.orderCount, discountTotals.amount],
+        [],
+        [t("pages.financeRefundsByReason"), t("pages.financeOrders"), t("pages.financeAmount")],
+        ...reasonRows(adjustments.refunds),
+        [total, refundTotals.orderCount, refundTotals.amount],
+        [],
+        [
+          t("pages.financeCancelledOrders"),
+          adjustments.cancelled.orderCount,
+          adjustments.cancelled.value,
+        ],
+        [t("pages.financeVoidedItems"), adjustments.voids.lineCount, adjustments.voids.value],
+      ]);
+    }
+
+    if (tax?.rates.length) {
+      const taxTotals = sumColumns(tax.rates, [
+        "orderCount",
+        "taxableBase",
+        "taxCharged",
+        "refundedTax",
+        "taxOwed",
+      ] as const);
+      addSheet(t("pages.financeTaxReport"), [
+        [
+          t("pages.financeTaxRate"),
+          t("pages.financeOrders"),
+          t("pages.financeTaxableBase"),
+          t("pages.financeTaxCharged"),
+          t("pages.financeTaxRefunded"),
+          t("pages.financeTaxOwed"),
+        ],
+        ...tax.rates.map((r) => [
+          `${r.ratePct}%`,
+          r.orderCount,
+          r.taxableBase,
+          r.taxCharged,
+          r.refundedTax,
+          r.taxOwed,
+        ]),
+        [
+          total,
+          taxTotals.orderCount,
+          taxTotals.taxableBase,
+          taxTotals.taxCharged,
+          taxTotals.refundedTax,
+          taxTotals.taxOwed,
+        ],
+      ]);
+    }
+
+    if (labour?.rows.length) {
+      addSheet(t("pages.financeLabour"), [
+        [
+          t("pages.financeStaff"),
+          t("pages.staffPayType"),
+          t("pages.staffPayRate"),
+          t("pages.financeHoursWorked"),
+          t("pages.financeDaysWorked"),
+          t("pages.financeLabourCost"),
+        ],
+        ...labour.rows.map((r) => [
+          r.name,
+          r.payType,
+          r.payRate ?? "",
+          Math.round((r.workedMinutes / 60) * 100) / 100,
+          r.workedDays,
+          r.cost ?? "—",
+        ]),
+        [
+          total,
+          "",
+          "",
+          Math.round((labour.totals.workedMinutes / 60) * 100) / 100,
+          "",
+          labour.totals.cost,
+        ],
+      ]);
     }
 
     XLSX.writeFile(wb, `finance-report-${from}-${to}.xlsx`);
   }
 
   function openPrintView() {
+    // Every filter the screen applies, so the PDF is the report on screen. A
+    // till session goes as its exact window; the print page widens a bare date
+    // to the whole day itself.
     const params = new URLSearchParams({ from, to });
     if (staffId !== ALL) params.set("staffId", staffId);
     if (categoryId !== ALL) params.set("category", categoryId);
     if (department !== ALL) params.set("department", department);
+    if (channel !== ALL) params.set("channel", channel);
+    if (paymentMethod !== ALL) params.set("paymentMethod", paymentMethod);
     window.open(`/store/${storeId}/finance/print?${params.toString()}`, "_blank");
   }
 
@@ -1123,6 +1591,11 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
               <SelectItem value="none">{t("common.departmentUnassigned")}</SelectItem>
               <SelectItem value="KITCHEN">{t("common.departmentKitchen")}</SelectItem>
               <SelectItem value="BAR">{t("common.departmentBar")}</SelectItem>
+              {/* "CUSTOM" = report-filters' CUSTOM_DEPARTMENT (not imported:
+                  that module pulls in @prisma/client). */}
+              {customDepartmentLabel && (
+                <SelectItem value="CUSTOM">{customDepartmentLabel}</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -1184,11 +1657,12 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
         </p>
       )}
 
-      {/* KPI cards */}
+      {/* KPI cards — the P&L's headline lines, in statement order */}
+      {scopeNote("pl")}
       {summary.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <Skeleton key={i} className="h-[92px] w-full" />
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-[108px] w-full" />
           ))}
         </div>
       ) : summary.isError ? (
@@ -1203,118 +1677,107 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
         </div>
       ) : s ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {t("pages.financeRevenue")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-bold">{formatOrderPrice(s.revenue)}</p>
-                <DeltaBadge metricKey="revenue" />
-              </div>
-              <p className="text-muted-foreground text-xs">
-                {s.orderCount} {t("pages.financeOrders")}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {t("pages.financeCogs")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{formatOrderPrice(s.cogs)}</p>
-              {/* Annotates rather than blanks the figure: aggregator orders are
-                  permanently uncosted, so hiding the whole P&L would hide it
-                  forever for any store on Grab or Gojek. */}
-              {(s.unknownCostLines ?? 0) > 0 && (
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {t("finance.summary.unknownCost")
-                    .replace("{count}", String(s.unknownCostLines))
-                    .replace("{amount}", formatOrderPrice(s.unknownCostRevenue ?? 0))}
+          <KpiCard
+            label={t("pages.financeRevenue")}
+            value={formatOrderPrice(s.revenue)}
+            delta={<DeltaBadge metricKey="revenue" />}
+            sub={
+              <>
+                <p>
+                  {s.orderCount} {t("pages.financeOrders")} · {t("pages.financeAvgTicket")}{" "}
+                  {formatOrderPrice(averageTicket(s.revenue, s.orderCount))}
                 </p>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {t("pages.financeGrossProfit")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-bold">{formatOrderPrice(s.grossProfit)}</p>
-                <DeltaBadge metricKey="grossProfit" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {t("pages.financeMargin")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{s.grossMarginPct.toFixed(1)}%</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {t("pages.financeTax")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{formatOrderPrice(s.taxCollected)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {t("pages.financeProcessingFee")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{formatOrderPrice(s.processingFee)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {t("pages.financeNetRevenue")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{formatOrderPrice(s.netRevenue)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {t("pages.financeWasteLoss")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-red-600">{formatOrderPrice(s.wasteLoss)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                {t("pages.financeNetProfit")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-bold">{formatOrderPrice(s.netProfit)}</p>
-                <DeltaBadge metricKey="netProfit" />
-              </div>
-            </CardContent>
-          </Card>
+                {s.awaitingPaymentCount > 0 && (
+                  <p className="text-amber-700 dark:text-amber-400">
+                    {t("pages.financeAwaitingPaymentShort")
+                      .replace("{amount}", formatOrderPrice(s.awaitingPaymentAmount))
+                      .replace("{count}", String(s.awaitingPaymentCount))}
+                  </p>
+                )}
+              </>
+            }
+          />
+          <KpiCard
+            label={t("pages.financeNetSales")}
+            value={formatOrderPrice(s.netSales)}
+            delta={<DeltaBadge metricKey="netSales" />}
+            sub={
+              <>
+                <p>{t("pages.financeNetSalesSub")}</p>
+                {(s.discountAmount > 0 || s.refundAmount > 0) && (
+                  <p>
+                    {t("pages.financeDiscount")} {formatOrderPrice(s.discountAmount)} ·{" "}
+                    {t("pages.financeRefund")} {formatOrderPrice(s.refundAmount)}
+                  </p>
+                )}
+              </>
+            }
+          />
+          <KpiCard
+            label={t("pages.financeGrossProfit")}
+            value={formatOrderPrice(s.grossProfit)}
+            delta={<DeltaBadge metricKey="grossProfit" />}
+            sub={`${s.grossMarginPct.toFixed(1)}% ${t("pages.financeMargin")}`}
+          />
+          <KpiCard
+            label={t("pages.financeNetProfit")}
+            value={formatOrderPrice(s.netProfit)}
+            delta={<DeltaBadge metricKey="netProfit" />}
+            sub={
+              wholeStoreView && expenses.data && expenses.data.total > 0
+                ? t("pages.financeAfterExpensesSub").replace(
+                    "{amount}",
+                    formatOrderPrice(Math.round((s.netProfit - expenses.data.total) * 100) / 100)
+                  )
+                : s.netSales > 0
+                  ? `${sharePct(s.netProfit, s.netSales).toFixed(1)}% ${t("pages.financeOfNetSales")}`
+                  : undefined
+            }
+          />
+          <KpiCard
+            label={t("pages.financeCogs")}
+            value={formatOrderPrice(s.cogs)}
+            sub={
+              // Annotates rather than blanks the figure: aggregator orders are
+              // permanently uncosted, so hiding the whole P&L would hide it
+              // forever for any store on Grab or Gojek.
+              (s.unknownCostLines ?? 0) > 0
+                ? t("finance.summary.unknownCost")
+                    .replace("{count}", String(s.unknownCostLines))
+                    .replace("{amount}", formatOrderPrice(s.unknownCostRevenue ?? 0))
+                : s.netSales > 0
+                  ? `${sharePct(s.cogs, s.netSales).toFixed(1)}% ${t("pages.financeOfNetSales")}`
+                  : undefined
+            }
+          />
+          <KpiCard
+            label={t("pages.financeTax")}
+            value={formatOrderPrice(s.taxCollected)}
+            sub={t("pages.financeTaxOwedSub")}
+          />
+          <KpiCard
+            label={t("pages.financeFeesAndCommission")}
+            value={formatOrderPrice(
+              Math.round((s.processingFee + s.platformCommission) * 100) / 100
+            )}
+            sub={
+              <>
+                <p>
+                  {t("pages.financeProcessingFee")} {formatOrderPrice(s.processingFee)}
+                </p>
+                {s.platformCommission > 0 && (
+                  <p>
+                    {t("pages.financePlatformCommission")} {formatOrderPrice(s.platformCommission)}
+                  </p>
+                )}
+              </>
+            }
+          />
+          <KpiCard
+            label={t("pages.financeWasteLoss")}
+            value={formatOrderPrice(s.wasteLoss)}
+            valueClassName={s.wasteLoss > 0 ? "text-red-600" : undefined}
+          />
         </div>
       ) : null}
 
@@ -1341,37 +1804,63 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-6">
+            <div className="flex flex-wrap gap-x-8 gap-y-4">
               {(byDepartment.data?.departments ?? []).map((d) => (
                 <div key={d.department ?? "unassigned"} className="space-y-0.5">
                   <p className="text-muted-foreground text-xs">{departmentLabel(d.department)}</p>
-                  <p className="text-xl font-bold">{formatOrderPrice(d.totalRevenue)}</p>
+                  <p className="text-xl font-bold tabular-nums">
+                    {formatOrderPrice(d.totalRevenue)}
+                  </p>
+                  <p className="text-muted-foreground text-xs tabular-nums">
+                    {sharePct(d.totalRevenue, departmentTotals.totalRevenue)}% · {d.totalQuantity}{" "}
+                    {t("pages.financeQtySold").toLowerCase()}
+                  </p>
                 </div>
               ))}
+              <div className="space-y-0.5 border-l pl-8">
+                <p className="text-muted-foreground text-xs">{t("pages.financeItemsSubtotal")}</p>
+                <p className="text-xl font-bold tabular-nums">
+                  {formatOrderPrice(departmentTotals.totalRevenue)}
+                </p>
+                <p className="text-muted-foreground text-xs tabular-nums">
+                  {departmentTotals.totalQuantity} {t("pages.financeQtySold").toLowerCase()}
+                </p>
+              </div>
             </div>
+            <p className="text-muted-foreground mt-3 text-xs">
+              {t("pages.financeItemsSubtotalHint")}
+            </p>
           </CardContent>
         </Card>
       ) : null}
 
-      <Tabs defaultValue="pl">
-        <TabsList className="overflow-x-auto">
-          <TabsTrigger value="pl">{t("pages.financePLStatement")}</TabsTrigger>
-          <TabsTrigger value="channels">{t("pages.financeChannels")}</TabsTrigger>
-          <TabsTrigger value="paymentMethod">{t("pages.financePaymentMethod")}</TabsTrigger>
-          <TabsTrigger value="items">{t("pages.financeTopItems")}</TabsTrigger>
-          <TabsTrigger value="margin">{t("pages.financeItemMargin")}</TabsTrigger>
-          <TabsTrigger value="category">{t("pages.financeByCategory")}</TabsTrigger>
-          <TabsTrigger value="shift">{t("pages.financeByShift")}</TabsTrigger>
-            <TabsTrigger value="scheduleShift">{t("pages.financeScheduleShiftBlock")}</TabsTrigger>
-          <TabsTrigger value="cash">{t("pages.financeCashReconciliation")}</TabsTrigger>
-          <TabsTrigger value="daily">{t("pages.financeDaily")}</TabsTrigger>
-          <TabsTrigger value="waste">{t("pages.financeWaste")}</TabsTrigger>
+      <Tabs value={tab} onValueChange={setTab}>
+        {/* Sixteen reports: a picker on a phone, a wrapping tab bar above it. */}
+        <div className="lg:hidden">
+          <Select value={tab} onValueChange={setTab}>
+            <SelectTrigger className="h-10 w-full" aria-label={t("pages.financeReport")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {REPORT_TABS.map((r) => (
+                <SelectItem key={r.value} value={r.value}>
+                  {t(r.labelKey)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <TabsList className="hidden h-auto w-full flex-wrap justify-start gap-0.5 lg:flex">
+          {REPORT_TABS.map((r) => (
+            <TabsTrigger key={r.value} value={r.value} className="h-8 flex-none">
+              {t(r.labelKey)}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        {/* P&L Statement — top-to-bottom accountant-style income statement,
-            same numbers as the KPI cards restructured into one readable
-            waterfall, with period-over-period deltas when comparePrevious
-            is on. */}
+        {/* P&L Statement — an income statement that adds up line by line,
+            each line also shown as a share of net sales, down to profit after
+            the operating expenses recorded on the Expenses tab. */}
         <TabsContent value="pl">
           {summary.isLoading ? (
             <div className="space-y-2 py-4">
@@ -1390,113 +1879,147 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
               />
             </div>
           ) : (
-            <div className="max-w-lg space-y-0.5 text-sm">
-              {(
-                [
-                  { label: t("pages.financeGrossRevenue"), value: s.grossRevenue, key: "grossRevenue" as const },
-                  { label: t("pages.financeDiscount"), value: -s.discountAmount, key: null },
-                  {
-                    label: t("pages.financeNetSales"),
-                    value: s.revenue,
-                    key: "revenue" as const,
-                    strong: true,
-                    borderTop: true,
-                  },
-                  { label: t("pages.financeRefund"), value: -s.refundAmount, key: null },
-                  { label: t("pages.financeCogs"), value: -s.cogs, key: null },
-                  {
-                    label: t("pages.financeGrossProfit"),
-                    value: s.grossProfit,
-                    key: "grossProfit" as const,
-                    strong: true,
-                    borderTop: true,
-                  },
-                  { label: t("pages.financeWasteLoss"), value: -s.wasteLoss, key: null },
-                  { label: t("pages.financeProcessingFee"), value: -s.processingFee, key: null },
-                  {
-                    label: t("pages.financeNetProfit"),
-                    value: s.netProfit,
-                    key: "netProfit" as const,
-                    strong: true,
-                    borderTop: true,
-                  },
-                ] satisfies {
-                  label: string;
-                  value: number;
-                  key: keyof SummaryData | null;
-                  strong?: boolean;
-                  borderTop?: boolean;
-                }[]
-              ).map((row) => (
-                <div
-                  key={row.label}
-                  className={`flex items-center justify-between py-1.5 ${row.borderTop ? "border-t pt-2" : ""} ${row.strong ? "font-semibold" : "text-muted-foreground"}`}
-                >
-                  <span className={row.strong ? "text-foreground" : undefined}>{row.label}</span>
-                  <span className="flex items-center gap-2">
-                    <span className={row.strong ? "text-foreground" : undefined}>
-                      {formatOrderPrice(row.value)}
-                    </span>
-                    {row.key && <DeltaBadge metricKey={row.key} />}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <FinancePnlStatement
+              s={s}
+              formatMoney={formatOrderPrice}
+              expenses={expenses}
+              expensesApply={wholeStoreView}
+              renderDelta={(key) => <DeltaBadge metricKey={key} />}
+            />
           )}
+        </TabsContent>
+
+        <TabsContent value="expenses">
+          {scopeNote("expenses")}
+          <FinanceExpensesTab
+            storeId={storeId}
+            rangeFrom={rangeFrom}
+            rangeTo={rangeTo}
+            formatMoney={formatOrderPrice}
+          />
+        </TabsContent>
+
+        <TabsContent value="patterns">
+          {scopeNote("patterns")}
+          <SalesPatternsTab scope={insightScope} formatMoney={formatOrderPrice} />
+        </TabsContent>
+
+        <TabsContent value="adjustments">
+          {scopeNote("adjustments")}
+          <AdjustmentsTab scope={insightScope} formatMoney={formatOrderPrice} />
+        </TabsContent>
+
+        <TabsContent value="tax">
+          {scopeNote("tax")}
+          <TaxTab scope={insightScope} formatMoney={formatOrderPrice} />
+        </TabsContent>
+
+        <TabsContent value="labour">
+          {scopeNote("labour")}
+          <LabourTab
+            scope={insightScope}
+            formatMoney={formatOrderPrice}
+            summary={wholeStoreView ? s : undefined}
+          />
         </TabsContent>
 
         {/* Channels tab */}
         <TabsContent value="channels">
+          {scopeNote("channels")}
           <div className="space-y-3 lg:hidden">
             {channels.isLoading || channels.isError ? (
-              <p className="text-muted-foreground py-8 text-center text-sm">
-                <ReportStatus
-                  isError={channels.isError}
-                  onRetry={() => channels.refetch()}
-                  loadingLabel="Loading..."
-                  errorLabel={t("pages.financeLoadError")}
-                  retryLabel={t("common.actions.retry")}
-                />
-              </p>
+              <MobileStatus isError={channels.isError} onRetry={() => channels.refetch()} />
+            ) : sortedChannels.length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">{t("pages.noData")}</p>
             ) : (
-              sortedChannels.map((c) => (
-                <div key={c.source} className="bg-muted/50 space-y-2 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{c.label}</span>
-                    <span className="text-muted-foreground text-sm">
-                      {c.orderCount} {t("pages.financeOrders")}
-                    </span>
+              <>
+                {sortedChannels.map((c) => (
+                  <div key={c.source} className="bg-muted/50 space-y-2 rounded-lg border p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{c.label}</span>
+                      <span className="text-muted-foreground text-sm">
+                        {c.orderCount} {t("pages.financeOrders")}
+                      </span>
+                    </div>
+                    <CardLine
+                      label={t("pages.financeRevenue")}
+                      value={formatOrderPrice(c.revenue)}
+                    />
+                    {c.refundAmount > 0 && (
+                      <CardLine
+                        label={t("pages.financeRefund")}
+                        value={`-${formatOrderPrice(c.refundAmount)}`}
+                        tone="cost"
+                      />
+                    )}
+                    {c.taxAmount > 0 && (
+                      <CardLine
+                        label={t("pages.financeTax")}
+                        value={`-${formatOrderPrice(c.taxAmount)}`}
+                        tone="cost"
+                      />
+                    )}
+                    <CardLine
+                      label={t("pages.financeCommission")}
+                      value={
+                        c.commissionPct > 0
+                          ? `-${formatOrderPrice(c.commissionAmount)} (${c.commissionPct}%)`
+                          : "—"
+                      }
+                      tone="cost"
+                    />
+                    <CardLine
+                      label={t("pages.financeProcessingFee")}
+                      value={
+                        c.processingFeeAmount > 0
+                          ? `-${formatOrderPrice(c.processingFeeAmount)}`
+                          : "—"
+                      }
+                      tone="cost"
+                    />
+                    <CardLine
+                      label={t("pages.financeNetRevenue")}
+                      value={formatOrderPrice(c.netRevenue)}
+                      strong
+                    />
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("pages.financeRevenue")}</span>
-                    <span>{formatOrderPrice(c.revenue)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("pages.financeCommission")}</span>
-                    <span className="text-orange-600">
-                      {c.commissionPct > 0
-                        ? `-${c.commissionPct}% (${formatOrderPrice(c.commissionAmount)})`
-                        : "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {t("pages.financeProcessingFee")}
-                    </span>
-                    <span className="text-orange-600">
-                      {c.processingFeeAmount > 0 ? `-${formatOrderPrice(c.processingFeeAmount)}` : "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-muted-foreground">{t("pages.financeNetRevenue")}</span>
-                    <span>{formatOrderPrice(c.netRevenue)}</span>
-                  </div>
-                </div>
-              ))
+                ))}
+                <TotalsCard
+                  title={t("pages.financeTotal")}
+                  lines={[
+                    { label: t("pages.financeOrders"), value: String(channelTotals.orderCount) },
+                    {
+                      label: t("pages.financeRevenue"),
+                      value: formatOrderPrice(channelTotals.revenue),
+                    },
+                    {
+                      label: t("pages.financeRefund"),
+                      value: formatOrderPrice(-channelTotals.refundAmount),
+                    },
+                    {
+                      label: t("pages.financeTax"),
+                      value: formatOrderPrice(-channelTotals.taxAmount),
+                    },
+                    {
+                      label: t("pages.financeCommission"),
+                      value: formatOrderPrice(-channelTotals.commissionAmount),
+                    },
+                    {
+                      label: t("pages.financeProcessingFee"),
+                      value: formatOrderPrice(-channelTotals.processingFeeAmount),
+                    },
+                    {
+                      label: t("pages.financeNetRevenue"),
+                      value: formatOrderPrice(channelTotals.netRevenue),
+                      emphasis: "total",
+                    },
+                  ]}
+                />
+              </>
             )}
           </div>
           <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
-            <div className="min-w-[680px]">
+            <div className="min-w-[860px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1523,10 +2046,10 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                     >
                       {t("pages.financeRevenue")}
                     </SortableHead>
+                    <TableHead className="text-right">{t("pages.financeRefund")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeTax")}</TableHead>
                     <TableHead className="text-right">{t("pages.financeCommission")}</TableHead>
-                    <TableHead className="text-right">
-                      {t("pages.financeProcessingFee")}
-                    </TableHead>
+                    <TableHead className="text-right">{t("pages.financeProcessingFee")}</TableHead>
                     <SortableHead
                       align="right"
                       active={channelSort.sortField === "netRevenue"}
@@ -1541,70 +2064,123 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                   {channels.isLoading || channels.isError ? (
                     <ReportStatusRow
                       isError={channels.isError}
-                      colSpan={6}
+                      colSpan={8}
                       onRetry={() => channels.refetch()}
-                      loadingLabel="Loading..."
+                      loadingLabel={t("common.loading")}
                       errorLabel={t("pages.financeLoadError")}
                       retryLabel={t("common.actions.retry")}
                     />
+                  ) : sortedChannels.length === 0 ? (
+                    <EmptyRow colSpan={8} />
                   ) : (
                     sortedChannels.map((c) => (
                       <TableRow key={c.source}>
                         <TableCell className="font-medium">{c.label}</TableCell>
-                        <TableCell className="text-right">{c.orderCount}</TableCell>
-                        <TableCell className="text-right">{formatOrderPrice(c.revenue)}</TableCell>
-                        <TableCell className="text-right text-orange-600">
+                        <TableCell className="text-right tabular-nums">{c.orderCount}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(c.revenue)}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600 tabular-nums">
+                          {c.refundAmount > 0 ? `-${formatOrderPrice(c.refundAmount)}` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600 tabular-nums">
+                          {c.taxAmount > 0 ? `-${formatOrderPrice(c.taxAmount)}` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600 tabular-nums">
                           {c.commissionPct > 0
-                            ? `-${c.commissionPct}% (${formatOrderPrice(c.commissionAmount)})`
+                            ? `-${formatOrderPrice(c.commissionAmount)} (${c.commissionPct}%)`
                             : "—"}
                         </TableCell>
-                        <TableCell className="text-right text-orange-600">
+                        <TableCell className="text-right text-orange-600 tabular-nums">
                           {c.processingFeeAmount > 0
                             ? `-${formatOrderPrice(c.processingFeeAmount)}`
                             : "—"}
                         </TableCell>
-                        <TableCell className="text-right font-semibold">
+                        <TableCell className="text-right font-semibold tabular-nums">
                           {formatOrderPrice(c.netRevenue)}
                         </TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
+                {sortedChannels.length > 0 && !channels.isLoading && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell>{t("pages.financeTotal")}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {channelTotals.orderCount}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(channelTotals.revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(-channelTotals.refundAmount)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(-channelTotals.taxAmount)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(-channelTotals.commissionAmount)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(-channelTotals.processingFeeAmount)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(channelTotals.netRevenue)}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>
+          <p className="text-muted-foreground mt-3 text-xs">{t("pages.financeChannelsHint")}</p>
         </TabsContent>
 
         {/* Payment method breakdown tab */}
         <TabsContent value="paymentMethod">
+          {scopeNote("paymentMethod")}
+          <p className="text-muted-foreground mb-3 text-xs">{t("pages.financePaymentsHint")}</p>
           <div className="space-y-3 lg:hidden">
             {byPaymentMethod.isLoading || byPaymentMethod.isError ? (
-              <p className="text-muted-foreground py-8 text-center text-sm">
-                <ReportStatus
-                  isError={byPaymentMethod.isError}
-                  onRetry={() => byPaymentMethod.refetch()}
-                  loadingLabel="Loading..."
-                  errorLabel={t("pages.financeLoadError")}
-                  retryLabel={t("common.actions.retry")}
-                />
-              </p>
+              <MobileStatus
+                isError={byPaymentMethod.isError}
+                onRetry={() => byPaymentMethod.refetch()}
+              />
+            ) : sortedPaymentMethods.length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">{t("pages.noData")}</p>
             ) : (
-              sortedPaymentMethods.map((m) => (
-                <div key={m.paymentMethod} className="bg-muted/50 space-y-2 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{paymentMethodLabel(m.paymentMethod)}</span>
-                    <span className="text-muted-foreground text-sm">
-                      {m.orderCount} {t("pages.financeOrders")}
-                    </span>
+              <>
+                {sortedPaymentMethods.map((m) => (
+                  <div
+                    key={m.paymentMethod}
+                    className="bg-muted/50 space-y-2 rounded-lg border p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{paymentMethodLabel(m.paymentMethod)}</span>
+                      <span className="text-muted-foreground text-sm">
+                        {m.orderCount} {t("pages.financePayments").toLowerCase()}
+                      </span>
+                    </div>
+                    <CardLine
+                      label={t("pages.financeRevenue")}
+                      value={`${formatOrderPrice(m.revenue)} (${m.percentOfTotal}%)`}
+                      strong
+                    />
                   </div>
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-muted-foreground">{t("pages.financeRevenue")}</span>
-                    <span>
-                      {formatOrderPrice(m.revenue)} ({m.percentOfTotal}%)
-                    </span>
-                  </div>
-                </div>
-              ))
+                ))}
+                <TotalsCard
+                  title={t("pages.financeTotal")}
+                  lines={[
+                    { label: t("pages.financePayments"), value: String(paymentTotals.orderCount) },
+                    {
+                      label: t("pages.financeRevenue"),
+                      value: formatOrderPrice(paymentTotals.revenue),
+                      emphasis: "total",
+                    },
+                  ]}
+                />
+              </>
             )}
           </div>
           <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
@@ -1625,7 +2201,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                       dir={paymentMethodSort.sortDir}
                       onClick={() => paymentMethodSort.toggleSort("orderCount")}
                     >
-                      {t("pages.financeOrders")}
+                      {t("pages.financePayments")}
                     </SortableHead>
                     <SortableHead
                       align="right"
@@ -1644,27 +2220,43 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                       isError={byPaymentMethod.isError}
                       colSpan={4}
                       onRetry={() => byPaymentMethod.refetch()}
-                      loadingLabel="Loading..."
+                      loadingLabel={t("common.loading")}
                       errorLabel={t("pages.financeLoadError")}
                       retryLabel={t("common.actions.retry")}
                     />
+                  ) : sortedPaymentMethods.length === 0 ? (
+                    <EmptyRow colSpan={4} />
                   ) : (
                     sortedPaymentMethods.map((m) => (
                       <TableRow key={m.paymentMethod}>
                         <TableCell className="font-medium">
                           {paymentMethodLabel(m.paymentMethod)}
                         </TableCell>
-                        <TableCell className="text-right">{m.orderCount}</TableCell>
-                        <TableCell className="text-right font-semibold">
+                        <TableCell className="text-right tabular-nums">{m.orderCount}</TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
                           {formatOrderPrice(m.revenue)}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-right">
+                        <TableCell className="text-muted-foreground text-right tabular-nums">
                           {m.percentOfTotal}%
                         </TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
+                {sortedPaymentMethods.length > 0 && !byPaymentMethod.isLoading && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell>{t("pages.financeTotal")}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {paymentTotals.orderCount}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(paymentTotals.revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">100%</TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>
@@ -1672,38 +2264,70 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
 
         {/* Top items tab */}
         <TabsContent value="items">
+          {scopeNote("items")}
           <div className="space-y-3 lg:hidden">
             {topItems.isLoading || topItems.isError ? (
-              <p className="text-muted-foreground py-8 text-center text-sm">
-                <ReportStatus
-                  isError={topItems.isError}
-                  onRetry={() => topItems.refetch()}
-                  loadingLabel="Loading..."
-                  errorLabel={t("pages.financeLoadError")}
-                  retryLabel={t("common.actions.retry")}
-                />
-              </p>
+              <MobileStatus isError={topItems.isError} onRetry={() => topItems.refetch()} />
+            ) : sortedItems.length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">{t("pages.noData")}</p>
             ) : (
-              sortedItems.map((item, i) => (
-                <div key={item.name} className="bg-muted/50 space-y-2 rounded-lg border p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-sm">{i + 1}</span>
-                    <span className="font-medium">{item.name}</span>
+              <>
+                {sortedItems.map((item, i) => (
+                  <div key={item.name} className="bg-muted/50 space-y-2 rounded-lg border p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-sm">{i + 1}</span>
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                    <CardLine label={t("pages.financeQtySold")} value={item.totalQuantity} />
+                    <CardLine
+                      label={t("pages.financeRevenue")}
+                      value={
+                        itemsBreakdown.all
+                          ? `${formatOrderPrice(item.totalRevenue)} (${sharePct(item.totalRevenue, itemsBreakdown.all.totalRevenue)}%)`
+                          : formatOrderPrice(item.totalRevenue)
+                      }
+                      strong
+                    />
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("pages.financeQtySold")}</span>
-                    <span>{item.totalQuantity}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-muted-foreground">{t("pages.financeRevenue")}</span>
-                    <span>{formatOrderPrice(item.totalRevenue)}</span>
-                  </div>
-                </div>
-              ))
+                ))}
+                <TotalsCard
+                  title={t("pages.financeTotal")}
+                  lines={[
+                    {
+                      label: t("pages.financeTopSubtotal").replace(
+                        "{count}",
+                        String(itemsBreakdown.shown.itemCount)
+                      ),
+                      value: formatOrderPrice(itemsBreakdown.shown.totalRevenue),
+                      emphasis: "subtotal",
+                    },
+                    ...(itemsBreakdown.other
+                      ? [
+                          {
+                            label: t("pages.financeOtherItems").replace(
+                              "{count}",
+                              String(itemsBreakdown.other.itemCount)
+                            ),
+                            value: formatOrderPrice(itemsBreakdown.other.totalRevenue),
+                          },
+                        ]
+                      : []),
+                    ...(itemsBreakdown.all
+                      ? [
+                          {
+                            label: t("pages.financeAllItems"),
+                            value: formatOrderPrice(itemsBreakdown.all.totalRevenue),
+                            emphasis: "total" as const,
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              </>
             )}
           </div>
           <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
-            <div className="min-w-[400px]">
+            <div className="min-w-[520px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1731,31 +2355,100 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                     >
                       {t("pages.financeRevenue")}
                     </SortableHead>
+                    <TableHead className="text-right">{t("pages.financeShare")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {topItems.isLoading || topItems.isError ? (
                     <ReportStatusRow
                       isError={topItems.isError}
-                      colSpan={4}
+                      colSpan={5}
                       onRetry={() => topItems.refetch()}
-                      loadingLabel="Loading..."
+                      loadingLabel={t("common.loading")}
                       errorLabel={t("pages.financeLoadError")}
                       retryLabel={t("common.actions.retry")}
                     />
+                  ) : sortedItems.length === 0 ? (
+                    <EmptyRow colSpan={5} />
                   ) : (
                     sortedItems.map((item, i) => (
                       <TableRow key={item.name}>
                         <TableCell className="text-muted-foreground">{i + 1}</TableCell>
                         <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-right">{item.totalQuantity}</TableCell>
-                        <TableCell className="text-right font-semibold">
+                        <TableCell className="text-right tabular-nums">
+                          {item.totalQuantity}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
                           {formatOrderPrice(item.totalRevenue)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-right tabular-nums">
+                          {itemsBreakdown.all
+                            ? `${sharePct(item.totalRevenue, itemsBreakdown.all.totalRevenue)}%`
+                            : ""}
                         </TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
+                {sortedItems.length > 0 && !topItems.isLoading && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell />
+                      <TableCell>
+                        {t("pages.financeTopSubtotal").replace(
+                          "{count}",
+                          String(itemsBreakdown.shown.itemCount)
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {itemsBreakdown.shown.totalQuantity}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(itemsBreakdown.shown.totalRevenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {itemsBreakdown.all
+                          ? `${sharePct(itemsBreakdown.shown.totalRevenue, itemsBreakdown.all.totalRevenue)}%`
+                          : ""}
+                      </TableCell>
+                    </TableRow>
+                    {itemsBreakdown.other && (
+                      <TableRow className="text-muted-foreground font-normal">
+                        <TableCell />
+                        <TableCell>
+                          {t("pages.financeOtherItems").replace(
+                            "{count}",
+                            String(itemsBreakdown.other.itemCount)
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {itemsBreakdown.other.totalQuantity}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(itemsBreakdown.other.totalRevenue)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {itemsBreakdown.all
+                            ? `${sharePct(itemsBreakdown.other.totalRevenue, itemsBreakdown.all.totalRevenue)}%`
+                            : ""}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {itemsBreakdown.all && (
+                      <TableRow className="font-semibold">
+                        <TableCell />
+                        <TableCell>{t("pages.financeAllItems")}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {itemsBreakdown.all.totalQuantity}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(itemsBreakdown.all.totalRevenue)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">100%</TableCell>
+                      </TableRow>
+                    )}
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>
@@ -1763,49 +2456,88 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
 
         {/* Menu item / recipe margin tab */}
         <TabsContent value="margin">
+          {scopeNote("margin")}
           <p className="text-muted-foreground mb-3 text-xs">{t("pages.financeUnknownCostHint")}</p>
+          {menuClasses.size > 0 && (
+            <p className="text-muted-foreground mb-3 text-xs">{t("pages.financeMenuClassHint")}</p>
+          )}
           <div className="space-y-3 lg:hidden">
             {itemMargin.isLoading || itemMargin.isError ? (
-              <p className="text-muted-foreground py-8 text-center text-sm">
-                <ReportStatus
-                  isError={itemMargin.isError}
-                  onRetry={() => itemMargin.refetch()}
-                  loadingLabel="Loading..."
-                  errorLabel={t("pages.financeLoadError")}
-                  retryLabel={t("common.actions.retry")}
-                />
-              </p>
+              <MobileStatus isError={itemMargin.isError} onRetry={() => itemMargin.refetch()} />
+            ) : sortedMarginItems.length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">{t("pages.noData")}</p>
             ) : (
-              sortedMarginItems.map((item) => (
-                <div key={item.name} className="bg-muted/50 space-y-2 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{item.name}</span>
-                    <span className="text-muted-foreground text-sm">
-                      {item.totalQuantity} {t("pages.financeQtySold")}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("pages.financeRevenue")}</span>
-                    <span>{formatOrderPrice(item.totalRevenue)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("pages.financeCost")}</span>
-                    <span>{item.totalCost != null ? formatOrderPrice(item.totalCost) : "—"}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-muted-foreground">{t("pages.financeMarginAmount")}</span>
-                    <span>
-                      {item.margin != null
-                        ? `${formatOrderPrice(item.margin)} (${item.marginPct}%)`
-                        : "—"}
-                    </span>
-                  </div>
-                </div>
-              ))
+              <>
+                {sortedMarginItems.map((item) => {
+                  const menuClass = menuClasses.get(item.name);
+                  return (
+                    <div key={item.name} className="bg-muted/50 space-y-2 rounded-lg border p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{item.name}</span>
+                        {menuClass && (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${MENU_CLASS_STYLE[menuClass]}`}
+                          >
+                            {t(`pages.financeMenuClasses.${menuClass}`)}
+                          </Badge>
+                        )}
+                      </div>
+                      <CardLine label={t("pages.financeQtySold")} value={item.totalQuantity} />
+                      <CardLine
+                        label={t("pages.financeRevenue")}
+                        value={formatOrderPrice(item.totalRevenue)}
+                      />
+                      <CardLine
+                        label={t("pages.financeCost")}
+                        value={item.totalCost != null ? formatOrderPrice(item.totalCost) : "—"}
+                      />
+                      <CardLine
+                        label={t("pages.financeMarginAmount")}
+                        value={
+                          item.margin != null
+                            ? `${formatOrderPrice(item.margin)} (${item.marginPct}%)`
+                            : "—"
+                        }
+                        strong
+                      />
+                    </div>
+                  );
+                })}
+                <TotalsCard
+                  title={t("pages.financeCostedTotal")}
+                  lines={[
+                    {
+                      label: t("pages.financeRevenue"),
+                      value: formatOrderPrice(marginTotals.costedRevenue),
+                    },
+                    {
+                      label: t("pages.financeCost"),
+                      value: formatOrderPrice(marginTotals.totalCost),
+                    },
+                    ...(marginTotals.uncostedCount > 0
+                      ? [
+                          {
+                            label: t("pages.financeUncostedItems").replace(
+                              "{count}",
+                              String(marginTotals.uncostedCount)
+                            ),
+                            value: formatOrderPrice(marginTotals.uncostedRevenue),
+                          },
+                        ]
+                      : []),
+                    {
+                      label: t("pages.financeMarginAmount"),
+                      value: `${formatOrderPrice(marginTotals.margin)} (${marginTotals.marginPct}%)`,
+                      emphasis: "total",
+                    },
+                  ]}
+                />
+              </>
             )}
           </div>
           <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
-            <div className="min-w-[560px]">
+            <div className="min-w-[760px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1816,6 +2548,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                     >
                       {t("common.name")}
                     </SortableHead>
+                    <TableHead className="text-right">{t("pages.financeQtySold")}</TableHead>
                     <SortableHead
                       align="right"
                       active={marginSort.sortField === "totalRevenue"}
@@ -1841,36 +2574,106 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                     >
                       {t("pages.financeMargin")}
                     </SortableHead>
+                    <TableHead>{t("pages.financeMenuClass")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {itemMargin.isLoading || itemMargin.isError ? (
                     <ReportStatusRow
                       isError={itemMargin.isError}
-                      colSpan={5}
+                      colSpan={7}
                       onRetry={() => itemMargin.refetch()}
-                      loadingLabel="Loading..."
+                      loadingLabel={t("common.loading")}
                       errorLabel={t("pages.financeLoadError")}
                       retryLabel={t("common.actions.retry")}
                     />
+                  ) : sortedMarginItems.length === 0 ? (
+                    <EmptyRow colSpan={7} />
                   ) : (
-                    sortedMarginItems.map((item) => (
-                      <TableRow key={item.name}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-right">{formatOrderPrice(item.totalRevenue)}</TableCell>
-                        <TableCell className="text-right">
-                          {item.totalCost != null ? formatOrderPrice(item.totalCost) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {item.margin != null ? formatOrderPrice(item.margin) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {item.marginPct != null ? `${item.marginPct}%` : "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    sortedMarginItems.map((item) => {
+                      const menuClass = menuClasses.get(item.name);
+                      return (
+                        <TableRow key={item.name}>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {item.totalQuantity}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatOrderPrice(item.totalRevenue)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {item.totalCost != null ? formatOrderPrice(item.totalCost) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {item.margin != null ? formatOrderPrice(item.margin) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {item.marginPct != null ? `${item.marginPct}%` : "—"}
+                          </TableCell>
+                          <TableCell>
+                            {menuClass && (
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${MENU_CLASS_STYLE[menuClass]}`}
+                              >
+                                {t(`pages.financeMenuClasses.${menuClass}`)}
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
+                {sortedMarginItems.length > 0 && !itemMargin.isLoading && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell>{t("pages.financeCostedTotal")}</TableCell>
+                      <TableCell />
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(marginTotals.costedRevenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(marginTotals.totalCost)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(marginTotals.margin)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {marginTotals.marginPct}%
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                    {marginTotals.uncostedCount > 0 && (
+                      <TableRow className="text-muted-foreground font-normal">
+                        <TableCell>
+                          {t("pages.financeUncostedItems").replace(
+                            "{count}",
+                            String(marginTotals.uncostedCount)
+                          )}
+                        </TableCell>
+                        <TableCell />
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(marginTotals.uncostedRevenue)}
+                        </TableCell>
+                        <TableCell className="text-right">—</TableCell>
+                        <TableCell className="text-right">—</TableCell>
+                        <TableCell className="text-right">—</TableCell>
+                        <TableCell />
+                      </TableRow>
+                    )}
+                    <TableRow className="font-semibold">
+                      <TableCell>{t("pages.financeAllItems")}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {marginTotals.totalQuantity}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(marginTotals.totalRevenue)}
+                      </TableCell>
+                      <TableCell colSpan={4} />
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>
@@ -1878,45 +2681,67 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
 
         {/* By category tab */}
         <TabsContent value="category">
+          {scopeNote("category")}
           <div className="space-y-3 lg:hidden">
             {byCategory.isLoading || byCategory.isError ? (
-              <p className="text-muted-foreground py-8 text-center text-sm">
-                <ReportStatus
-                  isError={byCategory.isError}
-                  onRetry={() => byCategory.refetch()}
-                  loadingLabel="Loading..."
-                  errorLabel={t("pages.financeLoadError")}
-                  retryLabel={t("common.actions.retry")}
-                />
-              </p>
+              <MobileStatus isError={byCategory.isError} onRetry={() => byCategory.refetch()} />
+            ) : sortedCategories.length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">{t("pages.noData")}</p>
             ) : (
-              sortedCategories.map((c) => (
-                <div
-                  key={c.categoryId ?? "none"}
-                  className="bg-muted/50 space-y-2 rounded-lg border p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">
-                      {c.categoryId ? c.categoryName : t("pages.financeUncategorized")}
-                    </span>
-                    <span className="text-muted-foreground text-sm">
-                      {c.orderItemCount} {t("pages.financeOrders")}
-                    </span>
+              <>
+                {sortedCategories.map((c) => (
+                  <div
+                    key={c.categoryId ?? "none"}
+                    className="bg-muted/50 space-y-2 rounded-lg border p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {c.categoryId ? c.categoryName : t("pages.financeUncategorized")}
+                      </span>
+                      <span className="text-muted-foreground text-sm">
+                        {c.orderCount} {t("pages.financeOrders")}
+                      </span>
+                    </div>
+                    <CardLine label={t("pages.financeQtySold")} value={c.totalQuantity} />
+                    <CardLine
+                      label={t("pages.financeRevenue")}
+                      value={`${formatOrderPrice(c.totalRevenue)} (${sharePct(c.totalRevenue, categoryTotals?.totalRevenue ?? 0)}%)`}
+                      strong
+                    />
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("pages.financeQtySold")}</span>
-                    <span>{c.totalQuantity}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-muted-foreground">{t("pages.financeRevenue")}</span>
-                    <span>{formatOrderPrice(c.totalRevenue)}</span>
-                  </div>
-                </div>
-              ))
+                ))}
+                {categoryTotals && (
+                  <TotalsCard
+                    title={t("pages.financeTotal")}
+                    lines={[
+                      {
+                        label: t("pages.financeItemsSubtotal"),
+                        value: formatOrderPrice(categoryTotals.totalRevenue),
+                        emphasis: "subtotal",
+                      },
+                      ...(s
+                        ? [
+                            {
+                              label: t("pages.financeOrderAdjustments"),
+                              value: formatOrderPrice(
+                                Math.round((s.revenue - categoryTotals.totalRevenue) * 100) / 100
+                              ),
+                            },
+                            {
+                              label: t("pages.financeRevenue"),
+                              value: formatOrderPrice(s.revenue),
+                              emphasis: "total" as const,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                )}
+              </>
             )}
           </div>
           <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
-            <div className="min-w-[480px]">
+            <div className="min-w-[600px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1944,89 +2769,155 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                     >
                       {t("pages.financeRevenue")}
                     </SortableHead>
+                    <TableHead className="text-right">{t("pages.financeShare")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {byCategory.isLoading || byCategory.isError ? (
                     <ReportStatusRow
                       isError={byCategory.isError}
-                      colSpan={4}
+                      colSpan={5}
                       onRetry={() => byCategory.refetch()}
-                      loadingLabel="Loading..."
+                      loadingLabel={t("common.loading")}
                       errorLabel={t("pages.financeLoadError")}
                       retryLabel={t("common.actions.retry")}
                     />
+                  ) : sortedCategories.length === 0 ? (
+                    <EmptyRow colSpan={5} />
                   ) : (
                     sortedCategories.map((c) => (
                       <TableRow key={c.categoryId ?? "none"}>
                         <TableCell className="font-medium">
                           {c.categoryId ? c.categoryName : t("pages.financeUncategorized")}
                         </TableCell>
-                        <TableCell className="text-right">{c.orderItemCount}</TableCell>
-                        <TableCell className="text-right">{c.totalQuantity}</TableCell>
-                        <TableCell className="text-right font-semibold">
+                        <TableCell className="text-right tabular-nums">{c.orderCount}</TableCell>
+                        <TableCell className="text-right tabular-nums">{c.totalQuantity}</TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
                           {formatOrderPrice(c.totalRevenue)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-right tabular-nums">
+                          {sharePct(c.totalRevenue, categoryTotals?.totalRevenue ?? 0)}%
                         </TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
+                {categoryTotals && sortedCategories.length > 0 && !byCategory.isLoading && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell>{t("pages.financeItemsSubtotal")}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {categoryTotals.orderCount}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {categoryTotals.totalQuantity}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(categoryTotals.totalRevenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">100%</TableCell>
+                    </TableRow>
+                    {s && (
+                      <>
+                        <TableRow className="text-muted-foreground font-normal">
+                          <TableCell>{t("pages.financeOrderAdjustments")}</TableCell>
+                          <TableCell />
+                          <TableCell />
+                          <TableCell className="text-right tabular-nums">
+                            {formatOrderPrice(
+                              Math.round((s.revenue - categoryTotals.totalRevenue) * 100) / 100
+                            )}
+                          </TableCell>
+                          <TableCell />
+                        </TableRow>
+                        <TableRow className="font-semibold">
+                          <TableCell>{t("pages.financeRevenue")}</TableCell>
+                          <TableCell className="text-right tabular-nums">{s.orderCount}</TableCell>
+                          <TableCell />
+                          <TableCell className="text-right tabular-nums">
+                            {formatOrderPrice(s.revenue)}
+                          </TableCell>
+                          <TableCell />
+                        </TableRow>
+                      </>
+                    )}
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>
+          <p className="text-muted-foreground mt-3 text-xs">
+            {t("pages.financeOrderAdjustmentsHint")}
+          </p>
         </TabsContent>
 
         {/* By shift tab — the "total sales from open to close" report */}
         <TabsContent value="shift">
+          {scopeNote("shift")}
           <div className="space-y-3 lg:hidden">
             {byShift.isLoading || byShift.isError ? (
-              <p className="text-muted-foreground py-8 text-center text-sm">
-                <ReportStatus
-                  isError={byShift.isError}
-                  onRetry={() => byShift.refetch()}
-                  loadingLabel="Loading..."
-                  errorLabel={t("pages.financeLoadError")}
-                  retryLabel={t("common.actions.retry")}
-                />
-              </p>
+              <MobileStatus isError={byShift.isError} onRetry={() => byShift.refetch()} />
+            ) : sortedShifts.length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">{t("pages.noData")}</p>
             ) : (
-              sortedShifts.map((sh) => (
-                <div
-                  key={sh.shiftId ?? "unassigned"}
-                  className="bg-muted/50 space-y-2 rounded-lg border p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">
-                      {sh.shiftId ? sh.staffName : t("pages.financeUnassigned")}
-                    </span>
-                    {sh.shiftId && (
-                      <Badge variant={sh.isOpen ? "default" : "outline"}>
-                        {sh.isOpen
-                          ? t("pages.financeShiftStatusOpen")
-                          : t("pages.financeShiftStatusClosed")}
-                      </Badge>
+              <>
+                {sortedShifts.map((sh) => (
+                  <div
+                    key={sh.shiftId ?? "unassigned"}
+                    className="bg-muted/50 space-y-2 rounded-lg border p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {sh.shiftId ? sh.staffName : t("pages.financeUnassigned")}
+                      </span>
+                      {sh.shiftId && (
+                        <Badge variant={sh.isOpen ? "default" : "outline"}>
+                          {sh.isOpen
+                            ? t("pages.financeShiftStatusOpen")
+                            : t("pages.financeShiftStatusClosed")}
+                        </Badge>
+                      )}
+                    </div>
+                    {sh.openedAt && (
+                      <p className="text-muted-foreground text-xs">
+                        {formatDateTime(sh.openedAt)}
+                        {sh.closedAt ? ` — ${formatDateTime(sh.closedAt)}` : ""}
+                      </p>
                     )}
+                    <CardLine label={t("pages.financeOrders")} value={sh.orderCount} />
+                    <CardLine
+                      label={t("pages.financeAvgTicket")}
+                      value={formatOrderPrice(averageTicket(sh.revenue, sh.orderCount))}
+                    />
+                    <CardLine
+                      label={t("pages.financeRevenue")}
+                      value={formatOrderPrice(sh.revenue)}
+                      strong
+                    />
                   </div>
-                  {sh.openedAt && (
-                    <p className="text-muted-foreground text-xs">
-                      {formatDateTime(sh.openedAt)}
-                      {sh.closedAt ? ` — ${formatDateTime(sh.closedAt)}` : ""}
-                    </p>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{t("pages.financeOrders")}</span>
-                    <span>{sh.orderCount}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-muted-foreground">{t("pages.financeRevenue")}</span>
-                    <span>{formatOrderPrice(sh.revenue)}</span>
-                  </div>
-                </div>
-              ))
+                ))}
+                <TotalsCard
+                  title={t("pages.financeTotal")}
+                  lines={[
+                    { label: t("pages.financeOrders"), value: String(shiftTotals.orderCount) },
+                    {
+                      label: t("pages.financeAvgTicket"),
+                      value: formatOrderPrice(
+                        averageTicket(shiftTotals.revenue, shiftTotals.orderCount)
+                      ),
+                    },
+                    {
+                      label: t("pages.financeRevenue"),
+                      value: formatOrderPrice(shiftTotals.revenue),
+                      emphasis: "total",
+                    },
+                  ]}
+                />
+              </>
             )}
           </div>
           <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
-            <div className="min-w-[560px]">
+            <div className="min-w-[680px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -2052,6 +2943,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                     >
                       {t("pages.financeOrders")}
                     </SortableHead>
+                    <TableHead className="text-right">{t("pages.financeAvgTicket")}</TableHead>
                     <SortableHead
                       align="right"
                       active={shiftSort.sortField === "revenue"}
@@ -2066,12 +2958,14 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                   {byShift.isLoading || byShift.isError ? (
                     <ReportStatusRow
                       isError={byShift.isError}
-                      colSpan={4}
+                      colSpan={5}
                       onRetry={() => byShift.refetch()}
-                      loadingLabel="Loading..."
+                      loadingLabel={t("common.loading")}
                       errorLabel={t("pages.financeLoadError")}
                       retryLabel={t("common.actions.retry")}
                     />
+                  ) : sortedShifts.length === 0 ? (
+                    <EmptyRow colSpan={5} />
                   ) : (
                     sortedShifts.map((sh) => (
                       <TableRow key={sh.shiftId ?? "unassigned"}>
@@ -2079,7 +2973,10 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                           <div className="flex items-center gap-2">
                             {sh.shiftId ? sh.staffName : t("pages.financeUnassigned")}
                             {sh.shiftId && (
-                              <Badge variant={sh.isOpen ? "default" : "outline"} className="text-xs">
+                              <Badge
+                                variant={sh.isOpen ? "default" : "outline"}
+                                className="text-xs"
+                              >
                                 {sh.isOpen
                                   ? t("pages.financeShiftStatusOpen")
                                   : t("pages.financeShiftStatusClosed")}
@@ -2097,14 +2994,35 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                             "—"
                           )}
                         </TableCell>
-                        <TableCell className="text-right">{sh.orderCount}</TableCell>
-                        <TableCell className="text-right font-semibold">
+                        <TableCell className="text-right tabular-nums">{sh.orderCount}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(averageTicket(sh.revenue, sh.orderCount))}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
                           {formatOrderPrice(sh.revenue)}
                         </TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
+                {sortedShifts.length > 0 && !byShift.isLoading && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={2}>{t("pages.financeTotal")}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {shiftTotals.orderCount}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(
+                          averageTicket(shiftTotals.revenue, shiftTotals.orderCount)
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(shiftTotals.revenue)}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>
@@ -2114,67 +3032,154 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
             report, not a partition: blocks can overlap by design (staggered
             handover coverage), so totals across rows are NOT expected to sum
             to the grand total. */}
-        <TabsContent value="scheduleShift">
-          <p className="text-muted-foreground mb-3 text-xs">
+        <TabsContent value="scheduleShift" className="space-y-4">
+          {scopeNote("scheduleShift")}
+          <p className="text-muted-foreground text-xs">
             {t("pages.financeScheduleShiftOverlapNote")}
           </p>
-          <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <div className="min-w-[640px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("pages.financeScheduleShiftBlock")}</TableHead>
-                    <TableHead>{t("common.date") || "Date"}</TableHead>
-                    <TableHead className="text-right">{t("pages.financeOrders")}</TableHead>
-                    <TableHead className="text-right">{t("pages.financeRevenue")}</TableHead>
-                    <TableHead>{t("pages.financeStaffOnDuty")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {byScheduleShift.isLoading || byScheduleShift.isError ? (
-                    <ReportStatusRow
-                      isError={byScheduleShift.isError}
-                      colSpan={5}
-                      onRetry={() => byScheduleShift.refetch()}
-                      loadingLabel={t("common.loading")}
-                      errorLabel={t("pages.financeLoadError")}
-                      retryLabel={t("common.actions.retry")}
-                    />
-                  ) : (byScheduleShift.data?.rows.length ?? 0) === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-muted-foreground text-center">
-                        {t("common.noData")}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    byScheduleShift.data!.rows
-                      .filter((r) => r.orderCount > 0)
-                      .map((r, i) => (
-                        <TableRow key={i}>
-                          <TableCell className="flex items-center gap-2 font-medium">
-                            {r.color && (
-                              <span
-                                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: r.color }}
-                              />
-                            )}
-                            {r.name}
+          {byScheduleShift.isLoading || byScheduleShift.isError ? (
+            <MobileStatus
+              isError={byScheduleShift.isError}
+              onRetry={() => byScheduleShift.refetch()}
+            />
+          ) : (
+            <>
+              {/* One subtotal per block: a block never overlaps itself, so its
+                  own days add up — different blocks do not. */}
+              <div className="-mx-4 overflow-x-auto sm:mx-0">
+                <div className="min-w-[520px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("pages.financeScheduleShiftBlock")}</TableHead>
+                        <TableHead className="text-right">{t("pages.financeActiveDays")}</TableHead>
+                        <TableHead className="text-right">{t("pages.financeOrders")}</TableHead>
+                        <TableHead className="text-right">{t("pages.financeAvgTicket")}</TableHead>
+                        <TableHead className="text-right">{t("pages.financeRevenue")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {blockSubtotals.length === 0 ? (
+                        <EmptyRow colSpan={5} />
+                      ) : (
+                        blockSubtotals.map((b) => (
+                          <TableRow key={b.scheduleShiftId}>
+                            <TableCell className="font-medium">
+                              <span className="flex items-center gap-2">
+                                {b.color && (
+                                  <span
+                                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                    style={{ backgroundColor: b.color }}
+                                  />
+                                )}
+                                {b.name}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {b.activeDays}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {b.orderCount}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatOrderPrice(averageTicket(b.revenue, b.orderCount))}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums">
+                              {formatOrderPrice(b.revenue)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                    {byScheduleShift.data?.totals && blockSubtotals.length > 0 && (
+                      <TableFooter>
+                        <TableRow className="text-muted-foreground font-normal">
+                          <TableCell>{t("pages.financeOutsideBlocks")}</TableCell>
+                          <TableCell />
+                          <TableCell className="text-right tabular-nums">
+                            {byScheduleShift.data.totals.outsideOrderCount}
                           </TableCell>
-                          <TableCell>{r.date}</TableCell>
-                          <TableCell className="text-right">{r.orderCount}</TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {formatOrderPrice(r.revenue)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-xs">
-                            {r.staffOnDuty.map((s) => s.name).join(", ") || "—"}
+                          <TableCell />
+                          <TableCell className="text-right tabular-nums">
+                            {formatOrderPrice(byScheduleShift.data.totals.outsideRevenue)}
                           </TableCell>
                         </TableRow>
-                      ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                        <TableRow>
+                          <TableCell>{t("pages.financeAllOrdersOnce")}</TableCell>
+                          <TableCell />
+                          <TableCell className="text-right tabular-nums">
+                            {byScheduleShift.data.totals.orderCount}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatOrderPrice(
+                              averageTicket(
+                                byScheduleShift.data.totals.revenue,
+                                byScheduleShift.data.totals.orderCount
+                              )
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatOrderPrice(byScheduleShift.data.totals.revenue)}
+                          </TableCell>
+                        </TableRow>
+                      </TableFooter>
+                    )}
+                  </Table>
+                </div>
+              </div>
+
+              {/* Day by day */}
+              <div className="-mx-4 overflow-x-auto sm:mx-0">
+                <div className="min-w-[640px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("pages.financeScheduleShiftBlock")}</TableHead>
+                        <TableHead>{t("common.date")}</TableHead>
+                        <TableHead className="text-right">{t("pages.financeOrders")}</TableHead>
+                        <TableHead className="text-right">{t("pages.financeRevenue")}</TableHead>
+                        <TableHead>{t("pages.financeStaffOnDuty")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(byScheduleShift.data?.rows ?? []).filter((r) => r.orderCount > 0).length ===
+                      0 ? (
+                        <EmptyRow colSpan={5} />
+                      ) : (
+                        (byScheduleShift.data?.rows ?? [])
+                          .filter((r) => r.orderCount > 0)
+                          .map((r) => (
+                            <TableRow key={`${r.scheduleShiftId}:${r.date}`}>
+                              <TableCell className="font-medium">
+                                <span className="flex items-center gap-2">
+                                  {r.color && (
+                                    <span
+                                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                      style={{ backgroundColor: r.color }}
+                                    />
+                                  )}
+                                  {r.name}
+                                </span>
+                              </TableCell>
+                              <TableCell>{r.date}</TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {r.orderCount}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold tabular-nums">
+                                {formatOrderPrice(r.revenue)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs">
+                                {r.staffOnDuty.map((member) => member.name).join(", ") || "—"}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </>
+          )}
         </TabsContent>
 
         {/* Cash-drawer reconciliation tab — the live per-category position of
@@ -2184,6 +3189,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
             spotted. Flags a CLOSED session whose count didn't match; an open
             session has a live expected figure but nothing to compare it to. */}
         <TabsContent value="cash">
+          {scopeNote("cash")}
           <div className="space-y-3 lg:hidden">
             {cashReconciliation.isLoading || cashReconciliation.isError ? (
               <p className="text-muted-foreground py-8 text-center text-sm">
@@ -2241,9 +3247,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                           ? formatOrderPrice(cashTotals.cashDifference)
                           : "—"
                       }
-                      emphasis={
-                        cashTotals.cashDifference ? "variance" : "total"
-                      }
+                      emphasis={cashTotals.cashDifference ? "variance" : "total"}
                     />
                     {cashTotals.closingCash == null && (
                       <p className="text-muted-foreground text-xs">
@@ -2341,9 +3345,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                     <TableHead className="text-right">{t("pages.financeCashPettyIn")}</TableHead>
                     <TableHead className="text-right">{t("pages.financeCashPettyOut")}</TableHead>
                     <TableHead className="text-right">{t("pages.financeCashDrops")}</TableHead>
-                    <TableHead className="text-right">
-                      {t("pages.financeCashTipPayouts")}
-                    </TableHead>
+                    <TableHead className="text-right">{t("pages.financeCashTipPayouts")}</TableHead>
                     <TableHead className="text-right">{t("pages.financeExpectedCash")}</TableHead>
                     <TableHead className="text-right">{t("pages.financeClosingCash")}</TableHead>
                     <SortableHead
@@ -2490,60 +3492,165 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
 
         {/* Daily breakdown tab */}
         <TabsContent value="daily">
+          {scopeNote("daily")}
           <div className="space-y-3 lg:hidden">
             {summary.isLoading || summary.isError ? (
-              <p className="text-muted-foreground py-8 text-center text-sm">
-                <ReportStatus
-                  isError={summary.isError}
-                  onRetry={() => summary.refetch()}
-                  loadingLabel="Loading..."
-                  errorLabel={t("pages.financeLoadError")}
-                  retryLabel={t("common.actions.retry")}
-                />
-              </p>
+              <MobileStatus isError={summary.isError} onRetry={() => summary.refetch()} />
+            ) : (s?.buckets ?? []).length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">{t("pages.noData")}</p>
             ) : (
-              (s?.buckets ?? []).map((b) => (
-                <div
-                  key={b.date}
-                  className="bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
-                >
-                  <span className="font-medium">{b.date}</span>
-                  <span>{formatOrderPrice(b.revenue)}</span>
-                </div>
-              ))
+              <>
+                {(s?.buckets ?? []).map((b) => (
+                  <div key={b.date} className="bg-muted/50 space-y-2 rounded-lg border p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{b.date}</span>
+                      <span className="text-muted-foreground text-sm">
+                        {b.orderCount} {t("pages.financeOrders")}
+                      </span>
+                    </div>
+                    <CardLine
+                      label={t("pages.financeRevenue")}
+                      value={formatOrderPrice(b.revenue)}
+                    />
+                    {b.refundAmount > 0 && (
+                      <CardLine
+                        label={t("pages.financeRefund")}
+                        value={`-${formatOrderPrice(b.refundAmount)}`}
+                        tone="cost"
+                      />
+                    )}
+                    {b.taxCollected > 0 && (
+                      <CardLine
+                        label={t("pages.financeTax")}
+                        value={`-${formatOrderPrice(b.taxCollected)}`}
+                        tone="cost"
+                      />
+                    )}
+                    <CardLine
+                      label={t("pages.financeNetSales")}
+                      value={formatOrderPrice(b.netSales)}
+                      strong
+                    />
+                  </div>
+                ))}
+                <TotalsCard
+                  title={t("pages.financeTotal")}
+                  lines={[
+                    { label: t("pages.financeOrders"), value: String(dailyTotals.orderCount) },
+                    {
+                      label: t("pages.financeRevenue"),
+                      value: formatOrderPrice(dailyTotals.revenue),
+                    },
+                    {
+                      label: t("pages.financeDiscount"),
+                      value: formatOrderPrice(dailyTotals.discountAmount),
+                    },
+                    {
+                      label: t("pages.financeRefund"),
+                      value: formatOrderPrice(-dailyTotals.refundAmount),
+                    },
+                    {
+                      label: t("pages.financeTax"),
+                      value: formatOrderPrice(-dailyTotals.taxCollected),
+                    },
+                    {
+                      label: t("pages.financeNetSales"),
+                      value: formatOrderPrice(dailyTotals.netSales),
+                      emphasis: "total",
+                    },
+                  ]}
+                />
+              </>
             )}
           </div>
           <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
-            <div className="min-w-[320px]">
+            <div className="min-w-[760px]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
+                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeOrders")}</TableHead>
                     <TableHead className="text-right">{t("pages.financeRevenue")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeDiscount")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeRefund")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeTax")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeNetSales")}</TableHead>
+                    <TableHead className="text-right">{t("pages.financeAvgTicket")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {summary.isLoading || summary.isError ? (
                     <ReportStatusRow
                       isError={summary.isError}
-                      colSpan={2}
+                      colSpan={8}
                       onRetry={() => summary.refetch()}
-                      loadingLabel="Loading..."
+                      loadingLabel={t("common.loading")}
                       errorLabel={t("pages.financeLoadError")}
                       retryLabel={t("common.actions.retry")}
                     />
+                  ) : (s?.buckets ?? []).length === 0 ? (
+                    <EmptyRow colSpan={8} />
                   ) : (
                     (s?.buckets ?? []).map((b) => (
                       <TableRow key={b.date}>
-                        <TableCell>{b.date}</TableCell>
-                        <TableCell className="text-right">{formatOrderPrice(b.revenue)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{b.date}</TableCell>
+                        <TableCell className="text-right tabular-nums">{b.orderCount}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(b.revenue)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-right tabular-nums">
+                          {b.discountAmount > 0 ? formatOrderPrice(b.discountAmount) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600 tabular-nums">
+                          {b.refundAmount > 0 ? `-${formatOrderPrice(b.refundAmount)}` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-orange-600 tabular-nums">
+                          {b.taxCollected > 0 ? `-${formatOrderPrice(b.taxCollected)}` : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
+                          {formatOrderPrice(b.netSales)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatOrderPrice(averageTicket(b.revenue, b.orderCount))}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
+                {(s?.buckets ?? []).length > 0 && !summary.isLoading && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell>{t("pages.financeTotal")}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {dailyTotals.orderCount}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(dailyTotals.revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(dailyTotals.discountAmount)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(-dailyTotals.refundAmount)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(-dailyTotals.taxCollected)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(dailyTotals.netSales)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatOrderPrice(
+                          averageTicket(dailyTotals.revenue, dailyTotals.orderCount)
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>
+          <p className="text-muted-foreground mt-3 text-xs">{t("pages.financeDailyHint")}</p>
         </TabsContent>
 
         {/* Waste tab — itemized loss with inline correction (edit/delete) */}
@@ -2553,10 +3660,24 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
               {(wasteByReason.data?.reasons ?? []).map((r) => (
                 <Badge key={r.reason + r.label} variant="outline" className="gap-1.5 py-1.5">
                   <span>{r.label}</span>
-                  <span className="text-muted-foreground">{formatPrice(r.totalValue)}</span>
+                  <span className="text-muted-foreground">
+                    {formatPrice(r.totalValue)} ·{" "}
+                    {sharePct(r.totalValue, wasteEntries.data?.sumValue ?? 0)}%
+                  </span>
                 </Badge>
               ))}
+              <Badge variant="secondary" className="gap-1.5 py-1.5 font-semibold">
+                <span>{t("pages.financeTotal")}</span>
+                <span>{formatPrice(wasteEntries.data?.sumValue ?? 0)}</span>
+              </Badge>
             </div>
+          )}
+          {(wasteEntries.data?.total ?? 0) > (wasteEntries.data?.entries.length ?? 0) && (
+            <p className="text-muted-foreground text-xs">
+              {t("pages.financeShowingEntries")
+                .replace("{shown}", String(wasteEntries.data?.entries.length ?? 0))
+                .replace("{total}", String(wasteEntries.data?.total ?? 0))}
+            </p>
           )}
 
           <div className="space-y-3 lg:hidden">
@@ -2582,7 +3703,9 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                       {entry.material?.name ?? entry.product?.name ?? "—"}
                     </span>
                     <Badge variant="outline" className="text-xs">
-                      {entry.reason === "OTHER" ? (entry.customReason ?? entry.reason) : entry.reason}
+                      {entry.reason === "OTHER"
+                        ? (entry.customReason ?? entry.reason)
+                        : entry.reason}
                     </Badge>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -2612,6 +3735,22 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                   </div>
                 </div>
               ))
+            )}
+            {(wasteEntries.data?.entries.length ?? 0) > 0 && (
+              <TotalsCard
+                title={t("pages.financeTotal")}
+                lines={[
+                  {
+                    label: t("pages.financeEntries"),
+                    value: String(wasteEntries.data?.total ?? 0),
+                  },
+                  {
+                    label: t("pages.financeWasteLoss"),
+                    value: formatPrice(wasteEntries.data?.sumValue ?? 0),
+                    emphasis: "total",
+                  },
+                ]}
+              />
             )}
           </div>
           <div className="-mx-4 hidden overflow-x-auto sm:mx-0 lg:block">
@@ -2693,6 +3832,20 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                     ))
                   )}
                 </TableBody>
+                {(wasteEntries.data?.entries.length ?? 0) > 0 && (
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={2}>
+                        {t("pages.financeTotal")} ({wasteEntries.data?.total ?? 0})
+                      </TableCell>
+                      <TableCell colSpan={3} />
+                      <TableCell className="text-right tabular-nums">
+                        {formatPrice(wasteEntries.data?.sumValue ?? 0)}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             </div>
           </div>
@@ -2718,7 +3871,9 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("waste.deleteConfirm.title") || "Delete waste entry?"}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("waste.deleteConfirm.title") || "Delete waste entry?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("waste.deleteConfirm.description") ||
                 "This restores the recorded quantity back to current stock and removes the entry."}

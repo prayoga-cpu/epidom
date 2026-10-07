@@ -3,6 +3,7 @@
 import { useI18n } from "@/components/lang/i18n-provider";
 import { FaqSection, type FaqItem } from "@/features/marketing/home/components/faq-section";
 import { getLocalizedPath } from "@/lib/i18n-routing";
+import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
 
 /**
  * /pricing's own questions: the three a buyer asks before paying (trial, plan
@@ -23,9 +24,9 @@ export function PricingFaq() {
         label: t("redesign.faq.pRefundLink"),
       },
     },
-    { q: t("redesign.faq.q1"), a: t("redesign.faq.a1") },
+    { q: t("redesign.faq.q1"), a: t(onlinePaymentCopyKey("redesign.faq.a1")) },
     { q: t("redesign.faq.q3"), a: t("redesign.faq.a3") },
-    { q: t("redesign.faq.q5"), a: t("redesign.faq.a5") },
+    { q: t("redesign.faq.q5"), a: t(onlinePaymentCopyKey("redesign.faq.a5")) },
   ];
 
   return <FaqSection items={items} />;

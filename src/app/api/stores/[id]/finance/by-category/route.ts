@@ -45,6 +45,7 @@ export const GET = withApiHandler(
         },
       },
       select: {
+        orderId: true,
         total: true,
         quantity: true,
         menuItem: { select: { category: { select: { id: true, name: true } } } },
@@ -53,14 +54,26 @@ export const GET = withApiHandler(
 
     const categories = bucketItemsByCategory(
       items.map((item) => ({
+        orderId: item.orderId,
         total: Number(item.total),
         quantity: Number(item.quantity),
         menuItem: item.menuItem,
       }))
     );
 
+    // An order with a drink and a dessert sits in two categories, so the
+    // per-category order counts don't add up to the period's orders — the
+    // total is counted once per order here instead of summed in the browser.
+    const totals = {
+      orderCount: new Set(items.map((item) => item.orderId)).size,
+      totalQuantity:
+        Math.round(categories.reduce((sum, c) => sum + c.totalQuantity, 0) * 100) / 100,
+      totalRevenue:
+        Math.round(categories.reduce((sum, c) => sum + c.totalRevenue, 0) * 100) / 100,
+    };
+
     return NextResponse.json(
-      createSuccessResponse({ from: from.toISOString(), to: to.toISOString(), categories })
+      createSuccessResponse({ from: from.toISOString(), to: to.toISOString(), categories, totals })
     );
   },
   { rateLimitEndpoint: "/api/stores/[id]/finance/by-category", requireStoreAuth: true }

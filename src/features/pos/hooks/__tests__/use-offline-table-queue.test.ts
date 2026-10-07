@@ -11,6 +11,8 @@ const { mockQueue } = vi.hoisted(() => ({
 
 vi.mock("@/lib/pwa/offline-table-queue", () => mockQueue);
 
+vi.mock("@/lib/pwa/reachability", () => ({ reportNetworkFailure: vi.fn() }));
+
 vi.mock("@/components/lang/i18n-provider", () => ({
   useI18n: () => ({ t: (k: string) => k }),
 }));
@@ -27,7 +29,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
 import { toast } from "sonner";
-import { apiClient, ApiClientError } from "@/lib/api/client";
+import { apiClient, ApiClientError, ApiNetworkError } from "@/lib/api/client";
 import { useOfflineTableQueue } from "../use-offline-table-queue";
 
 function makeWrapper(qc: QueryClient) {
@@ -101,9 +103,9 @@ describe("useOfflineTableQueue", () => {
     expect(toast.success).not.toHaveBeenCalled();
   });
 
-  it("keeps a network-failed entry queued for retry", async () => {
+  it("keeps a network-failed entry queued without spending an attempt", async () => {
     mockQueue.listTableQueue.mockResolvedValue([entry()]);
-    vi.spyOn(apiClient, "patch").mockRejectedValue(new Error("network error"));
+    vi.spyOn(apiClient, "patch").mockRejectedValue(new ApiNetworkError("network error"));
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     const { result } = renderHook(() => useOfflineTableQueue("store-1"), {
@@ -115,12 +117,14 @@ describe("useOfflineTableQueue", () => {
     });
 
     expect(mockQueue.removeFromTableQueue).not.toHaveBeenCalled();
-    expect(mockQueue.incrementTableQueueAttempts).toHaveBeenCalled();
+    expect(mockQueue.incrementTableQueueAttempts).not.toHaveBeenCalled();
   });
 
-  it("drops an entry that exhausted its retry budget without ever sending it", async () => {
-    mockQueue.listTableQueue.mockResolvedValue([entry({ attempts: 5 })]);
-    const patchSpy = vi.spyOn(apiClient, "patch");
+  it("counts a refusal as an attempt", async () => {
+    mockQueue.listTableQueue.mockResolvedValue([entry()]);
+    vi.spyOn(apiClient, "patch").mockRejectedValue(
+      new ApiClientError({ success: false, error: { code: "X", message: "bad" } } as never, 400)
+    );
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     const { result } = renderHook(() => useOfflineTableQueue("store-1"), {
@@ -131,8 +135,31 @@ describe("useOfflineTableQueue", () => {
       await result.current.syncQueue();
     });
 
-    expect(patchSpy).not.toHaveBeenCalled();
+    expect(mockQueue.incrementTableQueueAttempts).toHaveBeenCalled();
+    expect(mockQueue.removeFromTableQueue).not.toHaveBeenCalled();
+  });
+
+  // Table state goes stale, so unlike a sale it is dropped rather than parked.
+  it("drops an entry refused on its last attempt", async () => {
+    mockQueue.listTableQueue.mockResolvedValue([entry({ attempts: 4 })]);
+    const patchSpy = vi
+      .spyOn(apiClient, "patch")
+      .mockRejectedValue(
+        new ApiClientError({ success: false, error: { code: "X", message: "bad" } } as never, 400)
+      );
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { result } = renderHook(() => useOfflineTableQueue("store-1"), {
+      wrapper: makeWrapper(qc),
+    });
+
+    await act(async () => {
+      await result.current.syncQueue();
+    });
+
+    expect(patchSpy).toHaveBeenCalled();
     expect(mockQueue.removeFromTableQueue).toHaveBeenCalledWith("q1");
+    expect(mockQueue.incrementTableQueueAttempts).not.toHaveBeenCalled();
   });
 
   it("reflects queue size as pendingCount", async () => {

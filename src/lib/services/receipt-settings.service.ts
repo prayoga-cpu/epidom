@@ -6,7 +6,7 @@ import type { UpdateReceiptSettingsInput } from "@/lib/validation/receipt-settin
  * render its branding block — merged from Store (address/email/phone),
  * Storefront (tagline/Instagram/TikTok, when a storefront exists), and
  * StoreReceiptSettings (the receipt-only overrides: footer message, Facebook,
- * social-links visibility, WhatsApp auto-send toggle). A store with no
+ * social-links visibility, WhatsApp auto-send toggle, guest WiFi). A store with no
  * storefront simply resolves those fields to null — no dead inputs to fill
  * in for a cash-only stall.
  */
@@ -23,6 +23,9 @@ export interface ReceiptBrandingDto {
   footerMessage: string | null;
   showSocialLinks: boolean;
   autoSendWhatsappReceipt: boolean;
+  wifiName: string | null;
+  wifiPassword: string | null;
+  showWifiOnReceipt: boolean;
 }
 
 // "https://instagram.com/tahoma.cafe/" -> "tahoma.cafe". Falls back to the
@@ -59,6 +62,9 @@ export async function getReceiptBranding(storeId: string): Promise<ReceiptBrandi
           facebookUrl: true,
           showSocialLinks: true,
           autoSendWhatsappReceipt: true,
+          wifiName: true,
+          wifiPassword: true,
+          showWifiOnReceipt: true,
         },
       },
     },
@@ -84,6 +90,9 @@ export async function getReceiptBranding(storeId: string): Promise<ReceiptBrandi
     footerMessage: store.receiptSettings?.footerMessage ?? null,
     showSocialLinks: store.receiptSettings?.showSocialLinks ?? true,
     autoSendWhatsappReceipt: store.receiptSettings?.autoSendWhatsappReceipt ?? true,
+    wifiName: store.receiptSettings?.wifiName ?? null,
+    wifiPassword: store.receiptSettings?.wifiPassword ?? null,
+    showWifiOnReceipt: store.receiptSettings?.showWifiOnReceipt ?? true,
   };
 }
 
@@ -91,27 +100,25 @@ export async function updateReceiptSettings(
   storeId: string,
   input: UpdateReceiptSettingsInput
 ): Promise<ReceiptBrandingDto> {
-  const hasFieldUpdates = Object.keys(input).length > 0;
-  if (hasFieldUpdates) {
+  // Only the fields the caller sent — an omitted field keeps its stored value.
+  // A cleared WiFi field is stored as null, not "", so "is WiFi set up?" has
+  // one answer everywhere.
+  const data = {
+    ...(input.footerMessage !== undefined && { footerMessage: input.footerMessage }),
+    ...(input.facebookUrl !== undefined && { facebookUrl: input.facebookUrl }),
+    ...(input.showSocialLinks !== undefined && { showSocialLinks: input.showSocialLinks }),
+    ...(input.autoSendWhatsappReceipt !== undefined && {
+      autoSendWhatsappReceipt: input.autoSendWhatsappReceipt,
+    }),
+    ...(input.wifiName !== undefined && { wifiName: input.wifiName || null }),
+    ...(input.wifiPassword !== undefined && { wifiPassword: input.wifiPassword || null }),
+    ...(input.showWifiOnReceipt !== undefined && { showWifiOnReceipt: input.showWifiOnReceipt }),
+  };
+  if (Object.keys(data).length > 0) {
     await prisma.storeReceiptSettings.upsert({
       where: { storeId },
-      create: {
-        storeId,
-        ...(input.footerMessage !== undefined && { footerMessage: input.footerMessage }),
-        ...(input.facebookUrl !== undefined && { facebookUrl: input.facebookUrl }),
-        ...(input.showSocialLinks !== undefined && { showSocialLinks: input.showSocialLinks }),
-        ...(input.autoSendWhatsappReceipt !== undefined && {
-          autoSendWhatsappReceipt: input.autoSendWhatsappReceipt,
-        }),
-      },
-      update: {
-        ...(input.footerMessage !== undefined && { footerMessage: input.footerMessage }),
-        ...(input.facebookUrl !== undefined && { facebookUrl: input.facebookUrl }),
-        ...(input.showSocialLinks !== undefined && { showSocialLinks: input.showSocialLinks }),
-        ...(input.autoSendWhatsappReceipt !== undefined && {
-          autoSendWhatsappReceipt: input.autoSendWhatsappReceipt,
-        }),
-      },
+      create: { storeId, ...data },
+      update: data,
     });
   }
 

@@ -3,7 +3,12 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Locale } from "@/components/lang/i18n-provider";
-import type { OnboardingCompleteResult, OnboardingState } from "@/lib/onboarding/contracts";
+import type {
+  OnboardingBilling,
+  OnboardingCompleteResult,
+  OnboardingState,
+} from "@/lib/onboarding/contracts";
+import type { PlanIntent } from "../../lib/plan-intent";
 import {
   RENDER_TEST_TIMEOUT,
   installDomPolyfills,
@@ -241,17 +246,33 @@ const callsTo = (method: string, path: string) =>
 const bodyOf = (method: string, path: string, index = 0) =>
   JSON.parse(String((callsTo(method, path)[index][1] as RequestInit).body));
 
-function renderWizard(state: OnboardingState, locale: Locale = "en") {
+/** A new account: on Free, never subscribed, so a POS Checkout is the trial. */
+const FREE_NEW: OnboardingBilling = { canCheckout: true, posTrialEligible: true };
+
+function renderWizard(
+  state: OnboardingState,
+  locale: Locale = "en",
+  {
+    billing = FREE_NEW,
+    planIntent = null,
+  }: { billing?: OnboardingBilling; planIntent?: PlanIntent | null } = {}
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return renderIn(
     locale,
     <QueryClientProvider client={client}>
-      <OnboardingContent initialState={state} />
+      <OnboardingContent initialState={state} billing={billing} planIntent={planIntent} />
     </QueryClientProvider>
   );
 }
+
+const STRIPE_URL = "https://checkout.stripe.test/c/cs_1";
+const checkoutOk = (): Reply => ({
+  status: 201,
+  body: { success: true, data: { sessionId: "cs_1", url: STRIPE_URL } },
+});
 
 const eventsNamed = (name: string) =>
   analytics.trackEvent.mock.calls.filter(([event]) => event === name).map(([, params]) => params);
@@ -261,7 +282,17 @@ const SLUG_WAIT = 4000;
 
 beforeAll(installDomPolyfills);
 
+const realLocation = window.location;
+let assign: ReturnType<typeof vi.fn>;
+
 beforeEach(() => {
+  // jsdom can't navigate: a plain object records where Checkout would go.
+  assign = vi.fn();
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    writable: true,
+    value: { href: "http://localhost/onboarding", assign },
+  });
   routes = {};
   installFetch();
   nav.searchParams = new URLSearchParams();
@@ -275,6 +306,11 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    writable: true,
+    value: realLocation,
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -735,6 +771,7 @@ describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, (
   describe("step 3 and the launch screen", () => {
     it("publishes with the picked goals, then shows the launch screen", async () => {
       routes["POST /api/onboarding/complete"] = () => ok(completeResult);
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
       renderWizard(savedStore({ step: 3 }));
 
       fireEvent.click(screen.getByRole("checkbox", { name: /Take orders at the counter/ }));
@@ -777,21 +814,21 @@ describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, (
         "href",
         "/store/store_1/dashboard"
       );
-      const trial = screen.getByTestId("launch-pos-trial");
-      expect(within(trial).getByRole("link", { name: "Start my free trial" })).toHaveAttribute(
-        "href",
-        "/pricing?trial=true#plans"
-      );
+      expect(
+        within(screen.getByTestId("launch-plan")).getByText("Start your 14-day POS trial")
+      ).toBeInTheDocument();
       expect(screen.queryByText(/Step \d of 3/)).not.toBeInTheDocument();
     });
 
-    it("publishes with no goals, and no trial offer", async () => {
+    it("publishes with no goals: no plan, no Checkout", async () => {
       routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: [] });
       renderWizard(savedStore({ step: 3 }));
+      expect(screen.queryByTestId("goals-next-step")).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
       await screen.findByRole("heading", { name: "Your store is live" });
       expect(bodyOf("POST", "/api/onboarding/complete")).toEqual({ goals: [] });
-      expect(screen.queryByTestId("launch-pos-trial")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("launch-plan")).not.toBeInTheDocument();
+      expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(0);
     });
 
     it("pre-selects saved goals and Back returns to step 2", async () => {
@@ -850,6 +887,141 @@ describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, (
       });
       expect(writeText).toHaveBeenCalledWith("https://epidom.fr/@le-petit-four");
       expect(toasts.success).toHaveBeenCalledWith("Link copied");
+    });
+  });
+
+  describe("the plan picked goes on to Checkout", () => {
+    it("a POS pick opens the trial Checkout after publishing: a card, nothing charged today", async () => {
+      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: ["counter"] });
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      renderWizard(savedStore({ step: 3 }));
+
+      fireEvent.click(screen.getByRole("checkbox", { name: /Take orders at the counter/ }));
+      expect(screen.getByTestId("goals-next-step")).toHaveTextContent(
+        "After publishing, you'll add a card to start your 14-day POS trial. Nothing is charged today."
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
+
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      expect(bodyOf("POST", "/api/subscriptions/checkout")).toEqual({
+        plan: "POS",
+        yearly: false,
+        currency: "EUR",
+        next: "/store/store_1/dashboard?tour=1",
+      });
+      expect(analytics.trackConversion).toHaveBeenCalledWith(
+        "begin_checkout",
+        expect.objectContaining({ plan: "POS", trial: true, source: "onboarding" })
+      );
+      expect(analytics.trackMetaPixelEvent).toHaveBeenCalledWith("InitiateCheckout", {
+        content_name: "POS",
+        content_category: "trial",
+      });
+    });
+
+    it("a plan picked on the pricing page comes ticked and keeps its billing interval", async () => {
+      routes["POST /api/onboarding/complete"] = () =>
+        ok({ ...completeResult, goals: ["operations"] });
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      renderWizard(savedStore({ step: 3 }), "en", {
+        planIntent: { plan: "OPERATIONS", yearly: true },
+      });
+
+      expect(screen.getByRole("checkbox", { name: /Run stock and staff/ })).toBeChecked();
+      expect(screen.getByTestId("goals-next-step")).toHaveTextContent(
+        "After publishing, you'll go to checkout for the Operations plan."
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
+
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      expect(bodyOf("POST", "/api/onboarding/complete")).toEqual({ goals: ["operations"] });
+      expect(bodyOf("POST", "/api/subscriptions/checkout")).toEqual(
+        expect.objectContaining({ plan: "OPERATIONS", yearly: true })
+      );
+    });
+
+    it("drops the plan from the address bar once published", async () => {
+      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: ["counter"] });
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      window.location.href = "http://localhost/onboarding?plan=POS&billing=monthly&ref=ad";
+      const replaceState = vi.spyOn(window.history, "replaceState");
+      renderWizard(savedStore({ step: 3 }), "en", { planIntent: { plan: "POS", yearly: false } });
+      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
+      await waitFor(() => expect(assign).toHaveBeenCalled());
+      expect(replaceState.mock.calls.at(-1)?.slice(1)).toEqual(["", "/onboarding?ref=ad"]);
+    });
+
+    it("unticking the pre-picked plan publishes on Free, with no Checkout", async () => {
+      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: [] });
+      renderWizard(savedStore({ step: 3 }), "en", { planIntent: { plan: "POS", yearly: false } });
+      const counter = screen.getByRole("checkbox", { name: /Take orders at the counter/ });
+      expect(counter).toBeChecked();
+      fireEvent.click(counter);
+      expect(screen.queryByTestId("goals-next-step")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
+      await screen.findByRole("heading", { name: "Your store is live" });
+      expect(bodyOf("POST", "/api/onboarding/complete")).toEqual({ goals: [] });
+      expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(0);
+      expect(assign).not.toHaveBeenCalled();
+    });
+
+    it("when Checkout doesn't open, says so and keeps a button to try again", async () => {
+      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: ["counter"] });
+      routes["POST /api/subscriptions/checkout"] = () => ({
+        status: 500,
+        body: { success: false, error: { code: "INTERNAL", message: "boom" } },
+      });
+      renderWizard(savedStore({ step: 3 }));
+      fireEvent.click(screen.getByRole("checkbox", { name: /Take orders at the counter/ }));
+      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
+
+      await waitFor(() =>
+        expect(toasts.error).toHaveBeenCalledWith(
+          "Checkout didn't open. Try again, or later from Billing."
+        )
+      );
+      expect(assign).not.toHaveBeenCalled();
+      const retry = within(screen.getByTestId("launch-plan")).getByRole("button", {
+        name: "Start my free trial",
+      });
+      expect(retry).toBeEnabled();
+
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      fireEvent.click(retry);
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(2);
+    });
+
+    it("an account that already had its trial is told it goes to checkout, not a free trial", async () => {
+      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: ["counter"] });
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      renderWizard(savedStore({ step: 3 }), "en", {
+        billing: { canCheckout: true, posTrialEligible: false },
+      });
+      expect(screen.queryByText("14-day free trial on the POS plan")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("checkbox", { name: /Take orders at the counter/ }));
+      expect(screen.getByTestId("goals-next-step")).toHaveTextContent(
+        "After publishing, you'll go to checkout for the POS plan."
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      expect(
+        within(screen.getByTestId("launch-plan")).getByText("Get the POS plan")
+      ).toBeInTheDocument();
+    });
+
+    it("an owner already paying for a plan is never sent to Checkout from setup", async () => {
+      routes["POST /api/onboarding/complete"] = () =>
+        ok({ ...completeResult, goals: ["operations"] });
+      renderWizard(savedStore({ step: 3 }), "en", {
+        billing: { canCheckout: false, posTrialEligible: false },
+        planIntent: { plan: "OPERATIONS", yearly: false },
+      });
+      expect(screen.queryByTestId("goals-next-step")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
+      await screen.findByRole("heading", { name: "Your store is live" });
+      expect(screen.queryByTestId("launch-plan")).not.toBeInTheDocument();
+      expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(0);
     });
   });
 

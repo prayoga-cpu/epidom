@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +24,10 @@ import { ClockInOutDialog } from "@/features/dashboard/shared/clock-in-out-dialo
 import type { StaffScheduleEntry } from "./staff-schedule-cell-dialog";
 import type { ScheduleImageRow } from "./schedule-image-panel";
 import { ScheduleImageCards } from "./schedule-image-cards";
+import {
+  SelfiePreviewDialog,
+  type SelfiePreviewItem,
+} from "@/features/dashboard/shared/selfie-preview-dialog";
 
 interface MySchedule extends StaffScheduleEntry {
   scheduleShift: { name: string; startTime: string; endTime: string; color: string | null } | null;
@@ -131,6 +135,7 @@ export function MyScheduleList({
   const historyRecords = historySort === "asc"
     ? [...(historyData?.records ?? [])].reverse()
     : (historyData?.records ?? []);
+  const [selfieIndex, setSelfieIndex] = useState<number | null>(null);
 
   const typeLabel = (type: UnifiedLogRow["type"]) => {
     switch (type) {
@@ -146,6 +151,24 @@ export function MyScheduleList({
         return t("clockInOut.typeCashOut");
     }
   };
+
+  // This person's own selfies, in the list's order — the preview's Previous / Next.
+  const selfies = useMemo<SelfiePreviewItem[]>(
+    () =>
+      historyRecords
+        .filter((r): r is UnifiedLogRow & { selfieUrl: string } => !!r.selfieUrl)
+        .map((r) => ({
+          id: r.id,
+          selfieUrl: r.selfieUrl,
+          staffName: "",
+          typeLabel: typeLabel(r.type),
+          timestamp: r.timestamp,
+          locationLabel: r.locationLabel,
+        })),
+    // typeLabel only reads `t`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [historyRecords, t]
+  );
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -275,12 +298,20 @@ export function MyScheduleList({
                 className="border-border/60 flex items-center gap-3 rounded-lg border p-2.5"
               >
                 {record.selfieUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={record.selfieUrl}
-                    alt=""
-                    className="h-10 w-10 shrink-0 rounded-full object-cover"
-                  />
+                  <button
+                    type="button"
+                    className="focus-visible:ring-ring h-11 w-11 shrink-0 overflow-hidden rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                    aria-label={typeLabel(record.type)}
+                    onClick={() => setSelfieIndex(selfies.findIndex((s) => s.id === record.id))}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={record.selfieUrl}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
                 ) : (
                   <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                     <ImageOff className="text-muted-foreground/40 h-4 w-4" />
@@ -315,6 +346,8 @@ export function MyScheduleList({
           </div>
         )}
       </div>
+
+      <SelfiePreviewDialog items={selfies} index={selfieIndex} onIndexChange={setSelfieIndex} />
 
       {!onClockInOut && (
         <ClockInOutDialog

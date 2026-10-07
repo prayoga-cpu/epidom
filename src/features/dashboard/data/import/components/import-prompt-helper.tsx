@@ -73,7 +73,7 @@ export function ImportPromptHelper({
         {onEntityTypeChange && (
           <Select value={entityType} onValueChange={(v) => onEntityTypeChange(v as EntityType)}>
             <SelectTrigger
-              className="h-11 w-44 max-w-full"
+              className="w-44 max-w-full data-[size=default]:h-11"
               aria-label={t("import.quickStart.typeLabel")}
             >
               <SelectValue />

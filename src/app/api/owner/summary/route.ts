@@ -117,6 +117,7 @@ export const GET = withApiHandler(
           revenue: round2(summary.revenue),
           orderCount: summary.orderCount,
           pendingOrders,
+          netSales: summary.netSales,
           cogs: summary.cogs,
           grossProfit: summary.grossProfit,
           grossMarginPct: summary.grossMarginPct,
@@ -137,6 +138,7 @@ export const GET = withApiHandler(
       round2(stores.reduce((total, s) => total + pick(s), 0));
 
     const totalRevenue = sum((s) => s.revenue);
+    const totalNetSales = sum((s) => s.netSales);
     const totalGrossProfit = sum((s) => s.grossProfit);
 
     return NextResponse.json(
@@ -155,10 +157,13 @@ export const GET = withApiHandler(
           ? null
           : {
               revenue: totalRevenue,
+              netSales: totalNetSales,
               cogs: sum((s) => s.cogs),
               grossProfit: totalGrossProfit,
+              // Same base as each outlet's own margin: net sales, not revenue
+              // (which still holds tax and refunded sales).
               grossMarginPct:
-                totalRevenue > 0 ? round2((totalGrossProfit / totalRevenue) * 100) : 0,
+                totalNetSales > 0 ? round2((totalGrossProfit / totalNetSales) * 100) : 0,
               wasteLoss: sum((s) => s.wasteLoss),
               netProfit: sum((s) => s.netProfit),
             },

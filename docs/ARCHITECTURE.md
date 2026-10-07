@@ -372,6 +372,16 @@ Key principles:
 - The UI never blocks on network
 - Conflict resolution is last-write-wins for most fields, with manual review for cash reconciliation discrepancies
 
+**As built (3.3.6):** the diagram above was the Phase 3 plan. What shipped is a
+service worker for the screens, an IndexedDB mirror of the TanStack Query cache
+for reads, and three IndexedDB write queues (sales, table status, production
+logs) replayed through one loop with server-side idempotency keys. A sale keeps
+its own time and shift on replay, and nothing in a queue is ever deleted without
+a person choosing to. The same web app ships as a desktop installer (`desktop/`),
+an Android Trusted Web Activity (`android/`) and an iOS home-screen PWA. Details,
+guarantees, limits and the roadmap (offline shifts, a local-first sync engine, an
+in-store hub) are in [`OFFLINE_POS.md`](./OFFLINE_POS.md).
+
 ---
 
 ## 12. Cross-cutting concerns
@@ -408,4 +418,4 @@ Decisions yet to be made. Tracked here so we don't relitigate them in PRs:
 1. **POS hardware**: do we sell or recommend specific Android tablets? (Lean: recommend, never sell.)
 2. **Aggregator API access**: pursue partner programs vs continue email parsing? (Phase 5 decision.)
 3. **White-label**: should we support kopi-chain franchises rebranding the storefront? (Phase 5+.)
-4. **Mobile app**: do we ever ship a native app, or stay PWA-only? (Current bet: stay PWA. Owner.com regrets shipping native too early.)
+4. **Mobile app**: do we ever ship a native app, or stay PWA-only? (Current bet: stay PWA. Owner.com regrets shipping native too early.) As of 3.3.6 the PWA is also packaged as installable apps without a second codebase: an Electron desktop shell and an Android Trusted Web Activity — see `OFFLINE_POS.md`.

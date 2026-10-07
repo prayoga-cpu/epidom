@@ -16,6 +16,7 @@ import { withApiHandler } from "@/lib/api-handler";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import { shiftFilter, channelFilter, paymentMethodFilter } from "@/lib/finance/report-filters";
 import { computeStoreFinanceSummary } from "@/lib/finance/store-summary";
+import { bucketOrdersByDay } from "@/lib/finance/report-aggregation";
 import { requireFinanceReportAccessApi } from "@/lib/auth/require-finance-access";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,9 @@ export const GET = withApiHandler(
     const orderFilters = { ...shiftWhere, ...channelWhere, ...paymentWhere };
     const summary = await computeStoreFinanceSummary(storeId!, { from, to }, orderFilters);
 
-    // Daily breakdown for chart using memory grouping to avoid Prisma groupBy timezone/timestamp issues
+    // Daily breakdown — grouped in memory to avoid Prisma groupBy
+    // timezone/timestamp issues. Each day carries the P&L lines the KPI cards
+    // show, so the Daily tab's column totals equal the cards.
     const rawOrders = await prisma.order.findMany({
       where: {
         storeId,
@@ -57,21 +60,11 @@ export const GET = withApiHandler(
         ...channelWhere,
         ...paymentWhere,
       },
-      select: { orderDate: true, total: true },
+      select: { orderDate: true, total: true, discountAmount: true, tax: true, refundAmount: true },
       orderBy: { orderDate: "asc" },
     });
 
-    const bucketMap = new Map<string, number>();
-    for (const d of rawOrders) {
-      const dateKey = d.orderDate.toISOString().split("T")[0];
-      const current = bucketMap.get(dateKey) ?? 0;
-      bucketMap.set(dateKey, current + Number(d.total ?? 0));
-    }
-
-    const buckets = Array.from(bucketMap.entries()).map(([date, revenue]) => ({
-      date,
-      revenue,
-    }));
+    const buckets = bucketOrdersByDay(rawOrders);
 
     return NextResponse.json(
       createSuccessResponse({

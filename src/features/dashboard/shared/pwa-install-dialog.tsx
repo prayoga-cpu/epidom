@@ -18,6 +18,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { usePwaInstaller } from "@/components/pwa/pwa-install";
 import { useOfflineSyncContext } from "./offline-sync-provider";
 import { OfflineReadiness } from "./offline-readiness";
+import { OfflineQueueReview } from "@/features/pos/components/offline-queue-review";
 
 type PwaTriggerVariant = "icon" | "full";
 
@@ -93,6 +94,9 @@ export function OfflineSyncTrigger({ variant }: { variant: PwaTriggerVariant }) 
     lastSyncedAt,
     isSyncing,
     pendingCount,
+    attentionCount,
+    queuedSales,
+    queuedProductionLogs,
     isOnline,
     syncNow,
     offlineModeEnabled,
@@ -149,7 +153,25 @@ export function OfflineSyncTrigger({ variant }: { variant: PwaTriggerVariant }) 
                 {t("common.pwa.pendingOrders").replace("{count}", String(pendingCount))}
               </Badge>
             )}
+            {attentionCount > 0 && (
+              <Badge variant="destructive">
+                {t("pos.offline.needsAttentionShort").replace("{count}", String(attentionCount))}
+              </Badge>
+            )}
           </div>
+
+          {/* What this device is still holding for the server. Shown whether or
+              not Offline Mode's mirror is on: the write queue works either way,
+              and a parked sale must always be reachable. */}
+          {queuedSales.length + queuedProductionLogs.length > 0 && (
+            <div className="space-y-2 border-t pt-3">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">{t("pos.offline.reviewTitle")}</p>
+                <p className="text-muted-foreground text-xs">{t("pos.offline.reviewIntro")}</p>
+              </div>
+              <OfflineQueueReview />
+            </div>
+          )}
 
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-0.5">

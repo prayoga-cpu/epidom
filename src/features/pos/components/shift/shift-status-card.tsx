@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, ReceiptText, UserRound } from "lucide-react";
+import { Banknote, Lock, ReceiptText, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -8,6 +8,8 @@ import type { TillShift } from "../../hooks/use-active-shift";
 
 interface ShiftStatusCardProps {
   shift: TillShift;
+  /** False for anyone but the person who opened it — they see who can instead. */
+  canFinish: boolean;
   onFinish: () => void;
   onCashMovement: () => void;
   onViewReport: () => void;
@@ -29,6 +31,7 @@ function InfoTile({ label, value }: { label: string; value: string }) {
  */
 export function ShiftStatusCard({
   shift,
+  canFinish,
   onFinish,
   onCashMovement,
   onViewReport,
@@ -65,9 +68,22 @@ export function ShiftStatusCard({
         value={formatPriceRaw(Number(shift.openingCash), currency)}
       />
 
-      <Button variant="destructive" className="h-12 w-full text-base" onClick={onFinish}>
+      <Button
+        variant="destructive"
+        className="h-12 w-full text-base"
+        onClick={onFinish}
+        disabled={!canFinish}
+      >
+        {!canFinish && <Lock className="mr-2 size-4" aria-hidden />}
         {t("pos.shift.finish")}
       </Button>
+      {!canFinish && (
+        <p className="text-muted-foreground -mt-2 text-center text-xs break-words">
+          {shift.staffMember?.name
+            ? t("pos.shift.onlyOpenerCanEnd").replace("{name}", shift.staffMember.name)
+            : t("pos.shift.onlyOpenerCanEndUnknown")}
+        </p>
+      )}
 
       {/* Two buttons in one row: flex-1 each, never w-full (AGENTS.md — width:100%
           ignores the sibling and overflows the row by exactly its width). */}

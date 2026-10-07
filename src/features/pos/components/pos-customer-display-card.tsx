@@ -117,9 +117,12 @@ export function PosCustomerDisplayCard({ storeId, hasCustomer }: PosCustomerDisp
           {status}
         </p>
       )}
-      {!enabled && (
-        <p className="text-muted-foreground text-xs">{t("pos.customerDisplay.disabledHint")}</p>
-      )}
+      {/* When on: the screen talks to this till through the browser itself
+          (no server), so a tablet or second laptop facing the customer can
+          never mirror it — the one setup mistake worth saying up front. */}
+      <p className="text-muted-foreground text-xs">
+        {t(enabled ? "pos.customerDisplay.sameDeviceHint" : "pos.customerDisplay.disabledHint")}
+      </p>
     </div>
   );
 }

@@ -62,6 +62,7 @@ The wedge. Forever free. Replaces Linktree + Google Drive menu + WhatsApp orderi
 - GoPay, OVO, DANA, ShopeePay
 - Bank transfer
 - Cash (mark as paid manually)
+- **Storefront online payment is switched off for now (3.8.0).** Every storefront order is "pay at the cashier": placed unpaid, the till is alerted (POS bell + device push), and the cashier settles it with Mark as Paid. The gateways above stay wired behind `STOREFRONT_ONLINE_PAYMENTS_ENABLED` (`src/config/storefront-ordering.config.ts`)
 
 ### Notifications _(Phase 2)_
 
@@ -112,6 +113,7 @@ For merchants who run service in-person. Everything in FREE, plus:
 - PDF receipt fallback
 - Email receipt to customer
 - WhatsApp receipt to customer
+- Guest WiFi name and password on the customer receipt (per store, optional; never on kitchen tickets or the pre-payment bill)
 
 ### Order queue _(Phase 3)_
 
@@ -139,6 +141,9 @@ For merchants who run service in-person. Everything in FREE, plus:
 - POS continues working without internet
 - Orders queue locally and sync on reconnect
 - Conflict resolution on sync
+- A sale made offline keeps its own time and shift when it syncs, and is never deleted from the device without a person choosing to (review list: try again, download a copy, discard)
+- Installable as a desktop app (Windows, macOS, Linux), an Android app (Play Store or APK) or an iPad/iPhone home-screen app, with the same offline behavior everywhere
+- Details and limits: `docs/OFFLINE_POS.md`
 
 ### Custom Development requests
 
@@ -166,12 +171,14 @@ For merchants with staff, ingredient cost concerns, or a second or third outlet.
 
 - Clock-in / clock-out with PIN
 - Opening and closing cash counts
+- Only the person who opened a shift can close it on the POS; the owner can close any open shift from Back Office Shifts (recorded as closed by the owner)
 - Cash drawer reconciliation
 - **Cash on hand** — the expected balance in the register, broken down by category (opening float, cash sales, refunds paid out, tips, cash in, paid-outs, safe drops, tips reversed). Computed live rather than only at close, so a mid-shift report shows the current position (labelled provisional) instead of just the opening float. A date-ranged report gives the store-wide figure across every till, including counter cash tied to none of them
 - **Cash In / Out at the till** — record a tip, float top-up, supplier paid in cash, or safe drop; outbound movements require a reason, and every one lands on the staff log and in the drawer maths immediately
 - Discrepancy alerts
 - Shift handover notes
 - Staff roster/scheduling, selfie + geolocation attendance, and till cash reconciliation are unified on one page (`/schedule`, merged 2026-08-07 — `/shifts` and `/attendance` now redirect here): managers get roster setup/publish plus a filterable Log & History (clock events and cash in/out on one timeline); staff get their own upcoming shifts with Clock In/Out and (Cashier/Owner/Manager) Cash In/Out actions, and their own history. Automatic overtime calculation — see `docs/roadmap.md`
+- **Hours against the roster and salary from attendance** _(3.7.0)_ — the Log & History Hours tab compares each day's worked time with what was expected (the published roster block, else the store's standard day) and shows the difference ("+1h 2m" / "−2h 30m"), plus rostered no-shows, reported absences and days missing a clock-out. The owner-only Salary tab prices a period per staff member from their Contract card: hourly / monthly (pro-rated) / commission base pay, named allowances (per day worked or per month) and an optional overtime rate; printable. Staff see their own pay on POS Operational → My Pay. Clock-in/out selfies open full size from the log.
 
 ### Staff and roles _(Phase 4)_
 

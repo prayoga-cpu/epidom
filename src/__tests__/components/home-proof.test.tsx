@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within, fireEvent } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { StaticImageData } from "next/image";
 import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
@@ -53,20 +53,13 @@ vi.mock("@/components/lang/i18n-provider", async () => {
   };
 });
 
-vi.mock("@/features/marketing/shared/components/pos-dashboard", () => ({
-  PosDashboard: () => <div data-testid="pos-dashboard" />,
-}));
 vi.mock("@/features/marketing/shared/components/phone-menu", () => ({
   PhoneMenu: () => <div data-testid="phone-menu" />,
 }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
-import { HeroSection } from "@/features/marketing/home/components/hero-section";
 import { TrustBar } from "@/features/marketing/home/components/trust-bar";
 import { CaseStudiesSection } from "@/features/marketing/home/components/case-studies-section";
-import { UseCasesSection } from "@/features/marketing/home/components/use-cases-section";
-import { FeatureLadderSection } from "@/features/marketing/home/components/feature-ladder-section";
-import { WhatYouGetSection } from "@/features/marketing/home/components/what-you-get-section";
 import { PhoneKDS } from "@/features/marketing/shared/components/phone-kds";
 import { FeaturesShowcaseSection } from "@/features/marketing/services/components/features-showcase-section";
 import {
@@ -139,73 +132,6 @@ beforeEach(() => {
   );
 });
 
-// ── HeroSection ──────────────────────────────────────────────────────────────
-
-describe("HeroSection proof stats", () => {
-  it("renders the four product facts from their locale keys", () => {
-    render(<HeroSection />);
-    for (const [val, label] of [
-      ["Free", "Storefront, forever"],
-      ["14", "Days free POS trial"],
-      ["3", "Languages: FR · ID · EN"],
-      ["Cards", "+ QRIS, online checkout"],
-    ]) {
-      expect(screen.getByText(val)).toBeInTheDocument();
-      expect(screen.getByText(label)).toBeInTheDocument();
-    }
-  });
-
-  it("no longer shows customer counts, a rating or a country count", () => {
-    const { container } = render(<HeroSection />);
-    const text = container.textContent ?? "";
-    for (const removed of ["500+", "20+", "10k+", "4.9", "Active businesses", "Countries"]) {
-      expect(text).not.toContain(removed);
-    }
-  });
-
-  it.each(LOCALES)("%s: the four facts sit in one grid that never leaves one alone", (loc) => {
-    mockLocale.value = loc;
-    render(<HeroSection />);
-    const grid = screen.getByText(text(loc, "redesign.hero.fact1Val")).closest(".grid");
-    expect(grid).not.toBeNull();
-    expect(grid!.children).toHaveLength(4);
-    // 2x2 on a phone and in the narrow desktop column, one equal-width row of four elsewhere.
-    for (const cls of ["grid-cols-2", "sm:grid-cols-4", "lg:grid-cols-2", "xl:grid-cols-4"]) {
-      expect(grid!.className).toContain(cls);
-    }
-    expect(grid!.className).not.toContain("flex-wrap");
-    for (const n of [1, 2, 3, 4]) {
-      expect(
-        within(grid as HTMLElement).getByText(norm(text(loc, `redesign.hero.fact${n}Label`)))
-      ).toBeInTheDocument();
-    }
-  });
-
-  it.each([
-    ["fr", "/services"],
-    ["id", "/id/services"],
-    ["en", "/en/services"],
-  ] as const)("%s: 'see the product' goes to the visitor's own language (%s)", (loc, path) => {
-    mockLocale.value = loc;
-    render(<HeroSection />);
-    fireEvent.click(screen.getByRole("button", { name: text(loc, "redesign.hero.ctaSecondary") }));
-    expect(nav.push).toHaveBeenCalledWith(path);
-  });
-
-  it("still shows the live example storefront link when a slug is given", () => {
-    render(<HeroSection exampleStorefrontSlug="demo-shop" />);
-    expect(screen.getByRole("link", { name: /real storefront, live/i })).toHaveAttribute(
-      "href",
-      "/@demo-shop"
-    );
-  });
-
-  it("omits the live example link without a slug", () => {
-    render(<HeroSection />);
-    expect(screen.queryByRole("link", { name: /real storefront, live/i })).toBeNull();
-  });
-});
-
 // ── TrustBar ─────────────────────────────────────────────────────────────────
 
 describe("TrustBar", () => {
@@ -234,46 +160,18 @@ describe("TrustBar", () => {
     expect(source).toMatch(/ONLY after the brand confirms in writing/);
   });
 
-  it("shipped state: shows the integrations and markets, nothing customer-related", () => {
-    render(<TrustBar />);
-    for (const name of ["Stripe", "Xendit", "QRIS", "WhatsApp"]) {
-      expect(screen.getByText(name)).toBeInTheDocument();
-    }
-    for (const market of ["France", "Indonesia", "Worldwide"]) {
-      expect(screen.getByText(market)).toBeInTheDocument();
-    }
-    expect(screen.queryByTestId("trusted-brands")).toBeNull();
-    expect(screen.queryByRole("img")).toBeNull();
-    expect(screen.queryByText(/Shops running on Epidom/)).toBeNull();
+  it("shipped state: renders nothing at all, not a label over an empty row", () => {
+    const { container } = render(<TrustBar />);
+    expect(container).toBeEmptyDOMElement();
     for (const fictional of ["Warung Sari", "Café Bretonne", "Maison Lacroix", "Kopi Tujuh"]) {
       expect(screen.queryByText(fictional)).toBeNull();
     }
   });
 
-  it.each([
-    ["fr", ["France", "Indonésie", "Monde entier"], ["Indonesia", "Worldwide"]],
-    ["id", ["Prancis", "Indonesia", "Seluruh dunia"], ["France", "Worldwide"]],
-    ["en", ["France", "Indonesia", "Worldwide"], ["Indonésie", "Prancis"]],
-  ] as const)(
-    "%s: the market chips come from the locale, not from hardcoded English",
-    (loc, shown, hidden) => {
-      mockLocale.value = loc;
-      render(<TrustBar />);
-      for (const market of shown) expect(screen.getByText(market)).toBeInTheDocument();
-      for (const market of hidden) expect(screen.queryByText(market)).toBeNull();
-      expect(screen.getByText(text(loc, "redesign.trust.label"))).toBeInTheDocument();
-    }
-  );
-
-  it("id: the trust label addresses the visitor as Anda, like the rest of the marketing copy", () => {
-    expect(text("id", "redesign.trust.label")).toBe("Terhubung dengan alat yang sudah Anda pakai");
-    expect(text("id", "redesign.trust.label").toLowerCase()).not.toContain("kamu");
-  });
-
-  it("no longer claims to be trusted by customers", () => {
-    render(<TrustBar />);
-    expect(screen.getByText("Works with the tools you already use")).toBeInTheDocument();
-    expect(screen.queryByText(/Trusted by/i)).toBeNull();
+  it.each(LOCALES)("%s: the label comes from the locale", (loc) => {
+    mockLocale.value = loc;
+    render(<TrustBar brands={[brand({ slug: "yes", name: "Yes", consented: true })]} />);
+    expect(screen.getByText(text(loc, "redesign.landing.trust.label"))).toBeInTheDocument();
   });
 
   it("consented state: renders only the consented logos, with the brand name as alt text", () => {
@@ -284,7 +182,7 @@ describe("TrustBar", () => {
     ];
     render(<TrustBar brands={brands} />);
     const strip = screen.getByTestId("trusted-brands");
-    expect(within(strip).getByText("Shops running on Epidom")).toBeInTheDocument();
+    expect(within(strip).getByText("Already running on Epidom")).toBeInTheDocument();
     const images = within(strip).getAllByRole("img");
     expect(images.map((img) => img.getAttribute("alt"))).toEqual(["Yes One", "Yes Two"]);
     for (const img of images) {
@@ -296,8 +194,8 @@ describe("TrustBar", () => {
 
   it("treats a missing or non-true consent flag as not consented", () => {
     const sloppy = { slug: "x", name: "X", logo: logo("x") } as unknown as TrustedBrand;
-    render(<TrustBar brands={[sloppy]} />);
-    expect(screen.queryByTestId("trusted-brands")).toBeNull();
+    const { container } = render(<TrustBar brands={[sloppy]} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });
 
@@ -345,7 +243,17 @@ describe("CaseStudiesSection", () => {
     warn.mockRestore();
   });
 
-  it("rejects entries without exactly two metrics or without a quote", () => {
+  it("accepts a study with the shop and quote only, and shows no figures for it", () => {
+    const quoteOnly = study({ metrics: undefined });
+    expect(isPublishableCaseStudy(quoteOnly)).toBe(true);
+    render(<CaseStudiesSection studies={[quoteOnly]} />);
+    expect(screen.getByText(/Orders are easier to follow now\./)).toBeInTheDocument();
+    expect(screen.getByText(/Café Test · Lyon/)).toBeInTheDocument();
+    expect(screen.queryByText("-30%")).toBeNull();
+    expect(screen.queryByText(/Owner interview/)).toBeNull();
+  });
+
+  it("rejects entries with a number of metrics other than zero or two, or without a quote", () => {
     const oneMetric = study({
       metrics: [
         { value: "-30%", label: "Missed orders", source: "Interview" },
@@ -404,83 +312,6 @@ describe("CaseStudiesSection", () => {
   });
 });
 
-// ── UseCasesSection ──────────────────────────────────────────────────────────
-
-const VERTICALS = ["cafe", "restaurant", "cookie", "warung"] as const;
-
-describe("UseCasesSection", () => {
-  it.each(LOCALES)(
-    "%s: every vertical shows its headline and body, with no quote card and no outcome stats",
-    (loc) => {
-      mockLocale.value = loc;
-      const { container } = render(<UseCasesSection />);
-
-      for (const key of VERTICALS) {
-        fireEvent.click(
-          screen.getByRole("button", { name: text(loc, `redesign.useCases.${key}`) })
-        );
-
-        expect(
-          screen.getByRole("heading", {
-            level: 3,
-            name: text(loc, `redesign.useCases.${key}_headline`),
-          })
-        ).toBeInTheDocument();
-        expect(screen.getByText(text(loc, `redesign.useCases.${key}_body`))).toBeInTheDocument();
-
-        const shown = container.textContent ?? "";
-        // The old panel opened a quote with a big typographic mark and closed it with a byline.
-        expect(shown).not.toContain("“");
-        for (const invented of [
-          "Sari Dewi",
-          "Budi Santoso",
-          "Rina Kusuma",
-          "Léa",
-          "Bandung",
-          "Yogyakarta",
-          "Surabaya",
-          "Bordeaux",
-          "+34%",
-          "+27%",
-          "28%",
-          "38%",
-        ]) {
-          expect(shown, `${loc}/${key} still shows "${invented}"`).not.toContain(invented);
-        }
-      }
-    }
-  );
-
-  it("centres a single column now that the quote card and stats are gone", () => {
-    const { container } = render(<UseCasesSection />);
-    expect(container.querySelector(".lg\\:grid-cols-\\[1\\.3fr_1fr\\]")).toBeNull();
-    expect(container.querySelector("h3")!.parentElement!.className).toContain("text-center");
-  });
-});
-
-// ── Navigation to /services stays in the visitor's language ─────────────────
-
-describe("home buttons that open the services page", () => {
-  it.each([
-    ["fr", "/services"],
-    ["id", "/id/services"],
-    ["en", "/en/services"],
-  ] as const)("%s: 'full feature list' buttons go to %s", (loc, path) => {
-    mockLocale.value = loc;
-
-    const ladder = render(<FeatureLadderSection />);
-    fireEvent.click(
-      screen.getByRole("button", { name: text(loc, "redesign.coreProducts.fullFeatureList") })
-    );
-    ladder.unmount();
-
-    render(<WhatYouGetSection />);
-    fireEvent.click(screen.getByRole("button", { name: text(loc, "redesign.features.fullList") }));
-
-    expect(nav.push.mock.calls).toEqual([[path], [path]]);
-  });
-});
-
 // ── Mockups: no borrowed business names, and the KDS speaks the visitor's language ──
 
 describe("PhoneKDS", () => {
@@ -515,27 +346,6 @@ describe("PhoneKDS", () => {
       unmount();
     }
   });
-});
-
-describe("PosDashboard sample data", () => {
-  it.each([
-    ["fr", "Votre café", ["Café Bretonne"]],
-    ["id", "Kafe Anda", ["Warung Sari"]],
-    ["en", "Your café", ["The Grind House"]],
-  ] as const)(
-    "%s: shows the neutral placeholder %s, not a real-sounding business",
-    async (loc, shop, borrowed) => {
-      mockLocale.value = loc;
-      const { PosDashboard: RealPosDashboard } = await vi.importActual<
-        typeof import("@/features/marketing/shared/components/pos-dashboard")
-      >("@/features/marketing/shared/components/pos-dashboard");
-      const { container } = render(<RealPosDashboard />);
-      const shown = container.textContent ?? "";
-
-      expect(shown).toContain(shop);
-      for (const name of borrowed) expect(shown).not.toContain(name);
-    }
-  );
 });
 
 // ── Services page: the report mockup no longer invents an inbox ─────────────

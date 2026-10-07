@@ -1,4 +1,5 @@
 import type { Article } from "@/features/marketing/shared/content/article-types";
+import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 
 export const enGuides: Article[] = [
   {
@@ -95,7 +96,9 @@ export const enGuides: Article[] = [
       { type: "h2", text: "Payment" },
       {
         type: "p",
-        text: "Depending on your market, you can enable card payment or leave payment as cash on pickup. You configure accepted payment methods in your storefront settings.",
+        text: STOREFRONT_ONLINE_PAYMENTS_ENABLED
+          ? "Depending on your market, you can enable card payment or leave payment as cash on pickup. You configure accepted payment methods in your storefront settings."
+          : "Storefront orders are paid at the counter: each one reaches the till marked unpaid, and the cashier takes the payment and marks it paid.",
       },
     ],
   },

@@ -62,8 +62,13 @@ describe("departmentFilter", () => {
     expect(departmentFilter(null)).toEqual({});
   });
 
-  it("filters to a specific department via the menuItem relation", () => {
-    expect(departmentFilter("KITCHEN")).toEqual({ menuItem: { department: "KITCHEN" } });
+  it("filters to a specific department via the menuItem relation, leaving the custom line out", () => {
+    // The custom product line is its own bucket in the Department split, so
+    // its items (whose stored department is an inert default) stay out of
+    // Kitchen and Bar.
+    expect(departmentFilter("KITCHEN")).toEqual({
+      menuItem: { department: "KITCHEN", NOT: { product: { productLine: "CUSTOM" } } },
+    });
   });
 
   it("the unassigned sentinel matches items with no menuItem (department is a required field)", () => {

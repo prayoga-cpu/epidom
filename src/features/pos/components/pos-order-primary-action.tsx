@@ -36,7 +36,7 @@ export function PosOrderPrimaryAction({
   trailing,
 }: PosOrderPrimaryActionProps) {
   const { t } = useI18n();
-  const updateStatus = useUpdateOrderStatus(storeId);
+  const updateStatus = useUpdateOrderStatus(storeId, { atTill: true });
   const markReady = useMarkOrderReady(storeId);
   const [showMarkPaid, setShowMarkPaid] = useState(false);
 

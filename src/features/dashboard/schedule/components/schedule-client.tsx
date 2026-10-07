@@ -47,10 +47,18 @@ interface ScheduleClientProps {
   storeId: string;
   staff: StaffOption[];
   canManage: boolean;
+  /** The real owner, who alone gets the Log section's Salary tab. */
+  canSeePayroll?: boolean;
   viewerStaffMemberId: string | null;
 }
 
-export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId }: ScheduleClientProps) {
+export function ScheduleClient({
+  storeId,
+  staff,
+  canManage,
+  canSeePayroll = false,
+  viewerStaffMemberId,
+}: ScheduleClientProps) {
   const { t, intlLocale, dateLocale } = useI18n();
   const queryClient = useQueryClient();
   // Day keys are formatted as UTC midnight, so the weekday must be read in UTC
@@ -319,7 +327,7 @@ export function ScheduleClient({ storeId, staff, canManage, viewerStaffMemberId 
       )}
 
       <div className="border-t pt-4">
-        <ScheduleLog storeId={storeId} staff={staff} />
+        <ScheduleLog storeId={storeId} staff={staff} canSeePayroll={canSeePayroll} />
       </div>
 
       <ScheduleShiftBlocksDialog

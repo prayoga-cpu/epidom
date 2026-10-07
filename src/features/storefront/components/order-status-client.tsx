@@ -60,6 +60,8 @@ interface OrderStatusClientProps {
   order: {
     id: string;
     orderNumber: string;
+    /** The number called out at the counter (null for stores that don't allocate one). */
+    queueNumber?: number | null;
     status: OrderStatus;
     paymentStatus: PaymentStatus;
     paymentMethod: PaymentMethod;
@@ -81,6 +83,12 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
   const [currentPaymentStatus, setCurrentPaymentStatus] = useState(order.paymentStatus);
   const [isPolling, setIsPolling] = useState(true);
   const [lastPollAt, setLastPollAt] = useState<Date>(new Date());
+  // "Pay at the cashier": placed unpaid, settled at the counter. A cancelled
+  // order owes nothing, so it gets no payment card.
+  const payAtCashier =
+    order.paymentMethod === "CASH" &&
+    currentPaymentStatus === "PENDING" &&
+    currentStatus !== "CANCELLED";
 
   const themeStyle = {
     "--store-theme": storefront.themeColor,
@@ -96,10 +104,13 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
   // Poll for status updates every 10 seconds if order is in a non-terminal state
   useEffect(() => {
     const isTerminal =
-      currentStatus === "DELIVERED" ||
       currentStatus === "CANCELLED" ||
       currentPaymentStatus === "FAILED" ||
-      currentPaymentStatus === "EXPIRED";
+      currentPaymentStatus === "EXPIRED" ||
+      // Delivered is final once paid. A pay-at-the-cashier order can be handed
+      // over before it is paid (a store with the kitchen display off places it
+      // straight as DELIVERED) — keep watching until the cashier settles it.
+      (currentStatus === "DELIVERED" && currentPaymentStatus !== "PENDING");
 
     if (isTerminal) {
       setIsPolling(false);
@@ -166,9 +177,35 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
             className={`inline-block rounded-full border px-3 py-1 text-xs font-medium ${paymentInfo.color}`}
           >
             {t("publicOrder.orderStatus.paymentLabel")}:{" "}
-            {t(PAYMENT_STATUS_KEY[currentPaymentStatus])}
+            {payAtCashier
+              ? t("publicOrder.orderStatus.paymentAtCashier")
+              : t(PAYMENT_STATUS_KEY[currentPaymentStatus])}
           </span>
         </div>
+
+        {/* Pay at the cashier: the order is with the store, unpaid. The number is
+            what the customer shows (or says) at the counter. */}
+        {payAtCashier && (
+          <div className="bg-card space-y-3 rounded-2xl border p-6 text-center shadow-sm">
+            <div>
+              <h3 className="text-foreground text-lg font-bold">
+                {t("publicOrder.orderStatus.payAtCashierTitle")}
+              </h3>
+              <p className="text-muted-foreground mt-1 text-sm">
+                {t("publicOrder.orderStatus.payAtCashierDesc")}
+              </p>
+            </div>
+            <div className="bg-muted border-border space-y-1 rounded-xl border-2 p-4">
+              <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                {t("publicOrder.orderStatus.payAtCashierNumberLabel")}
+              </p>
+              <p className="text-foreground font-mono text-3xl font-bold tracking-widest break-all">
+                {order.queueNumber ? `#${order.queueNumber}` : order.orderNumber}
+              </p>
+              <p className="text-foreground text-sm font-semibold">{formatPrice(order.total)}</p>
+            </div>
+          </div>
+        )}
 
         {/* Polling indicator */}
         {isPolling && (

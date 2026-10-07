@@ -32,22 +32,22 @@ describe("resolveOperationalTabs", () => {
     [
       "a cashier (till + schedule)",
       { session: persona("CASHIER", ["/pos", "/pos/orders", "/tables", "/pos/schedule"]) },
-      ["shift", "schedule", "clock"],
+      ["shift", "schedule", "pay", "clock"],
     ],
     [
       "a manager",
       { session: persona("MANAGER", ["/pos", "/pos/schedule", "/dashboard"]) },
-      ["shift", "schedule", "clock"],
+      ["shift", "schedule", "pay", "clock"],
     ],
     [
       "kitchen (no till)",
       { session: persona("KITCHEN", ["/pos/kds", "/pos/schedule"]) },
-      ["schedule", "clock"],
+      ["schedule", "pay", "clock"],
     ],
     [
       "a cashier on the floor only (no /pos, so no till)",
       { session: persona("CASHIER", ["/tables", "/pos/schedule"]) },
-      ["schedule", "clock"],
+      ["schedule", "pay", "clock"],
     ],
     [
       "a cashier whose owner removed My Schedule",
@@ -67,7 +67,7 @@ describe("resolveOperationalTabs", () => {
     expect(tabsFor({ viewer: "staff", session: persona("KITCHEN", ["/pos/kds"]) })).toEqual([]);
     expect(
       tabsFor({ viewer: "staff", session: persona("KITCHEN", ["/pos/kds", "/pos/schedule"]) })
-    ).toEqual(["schedule", "clock"]);
+    ).toEqual(["schedule", "pay", "clock"]);
     expect(tabsFor({ viewer: "staff", session: persona("CASHIER", ["/pos"]) })).toEqual(["shift"]);
   });
 
@@ -82,13 +82,13 @@ describe("resolveOperationalTabs", () => {
         session: persona("KITCHEN", ["/pos/kds", "/pos/schedule"]),
         hasClockableStaff: false,
       })
-    ).toEqual(["schedule"]);
+    ).toEqual(["schedule", "pay"]);
   });
 });
 
 describe("isOperationalTab", () => {
-  it("accepts the three tabs and nothing else", () => {
-    expect(["shift", "schedule", "clock"].every(isOperationalTab)).toBe(true);
+  it("accepts the page's tabs and nothing else", () => {
+    expect(["shift", "schedule", "pay", "roster", "clock"].every(isOperationalTab)).toBe(true);
     expect(isOperationalTab("orders")).toBe(false);
     expect(isOperationalTab(null)).toBe(false);
     expect(isOperationalTab(undefined)).toBe(false);
@@ -99,7 +99,7 @@ describe("resolveOperationalTabs — Team Schedule (the roster published in Back
   it("a manager who has Back Office Schedule sees the team's roster here too", () => {
     expect(
       tabsFor({ session: persona("MANAGER", ["/pos", "/pos/schedule", "/schedule"]) })
-    ).toEqual(["shift", "schedule", "roster", "clock"]);
+    ).toEqual(["shift", "schedule", "pay", "roster", "clock"]);
   });
 
   it("a manager without Back Office Schedule (the finance template) doesn't", () => {
@@ -128,5 +128,23 @@ describe("resolveOperationalTabs — Team Schedule (the roster published in Back
 
   it("not on a plan without rosters (Back Office /schedule is locked there too)", () => {
     expect(tabsFor({ session: null, staffOperations: false })).toEqual(["shift", "clock"]);
+  });
+});
+
+describe("resolveOperationalTabs — My Pay (the persona's own earnings)", () => {
+  it("goes with My Schedule: whoever sees their own roster sees their own pay", () => {
+    expect(tabsFor({ session: persona("CASHIER", ["/pos", "/pos/schedule"]) })).toContain("pay");
+    expect(tabsFor({ session: persona("CASHIER", ["/pos"]) })).not.toContain("pay");
+  });
+
+  it("never the owner — no wage here, and everyone's is on Back Office's Salary tab", () => {
+    expect(tabsFor({ session: null })).not.toContain("pay");
+    expect(tabsFor({ session: persona("OWNER", []) })).not.toContain("pay");
+  });
+
+  it("not on a plan without staff operations, like the Salary tab", () => {
+    expect(
+      tabsFor({ session: persona("CASHIER", ["/pos", "/pos/schedule"]), staffOperations: false })
+    ).not.toContain("pay");
   });
 });

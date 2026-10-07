@@ -22,6 +22,7 @@ When you add a new env var to the codebase, update this doc and `.env.example` i
 | Upstash Redis | Rate limiting          | Phase 1     |
 | Feature flags | Hiding legacy surfaces | Phase 0     |
 | Web Push      | Order/low-stock push notifications | Maintenance |
+| Android app   | Play Store app opens full-screen | Maintenance |
 
 ---
 
@@ -246,6 +247,32 @@ Used for OS-level browser push (new storefront orders, low/critical material sto
 tab. Desktop Safari requires macOS 13+. A user who has already denied the browser
 permission prompt won't be re-prompted automatically — the UI must surface that as
 a distinct "blocked" state rather than retrying.
+
+---
+
+## Android app (Trusted Web Activity)
+
+```bash
+ANDROID_TWA_PACKAGE_NAME=fr.epidom.pos
+ANDROID_TWA_SHA256_FINGERPRINTS=AA:BB:…:FF,11:22:…:99
+```
+
+The Play Store build of Epidom is this website wrapped in a Trusted Web Activity
+(see `android/README.md` and `docs/OFFLINE_POS.md`). Android only shows it
+full-screen — no browser address bar — once `https://epidom.fr/.well-known/assetlinks.json`
+vouches for the app. That file is served by `src/app/.well-known/assetlinks.json/route.ts`
+from these two variables.
+
+- `ANDROID_TWA_PACKAGE_NAME` — the package id chosen when the app was generated.
+  Optional; defaults to `fr.epidom.pos`.
+- `ANDROID_TWA_SHA256_FINGERPRINTS` — comma-separated SHA-256 certificate
+  fingerprints. Add **both** the upload key's (`keytool -list -v -keystore android.keystore`)
+  and Play App Signing's (Play Console → Setup → App signing), since Play re-signs
+  the app with its own key. Malformed entries are dropped.
+
+Optional, and not secret (the file is public by design). Until a fingerprint is
+set the route answers `[]`, which associates nothing — the app still works, it just
+shows a slim browser bar at the top.
 
 ---
 

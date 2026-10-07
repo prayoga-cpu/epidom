@@ -60,7 +60,8 @@ describe.each(Object.entries(LOCALES))("removed copy (%s)", (_name, dict) => {
   });
 
   it("keeps what replaced them", () => {
-    expect(dig(dict, "redesign.hero.headlineAccent")).toEqual(expect.any(String));
+    // The old hero (and its headlineAccent) went with the 2026-09 homepage redesign.
+    expect(dig(dict, "redesign.landing.hero.title")).toEqual(expect.any(String));
     expect(dig(dict, "contact.page.title1")).toEqual(expect.any(String));
   });
 });

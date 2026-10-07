@@ -16,6 +16,14 @@ vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname }));
 // Has its own test (pos-mode-shift-chip.test.tsx); it needs a query client this
 // file's bar-layout assertions have no reason to set up.
 vi.mock("../pos-mode-shift-chip", () => ({ PosModeShiftChip: () => null }));
+// Same: the bell has its own test (notification-bell.test.tsx) and pulls in the
+// router and a query client. Stubbed with a marker so this file can still check
+// the bar mounts it, and in which variant.
+vi.mock("@/features/dashboard/shared/notification-bell", () => ({
+  NotificationBell: ({ variant }: { variant?: string }) => (
+    <button type="button" aria-label={`bell:${variant ?? "topbar"}`} />
+  ),
+}));
 
 import { PosModeStatusBar } from "../pos-mode-status-bar";
 import { PosModeShell } from "../pos-mode-shell";
@@ -123,6 +131,36 @@ describe("PosModeStatusBar — printers", () => {
     render(<PosModeStatusBar storeId="store-1" />);
     expect(screen.queryByRole("button", { name: "printer" })).toBeNull();
   });
+});
+
+describe("PosModeStatusBar — fullscreen", () => {
+  it("puts the fullscreen toggle just left of the bell, hidden on phones", () => {
+    Object.defineProperty(document.documentElement, "requestFullscreen", {
+      value: vi.fn(),
+      configurable: true,
+    });
+    try {
+      render(<PosModeStatusBar storeId="store-1" />);
+      const toggle = screen.getByRole("button", { name: "cashierCheckout.topBar.fullscreen" });
+      const bell = screen.getByRole("button", { name: "bell:pos" });
+      expect(toggle.parentElement!.nextElementSibling).toBe(bell.parentElement);
+      expect(toggle.parentElement!.className).toContain("hidden");
+      expect(toggle.parentElement!.className).toContain("sm:flex");
+    } finally {
+      delete (document.documentElement as unknown as Record<string, unknown>).requestFullscreen;
+    }
+  });
+});
+
+describe("PosModeStatusBar — notifications", () => {
+  it.each(["/pos", "/pos/orders", "/pos/kds", "/tables", "/pos/operational"])(
+    "shows the POS bell on every POS route (%s) — a new online order must be noticed anywhere",
+    (path) => {
+      nav.pathname = `/store/store-1${path}`;
+      render(<PosModeStatusBar storeId="store-1" />);
+      expect(screen.getByRole("button", { name: "bell:pos" })).toBeInTheDocument();
+    }
+  );
 });
 
 describe("PosModeStatusBar — More menu", () => {

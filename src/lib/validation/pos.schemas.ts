@@ -176,14 +176,30 @@ const posOrderObjectSchema = z.object({
   // while disconnected and POSTs them on reconnect; if the response is lost, or
   // a second tab flushes the same queue, the retry previously created a
   // DUPLICATE order with duplicate stock deduction behind it. The queue entry's
-  // own id is the key. Absent for ordinary online checkouts.
+  // own id is the key. Online checkouts send one too, so a request that timed
+  // out after reaching the server can fall back to the queue without doubling.
   clientRequestId: z.string().min(1).max(128).optional(),
+  /**
+   * When the till actually rang the sale up, for an order replayed from the
+   * offline queue. Without it the order was stamped with the moment the
+   * connection came back, so a sale made at 23:50 and synced next morning sat
+   * in the next day's revenue — and was linked to whatever shift was open then.
+   * Honored only inside a sane window; see resolveOfflineOccurredAt.
+   */
+  clientCreatedAt: z.string().datetime({ offset: true }).optional(),
+  /**
+   * Set ONLY on the live checkout's own POST (never in the payload the offline
+   * queue stores). A clientRequestId without it is an offline replay — which is
+   * also how a till still running the previous release sends its queued sales,
+   * so those keep the replay leniency they had (see isOfflineReplay).
+   */
+  liveCheckout: z.boolean().optional(),
 
   // ── Cashier revamp (2.88.0) — every field below is optional and additive ───
-  // The offline queue persists the raw request body UNVERSIONED and deletes an
-  // entry after 5 failed replays, so a schema that starts rejecting an old
-  // payload silently destroys an already-collected sale. Nothing here may ever
-  // become required.
+  // The offline queue persists the raw request body UNVERSIONED and parks an
+  // entry for a person to deal with after 5 refusals, so a schema that starts
+  // rejecting an old payload strands an already-collected sale on the device.
+  // Nothing here may ever become required.
 
   /**
    * Customer record attached to the sale (POS tier). Must belong to the store.
@@ -325,6 +341,10 @@ export const updateOrderStatusSchema = z
     // paymentStatus: "PAID", enforced by the refine below.
     paymentMethod: settlePaymentMethodEnum.optional(),
     paymentNote: z.string().max(300, "Note is too long").optional(),
+    // Sent by the POS (order queue / history): the money was taken at a till,
+    // so an order with no shift joins the open one. The Back Office's settle-up
+    // leaves it off — see settlePendingOrderInTx.
+    attachToOpenShift: z.boolean().optional(),
   })
   .refine((data) => data.status !== undefined || data.paymentStatus !== undefined, {
     message: "Either status or paymentStatus is required",

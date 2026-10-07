@@ -24,7 +24,7 @@ export function CaseStudiesSection({ studies = CASE_STUDIES }: { studies?: reado
     const rejected = studies.length - getPublishableCaseStudies(studies).length;
     if (rejected > 0) {
       console.warn(
-        `[case-studies] ${rejected} entr${rejected === 1 ? "y" : "ies"} not shown: each needs every field and exactly 2 metrics with a source (see data/case-studies.ts).`
+        `[case-studies] ${rejected} entr${rejected === 1 ? "y" : "ies"} not shown: each needs every field, and either no metrics or exactly 2 with a source (see data/case-studies.ts).`
       );
     }
   }, [studies]);
@@ -78,22 +78,24 @@ export function CaseStudiesSection({ studies = CASE_STUDIES }: { studies?: reado
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t border-[rgba(6,15,27,0.08)] pt-5">
-                  {study.metrics.map((metric) => (
-                    <div key={metric.label} className="min-w-0">
-                      <div className="epi-display text-3xl leading-none text-[var(--epi-navy-900)]">
-                        {metric.value}
+                {study.metrics ? (
+                  <div className="grid grid-cols-2 gap-4 border-t border-[rgba(6,15,27,0.08)] pt-5">
+                    {study.metrics.map((metric) => (
+                      <div key={metric.label} className="min-w-0">
+                        <div className="epi-display text-3xl leading-none text-[var(--epi-navy-900)]">
+                          {metric.value}
+                        </div>
+                        <div className="mt-1.5 text-sm text-[var(--epi-navy-900)]">
+                          {metric.label}
+                        </div>
+                        <div className="mt-1 text-[11px] leading-snug text-[var(--epi-navy-700)] opacity-70">
+                          {t("redesign.caseStudies.source")}
+                          {locale === "fr" ? " " : ""}: {metric.source}
+                        </div>
                       </div>
-                      <div className="mt-1.5 text-sm text-[var(--epi-navy-900)]">
-                        {metric.label}
-                      </div>
-                      <div className="mt-1 text-[11px] leading-snug text-[var(--epi-navy-700)] opacity-70">
-                        {t("redesign.caseStudies.source")}
-                        {locale === "fr" ? " " : ""}: {metric.source}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : null}
 
                 {href && (
                   <a

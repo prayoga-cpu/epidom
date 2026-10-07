@@ -476,8 +476,10 @@ export const config = {
      *   and robots.ts — crawlers don't carry a session cookie, so these
      *   must never hit the auth-redirect below)
      * - llms.txt (public/llms.txt, same crawler-facing reasoning)
+     * - .well-known (assetlinks.json for the Android app — Android's verifier
+     *   fetches it anonymously; a login redirect breaks the app association)
      * - public files (images, etc.)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|offline.html|manifest.webmanifest|sitemap.xml|robots.txt|llms.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|txt|xml)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|sw.js|offline.html|manifest.webmanifest|sitemap.xml|robots.txt|llms.txt|\\.well-known|.*\\.(?:svg|png|jpg|jpeg|gif|webp|txt|xml)$).*)",
   ],
 };

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Lock } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,7 @@ import { shiftReportPath } from "@/lib/finance/shift-report-path";
 import { PageIntro } from "@/features/guide/components/page-intro";
 import type { CashReconciliationRow } from "@/lib/finance/report-aggregation";
 import { DIFFERENCE_TONE_CLASSES, differenceTone } from "@/features/pos/lib/shift-summary";
+import { OwnerCloseShiftDialog } from "./owner-close-shift-dialog";
 
 interface StaffOption {
   id: string;
@@ -74,9 +75,19 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
  * Its own page, not a tab of Schedule: attendance answers "who was on the
  * clock", this answers "what was in the drawer", and they were being read off
  * one mixed timeline. Opening and finishing a shift stays on POS Mode's Shift
- * page — this only reads them back.
+ * page — this reads them back. The one write is the owner's override: on the
+ * POS only a shift's opener may finish it, so a till left open by someone who
+ * has gone home is closed from here (`canCloseShifts`, owner only).
  */
-export function ShiftsClient({ storeId, staff }: { storeId: string; staff: StaffOption[] }) {
+export function ShiftsClient({
+  storeId,
+  staff,
+  canCloseShifts = false,
+}: {
+  storeId: string;
+  staff: StaffOption[];
+  canCloseShifts?: boolean;
+}) {
   const { t, formatDateTime, formatTimeOnly } = useI18n();
   // Every amount here is Shift/CashMovement-derived and already literal in the
   // store's own currency — the bare one-arg formatPrice() would treat it as IDR
@@ -88,6 +99,7 @@ export function ShiftsClient({ storeId, staff }: { storeId: string; staff: Staff
   const [to, setTo] = useState(todayLocalISO());
   const [staffId, setStaffId] = useState("all");
   const [tab, setTab] = useState<"report" | "cash">("report");
+  const [closingRow, setClosingRow] = useState<CashReconciliationRow | null>(null);
 
   const range = {
     from: new Date(from).toISOString(),
@@ -266,6 +278,11 @@ export function ShiftsClient({ storeId, staff }: { storeId: string; staff: Staff
                                           {t("pages.financeShiftStatusOpen")}
                                         </Badge>
                                       )}
+                                      {row.closedFromBackOffice && (
+                                        <Badge variant="secondary">
+                                          {t("pages.shiftsClosedByOwner")}
+                                        </Badge>
+                                      )}
                                     </div>
                                     <p className="text-muted-foreground text-xs">{row.staffName}</p>
                                   </TableCell>
@@ -298,17 +315,30 @@ export function ShiftsClient({ storeId, staff }: { storeId: string; staff: Staff
                                     )}
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    <Button asChild variant="outline" size="sm" className="h-10">
-                                      <a
-                                        href={shiftReportPath(storeId, row.shiftId)}
-                                        aria-label={t("pos.shift.openReport")}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      >
-                                        <ExternalLink className="mr-1.5 size-3.5" aria-hidden />
-                                        {t("pages.shiftsColReport")}
-                                      </a>
-                                    </Button>
+                                    <div className="flex items-center justify-end gap-2">
+                                      {row.isOpen && canCloseShifts && (
+                                        <Button
+                                          variant="destructive"
+                                          size="sm"
+                                          className="h-10"
+                                          onClick={() => setClosingRow(row)}
+                                        >
+                                          <Lock className="mr-1.5 size-3.5" aria-hidden />
+                                          {t("pages.shiftsCloseAction")}
+                                        </Button>
+                                      )}
+                                      <Button asChild variant="outline" size="sm" className="h-10">
+                                        <a
+                                          href={shiftReportPath(storeId, row.shiftId)}
+                                          aria-label={t("pos.shift.openReport")}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        >
+                                          <ExternalLink className="mr-1.5 size-3.5" aria-hidden />
+                                          {t("pages.shiftsColReport")}
+                                        </a>
+                                      </Button>
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               );
@@ -380,6 +410,15 @@ export function ShiftsClient({ storeId, staff }: { storeId: string; staff: Staff
           </Card>
         </TabsContent>
       </Tabs>
+
+      {canCloseShifts && (
+        <OwnerCloseShiftDialog
+          storeId={storeId}
+          row={closingRow}
+          onOpenChange={(open) => !open && setClosingRow(null)}
+          money={money}
+        />
+      )}
     </div>
   );
 }

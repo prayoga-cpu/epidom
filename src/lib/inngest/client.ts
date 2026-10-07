@@ -18,7 +18,8 @@ export type OrderPlacedEventData = {
 export type OrderPaymentEventData = {
   orderId: string;
   storeId: string;
-  providerRef: string;
+  /** The gateway's reference — absent when the cashier settled it at the till. */
+  providerRef?: string;
 };
 
 export type FeedbackSubmittedEventData = {

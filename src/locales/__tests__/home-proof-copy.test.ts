@@ -52,18 +52,26 @@ const REMOVED_STRINGS = [
 
 // Only the subtrees this work owns; other pages have their own claims.
 const OWNED_SUBTREES = [
-  "redesign.hero",
-  "redesign.trust",
+  "redesign.landing",
   "redesign.caseStudies",
   "about",
-  "redesign.useCases",
-  "redesign.setup",
   "redesign.cta",
   "redesign.faq",
-  "redesign.oldVsNew",
-  "redesign.features",
   "redesign.servicesPage",
   "redesign.dashboard",
+];
+
+/** Home sections the 2026-09 homepage spec dropped: their copy went with them. */
+const DROPPED_SUBTREES = [
+  "redesign.hero",
+  "redesign.trust",
+  "redesign.useCases",
+  "redesign.setup",
+  "redesign.oldVsNew",
+  "redesign.features",
+  "redesign.oneLink",
+  "redesign.coreProducts",
+  "redesign.pricingTeaser",
 ];
 
 /**
@@ -101,8 +109,7 @@ const REMOVED_USE_CASE_PROOF = [
  * a nightly digest either. WhatsApp copy belongs to the customer's ordering link
  * (wa.me), never to something the merchant receives.
  *
- * Scanned over OWNED_SUBTREES (through FALSE_CLAIMS) and over the two home
- * sections in EXTRA_NOTIFICATION_SUBTREES, which the other patterns do not cover.
+ * Scanned over OWNED_SUBTREES, through FALSE_CLAIMS.
  */
 const NOTIFICATION_CLAIMS: [label: string, pattern: RegExp][] = [
   ["merchant WhatsApp ping", /WhatsApp ping|ping WhatsApp|WA ping|ping WA\b/i],
@@ -113,8 +120,6 @@ const NOTIFICATION_CLAIMS: [label: string, pattern: RegExp][] = [
   ["new-order chip 'via WA'", /(new order|nouvelle commande|pesanan baru) via WA\b/i],
   ["one email per night", /one email per night|un e-mail par nuit|satu email per malam/i],
 ];
-
-const EXTRA_NOTIFICATION_SUBTREES = ["redesign.oneLink", "redesign.coreProducts"];
 
 /**
  * Claims the product does not back up. Each pattern is a phrase that used to be
@@ -213,13 +218,6 @@ describe.each(Object.entries(LOCALES))("home + about copy (%s)", (_name, dict) =
     expect(dig(dict, "about.numbersLabel")).toBeUndefined();
   });
 
-  it("has four product-fact stats, each with a value and a label", () => {
-    for (const n of [1, 2, 3, 4]) {
-      expect(dig(dict, `redesign.hero.fact${n}Val`)).toEqual(expect.any(String));
-      expect(dig(dict, `redesign.hero.fact${n}Label`)).toEqual(expect.any(String));
-    }
-  });
-
   it("has the case-study section copy", () => {
     for (const key of ["eyebrow", "title1", "title2", "source", "readStory"]) {
       expect(dig(dict, `redesign.caseStudies.${key}`), key).toEqual(expect.any(String));
@@ -227,32 +225,10 @@ describe.each(Object.entries(LOCALES))("home + about copy (%s)", (_name, dict) =
   });
 
   it("no longer says the trust bar is 'trusted by' customers", () => {
-    const label = dig(dict, "redesign.trust.label") as string;
+    const label = dig(dict, "redesign.landing.trust.label") as string;
     expect(label).toEqual(expect.any(String));
     expect(label.toLowerCase()).not.toMatch(/trusted|adopté|dipercaya/);
   });
-  it("has dropped the four use-case testimonials and their outcome stats", () => {
-    for (const vertical of ["cafe", "restaurant", "cookie", "warung"]) {
-      for (const suffix of ["quote", "by", "stat1v", "stat1l", "stat2v", "stat2l"]) {
-        expect(
-          dig(dict, `redesign.useCases.${vertical}_${suffix}`),
-          `redesign.useCases.${vertical}_${suffix}`
-        ).toBeUndefined();
-      }
-      // The headline and body of each vertical stay.
-      expect(dig(dict, `redesign.useCases.${vertical}_headline`)).toEqual(expect.any(String));
-      expect(dig(dict, `redesign.useCases.${vertical}_body`)).toEqual(expect.any(String));
-    }
-  });
-
-  it("no longer names the removed use-case customers, places or figures", () => {
-    for (const [path, text] of leaves(dig(dict, "redesign.useCases"), "redesign.useCases")) {
-      for (const banned of REMOVED_USE_CASE_PROOF) {
-        expect(text, `${path} still contains "${banned}"`).not.toContain(banned);
-      }
-    }
-  });
-
   it("makes none of the false feature, delivery, hosting or timing claims", () => {
     for (const subtree of OWNED_SUBTREES) {
       for (const [path, text] of leaves(dig(dict, subtree), subtree)) {
@@ -260,46 +236,6 @@ describe.each(Object.entries(LOCALES))("home + about copy (%s)", (_name, dict) =
           expect(text, `${path} makes the "${label}" claim`).not.toMatch(pattern);
         }
       }
-    }
-  });
-
-  it("promises no WhatsApp message to the merchant in the how-it-works and feature-ladder sections", () => {
-    for (const subtree of EXTRA_NOTIFICATION_SUBTREES) {
-      for (const [path, text] of leaves(dig(dict, subtree), subtree)) {
-        for (const [label, pattern] of NOTIFICATION_CLAIMS) {
-          expect(text, `${path} makes the "${label}" claim`).not.toMatch(pattern);
-        }
-      }
-    }
-  });
-
-  it("tells the merchant they get a notification, and the hero chip does not name WhatsApp", () => {
-    expect(dig(dict, "redesign.hero.lede")).toMatch(/notification|notifikasi/i);
-    for (const key of ["redesign.hero.lede", "redesign.hero.waChip"]) {
-      expect(dig(dict, key), key).not.toMatch(/WhatsApp|\bWA\b/);
-    }
-  });
-
-  it("keeps the cookie-bar body to features that exist", () => {
-    const body = dig(dict, "redesign.useCases.cookie_body") as string;
-    for (const invented of [
-      /wholesale|grossiste|grosir/i,
-      /rush/i,
-      /bake board|planning de fournée|papan bake/i,
-    ]) {
-      expect(body).not.toMatch(invented);
-    }
-  });
-
-  it("says the data-security answer without a hosting-location claim", () => {
-    const answer = dig(dict, "redesign.faq.a6") as string;
-    expect(answer).toEqual(expect.any(String));
-    expect(answer).toMatch(/CSV/);
-  });
-
-  it("has the three localised market chips for the trust bar", () => {
-    for (const key of ["marketFr", "marketId", "marketWorld"]) {
-      expect(dig(dict, `redesign.trust.${key}`), key).toEqual(expect.any(String));
     }
   });
 
@@ -321,5 +257,62 @@ describe.each(Object.entries(LOCALES))("home + about copy (%s)", (_name, dict) =
     }
     // The one commitment that stays.
     expect(dig(dict, "contact.page.script")).toMatch(/24/);
+  });
+  it("has none of the home sections the 2026-09 homepage spec dropped", () => {
+    for (const subtree of DROPPED_SUBTREES) {
+      expect(dig(dict, subtree), subtree).toBeUndefined();
+    }
+  });
+
+  it("never says the Free plan takes online orders or payments (ordering is a POS feature)", () => {
+    // FEATURE_MIN_PLAN.onlineOrders is POS, enforced in POST /api/public/orders.
+    const onlineOrders =
+      /online orders?|orders? online|commandes? en ligne|paiements? (en ligne|carte)|pesanan online|pembayaran (online|QRIS)|card \/ bank/i;
+    const freeLines = [
+      "redesign.landing.pricing.freeDesc",
+      ...[1, 2, 3, 4, 5].map((n) => `redesign.pricingPage.t1f${n}`),
+    ];
+    for (const path of freeLines) {
+      const line = dig(dict, path);
+      expect(line, path).toEqual(expect.any(String));
+      expect(line as string, path).not.toMatch(onlineOrders);
+    }
+    // The Free FAQ answer may name ordering, but only as what POS adds.
+    expect(dig(dict, "redesign.faq.a1")).toMatch(/POS/);
+  });
+
+  it("makes no AI claim on the home page", () => {
+    for (const [path, text] of leaves(dig(dict, "redesign.landing"), "redesign.landing")) {
+      expect(text, path).not.toMatch(/\bAI\b|\bIA\b|intelligen|kecerdasan buatan/i);
+    }
+  });
+});
+
+describe("home page copy across languages", () => {
+  const landing = (dict: unknown) =>
+    Object.fromEntries(leaves(dig(dict, "redesign.landing"), "redesign.landing"));
+
+  it("has the same redesign.landing keys in fr, en and id", () => {
+    const keys = Object.keys(landing(en)).sort();
+    expect(keys.length).toBeGreaterThan(100);
+    expect(Object.keys(landing(fr)).sort()).toEqual(keys);
+    expect(Object.keys(landing(id)).sort()).toEqual(keys);
+  });
+
+  it("keeps every {placeholder} in every language", () => {
+    const en_ = landing(en);
+    for (const dict of [fr, id]) {
+      const other = landing(dict);
+      for (const [path, text] of Object.entries(en_)) {
+        const wanted = (text.match(/\{\w+\}/g) ?? []).sort();
+        expect((other[path].match(/\{\w+\}/g) ?? []).sort(), path).toEqual(wanted);
+      }
+    }
+  });
+
+  it("fr: never names Just Eat, which no longer operates in France", () => {
+    for (const [path, text] of Object.entries(landing(fr))) {
+      expect(text, path).not.toMatch(/just ?eat/i);
+    }
   });
 });

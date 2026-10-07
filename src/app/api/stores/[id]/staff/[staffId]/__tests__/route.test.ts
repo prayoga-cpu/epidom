@@ -9,22 +9,38 @@ vi.mock("@/lib/api-handler", () => ({
 vi.mock("@/lib/services/email.service", () => ({ sendStaffPinEmail: vi.fn() }));
 vi.mock("bcryptjs", () => ({ hash: vi.fn(async () => "hashed"), compare: vi.fn() }));
 
+const ownerGuard = vi.fn();
+vi.mock("@/lib/auth/require-owner-only", () => ({
+  requireOwnerWithoutStaffPersonaApi: (...a: unknown[]) => ownerGuard(...a),
+}));
+
 const staffFindUnique = vi.fn();
 const staffFindFirst = vi.fn();
 const staffUpdate = vi.fn();
 const storeFindUnique = vi.fn();
 const inviteDeleteMany = vi.fn();
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
-    staffMember: {
-      findUnique: (...a: unknown[]) => staffFindUnique(...a),
-      findFirst: (...a: unknown[]) => staffFindFirst(...a),
-      update: (...a: unknown[]) => staffUpdate(...a),
+const allowanceDeleteMany = vi.fn();
+const allowanceCreateMany = vi.fn();
+vi.mock("@/lib/prisma", () => {
+  const staffMember = {
+    findUnique: (...a: unknown[]) => staffFindUnique(...a),
+    findFirst: (...a: unknown[]) => staffFindFirst(...a),
+    update: (...a: unknown[]) => staffUpdate(...a),
+  };
+  const staffAllowance = {
+    deleteMany: (...a: unknown[]) => allowanceDeleteMany(...a),
+    createMany: (...a: unknown[]) => allowanceCreateMany(...a),
+  };
+  return {
+    prisma: {
+      staffMember,
+      staffAllowance,
+      store: { findUnique: (...a: unknown[]) => storeFindUnique(...a) },
+      staffInvite: { deleteMany: (...a: unknown[]) => inviteDeleteMany(...a) },
+      $transaction: (fn: (tx: unknown) => Promise<unknown>) => fn({ staffMember, staffAllowance }),
     },
-    store: { findUnique: (...a: unknown[]) => storeFindUnique(...a) },
-    staffInvite: { deleteMany: (...a: unknown[]) => inviteDeleteMany(...a) },
-  },
-}));
+  };
+});
 
 import { PATCH, DELETE } from "../route";
 
@@ -53,7 +69,8 @@ beforeEach(() => {
   staffFindUnique.mockResolvedValue(existing);
   staffFindFirst.mockResolvedValue(null);
   storeFindUnique.mockResolvedValue({ name: "Kopi Kita" });
-  staffUpdate.mockResolvedValue({ id: "s1" });
+  staffUpdate.mockResolvedValue({ id: "s1", payRate: null, overtimeRate: null, allowances: [] });
+  ownerGuard.mockResolvedValue(null);
   inviteDeleteMany.mockResolvedValue({ count: 1 });
 });
 
@@ -108,5 +125,62 @@ describe("DELETE staff (deactivate)", () => {
     expect(res.status).toBe(200);
     expect(staffUpdate).toHaveBeenCalledWith({ where: { id: "s1" }, data: { isActive: false } });
     expect(inviteDeleteMany).toHaveBeenCalledWith(pendingWhere);
+  });
+});
+
+describe("staff writes are the owner's alone", () => {
+  const refused = new Response(JSON.stringify({ success: false }), { status: 403 });
+
+  it("refuses an edit from anyone the owner guard turns away — a cashier can't raise their own pay", async () => {
+    ownerGuard.mockResolvedValue(refused);
+    const res = await patch({ payRate: 99999 });
+    expect(res.status).toBe(403);
+    expect(staffUpdate).not.toHaveBeenCalled();
+  });
+
+  it("refuses a deactivation the same way", async () => {
+    ownerGuard.mockResolvedValue(refused);
+    const res = await del();
+    expect(res.status).toBe(403);
+    expect(staffUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("PATCH staff — allowances and overtime rate", () => {
+  it("replaces the whole allowance list, scoped to this store and staff member", async () => {
+    await patch({
+      overtimeRate: 25000,
+      allowances: [
+        { name: "Meal", amount: 25000, basis: "PER_DAY" },
+        { name: "Position", amount: 500000, basis: "PER_MONTH" },
+      ],
+    });
+    expect(allowanceDeleteMany).toHaveBeenCalledWith({ where: { staffMemberId: "s1", storeId: STORE } });
+    expect(allowanceCreateMany).toHaveBeenCalledWith({
+      data: [
+        { storeId: STORE, staffMemberId: "s1", name: "Meal", amount: 25000, basis: "PER_DAY" },
+        { storeId: STORE, staffMemberId: "s1", name: "Position", amount: 500000, basis: "PER_MONTH" },
+      ],
+    });
+    expect(staffUpdate.mock.calls[0][0].data).toMatchObject({ overtimeRate: 25000 });
+  });
+
+  it("an empty list clears them; leaving the field out keeps them", async () => {
+    await patch({ allowances: [] });
+    expect(allowanceDeleteMany).toHaveBeenCalledTimes(1);
+    expect(allowanceCreateMany).not.toHaveBeenCalled();
+
+    vi.clearAllMocks();
+    staffFindUnique.mockResolvedValue(existing);
+    staffUpdate.mockResolvedValue({ id: "s1", payRate: null, overtimeRate: null, allowances: [] });
+    ownerGuard.mockResolvedValue(null);
+    await patch({ name: "Jane D." });
+    expect(allowanceDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects a nameless or negative allowance", async () => {
+    expect((await patch({ allowances: [{ name: " ", amount: 1, basis: "PER_DAY" }] })).status).toBe(400);
+    expect((await patch({ allowances: [{ name: "Meal", amount: -1, basis: "PER_DAY" }] })).status).toBe(400);
+    expect(allowanceDeleteMany).not.toHaveBeenCalled();
   });
 });

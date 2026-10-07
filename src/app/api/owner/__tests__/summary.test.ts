@@ -55,10 +55,12 @@ function outletSummary(
   currency: string,
   f: { revenue: number; cogs: number; wasteLoss: number; netProfit: number; orderCount: number }
 ) {
+  // No tax or refunds in these fixtures, so net sales is the revenue.
   const grossProfit = f.revenue - f.cogs;
   return {
     currency,
     revenue: f.revenue,
+    netSales: f.revenue,
     cogs: f.cogs,
     grossProfit,
     grossMarginPct: f.revenue > 0 ? Math.round((grossProfit / f.revenue) * 10000) / 100 : 0,
@@ -191,6 +193,7 @@ describe("GET /api/owner/summary — roll-up", () => {
     expect(body.currency).toBe("EUR");
     expect(body.totals).toEqual({
       revenue: 1200,
+      netSales: 1200,
       cogs: 450,
       grossProfit: 750,
       grossMarginPct: 62.5,

@@ -54,6 +54,7 @@ export default async function OrderStatusPage({ params }: PageProps) {
       order={{
         id: order.id,
         orderNumber: order.orderNumber,
+        queueNumber: order.queueNumber,
         status: order.status,
         paymentStatus: order.paymentStatus,
         paymentMethod: order.paymentMethod,

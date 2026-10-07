@@ -55,25 +55,31 @@ function makeWrapper(qc: QueryClient) {
 beforeEach(() => {
   vi.clearAllMocks();
   network.onRecovered = null;
-  mockUseOfflineQueue.mockReturnValue({
-    pendingCount: 0,
-    isSyncing: false,
-    syncQueue: vi.fn().mockResolvedValue(undefined),
-    refreshCount: vi.fn(),
-  });
+  mockUseOfflineQueue.mockReturnValue(writeQueue());
   mockUseOfflineTableQueue.mockReturnValue({
     pendingCount: 0,
     isSyncing: false,
     syncQueue: vi.fn().mockResolvedValue(undefined),
     refreshCount: vi.fn(),
   });
-  mockUseOfflineProductionQueue.mockReturnValue({
+  mockUseOfflineProductionQueue.mockReturnValue(writeQueue());
+});
+
+/** A sale / production queue hook's return value. */
+function writeQueue(overrides: Record<string, unknown> = {}) {
+  return {
+    entries: [],
     pendingCount: 0,
+    attentionCount: 0,
+    needsSignIn: false,
     isSyncing: false,
     syncQueue: vi.fn().mockResolvedValue(undefined),
     refreshCount: vi.fn(),
-  });
-});
+    retryParked: vi.fn().mockResolvedValue(undefined),
+    discardEntry: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
 
 describe("useOfflineSync", () => {
   it("loads the last-synced timestamp on mount", async () => {
@@ -182,5 +188,36 @@ describe("useOfflineSync", () => {
     expect(orderSync).toHaveBeenCalled();
     expect(tableSync).toHaveBeenCalled();
     expect(productionSync).toHaveBeenCalled();
+  });
+  it("adds up what needs attention and whether a sign-in is needed", () => {
+    mockUseOfflineQueue.mockReturnValue(writeQueue({ attentionCount: 2, needsSignIn: true }));
+    mockUseOfflineProductionQueue.mockReturnValue(writeQueue({ attentionCount: 1 }));
+    const qc = new QueryClient();
+
+    const { result } = renderHook(() => useOfflineSync("store-1"), { wrapper: makeWrapper(qc) });
+
+    expect(result.current.attentionCount).toBe(3);
+    expect(result.current.needsSignIn).toBe(true);
+  });
+
+  it("retry puts both queues' parked entries back; discard goes to the right queue", async () => {
+    const sales = writeQueue();
+    const production = writeQueue();
+    mockUseOfflineQueue.mockReturnValue(sales);
+    mockUseOfflineProductionQueue.mockReturnValue(production);
+    const qc = new QueryClient();
+
+    const { result } = renderHook(() => useOfflineSync("store-1"), { wrapper: makeWrapper(qc) });
+
+    await act(async () => {
+      await result.current.retryParked();
+      await result.current.discardQueued("sale", "s1");
+      await result.current.discardQueued("production", "p1");
+    });
+
+    expect(sales.retryParked).toHaveBeenCalledTimes(1);
+    expect(production.retryParked).toHaveBeenCalledTimes(1);
+    expect(sales.discardEntry).toHaveBeenCalledWith("s1");
+    expect(production.discardEntry).toHaveBeenCalledWith("p1");
   });
 });

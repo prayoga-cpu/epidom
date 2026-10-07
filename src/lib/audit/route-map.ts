@@ -255,6 +255,13 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
   // -------------------------------------------------------------- shifts
   "POST /api/stores/*/shifts": { code: "shift.open", severity: N, targetType: "Shift" },
   "PATCH /api/stores/*/shifts/*": { code: "shift.close", severity: C, targetType: "Shift", targetIdIndex: 1 },
+  // The owner ending someone else's till from the Back Office.
+  "POST /api/stores/*/shifts/*/close": {
+    code: "shift.close_from_back_office",
+    severity: C,
+    targetType: "Shift",
+    targetIdIndex: 1,
+  },
 
   // ------------------------------------------------------- cash movements
   // CRITICAL on both: these rows move physical money, and deleting a paid-out
@@ -268,6 +275,23 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
     code: "cash_movement.delete",
     severity: C,
     targetType: "CashMovement",
+    targetIdIndex: 1,
+  },
+
+  // ------------------------------------------------------------- expenses
+  // Editing or deleting a recorded cost changes the profit the business
+  // reports, so both are CRITICAL; recording one is routine bookkeeping.
+  "POST /api/stores/*/finance/expenses": { code: "expense.create", severity: N, targetType: "Expense" },
+  "PATCH /api/stores/*/finance/expenses/*": {
+    code: "expense.update",
+    severity: C,
+    targetType: "Expense",
+    targetIdIndex: 1,
+  },
+  "DELETE /api/stores/*/finance/expenses/*": {
+    code: "expense.delete",
+    severity: C,
+    targetType: "Expense",
     targetIdIndex: 1,
   },
 

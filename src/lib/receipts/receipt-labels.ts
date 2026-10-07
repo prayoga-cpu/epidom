@@ -38,6 +38,9 @@ interface ReceiptLabels {
   cash: string;
   change: string;
   notes: string;
+  /** Guest WiFi block — the network name, then its password. */
+  wifi: string;
+  wifiPassword: string;
   defaultFooter: string;
   poweredByTitle: string;
   /**
@@ -69,6 +72,8 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     cash: "TUNAI",
     change: "KEMBALI",
     notes: "Catatan",
+    wifi: "WiFi",
+    wifiPassword: "Password",
     defaultFooter: "Terima kasih!\nSilakan datang kembali",
     poweredByTitle: "Cafe & Restaurant System",
     billTitle: "NOTA SEMENTARA",
@@ -90,6 +95,8 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     cash: "CASH",
     change: "CHANGE",
     notes: "Notes",
+    wifi: "WiFi",
+    wifiPassword: "Password",
     defaultFooter: "Thank you!\nPlease come again",
     poweredByTitle: "Cafe & Restaurant System",
     billTitle: "BILL",
@@ -111,6 +118,8 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     cash: "ESPÈCES",
     change: "MONNAIE",
     notes: "Remarques",
+    wifi: "Wi-Fi",
+    wifiPassword: "Mot de passe",
     defaultFooter: "Merci !\nÀ bientôt",
     poweredByTitle: "Cafe & Restaurant System",
     billTitle: "ADDITION",

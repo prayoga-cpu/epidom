@@ -73,6 +73,25 @@ export function downloadCSV(csv: string, filename: string): void {
 }
 
 /**
+ * Download a value as a pretty-printed `.json` file.
+ */
+export function downloadJSON(data: unknown, filename: string): void {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute("href", url);
+  link.setAttribute("download", `${filename}.json`);
+  link.style.visibility = "hidden";
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Trigger a browser download for a data URL (e.g. a canvas `toDataURL()` PNG).
  */
 export function downloadDataUrl(dataUrl: string, filename: string): void {

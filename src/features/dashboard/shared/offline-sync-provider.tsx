@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, type ReactNode, useMemo } from "react";
 import { useCurrentStore } from "./hooks/use-current-store";
-import { useOfflineSync } from "@/features/pos/hooks/use-offline-sync";
+import { useOfflineSync, type QueuedEntryKind } from "@/features/pos/hooks/use-offline-sync";
+import type { OfflineOrder } from "@/lib/pwa/offline-queue";
+import type { OfflineProductionLog } from "@/lib/pwa/offline-production-queue";
 import { useOfflineMode } from "@/features/pos/hooks/use-offline-mode";
 
 interface OfflineSyncContextValue {
@@ -10,6 +12,14 @@ interface OfflineSyncContextValue {
   lastSyncedAt: Date | null;
   isSyncing: boolean;
   pendingCount: number;
+  /** Sales / production logs the server refused repeatedly — kept, waiting for a person. */
+  attentionCount: number;
+  /** Queued work is waiting because this device's sign-in expired while offline. */
+  needsSignIn: boolean;
+  queuedSales: OfflineOrder[];
+  queuedProductionLogs: OfflineProductionLog[];
+  retryParked: () => Promise<void>;
+  discardQueued: (kind: QueuedEntryKind, id: string) => Promise<void>;
   /**
    * Confirmed by a real round-trip to our own origin, not by
    * `navigator.onLine` — so it stays `false` behind a café captive portal and
@@ -63,6 +73,12 @@ export function OfflineSyncProvider({ children }: { children: ReactNode }) {
       lastSyncedAt: sync.lastSyncedAt,
       isSyncing: sync.isSyncing,
       pendingCount: sync.pendingCount,
+      attentionCount: sync.attentionCount,
+      needsSignIn: sync.needsSignIn,
+      queuedSales: sync.queuedSales,
+      queuedProductionLogs: sync.queuedProductionLogs,
+      retryParked: sync.retryParked,
+      discardQueued: sync.discardQueued,
       isOnline: sync.isOnline,
       syncNow,
       offlineModeEnabled: mode.enabled,
@@ -76,6 +92,12 @@ export function OfflineSyncProvider({ children }: { children: ReactNode }) {
       sync.lastSyncedAt,
       sync.isSyncing,
       sync.pendingCount,
+      sync.attentionCount,
+      sync.needsSignIn,
+      sync.queuedSales,
+      sync.queuedProductionLogs,
+      sync.retryParked,
+      sync.discardQueued,
       sync.isOnline,
       syncNow,
       mode.enabled,

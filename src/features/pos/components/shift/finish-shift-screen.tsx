@@ -150,10 +150,18 @@ export function FinishShiftScreen({ storeId, shift, onBack, onEnded }: FinishShi
     } catch (error) {
       // 409: another account or tablet already ended it. Retrying can't work, and the
       // page drops back to the open-shift form once it re-reads.
+      // 403: this persona didn't open the shift (the button is locked for them, so
+      // this is a persona switched mid-count) — say who can, not "try again".
+      const status = error instanceof ApiClientError ? error.status : null;
+      const openedBy = shift.staffMember?.name;
       toast.error(
-        error instanceof ApiClientError && error.status === 409
+        status === 409
           ? t("pos.shift.alreadyEnded")
-          : t("pos.shift.endFailed")
+          : status === 403
+            ? openedBy
+              ? t("pos.shift.onlyOpenerCanEnd").replace("{name}", openedBy)
+              : t("pos.shift.onlyOpenerCanEndUnknown")
+            : t("pos.shift.endFailed")
       );
       return;
     }

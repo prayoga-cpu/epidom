@@ -2,6 +2,7 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { CheckMark, PlanPill } from "./plan-pill";
+import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
 
 // Epidom 3's split: the storefront customers see, POS Mode for the counter and
 // the Back Office for owners and managers (CHANGELOG 3.0.0).
@@ -107,7 +108,11 @@ export function SpacesSection() {
                     }}
                   >
                     <CheckMark />
-                    {t(`redesign.servicesPage.${key}i${n}`)}
+                    {t(
+                      key === "s1" && n === 2
+                        ? onlinePaymentCopyKey("redesign.servicesPage.s1i2")
+                        : `redesign.servicesPage.${key}i${n}`
+                    )}
                   </div>
                 ))}
               </div>

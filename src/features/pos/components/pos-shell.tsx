@@ -57,9 +57,11 @@ function useMinWidth(minPx: number): boolean {
 
 interface PosShellProps {
   store: Pick<Store, "id" | "name">;
+  /** Where this viewer adds the menu, for the empty menu's button (see /pos). */
+  menuSetupHref?: string | null;
 }
 
-export function PosShell({ store }: PosShellProps) {
+export function PosShell({ store, menuSetupHref = null }: PosShellProps) {
   const { t } = useI18n();
   // Menu item/modifier prices are literal in the store's display currency,
   // never IDR — passing `currency` skips formatPrice's default base-currency
@@ -285,6 +287,7 @@ export function PosShell({ store }: PosShellProps) {
                 onItemClick={handleItemClick}
                 viewMode={viewMode}
                 toolbar={<PosViewToggle />}
+                menuSetupHref={menuSetupHref}
                 customDepartmentLabel={
                   menuData?.customProductsEnabled ? menuData.customProductsLabel : null
                 }

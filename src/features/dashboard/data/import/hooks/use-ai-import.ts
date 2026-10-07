@@ -215,6 +215,10 @@ export function useExecuteImport() {
         queryClient.refetchQueries({ queryKey: ["products", storeId] }),
         queryClient.refetchQueries({ queryKey: ["suppliers", storeId] }),
         queryClient.refetchQueries({ queryKey: ["recipes", storeId] }),
+        // Imported products are linked to the till's menu as they are saved
+        // (autoLinkProductToMenu): the POS and the Data page's "from the POS"
+        // notice read that menu.
+        queryClient.invalidateQueries({ queryKey: ["pos", "menu", storeId] }),
         // Invalidate sessions (these don't need immediate refetch)
         queryClient.invalidateQueries({ queryKey: aiImportKeys.sessions(storeId) }),
       ]);

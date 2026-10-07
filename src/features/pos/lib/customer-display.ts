@@ -17,6 +17,12 @@ import type { CartItem } from "../types/pos.types";
  * stale "paid" snapshot on its own if the cashier window went away. */
 export const CUSTOMER_DISPLAY_PAID_MS = 12_000;
 
+/** How often a display sitting on standby (`off` / `closed`) asks again for
+ * the till's state. A standby snapshot can be stale — left in the mirror by a
+ * till tab that closed while another one kept ringing up — and broadcasts are
+ * not replayed, so the display has to ask rather than wait to be told. */
+export const CUSTOMER_DISPLAY_RETRY_MS = 3_000;
+
 export function customerDisplayChannelName(storeId: string): string {
   return `epidom-customer-display:${storeId}`;
 }
@@ -56,8 +62,11 @@ export interface CustomerDisplaySnapshot {
   /** `idle` — nothing rung up yet; `building` — cashier is adding items;
    * `paid` — the order just settled, shown as a thank-you before idling;
    * `off` — the cashier turned the customer display off, so an already-open
-   * display window goes to standby instead of freezing on the last order. */
-  phase: "idle" | "building" | "paid" | "off";
+   * display window goes to standby instead of freezing on the last order;
+   * `closed` — the till window closed or reloaded with the display still ON.
+   * Kept apart from `off` so the screen never tells staff the setting is off
+   * when it isn't, and so the display keeps asking until a till answers. */
+  phase: "idle" | "building" | "paid" | "off" | "closed";
   lines: CustomerDisplayLine[];
   /** The line the hero card blows up — the one just added or increased.
    * Null when the cart is empty. */
@@ -300,6 +309,12 @@ export function resolveHighlight(
   // was switched on over a cart it never watched being built. Show the last
   // line, but never as "just added" — the customer didn't see it arrive.
   return { id: next[next.length - 1].id, isNew: false };
+}
+
+/** Nothing for the customer to see or touch: the display was switched off, or
+ * no till is driving it right now. */
+export function isCustomerDisplayStandby(phase: CustomerDisplaySnapshot["phase"]): boolean {
+  return phase === "off" || phase === "closed";
 }
 
 /** Parses a mirrored snapshot, tolerating anything that isn't one (a cleared

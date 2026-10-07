@@ -7,6 +7,7 @@ import { hash, compare } from "bcryptjs";
 import { sendStaffPinEmail } from "@/lib/services/email.service";
 import { ALL_STAFF_PAGES } from "@/config/staff-permissions.config";
 import { emailsMatch } from "@/lib/staff-invite";
+import { requireOwnerWithoutStaffPersonaApi } from "@/lib/auth/require-owner-only";
 
 const OWNER_ONLY_PAGES = new Set(["/profile", "/billing", "/staff"]);
 function sanitizeAllowedPages(pages: string[] | undefined): string[] | undefined {
@@ -16,8 +17,13 @@ function sanitizeAllowedPages(pages: string[] | undefined): string[] | undefined
 
 export const dynamic = "force-dynamic";
 
+// Owner only, like the Staff page that is the sole caller: this sets roles,
+// page access, PINs and pay. Before the guard, any PIN persona on the owner's
+// device could call it directly — a cashier could raise their own pay rate.
 export const PATCH = withApiHandler(
   async (request, { storeId, params }) => {
+    const guard = await requireOwnerWithoutStaffPersonaApi(storeId!);
+    if (guard) return guard;
     const { staffId } = params as { staffId: string };
 
     const existing = await prisma.staffMember.findUnique({ where: { id: staffId } });
@@ -49,6 +55,7 @@ export const PATCH = withApiHandler(
       customRoleLabel,
       allowedPages,
       sendPinEmail,
+      allowances,
       ...rest
     } = parsed.data;
     const updateData: Record<string, unknown> = { ...rest };
@@ -93,25 +100,48 @@ export const PATCH = withApiHandler(
       select: { name: true },
     });
 
-    const staff = await prisma.staffMember.update({
-      where: { id: staffId },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        email: true,
-        whatsapp: true,
-        role: true,
-        customRoleLabel: true,
-        allowedPages: true,
-        isActive: true,
-        inviteStatus: true,
-        payType: true,
-        payRate: true,
-        contractType: true,
-        updatedAt: true,
-      },
+    // Allowances are saved as a whole list (the Contract card edits them all at
+    // once), in the same transaction as the rest of the row.
+    const staff = await prisma.$transaction(async (tx) => {
+      if (allowances !== undefined) {
+        await tx.staffAllowance.deleteMany({ where: { staffMemberId: staffId, storeId: storeId! } });
+        if (allowances.length > 0) {
+          await tx.staffAllowance.createMany({
+            data: allowances.map((a) => ({
+              storeId: storeId!,
+              staffMemberId: staffId,
+              name: a.name,
+              amount: a.amount,
+              basis: a.basis,
+            })),
+          });
+        }
+      }
+      return tx.staffMember.update({
+        where: { id: staffId },
+        data: updateData,
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          whatsapp: true,
+          role: true,
+          customRoleLabel: true,
+          allowedPages: true,
+          isActive: true,
+          inviteStatus: true,
+          payType: true,
+          payRate: true,
+          overtimeRate: true,
+          contractType: true,
+          updatedAt: true,
+          allowances: {
+            select: { id: true, name: true, amount: true, basis: true },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      });
     });
 
     // An outstanding sign-in invite belongs to the address it was sent to. If
@@ -142,13 +172,24 @@ export const PATCH = withApiHandler(
       }
     }
 
-    return NextResponse.json(createSuccessResponse({ staff }));
+    return NextResponse.json(
+      createSuccessResponse({
+        staff: {
+          ...staff,
+          payRate: staff.payRate !== null ? Number(staff.payRate) : null,
+          overtimeRate: staff.overtimeRate !== null ? Number(staff.overtimeRate) : null,
+          allowances: staff.allowances.map((a) => ({ ...a, amount: Number(a.amount) })),
+        },
+      })
+    );
   },
   { rateLimitEndpoint: "/api/stores/[id]/staff/[staffId]", requireStoreAuth: true }
 );
 
 export const DELETE = withApiHandler(
   async (_req, { storeId, params }) => {
+    const guard = await requireOwnerWithoutStaffPersonaApi(storeId!);
+    if (guard) return guard;
     const { staffId } = params as { staffId: string };
 
     const existing = await prisma.staffMember.findUnique({ where: { id: staffId } });

@@ -9,6 +9,9 @@ import { cancelOrderInTx, settlePendingOrderInTx } from "@/lib/services/pos-orde
 import { serializePosOrder } from "@/lib/server/serialize";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
+import { inngest } from "@/lib/inngest/client";
+import { resolveFinanceSettingsForOrder } from "@/lib/services/finance-settings.service";
+import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import type { PaymentMethod } from "@prisma/client";
 
 /**
@@ -54,7 +57,14 @@ export async function PATCH(
       );
     }
 
-    const { status, paymentStatus, paymentMethod, paymentNote, foodWasNeverMade } = parsed.data;
+    const {
+      status,
+      paymentStatus,
+      paymentMethod,
+      paymentNote,
+      foodWasNeverMade,
+      attachToOpenShift,
+    } = parsed.data;
 
     // Verify order belongs to this store
     const existing = await prisma.order.findFirst({
@@ -71,6 +81,31 @@ export async function PATCH(
     if (status === "CANCELLED" && existing.status === "CANCELLED") {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.INVALID_INPUT, "Order is already cancelled"),
+        { status: 400 }
+      );
+    }
+
+    // Nothing is owed on a cancelled order, and a saved bill (HELD) is paid
+    // through finalize. A fast 400; the claim in settlePendingOrderInTx is the
+    // guard against a cancel landing at the same moment. Paying and cancelling
+    // in one request would otherwise settle the order, then cancel it.
+    if (paymentStatus === "PAID" && status === "CANCELLED") {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          "An order can't be paid and cancelled at once"
+        ),
+        { status: 400 }
+      );
+    }
+    if (paymentStatus === "PAID" && NON_REVENUE_STATUSES.includes(existing.status)) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.INVALID_INPUT,
+          existing.status === "CANCELLED"
+            ? "A cancelled order can't be marked paid"
+            : "A saved bill is paid from the till, not marked paid"
+        ),
         { status: 400 }
       );
     }
@@ -99,18 +134,35 @@ export async function PATCH(
         ? resolveSettleTenderMethod(paymentMethod, existing.paymentMethod)
         : null;
 
+    // Read outside the transaction: the settle re-prices the processing fee from
+    // the method actually used (see settlePendingOrderInTx's feeSettings).
+    const feeSettings =
+      paymentStatus === "PAID" ? await resolveFinanceSettingsForOrder(storeId) : undefined;
+
+    let settled = false;
     const updated = await prisma.$transaction(async (tx) => {
       // Claim the PENDING → PAID transition. Only the winner writes the tender
       // row and credits points; the loser's PATCH still succeeds (the order is
       // paid either way) but does no money work.
       if (paymentStatus === "PAID") {
-        await settlePendingOrderInTx(tx, {
+        ({ settled } = await settlePendingOrderInTx(tx, {
           orderId,
           storeId,
           tenderMethod,
           paymentNote,
           hasExistingPayments: existing.payments.length > 0,
-        });
+          // Only the POS sends this: money taken at a till joins its shift.
+          attachToOpenShift: attachToOpenShift === true,
+          feeSettings,
+        }));
+        // The claim lost: already paid by a concurrent settle (which wrote the
+        // payment fields), or cancelled in the meantime — then it must not be
+        // marked paid by the plain update below either.
+        if (!settled) {
+          delete updateData.paymentStatus;
+          delete updateData.paymentMethod;
+          delete updateData.paymentNote;
+        }
       }
 
       // Claim the cancel the same way: reverseLoyaltyForOrder's coupon release
@@ -138,10 +190,40 @@ export async function PATCH(
       return order;
     });
 
+    // The settle lost to a cancel that landed between our read and the claim:
+    // nothing was marked paid, so say so instead of a success the till would
+    // toast as "Marked as paid". (Losing to a concurrent settle is still a 200 —
+    // the order IS paid.)
+    if (paymentStatus === "PAID" && !settled && updated.paymentStatus !== "PAID") {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.CONFLICT,
+          "The order was cancelled before it could be marked paid"
+        ),
+        { status: 409 }
+      );
+    }
+
     publishStoreEvent(storeId, REALTIME_EVENTS.ORDER_UPDATED, {
       action: "updated",
       entityId: updated.id,
     });
+
+    // The customer's WhatsApp / e-mail receipt follows the PAID transition. A
+    // "pay at the cashier" storefront order (and a Pay Later tab) only gets
+    // there here — the jobs re-read the order and skip one that isn't PAID or
+    // was already sent, so this can never double-send. Only the claim's winner
+    // emits it.
+    if (settled) {
+      try {
+        await inngest.send({
+          name: "order/payment.confirmed",
+          data: { orderId: updated.id, storeId },
+        });
+      } catch (err) {
+        console.error("[POS_ORDER_PATCH] payment.confirmed event failed:", err);
+      }
+    }
 
     // Deduct ingredient stock when order is completed (Synchronous to prevent race conditions)
     if (status === "DELIVERED") {

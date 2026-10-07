@@ -46,6 +46,10 @@ export interface ReceiptData {
   tiktokHandle?: string;
   facebookHandle?: string;
   footerMessage?: string;
+  /** Guest WiFi — set only by receiptWifiFields(), so absent unless the store
+   * filled it in and left it switched on. Never printed on a bill. */
+  wifiName?: string;
+  wifiPassword?: string;
   orderNumber: string;
   date: string;
   items: Array<{
@@ -413,6 +417,17 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   if (receipt.notes) {
     line(divider);
     lines(wrapText(`${labels.notes}: ${receipt.notes}`, cols));
+  }
+
+  // ---- Guest WiFi ----
+  // labelRow, not a two-column row: a long network name or passphrase wraps
+  // under its own label instead of overflowing 58mm paper.
+  if (!isBill && receipt.wifiName) {
+    line(divider);
+    lines(labelRow(labels.wifi, receipt.wifiName, cols));
+    if (receipt.wifiPassword) {
+      lines(labelRow(labels.wifiPassword, receipt.wifiPassword, cols));
+    }
   }
 
   // ---- Footer ----

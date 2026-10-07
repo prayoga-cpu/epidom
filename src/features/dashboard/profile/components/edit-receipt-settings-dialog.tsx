@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { ReceiptDocument } from "@/components/shared/receipt-document";
 import type { ReceiptData } from "@/lib/pwa/thermal-printer";
 import { RECEIPT_INTL_LOCALE } from "@/lib/receipts/receipt-labels";
+import { receiptWifiFields } from "@/lib/receipts/receipt-wifi";
 import {
   useUpdateReceiptSettings,
   type ReceiptSettingsData,
@@ -33,6 +34,9 @@ interface FormValues {
   facebookUrl: string;
   showSocialLinks: boolean;
   autoSendWhatsappReceipt: boolean;
+  wifiName: string;
+  wifiPassword: string;
+  showWifiOnReceipt: boolean;
 }
 
 function toFormValues(settings: ReceiptSettingsData): FormValues {
@@ -41,6 +45,9 @@ function toFormValues(settings: ReceiptSettingsData): FormValues {
     facebookUrl: settings.facebookHandle ?? "",
     showSocialLinks: settings.showSocialLinks,
     autoSendWhatsappReceipt: settings.autoSendWhatsappReceipt,
+    wifiName: settings.wifiName ?? "",
+    wifiPassword: settings.wifiPassword ?? "",
+    showWifiOnReceipt: settings.showWifiOnReceipt,
   };
 }
 
@@ -74,6 +81,9 @@ export function EditReceiptSettingsDialog({
         facebookUrl: data.facebookUrl,
         showSocialLinks: data.showSocialLinks,
         autoSendWhatsappReceipt: data.autoSendWhatsappReceipt,
+        wifiName: data.wifiName.trim(),
+        wifiPassword: data.wifiPassword,
+        showWifiOnReceipt: data.showWifiOnReceipt,
       });
       toast.success(t("profile.toasts.receiptSettingsUpdated.title"), {
         description: t("profile.toasts.receiptSettingsUpdated.description"),
@@ -94,6 +104,9 @@ export function EditReceiptSettingsDialog({
   });
   const footerMessage = useWatch({ control: form.control, name: "footerMessage" });
   const facebookUrl = useWatch({ control: form.control, name: "facebookUrl" });
+  const wifiName = useWatch({ control: form.control, name: "wifiName" });
+  const wifiPassword = useWatch({ control: form.control, name: "wifiPassword" });
+  const showWifiOnReceipt = useWatch({ control: form.control, name: "showWifiOnReceipt" });
 
   const previewData: ReceiptData = {
     storeName: settings.storeName,
@@ -107,6 +120,7 @@ export function EditReceiptSettingsDialog({
     tiktokHandle: showSocialLinks ? (settings.tiktokHandle ?? undefined) : undefined,
     facebookHandle: showSocialLinks && facebookUrl ? facebookUrl : undefined,
     footerMessage: footerMessage || undefined,
+    ...receiptWifiFields({ wifiName, wifiPassword, showWifiOnReceipt }),
     orderNumber: "POS-PREVIEW-0001",
     date: new Intl.DateTimeFormat(RECEIPT_INTL_LOCALE[locale], {
       dateStyle: "short",
@@ -185,6 +199,54 @@ export function EditReceiptSettingsDialog({
                 checked={showSocialLinks}
                 onCheckedChange={(checked) => form.setValue("showSocialLinks", checked)}
               />
+            </section>
+
+            <Separator />
+
+            <section className="space-y-3">
+              <p className="text-base font-semibold">{t("profile.receiptSettings.wifiTitle")}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="min-w-0 space-y-1">
+                  <Label htmlFor="wifiName">{t("profile.receiptSettings.wifiName")}</Label>
+                  <Input
+                    id="wifiName"
+                    maxLength={64}
+                    autoComplete="off"
+                    placeholder={t("profile.receiptSettings.wifiNamePlaceholder")}
+                    className="h-11"
+                    {...form.register("wifiName")}
+                  />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <Label htmlFor="wifiPassword">{t("profile.receiptSettings.wifiPassword")}</Label>
+                  {/* Plain text on purpose: it is printed for every customer,
+                      and the owner needs to see what they typed. */}
+                  <Input
+                    id="wifiPassword"
+                    maxLength={100}
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder={t("profile.receiptSettings.wifiPasswordPlaceholder")}
+                    className="h-11"
+                    {...form.register("wifiPassword")}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-1">
+                <div>
+                  <Label htmlFor="showWifiOnReceipt" className="text-sm font-medium">
+                    {t("profile.receiptSettings.showWifiOnReceipt")}
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    {t("profile.receiptSettings.showWifiOnReceiptDesc")}
+                  </p>
+                </div>
+                <Switch
+                  id="showWifiOnReceipt"
+                  checked={showWifiOnReceipt}
+                  onCheckedChange={(checked) => form.setValue("showWifiOnReceipt", checked)}
+                />
+              </div>
             </section>
 
             <Separator />

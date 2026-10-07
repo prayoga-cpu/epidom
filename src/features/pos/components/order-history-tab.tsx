@@ -536,7 +536,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [showBulkMarkPaid, setShowBulkMarkPaid] = useState(false);
-  const updateStatus = useUpdateOrderStatus(storeId);
+  const updateStatus = useUpdateOrderStatus(storeId, { atTill: true });
   const { confirm, confirmDialog: bulkConfirmDialog } = useConfirm();
 
   // A fresh query (any filter change) invalidates which rows are even on
@@ -559,7 +559,13 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   ]);
 
   const selectedOrders = orders.filter((o) => selectedIds.has(o.id));
-  const markPaidIds = selectedOrders.filter((o) => o.paymentStatus === "PENDING").map((o) => o.id);
+  // A cancelled order owes nothing, and a saved bill (HELD) is paid by resuming
+  // it at the till — the server refuses to mark either paid.
+  const markPaidIds = selectedOrders
+    .filter(
+      (o) => o.paymentStatus === "PENDING" && o.status !== "CANCELLED" && o.status !== "HELD"
+    )
+    .map((o) => o.id);
   const cancelIds = selectedOrders.filter((o) => o.status !== "CANCELLED").map((o) => o.id);
 
   const toggleOrder = (id: string, checked: boolean) => {

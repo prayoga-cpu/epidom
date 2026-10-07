@@ -1,4 +1,5 @@
 import type { Article } from "@/features/marketing/shared/content/article-types";
+import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 
 export const idGuides: Article[] = [
   {
@@ -95,7 +96,9 @@ export const idGuides: Article[] = [
       { type: "h2", text: "Pembayaran" },
       {
         type: "p",
-        text: "Kamu bisa aktifkan QRIS, atau biarkan bayar tunai pas ambil pesanan. Metode pembayaran yang diterima diatur di pengaturan toko.",
+        text: STOREFRONT_ONLINE_PAYMENTS_ENABLED
+          ? "Kamu bisa aktifkan QRIS, atau biarkan bayar tunai pas ambil pesanan. Metode pembayaran yang diterima diatur di pengaturan toko."
+          : "Pesanan dari toko online dibayar di kasir: setiap pesanan masuk ke kasir dengan tanda belum dibayar, lalu kasir menerima pembayaran dan menandainya lunas.",
       },
     ],
   },

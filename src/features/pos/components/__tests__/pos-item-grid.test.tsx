@@ -130,6 +130,21 @@ describe("PosItemGrid view modes", () => {
     }
   );
 
+  it.each(["grid", "columns"] as const)(
+    "%s: the counted chip shares the price row, below the name — never floated over it",
+    (mode) => {
+      renderGrid(mode);
+      const chip = screen.getByText("pos.menu.counted");
+      // A corner-pinned chip ran over the name on tiles without a photo.
+      expect(chip.className).not.toMatch(/\babsolute\b/);
+      expect(chip.className).toContain("whitespace-nowrap");
+      expect(chip.parentElement).toBe(screen.getByText("EUR 3.00").parentElement);
+      expect(
+        screen.getByText("Tea").compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    }
+  );
+
   it("tap targets: columns tiles are 72px+, never below the 40px floor", () => {
     const { container } = renderGrid("columns");
     for (const tile of container.querySelectorAll("button"))

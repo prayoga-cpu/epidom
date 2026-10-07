@@ -63,20 +63,59 @@ export async function requireNoActiveStaffPersona(): Promise<void> {
  * @returns an error NextResponse to return immediately, or null to proceed.
  */
 export async function requireOwnerOnlyApi(storeId: string): Promise<NextResponse | null> {
-  const viewer = await getStoreViewer(storeId);
-  if (viewer.kind !== "owner") {
-    return NextResponse.json(
-      createErrorResponse(ApiErrorCode.FORBIDDEN, "Only the account owner can do this"),
-      { status: 403 }
-    );
-  }
+  if (await isOwnerActing(storeId)) return null;
+  return NextResponse.json(
+    createErrorResponse(ApiErrorCode.FORBIDDEN, "Only the account owner can do this"),
+    { status: 403 }
+  );
+}
 
+/**
+ * The same test as requireOwnerOnlyApi, as a boolean — for a page every
+ * persona may open that shows one owner-only control (the Back Office Shifts
+ * page's "Close shift"): the real account owner, with no cashier or manager
+ * persona layered on their device.
+ */
+export async function isOwnerActing(storeId: string): Promise<boolean> {
+  const viewer = await getStoreViewer(storeId);
+  if (viewer.kind !== "owner") return false;
   const staffSession = await getActiveStaffSession();
-  if (staffSession && staffSession.storeId === storeId && staffSession.role !== "OWNER") {
+  // role === "OWNER": a StaffMember row that is itself the owner — the same as
+  // no persona at all.
+  return !(staffSession && staffSession.storeId === storeId && staffSession.role !== "OWNER");
+}
+
+/**
+ * requireOwnerOnlyApi for routes about money owed to people (salaries, pay
+ * rates, allowances): the real owner, and no non-owner staff persona active on
+ * this device for ANY store. requireOwnerOnlyApi on its own only refuses a
+ * persona of THIS store, so a cashier signed in on another of the owner's
+ * outlets would pass it — the same permissive default requireManagerOrOwnerApi
+ * has (see DELETE cash-movements for the original explicit check).
+ *
+ * @returns an error NextResponse to return immediately, or null to proceed.
+ */
+export async function requireOwnerWithoutStaffPersonaApi(
+  storeId: string
+): Promise<NextResponse | null> {
+  const staffSession = await getActiveStaffSession();
+  if (staffSession && staffSession.role !== "OWNER") {
     return NextResponse.json(
       createErrorResponse(ApiErrorCode.FORBIDDEN, "Only the account owner can do this"),
       { status: 403 }
     );
   }
-  return null;
+  return requireOwnerOnlyApi(storeId);
+}
+
+/**
+ * May this request see staff pay (rates, overtime, allowances, salary)? Only
+ * the account owner as themselves: no cashier or manager persona on the device
+ * for ANY store — the same test as requireOwnerWithoutStaffPersonaApi, which
+ * guards the pay writes — and not a linked staff account.
+ */
+export async function canSeeStaffPay(storeId: string): Promise<boolean> {
+  const staffSession = await getActiveStaffSession();
+  if (staffSession && staffSession.role !== "OWNER") return false;
+  return isOwnerActing(storeId);
 }

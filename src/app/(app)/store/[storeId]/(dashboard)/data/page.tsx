@@ -12,7 +12,6 @@ import type { RecipeWithIngredients } from "@/features/dashboard/data/recipes/ho
 import type { Product } from "@/features/dashboard/data/products/hooks/use-products";
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
-import { PageIntro } from "@/features/guide/components/page-intro";
 
 export default async function DataPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
@@ -33,19 +32,18 @@ export default async function DataPage({ params }: { params: Promise<{ storeId: 
     fetchSuppliersForPage(storeId),
   ]);
 
+  // The page intro is rendered by DataViewClient: an empty store's first-run
+  // choice takes its place.
   return (
-    <>
-      {/* The page has no header of its own: the intro sits above the tabs. */}
-      <PageIntro id="data" storeId={storeId} className="mb-4" />
-      <DataViewClient
-        initialMaterials={materialsResult.materials}
-        initialMaterialsTotal={materialsResult.total}
-        initialRecipes={recipesResult.recipes}
-        initialProducts={productsResult.products}
-        initialProductsTotal={productsResult.total}
-        initialSuppliers={suppliersResult.suppliers}
-        storeId={storeId}
-      />
-    </>
+    <DataViewClient
+      initialMaterials={materialsResult.materials}
+      initialMaterialsTotal={materialsResult.total}
+      initialRecipes={recipesResult.recipes}
+      initialRecipesTotal={recipesResult.total}
+      initialProducts={productsResult.products}
+      initialProductsTotal={productsResult.total}
+      initialSuppliers={suppliersResult.suppliers}
+      storeId={storeId}
+    />
   );
 }

@@ -8,8 +8,10 @@ import type { PosViewMode } from "../hooks/use-pos-view-mode";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ChevronRight, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, Sparkles, UtensilsCrossed } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { matchesMenuDepartment, type PosMenuDepartment } from "../lib/menu-department";
 
 interface PosItemGridProps {
@@ -29,6 +31,9 @@ interface PosItemGridProps {
   /** Controls for the menu itself (the view switch). They float over the top-right
    * of the menu — no row of their own, and they stay put while it scrolls. */
   toolbar?: ReactNode;
+  /** Where this viewer adds the menu (see resolveMenuSetupHref), or null when
+   * they can't: an empty menu then says who can. */
+  menuSetupHref?: string | null;
 }
 
 /**
@@ -48,6 +53,7 @@ export function PosItemGrid({
   customDepartmentLabel,
   viewMode = "grid",
   toolbar,
+  menuSetupHref = null,
 }: PosItemGridProps) {
   const { t } = useI18n();
   // The counted-stock chip is suppressed offline: the POS menu IS mirrored to
@@ -126,6 +132,27 @@ export function PosItemGrid({
     if (customItems.length > 0) customCategories.push({ ...category, items: customItems });
   }
 
+  // No menu at all (not just an empty tab or search): nothing here can be sold,
+  // so say where the menu comes from. /pos sends whoever can add it there before
+  // this ever renders; this is for everyone else, and for a menu emptied while
+  // the till is open.
+  if (categories.every((cat) => cat.items.length === 0)) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+        <UtensilsCrossed className="text-muted-foreground/60 size-10" aria-hidden="true" />
+        <h2 className="text-lg font-semibold">{t("pos.menu.emptyMenuTitle")}</h2>
+        <p className="text-muted-foreground max-w-sm text-sm">
+          {menuSetupHref ? t("pos.menu.emptyMenuBody") : t("pos.menu.emptyMenuAskBody")}
+        </p>
+        {menuSetupHref && (
+          <Button asChild className="h-11">
+            <Link href={menuSetupHref}>{t("pos.menu.emptyMenuCta")}</Link>
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (shownCategories.length === 0) {
     // An empty Food or Drink tab almost always means the items were never given a
     // department (it defaults to Kitchen), so say where that is set.
@@ -151,13 +178,14 @@ export function PosItemGrid({
   // point. The tile stays fully tappable; this is a hint, never a gate.
   // Suppressed while offline, where the number would be an hours-old figure
   // rendered as if it were authoritative.
-  const countedChip = (item: PosMenuItem, className?: string) =>
+  // Always laid out in flow (next to the price), never floated over the tile: a
+  // corner-pinned chip ran straight over the name on photo-less tiles.
+  const countedChip = (item: PosMenuItem) =>
     item.countedStock !== undefined && isOnline ? (
       <span
         className={cn(
-          "rounded-md px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
-          item.countedStock <= 0 ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary",
-          className
+          "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap tabular-nums",
+          item.countedStock <= 0 ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
         )}
       >
         {t("pos.menu.counted").replace("{count}", String(item.countedStock))}
@@ -255,18 +283,25 @@ export function PosItemGrid({
             />
           </div>
         )}
-        <div className="flex flex-1 flex-col justify-between p-1 sm:p-3">
-          <div>
-            <h3 className="line-clamp-2 leading-tight font-medium">{item.name}</h3>
+        <div className="flex flex-1 flex-col justify-between gap-2 p-1 sm:p-3">
+          <div className="min-w-0">
+            <h3 className="line-clamp-2 leading-tight font-medium break-words">{item.name}</h3>
             {item.description && (
               <p className="text-muted-foreground mt-1 line-clamp-2 text-[11px] leading-snug">
                 {item.description}
               </p>
             )}
           </div>
-          <div className="text-primary mt-2 text-sm font-semibold">{formatPrice(item.price)}</div>
+          {/* The tile's meta row: price, then the counted chip. Both stay in flow,
+              so the name above always has the full tile width; on a narrow tile the
+              chip wraps under the price rather than crowding it. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <span className="text-primary text-sm font-semibold tabular-nums">
+              {formatPrice(item.price)}
+            </span>
+            {countedChip(item)}
+          </div>
         </div>
-        {countedChip(item, "absolute top-1.5 right-1.5")}
         {!item.isAvailable && (
           <div className="bg-background/50 absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
             <span className="bg-destructive text-destructive-foreground rounded-md px-2 py-1 text-xs font-bold">

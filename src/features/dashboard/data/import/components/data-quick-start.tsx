@@ -64,29 +64,6 @@ export function DataQuickStart({
 
   const open = state.open ?? startOpen;
 
-  const steps = [
-    {
-      title: t("import.quickStart.step1Title"),
-      body: t("import.quickStart.step1Body"),
-      action: <ImportPromptHelper entityType={entityType} onEntityTypeChange={setEntityType} />,
-    },
-    {
-      title: t("import.quickStart.step2Title"),
-      body: t("import.quickStart.step2Body"),
-      action: null,
-    },
-    {
-      title: t("import.quickStart.step3Title"),
-      body: t("import.quickStart.step3Body"),
-      action: (
-        <Button type="button" className="h-11" onClick={() => setImportOpen(true)}>
-          <FileUp aria-hidden="true" />
-          {t("import.quickStart.importCta")}
-        </Button>
-      ),
-    },
-  ];
-
   return (
     <section
       aria-label={t("import.quickStart.title")}
@@ -130,25 +107,13 @@ export function DataQuickStart({
       </div>
 
       {open && (
-        <ol id={stepsId} className="mt-4 grid gap-4 border-t pt-4 lg:grid-cols-3">
-          {steps.map((step, index) => (
-            <li key={step.title} className="flex min-w-0 gap-3">
-              <span
-                aria-hidden="true"
-                className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-              >
-                {index + 1}
-              </span>
-              <div className="min-w-0 flex-1 space-y-2">
-                <div>
-                  <h3 className="text-sm font-semibold">{step.title}</h3>
-                  <p className="text-muted-foreground text-sm">{step.body}</p>
-                </div>
-                {step.action}
-              </div>
-            </li>
-          ))}
-        </ol>
+        <ImportSteps
+          id={stepsId}
+          entityType={entityType}
+          onEntityTypeChange={setEntityType}
+          onImport={() => setImportOpen(true)}
+          className="mt-4 border-t pt-4"
+        />
       )}
 
       <SmartImportDialog
@@ -160,5 +125,76 @@ export function DataQuickStart({
         defaultEntityType={entityType}
       />
     </section>
+  );
+}
+
+interface ImportStepsProps {
+  entityType: EntityType;
+  onEntityTypeChange: (type: EntityType) => void;
+  /** Step 3's button: open Smart Import (the caller owns the dialog). */
+  onImport: () => void;
+  id?: string;
+  className?: string;
+}
+
+/**
+ * The three steps themselves: copy the prompt (for the chosen record type),
+ * ask any AI assistant, import the file. Shared by the quick start card and
+ * the Data page's first-run menu import.
+ */
+export function ImportSteps({
+  entityType,
+  onEntityTypeChange,
+  onImport,
+  id,
+  className,
+}: ImportStepsProps) {
+  const { t } = useI18n();
+
+  const steps = [
+    {
+      title: t("import.quickStart.step1Title"),
+      body: t("import.quickStart.step1Body"),
+      action: (
+        <ImportPromptHelper entityType={entityType} onEntityTypeChange={onEntityTypeChange} />
+      ),
+    },
+    {
+      title: t("import.quickStart.step2Title"),
+      body: t("import.quickStart.step2Body"),
+      action: null,
+    },
+    {
+      title: t("import.quickStart.step3Title"),
+      body: t("import.quickStart.step3Body"),
+      action: (
+        <Button type="button" className="h-11" onClick={onImport}>
+          <FileUp aria-hidden="true" />
+          {t("import.quickStart.importCta")}
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <ol id={id} className={cn("grid gap-4 lg:grid-cols-3", className)}>
+      {steps.map((step, index) => (
+        <li key={step.title} className="flex min-w-0 gap-3">
+          <span
+            aria-hidden="true"
+            className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+          >
+            {index + 1}
+          </span>
+          <div className="min-w-0 flex-1 space-y-2">
+            <div>
+              <h3 className="text-sm font-semibold">{step.title}</h3>
+              <p className="text-muted-foreground text-sm">{step.body}</p>
+            </div>
+            {step.action}
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }

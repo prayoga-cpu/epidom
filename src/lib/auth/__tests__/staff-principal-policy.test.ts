@@ -54,6 +54,7 @@ describe("the staff allow-list itself", () => {
   it("is exactly the reviewed set of routes", () => {
     expect(listStaffPolicyKeys().sort()).toEqual(
       [
+        "DELETE /api/stores/*/push/unsubscribe",
         "DELETE /api/stores/*/tables/*",
         "DELETE /api/stores/*/reservations/*",
         "GET /api/stores/*/attendance/history",
@@ -62,9 +63,12 @@ describe("the staff allow-list itself", () => {
         "GET /api/stores/*/discount-presets",
         "GET /api/stores/*/finance/settings",
         "GET /api/stores/*/notifications",
+        "GET /api/stores/*/receipt-settings",
         "GET /api/stores/*/orders",
         "GET /api/stores/*/orders/payment-totals",
         "GET /api/stores/*/orders/stream",
+        // My Pay — the persona's own earnings; the route reads whose from the PIN session.
+        "GET /api/stores/*/payroll/me",
         "GET /api/stores/*/pos/kds/settings",
         "GET /api/stores/*/pos/menu",
         "GET /api/stores/*/pos/orders",
@@ -104,6 +108,7 @@ describe("the staff allow-list itself", () => {
         "POST /api/stores/*/pos/orders/hold",
         "POST /api/stores/*/pos/orders/merge",
         "POST /api/stores/*/reservations",
+        "POST /api/stores/*/push/subscribe",
         "POST /api/stores/*/shifts",
         "POST /api/stores/*/staff/logout",
         "POST /api/stores/*/staff/verify-pin",
@@ -135,6 +140,8 @@ describe("the staff allow-list itself", () => {
       // the manager's, and not being listed is what keeps it that way.
       ["POST", `/api/stores/${STORE}/schedule-images`],
       ["DELETE", `/api/stores/${STORE}/schedule-images/i1`],
+      // Everyone's salary is the owner's report; staff only ever see their own (payroll/me).
+      ["GET", `/api/stores/${STORE}/payroll`],
     ];
     for (const [method, path] of forbidden) {
       expect(resolveStaffRoutePolicy(method, path), `${method} ${path}`).toBeNull();

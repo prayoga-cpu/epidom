@@ -13,6 +13,9 @@ export interface ReceiptSettingsData {
   footerMessage: string | null;
   showSocialLinks: boolean;
   autoSendWhatsappReceipt: boolean;
+  wifiName: string | null;
+  wifiPassword: string | null;
+  showWifiOnReceipt: boolean;
 }
 
 export interface UpdateReceiptSettingsPayload {
@@ -20,6 +23,9 @@ export interface UpdateReceiptSettingsPayload {
   facebookUrl?: string;
   showSocialLinks?: boolean;
   autoSendWhatsappReceipt?: boolean;
+  wifiName?: string;
+  wifiPassword?: string;
+  showWifiOnReceipt?: boolean;
 }
 
 async function parseReceiptSettingsResponse<T>(

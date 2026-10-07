@@ -15,8 +15,11 @@ export interface CaseStudy {
   location: string;
   /** A plain string shows in every locale; a per-locale map lets you translate it. */
   quote: LocalizedText;
-  /** Exactly two, each with a non-empty `source`. */
-  metrics: readonly [CaseStudyMetric, CaseStudyMetric];
+  /**
+   * Leave out until two figures are verified: a study can run on the shop and
+   * the quote alone. When present, exactly two, each with a non-empty `source`.
+   */
+  metrics?: readonly [CaseStudyMetric, CaseStudyMetric];
   /** Optional long-form page: an internal path ("/blog/...") or an https URL. */
   storyHref?: string;
 }
@@ -32,7 +35,7 @@ export interface CaseStudy {
  *    did not say. Provide fr / en / id variants if they agree to a translation.
  *  - Every metric needs a `source` you can point to if asked (interview date,
  *    a dashboard export, an order count you actually ran). No source, no metric.
- *  - Exactly two metrics per study.
+ *  - Either no metrics at all (shop and quote only) or exactly two.
  */
 export const CASE_STUDIES: readonly CaseStudy[] = [];
 
@@ -48,9 +51,10 @@ export function isPublishableCaseStudy(study: CaseStudy): boolean {
     filled(study.ownerName) &&
     filled(study.location) &&
     hasLocalizedText(study.quote) &&
-    Array.isArray(study.metrics) &&
-    study.metrics.length === 2 &&
-    study.metrics.every((m) => filled(m?.value) && filled(m?.label) && filled(m?.source))
+    (study.metrics === undefined ||
+      (Array.isArray(study.metrics) &&
+        study.metrics.length === 2 &&
+        study.metrics.every((m) => filled(m?.value) && filled(m?.label) && filled(m?.source))))
   );
 }
 

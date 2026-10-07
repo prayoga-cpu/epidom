@@ -61,11 +61,5 @@ describe("locale price strings match plan-pricing", () => {
       expect(page.t3price_mo).toBe(formatPlanPrice("OPERATIONS", currency, "monthly"));
       expect(page.t3price_yr).toBe(formatPlanPrice("OPERATIONS", currency, "yearly"));
     });
-
-    it(`the home teaser in ${locale} quotes the monthly price`, () => {
-      const teaser = dict(locale).redesign.pricingTeaser;
-      expect(teaser.t2price).toBe(formatPlanPrice("POS", currency, "monthly"));
-      expect(teaser.t3price).toBe(formatPlanPrice("OPERATIONS", currency, "monthly"));
-    });
   }
 });

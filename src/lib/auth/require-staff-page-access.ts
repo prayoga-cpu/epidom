@@ -29,8 +29,31 @@ export async function requireStaffPageAccess(
   storeId: string,
   page: string | string[]
 ): Promise<void> {
+  const access = await resolveStaffPageAccess(storeId, page);
+  if (!access.allowed) redirect(access.redirectTo);
+}
+
+/**
+ * The same rule as requireStaffPageAccess, as a plain answer with no redirect:
+ * for a page that only wants to know where it may SEND the viewer (the POS
+ * sending an empty till to wherever the menu is added). Sending someone to a
+ * page this says no to would bounce them straight back.
+ */
+export async function canAccessStaffPage(
+  storeId: string,
+  page: string | string[]
+): Promise<boolean> {
+  return (await resolveStaffPageAccess(storeId, page)).allowed;
+}
+
+type StaffPageAccess = { allowed: true } | { allowed: false; redirectTo: string };
+
+async function resolveStaffPageAccess(
+  storeId: string,
+  page: string | string[]
+): Promise<StaffPageAccess> {
   const viewer = await getStoreViewer(storeId);
-  if (viewer.kind === "none") redirect("/stores");
+  if (viewer.kind === "none") return { allowed: false, redirectTo: "/stores" };
 
   const staffSession = await getActiveStaffSession();
 
@@ -40,28 +63,28 @@ export async function requireStaffPageAccess(
       staffSession.storeId !== storeId ||
       staffSession.staffMemberId !== viewer.staffMemberId
     ) {
-      redirect("/stores");
+      return { allowed: false, redirectTo: "/stores" };
     }
     // Falls through to the page check below — and never takes the owner's
     // "role OWNER is unrestricted" shortcut, whatever the persona's role says.
   } else if (!staffSession || staffSession.storeId !== storeId || staffSession.role === "OWNER") {
-    return;
+    return { allowed: true };
   }
 
   const pages = Array.isArray(page) ? page : [page];
-  if (!pages.some((p) => staffSession.allowedPages.includes(p))) {
-    // /pos, not /dashboard: a restricted persona reaching this branch is by
-    // definition not the account owner, and /dashboard is not a page most
-    // staff roles are ever granted — falling back to it just traded one
-    // "you can't be here" redirect for a second one. /pos is every staff
-    // role's actual safe home (POS Mode, not Back Office), preferred over
-    // allowedPages[0] even when that's already set, since an owner-edited
-    // permission order shouldn't accidentally change where a denied staffer
-    // lands. Empty allowedPages (an owner unchecked every box) still falls
-    // back to /pos rather than /dashboard for the same reason.
-    const fallback = staffSession.allowedPages.includes("/pos")
-      ? "/pos"
-      : (staffSession.allowedPages[0] ?? "/pos");
-    redirect(`/store/${storeId}${fallback}`);
-  }
+  if (pages.some((p) => staffSession.allowedPages.includes(p))) return { allowed: true };
+
+  // /pos, not /dashboard: a restricted persona reaching this branch is by
+  // definition not the account owner, and /dashboard is not a page most
+  // staff roles are ever granted — falling back to it just traded one
+  // "you can't be here" redirect for a second one. /pos is every staff
+  // role's actual safe home (POS Mode, not Back Office), preferred over
+  // allowedPages[0] even when that's already set, since an owner-edited
+  // permission order shouldn't accidentally change where a denied staffer
+  // lands. Empty allowedPages (an owner unchecked every box) still falls
+  // back to /pos rather than /dashboard for the same reason.
+  const fallback = staffSession.allowedPages.includes("/pos")
+    ? "/pos"
+    : (staffSession.allowedPages[0] ?? "/pos");
+  return { allowed: false, redirectTo: `/store/${storeId}${fallback}` };
 }

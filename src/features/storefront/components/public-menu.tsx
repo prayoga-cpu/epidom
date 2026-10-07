@@ -37,6 +37,7 @@ import {
   type PublicMenuItem,
 } from "../hooks/use-public-menu";
 import { useTrackPageView } from "../hooks/use-track-storefront-event";
+import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 
 interface ModifierOption {
   name: string;
@@ -1153,14 +1154,27 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                 </label>
 
                 <div className="space-y-4">
+                  {/* Online payment is switched off for now (see
+                      storefront-ordering.config.ts): "Pay at Cashier" is the only
+                      group, and the order is placed unpaid for the till to collect. */}
                   {[
                     { title: t("publicOrder.checkoutForm.groupCashier"), methods: ["CASH"] },
-                    {
-                      title: t("publicOrder.checkoutForm.groupEwallet"),
-                      methods: ["QRIS", "GOPAY", "OVO", "DANA", "SHOPEEPAY"],
-                    },
-                    { title: t("publicOrder.checkoutForm.groupVa"), methods: ["BANK_TRANSFER"] },
-                    { title: t("publicOrder.checkoutForm.groupCard"), methods: ["STRIPE_CARD"] },
+                    ...(STOREFRONT_ONLINE_PAYMENTS_ENABLED
+                      ? [
+                          {
+                            title: t("publicOrder.checkoutForm.groupEwallet"),
+                            methods: ["QRIS", "GOPAY", "OVO", "DANA", "SHOPEEPAY"],
+                          },
+                          {
+                            title: t("publicOrder.checkoutForm.groupVa"),
+                            methods: ["BANK_TRANSFER"],
+                          },
+                          {
+                            title: t("publicOrder.checkoutForm.groupCard"),
+                            methods: ["STRIPE_CARD"],
+                          },
+                        ]
+                      : []),
                   ].map((group) => (
                     <div key={group.title} className="space-y-2">
                       <h4 className="text-muted-foreground pl-1 text-[10px] font-bold tracking-widest uppercase">
@@ -1197,6 +1211,11 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                     </div>
                   ))}
                 </div>
+                {paymentMethod === "CASH" && (
+                  <p className="text-muted-foreground pl-1 text-xs">
+                    {t("publicOrder.checkoutForm.payAtCashierHint")}
+                  </p>
+                )}
               </div>
 
               {/* Bank Sub-selector (only when BANK_TRANSFER selected) */}
@@ -1285,7 +1304,11 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                 ) : (
                   <>
                     <MessageSquare className="size-5" />
-                    <span>{t("publicOrder.checkoutForm.payAndProcess")}</span>
+                    <span>
+                      {paymentMethod === "CASH"
+                        ? t("publicOrder.checkoutForm.placeOrderPayAtCashier")
+                        : t("publicOrder.checkoutForm.payAndProcess")}
+                    </span>
                   </>
                 )}
               </button>

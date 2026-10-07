@@ -16,10 +16,10 @@ import {
   markCustomerDisplayPaid,
   useCustomerIntake,
 } from "../hooks/use-customer-display";
-import { paymentMethodEnum } from "@/lib/validation/pos.schemas";
+import { paymentMethodEnum, type CreatePosOrderInput } from "@/lib/validation/pos.schemas";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { apiClient, ApiClientError } from "@/lib/api/client";
+import { apiClient, ApiClientError, ApiNetworkError } from "@/lib/api/client";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/analytics";
 import { Dialog } from "@/components/ui/dialog";
@@ -39,9 +39,12 @@ import { RadioGroup } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { WifiOff, Loader2, Clock } from "lucide-react";
-import { enqueueOrder } from "@/lib/pwa/offline-queue";
+import { enqueueOrder, offlineOrderNumber } from "@/lib/pwa/offline-queue";
+import { reportNetworkFailure } from "@/lib/pwa/reachability";
+import { useOnlineStatus } from "@/hooks/use-network-status";
 import { isPrinterConnected, type ReceiptData } from "@/lib/pwa/thermal-printer";
 import { RECEIPT_INTL_LOCALE } from "@/lib/receipts/receipt-labels";
+import { receiptWifiFields } from "@/lib/receipts/receipt-wifi";
 import {
   normalizeTenders,
   type TenderInput,
@@ -73,6 +76,14 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 const BANK_CODES = ["BNI", "BRI", "MANDIRI", "PERMATA"] as const;
+
+/**
+ * How long a live checkout waits before treating the connection as gone and
+ * queuing the sale. Longer than the server's own order transaction
+ * (POS_ORDER_TX_TIMEOUT_MS, 15s) so a slow-but-working save isn't cut short;
+ * if one is anyway, the shared idempotency key stops it from doubling.
+ */
+const CHECKOUT_TIMEOUT_MS = 25_000;
 
 /**
  * What a by-items split bill is priced from instead of the whole cart — the
@@ -149,6 +160,7 @@ export function PosCheckoutDialog({
   title,
 }: PosCheckoutDialogProps) {
   const { t, locale } = useI18n();
+  const isOnline = useOnlineStatus();
   // Every monetary value flowing through the POS (cart totals, menu item
   // prices, modifiers, amountTendered) is stored and computed literally in
   // the store's own display currency — see pos-order-builder.ts, which
@@ -369,6 +381,7 @@ export function PosCheckoutDialog({
           ? (receiptSettings?.facebookHandle ?? undefined)
           : undefined,
       footerMessage: receiptSettings?.footerMessage ?? undefined,
+      ...receiptWifiFields(receiptSettings),
       orderNumber,
       date: new Intl.DateTimeFormat(RECEIPT_INTL_LOCALE[locale] ?? "en-US", {
         dateStyle: "short",
@@ -450,7 +463,10 @@ export function PosCheckoutDialog({
   const onSubmit = async (values: CheckoutFormValues) => {
     setIsSubmitting(true);
     try {
-      const offline = !navigator.onLine;
+      // The reachability probe, not just `navigator.onLine`: wifi that is up
+      // with the internet down still reads "online" to the browser, and every
+      // sale rung up there used to fail outright instead of being queued.
+      const offline = !isOnline || navigator.onLine === false;
 
       // amountTendered is typed by the cashier in the store's display
       // currency — same units as the total and every menu item price, none of
@@ -498,7 +514,7 @@ export function PosCheckoutDialog({
             redeemPoints: cart.pointsRedeemed,
           };
 
-      const payload = buildCheckoutPayload({
+      const payloadInput = {
         items: priced.items,
         orderType: cart.orderType,
         onlinePlatform: cart.onlinePlatform,
@@ -509,14 +525,15 @@ export function PosCheckoutDialog({
         fallbackPhone: displayPhone,
         fallbackEmail: displayEmail,
         notes: values.notes ?? "",
-        // The offline queue never carried the shift (it may be closed by the time
-        // the order replays); keep queued payloads exactly as they always were.
-        shiftId: offline ? undefined : shiftId,
+        // Queued sales carry the shift too now: the server links a replay only
+        // to that same shift, and only while it's still open (see
+        // resolveReplayShiftId), so it can't land in a later drawer.
+        shiftId,
         splitGroupId: basis?.splitGroupId,
         discount,
         payment,
-        offline,
-      });
+      };
+      const payload = buildCheckoutPayload({ ...payloadInput, offline });
 
       // Everything the success path needs from the cart, read BEFORE it is
       // cleared or (for a split bill) has this bill's lines taken out.
@@ -620,35 +637,62 @@ export function PosCheckoutDialog({
         });
       };
 
-      if (offline) {
-        if (cart.resumingOrderId && !basis) {
-          // The offline queue always creates a brand-new order on reconnect —
-          // it has no concept of finalizing an existing HELD row, so queuing
-          // here would leave the original held order dangling and create a
-          // duplicate. Block it instead, same as Hold does when offline.
-          toast.error(t("pos.cart.holdOffline"));
-          return;
-        }
+      // The offline queue always creates a brand-new order on reconnect — it
+      // has no concept of finalizing an existing HELD row, so queuing one would
+      // leave the original held order dangling and create a duplicate.
+      const finalizesHeldOrder = !!cart.resumingOrderId && !basis;
 
-        const localId = await enqueueOrder(storeId, payload);
-        finishSale({ orderId: null, orderNumber: `OFFLINE-${localId.slice(0, 8).toUpperCase()}` });
+      // One idempotency key for this sale, online attempt and queued replay
+      // alike: if the online request reached the server before the connection
+      // died, the replay finds that order instead of recording a second one.
+      const requestId = crypto.randomUUID();
+
+      const queueSale = async (queuedPayload: CreatePosOrderInput) => {
+        const localId = await enqueueOrder(storeId, queuedPayload, requestId);
+        finishSale({ orderId: null, orderNumber: offlineOrderNumber(localId) });
         toast(t("pos.offline.queued"), {
           description: t("pos.offline.queuedDesc"),
           icon: <WifiOff className="h-4 w-4" />,
         });
+      };
+
+      if (offline) {
+        if (finalizesHeldOrder) {
+          // Block it instead, same as Hold does when offline.
+          toast.error(t("pos.cart.holdOffline"));
+          return;
+        }
+        await queueSale(payload);
         return;
       }
 
       // A bill of a split-by-items is always a brand-new order: finalizing a
       // resumed HELD order would settle ALL of its lines, not this bill's.
-      const endpoint =
-        cart.resumingOrderId && !basis
-          ? `/stores/${storeId}/pos/orders/${cart.resumingOrderId}/finalize`
-          : `/stores/${storeId}/pos/orders`;
+      const endpoint = finalizesHeldOrder
+        ? `/stores/${storeId}/pos/orders/${cart.resumingOrderId}/finalize`
+        : `/stores/${storeId}/pos/orders`;
 
-      const created = await apiClient.post<
-        Partial<PosOrderCreatedDto> & { paymentStatus?: string }
-      >(endpoint, payload);
+      let created: Partial<PosOrderCreatedDto> & { paymentStatus?: string };
+      try {
+        created = await apiClient.post<Partial<PosOrderCreatedDto> & { paymentStatus?: string }>(
+          endpoint,
+          // liveCheckout here only, never in `payload`: if this request times out
+        // and the sale falls back to the queue, the queued copy must replay as
+        // an offline sale (see isOfflineReplay).
+        finalizesHeldOrder ? payload : { ...payload, clientRequestId: requestId, liveCheckout: true },
+          { timeoutMs: CHECKOUT_TIMEOUT_MS }
+        );
+      } catch (error) {
+        // The connection went mid-sale (or never really existed): keep the sale
+        // on the device, priced the way an offline sale always is, rather than
+        // telling a cashier holding the customer's money that it failed.
+        if (error instanceof ApiNetworkError && !finalizesHeldOrder) {
+          reportNetworkFailure();
+          await queueSale(buildCheckoutPayload({ ...payloadInput, offline: true }));
+          return;
+        }
+        throw error;
+      }
       const orderId = created?.orderId;
       const orderNumber = created?.orderNumber ?? "—";
 

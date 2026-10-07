@@ -4,16 +4,22 @@ import { prisma } from "@/lib/prisma";
 import { verifyStoreOwnership } from "@/lib/utils/store-verification";
 import { requireOwnerOnly } from "@/lib/auth/require-owner-only";
 import { AttendancePrintView } from "@/features/dashboard/attendance/components/attendance-print-view";
-import { pairAttendanceIntoWorkdays } from "@/lib/attendance/hours-aggregation";
 import { getBusinessDateKey } from "@/lib/attendance/business-date";
+import {
+  fetchHoursReport,
+  getStoreHoursSettings,
+  resolveReportRange,
+} from "@/lib/attendance/fetch-hours-report";
+import { fetchPayroll } from "@/lib/attendance/fetch-payroll";
+import { getActiveStaffSession } from "@/lib/staff-session";
+import { getStorePlan } from "@/lib/plans/store-plan";
+import { planHasFeature } from "@/lib/plans/entitlements";
 import { fetchUnifiedLog } from "@/lib/attendance/unified-log";
 import { formatCurrency } from "@/lib/utils/formatting";
 import { getFinanceSettings } from "@/lib/services/finance-settings.service";
 
 // Deliberately outside the (dashboard) route group — see pos/orders/print's
 // page.tsx for the original precedent.
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 function firstParam(value: string | string[] | undefined): string | null {
   return (Array.isArray(value) ? value[0] : value) ?? null;
@@ -39,57 +45,62 @@ export default async function AttendancePrintPage({ params, searchParams }: Prin
   const store = await verifyStoreOwnership(storeId, session.user.id);
 
   const now = new Date();
-  const from = firstParam(sp.from) ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const to = firstParam(sp.to) ?? now.toISOString().slice(0, 10);
+  const settings = await getStoreHoursSettings(storeId);
+  const rangeParams = new URLSearchParams();
+  const fromParam = firstParam(sp.from);
+  const toParam = firstParam(sp.to);
+  if (fromParam) rangeParams.set("from", fromParam);
+  if (toParam) rangeParams.set("to", toParam);
+  const range = resolveReportRange(rangeParams, settings.timeZone, now);
+  const todayKey = getBusinessDateKey(now, settings.timeZone);
+  const from = range?.fromKey ?? `${todayKey.slice(0, 8)}01`;
+  const to = range?.toKey ?? todayKey;
   const staffId = firstParam(sp.staffId);
-  const tab = firstParam(sp.tab) === "hours" ? "hours" : "log";
+  const tabParam = firstParam(sp.tab);
+  const tab = tabParam === "hours" || tabParam === "salary" ? tabParam : "log";
 
   const fromDate = new Date(`${from}T00:00:00.000Z`);
   const toDate = new Date(`${to}T23:59:59.999Z`);
 
-  if (tab === "hours") {
-    const business = await prisma.store.findUnique({
-      where: { id: storeId },
-      select: { standardWorkMinutesPerDay: true, business: { select: { timezone: true } } },
-    });
-    const timezone = business?.business.timezone ?? "UTC";
-    const standardWorkMinutesPerDay = business?.standardWorkMinutesPerDay ?? 480;
+  if (tab === "salary") {
+    // Salaries: the real owner with no other persona on the device — what
+    // GET /payroll enforces. requireOwnerOnly above only turns away a persona
+    // of THIS store.
+    const persona = await getActiveStaffSession();
+    if (persona && persona.role !== "OWNER") redirect(`/store/${storeId}/schedule`);
+    // Same plan gate as the Schedule page and GET /payroll — this page sits
+    // outside the (dashboard) group, so no layout applies it here.
+    if (!planHasFeature(await getStorePlan(storeId), "staffOperations")) {
+      redirect(`/store/${storeId}/schedule`);
+    }
 
-    const events = await prisma.attendanceRecord.findMany({
-      where: {
-        storeId,
-        type: { in: ["CLOCK_IN", "CLOCK_OUT", "ABSENCE"] },
-        ...(staffId && { staffMemberId: staffId }),
-        timestamp: { gte: new Date(fromDate.getTime() - DAY_MS), lte: new Date(toDate.getTime() + DAY_MS) },
-      },
-      select: { id: true, staffMemberId: true, type: true, timestamp: true },
-      orderBy: { timestamp: "asc" },
-    });
-    const result = pairAttendanceIntoWorkdays(events, standardWorkMinutesPerDay, timezone, now);
-    const fromKey = getBusinessDateKey(fromDate, timezone);
-    const toKey = getBusinessDateKey(toDate, timezone);
+    const payroll = await fetchPayroll({ storeId, fromKey: from, toKey: to, staffId, settings, now });
+    return (
+      <AttendancePrintView
+        storeName={store.name}
+        from={from}
+        to={to}
+        payroll={payroll}
+        generatedAt={now.toISOString()}
+      />
+    );
+  }
+
+  if (tab === "hours") {
+    const { rows } = await fetchHoursReport({ storeId, fromKey: from, toKey: to, staffId, settings, now });
     const staff = await prisma.staffMember.findMany({
-      where: { id: { in: [...new Set(events.map((e) => e.staffMemberId))] } },
+      where: { storeId, id: { in: [...new Set(rows.map((r) => r.staffMemberId))] } },
       select: { id: true, name: true },
     });
     const staffMap = new Map(staff.map((s) => [s.id, s.name]));
-
-    const hoursRows = result.dailyRows
-      .filter((row) => row.date >= fromKey && row.date <= toKey)
-      .map((row) => ({
-        date: row.date,
-        staffName: staffMap.get(row.staffMemberId) ?? row.staffMemberId,
-        regularMinutes: row.regularMinutes,
-        overtimeMinutes: row.overtimeMinutes,
-      }));
 
     return (
       <AttendancePrintView
         storeName={store.name}
         from={from}
         to={to}
-        hoursRows={hoursRows}
-        generatedAt={new Date().toISOString()}
+        hoursRows={rows.map((row) => ({ ...row, staffName: staffMap.get(row.staffMemberId) ?? row.staffMemberId }))}
+        generatedAt={now.toISOString()}
       />
     );
   }

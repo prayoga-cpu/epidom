@@ -7,8 +7,10 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { useCurrentStore } from "@/features/dashboard/shared/hooks/use-current-store";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { PosPrinterMenu } from "@/features/pos/components/pos-printer-menu";
+import { NotificationBell } from "@/features/dashboard/shared/notification-bell";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { PosModeShiftChip } from "./pos-mode-shift-chip";
+import { PosModeFullscreenToggle } from "./pos-mode-fullscreen-toggle";
 import { isPosTabPath } from "./pos-mode-tab-bar";
 
 interface PosModeStatusBarProps {
@@ -26,7 +28,8 @@ interface PosModeStatusBarProps {
 
 /**
  * Persistent 44px strip above every POS Mode route — online status, shift
- * label, store name, printer menu, staff badge, "More" menu. Ports the desktop-branch content
+ * label, store name, fullscreen, notifications, printer menu, staff badge,
+ * "More" menu. Ports the desktop-branch content
  * pos-header.tsx used to render per-page; here it's shell-level so it
  * doesn't repaint between /pos, /pos/orders, /pos/kds, /tables.
  */
@@ -114,6 +117,17 @@ export function PosModeStatusBar({
           controls don't fit, and the name truncates instead of pushing the More
           button off-screen. The printer and More buttons keep their width. */}
       <div className="ml-auto flex min-w-0 gap-2">
+        {/* On every POS route, the Operational page included: a new online order
+            has to be noticed wherever the cashier happens to be. Its popover
+            carries the same per-device push + sound settings as the Back Office. */}
+        {/* Fullscreen is for the till tablet; on a phone the bar has no room
+            for it and the browser rarely allows it anyway. */}
+        <div className="hidden shrink-0 items-center sm:flex">
+          <PosModeFullscreenToggle />
+        </div>
+        <div className="flex shrink-0 items-center">
+          <NotificationBell variant="pos" />
+        </div>
         {onPosSystem && <PosPrinterMenu storeId={storeId} />}
         {/* No gap inside: the staff badge and the More button read as one block. */}
         <div className="flex min-w-0">

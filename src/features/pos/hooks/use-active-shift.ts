@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { CloseShiftInput, OpenShiftInput } from "@/lib/validation/operations.schemas";
 import type { ShiftReportData } from "@/lib/finance/shift-report";
-import { canManageShift } from "../lib/shift-access";
+import { canFinishShift, canManageShift } from "../lib/shift-access";
 import { OWNER_PERSONA_ID, usePosSession } from "./use-pos-session";
 
 /**
@@ -134,6 +134,15 @@ export function useActiveShift(storeId: string) {
   });
 
   const shift = query.data ?? null;
+  const canFinish =
+    !!shift &&
+    canFinishShift(
+      {
+        staffMemberId,
+        isOwner: session.staffId === OWNER_PERSONA_ID || session.staffRole === "OWNER",
+      },
+      shift.staffMember
+    );
   const sessionShiftId = session.shiftId;
   // When this persona signed in. Login carries the shift the SERVER just resolved
   // (verify-pin), which is fresher than anything already in this shared cache.
@@ -167,6 +176,8 @@ export function useActiveShift(storeId: string) {
      */
     known: query.data !== undefined,
     staffMemberId,
+    /** Only the persona who opened the shift may finish it (see canFinishShift). */
+    canFinish,
     isLoading: allowed && (isResolving || query.isLoading),
     isError: query.isError,
     refetch: query.refetch,

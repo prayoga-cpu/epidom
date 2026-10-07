@@ -56,6 +56,21 @@ export interface OnboardingState {
   goals: OnboardingGoal[];
 }
 
+/**
+ * The account's billing, read when the wizard loads (getOnboardingBilling):
+ * whether publishing may go on to a plan's Checkout.
+ */
+export interface OnboardingBilling {
+  /**
+   * A self-serve Checkout fits: the account is on Free (no ACTIVE paid plan)
+   * and has no admin-quoted price waiting to be paid. An owner already paying
+   * changes plan from Billing instead.
+   */
+  canCheckout: boolean;
+  /** A POS Checkout would include the 14-day trial (first subscription only). */
+  posTrialEligible: boolean;
+}
+
 /** POST /api/onboarding/complete response. */
 export interface OnboardingCompleteResult {
   storeId: string;

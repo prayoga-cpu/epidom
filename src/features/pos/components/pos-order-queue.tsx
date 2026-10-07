@@ -48,7 +48,7 @@ export function PosOrderQueue({ storeId, queue }: PosOrderQueueProps) {
   const { data: kdsSettings, isLoading: isLoadingSettings } = useKdsSettings(storeId);
   const { data: customProductsSettings } = useCustomProductsSettings(storeId);
   const queryClient = useQueryClient();
-  const updateStatus = useUpdateOrderStatus(storeId);
+  const updateStatus = useUpdateOrderStatus(storeId, { atTill: true });
   const activeQueueEnabled = kdsSettings?.kitchenDisplayEnabled ?? true;
 
   const { filters, setFilters, patchFilters, allOrders, scopedOrders, isLoading } = queue;

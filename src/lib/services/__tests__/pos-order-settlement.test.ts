@@ -346,12 +346,45 @@ describe("buildPosSettlement — customer snapshot", () => {
     ).rejects.toMatchObject({ status: 422 });
   });
 
+  it("stays strict for a LIVE checkout, which marks itself", async () => {
+    // Since 3.3.7 the online checkout sends clientRequestId too (an idempotency
+    // key). It is not a replay, and a bad customer is still a 422.
+    prismaMock.customer.findFirst.mockResolvedValue(null);
+    await expect(
+      buildPosSettlement({
+        storeId: "store-1",
+        store: STORE,
+        input: legacyInput({
+          customerId: "cus-other",
+          clientRequestId: "live-1",
+          liveCheckout: true,
+        }),
+      })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
+  it("stays lenient for a sale queued by a till still on the previous release", async () => {
+    // That client sends a bare clientRequestId — no clientCreatedAt, no mark —
+    // and deletes a sale the server refuses five times.
+    prismaMock.customer.findFirst.mockResolvedValue(null);
+    const s = await buildPosSettlement({
+      storeId: "store-1",
+      store: STORE,
+      input: legacyInput({ customerId: "cus-other", clientRequestId: "queue-old" }),
+    });
+    expect(s.tolerant).toBe(true);
+  });
+
   it("records the sale anyway on an offline replay", async () => {
     prismaMock.customer.findFirst.mockResolvedValue(null);
     const s = await buildPosSettlement({
       storeId: "store-1",
       store: STORE,
-      input: legacyInput({ customerId: "cus-other", clientRequestId: "queue-1" }),
+      input: legacyInput({
+        customerId: "cus-other",
+        clientRequestId: "queue-1",
+        clientCreatedAt: "2026-10-06T01:00:00.000Z",
+      }),
     });
 
     expect(s.customer).toBeNull();
@@ -435,6 +468,7 @@ describe("buildSettlementOrderData", () => {
     const input = legacyInput({
       customerId: "cus-other",
       clientRequestId: "queue-1",
+      clientCreatedAt: "2026-10-06T01:00:00.000Z",
       notes: "extra hot",
     });
     const s = await buildPosSettlement({ storeId: "store-1", store: STORE, input });
@@ -515,7 +549,7 @@ describe("applySettlementBookkeeping", () => {
     vi.mocked(consumeCouponUse).mockRejectedValueOnce(new LoyaltyConflictError("used up"));
     const s = await settlementWith(
       { couponId: "cp-1", couponMaxUses: 1, discountAmount: 10 },
-      legacyInput({ clientRequestId: "queue-1" })
+      legacyInput({ clientRequestId: "queue-1", clientCreatedAt: "2026-10-06T01:00:00.000Z" })
     );
 
     const result = await applySettlementBookkeeping(tx, {
@@ -578,6 +612,7 @@ function makeTx() {
     },
     orderPayment: { create: vi.fn() },
     table: { updateMany: vi.fn() },
+    shift: { findFirst: vi.fn().mockResolvedValue(null) },
   } as any;
 }
 
@@ -612,6 +647,83 @@ describe("claimHeldOrderForSettlement", () => {
 });
 
 describe("settlePendingOrderInTx", () => {
+  const settle = (tx: ReturnType<typeof makeTx>, extra: Record<string, unknown> = {}) =>
+    settlePendingOrderInTx(tx, {
+      orderId: "ord-1",
+      storeId: "store-1",
+      tenderMethod: "CASH",
+      hasExistingPayments: false,
+      attachToOpenShift: true,
+      ...extra,
+    });
+
+  it("leaves a Back Office settle-up off every till", async () => {
+    // The owner collected it; it never went into whoever's drawer is open.
+    const tx = makeTx();
+    tx.shift.findFirst.mockResolvedValue({ id: "shift-open" });
+    await settle(tx, { attachToOpenShift: false });
+    expect(tx.shift.findFirst).not.toHaveBeenCalled();
+    expect(tx.order.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-prices the processing fee from the method actually used", async () => {
+    // Placed as "pay at the cashier" (CASH, fee 0), paid by QRIS: the fee is the
+    // store's cost and must follow the real tender.
+    const tx = makeTx();
+    await settle(tx, {
+      tenderMethod: "QRIS",
+      feeSettings: { processingFeeEnabled: true, processingFeeOverrides: null },
+    });
+    const feeWrite = tx.order.update.mock.calls.find(
+      (c: any[]) => c[0]?.data?.processingFee !== undefined
+    );
+    expect(feeWrite).toBeDefined();
+    expect(Number(feeWrite[0].data.processingFee)).toBeGreaterThan(0);
+    expect(feeWrite[0].where).toEqual({ id: "ord-1" });
+  });
+
+  it("leaves the fee alone when the fee settings weren't given", async () => {
+    const tx = makeTx();
+    await settle(tx, { tenderMethod: "QRIS" });
+    expect(
+      tx.order.update.mock.calls.some((c: any[]) => c[0]?.data?.processingFee !== undefined)
+    ).toBe(false);
+  });
+
+  it("files an order that reached the till with no shift under the open one when it is paid", async () => {
+    // A storefront "pay at the cashier" order: its cash goes into THIS drawer.
+    const tx = makeTx();
+    tx.shift.findFirst.mockResolvedValue({ id: "shift-open" });
+
+    await settle(tx);
+
+    expect(tx.shift.findFirst).toHaveBeenCalledWith({
+      where: { storeId: "store-1", closedAt: null },
+      orderBy: { openedAt: "desc" },
+      select: { id: true },
+    });
+    // Guarded on shiftId: null — an order already on a shift keeps it.
+    expect(tx.order.updateMany).toHaveBeenCalledWith({
+      where: { id: "ord-1", storeId: "store-1", shiftId: null },
+      data: { shiftId: "shift-open" },
+    });
+  });
+
+  it("attaches nothing when no shift is open", async () => {
+    const tx = makeTx();
+    await settle(tx);
+    // Only the PAID claim itself.
+    expect(tx.order.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("attaches nothing for the loser of a concurrent settle", async () => {
+    const tx = makeTx();
+    tx.order.updateMany.mockResolvedValue({ count: 0 });
+    tx.shift.findFirst.mockResolvedValue({ id: "shift-open" });
+    await settle(tx);
+    expect(tx.shift.findFirst).not.toHaveBeenCalled();
+  });
+
   it("writes one tender row and earns points for the winner", async () => {
     const tx = makeTx();
     vi.mocked(earnPointsForOrder).mockResolvedValue(5);
@@ -626,7 +738,13 @@ describe("settlePendingOrderInTx", () => {
 
     expect(result).toEqual({ settled: true, pointsEarned: 5 });
     expect(tx.order.updateMany).toHaveBeenCalledWith({
-      where: { paymentStatus: { not: "PAID" }, id: "ord-1", storeId: "store-1" },
+      // A cancelled order or a saved bill is never marked paid here.
+      where: {
+        paymentStatus: { not: "PAID" },
+        status: { notIn: ["CANCELLED", "HELD"] },
+        id: "ord-1",
+        storeId: "store-1",
+      },
       data: { paymentStatus: "PAID" },
     });
     expect(tx.orderPayment.create).toHaveBeenCalledTimes(1);
@@ -905,6 +1023,7 @@ describe("mapSettlementError: lines the menu no longer sells", () => {
         paymentMethod: "CASH",
         amountTendered: 100,
         clientRequestId: "offline-1",
+        clientCreatedAt: "2026-10-06T01:00:00.000Z",
       } as any,
     });
 

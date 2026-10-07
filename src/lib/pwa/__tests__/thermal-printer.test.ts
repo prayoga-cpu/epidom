@@ -690,3 +690,49 @@ describe("buildEscPos — wrapped lines keep their indentation", () => {
     for (const line of lines) expect(line.length).toBeLessThanOrEqual(32);
   });
 });
+
+describe("buildEscPos — guest WiFi", () => {
+  it("prints the network and password on a receipt", () => {
+    const out = decode(
+      buildEscPos({ ...BASE_RECEIPT, wifiName: "Tahoma Guest", wifiPassword: "kopi2026" })
+    );
+    expect(out).toContain("WiFi     : Tahoma Guest");
+    expect(out).toContain("Password : kopi2026");
+  });
+
+  it("prints the network alone for an open network", () => {
+    const out = decode(buildEscPos({ ...BASE_RECEIPT, wifiName: "Tahoma Guest" }));
+    expect(out).toContain("WiFi     : Tahoma Guest");
+    expect(out).not.toContain("Password");
+  });
+
+  it("never prints WiFi on a bill", () => {
+    const out = decode(
+      buildEscPos({
+        ...BASE_RECEIPT,
+        documentType: "bill",
+        wifiName: "Tahoma Guest",
+        wifiPassword: "kopi2026",
+      })
+    );
+    expect(out).not.toContain("Tahoma Guest");
+    expect(out).not.toContain("kopi2026");
+  });
+
+  it("wraps a long passphrase instead of overflowing 58mm paper", () => {
+    const passphrase = "this-is-a-very-long-wpa-passphrase-0123456789";
+    const lines = printedLines(
+      buildEscPos({ ...BASE_RECEIPT, width: 32, wifiName: "Guest", wifiPassword: passphrase })
+    );
+    for (const l of lines) expect(l.length).toBeLessThanOrEqual(32);
+    expect(lines.join("").replace(/\s/g, "")).toContain(passphrase);
+  });
+
+  it("uses the receipt's own language for the labels", () => {
+    const out = decode(
+      buildEscPos({ ...BASE_RECEIPT, locale: "fr", wifiName: "Invites", wifiPassword: "x" })
+    );
+    expect(out).toContain("Wi-Fi    : Invites");
+    expect(out).toContain("Mot de passe: x");
+  });
+});

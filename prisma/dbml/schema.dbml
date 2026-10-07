@@ -142,7 +142,9 @@ Table stores {
   staffSchedules staff_schedules [not null]
   scheduleImages schedule_images [not null]
   attendanceRecords attendance_records [not null]
+  staffAllowances staff_allowances [not null]
   cashMovements cash_movements [not null]
+  expenses expenses [not null]
   customers customers [not null]
   discountPresets discount_presets [not null]
   coupons coupons [not null]
@@ -176,6 +178,9 @@ Table store_receipt_settings {
   facebookUrl String
   showSocialLinks Boolean [not null, default: true]
   autoSendWhatsappReceipt Boolean [not null, default: true]
+  wifiName String
+  wifiPassword String
+  showWifiOnReceipt Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   store stores [not null]
@@ -907,6 +912,7 @@ Table staff_members {
   pin String
   payType PayType [not null, default: 'NONE']
   payRate Decimal
+  overtimeRate Decimal
   contractType ContractType
   isActive Boolean [not null, default: true]
   inviteStatus String
@@ -918,14 +924,34 @@ Table staff_members {
   user user
   staffInvites staff_invites [not null]
   shifts shifts [not null]
+  closedShifts shifts [not null]
   sessions staff_sessions [not null]
   staffSchedules staff_schedules [not null]
   attendanceRecords attendance_records [not null]
   cashMovements cash_movements [not null]
+  allowances staff_allowances [not null]
 
   indexes {
     (storeId, username) [unique]
   }
+}
+
+Table staff_allowances {
+  id String [pk]
+  storeId String [not null]
+  staffMemberId String [not null]
+  name String [not null]
+  amount Decimal [not null]
+  basis AllowanceBasis [not null, default: 'PER_DAY']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+  staffMember staff_members [not null]
+
+  Note: 'A named allowance the owner pays one staff member on top of their base pay.
+Set on the Staff page\'s Contract card, which saves the whole list at once
+(replace-all), so there is no per-row edit history: like payRate, the
+salary report always prices a period at today\'s values.'
 }
 
 Table staff_invites {
@@ -979,10 +1005,13 @@ Table shifts {
   expectedCash Decimal
   cashDifference Decimal
   notes String
+  closedByStaffMemberId String
+  closedFromBackOffice Boolean [not null, default: false]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   store stores [not null]
   staffMember staff_members [not null]
+  closedBy staff_members
   orders orders [not null]
   cashMovements cash_movements [not null]
 }
@@ -1011,6 +1040,24 @@ the right shift window.']
   store stores [not null]
   shift shifts
   staffMember staff_members
+}
+
+Table expenses {
+  id String [pk]
+  storeId String [not null]
+  date DateTime [not null, note: 'The day the cost belongs to, as a calendar date.']
+  category ExpenseCategory [not null]
+  description String
+  amount Decimal [not null, note: 'Literal amount in the store\'s own currency, like Order money.']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+
+  Note: 'An operating cost the owner records against a day — rent, electricity,
+wages paid, marketing. Finance subtracts these from net profit to reach
+profit after expenses. Ingredients bought for sale are NOT expenses here:
+they reach the P&L as COGS when sold, and recording them again would count
+them twice.'
 }
 
 Table schedule_shifts {
@@ -1659,12 +1706,29 @@ Enum BillingInterval {
   YEARLY
 }
 
+Enum AllowanceBasis {
+  PER_DAY
+  PER_MONTH
+}
+
 Enum CashMovementType {
   TIP
   PETTY_IN
   PETTY_OUT
   DROP
   PAYOUT
+}
+
+Enum ExpenseCategory {
+  RENT
+  UTILITIES
+  SALARIES
+  MARKETING
+  SUPPLIES
+  MAINTENANCE
+  INSURANCE
+  FEES
+  OTHER
 }
 
 Enum ScheduleStatus {
@@ -1885,6 +1949,10 @@ Ref: staff_members.storeId > stores.id [delete: Cascade]
 
 Ref: staff_members.userId - user.id [delete: Set Null]
 
+Ref: staff_allowances.storeId > stores.id [delete: Cascade]
+
+Ref: staff_allowances.staffMemberId > staff_members.id [delete: Cascade]
+
 Ref: staff_invites.storeId > stores.id [delete: Cascade]
 
 Ref: staff_invites.staffMemberId > staff_members.id [delete: Cascade]
@@ -1897,11 +1965,15 @@ Ref: shifts.storeId > stores.id [delete: Cascade]
 
 Ref: shifts.staffMemberId > staff_members.id [delete: Cascade]
 
+Ref: shifts.closedByStaffMemberId > staff_members.id [delete: Cascade]
+
 Ref: cash_movements.storeId > stores.id [delete: Cascade]
 
 Ref: cash_movements.shiftId > shifts.id [delete: Set Null]
 
 Ref: cash_movements.staffMemberId > staff_members.id [delete: Set Null]
+
+Ref: expenses.storeId > stores.id [delete: Cascade]
 
 Ref: schedule_shifts.storeId > stores.id [delete: Cascade]
 

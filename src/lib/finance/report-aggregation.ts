@@ -6,17 +6,25 @@
  */
 
 import type { CashOnHandBreakdown } from "@/lib/finance/cash-drawer";
+import { refundedTaxPortion } from "@/lib/finance/order-charges";
 
 export interface CategoryBucketInput {
   total: number | string;
   quantity: number | string;
   menuItem: { category: { id: string; name: string } | null } | null;
+  /** When present, `orderCount` counts distinct orders instead of lines. */
+  orderId?: string;
 }
 
 export interface CategoryBucket {
   categoryId: string | null;
   categoryName: string;
+  /** Order lines. */
   orderItemCount: number;
+  /** Distinct orders with at least one line in this category — what the
+   * "Orders" column means. Falls back to the line count when the caller
+   * didn't pass order ids. */
+  orderCount: number;
   totalQuantity: number;
   totalRevenue: number;
 }
@@ -27,7 +35,8 @@ export interface CategoryBucket {
  * assigned both fall under "Uncategorized" rather than being dropped.
  */
 export function bucketItemsByCategory(items: CategoryBucketInput[]): CategoryBucket[] {
-  const buckets = new Map<string, CategoryBucket>();
+  const buckets = new Map<string, Omit<CategoryBucket, "orderCount">>();
+  const ordersByBucket = new Map<string, Set<string>>();
 
   for (const item of items) {
     const category = item.menuItem?.category ?? null;
@@ -43,10 +52,20 @@ export function bucketItemsByCategory(items: CategoryBucketInput[]): CategoryBuc
     bucket.totalQuantity += Number(item.quantity);
     bucket.totalRevenue += Number(item.total);
     buckets.set(key, bucket);
+    if (item.orderId) {
+      const orders = ordersByBucket.get(key) ?? new Set<string>();
+      orders.add(item.orderId);
+      ordersByBucket.set(key, orders);
+    }
   }
 
-  return Array.from(buckets.values())
-    .map((b) => ({ ...b, totalRevenue: Math.round(b.totalRevenue * 100) / 100 }))
+  return Array.from(buckets.entries())
+    .map(([key, b]) => ({
+      ...b,
+      orderCount: ordersByBucket.get(key)?.size ?? b.orderItemCount,
+      totalQuantity: Math.round(b.totalQuantity * 100) / 100,
+      totalRevenue: Math.round(b.totalRevenue * 100) / 100,
+    }))
     .sort((a, b) => b.totalRevenue - a.totalRevenue);
 }
 
@@ -140,6 +159,73 @@ export function bucketWasteByReason(entries: WasteBucketInput[]): WasteBucket[] 
   return Array.from(buckets.values())
     .map((b) => ({ ...b, totalValue: Math.round(b.totalValue * 100) / 100 }))
     .sort((a, b) => b.totalValue - a.totalValue);
+}
+
+export interface DailyOrderInput {
+  orderDate: Date | string;
+  total: number | string | { toString(): string };
+  discountAmount?: number | string | { toString(): string } | null;
+  tax?: number | string | { toString(): string } | null;
+  refundAmount?: number | string | { toString(): string } | null;
+}
+
+export interface DailyRow {
+  date: string;
+  orderCount: number;
+  /** Σ Order.total — the "Revenue" KPI for that day. */
+  revenue: number;
+  discountAmount: number;
+  refundAmount: number;
+  /** Tax owed, net of the tax share of refunds — same rule as the KPI card. */
+  taxCollected: number;
+  /** revenue − refunds − tax owed. */
+  netSales: number;
+}
+
+/**
+ * The Daily tab: one row per day an order was placed, carrying the same
+ * figures as the summary's P&L lines so the column totals equal the KPI cards.
+ *
+ * Days are UTC calendar days, matching the report window itself
+ * (`from`/`to` are sent as `T00:00:00Z`/`T23:59:59Z`), so no order falls into
+ * a half-day outside the requested range.
+ */
+export function bucketOrdersByDay(orders: DailyOrderInput[]): DailyRow[] {
+  const days = new Map<
+    string,
+    { orderCount: number; revenue: number; discount: number; refund: number; tax: number }
+  >();
+
+  for (const order of orders) {
+    const date = new Date(order.orderDate).toISOString().split("T")[0];
+    const day = days.get(date) ?? { orderCount: 0, revenue: 0, discount: 0, refund: 0, tax: 0 };
+    const tax = Number(order.tax ?? 0);
+    const refundAmount = Number(order.refundAmount ?? 0);
+    day.orderCount += 1;
+    day.revenue += Number(order.total ?? 0);
+    day.discount += Number(order.discountAmount ?? 0);
+    day.refund += refundAmount;
+    day.tax += tax - refundedTaxPortion({ total: order.total, tax, refundAmount });
+    days.set(date, day);
+  }
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  return Array.from(days.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, d]) => {
+      const revenue = round2(d.revenue);
+      const refundAmount = round2(d.refund);
+      const taxCollected = round2(d.tax);
+      return {
+        date,
+        orderCount: d.orderCount,
+        revenue,
+        discountAmount: round2(d.discount),
+        refundAmount,
+        taxCollected,
+        netSales: round2(revenue - refundAmount - taxCollected),
+      };
+    });
 }
 
 export interface ShiftGroupInput {
@@ -297,6 +383,10 @@ export interface ItemMarginInput {
    * for items sold before this field existed, or with no COGS attribution
    * path (aggregator items with no productId). */
   unitCostSnapshot: number | string | null;
+  /** Frozen per-unit cost of the line's modifiers
+   * (OrderItem.optionCostSnapshot). Part of the line's cost exactly as in
+   * COGS (see cogs.ts), or this report's costs never add up to the COGS card. */
+  optionCostSnapshot?: number | string | null;
 }
 
 export interface ItemMarginRow {
@@ -343,7 +433,8 @@ export function buildItemMarginRows(items: ItemMarginInput[]): ItemMarginRow[] {
     bucket.totalQuantity += qty;
     bucket.totalRevenue += Number(item.total);
     if (item.unitCostSnapshot != null) {
-      bucket.totalCost += Number(item.unitCostSnapshot) * qty;
+      bucket.totalCost +=
+        (Number(item.unitCostSnapshot) + Number(item.optionCostSnapshot ?? 0)) * qty;
     } else {
       bucket.hasUnknownCost = true;
     }
@@ -375,6 +466,8 @@ export interface CashShiftInput {
   openedAt: Date | string;
   closedAt: Date | string | null;
   staffMember: { id: string; name: string };
+  /** The owner ended this till from the Back Office, not its opener on the POS. */
+  closedFromBackOffice?: boolean;
   /**
    * The session's live cash position, from `getShiftCashOnHand()`. It carries
    * openingCash/closingCash/expectedCash/cashDifference as well as the
@@ -405,6 +498,8 @@ export interface CashReconciliationRow extends CashOnHandBreakdown {
   isOpen: boolean;
   /** true when a CLOSED session's counted drawer didn't balance. */
   isFlagged: boolean;
+  /** The owner ended this till from the Back Office, not its opener on the POS. */
+  closedFromBackOffice: boolean;
 }
 
 /**
@@ -436,6 +531,7 @@ export function buildCashReconciliationRows(shifts: CashShiftInput[]): CashRecon
         // running balance.
         isFlagged:
           !isOpen && s.breakdown.cashDifference != null && s.breakdown.cashDifference !== 0,
+        closedFromBackOffice: s.closedFromBackOffice ?? false,
       };
     })
     .sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());

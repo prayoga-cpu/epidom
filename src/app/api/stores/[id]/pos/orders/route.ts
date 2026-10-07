@@ -20,14 +20,14 @@ import {
   POS_ORDER_TX_TIMEOUT_MS,
 } from "@/lib/services/pos-order-settlement";
 import { allocateQueueNumber } from "@/lib/services/order-queue-number";
-import { resolveSaleShiftId } from "@/lib/services/shift-link";
+import { resolveReplayShiftId, resolveSaleShiftId } from "@/lib/services/shift-link";
+import { resolveOfflineOccurredAt } from "@/lib/services/offline-replay";
 import { serializePosOrders } from "@/lib/server/serialize";
 import { decimalToNumber } from "@/types/prisma";
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
-function generateOrderNumber(): string {
-  const date = new Date();
+function generateOrderNumber(date: Date = new Date()): string {
   const ymd = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
   return `POS-${ymd}-${nanoid(6).toUpperCase()}`;
 }
@@ -191,12 +191,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw err;
     }
 
-    const orderNumber = generateOrderNumber();
+    // A sale replayed from the offline queue keeps the time it was rung up, so
+    // it lands on its own day in every report (they filter on orderDate) and on
+    // the drawer it was paid into. Null for an online checkout.
+    const occurredAt = resolveOfflineOccurredAt(input);
+
+    const orderNumber = generateOrderNumber(occurredAt ?? undefined);
     const orderData = buildSettlementOrderData({ settlement, input });
     const { immediatelyDelivered, settledStatus } = settlement;
 
     // The client's idea of the open shift can be a minute stale on a shared till.
-    const shiftId = await resolveSaleShiftId(storeId, input.shiftId);
+    // A replay never borrows the shift open at sync time — see resolveReplayShiftId.
+    const shiftId = input.clientCreatedAt
+      ? await resolveReplayShiftId(storeId, input.shiftId, occurredAt)
+      : await resolveSaleShiftId(storeId, input.shiftId);
 
     let transactionResult;
     try {
@@ -215,11 +223,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
               orderNumber,
               queueNumber,
               storeId,
-              // Null for ordinary online checkouts; only offline replay sets it.
-              // The unique index makes a concurrent double-flush fail loudly here
+              // Offline replays always set it; online checkouts do too, so one
+              // that timed out can fall back to the queue safely. The unique index makes a concurrent double-flush fail loudly here
               // rather than silently creating a second order.
               clientRequestId: input.clientRequestId ?? null,
               shiftId,
+              ...(occurredAt ? { orderDate: occurredAt, createdAt: occurredAt } : {}),
               // `source` comes from orderData: POS, or the delivery platform.
             },
             include: {

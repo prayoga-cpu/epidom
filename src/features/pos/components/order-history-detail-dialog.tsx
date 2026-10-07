@@ -107,7 +107,7 @@ export function OrderHistoryDetailDialog({
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
   const { confirm, confirmDialog } = useConfirm();
-  const updateStatus = useUpdateOrderStatus(storeId);
+  const updateStatus = useUpdateOrderStatus(storeId, { atTill: true });
   const refundOrder = useRefundOrder(storeId);
   const { data: receiptSends } = useOrderReceiptSends(storeId, order?.id);
   const sendReceipt = useSendOrderReceipt(storeId);
@@ -580,7 +580,8 @@ export function OrderHistoryDetailDialog({
 
               {order.status !== "CANCELLED" && (
                 <DialogFooter>
-                  {order.paymentStatus === "PENDING" && (
+                  {/* A saved bill is paid by resuming it at the till (finalize). */}
+                  {order.paymentStatus === "PENDING" && order.status !== "HELD" && (
                     <Button
                       variant="outline"
                       disabled={updateStatus.isPending}

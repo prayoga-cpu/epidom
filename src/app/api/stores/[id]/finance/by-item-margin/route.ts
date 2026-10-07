@@ -57,7 +57,13 @@ export const GET = withApiHandler(
           departmentFilter(searchParams.get("department")),
         ],
       },
-      select: { name: true, quantity: true, total: true, unitCostSnapshot: true },
+      select: {
+        name: true,
+        quantity: true,
+        total: true,
+        unitCostSnapshot: true,
+        optionCostSnapshot: true,
+      },
     });
 
     // item.total is already literal in the owner's own currency;
@@ -75,6 +81,10 @@ export const GET = withApiHandler(
         unitCostSnapshot:
           item.unitCostSnapshot != null
             ? storefrontService.convertBaseToOwnerSync(Number(item.unitCostSnapshot), ownerRate)
+            : null,
+        optionCostSnapshot:
+          item.optionCostSnapshot != null
+            ? storefrontService.convertBaseToOwnerSync(Number(item.optionCostSnapshot), ownerRate)
             : null,
       }))
     );

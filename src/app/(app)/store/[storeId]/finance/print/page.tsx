@@ -7,27 +7,35 @@ import { requirePlan } from "@/lib/auth/require-plan";
 import { minPlanFor } from "@/lib/plans/entitlements";
 import { getActiveStaffSession } from "@/lib/staff-session";
 import { staffPersonaMayReadFinance } from "@/lib/auth/require-finance-access";
-import { type OrderSource } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { computeStoreFinanceSummary } from "@/lib/finance/store-summary";
+import { loadChannelRows } from "@/lib/finance/channel-report";
 import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import {
   shiftFilter,
   categoryFilter,
   departmentFilter,
+  channelFilter,
+  paymentMethodFilter,
+  parseReportBound,
   UNCATEGORIZED,
 } from "@/lib/finance/report-filters";
 import {
   bucketItemsByCategory,
   bucketItemsByDepartment,
+  bucketOrdersByDay,
   bucketWasteByReason,
+  buildItemMarginRows,
   buildShiftRows,
+  buildTenderPaymentMethodRows,
 } from "@/lib/finance/report-aggregation";
 import {
   bucketOrdersByScheduleShift,
   enumerateDateKeys,
+  summarizeScheduleShiftCoverage,
 } from "@/lib/finance/schedule-shift-bucketing";
+import { expenseDateWindow, summarizeExpenses } from "@/lib/finance/expenses";
 import { getBusinessDateKey, businessDateKeyToDate } from "@/lib/attendance/business-date";
-import { commissionRate, ONLINE_PLATFORM_LABELS } from "@/config/aggregator.config";
 import { wasteService } from "@/lib/services/waste.service";
 import { storefrontService } from "@/lib/services/storefront.service";
 import { FinancePrintView } from "@/features/dashboard/finance/components/finance-print-view";
@@ -39,13 +47,6 @@ import { FinancePrintView } from "@/features/dashboard/finance/components/financ
 // matching how attendance/print and schedule/print already work.
 
 export const dynamic = "force-dynamic";
-
-const SOURCE_LABELS: Record<OrderSource, string> = {
-  MANUAL: "Manual",
-  STOREFRONT: "Storefront",
-  POS: "POS Cashier",
-  ...ONLINE_PLATFORM_LABELS,
-};
 
 function firstParam(value: string | string[] | undefined): string | null {
   return (Array.isArray(value) ? value[0] : value) ?? null;
@@ -78,19 +79,40 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   const store = await verifyStoreOwnership(storeId, session.user.id);
 
   const now = new Date();
-  const from = new Date(
-    firstParam(sp.from) ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  );
-  const to = new Date(firstParam(sp.to) ?? now.toISOString());
+  // parseReportBound widens a bare YYYY-MM-DD to the whole day, as the
+  // on-screen report does — `new Date(to)` alone dropped the last day.
+  const from =
+    parseReportBound(firstParam(sp.from), "start") ??
+    new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = parseReportBound(firstParam(sp.to), "end") ?? now;
   const staffId = firstParam(sp.staffId);
   const categoryId = firstParam(sp.category);
   const department = firstParam(sp.department);
+  const channel = firstParam(sp.channel);
+  const paymentMethod = firstParam(sp.paymentMethod);
 
+  // The same filters, applied to the same reports, as the screen: a till
+  // session arrives as its exact from/to window, staff/channel/payment narrow
+  // the orders, and category/department only narrow the item reports.
   const urlParams = new URLSearchParams();
   if (staffId) urlParams.set("staffId", staffId);
   const shiftWhere = shiftFilter(urlParams);
+  const channelWhere = channelFilter(channel);
+  const paymentWhere = paymentMethodFilter(paymentMethod);
+  const orderFilters = { ...shiftWhere, ...channelWhere, ...paymentWhere };
+  const revenueOrders: Prisma.OrderWhereInput = {
+    storeId,
+    status: { notIn: NON_REVENUE_STATUSES },
+    orderDate: { gte: from, lte: to },
+  };
+  const filteredOrders: Prisma.OrderWhereInput = { ...revenueOrders, ...orderFilters };
+  const itemWhere: Prisma.OrderItemWhereInput = {
+    order: filteredOrders,
+    // Combined via AND — both filters can produce their own "OR" clause.
+    AND: [categoryFilter(categoryId), departmentFilter(department)],
+  };
 
-  const [business, staffMember, categoryRecord, { currency }] = await Promise.all([
+  const [business, staffMember, categoryRecord, { currency, rate }] = await Promise.all([
     prisma.store.findUnique({
       where: { id: storeId },
       select: {
@@ -107,129 +129,91 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   ]);
   const timezone = business?.business.timezone ?? "UTC";
 
-  // ─── Summary ───
+  // ─── Summary + daily ───
   // The same computeStoreFinanceSummary the on-screen report and the All
-  // outlets roll-up use. This page used to carry its own copy of the P&L,
-  // which left refunds out of net revenue — so the printed and on-screen
-  // figures disagreed for any period with a refund.
-  const {
-    revenue,
-    orderCount,
-    taxCollected,
-    serviceCharge,
-    processingFee,
-    cogs,
-    grossProfit,
-    grossMarginPct,
-    wasteLoss,
-    netRevenue,
-    netProfit,
-  } = await computeStoreFinanceSummary(storeId, { from, to }, shiftWhere);
+  // outlets roll-up use, so the printed P&L is the one on screen.
+  const [summary, dailyOrders] = await Promise.all([
+    computeStoreFinanceSummary(storeId, { from, to }, orderFilters),
+    prisma.order.findMany({
+      where: filteredOrders,
+      select: { orderDate: true, total: true, discountAmount: true, tax: true, refundAmount: true },
+      orderBy: { orderDate: "asc" },
+    }),
+  ]);
+  const buckets = bucketOrdersByDay(dailyOrders);
 
-  const rawOrders = await prisma.order.findMany({
-    where: {
-      storeId,
-      status: { notIn: NON_REVENUE_STATUSES },
-      orderDate: { gte: from, lte: to },
-      ...shiftWhere,
-    },
-    select: { orderDate: true, total: true },
-    orderBy: { orderDate: "asc" },
-  });
-  const bucketMap = new Map<string, number>();
-  for (const d of rawOrders) {
-    const dateKey = d.orderDate.toISOString().split("T")[0];
-    bucketMap.set(dateKey, (bucketMap.get(dateKey) ?? 0) + Number(d.total ?? 0));
-  }
-  const buckets = Array.from(bucketMap.entries()).map(([date, rev]) => ({ date, revenue: rev }));
-
-  // ─── Channels ───
-  const [channelGrouped, channelFeeGrouped] = await Promise.all([
-    prisma.order.groupBy({
-      by: ["source"],
-      where: {
-        storeId,
-        status: { notIn: NON_REVENUE_STATUSES },
-        orderDate: { gte: from, lte: to },
-        ...shiftWhere,
-      },
-      _sum: { total: true, tax: true },
+  // ─── Channels, payment methods ───
+  const [channels, tenderGroups, legacyGroups] = await Promise.all([
+    loadChannelRows(storeId, { from, to }, { ...shiftWhere, ...paymentWhere }),
+    prisma.orderPayment.groupBy({
+      by: ["method"],
+      where: { order: { ...revenueOrders, ...shiftWhere, ...channelWhere } },
+      _sum: { amount: true },
       _count: { id: true },
     }),
     prisma.order.groupBy({
-      by: ["source"],
-      where: {
-        storeId,
-        status: { notIn: NON_REVENUE_STATUSES },
-        paymentStatus: "PAID",
-        orderDate: { gte: from, lte: to },
-        ...shiftWhere,
-      },
-      _sum: { processingFee: true },
+      by: ["paymentMethod"],
+      where: { ...revenueOrders, ...shiftWhere, ...channelWhere, payments: { none: {} } },
+      _sum: { total: true },
+      _count: { id: true },
     }),
   ]);
-  const feeBySource = new Map(
-    channelFeeGrouped.map((g) => [g.source, Number(g._sum.processingFee ?? 0)])
-  );
-  const channels = channelGrouped
-    .map((g) => {
-      const rev = Number(g._sum.total ?? 0);
-      const taxAmount = Math.round(Number(g._sum.tax ?? 0) * 100) / 100;
-      const processingFeeAmount = Math.round((feeBySource.get(g.source) ?? 0) * 100) / 100;
-      const commission = commissionRate(g.source);
-      const commissionAmount = Math.round(rev * commission * 100) / 100;
-      const netRev =
-        Math.round((rev - commissionAmount - processingFeeAmount - taxAmount) * 100) / 100;
-      return {
-        source: g.source,
-        label: SOURCE_LABELS[g.source] ?? g.source,
-        orderCount: g._count.id,
-        revenue: Math.round(rev * 100) / 100,
-        // Rounded to 2 decimals: 0.14 * 100 is 14.000000000000002 in floating point.
-        commissionPct: Math.round(commission * 10000) / 100,
-        commissionAmount,
-        taxAmount,
-        processingFeeAmount,
-        netRevenue: netRev,
-      };
-    })
-    .sort((a, b) => b.revenue - a.revenue);
+  const paymentMethods = buildTenderPaymentMethodRows(tenderGroups, legacyGroups);
 
-  // ─── Top items ───
-  const topItemGroups = await prisma.orderItem.groupBy({
-    by: ["name"],
-    where: {
-      order: {
-        storeId,
-        status: { notIn: NON_REVENUE_STATUSES },
-        orderDate: { gte: from, lte: to },
-        ...shiftWhere,
-      },
-      AND: [categoryFilter(categoryId), departmentFilter(department)],
-    },
-    _sum: { total: true, quantity: true },
-    _count: { id: true },
-    orderBy: { _sum: { total: "desc" } },
-    take: 20,
-  });
+  // ─── Top items (+ every item, for the remainder line) ───
+  const [topItemGroups, itemSums, itemNames] = await Promise.all([
+    prisma.orderItem.groupBy({
+      by: ["name"],
+      where: itemWhere,
+      _sum: { total: true, quantity: true },
+      _count: { id: true },
+      orderBy: { _sum: { total: "desc" } },
+      take: 20,
+    }),
+    prisma.orderItem.aggregate({ where: itemWhere, _sum: { total: true, quantity: true } }),
+    prisma.orderItem.groupBy({ by: ["name"], where: itemWhere }),
+  ]);
   const topItems = topItemGroups.map((item) => ({
     name: item.name,
     orderCount: item._count.id,
     totalQuantity: Number(item._sum.quantity ?? 0),
     totalRevenue: Math.round(Number(item._sum.total ?? 0) * 100) / 100,
   }));
+  const topItemsTotals = {
+    itemCount: itemNames.length,
+    totalQuantity: Math.round(Number(itemSums._sum.quantity ?? 0) * 100) / 100,
+    totalRevenue: Math.round(Number(itemSums._sum.total ?? 0) * 100) / 100,
+  };
+
+  // ─── Item margin ───
+  // unitCostSnapshot/optionCostSnapshot are IDR; convert before combining.
+  const marginLines = await prisma.orderItem.findMany({
+    where: itemWhere,
+    select: {
+      name: true,
+      quantity: true,
+      total: true,
+      unitCostSnapshot: true,
+      optionCostSnapshot: true,
+    },
+  });
+  const toOwner = (value: unknown) =>
+    value != null ? storefrontService.convertBaseToOwnerSync(Number(value), rate) : null;
+  const itemMargin = buildItemMarginRows(
+    marginLines.map((line) => ({
+      name: line.name,
+      quantity: Number(line.quantity),
+      total: Number(line.total),
+      unitCostSnapshot: toOwner(line.unitCostSnapshot),
+      optionCostSnapshot: toOwner(line.optionCostSnapshot),
+    }))
+  );
 
   // ─── By category / department ───
   const orderItems = await prisma.orderItem.findMany({
-    where: {
-      order: {
-        storeId,
-        status: { notIn: NON_REVENUE_STATUSES },
-        orderDate: { gte: from, lte: to },
-        ...shiftWhere,
-      },
-    },
+    where: { order: filteredOrders },
     select: {
+      orderId: true,
       total: true,
       quantity: true,
       menuItem: {
@@ -243,11 +227,17 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   });
   const categories = bucketItemsByCategory(
     orderItems.map((item) => ({
+      orderId: item.orderId,
       total: Number(item.total),
       quantity: Number(item.quantity),
       menuItem: item.menuItem ? { category: item.menuItem.category } : null,
     }))
   );
+  const categoryTotals = {
+    orderCount: new Set(orderItems.map((item) => item.orderId)).size,
+    totalQuantity: Math.round(categories.reduce((sum, c) => sum + c.totalQuantity, 0) * 100) / 100,
+    totalRevenue: Math.round(categories.reduce((sum, c) => sum + c.totalRevenue, 0) * 100) / 100,
+  };
   const departments = bucketItemsByDepartment(
     orderItems.map((item) => ({
       total: Number(item.total),
@@ -291,11 +281,7 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
       select: { id: true, name: true, startTime: true, endTime: true, color: true },
     }),
     prisma.order.findMany({
-      where: {
-        storeId,
-        status: { notIn: NON_REVENUE_STATUSES },
-        orderDate: { gte: from, lte: to },
-      },
+      where: revenueOrders,
       select: { total: true, orderDate: true },
     }),
   ]);
@@ -303,6 +289,12 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
   const toKey = getBusinessDateKey(to, timezone);
   const dateKeys = enumerateDateKeys(fromKey, toKey);
   const scheduleShiftRawRows = bucketOrdersByScheduleShift(
+    scheduleOrders,
+    scheduleShifts,
+    dateKeys,
+    timezone
+  );
+  const scheduleTotals = summarizeScheduleShiftCoverage(
     scheduleOrders,
     scheduleShifts,
     dateKeys,
@@ -367,42 +359,64 @@ export default async function FinancePrintPage({ params, searchParams }: PrintPa
     notes: entry.notes,
   }));
 
+  // ─── Expenses ───
+  // Read on its own so a database that hasn't had the expenses migration
+  // applied yet still prints the rest of the report.
+  // Only on an unfiltered whole-day report, as on screen: expenses are
+  // store-wide, so subtracting them from a staff/channel/payment-filtered or
+  // till-session net profit would compare unlike with unlike.
+  const dateOnly = (value: string | null) => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const wholeStoreView =
+    !staffId &&
+    !channel &&
+    !paymentMethod &&
+    (firstParam(sp.from) == null || dateOnly(firstParam(sp.from)));
+  let expenses: ReturnType<typeof summarizeExpenses> | null = null;
+  if (wholeStoreView) {
+    try {
+      const rows = await prisma.expense.findMany({
+        where: { storeId, date: expenseDateWindow(from, to) },
+        select: { category: true, amount: true },
+      });
+      expenses = summarizeExpenses(rows);
+    } catch {
+      expenses = null;
+    }
+  }
+
   return (
     <FinancePrintView
       storeName={store.name}
       currency={currency}
       from={firstParam(sp.from) ?? from.toISOString().slice(0, 10)}
       to={firstParam(sp.to) ?? to.toISOString().slice(0, 10)}
+      isExactWindow={!dateOnly(firstParam(sp.from)) && firstParam(sp.from) != null}
       generatedAt={new Date().toISOString()}
       filters={{
         staffLabel: staffMember?.name ?? null,
         categoryId,
         categoryName: categoryRecord?.name ?? null,
         department,
+        channel,
+        paymentMethod,
       }}
-      summary={{
-        revenue: Math.round(revenue * 100) / 100,
-        cogs: Math.round(cogs * 100) / 100,
-        grossProfit: Math.round(grossProfit * 100) / 100,
-        grossMarginPct: Math.round(grossMarginPct * 100) / 100,
-        wasteLoss: Math.round(wasteLoss * 100) / 100,
-        taxCollected: Math.round(taxCollected * 100) / 100,
-        serviceCharge: Math.round(serviceCharge * 100) / 100,
-        processingFee: Math.round(processingFee * 100) / 100,
-        netRevenue: Math.round(netRevenue * 100) / 100,
-        netProfit: Math.round(netProfit * 100) / 100,
-        orderCount,
-        buckets,
-      }}
+      summary={{ ...summary, buckets }}
       channels={channels}
+      paymentMethods={paymentMethods}
       topItems={topItems}
+      topItemsTotals={topItemsTotals}
+      itemMargin={itemMargin}
       categories={categories}
+      categoryTotals={categoryTotals}
       departments={departments}
       customDepartmentLabel={store.customProductsEnabled ? store.customProductsLabel : null}
       shifts={shifts}
       scheduleShiftRows={scheduleShiftRows}
+      scheduleTotals={scheduleTotals}
       wasteReasons={wasteReasons}
       wasteEntries={wasteEntries}
+      wasteTotals={{ count: wasteList.total, value: wasteList.sumValue }}
+      expenses={expenses}
     />
   );
 }

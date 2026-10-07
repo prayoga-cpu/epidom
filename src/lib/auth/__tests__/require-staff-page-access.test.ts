@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
   redirect: (url: string) => mockRedirect(url),
 }));
 
-import { requireStaffPageAccess } from "../require-staff-page-access";
+import { canAccessStaffPage, requireStaffPageAccess } from "../require-staff-page-access";
 
 function session(
   overrides: Partial<{ storeId: string; role: string; allowedPages: string[]; staffMemberId: string }> = {}
@@ -170,5 +170,34 @@ describe("requireStaffPageAccess — no relationship to the store", () => {
     mockGetStoreViewer.mockResolvedValue({ kind: "none" });
     mockGetActiveStaffSession.mockResolvedValue(null);
     await expect(requireStaffPageAccess("store-1", "/pos")).rejects.toThrow("REDIRECT:/stores");
+  });
+});
+
+// The same rule as a yes/no, for a page deciding where it may send the viewer
+// (/pos with an empty menu): never redirects, and agrees with the guard.
+describe("canAccessStaffPage", () => {
+  it("the owner with no persona: yes", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(null);
+    await expect(canAccessStaffPage("store-1", "/data")).resolves.toBe(true);
+  });
+
+  it("a persona with the page: yes; without it: no, and no redirect", async () => {
+    mockGetActiveStaffSession.mockResolvedValue(session({ allowedPages: ["/pos", "/storefront"] }));
+    await expect(canAccessStaffPage("store-1", "/storefront")).resolves.toBe(true);
+    await expect(canAccessStaffPage("store-1", "/data")).resolves.toBe(false);
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it("a linked account before its PIN: no", async () => {
+    mockGetStoreViewer.mockResolvedValue({ kind: "staff", staffMemberId: "staff-1" });
+    mockGetActiveStaffSession.mockResolvedValue(null);
+    await expect(canAccessStaffPage("store-1", "/pos")).resolves.toBe(false);
+  });
+
+  it("no relationship to the store: no", async () => {
+    mockGetStoreViewer.mockResolvedValue({ kind: "none" });
+    mockGetActiveStaffSession.mockResolvedValue(null);
+    await expect(canAccessStaffPage("store-1", "/pos")).resolves.toBe(false);
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 });

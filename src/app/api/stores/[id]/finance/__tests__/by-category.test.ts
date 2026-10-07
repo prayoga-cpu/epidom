@@ -23,10 +23,21 @@ describe("bucketItemsByCategory", () => {
         categoryId: null,
         categoryName: "Uncategorized",
         orderItemCount: 1,
+        orderCount: 1,
         totalQuantity: 1,
         totalRevenue: 15_000,
       },
     ]);
+  });
+
+  it("counts distinct orders, not lines, when order ids are passed", () => {
+    const coffee = { category: { id: "drinks", name: "Drinks" } };
+    const result = bucketItemsByCategory([
+      { orderId: "o1", total: 10, quantity: 1, menuItem: coffee },
+      { orderId: "o1", total: 10, quantity: 1, menuItem: coffee },
+      { orderId: "o2", total: 10, quantity: 1, menuItem: coffee },
+    ]);
+    expect(result[0]).toMatchObject({ orderItemCount: 3, orderCount: 2 });
   });
 
   it("buckets a menuItem with no category assigned under Uncategorized", () => {

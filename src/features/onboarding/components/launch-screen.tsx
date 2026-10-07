@@ -5,26 +5,36 @@ import Link from "next/link";
 import { QRCodeCanvas } from "qrcode.react";
 import {
   ArrowRight,
+  Boxes,
   Check,
   Copy,
   Download,
   ExternalLink,
   LayoutDashboard,
+  Loader2,
   MessageCircle,
   MonitorSmartphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
+import { resolvePriceCurrency } from "@/features/dashboard/billing/lib/plan-price";
 import type { OnboardingCompleteResult } from "@/lib/onboarding/contracts";
-import { upgradeHrefFor } from "@/lib/plans/entitlements";
 import { downloadDataUrl } from "@/lib/utils/export";
 import { cn } from "@/lib/utils";
+import { usePlanCheckout } from "../hooks/use-plan-checkout";
+import type { PlanCheckout } from "../lib/plan-intent";
 import { PRIMARY_BUTTON_CLASS } from "./wizard-frame";
 
 export interface LaunchScreenProps {
   result: OnboardingCompleteResult;
   storeName: string;
+  /** The store's currency (OnboardingState.currency): the plan is charged in it when Stripe has a price in it. */
+  storeCurrency: string;
+  /** The plan the owner picked (checkoutAfterPublish), or null to stay on Free. */
+  checkout?: PlanCheckout | null;
+  /** Open the plan's Checkout as soon as this screen shows, without a click. */
+  autoCheckout?: boolean;
 }
 
 /** The link a WhatsApp share opens with: a ready-to-send message plus the store link. */
@@ -41,14 +51,22 @@ export const QR_EXPORT_SIZE = 1024;
 export const QR_EXPORT_MARGIN = 4;
 
 /**
- * "Your store is live": shown once the storefront is published. The public
- * link with Copy, a QR code to print, a WhatsApp share, then the way in: the
- * 1-minute tour or straight to the Back Office. An owner who wants to take
- * orders at the counter also gets the POS trial offer. Nothing here blocks;
- * every action is optional.
+ * "Your store is live": shown once the storefront is published. An owner who
+ * picked a paid plan (a POS or Operations goal, or a plan button before
+ * signing up) is taken on to that plan's Checkout straight away: for the POS
+ * trial that is a card and nothing charged for 14 days. The plan card stays
+ * at the top with a button, for when Checkout doesn't open or the owner comes
+ * Back from it. Then the public link with Copy, a QR code to print, a
+ * WhatsApp share, and the way in: the 1-minute tour or the Back Office.
  */
-export function LaunchScreen({ result, storeName }: LaunchScreenProps) {
-  const { t } = useI18n();
+export function LaunchScreen({
+  result,
+  storeName,
+  storeCurrency,
+  checkout = null,
+  autoCheckout = false,
+}: LaunchScreenProps) {
+  const { t, locale } = useI18n();
   const [copied, setCopied] = useState(false);
   // The print-size QR is only drawn while a download is being prepared.
   const [exportingQr, setExportingQr] = useState(false);
@@ -69,7 +87,44 @@ export function LaunchScreen({ result, storeName }: LaunchScreenProps) {
     t("onboarding.launch.whatsappMessage").replace("{store}", storeName),
     result.publicUrl
   );
-  const wantsCounter = result.goals.includes("counter");
+  const planCheckout = usePlanCheckout({
+    checkout,
+    currency: resolvePriceCurrency(storeCurrency, locale),
+    next: tourHref,
+  });
+  const redirecting = planCheckout.status === "redirecting";
+  const startCheckout = planCheckout.start;
+
+  // Once, even when React runs effects twice in development.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoCheckout || !checkout || autoStarted.current) return;
+    autoStarted.current = true;
+    void startCheckout();
+  }, [autoCheckout, checkout, startCheckout]);
+
+  const planCard = checkout
+    ? checkout.trial
+      ? {
+          icon: MonitorSmartphone,
+          title: t("onboarding.launch.plan.trialTitle"),
+          body: t("onboarding.launch.plan.trialBody"),
+          cta: t("onboarding.launch.plan.trialCta"),
+        }
+      : checkout.plan === "POS"
+        ? {
+            icon: MonitorSmartphone,
+            title: t("onboarding.launch.plan.posTitle"),
+            body: t("onboarding.launch.plan.posBody"),
+            cta: t("onboarding.launch.plan.checkoutCta"),
+          }
+        : {
+            icon: Boxes,
+            title: t("onboarding.launch.plan.operationsTitle"),
+            body: t("onboarding.launch.plan.operationsBody"),
+            cta: t("onboarding.launch.plan.checkoutCta"),
+          }
+    : null;
 
   const copyLink = async () => {
     try {
@@ -117,6 +172,43 @@ export function LaunchScreen({ result, storeName }: LaunchScreenProps) {
             {t("onboarding.launch.subtitle")}
           </p>
         </div>
+
+        {planCard ? (
+          <section
+            aria-labelledby="launch-plan-title"
+            aria-busy={redirecting}
+            data-testid="launch-plan"
+            className="flex flex-col gap-3 rounded-xl border border-[var(--epi-gold-500)]/40 bg-[var(--epi-gold-500)]/8 p-4 sm:flex-row sm:items-center"
+          >
+            <span
+              aria-hidden="true"
+              className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[var(--epi-gold-500)] text-[var(--epi-navy-900)]"
+            >
+              <planCard.icon className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              <p id="launch-plan-title" className="font-semibold">
+                {planCard.title}
+              </p>
+              <p className="text-muted-foreground text-sm">{planCard.body}</p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => void startCheckout()}
+              disabled={redirecting}
+              className="h-11 shrink-0 rounded-lg sm:h-10"
+            >
+              {redirecting ? (
+                <>
+                  <Loader2 aria-hidden="true" className="animate-spin" />
+                  {t("onboarding.launch.plan.redirecting")}
+                </>
+              ) : (
+                planCard.cta
+              )}
+            </Button>
+          </section>
+        ) : null}
 
         <section aria-labelledby="launch-link-label" className="space-y-2">
           <p id="launch-link-label" className="text-sm font-medium">
@@ -200,32 +292,6 @@ export function LaunchScreen({ result, storeName }: LaunchScreenProps) {
             </Button>
           </div>
         </section>
-
-        {wantsCounter ? (
-          <section
-            aria-labelledby="launch-pos-trial"
-            data-testid="launch-pos-trial"
-            className="flex flex-col gap-3 rounded-xl border border-[var(--epi-gold-500)]/40 bg-[var(--epi-gold-500)]/8 p-4 sm:flex-row sm:items-center"
-          >
-            <span
-              aria-hidden="true"
-              className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[var(--epi-gold-500)] text-[var(--epi-navy-900)]"
-            >
-              <MonitorSmartphone className="size-5" />
-            </span>
-            <div className="min-w-0 flex-1 space-y-1">
-              <p id="launch-pos-trial" className="font-semibold">
-                {t("onboarding.launch.posTrial.title")}
-              </p>
-              <p className="text-muted-foreground text-sm">
-                {t("onboarding.launch.posTrial.body")}
-              </p>
-            </div>
-            <Button asChild variant="outline" className="h-10 shrink-0 rounded-lg">
-              <Link href={upgradeHrefFor("POS")}>{t("onboarding.launch.posTrial.cta")}</Link>
-            </Button>
-          </section>
-        ) : null}
       </div>
 
       <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:flex-row sm:justify-end sm:gap-3 sm:rounded-b-2xl sm:px-8 sm:py-4">

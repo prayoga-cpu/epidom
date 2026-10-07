@@ -100,3 +100,51 @@ export function ReportStatusRow({
     </TableRow>
   );
 }
+
+export interface TotalsLine {
+  label: string;
+  value: string;
+  /** "total" for the bottom line, "subtotal" for an intermediate one. */
+  emphasis?: "total" | "subtotal";
+}
+
+/**
+ * The totals of a report tab on a phone, where the table is replaced by row
+ * cards: one card closing the list, its lines aligned like a till receipt.
+ */
+export function TotalsCard({ title, lines }: { title: string; lines: TotalsLine[] }) {
+  return (
+    <div className="bg-card space-y-1.5 rounded-lg border p-4">
+      <p className="font-medium">{title}</p>
+      {lines.map((line) => (
+        <div
+          key={line.label}
+          className={`flex items-baseline justify-between gap-3 text-sm ${
+            line.emphasis === "total"
+              ? "border-t pt-1.5 font-semibold"
+              : line.emphasis === "subtotal"
+                ? "font-medium"
+                : "text-muted-foreground"
+          }`}
+        >
+          <span>{line.label}</span>
+          <span className="text-foreground tabular-nums">{line.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Says which of the page's active filters a tab does not apply — e.g. the
+ * Category filter on By Channel — so a filtered view never silently shows
+ * unfiltered figures.
+ */
+export function FilterScopeNote({ ignored, template }: { ignored: string[]; template: string }) {
+  if (ignored.length === 0) return null;
+  return (
+    <p className="text-muted-foreground mb-3 text-xs">
+      {template.replace("{filters}", ignored.join(", "))}
+    </p>
+  );
+}

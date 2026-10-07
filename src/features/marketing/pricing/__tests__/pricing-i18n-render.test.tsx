@@ -73,6 +73,7 @@ import { FeatureComparison } from "../components/feature-comparison";
 import { PricingFaq } from "../components/pricing-faq";
 import { FaqSection } from "@/features/marketing/home/components/faq-section";
 import { PricingSection } from "@/features/marketing/home/components/pricing-section";
+import { SwitcherFaqSection } from "@/features/marketing/home/components/switcher-faq-section";
 import { SUPPORT_EMAIL_DISPLAY, SUPPORT_MAILTO } from "@/lib/constants/contact";
 
 // The three dictionaries are structurally different types (each has keys the
@@ -81,6 +82,10 @@ const section = (l: unknown, name: string) =>
   (l as { redesign: Record<string, Record<string, string>> }).redesign[name];
 const pricing = (l: unknown) => section(l, "pricingPage");
 const faq = (l: unknown) => section(l, "faq");
+const switcherFaq = (l: unknown) =>
+  (section(l, "landing") as unknown as { faq: Record<string, string> }).faq;
+/** Three plain questions, for the accordion tests. */
+const sampleItems = () => [1, 3, 5].map((n) => ({ q: faq(en)[`q${n}`], a: faq(en)[`a${n}`] }));
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -202,17 +207,13 @@ describe("most-popular mark", () => {
   });
 });
 
-describe("home pricing teaser", () => {
-  it("emphasises POS, not Operations, and no card says 'popular'", () => {
+describe("home pricing section", () => {
+  it("marks POS, and only POS, as most popular, like /pricing", () => {
     state.locale = "en";
-    const { container } = render(<PricingSection />);
-    expect(container.textContent).not.toMatch(/popul/i);
-    const cards = Array.from(container.querySelectorAll<HTMLElement>(".cursor-pointer")).filter(
-      (el) => el.style.borderColor !== undefined && el.textContent?.includes("per month")
-    );
-    const highlighted = cards.filter((c) => c.style.borderColor.includes("217, 174, 59"));
-    expect(highlighted).toHaveLength(1);
-    expect(highlighted[0].textContent).toContain("POS");
+    render(<PricingSection />);
+    const hits = screen.getAllByText(pricing(en).mostPopular);
+    expect(hits).toHaveLength(1);
+    expect(hits[0].closest("li")).toHaveTextContent("POS");
   });
 });
 
@@ -223,9 +224,9 @@ describe("FAQ sections", () => {
     for (const q of [faq(en).pTrialQ, faq(en).pSwitchQ, faq(en).pRefundQ]) {
       expect(screen.getByText(q)).toBeTruthy();
     }
-    // Homepage questions that do not belong on a pricing page are not repeated.
-    expect(screen.queryByText(faq(en).q2)).toBeNull();
-    expect(screen.queryByText(faq(en).q4)).toBeNull();
+    // The home page's switcher questions do not belong on a pricing page.
+    expect(screen.queryByText(switcherFaq(en).q1)).toBeNull();
+    expect(screen.queryByText(switcherFaq(en).q2)).toBeNull();
   });
 
   it("the refund answer links to the localised refund policy", () => {
@@ -242,11 +243,11 @@ describe("FAQ sections", () => {
     }
   });
 
-  it("the homepage FAQ still renders exactly its original six questions", () => {
+  it("the homepage renders its five switcher questions, and none of /pricing's", () => {
     state.locale = "en";
-    render(<FaqSection />);
-    for (const n of [1, 2, 3, 4, 5, 6]) {
-      expect(screen.getByText(faq(en)[`q${n}`])).toBeTruthy();
+    render(<SwitcherFaqSection />);
+    for (const n of [1, 2, 3, 4, 5]) {
+      expect(screen.getByText(switcherFaq(en)[`q${n}`])).toBeTruthy();
     }
     expect(screen.queryByText(faq(en).pTrialQ)).toBeNull();
     expect(screen.queryByText(faq(en).pRefundQ)).toBeNull();
@@ -254,15 +255,15 @@ describe("FAQ sections", () => {
 
   it("reads the support address from the shared constants", () => {
     state.locale = "en";
-    render(<FaqSection />);
+    render(<FaqSection items={sampleItems()} />);
     const mail = screen.getByText(SUPPORT_EMAIL_DISPLAY).closest("a");
     expect(mail?.getAttribute("href")).toBe(SUPPORT_MAILTO);
   });
 
   it("opens and closes an answer with the keyboard-reachable button", () => {
     state.locale = "en";
-    render(<FaqSection />);
-    const q2 = screen.getByRole("button", { name: new RegExp(faq(en).q2.slice(0, 12)) });
+    render(<FaqSection items={sampleItems()} />);
+    const q2 = screen.getByRole("button", { name: new RegExp(faq(en).q3.slice(0, 12)) });
     expect(q2.getAttribute("aria-expanded")).toBe("false");
     fireEvent.click(q2);
     expect(q2.getAttribute("aria-expanded")).toBe("true");
@@ -304,16 +305,18 @@ describe("PricingCards for a signed-out visitor, real dictionaries", () => {
     );
   });
 
-  it("fr: an Operations click goes straight to sign-up and returns to /pricing", () => {
+  it("fr: an Operations click goes straight to sign-up, then setup with Operations picked", () => {
     stubLocation();
     const { container } = render(<PricingCards yearly={false} />);
     fireEvent.click(within(cardOf(container, "OPERATIONS")).getByRole("button"));
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(window.location.href).toBe("/register?next=%2Fpricing");
+    expect(window.location.href).toBe(
+      "/register?next=" + encodeURIComponent("/onboarding?plan=OPERATIONS&billing=monthly")
+    );
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("en: the trial bar comes back to /en/pricing?trial=true after sign-up", () => {
+  it("en: the trial bar goes on to setup with POS picked after sign-up", () => {
     stubLocation();
     state.locale = "en";
     render(<PricingCards yearly={false} />);
@@ -323,7 +326,7 @@ describe("PricingCards for a signed-out visitor, real dictionaries", () => {
       .find((button) => !button.closest("[data-plan]"))!;
     fireEvent.click(bar);
     expect(window.location.href).toBe(
-      "/register?next=" + encodeURIComponent("/en/pricing?trial=true")
+      "/register?next=" + encodeURIComponent("/onboarding?plan=POS&billing=monthly")
     );
   });
 });
@@ -398,24 +401,21 @@ describe("FeatureComparison", () => {
   });
 });
 
-describe("home pricing teaser navigation", () => {
+describe("home pricing section navigation", () => {
   it.each([
     ["fr", fr, "/pricing"],
     ["en", en, "/en/pricing"],
     ["id", id, "/id/pricing"],
-  ] as const)("%s: the button and all four cards open %s", (locale, dict, path) => {
+  ] as const)("%s: the full comparison and the Operations card open %s", (locale, dict, path) => {
     state.locale = locale;
-    const { container } = render(<PricingSection />);
-
-    const teaser = section(dict, "pricingTeaser");
-    fireEvent.click(screen.getByRole("button", { name: teaser.fullComparison }));
-    expect(push).toHaveBeenLastCalledWith(path);
-
-    const cards = container.querySelectorAll<HTMLElement>("div.cursor-pointer");
-    expect(cards).toHaveLength(4);
-    push.mockClear();
-    cards.forEach((card) => fireEvent.click(card));
-    expect(push.mock.calls).toEqual([[path], [path], [path], [path]]);
+    render(<PricingSection />);
+    const home = (section(dict, "landing") as unknown as { pricing: Record<string, string> })
+      .pricing;
+    expect(screen.getByRole("link", { name: home.fullComparison })).toHaveAttribute("href", path);
+    expect(screen.getByRole("link", { name: home.operationsCta })).toHaveAttribute(
+      "href",
+      `${path}#plans`
+    );
   });
 });
 
@@ -425,9 +425,9 @@ describe("FAQ accordion accessibility", () => {
 
   it("hides a closed answer from the accessibility tree and shows the open one", () => {
     state.locale = "en";
-    render(<FaqSection />);
+    render(<FaqSection items={sampleItems()} />);
     const q1 = screen.getByRole("button", { name: new RegExp(faq(en).q1.slice(0, 12)) });
-    const q2 = screen.getByRole("button", { name: new RegExp(faq(en).q2.slice(0, 12)) });
+    const q2 = screen.getByRole("button", { name: new RegExp(faq(en).q3.slice(0, 12)) });
 
     // The first question starts open.
     expect(q1.getAttribute("aria-expanded")).toBe("true");
@@ -437,25 +437,25 @@ describe("FAQ accordion accessibility", () => {
     expect(q2.getAttribute("aria-expanded")).toBe("false");
     expect(answerPanel(q2)).not.toBeVisible();
     expect(isInaccessible(answerPanel(q2))).toBe(true);
-    expect(isInaccessible(screen.getByText(faq(en).a2))).toBe(true);
+    expect(isInaccessible(screen.getByText(faq(en).a3))).toBe(true);
 
     fireEvent.click(q2);
     expect(q2.getAttribute("aria-expanded")).toBe("true");
-    expect(isInaccessible(screen.getByText(faq(en).a2))).toBe(false);
+    expect(isInaccessible(screen.getByText(faq(en).a3))).toBe(false);
     // Opening one closes the other, and that one leaves the tree too.
     expect(q1.getAttribute("aria-expanded")).toBe("false");
     expect(isInaccessible(screen.getByText(faq(en).a1))).toBe(true);
 
     fireEvent.click(q2);
     expect(q2.getAttribute("aria-expanded")).toBe("false");
-    expect(isInaccessible(screen.getByText(faq(en).a2))).toBe(true);
+    expect(isInaccessible(screen.getByText(faq(en).a3))).toBe(true);
   });
 
   it("keeps the collapse animation: the height still transitions, visibility flips last", () => {
     state.locale = "en";
-    render(<FaqSection />);
+    render(<FaqSection items={sampleItems()} />);
     const q1 = screen.getByRole("button", { name: new RegExp(faq(en).q1.slice(0, 12)) });
-    const q2 = screen.getByRole("button", { name: new RegExp(faq(en).q2.slice(0, 12)) });
+    const q2 = screen.getByRole("button", { name: new RegExp(faq(en).q3.slice(0, 12)) });
     // Collapsing keeps the panel visible for the length of the transition...
     expect(answerPanel(q2).style.transition).toContain("max-height 0.3s");
     expect(answerPanel(q2).style.transition).toContain("visibility 0s linear 0.3s");
@@ -466,7 +466,7 @@ describe("FAQ accordion accessibility", () => {
 
   it("does not make six landmark regions out of the answers", () => {
     state.locale = "en";
-    const { container } = render(<FaqSection />);
+    const { container } = render(<FaqSection items={sampleItems()} />);
     expect(container.querySelectorAll('[role="region"]')).toHaveLength(0);
     expect(screen.queryAllByRole("region", { hidden: true })).toHaveLength(0);
   });
@@ -475,8 +475,8 @@ describe("FAQ accordion accessibility", () => {
     state.locale = "en";
     const { container } = render(
       <>
-        <FaqSection />
-        <FaqSection />
+        <FaqSection items={sampleItems()} />
+        <FaqSection items={sampleItems()} />
       </>
     );
     const ids = Array.from(container.querySelectorAll("[id]")).map((el) => el.id);

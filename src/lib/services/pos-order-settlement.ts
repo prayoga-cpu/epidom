@@ -10,6 +10,7 @@ import type { PosOnlinePlatform } from "@/config/aggregator.config";
 import { prisma } from "@/lib/prisma";
 import { createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { ITEMS_UNAVAILABLE_REASON } from "@/lib/constants/pos";
+import { NON_REVENUE_STATUSES } from "@/lib/constants/order-status";
 import type { CreatePosOrderInput } from "@/lib/validation/pos.schemas";
 import {
   computeOrderCharges,
@@ -49,6 +50,7 @@ import {
   LoyaltyConflictError,
 } from "./loyalty.service";
 import { claimOrderTransition, claimOrderTransitions } from "./order-status.helpers";
+import { isOfflineReplay } from "./offline-replay";
 
 /**
  * The one shared settlement path behind POST /pos/orders and
@@ -121,7 +123,7 @@ export interface PosSettlement {
   immediatelyDelivered: boolean;
   /** Degradations recorded on an offline replay; appended to Order.notes. */
   warnings: string[];
-  /** True when the request carried a clientRequestId (offline replay). */
+  /** True for an offline replay — see isOfflineReplay. */
   tolerant: boolean;
   /** input.tableId once checked to be one of this store's tables — see resolveStoreTableId. */
   tableId: string | null;
@@ -144,13 +146,18 @@ export async function buildPosSettlement(args: {
   // from here on nothing may 4xx over a coupon/customer/points problem — see
   // resolveOrderDiscount's `tolerant`.
   //
-  // DELIBERATE: `tolerant` is keyed on clientRequestId alone, which means an
-  // offline payload's own `discountAmount` is trusted as the manual discount.
-  // That is not an oversight and must not be "hardened" away — the pre-2.88.0
-  // routes already trusted it (it is the staff discount field), and the only
-  // alternative for a sale that was rung up on a disconnected till is to
-  // reject money the customer has already handed over.
-  const tolerant = !!input.clientRequestId;
+  // DELIBERATE: a replay's own `discountAmount` is trusted as the manual
+  // discount. That is not an oversight and must not be "hardened" away — the
+  // pre-2.88.0 routes already trusted it (it is the staff discount field), and
+  // the only alternative for a sale that was rung up on a disconnected till is
+  // to reject money the customer has already handed over.
+  //
+  // Since 3.3.7 a LIVE checkout sends a clientRequestId too, as an idempotency
+  // key; keyed on that alone, every live sale skipped the menu-availability,
+  // coupon, points and customer checks. The live checkout now marks itself
+  // (`liveCheckout`) — see isOfflineReplay for why the mark is on the live
+  // request rather than on the replay.
+  const tolerant = isOfflineReplay(input);
 
   // `payments[]` overrides the legacy single-method fields entirely, so a
   // body carrying both is a tendered sale, never a Pay Later.
@@ -569,6 +576,9 @@ export async function claimHeldOrderForSettlement(
  * `tenderMethod` is null when nothing real can be named (PAY_LATER / SPLIT
  * with no explicit method) — then no row is written and readers fall back to
  * Order.paymentMethod/total, as they do for every pre-2.88.0 order.
+ *
+ * A cancelled order, or a saved bill (HELD — that is finalize's job), can't be
+ * marked paid: the claim refuses it and the caller gets `settled: false`.
  */
 export async function settlePendingOrderInTx(
   tx: Prisma.TransactionClient,
@@ -579,15 +589,51 @@ export async function settlePendingOrderInTx(
     paymentNote?: string | null;
     /** True when the order already carries tender rows (never write a second set). */
     hasExistingPayments: boolean;
+    /**
+     * The money was taken AT THE TILL (POS order queue / history), so an order
+     * with no shift — a storefront "pay at the cashier" order — joins the
+     * store's open shift. False for a Back Office settle-up (the Alerts card):
+     * that money did not go into any till, and filing it under whoever has the
+     * drawer open would push their count Over and credit them the sale.
+     */
+    attachToOpenShift?: boolean;
+    /**
+     * The store's processing-fee settings. When given, the fee is re-priced from
+     * the method actually used: an order placed as "pay at the cashier" (CASH, so
+     * fee 0) and then paid by QRIS or card otherwise kept a fee of 0 and the P&L
+     * overstated net profit. The fee is the store's cost — never part of the
+     * total the customer pays — so this changes no amount anyone collects.
+     */
+    feeSettings?: Pick<ResolvedFinanceSettings, "processingFeeEnabled" | "processingFeeOverrides">;
   }
 ): Promise<{ settled: boolean; pointsEarned: number }> {
   const won = await claimOrderTransition(tx, {
     orderId: args.orderId,
     storeId: args.storeId,
-    guard: { paymentStatus: { not: "PAID" } },
+    guard: { paymentStatus: { not: "PAID" }, status: { notIn: NON_REVENUE_STATUSES } },
     data: { paymentStatus: "PAID" },
   });
   if (!won) return { settled: false, pointsEarned: 0 };
+
+  // Money taken at the till belongs in the till's drawer. An order that reached
+  // the till with no shift — a storefront "pay at the cashier" order — is filed
+  // under the store's open shift at the moment it is paid. Unattached, its cash
+  // only showed on the report's "cash sales not on a till" line and the counted
+  // drawer came out Over by exactly that much. An order already on a shift
+  // keeps it. Newest open first, the same shift sales attach to (useActiveShift).
+  if (args.attachToOpenShift) {
+    const openShift = await tx.shift.findFirst({
+      where: { storeId: args.storeId, closedAt: null },
+      orderBy: { openedAt: "desc" },
+      select: { id: true },
+    });
+    if (openShift) {
+      await tx.order.updateMany({
+        where: { id: args.orderId, storeId: args.storeId, shiftId: null },
+        data: { shiftId: openShift.id },
+      });
+    }
+  }
 
   if (args.tenderMethod && !args.hasExistingPayments) {
     const order = await tx.order.findUnique({
@@ -605,6 +651,20 @@ export async function settlePendingOrderInTx(
           note: args.paymentNote?.trim() ? args.paymentNote.trim() : null,
         },
       });
+      if (args.feeSettings) {
+        const fee = computeTendersProcessingFee({
+          tenders: [{ method: args.tenderMethod as TenderMethod, amount: Number(order.total) }],
+          enabled: args.feeSettings.processingFeeEnabled,
+          overrides: args.feeSettings.processingFeeOverrides,
+        });
+        await tx.order.update({
+          where: { id: args.orderId },
+          data: {
+            processingFee: new Prisma.Decimal(fee.fee),
+            processingFeeRate: new Prisma.Decimal(fee.rate),
+          },
+        });
+      }
     }
   }
 

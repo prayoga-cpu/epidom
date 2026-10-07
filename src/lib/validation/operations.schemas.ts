@@ -42,6 +42,18 @@ export const createStaffSchema = z.object({
 });
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 
+/** The largest amount a Decimal(12, 2) money column holds. */
+const MAX_STAFF_MONEY = 9_999_999_999.99;
+export const MAX_STAFF_ALLOWANCES = 20;
+
+/** One named allowance on the Staff page's Contract card (StaffAllowance). */
+export const staffAllowanceSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  amount: z.number().min(0).max(MAX_STAFF_MONEY),
+  basis: z.enum(["PER_DAY", "PER_MONTH"]),
+});
+export type StaffAllowanceInput = z.infer<typeof staffAllowanceSchema>;
+
 export const updateStaffSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   username: usernameSchema.optional(),
@@ -62,6 +74,11 @@ export const updateStaffSchema = z.object({
   // off-system payroll, so NONE (the default) means "unknown," not zero.
   payType: z.enum(["HOURLY", "MONTHLY", "SALES", "NONE"]).optional(),
   payRate: z.number().min(0).optional().nullable(),
+  // Pay per overtime hour; null = an hourly member's overtime at payRate,
+  // anyone else's tracked but not paid (src/lib/attendance/payroll.ts).
+  overtimeRate: z.number().min(0).max(MAX_STAFF_MONEY).optional().nullable(),
+  // The whole list, replacing what was saved — see StaffAllowance.
+  allowances: z.array(staffAllowanceSchema).max(MAX_STAFF_ALLOWANCES).optional(),
   // Employment type shown on the "Contract" card — purely descriptive, see
   // ContractType's own schema comment.
   contractType: z.enum(["FREELANCE", "PART_TIME", "FULL_TIME", "CONTRACT"]).optional().nullable(),

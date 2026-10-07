@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getFinanceSettings, getReceiptBranding } from "@/lib/services";
 import type { ReceiptData } from "@/lib/pwa/thermal-printer";
 import { RECEIPT_INTL_LOCALE, resolveReceiptLocale } from "@/lib/receipts/receipt-labels";
+import { receiptWifiFields } from "@/lib/receipts/receipt-wifi";
 
 export interface BuiltReceipt {
   receipt: ReceiptData;
@@ -121,6 +122,7 @@ export async function buildReceiptData(orderId: string): Promise<BuiltReceipt | 
     tiktokHandle: branding.showSocialLinks ? (branding.tiktokHandle ?? undefined) : undefined,
     facebookHandle: branding.showSocialLinks ? (branding.facebookHandle ?? undefined) : undefined,
     footerMessage: branding.footerMessage ?? undefined,
+    ...receiptWifiFields(branding),
     orderNumber: order.orderNumber,
     date: new Intl.DateTimeFormat(RECEIPT_INTL_LOCALE[receiptLocale], {
       dateStyle: "medium",
