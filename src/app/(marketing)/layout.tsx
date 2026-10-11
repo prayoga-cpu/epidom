@@ -13,7 +13,7 @@ import {
   OrganizationStructuredData,
 } from "@/components/seo/structured-data";
 import { LOCALE_HEADER, DEFAULT_LOCALE } from "@/lib/i18n-routing";
-import { Jost, IM_Fell_French_Canon } from "next/font/google";
+import { Jost, IM_Fell_French_Canon, Oswald } from "next/font/google";
 
 const jost = Jost({
   subsets: ["latin"],
@@ -27,6 +27,15 @@ const imFell = IM_Fell_French_Canon({
   weight: ["400"],
   style: ["normal", "italic"],
   variable: "--font-im-fell",
+  display: "swap",
+});
+
+// The light condensed face under the Bebas headline (.epi-display-light): Bebas
+// Neue on Google Fonts has one weight only, Oswald is its light-weight cousin.
+const oswald = Oswald({
+  subsets: ["latin"],
+  weight: ["300"],
+  variable: "--font-oswald",
   display: "swap",
 });
 
@@ -50,7 +59,7 @@ export default async function LandingLayout({
 
   return (
     <div
-      className={`${jost.variable} ${imFell.variable} epidom-dark-page`}
+      className={`${jost.variable} ${imFell.variable} ${oswald.variable} epidom-dark-page`}
       style={{ fontFamily: "var(--epi-font-body)" }}
     >
       <WebsiteStructuredData />

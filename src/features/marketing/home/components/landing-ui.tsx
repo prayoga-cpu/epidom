@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
-import { sourceAnchor, sourceNumber, type SourceId } from "../data/sources";
 import type { BadgePlan } from "../data/problems";
 
 /**
@@ -20,26 +19,6 @@ export const SECONDARY_BUTTON =
 /** A text link with a 44px tap area. */
 export const TEXT_LINK =
   "inline-flex min-h-11 items-center text-sm text-epi-gold-400 underline decoration-epi-gold-500/50 underline-offset-4 hover:decoration-epi-gold-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-epi-gold-300";
-
-/**
- * Footnote marker linking a figure to its line in the Sources list. The visible
- * mark is small, the tap area around it is 44px.
- */
-export function SourceRef({ id, className }: { id: SourceId; className?: string }) {
-  const { t } = useI18n();
-  const n = sourceNumber(id);
-  return (
-    <sup className={cn("ml-0.5 align-super text-[0.7em] leading-none", className)}>
-      <a
-        href={`#${sourceAnchor(id)}`}
-        aria-label={`${t("redesign.landing.sources.ref")} ${n}`}
-        className="text-epi-gold-400 focus-visible:outline-epi-gold-300 relative no-underline before:absolute before:-inset-3.5 before:content-[''] hover:underline focus-visible:outline-2"
-      >
-        [{n}]
-      </a>
-    </sup>
-  );
-}
 
 const PLAN_KEY: Record<BadgePlan | "ENTERPRISE", string> = {
   FREE: "redesign.landing.plans.free",

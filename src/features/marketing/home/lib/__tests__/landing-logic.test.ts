@@ -7,7 +7,7 @@ import {
   PAYMENT_FEE,
   savingBucket,
 } from "../margin-calculator";
-import { availablePaths, CURRENT_POS_OPTIONS, recommend } from "../migration";
+import { availablePaths, CURRENT_POS_OPTIONS, marketOptions, recommend } from "../migration";
 
 describe("computeMargin", () => {
   it("follows the spec's formula on its default inputs (EUR, POS)", () => {
@@ -136,17 +136,25 @@ describe("migration recommendation", () => {
     expect(recommend({ currentPos: "none", path: "A", outlets: "1" }).keepsTill).toBe(false);
   });
 
-  it("does not offer the full switch on the French site until NF525 is settled", () => {
+  it("does not offer the full switch to a business in France until NF525 is settled", () => {
     expect(availablePaths("fr")).toEqual(["A", "B"]);
-    expect(availablePaths("en")).toEqual(["A", "B", "C"]);
     expect(availablePaths("id")).toEqual(["A", "B", "C"]);
+    expect(availablePaths("global")).toEqual(["A", "B", "C"]);
   });
 
   it("offers the tills each market actually leaves", () => {
     expect(CURRENT_POS_OPTIONS.fr).toContain("zelty");
     expect(CURRENT_POS_OPTIONS.id).toContain("moka");
+    expect(CURRENT_POS_OPTIONS.id).not.toContain("zelty");
+    expect(CURRENT_POS_OPTIONS.global).toContain("square");
     for (const list of Object.values(CURRENT_POS_OPTIONS)) {
-      expect(list.at(-1)).toBe("none");
+      expect(list.slice(-2)).toEqual(["other", "none"]);
     }
+  });
+
+  it("lists the site language's market first, and anywhere else last", () => {
+    expect(marketOptions("fr")).toEqual(["fr", "id", "global"]);
+    expect(marketOptions("id")).toEqual(["id", "fr", "global"]);
+    expect(marketOptions("en")).toEqual(["fr", "id", "global"]);
   });
 });

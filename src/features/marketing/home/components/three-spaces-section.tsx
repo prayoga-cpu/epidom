@@ -22,7 +22,7 @@ const SPACES: readonly {
 ];
 
 /**
- * One app, three spaces: Storefront (free), POS Mode (POS), Back Office
+ * One link, three spaces: Storefront (free), POS Mode (POS), Back Office
  * (Operations). Each card shows a real screenshot once one is supplied in
  * data/media.ts, and a plain icon until then, never a mockup. The Storefront
  * card links to a real, currently published storefront when there is one; the
@@ -42,6 +42,7 @@ export function ThreeSpacesSection({
           id="spaces-title"
           eyebrow={t("redesign.landing.spaces.eyebrow")}
           title={t("redesign.landing.spaces.title")}
+          sub={t("redesign.landing.spaces.sub")}
         />
 
         <ul className="m-0 mt-12 grid list-none gap-4 p-0 md:grid-cols-3">
@@ -78,12 +79,21 @@ export function ThreeSpacesSection({
                   )}
                 </p>
                 {key === "storefront" && exampleStorefrontSlug ? (
-                  <Suspense fallback={null}>
-                    <LiveExampleLink
-                      slug={exampleStorefrontSlug}
-                      label={t("redesign.landing.spaces.liveExample")}
-                    />
-                  </Suspense>
+                  // The link's place is held before its streamed slug arrives:
+                  // the calculator sits right below this section, and Safari
+                  // (no scroll anchoring) would otherwise push it 64px down after
+                  // the picker's calculator button has scrolled to it.
+                  <div
+                    data-testid="live-example-slot"
+                    className="mt-auto flex min-h-11 items-center"
+                  >
+                    <Suspense fallback={null}>
+                      <LiveExampleLink
+                        slug={exampleStorefrontSlug}
+                        label={t("redesign.landing.spaces.liveExample")}
+                      />
+                    </Suspense>
+                  </div>
                 ) : null}
               </li>
             );
@@ -111,12 +121,7 @@ function LiveExampleLink({
   const value = typeof slug === "string" ? slug : use(slug);
   if (!value) return null;
   return (
-    <a
-      href={`/@${value}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`${TEXT_LINK} mt-auto`}
-    >
+    <a href={`/@${value}`} target="_blank" rel="noopener noreferrer" className={TEXT_LINK}>
       {label}
     </a>
   );

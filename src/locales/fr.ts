@@ -6157,18 +6157,20 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       // French punctuation: a no-break space (U+00A0) sits before : ; ? ! % and €
       // in these strings, so a line never starts with one when the text wraps.
       hero: {
-        title: "Pilotez tout, de la commande à *la marge.*",
+        title: "Caisse en temps réel",
+        tagline: "avec une marge transparente pour les cafés",
         sub:
-          "La caisse de bout en bout pour cafés, restaurants et boulangeries : lien en bio, commandes, stock, équipe et finance dans une seule appli, pour savoir ce que chaque vente vous rapporte vraiment.",
+          "Le système de prise de commande de bout en bout pour cafés, restaurants et boulangeries : lien en bio, commandes, stock, équipe et finance dans un seul lien web (epidom.fr).",
         ctaTrial: "Essai POS gratuit 14 jours",
         ctaTrialNote:
           "Carte requise, sans engagement. Annulez avant le 14e jour, vous ne payez rien.",
         ctaCalculator: "Calculer ma marge",
-        migrationLink: "Vous avez déjà une caisse ? Choisissez comment démarrer avec Epidom →",
-        storefrontLabel: "Vitrine",
-        storefrontValue: "Gratuite, pour toujours",
-        supportLabel: "Support",
-        supportValue: "WhatsApp, en français",
+        migrationLink: "Vous avez déjà une caisse ? →",
+        supportLabel: "Support en ligne 24 h/24",
+        supportValue: "France / Indonésie, par WhatsApp",
+        supportPopoverTitle: "Écrire sur WhatsApp",
+        supportFrance: "France",
+        supportIndonesia: "Indonésie",
         releaseLabel: "Dernière mise à jour",
       },
       plans: {
@@ -6176,25 +6178,6 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         pos: "POS",
         operations: "Opérations",
         enterprise: "Entreprise",
-      },
-      sources: {
-        ref: "Source",
-        title: "Sources",
-        s1:
-          "Uber Eats : 30 % HT sur l'offre par défaut, soit 33 à 36 % de coût réel pour un restaurant indépendant. commandeici.com, juin 2026.",
-        s2:
-          "Une commande directe ne coûte que les frais de carte, environ 1,5 % + 0,25 €. thegoodseat.app, juin 2026, d'après France Num.",
-        s3:
-          "Le résultat des restaurants est passé de 11 % à 3 % du chiffre d'affaires, et le coût des matières premières a augmenté de 20 %. GHR, d'après l'Observatoire Fiducial.",
-        s4:
-          "15 à 25 % du chiffre d'affaires perdus pendant une panne de caisse imprévue, estimation du secteur. vivantcorp.com, juillet 2026.",
-        s5:
-          "61 % des consommateurs ont déjà quitté une file avant leur tour (échantillon américain). Enquête consommateurs Waitwhile, 2024.",
-        s6: "Plus de 200 000 postes vacants dans l'hôtellerie-restauration. UMIH, juillet 2025.",
-        s7:
-          "Paiement par carte en ligne aux États-Unis : 2,9 % + 0,30 $ par transaction, tarif standard publié par Stripe.",
-        s8:
-          "QRIS en Indonésie : commission (MDR) de 0,7 % pour les commerçants réguliers, fixée par Bank Indonesia.",
       },
       picker: {
         eyebrow: "Problèmes et solutions",
@@ -6320,8 +6303,9 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         label: "Ils utilisent déjà Epidom",
       },
       spaces: {
-        eyebrow: "Une appli, trois espaces",
-        title: "Tout votre café, dans une seule appli",
+        eyebrow: "Un lien, trois espaces",
+        title: "Tout votre café, dans un seul lien web (epidom.fr)",
+        sub: "Ouvrez-le partout, sur n'importe quel appareil : téléphone, tablette ou ordinateur, depuis le même lien.",
         storefrontName: "Vitrine",
         storefrontBody:
           "Votre menu en ligne, un seul lien et son QR code. La commande et le paiement en ligne s'ajoutent avec le forfait POS.",
@@ -6412,20 +6396,33 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       },
       migration: {
         title: "Démarrer avec Epidom",
-        stepLabel: "Étape {n} sur 3",
+        stepLabel: "Étape {n} sur {total}",
         close: "Fermer",
         back: "Retour",
         restart: "Recommencer",
+        qMarket: "Où se trouve votre commerce ?",
+        market: {
+          fr: "France",
+          id: "Indonésie",
+          global: "Un autre pays",
+        },
         q1: "Qu'utilisez-vous aujourd'hui ?",
         q2: "Comment voulez-vous démarrer ?",
         q3: "Combien d'établissements ?",
         pos: {
           zelty: "Zelty",
+          laddition: "L'Addition",
           lightspeed: "Lightspeed",
           sumup: "SumUp",
           tiller: "Tiller",
           moka: "Moka",
           majoo: "Majoo",
+          pawoon: "Pawoon",
+          esb: "ESB POS",
+          qasir: "Qasir",
+          square: "Square",
+          toast: "Toast",
+          clover: "Clover",
           other: "Autre caisse",
           none: "Pas de caisse",
         },
@@ -6483,9 +6480,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       eyebrow: "FAQ",
       title: "Questions fréquentes.",
       script: "et quelques-unes qu'on aimerait qu'on nous pose.",
-      helpText: "Encore des questions ? Écrivez-nous sur",
+      helpText: "Encore des questions ? Écrivez-nous :",
       helpWa: "WhatsApp",
-      helpOr: "ou par e-mail",
       q1: "Epidom est-il vraiment gratuit à vie ?",
       a1: "Oui. Le forfait Free vous donne une page menu illimitée, un QR code et votre propre lien sur un établissement, pour toujours. La commande et le paiement en ligne s'ajoutent avec le forfait POS. Nous gagnons de l'argent quand vous passez à POS, Opérations ou Entreprise.",
       a1PayAtCounter: "Oui. Le forfait Free vous donne une page menu illimitée, un QR code et votre propre lien sur un établissement, pour toujours. La commande en ligne s'ajoute avec le forfait POS. Nous gagnons de l'argent quand vous passez à POS, Opérations ou Entreprise.",
@@ -6518,11 +6514,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       check4: "✓ Données chiffrées",
     },
     servicesPage: {
-      eyebrow: "Fonctionnalités",
       title1: "Le comptoir, la cuisine",
       titleAccent: "et le back-office.",
-      script:
-        "Epidom 3 donne à chaque métier son espace : le mode Caisse pour le comptoir et la cuisine, le Back-Office pour piloter l'établissement, et une vitrine gratuite pour vos clients.",
       spacesEyebrow: "Epidom 3",
       spacesTitle1: "Trois espaces.",
       spacesTitle2: "Les mêmes données.",

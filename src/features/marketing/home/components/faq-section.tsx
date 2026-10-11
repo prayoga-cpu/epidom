@@ -4,8 +4,9 @@ import { useId, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { FaqStructuredData } from "@/components/seo/structured-data";
+import { MailIcon, WhatsAppIcon } from "@/features/marketing/shared/components/contact-icons";
 import {
-  SUPPORT_EMAIL_DISPLAY,
+  SUPPORT_EMAIL_ADDRESSES,
   SUPPORT_MAILTO,
   getWhatsAppOptions,
   whatsappHref,
@@ -19,7 +20,47 @@ export interface FaqItem {
 }
 
 /**
- * An accordion of questions with the "still have questions?" contact line.
+ * One row of the "still have questions?" list: the icon in a small round chip,
+ * then the label. The whole row is the link, at least 44px tall.
+ */
+function ContactLink({
+  href,
+  external = false,
+  icon,
+  iconColor,
+  children,
+}: {
+  href: string;
+  external?: boolean;
+  icon: React.ReactNode;
+  iconColor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      // The colour is a class, not an inline style: an inline colour would beat
+      // the hover class and the row would never turn gold.
+      className="text-epi-cream-50/85 hover:text-epi-gold-300 flex min-h-11 items-start gap-3 py-1.5 text-[15px] leading-[1.55] transition-colors"
+    >
+      <span
+        className="grid size-8 shrink-0 place-items-center rounded-full"
+        style={{
+          color: iconColor,
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(255,255,255,0.04)",
+        }}
+      >
+        {icon}
+      </span>
+      <span className="pt-[5px]">{children}</span>
+    </a>
+  );
+}
+
+/**
+ * An accordion of questions with the "still have questions?" contact list.
  * Each page passes its own questions: the home page's switcher FAQ, /pricing's
  * buyer questions.
  */
@@ -71,43 +112,48 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
                 fontSize: 15,
                 lineHeight: 1.55,
                 marginTop: 20,
+                marginBottom: 8,
               }}
             >
-              {t("redesign.faq.helpText")}{" "}
-              {waOptions.map((opt, i) => (
-                <span key={opt.number}>
-                  {i > 0 && " / "}
-                  <a
-                    href={whatsappHref(opt.number)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    // Inline in the sentence, so the 44px tap area is a pseudo-element.
-                    className="relative before:absolute before:inset-x-0 before:-inset-y-3 before:content-['']"
-                    style={{
-                      color: "#25D366",
-                      borderBottom: "1px solid #25D366",
-                    }}
-                  >
-                    {waOptions.length > 1
-                      ? `${t("redesign.faq.helpWa")} (${opt.label})`
-                      : t("redesign.faq.helpWa")}
-                  </a>
-                </span>
-              ))}{" "}
-              {t("redesign.faq.helpOr")}{" "}
-              <a
-                href={SUPPORT_MAILTO}
-                className="relative before:absolute before:inset-x-0 before:-inset-y-3 before:content-['']"
-                style={{
-                  color: "var(--epi-gold-400)",
-                  borderBottom: "1px solid var(--epi-gold-500)",
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {SUPPORT_EMAIL_DISPLAY}
-              </a>
-              .
+              {t("redesign.faq.helpText")}
             </p>
+            {/* One row per WhatsApp number, then one row for email: the support
+                inbox is a single mailto to every address (see contact.ts), so
+                the addresses are listed under one link, not linked one by one. */}
+            <ul className="m-0 flex list-none flex-col p-0">
+              {waOptions.map((opt) => (
+                <li key={opt.number}>
+                  <ContactLink
+                    href={whatsappHref(opt.number)}
+                    external
+                    icon={<WhatsAppIcon className="size-4" />}
+                    iconColor="#25D366"
+                  >
+                    {t("redesign.faq.helpWa")}
+                    {waOptions.length > 1 ? (
+                      <span style={{ opacity: 0.55 }}> · {opt.label}</span>
+                    ) : null}
+                  </ContactLink>
+                </li>
+              ))}
+              <li>
+                <ContactLink
+                  href={SUPPORT_MAILTO}
+                  icon={<MailIcon className="size-4" />}
+                  iconColor="var(--epi-gold-400)"
+                >
+                  <span className="flex flex-col">
+                    {SUPPORT_EMAIL_ADDRESSES.map((address, i) => (
+                      <span key={address} style={{ overflowWrap: "anywhere" }}>
+                        {/* Read as one list by screen readers: "a, b, c". */}
+                        {i > 0 ? <span className="sr-only">, </span> : null}
+                        {address}
+                      </span>
+                    ))}
+                  </span>
+                </ContactLink>
+              </li>
+            </ul>
           </div>
 
           {/* Right — accordion */}

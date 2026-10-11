@@ -13,15 +13,17 @@ import {
 } from "@/components/ui/dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { trackEvent } from "@/lib/analytics";
-import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
+import { getWhatsAppOptions, WHATSAPP_NUMBERS, whatsappHref } from "@/lib/constants/contact";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { cn } from "@/lib/utils";
 import {
   availablePaths,
   CURRENT_POS_OPTIONS,
+  marketOptions,
   OUTLET_OPTIONS,
   recommend,
   type CurrentPos,
+  type Market,
   type MigrationPath,
   type Outlets,
 } from "../lib/migration";
@@ -32,13 +34,16 @@ import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
 const OPTION =
   "flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-white/[0.12] bg-white/[0.03] px-4 py-3 text-left text-[15px] text-epi-cream-50 transition-colors hover:border-epi-gold-500/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-epi-gold-300";
 
-type Step = 1 | 2 | 3 | "result";
+type Step = 1 | 2 | 3 | 4 | "result";
+
+const STEP_COUNT = 4;
 
 /**
- * "Already have a POS? Choose how to start": what they use, how they want to
- * start, how many outlets, then one recommendation that says what they keep,
- * what changes, and what to know. No email field: there is no lead backend
- * for it to write to.
+ * "Already have a POS?": where the business is (which sets
+ * the tills offered, the paths, and the WhatsApp number), what they use, how
+ * they want to start, how many outlets, then one recommendation that says what
+ * they keep, what changes, and what to know. No email field: there is no lead
+ * backend for it to write to.
  *
  * Opened from the hero link and from the "switch at your pace" section.
  * Escape, a tap on the backdrop and the 44px close button all close it. On a
@@ -49,6 +54,7 @@ export function MigrationModal({ open, onClose }: { open: boolean; onClose: () =
   const { t, locale } = useI18n();
   const trialHref = usePosTrialHref();
   const [step, setStep] = useState<Step>(1);
+  const [market, setMarket] = useState<Market | null>(null);
   const [currentPos, setCurrentPos] = useState<CurrentPos | null>(null);
   const [path, setPath] = useState<MigrationPath | null>(null);
   const [outlets, setOutlets] = useState<Outlets | null>(null);
@@ -57,6 +63,7 @@ export function MigrationModal({ open, onClose }: { open: boolean; onClose: () =
   useEffect(() => {
     if (open) {
       setStep(1);
+      setMarket(null);
       setCurrentPos(null);
       setPath(null);
       setOutlets(null);
@@ -69,15 +76,23 @@ export function MigrationModal({ open, onClose }: { open: boolean; onClose: () =
   const chooseOutlets = (value: Outlets) => {
     setOutlets(value);
     setStep("result");
-    if (currentPos && path) {
-      trackEvent("migration_path_selected", { current_pos: currentPos, path, outlets: value });
+    if (market && currentPos && path) {
+      trackEvent("migration_path_selected", {
+        market,
+        current_pos: currentPos,
+        path,
+        outlets: value,
+      });
     }
   };
 
-  const back = () => setStep((s) => (s === "result" ? 3 : s === 3 ? 2 : 1));
+  const back = () => setStep((s) => (s === "result" ? 4 : s === 4 ? 3 : s === 3 ? 2 : 1));
 
   const result = currentPos && path && outlets ? recommend({ currentPos, path, outlets }) : null;
-  const whatsapp = getWhatsAppOptions(locale)[0];
+  // A business in France or Indonesia talks to that market's number; anywhere
+  // else gets the site language's first one.
+  const whatsapp =
+    market && market !== "global" ? WHATSAPP_NUMBERS[market] : getWhatsAppOptions(locale)[0];
   const planKey = { POS: "pos", OPERATIONS: "operations", ENTERPRISE: "enterprise" } as const;
 
   return (
@@ -98,7 +113,7 @@ export function MigrationModal({ open, onClose }: { open: boolean; onClose: () =
               {step !== "result" ? (
                 <div className="mt-3 flex items-center gap-3">
                   <div className="flex gap-1.5" aria-hidden="true">
-                    {[1, 2, 3].map((n) => (
+                    {Array.from({ length: STEP_COUNT }, (_, i) => i + 1).map((n) => (
                       <span
                         key={n}
                         className={cn(
@@ -109,7 +124,9 @@ export function MigrationModal({ open, onClose }: { open: boolean; onClose: () =
                     ))}
                   </div>
                   <span className="text-epi-cream-50/60 text-xs">
-                    {k("stepLabel").replace("{n}", String(step))}
+                    {k("stepLabel")
+                      .replace("{n}", String(step))
+                      .replace("{total}", String(STEP_COUNT))}
                   </span>
                 </div>
               ) : null}
@@ -127,15 +144,34 @@ export function MigrationModal({ open, onClose }: { open: boolean; onClose: () =
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-6">
             {step === 1 ? (
+              <Question legend={k("qMarket")}>
+                {marketOptions(locale).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={OPTION}
+                    onClick={() => {
+                      setMarket(option);
+                      setStep(2);
+                    }}
+                  >
+                    {k(`market.${option}`)}
+                    <ChevronRight aria-hidden="true" className="size-4 shrink-0 opacity-60" />
+                  </button>
+                ))}
+              </Question>
+            ) : null}
+
+            {step === 2 && market ? (
               <Question legend={k("q1")}>
-                {CURRENT_POS_OPTIONS[locale].map((option) => (
+                {CURRENT_POS_OPTIONS[market].map((option) => (
                   <button
                     key={option}
                     type="button"
                     className={OPTION}
                     onClick={() => {
                       setCurrentPos(option);
-                      setStep(2);
+                      setStep(3);
                     }}
                   >
                     {k(`pos.${option}`)}
@@ -145,16 +181,16 @@ export function MigrationModal({ open, onClose }: { open: boolean; onClose: () =
               </Question>
             ) : null}
 
-            {step === 2 ? (
+            {step === 3 && market ? (
               <Question legend={k("q2")}>
-                {availablePaths(locale).map((option) => (
+                {availablePaths(market).map((option) => (
                   <button
                     key={option}
                     type="button"
                     className={OPTION}
                     onClick={() => {
                       setPath(option);
-                      setStep(3);
+                      setStep(4);
                     }}
                   >
                     {k(`path${option}${hasPos ? "" : "NoPos"}`)}
@@ -164,7 +200,7 @@ export function MigrationModal({ open, onClose }: { open: boolean; onClose: () =
               </Question>
             ) : null}
 
-            {step === 3 ? (
+            {step === 4 ? (
               <Question legend={k("q3")}>
                 {OUTLET_OPTIONS.map((option) => (
                   <button

@@ -1,7 +1,7 @@
 import type { Locale } from "@/components/lang/i18n-provider";
 
 /**
- * The "How do you want to start?" modal: three questions, then one
+ * The "How do you want to start?" modal: four questions, then one
  * recommendation. Pure so the rules can be tested without rendering.
  *
  * The plan follows what the code gates, not what would read best:
@@ -12,13 +12,23 @@ import type { Locale } from "@/components/lang/i18n-provider";
  *  - recipes, stock, suppliers and finance are Operations.
  */
 
+/** Where the business is: the two markets Epidom sells in, or anywhere else. */
+export type Market = "fr" | "id" | "global";
+
 export type CurrentPos =
   | "zelty"
+  | "laddition"
   | "lightspeed"
   | "sumup"
   | "tiller"
   | "moka"
   | "majoo"
+  | "pawoon"
+  | "esb"
+  | "qasir"
+  | "square"
+  | "toast"
+  | "clover"
   | "other"
   | "none";
 
@@ -29,11 +39,18 @@ export type Outlets = "1" | "2-3" | "4+";
 
 export type RecommendedPlan = "POS" | "OPERATIONS" | "ENTERPRISE";
 
-/** Tills the visitor is likely to be leaving, by site language. */
-export const CURRENT_POS_OPTIONS: Record<Locale, readonly CurrentPos[]> = {
-  fr: ["zelty", "lightspeed", "sumup", "tiller", "other", "none"],
-  en: ["zelty", "lightspeed", "sumup", "tiller", "other", "none"],
-  id: ["moka", "majoo", "other", "none"],
+const MARKETS: readonly Market[] = ["fr", "id", "global"];
+
+/** The markets to pick from, the one matching the site language first. */
+export function marketOptions(locale: Locale): Market[] {
+  return [...MARKETS].sort((a, b) => Number(b === locale) - Number(a === locale));
+}
+
+/** Tills the visitor is likely to be leaving, by where the business is. */
+export const CURRENT_POS_OPTIONS: Record<Market, readonly CurrentPos[]> = {
+  fr: ["zelty", "laddition", "lightspeed", "sumup", "tiller", "other", "none"],
+  id: ["moka", "majoo", "pawoon", "esb", "qasir", "other", "none"],
+  global: ["square", "toast", "lightspeed", "clover", "sumup", "other", "none"],
 };
 
 export const OUTLET_OPTIONS: readonly Outlets[] = ["1", "2-3", "4+"];
@@ -41,12 +58,13 @@ export const OUTLET_OPTIONS: readonly Outlets[] = ["1", "2-3", "4+"];
 /**
  * French cash-register software has to be NF525-certified or attested, and
  * Epidom has neither yet. Until the founder settles that, the "switch fully"
- * path is not offered on the French site. Flip to true once it is settled.
+ * path is not offered to a business in France, whatever language it reads the
+ * site in. Flip to true once it is settled.
  */
 export const NF525_SETTLED = false;
 
-export function availablePaths(locale: Locale): MigrationPath[] {
-  return locale === "fr" && !NF525_SETTLED ? ["A", "B"] : ["A", "B", "C"];
+export function availablePaths(market: Market): MigrationPath[] {
+  return market === "fr" && !NF525_SETTLED ? ["A", "B"] : ["A", "B", "C"];
 }
 
 export interface MigrationChoice {

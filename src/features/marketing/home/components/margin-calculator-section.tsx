@@ -23,7 +23,7 @@ import {
   type Range,
 } from "../lib/margin-calculator";
 import { usePosTrialHref } from "../lib/use-pos-trial-href";
-import { PRIMARY_BUTTON, SectionHeading, SourceRef } from "./landing-ui";
+import { PRIMARY_BUTTON, SectionHeading } from "./landing-ui";
 
 type MoneyField = "revenue" | "averageOrder" | "currentPosFee";
 type PercentField = "deliveryShare" | "commission" | "movedShare" | "currentMargin";
@@ -76,7 +76,7 @@ function parseField(raw: string, range: Range): number {
 export function MarginCalculatorSection({
   preset,
 }: {
-  /** Set by the problem picker: `nonce` changes on every click, so the same rate can be re-applied. */
+  /** Set once on arrival from ?commission= (see LandingPageSections); `nonce` marks a new preset. */
   preset: { commission: number; nonce: number } | null;
 }) {
   const { t, locale } = useI18n();
@@ -206,7 +206,7 @@ export function MarginCalculatorSection({
   const barMax = Math.max(inputs.currentMargin, result.newMargin, 0.05) * 1.15;
   const barWidth = (value: number) => `${Math.max(0, Math.min(1, value / barMax)) * 100}%`;
 
-  const field = (name: Field, labelKey: string, sourceId?: "S1" | "S3") => {
+  const field = (name: Field, labelKey: string) => {
     const isPercent = (PERCENT_FIELDS as readonly string[]).includes(name);
     const range = rangeFor(name, currency);
     const affix = isPercent ? { symbol: "%", side: "suffix" as const } : CURRENCY_AFFIX[currency];
@@ -215,7 +215,6 @@ export function MarginCalculatorSection({
       <div className="flex flex-col gap-2">
         <label htmlFor={inputId} className="text-epi-cream-50/80 text-sm">
           {t(`redesign.landing.calculator.${labelKey}`)}
-          {sourceId ? <SourceRef id={sourceId} /> : null}
         </label>
         <div className="relative">
           {affix.side === "prefix" ? (
@@ -283,7 +282,7 @@ export function MarginCalculatorSection({
             {field("revenue", "revenue")}
             {field("averageOrder", "averageOrder")}
             {field("deliveryShare", "deliveryShare")}
-            {field("commission", "commission", "S1")}
+            {field("commission", "commission")}
 
             <div className="flex flex-col gap-2 sm:col-span-2">
               <div className="flex items-baseline justify-between gap-3">
@@ -307,7 +306,7 @@ export function MarginCalculatorSection({
             </div>
 
             {field("currentPosFee", "currentPosFee")}
-            {field("currentMargin", "currentMargin", "S3")}
+            {field("currentMargin", "currentMargin")}
 
             <fieldset className="m-0 flex flex-col gap-2 border-0 p-0 sm:col-span-2">
               <legend className="text-epi-cream-50/80 mb-2 text-sm">
@@ -431,10 +430,7 @@ export function MarginCalculatorSection({
             </div>
 
             <ul className="text-epi-cream-50/55 m-0 flex list-none flex-col gap-1.5 p-0 text-xs leading-relaxed">
-              <li>
-                {t("redesign.landing.calculator.feeAssumption").replace("{fee}", feeText)}
-                <SourceRef id={fee.source} />
-              </li>
+              <li>{t("redesign.landing.calculator.feeAssumption").replace("{fee}", feeText)}</li>
               <li>
                 {t("redesign.landing.calculator.planAssumption")
                   .replace("{plan}", planName)

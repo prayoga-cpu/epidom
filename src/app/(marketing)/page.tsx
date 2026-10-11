@@ -3,10 +3,10 @@
  *
  * Landing page: make switching feel safe, and show what Epidom does for
  * margin. Composed of the sections in landing-page-sections.tsx (hero,
- * problem picker, margin calculator, trust bar, three spaces, switch at your
- * pace, hardware, comparisons, pricing, case studies, switcher FAQ, final
- * CTA, sources). Each section is wrapped with an error boundary to prevent
- * one section's failure from crashing the entire page.
+ * three spaces, margin calculator, trust bar, switch at your pace, hardware,
+ * comparisons, pricing, case studies, switcher FAQ, final CTA; the problem
+ * picker moved to /services). Each section is wrapped with an error
+ * boundary to prevent one section's failure from crashing the entire page.
  *
  * @page
  */

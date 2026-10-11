@@ -9,6 +9,17 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.11.0] - 2026-10-11 · ux
+
+A shorter homepage headline, help one tap away, an "Already have a POS?" guide that starts with your country, and a Features page that opens on your problem.
+
+- **A shorter headline.** The homepage now leads with "Realtime POS", with "transparent margin for cafés" underneath, and says everything runs from one website link, on a phone, a tablet or a computer.
+- **"Already have a POS?" starts with your country.** The guide first asks whether your business is in France, Indonesia or another country, then lists the tills used there: L'Addition, Pawoon, ESB POS, Qasir, Square, Toast and Clover join the lists. "Switch fully to Epidom" is offered to every business outside France, whatever language you read the site in, and for four outlets or more the WhatsApp button goes to our team in France or in Indonesia, depending on where you are.
+- **Help one tap away.** Under the headline, "24h online support" opens our two WhatsApp numbers, France and Indonesia, and "Last updated" now shows the year and opens this changelog. The free-storefront line is gone from there.
+- **Clearer contact in the FAQ.** "Still wondering?" now lists WhatsApp France, WhatsApp Indonesia and our email addresses, one per row, each with its icon.
+- **The Features page opens on your problem.** "Which problem costs you the most?" moved from the homepage to the top of the Features page, in place of its title section. Its "Calculate my commissions" button takes you to the homepage calculator with the platform's 30% already filled in. On the homepage, the three spaces now come straight after the headline.
+- **No more Sources list.** The numbered footnotes and the Sources list at the bottom of the homepage are gone.
+
 ## [3.10.0] - 2026-10-08 · infra
 
 The three sales pages now speak English and Indonesian too, with the website's language switcher.

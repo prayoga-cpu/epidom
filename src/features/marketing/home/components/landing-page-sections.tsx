@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SectionErrorBoundary } from "@/components/shared";
 import { trackEvent } from "@/lib/analytics";
 import { CaseStudiesSection } from "./case-studies-section";
@@ -10,8 +10,6 @@ import { HeroSection } from "./hero-section";
 import { MarginCalculatorSection } from "./margin-calculator-section";
 import { MigrationModal } from "./migration-modal";
 import { PricingSection } from "./pricing-section";
-import { ProblemPickerSection } from "./problem-picker-section";
-import { SourcesSection } from "./sources-section";
 import { SwitchPaceSection } from "./switch-pace-section";
 import { SwitcherFaqSection } from "./switcher-faq-section";
 import { ThreeSpacesSection } from "./three-spaces-section";
@@ -19,13 +17,16 @@ import { TrustBar } from "./trust-bar";
 import { WorksWithSection } from "./works-with-section";
 
 /**
- * The home page, in the order of the homepage spec (28.09.2026): make
- * switching feel safe, and show what Epidom does for margin. Each section has
- * its own error boundary so one failing section never takes the page down.
+ * The home page, in the order of the homepage spec (28.09.2026), except that
+ * "one link, three spaces" now comes straight after the hero and the problem
+ * picker has moved to the top of /services (11.10.2026): make switching feel
+ * safe, and show what Epidom does for margin. Each section has its own error
+ * boundary so one failing section never takes the page down.
  *
- * Two pieces of state are shared between sections: the "how do you want to
- * start" modal (opened from the hero and from "switch at your pace"), and the
- * commission rate the problem picker hands to the calculator.
+ * The "how do you want to start" modal is shared between sections (opened from
+ * the hero and from "switch at your pace"). The calculator takes a commission
+ * rate from the URL: the problem picker's commissions button lands here on
+ * `?commission=30#calculator`.
  */
 export function LandingPageSections({
   exampleStorefrontSlug,
@@ -44,8 +45,13 @@ export function LandingPageSections({
     trackEvent("migration_modal_open", { source });
   }, []);
 
-  const openCalculator = useCallback((preset?: { commission: number }) => {
-    if (preset) setCalculatorPreset({ commission: preset.commission, nonce: Date.now() });
+  // Read once on arrival: the problem picker on /services links here with
+  // ?commission=, and the calculator only needs the rate when it mounts.
+  useEffect(() => {
+    const commission = Number(new URLSearchParams(window.location.search).get("commission"));
+    if (commission > 0 && commission <= 100) {
+      setCalculatorPreset({ commission, nonce: Date.now() });
+    }
   }, []);
 
   return (
@@ -54,8 +60,8 @@ export function LandingPageSections({
         <HeroSection onOpenMigration={() => openMigration("hero")} />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="Problem Picker">
-        <ProblemPickerSection onOpenCalculator={openCalculator} />
+      <SectionErrorBoundary sectionName="Three Spaces">
+        <ThreeSpacesSection exampleStorefrontSlug={exampleStorefrontSlug} />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Margin Calculator">
@@ -64,10 +70,6 @@ export function LandingPageSections({
 
       <SectionErrorBoundary sectionName="Trust Bar">
         <TrustBar />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary sectionName="Three Spaces">
-        <ThreeSpacesSection exampleStorefrontSlug={exampleStorefrontSlug} />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Switch At Your Pace">
@@ -96,10 +98,6 @@ export function LandingPageSections({
 
       <SectionErrorBoundary sectionName="Final CTA">
         <FinalCtaSection />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary sectionName="Sources">
-        <SourcesSection />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Migration Modal">

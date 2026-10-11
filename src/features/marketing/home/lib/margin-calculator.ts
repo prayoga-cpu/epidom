@@ -1,5 +1,4 @@
 import { PLAN_PRICING, type PaidPlan, type PriceCurrency } from "@/lib/constants/plan-pricing";
-import type { SourceId } from "../data/sources";
 
 /**
  * The home page margin calculator: what moving part of the delivery-app orders
@@ -59,13 +58,12 @@ export interface CalculatorResult {
 export interface PaymentFee {
   percent: number;
   flat: number;
-  source: SourceId;
 }
 
 export const PAYMENT_FEE: Record<PriceCurrency, PaymentFee> = {
-  EUR: { percent: 0.015, flat: 0.25, source: "S2" },
-  USD: { percent: 0.029, flat: 0.3, source: "S7" },
-  IDR: { percent: 0.007, flat: 0, source: "S8" },
+  EUR: { percent: 0.015, flat: 0.25 },
+  USD: { percent: 0.029, flat: 0.3 },
+  IDR: { percent: 0.007, flat: 0 },
 };
 
 export interface Range {
@@ -100,10 +98,10 @@ export const MONEY_INPUTS: Record<
 /** Percentage inputs, in percent (25 means 25 %). */
 export const PERCENT_INPUTS = {
   deliveryShare: { default: 25, min: 0, max: 100, step: 1 },
-  // 30 %: Uber Eats' default plan before tax (S1).
+  // 30 %: Uber Eats' default plan in France, before tax (commandeici.com, June 2026).
   commission: { default: 30, min: 0, max: 40, step: 1 },
   movedShare: { default: 20, min: 0, max: 100, step: 1 },
-  // 3 %: the average restaurant result (S3).
+  // 3 %: the average French restaurant's result (GHR, citing Observatoire Fiducial).
   currentMargin: { default: 3, min: 0, max: 30, step: 0.5 },
 } as const satisfies Record<string, Range>;
 

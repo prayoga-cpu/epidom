@@ -32,7 +32,7 @@ import {
   type PainId,
 } from "../data/problems";
 import { usePosTrialHref } from "../lib/use-pos-trial-href";
-import { PlanBadge, PRIMARY_BUTTON, SectionHeading, SourceRef } from "./landing-ui";
+import { PlanBadge, PRIMARY_BUTTON, SectionHeading } from "./landing-ui";
 import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
 
 const ILLUSTRATION: Record<PainId, { before: LucideIcon; after: LucideIcon }> = {
@@ -50,13 +50,10 @@ const ILLUSTRATION: Record<PainId, { before: LucideIcon; after: LucideIcon }> = 
  * the fix. Chips from sm up, a native select on a phone. Commissions is
  * selected on load so the panel is never empty, and the panel is a polite
  * live region so a screen reader hears the new content.
+ *
+ * It opens /services (the Features page).
  */
-export function ProblemPickerSection({
-  onOpenCalculator,
-}: {
-  /** Scrolls to the calculator; `commission` (in %) presets its rate. */
-  onOpenCalculator: (preset?: { commission: number }) => void;
-}) {
+export function ProblemPickerSection() {
   const { t, locale } = useI18n();
   const selectId = useId();
   const [selected, setSelected] = useState<PainId>(DEFAULT_PAIN);
@@ -122,27 +119,14 @@ export function ProblemPickerSection({
         </div>
 
         <div aria-live="polite" className="mt-6">
-          <PainPanel
-            key={pain.id}
-            pain={pain}
-            locale={locale}
-            onOpenCalculator={onOpenCalculator}
-          />
+          <PainPanel key={pain.id} pain={pain} locale={locale} />
         </div>
       </div>
     </section>
   );
 }
 
-function PainPanel({
-  pain,
-  locale,
-  onOpenCalculator,
-}: {
-  pain: Pain;
-  locale: "en" | "fr" | "id";
-  onOpenCalculator: (preset?: { commission: number }) => void;
-}) {
+function PainPanel({ pain, locale }: { pain: Pain; locale: "en" | "fr" | "id" }) {
   const { t } = useI18n();
   const trialHref = usePosTrialHref();
   const k = (field: string) => t(`redesign.landing.picker.pains.${pain.id}.${field}`);
@@ -150,35 +134,25 @@ function PainPanel({
   const ctaLabel = k("cta");
   const trackCta = () => trackEvent("problem_cta_click", { pain_id: pain.id, cta: pain.cta });
 
-  let cta;
-  if (pain.cta === "calculator") {
-    cta = (
-      <a
-        href="#calculator"
-        onClick={() => {
-          trackCta();
-          onOpenCalculator(
-            pain.id === "commissions" ? { commission: PLATFORM_COMMISSION_PERCENT } : undefined
-          );
-        }}
-        className={PRIMARY_BUTTON}
-      >
-        {ctaLabel}
-      </a>
-    );
-  } else {
-    const href =
-      pain.cta === "trial"
+  // The calculator lives on the home page; commissions hands it the platform
+  // rate in the URL (read by LandingPageSections).
+  const calculatorHref =
+    getLocalizedPath("/", locale) +
+    (pain.id === "commissions" ? `?commission=${PLATFORM_COMMISSION_PERCENT}` : "") +
+    "#calculator";
+  const href =
+    pain.cta === "calculator"
+      ? calculatorHref
+      : pain.cta === "trial"
         ? trialHref
         : pain.cta === "stockGuide"
           ? getLocalizedPath(`/docs/${STOCK_GUIDE_SLUG[locale]}`, locale)
           : "/register";
-    cta = (
-      <Link href={href} onClick={trackCta} className={PRIMARY_BUTTON}>
-        {ctaLabel}
-      </Link>
-    );
-  }
+  const cta = (
+    <Link href={href} onClick={trackCta} className={PRIMARY_BUTTON}>
+      {ctaLabel}
+    </Link>
+  );
 
   return (
     <article
@@ -195,10 +169,9 @@ function PainPanel({
         >
           {k("pain")}
         </h3>
-        {pain.numberSource ? (
+        {pain.hasNumber ? (
           <p className="text-epi-gold-300 mt-4 text-base leading-relaxed">
             {k("number")}
-            <SourceRef id={pain.numberSource} />
             {pain.numberNote ? (
               <span className="text-epi-cream-50/70 ml-2 inline-block rounded-full border border-white/15 px-2 py-0.5 align-middle text-[11px] tracking-[0.1em] uppercase">
                 {k("numberNote")}
@@ -239,22 +212,16 @@ function PainPanel({
           ))}
         </div>
         <ul className="m-0 mt-5 flex list-none flex-col gap-3 p-0">
-          {([1, 2, 3] as const).map((n) => {
-            const source = pain.fixSources?.[n];
-            return (
-              <li key={n} className="text-epi-cream-50 flex gap-3 text-[15px] leading-relaxed">
-                <span aria-hidden="true" className="text-epi-gold-400">
-                  ✓
-                </span>
-                <span>
-                  {k(
-                    pain.id === "commissions" && n === 2 ? onlinePaymentCopyKey("fix2") : `fix${n}`
-                  )}
-                  {source ? <SourceRef id={source} /> : null}
-                </span>
-              </li>
-            );
-          })}
+          {([1, 2, 3] as const).map((n) => (
+            <li key={n} className="text-epi-cream-50 flex gap-3 text-[15px] leading-relaxed">
+              <span aria-hidden="true" className="text-epi-gold-400">
+                ✓
+              </span>
+              <span>
+                {k(pain.id === "commissions" && n === 2 ? onlinePaymentCopyKey("fix2") : `fix${n}`)}
+              </span>
+            </li>
+          ))}
         </ul>
         <div className="mt-8 lg:mt-auto lg:pt-8">{cta}</div>
       </div>

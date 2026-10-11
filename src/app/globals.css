@@ -555,6 +555,15 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
   line-height: 0.92;
   text-transform: uppercase;
 }
+/* The display face's light companion: a condensed light line under an
+   .epi-display headline (the home hero's tagline). */
+.epi-display-light {
+  font-family: var(--font-oswald, "Oswald"), "Bebas Neue", sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
 .epi-eyebrow {
   font-family: var(--epi-font-body);
   font-size: 12px;

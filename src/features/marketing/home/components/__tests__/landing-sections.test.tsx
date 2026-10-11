@@ -49,14 +49,14 @@ import { ProblemPickerSection } from "../problem-picker-section";
 import { MarginCalculatorSection } from "../margin-calculator-section";
 import { MigrationModal } from "../migration-modal";
 import { PricingSection } from "../pricing-section";
-import { SourcesSection } from "../sources-section";
 import { ThreeSpacesSection } from "../three-spaces-section";
 import { FinalCtaSection } from "../final-cta-section";
-import { SOURCE_IDS, sourceAnchor } from "../../data/sources";
 import { PAINS } from "../../data/problems";
 import { POS_TRIAL_REGISTER_HREF } from "@/features/onboarding/lib/plan-intent";
 import { APP_RELEASE_DATE, APP_VERSION } from "@/lib/version";
 import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
+import { WHATSAPP_NUMBERS } from "@/lib/constants/contact";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 
 const DICTS = { en, fr, id } as const;
 type Loc = keyof typeof DICTS;
@@ -143,15 +143,45 @@ describe("HeroSection", () => {
   });
 
   it.each([
-    ["fr", "Pilotez tout, de la commande à la marge."],
-    ["en", "Orders to Margin Controller"],
-    ["id", "Kendali penuh, dari pesanan ke margin."],
-  ] as const)("%s: one h1, the orders-to-margin headline", (loc, headline) => {
-    mockLocale.value = loc;
-    render(<HeroSection onOpenMigration={() => {}} />);
-    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(headline);
-  });
+    ["fr", "Caisse en temps réel", "avec une marge transparente pour les cafés"],
+    ["en", "Realtime POS", "with transparent margin for cafés"],
+    ["id", "Kasir realtime", "dengan margin transparan untuk kafe"],
+  ] as const)(
+    "%s: one h1, only the product, with the margin promise under it",
+    (loc, headline, tagline) => {
+      mockLocale.value = loc;
+      render(<HeroSection onOpenMigration={() => {}} />);
+      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+      const h1 = screen.getByRole("heading", { level: 1, name: headline });
+      const taglineEl = screen.getByText(
+        (_, el) => el?.tagName === "P" && el.textContent === tagline
+      );
+      expect(h1.compareDocumentPosition(taglineEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  );
+
+  it.each([
+    ["en", "Realt", "me POS"],
+    ["id", "Kasir realt", "me"],
+    ["fr", "Caisse en temp", " réel"],
+  ] as const)(
+    "%s: one letter of realtime is a bolt drawing, hidden from screen readers",
+    (loc, before, after) => {
+      mockLocale.value = loc;
+      render(<HeroSection onOpenMigration={() => {}} />);
+      const bolts = screen.getByRole("heading", { level: 1 }).querySelectorAll("svg");
+      expect(bolts).toHaveLength(1);
+      expect(bolts[0]).toHaveAttribute("aria-hidden", "true");
+      const visual = bolts[0].parentElement!;
+      expect(visual).toHaveAttribute("aria-hidden", "true");
+      // The letter the bolt stands for stays in the drawn copy's text, undrawn,
+      // so search engines read "REALTIME" there, not "REALTME".
+      const title = text(loc, "redesign.landing.hero.title");
+      const letter = visual.querySelector(".sr-only")?.textContent;
+      expect(`${before}${letter}${after}`).toBe(title);
+      expect(visual.textContent).toBe(title);
+    }
+  );
 
   it("puts the gold trial pill first and the calculator (text only) second", () => {
     render(<HeroSection onOpenMigration={() => {}} />);
@@ -164,13 +194,20 @@ describe("HeroSection", () => {
     expect(calc.className).not.toMatch(/\bbg-/);
   });
 
-  it("sets the headline in the brand display face, with the *marked* words in gold", () => {
+  it("sets the headline in the display face and the tagline on one line in its light companion, one colour", () => {
     mockLocale.value = "en";
     render(<HeroSection onOpenMigration={() => {}} />);
     const h1 = screen.getByRole("heading", { level: 1 });
-    expect(h1.className).toMatch(/epi-display/);
-    expect(h1.textContent).not.toContain("*");
-    expect(within(h1).getByText("Margin").className).toMatch(/text-epi-gold-400/);
+    expect(h1.className).toMatch(/\bepi-display\b/);
+    const taglineEl = screen.getByText(
+      (_, el) => el?.tagName === "P" && el.textContent === "with transparent margin for cafés"
+    );
+    expect(taglineEl.className).toMatch(/\bepi-display-light\b/);
+    expect(taglineEl.className).toMatch(/whitespace-nowrap/);
+    expect(taglineEl.querySelector("[class*='gold']")).toBeNull();
+    // Sized from its box (as wide as the h1), not a fixed size.
+    expect(taglineEl.getAttribute("style")).toMatch(/--tagline-em:\s*[\d.]+/);
+    expect(taglineEl.className).toMatch(/100cqi/);
   });
 
   it("shows the photo with alt text in the visitor's language, loaded eagerly at high priority", () => {
@@ -195,33 +232,51 @@ describe("HeroSection", () => {
       new Intl.DateTimeFormat(intlLocale, {
         day: "numeric",
         month: "short",
+        year: "numeric",
         timeZone: "UTC",
       }).format(new Date(`${APP_RELEASE_DATE}T00:00:00Z`));
 
-    it("lists the free storefront, WhatsApp support and the running build's release", () => {
+    it("lists 24h WhatsApp support and the last update, which opens the changelog", () => {
       render(<HeroSection onOpenMigration={() => {}} />);
-      const facts = screen.getByText("Vitrine").closest("dl")!;
+      const facts = screen.getByText("Support en ligne 24 h/24").closest("dl")!;
+      expect(within(facts).getAllByRole("term")).toHaveLength(2);
+      expect(within(facts).queryByText("Vitrine")).toBeNull();
       expect(
-        within(facts).getByText(text("fr", "redesign.landing.hero.storefrontValue"))
+        within(facts).getByRole("button", { name: "France / Indonésie, par WhatsApp" })
       ).toBeInTheDocument();
-      expect(
-        within(facts).getByText(text("fr", "redesign.landing.hero.supportValue"))
-      ).toBeInTheDocument();
-      expect(
-        within(facts).getByText(text("fr", "redesign.landing.hero.releaseLabel"))
-      ).toBeInTheDocument();
-      expect(plain(within(facts).getByText(new RegExp(`/ ${APP_VERSION}$`)).textContent)).toBe(
-        plain(`${releaseDay("fr-FR")} / ${APP_VERSION}`)
-      );
+      expect(within(facts).getByText("Dernière mise à jour")).toBeInTheDocument();
+      const update = within(facts).getByRole("link", { name: new RegExp(`/ ${APP_VERSION}$`) });
+      expect(update).toHaveAttribute("href", getLocalizedPath("/changelog", "fr"));
+      expect(plain(update.textContent)).toBe(plain(`${releaseDay("fr-FR")} / ${APP_VERSION}`));
     });
 
-    it("en: the release date reads the English way", () => {
+    it("en: the update date reads the English way, year included", () => {
       mockLocale.value = "en";
       render(<HeroSection onOpenMigration={() => {}} />);
+      expect(screen.getByText("Last updated")).toBeInTheDocument();
       expect(screen.getByText(new RegExp(`/ ${APP_VERSION}$`)).textContent).toBe(
         `${releaseDay("en-US")} / ${APP_VERSION}`
       );
+      expect(releaseDay("en-US")).toMatch(/\d{4}$/);
     });
+
+    it.each([
+      ["fr", "France / Indonésie, par WhatsApp", ["France", "Indonésie"], ["fr", "id"]],
+      ["id", "Prancis / Indonesia, via WhatsApp", ["Indonesia", "Prancis"], ["id", "fr"]],
+    ] as const)(
+      "%s: support opens both WhatsApp numbers, the visitor's market first",
+      (loc, trigger, labels, markets) => {
+        mockLocale.value = loc;
+        render(<HeroSection onOpenMigration={() => {}} />);
+        fireEvent.click(screen.getByRole("button", { name: trigger }));
+        const links = within(screen.getByRole("dialog")).getAllByRole("link");
+        expect(links.map((a) => a.textContent)).toEqual(labels);
+        expect(links.map((a) => a.getAttribute("href"))).toEqual(
+          markets.map((m) => `https://wa.me/${WHATSAPP_NUMBERS[m].number}`)
+        );
+        for (const a of links) expect(a).toHaveAttribute("target", "_blank");
+      }
+    );
   });
 });
 
@@ -229,7 +284,7 @@ describe("HeroSection", () => {
 
 describe("ProblemPickerSection", () => {
   it("opens on Commissions, so the panel is never empty", () => {
-    render(<ProblemPickerSection onOpenCalculator={() => {}} />);
+    render(<ProblemPickerSection />);
     const chip = screen.getByRole("button", { name: "Commissions" });
     expect(chip).toHaveAttribute("aria-pressed", "true");
     expect(
@@ -240,7 +295,7 @@ describe("ProblemPickerSection", () => {
   });
 
   it("switching pain updates the panel and is tracked; the panel is a polite live region", () => {
-    const { container } = render(<ProblemPickerSection onOpenCalculator={() => {}} />);
+    const { container } = render(<ProblemPickerSection />);
     fireEvent.click(screen.getByRole("button", { name: "Coupures" }));
     expect(
       screen.getByRole("heading", {
@@ -253,27 +308,34 @@ describe("ProblemPickerSection", () => {
   });
 
   it("the phone select switches pain too", () => {
-    render(<ProblemPickerSection onOpenCalculator={() => {}} />);
+    render(<ProblemPickerSection />);
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "queues" } });
     expect(screen.getByText("données US")).toBeInTheDocument();
   });
 
-  it("the commissions button hands the 30 % platform rate to the calculator", () => {
-    const openCalculator = vi.fn();
-    render(<ProblemPickerSection onOpenCalculator={openCalculator} />);
+  it("the commissions button hands the 30 % platform rate to the home page's calculator", () => {
+    render(<ProblemPickerSection />);
     const cta = screen.getByRole("link", { name: "Calculer mes commissions" });
-    expect(cta).toHaveAttribute("href", "#calculator");
+    expect(cta).toHaveAttribute("href", "/?commission=30#calculator");
     fireEvent.click(cta);
-    expect(openCalculator).toHaveBeenCalledWith({ commission: 30 });
     expect(analytics.trackEvent).toHaveBeenCalledWith("problem_cta_click", {
       pain_id: "commissions",
       cta: "calculator",
     });
   });
 
+  it("en: the calculator link stays on the English home page", () => {
+    mockLocale.value = "en";
+    render(<ProblemPickerSection />);
+    expect(screen.getByRole("link", { name: "Calculate my commissions" })).toHaveAttribute(
+      "href",
+      "/en?commission=30#calculator"
+    );
+  });
+
   it("commissions is sold as POS, never Free (online ordering is a POS feature)", () => {
     expect(PAINS.find((p) => p.id === "commissions")?.plans).toEqual(["POS"]);
-    render(<ProblemPickerSection onOpenCalculator={() => {}} />);
+    render(<ProblemPickerSection />);
     const panel = screen.getByRole("article");
     expect(within(panel).getByText("POS")).toBeInTheDocument();
     expect(within(panel).queryByText("Free")).toBeNull();
@@ -281,7 +343,7 @@ describe("ProblemPickerSection", () => {
 
   it("the stock button goes to the stock guide in the visitor's language", () => {
     mockLocale.value = "en";
-    render(<ProblemPickerSection onOpenCalculator={() => {}} />);
+    render(<ProblemPickerSection />);
     fireEvent.click(screen.getByRole("button", { name: "Accurate tracking" }));
     expect(screen.getByRole("link", { name: "See stock tracking" })).toHaveAttribute(
       "href",
@@ -343,8 +405,27 @@ describe("MigrationModal", () => {
     fireEvent.click(screen.getByRole("button", { name: label }));
   }
 
+  it("asks where the business is first, the site language's market on top", () => {
+    render(<MigrationModal open onClose={() => {}} />);
+    expect(screen.getByText("Étape 1 sur 4")).toBeInTheDocument();
+    const markets = within(screen.getByRole("group")).getAllByRole("button");
+    expect(markets.map((b) => b.textContent)).toEqual(["France", "Indonésie", "Un autre pays"]);
+  });
+
+  it.each([
+    ["France", ["Zelty", "L'Addition", "Lightspeed", "SumUp", "Tiller"]],
+    ["Indonésie", ["Moka", "Majoo", "Pawoon", "ESB POS", "Qasir"]],
+    ["Un autre pays", ["Square", "Toast", "Lightspeed", "Clover", "SumUp"]],
+  ] as const)("%s lists that market's tills, then other and none", (market, tills) => {
+    render(<MigrationModal open onClose={() => {}} />);
+    answer(market);
+    const options = within(screen.getByRole("group")).getAllByRole("button");
+    expect(options.map((b) => b.textContent)).toEqual([...tills, "Autre caisse", "Pas de caisse"]);
+  });
+
   it("fr: keep my till + online ordering, 1 outlet → POS trial, with the till kept", () => {
     render(<MigrationModal open onClose={() => {}} />);
+    answer("France");
     answer("Zelty");
     // No "switch fully" on the French site until NF525 is settled.
     expect(screen.queryByRole("button", { name: "Passer entièrement à Epidom" })).toBeNull();
@@ -358,6 +439,7 @@ describe("MigrationModal", () => {
       POS_TRIAL_REGISTER_HREF
     );
     expect(analytics.trackEvent).toHaveBeenCalledWith("migration_path_selected", {
+      market: "fr",
       current_pos: "zelty",
       path: "A",
       outlets: "1",
@@ -366,6 +448,7 @@ describe("MigrationModal", () => {
 
   it("keep my till + margin says, on the card, what only works with Epidom sales", () => {
     render(<MigrationModal open onClose={() => {}} />);
+    answer("France");
     answer("SumUp");
     answer("Garder ma caisse, suivre ma marge et mes recettes");
     answer("2 à 3");
@@ -378,20 +461,34 @@ describe("MigrationModal", () => {
     ).toHaveAttribute("href", "/pricing#plans");
   });
 
-  it("4+ outlets goes to WhatsApp", () => {
+  it.each([
+    ["France", "Tiller", WHATSAPP_NUMBERS.fr.number],
+    ["Indonésie", "Moka", WHATSAPP_NUMBERS.id.number],
+  ] as const)("4+ outlets in %s goes to that market's WhatsApp", (market, till, number) => {
     render(<MigrationModal open onClose={() => {}} />);
-    answer("Tiller");
+    answer(market);
+    answer(till);
     answer("Garder ma caisse, ajouter la commande en ligne");
     answer("4 et plus");
     const link = within(screen.getByTestId("migration-result")).getByRole("link", {
       name: "Parler sur WhatsApp",
     });
-    expect(link.getAttribute("href")).toMatch(/^https:\/\/wa\.me\//);
+    expect(link).toHaveAttribute("href", `https://wa.me/${number}`);
+  });
+
+  it("the NF525 gate follows the business's country, not the site language", () => {
+    mockLocale.value = "en";
+    render(<MigrationModal open onClose={() => {}} />);
+    answer("France");
+    answer("Zelty");
+    expect(screen.getByText("How do you want to start?")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Switch fully to Epidom" })).toBeNull();
   });
 
   it("en: the full switch is offered, and 2-3 outlets explains the move to Operations", () => {
     mockLocale.value = "en";
     render(<MigrationModal open onClose={() => {}} />);
+    answer("Another country");
     answer("No POS");
     answer("Run everything on Epidom, till included");
     answer("2 to 3");
@@ -403,9 +500,12 @@ describe("MigrationModal", () => {
   it("Back walks back a step; Escape and the 44px close button close it", () => {
     const onClose = vi.fn();
     render(<MigrationModal open onClose={onClose} />);
+    answer("France");
     answer("Lightspeed");
     answer("Retour");
     expect(screen.getByText("Qu'utilisez-vous aujourd'hui ?")).toBeInTheDocument();
+    answer("Retour");
+    expect(screen.getByText("Où se trouve votre commerce ?")).toBeInTheDocument();
 
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -482,6 +582,12 @@ describe("ThreeSpacesSection", () => {
       "/services"
     );
   });
+
+  it("holds the live storefront link's place while its slug streams in, so the calculator below never moves", () => {
+    render(<ThreeSpacesSection exampleStorefrontSlug={new Promise<string | null>(() => {})} />);
+    expect(screen.queryByRole("link", { name: /vraie vitrine/ })).toBeNull();
+    expect(screen.getByTestId("live-example-slot")).toHaveClass("min-h-11");
+  });
 });
 
 describe("FinalCtaSection", () => {
@@ -498,37 +604,22 @@ describe("FinalCtaSection", () => {
   });
 });
 
-// ── Sources ──────────────────────────────────────────────────────────────────
+// ── No Sources list (removed 11.10.2026) ─────────────────────────────────────
 
-describe("Sources", () => {
-  it.each(["fr", "en", "id"] as const)(
-    "%s: every source has a line, and every footnote on the page points at one",
-    (loc) => {
-      mockLocale.value = loc;
-      const { container } = render(
-        <>
-          <ProblemPickerSection onOpenCalculator={() => {}} />
-          <MarginCalculatorSection preset={null} />
-          <SourcesSection />
-        </>
-      );
-      for (const sid of SOURCE_IDS) {
-        const line = container.querySelector(`#${sourceAnchor(sid)}`);
-        expect(line, sid).not.toBeNull();
-        expect(line?.textContent).not.toContain("redesign.landing");
-      }
-      const refs = Array.from(container.querySelectorAll<HTMLAnchorElement>('a[href^="#source-"]'));
-      expect(refs.length).toBeGreaterThan(0);
-      for (const ref of refs) {
-        expect(container.querySelector(ref.getAttribute("href")!), ref.href).not.toBeNull();
-      }
-    }
-  );
+describe("Figures without the Sources list", () => {
+  it.each(["fr", "en", "id"] as const)("%s: no footnote marker is left behind", (loc) => {
+    mockLocale.value = loc;
+    const { container } = render(
+      <>
+        <ProblemPickerSection />
+        <MarginCalculatorSection preset={null} />
+      </>
+    );
+    expect(container.querySelector('a[href^="#source-"]')).toBeNull();
+    expect(container.textContent).not.toMatch(/\[\d+\]/);
+  });
 
-  it("every pain with a figure names its source", () => {
-    for (const pain of PAINS) {
-      if (pain.id === "apps") expect(pain.numberSource).toBeNull();
-      else expect(pain.numberSource, pain.id).not.toBeNull();
-    }
+  it("every pain but 'apps' still shows its figure", () => {
+    for (const pain of PAINS) expect(pain.hasNumber, pain.id).toBe(pain.id !== "apps");
   });
 });

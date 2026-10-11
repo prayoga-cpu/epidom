@@ -74,7 +74,7 @@ import { PricingFaq } from "../components/pricing-faq";
 import { FaqSection } from "@/features/marketing/home/components/faq-section";
 import { PricingSection } from "@/features/marketing/home/components/pricing-section";
 import { SwitcherFaqSection } from "@/features/marketing/home/components/switcher-faq-section";
-import { SUPPORT_EMAIL_DISPLAY, SUPPORT_MAILTO } from "@/lib/constants/contact";
+import { SUPPORT_EMAIL_DISPLAY, SUPPORT_MAILTO, WHATSAPP_NUMBERS } from "@/lib/constants/contact";
 
 // The three dictionaries are structurally different types (each has keys the
 // others lack), so the helpers take them as unknown and read one section.
@@ -256,8 +256,24 @@ describe("FAQ sections", () => {
   it("reads the support address from the shared constants", () => {
     state.locale = "en";
     render(<FaqSection items={sampleItems()} />);
-    const mail = screen.getByText(SUPPORT_EMAIL_DISPLAY).closest("a");
-    expect(mail?.getAttribute("href")).toBe(SUPPORT_MAILTO);
+    // One link, every address on its own line, read as "a, b, c".
+    const mail = screen.getByRole("link", { name: (name) => name.includes("prionation.io") });
+    expect(mail.getAttribute("href")).toBe(SUPPORT_MAILTO);
+    expect(mail.textContent).toBe(SUPPORT_EMAIL_DISPLAY);
+  });
+
+  it("lists the contact ways as rows: one per WhatsApp number (en offers both), then email", () => {
+    state.locale = "en";
+    render(<FaqSection items={sampleItems()} />);
+    const rows = within(screen.getByText(faq(en).helpText).nextElementSibling as HTMLElement)
+      .getAllByRole("listitem")
+      .map((li) => within(li).getByRole("link"));
+    expect(rows.map((a) => a.getAttribute("href"))).toEqual([
+      `https://wa.me/${WHATSAPP_NUMBERS.fr.number}`,
+      `https://wa.me/${WHATSAPP_NUMBERS.id.number}`,
+      SUPPORT_MAILTO,
+    ]);
+    for (const a of rows) expect(a.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("opens and closes an answer with the keyboard-reachable button", () => {

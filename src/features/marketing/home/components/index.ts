@@ -11,6 +11,5 @@ export { CaseStudiesSection } from "./case-studies-section";
 export { SwitcherFaqSection } from "./switcher-faq-section";
 export { FaqSection } from "./faq-section";
 export { FinalCtaSection } from "./final-cta-section";
-export { SourcesSection } from "./sources-section";
 export { MigrationModal } from "./migration-modal";
 export { ClosingCtaSection } from "./closing-cta-section";

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("next/font/google", () => ({
   Jost: () => ({ variable: "jost" }),
   IM_Fell_French_Canon: () => ({ variable: "imfell" }),
+  Oswald: () => ({ variable: "oswald" }),
 }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/features/marketing/shared/components/site-header", () => ({ SiteHeader: () => null }));
