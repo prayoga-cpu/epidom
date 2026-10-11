@@ -46,6 +46,13 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # next-env.d.ts (gitignored) declares Next's static-image and route types.
+      # Without it, `import hero from "…/hero.jpeg"` fails the type check with
+      # TS2307 (red since the homepage hero photo). `next build` writes it on
+      # Vercel; typegen writes it here without a build.
+      - name: Generate Next.js types
+        run: pnpm next typegen
+
       - name: Type check
         run: pnpm type-check
 
