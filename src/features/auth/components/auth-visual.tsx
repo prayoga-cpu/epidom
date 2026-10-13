@@ -1,69 +1,35 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
-import { Check, TrendingUp, Bell, PieChart, Package, Receipt, Truck } from "lucide-react";
+import { Bell, Check, MessageCircle, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import {
+  PRODUCT_SCREENS,
+  type ProductScreenKey,
+} from "@/features/marketing/shared/content/product-screens";
 
-const SLIDES = [
+// One slide per real screenshot (see product-screens.ts); the copy lives under
+// auth.visual.<key>Title / Body / Toast / ToastSub. The toast is an example of
+// what that screen does, not a live event.
+const SLIDES: readonly {
+  key: "cashier" | "queue" | "customer" | "stock";
+  screen: ProductScreenKey;
+  notification: { icon: LucideIcon; color: "green" | "blue" | "orange" };
+}[] = [
+  { key: "cashier", screen: "posCashier", notification: { icon: Check, color: "green" } },
+  { key: "queue", screen: "posOrderQueue", notification: { icon: Bell, color: "blue" } },
   {
-    id: "dashboard",
-    image: "/images/dashboard.png",
-    title: "Manage your bakery\nlike a pro.",
-    description:
-      "Get a bird's eye view of your bakery's performance with our comprehensive dashboard.",
-    icon: PieChart,
-    notification: {
-      title: "Revenue Up 24%",
-      subtitle: "Compared to last month",
-      icon: TrendingUp,
-      color: "green",
-    },
+    key: "customer",
+    screen: "posCustomerDisplay",
+    notification: { icon: MessageCircle, color: "green" },
   },
-  {
-    id: "recipe",
-    image: "/images/data-recipe.png",
-    title: "Precision Recipe\nCosting.",
-    description: "Calculate exact production costs based on real-time material prices and labor.",
-    icon: Receipt,
-    notification: {
-      title: "Recipe Updated",
-      subtitle: "Croissant margins improved by 5%",
-      icon: Check,
-      color: "blue",
-    },
-  },
-  {
-    id: "inventory",
-    image: "/images/data-product.png",
-    title: "Smart Inventory\nManagement.",
-    description: "Track stock levels, set alerts, and never run out of key ingredients again.",
-    icon: Package,
-    notification: {
-      title: "Low Stock Alert",
-      subtitle: "Flour stock below minimum level",
-      icon: Bell,
-      color: "orange",
-    },
-  },
-  {
-    id: "tracking",
-    image: "/images/tracking.png",
-    title: "Real-time Order\nTracking.",
-    description: "Monitor production batches and delivery status in real-time.",
-    icon: Truck,
-    notification: {
-      title: "Batch Completed",
-      subtitle: "Sour Dough Batch #420 is ready",
-      icon: Check,
-      color: "green",
-    },
-  },
+  { key: "stock", screen: "backOfficeStock", notification: { icon: Bell, color: "orange" } },
 ];
 
 export function AuthVisual() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -125,7 +91,7 @@ export function AuthVisual() {
           <div className="relative aspect-[16/10] w-full perspective-[2000px]">
             {SLIDES.map((slide, index) => (
               <div
-                key={slide.id}
+                key={slide.key}
                 className={cn(
                   "absolute inset-0 transform transition-all duration-1000 ease-in-out",
                   index === currentSlide
@@ -148,8 +114,8 @@ export function AuthVisual() {
                     style={{ background: "var(--epi-navy-800)" }}
                   >
                     <Image
-                      src={slide.image}
-                      alt={slide.title}
+                      src={PRODUCT_SCREENS[slide.screen].src}
+                      alt={PRODUCT_SCREENS[slide.screen].alt[locale]}
                       fill
                       className="object-cover object-left-top"
                       sizes="(max-width: 768px) 100vw, 600px"
@@ -196,10 +162,10 @@ export function AuthVisual() {
                     </div>
                     <div>
                       <h4 className="text-left text-sm font-semibold text-white">
-                        {slide.notification.title}
+                        {t(`auth.visual.${slide.key}Toast`)}
                       </h4>
                       <p className="mt-1 text-left text-xs text-white/50">
-                        {slide.notification.subtitle}
+                        {t(`auth.visual.${slide.key}ToastSub`)}
                       </p>
                     </div>
                   </div>
@@ -213,17 +179,17 @@ export function AuthVisual() {
             <div className="relative h-[120px] w-full">
               {SLIDES.map((slide, index) => (
                 <div
-                  key={slide.id}
+                  key={slide.key}
                   className={cn(
                     "absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 ease-out",
                     index === currentSlide ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
                   )}
                 >
                   <h2 className="mb-3 bg-gradient-to-r from-white to-white/60 bg-clip-text text-3xl leading-tight font-bold whitespace-pre-line text-transparent md:text-3xl lg:text-4xl">
-                    {slide.title}
+                    {t(`auth.visual.${slide.key}Title`)}
                   </h2>
                   <p className="max-w-md text-lg leading-relaxed text-white/60">
-                    {slide.description}
+                    {t(`auth.visual.${slide.key}Body`)}
                   </p>
                 </div>
               ))}

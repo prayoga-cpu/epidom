@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.12.0] - 2026-10-13 · ux
+
+Real screens of today's Epidom on the website and the sign-in page, in place of pictures of the old app.
+
+- **See the POS before you sign up.** A new section on the homepage, right after the headline, and on the Features page shows the real cashier, the order queue, the customer screen and an order placed from a phone. Tap a view to switch.
+- **The three spaces have pictures.** The Storefront, POS Mode and Back Office cards on the homepage each show a real screenshot.
+- **A new sign-in and sign-up panel.** The slideshow next to the form now shows the cashier, the order queue, the customer screen and the stock page, with its text in French, English and Indonesian.
+- **A new link preview.** A link to Epidom shared on WhatsApp, Facebook or LinkedIn now shows the homepage headline, and the app's install prompt shows the real cashier.
+
 ## [3.11.0] - 2026-10-11 · ux
 
 A shorter homepage headline, help one tap away, an "Already have a POS?" guide that starts with your country, and a Features page that opens on your problem.

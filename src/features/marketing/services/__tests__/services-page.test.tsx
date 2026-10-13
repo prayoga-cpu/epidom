@@ -38,6 +38,7 @@ vi.mock("@/features/marketing/shared/components/phone-kds", () => ({
 
 import { SpacesSection } from "../components/spaces-section";
 import { FeaturesShowcaseSection } from "../components/features-showcase-section";
+import { PosTourSection } from "@/features/marketing/home/components/pos-tour-section";
 import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
@@ -53,6 +54,7 @@ describe("Services page sections", () => {
     const { container } = render(
       <>
         <SpacesSection />
+        <PosTourSection />
         <FeaturesShowcaseSection />
       </>
     );

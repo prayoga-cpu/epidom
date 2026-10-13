@@ -9,6 +9,7 @@ import { FinalCtaSection } from "./final-cta-section";
 import { HeroSection } from "./hero-section";
 import { MarginCalculatorSection } from "./margin-calculator-section";
 import { MigrationModal } from "./migration-modal";
+import { PosTourSection } from "./pos-tour-section";
 import { PricingSection } from "./pricing-section";
 import { SwitchPaceSection } from "./switch-pace-section";
 import { SwitcherFaqSection } from "./switcher-faq-section";
@@ -18,8 +19,9 @@ import { WorksWithSection } from "./works-with-section";
 
 /**
  * The home page, in the order of the homepage spec (28.09.2026), except that
- * "one link, three spaces" now comes straight after the hero and the problem
- * picker has moved to the top of /services (11.10.2026): make switching feel
+ * the POS tour (real screens, 13.10.2026) and then "one link, three spaces"
+ * come straight after the hero, and the problem picker has moved to the top of
+ * /services (11.10.2026): make switching feel
  * safe, and show what Epidom does for margin. Each section has its own error
  * boundary so one failing section never takes the page down.
  *
@@ -58,6 +60,10 @@ export function LandingPageSections({
     <>
       <SectionErrorBoundary sectionName="Hero">
         <HeroSection onOpenMigration={() => openMigration("hero")} />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="POS Tour">
+        <PosTourSection />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Three Spaces">

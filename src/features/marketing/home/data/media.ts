@@ -1,5 +1,9 @@
 import type { StaticImageData } from "next/image";
 import type { Locale } from "@/components/lang/i18n-provider";
+import {
+  PRODUCT_SCREENS,
+  type ProductScreen,
+} from "@/features/marketing/shared/content/product-screens";
 // Kept in public/ where it was supplied; the static import gives next/image its
 // size and blur placeholder, and the optimiser serves AVIF/WebP at each width.
 import heroPhoto from "../../../../../public/images/hero.jpeg";
@@ -15,7 +19,8 @@ import heroPhoto from "../../../../../public/images/hero.jpeg";
  * large and retina screens.
  *
  * Spaces: one real screenshot per space (Storefront, POS Mode, Back Office),
- * not a mockup.
+ * not a mockup. The POS card shows the order queue because the cashier itself
+ * is shown full size in the POS tour right above it.
  */
 export interface LocalizedImage {
   src: StaticImageData;
@@ -31,9 +36,9 @@ export const HERO_PHOTO: LocalizedImage | null = {
   },
 };
 
-export const SPACE_SCREENSHOTS: Record<"storefront" | "pos" | "backOffice", LocalizedImage | null> =
+export const SPACE_SCREENSHOTS: Record<"storefront" | "pos" | "backOffice", ProductScreen | null> =
   {
-    storefront: null,
-    pos: null,
-    backOffice: null,
+    storefront: PRODUCT_SCREENS.storefrontMenu,
+    pos: PRODUCT_SCREENS.posOrderQueue,
+    backOffice: PRODUCT_SCREENS.backOfficeStock,
   };

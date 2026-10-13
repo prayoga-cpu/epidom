@@ -5,7 +5,7 @@
  * Bump this with every release (see AGENTS.md "Changelog & versioning").
  * Used for the footer/dashboard version badge and the "What's new" bell prompt.
  */
-export const APP_VERSION = "3.11.0";
+export const APP_VERSION = "3.12.0";
 
 /**
  * The day APP_VERSION was released: the date on its CHANGELOG.md header, bumped
@@ -13,4 +13,4 @@ export const APP_VERSION = "3.11.0";
  * page shows it as the "last updated" fact, so it always matches the build
  * that is actually running.
  */
-export const APP_RELEASE_DATE = "2026-10-11";
+export const APP_RELEASE_DATE = "2026-10-13";

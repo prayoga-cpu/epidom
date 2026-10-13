@@ -258,7 +258,7 @@ export function BlogPostingStructuredData({
     publisher: {
       "@type": "Organization",
       name: "Epidom",
-      logo: { "@type": "ImageObject", url: "https://epidom.fr/images/logo.svg" },
+      logo: { "@type": "ImageObject", url: "https://epidom.fr/images/icon-512.png" },
     },
   };
 

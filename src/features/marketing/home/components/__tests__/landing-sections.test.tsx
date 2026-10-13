@@ -50,8 +50,10 @@ import { MarginCalculatorSection } from "../margin-calculator-section";
 import { MigrationModal } from "../migration-modal";
 import { PricingSection } from "../pricing-section";
 import { ThreeSpacesSection } from "../three-spaces-section";
+import { PosTourSection } from "../pos-tour-section";
 import { FinalCtaSection } from "../final-cta-section";
 import { PAINS } from "../../data/problems";
+import { PRODUCT_SCREENS } from "@/features/marketing/shared/content/product-screens";
 import { POS_TRIAL_REGISTER_HREF } from "@/features/onboarding/lib/plan-intent";
 import { APP_RELEASE_DATE, APP_VERSION } from "@/lib/version";
 import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
@@ -587,6 +589,83 @@ describe("ThreeSpacesSection", () => {
     render(<ThreeSpacesSection exampleStorefrontSlug={new Promise<string | null>(() => {})} />);
     expect(screen.queryByRole("link", { name: /vraie vitrine/ })).toBeNull();
     expect(screen.getByTestId("live-example-slot")).toHaveClass("min-h-11");
+  });
+
+  it("shows a real screenshot in each card, described in the visitor's language", () => {
+    mockLocale.value = "en";
+    render(<ThreeSpacesSection exampleStorefrontSlug={null} />);
+    for (const shot of [
+      PRODUCT_SCREENS.storefrontMenu,
+      PRODUCT_SCREENS.posOrderQueue,
+      PRODUCT_SCREENS.backOfficeStock,
+    ]) {
+      expect(screen.getByRole("img", { name: shot.alt.en })).toBeInTheDocument();
+    }
+  });
+});
+
+describe("PosTourSection", () => {
+  const tabs = () => screen.getAllByRole("tab");
+
+  it.each(["fr", "en", "id"] as const)("%s: every string it asks for exists", (loc) => {
+    mockLocale.value = loc;
+    const { container } = render(<PosTourSection />);
+    expect(container.textContent).not.toContain("redesign.");
+    expect(tabs()).toHaveLength(4);
+  });
+
+  it("opens on the cashier, and only the visible view's screenshot is announced", () => {
+    mockLocale.value = "en";
+    render(<PosTourSection />);
+    expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
+    expect(tabs()[0]).toHaveTextContent(text("en", "redesign.posTour.cashierTab"));
+    expect(
+      screen.getByRole("img", { name: PRODUCT_SCREENS.posCashier.alt.en })
+    ).toBeInTheDocument();
+    // The other views stay mounted for an instant switch, hidden from screen readers.
+    expect(screen.queryByRole("img", { name: PRODUCT_SCREENS.posOrderQueue.alt.en })).toBeNull();
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", tabs()[0].id);
+  });
+
+  it("a tap switches the view, its screenshot and its text", () => {
+    mockLocale.value = "en";
+    render(<PosTourSection />);
+    fireEvent.click(screen.getByRole("tab", { name: /Customer screen/ }));
+    expect(tabs()[2]).toHaveAttribute("aria-selected", "true");
+    expect(tabs()[0]).toHaveAttribute("aria-selected", "false");
+    expect(
+      screen.getByRole("img", { name: PRODUCT_SCREENS.posCustomerDisplay.alt.en })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel")).toHaveTextContent(
+      text("en", "redesign.posTour.customerBody")
+    );
+  });
+
+  it("online orders show both phone screens, with the payment line that is true today", () => {
+    mockLocale.value = "fr";
+    render(<PosTourSection />);
+    fireEvent.click(tabs()[3]);
+    for (const shot of [PRODUCT_SCREENS.storefrontMenu, PRODUCT_SCREENS.storefrontCheckout]) {
+      expect(screen.getByRole("img", { name: shot.alt.fr })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("tabpanel")).toHaveTextContent(
+      text("fr", onlinePaymentCopyKey("redesign.posTour.onlineBody"))
+    );
+  });
+
+  it("arrow keys, Home and End move between tabs (roving focus)", () => {
+    render(<PosTourSection />);
+    expect(tabs().map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1]);
+    fireEvent.keyDown(tabs()[0], { key: "ArrowLeft" });
+    expect(tabs()[3]).toHaveAttribute("aria-selected", "true");
+    expect(tabs()[3]).toHaveFocus();
+    fireEvent.keyDown(tabs()[3], { key: "ArrowRight" });
+    expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(tabs()[0], { key: "End" });
+    expect(tabs()[3]).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(tabs()[3], { key: "Home" });
+    expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
+    expect(tabs()[0]).toHaveFocus();
   });
 });
 

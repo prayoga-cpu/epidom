@@ -469,6 +469,25 @@ export const fr = {
     },
   },
   auth: {
+    // Sign-in / sign-up carousel, one slide per real screenshot (auth-visual.tsx).
+    visual: {
+      cashierTitle: "Une caisse qui suit\nle rythme du service.",
+      cashierBody: "Sur place ou à emporter, puis enregistrez, imprimez ou encaissez l'addition en quelques gestes.",
+      cashierToast: "Commande envoyée en cuisine",
+      cashierToastSub: "Sur place · 2 articles",
+      queueTitle: "Toutes les commandes,\nune seule file.",
+      queueBody: "Les commandes de la caisse et en ligne côte à côte, de confirmée à prête.",
+      queueToast: "Nouvelle commande en ligne",
+      queueToastSub: "À emporter · paiement à la caisse",
+      customerTitle: "Un écran pour\nvos clients.",
+      customerBody: "Ils voient chaque article et le total au fil de la saisie.",
+      customerToast: "Ticket envoyé sur WhatsApp",
+      customerToastSub: "Une fois l'addition réglée",
+      stockTitle: "Un stock qui bouge\nà chaque vente.",
+      stockBody: "Chaque vente retire du stock les ingrédients de sa recette : vous savez ce qu'il reste.",
+      stockToast: "Stock bas",
+      stockToastSub: "Farine T55 sous son seuil minimum",
+    },
     // Simple string keys for forms
     welcome: "Bienvenue",
     signInToContinue: "Connectez-vous pour continuer sur votre compte",
@@ -6512,6 +6531,22 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       check2: "✓ Mise en route rapide",
       check3: "✓ Aucun téléchargement",
       check4: "✓ Données chiffrées",
+    },
+    // POS tour on the home page and /services (real screenshots, 13.10.2026).
+    posTour: {
+      eyebrow: "Le Mode Caisse, de près",
+      title: "La caisse de votre équipe",
+      sub: "De vrais écrans d'Epidom, pas des maquettes. Choisissez une vue.",
+      tabsLabel: "Écrans de la caisse",
+      cashierTab: "Caisse",
+      cashierBody: "Ajoutez les articles à l'addition, choisissez sur place ou à emporter, puis enregistrez-la, imprimez la pré-addition ou encaissez.",
+      queueTab: "File de commandes",
+      queueBody: "Les commandes de la caisse et en ligne, chacune dans son onglet, de confirmée à prête. Les additions impayées sont à un filtre près.",
+      customerTab: "Écran client",
+      customerBody: "Un second écran affiche chaque article et le total au fil de la saisie, et propose le ticket sur WhatsApp.",
+      onlineTab: "Commandes en ligne",
+      onlineBody: "Vos clients commandent depuis le lien de votre menu et paient en ligne ou à la caisse. La commande arrive dans votre file.",
+      onlineBodyPayAtCounter: "Vos clients commandent sur leur téléphone, depuis le lien de votre menu, et paient à la caisse. La commande arrive dans votre file.",
     },
     servicesPage: {
       title1: "Le comptoir, la cuisine",

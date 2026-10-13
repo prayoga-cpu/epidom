@@ -77,12 +77,11 @@ const defaultSEO: SEOConfig = {
     siteName: "Epidom",
     images: [
       {
-        // TODO(operator): swap for a dedicated 1200x630 designed OG card —
-        // this is a real product screenshot used as a stopgap, see STATUS.md.
-        url: "https://epidom.fr/images/screenshot-wide-1.png",
-        width: 1602,
-        height: 1067,
-        alt: "Epidom — F&B Online Storefront & POS Platform",
+        // 1200x630 cut from the home page hero (public/images/screens/website-home.png).
+        url: "https://epidom.fr/images/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Epidom — Realtime POS with transparent margin for cafés",
       },
     ],
     locale: "en_US",
@@ -95,7 +94,7 @@ const defaultSEO: SEOConfig = {
     title: "Epidom — Storefront, Online Ordering & POS for F&B",
     description:
       "Public menu page, WhatsApp & online ordering, and POS cashier for F&B businesses. Free storefront, forever.",
-    images: ["https://epidom.fr/images/screenshot-wide-1.png"],
+    images: ["https://epidom.fr/images/og-image.png"],
   },
   robots: {
     index: true,
@@ -390,8 +389,8 @@ export function generateStructuredData(
     description:
       "Online store, menu page, and POS cashier platform for cafés, warungs, and restaurants.",
     url: baseUrl,
-    logo: `${baseUrl}/images/logo.svg`,
-    image: `${baseUrl}/images/screenshot-wide-1.png`,
+    logo: `${baseUrl}/images/icon-512.png`,
+    image: `${baseUrl}/images/og-image.png`,
     // Kept in sync with SOCIAL in site-footer.tsx — Instagram is the only
     // actively maintained account.
     sameAs: ["https://instagram.com/epidom.fr"],

@@ -7,6 +7,7 @@ import { LayoutDashboard, MonitorSmartphone, Store, type LucideIcon } from "luci
 import { useI18n } from "@/components/lang/i18n-provider";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { SPACE_SCREENSHOTS } from "../data/media";
+import type { ProductScreen } from "@/features/marketing/shared/content/product-screens";
 import type { BadgePlan } from "../data/problems";
 import { PlanBadge, SECONDARY_BUTTON, SectionHeading, TEXT_LINK } from "./landing-ui";
 import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
@@ -23,8 +24,8 @@ const SPACES: readonly {
 
 /**
  * One link, three spaces: Storefront (free), POS Mode (POS), Back Office
- * (Operations). Each card shows a real screenshot once one is supplied in
- * data/media.ts, and a plain icon until then, never a mockup. The Storefront
+ * (Operations). Each card shows the real screenshot set in data/media.ts, and
+ * a plain icon for a space that has none, never a mockup. The Storefront
  * card links to a real, currently published storefront when there is one; the
  * server page streams that slug in, so the link can arrive after the hero.
  */
@@ -54,12 +55,7 @@ export function ThreeSpacesSection({
                 className="flex flex-col gap-5 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.01] p-6"
               >
                 {shot ? (
-                  <Image
-                    src={shot.src}
-                    alt={shot.alt[locale]}
-                    sizes="(min-width: 768px) 33vw, 100vw"
-                    className="h-auto w-full rounded-2xl border border-white/10"
-                  />
+                  <SpaceShot shot={shot} alt={shot.alt[locale]} />
                 ) : (
                   <span aria-hidden="true" className="epi-logo-tile size-14 [&_svg]:size-6">
                     <Icon />
@@ -107,6 +103,40 @@ export function ThreeSpacesSection({
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * A 16:10 window on a space's screenshot, so the three cards line up whatever
+ * the capture's shape. A phone capture stands in it as a phone, cut off at the
+ * bottom; a desktop capture fills it from the top-left corner.
+ */
+function SpaceShot({ shot, alt }: { shot: ProductScreen; alt: string }) {
+  const placeholder = shot.src.blurDataURL ? "blur" : "empty";
+  return (
+    <div className="bg-epi-navy-900 relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_50%_0%,rgba(217,174,59,0.16),transparent_65%)]">
+      {shot.device === "phone" ? (
+        <div className="absolute top-4 left-1/2 aspect-[514/1106] w-[44%] -translate-x-1/2 overflow-hidden rounded-t-[20px] border border-white/15 shadow-2xl">
+          <Image
+            src={shot.src}
+            alt={alt}
+            fill
+            sizes="(min-width: 768px) 160px, 45vw"
+            placeholder={placeholder}
+            className="object-cover object-top"
+          />
+        </div>
+      ) : (
+        <Image
+          src={shot.src}
+          alt={alt}
+          fill
+          sizes="(min-width: 1240px) 380px, (min-width: 768px) 33vw, 100vw"
+          placeholder={placeholder}
+          className="object-cover object-left-top"
+        />
+      )}
+    </div>
   );
 }
 

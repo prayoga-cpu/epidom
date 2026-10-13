@@ -84,10 +84,11 @@ export default function manifest(): MetadataRoute.Manifest {
         form_factor: "narrow",
       },
       {
-        src: "/images/screenshot-wide-1.png",
-        sizes: "1602x1067",
+        src: "/images/screens/pos-cashier.png",
+        sizes: "1280x855",
         type: "image/png",
         form_factor: "wide",
+        label: "The POS cashier",
       },
     ],
     categories: ["business", "productivity"],
