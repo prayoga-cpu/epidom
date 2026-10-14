@@ -5297,6 +5297,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     linkGdpr: "RGPD",
     manageCookies: "Gérer les cookies",
     infrastructuredBy: "Infrastructure par",
+    languages: "Langues",
     meetUs: "Nous rencontrer",
   },
   cookie: {
@@ -6549,8 +6550,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       onlineBodyPayAtCounter: "Vos clients commandent sur leur téléphone, depuis le lien de votre menu, et paient à la caisse. La commande arrive dans votre file.",
     },
     servicesPage: {
-      title1: "Le comptoir, la cuisine",
-      titleAccent: "et le back-office.",
+      title1: "Caisse, écran cuisine et back-office",
+      titleAccent: "pour cafés et restaurants",
       spacesEyebrow: "Epidom 3",
       spacesTitle1: "Trois espaces.",
       spacesTitle2: "Les mêmes données.",

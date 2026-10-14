@@ -3,7 +3,8 @@ import { headers } from "next/headers";
 import type { Metadata } from "next";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { LOCALE_HEADER, DEFAULT_LOCALE } from "@/lib/i18n-routing";
-import { buildLocalizedMetadata } from "@/lib/seo";
+import { BREADCRUMB_LABELS, buildBreadcrumbs, buildLocalizedMetadata } from "@/lib/seo";
+import { BreadcrumbStructuredData } from "@/components/seo/structured-data";
 import { getDocsGuides } from "@/features/marketing/docs/content";
 import { DocsGuideView } from "@/features/marketing/docs/components/docs-guide-view";
 
@@ -49,8 +50,14 @@ export default async function DocsGuidePage({ params }: PageProps) {
   const nextGuide = index >= 0 && index < guides.length - 1 ? guides[index + 1] : undefined;
 
   return (
-    <main className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-hidden">
+      <BreadcrumbStructuredData
+        items={buildBreadcrumbs(locale, [
+          { name: BREADCRUMB_LABELS[locale].docs, path: "/docs" },
+          { name: guide!.title, path: `/docs/${slug}` },
+        ])}
+      />
       <DocsGuideView locale={locale} guide={guide!} nextGuide={nextGuide} />
-    </main>
+    </div>
   );
 }

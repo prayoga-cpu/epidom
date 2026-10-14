@@ -18,8 +18,13 @@ import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering
  * pricing snippet takes its price from the plan-pricing table for the language
  * of the page, never another language's currency.
  *
- * "{price}" in a description is replaced with the POS monthly price in the
- * served locale's currency (fr EUR, en USD, id IDR).
+ * Titles lead with what a buyer searches for ("aplikasi kasir cafe", "commande
+ * en ligne", "POS"), brand last; Google cuts titles past ~60 characters and
+ * snippets past ~160, so page-metadata.test.ts holds every filled string to
+ * that. French copy is for French readers: no "warung".
+ *
+ * "{price}" in a title or description is replaced with the POS monthly price
+ * in the served locale's currency (fr EUR, en USD, id IDR).
  */
 export type MarketingMetaPage =
   | "home"
@@ -48,6 +53,12 @@ interface PageCopy {
 interface PageDefinition {
   /** Unprefixed URL path. */
   path: string;
+  /**
+   * Placeholder pages with nothing to rank for yet (no open roles, no press
+   * kit, no partner program): `noindex, follow`, and off the sitemap. Remove
+   * the flag (and add the page back to src/app/sitemap.ts) once it has content.
+   */
+  noindex?: true;
   /** Kept in English for every locale, as before this module existed. */
   keywords?: string[];
   copy: Record<Locale, PageCopy>;
@@ -71,31 +82,31 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
     ],
     copy: {
       en: {
-        title: "Epidom — Online Store, Menu & POS for F&B Businesses",
+        title: "POS & Online Ordering for Cafés and Restaurants — EPIDOM",
         description: STOREFRONT_ONLINE_PAYMENTS_ENABLED
-          ? "A menu page, online orders and payments in one link, plus a POS cashier. Storefront free forever; POS with a 14-day free trial. For cafés, restaurants and warungs."
-          : "A menu page and online orders in one link, plus a POS cashier. Storefront free forever; POS with a 14-day free trial. For cafés, restaurants and warungs.",
-        ogTitle: "Epidom — Online Store & POS for F&B",
+          ? "A realtime POS, plus your menu, online orders and payments in one link. Storefront free forever; POS with a 14-day free trial. For cafés and restaurants."
+          : "A realtime POS, plus your menu and online orders in one link. Storefront free forever; POS with a 14-day free trial. For cafés, bakeries and restaurants.",
+        ogTitle: "Epidom — Realtime POS & Online Ordering",
         ogDescription:
-          "Menu page, online orders and POS cashier in one link. Free storefront, forever.",
+          "A realtime POS, plus your menu and online orders in one link. Free storefront, forever.",
       },
       fr: {
-        title: "Epidom — Vitrine en ligne, menu et caisse pour cafés et restaurants",
+        title: "Commande en ligne, menu QR et caisse pour cafés — EPIDOM",
         description: STOREFRONT_ONLINE_PAYMENTS_ENABLED
-          ? "Une page menu, des commandes et des paiements en ligne dans un seul lien, plus une caisse POS. Vitrine gratuite à vie ; caisse POS avec 14 jours d'essai gratuit. Pour cafés, restaurants et warungs."
-          : "Une page menu et des commandes en ligne dans un seul lien, plus une caisse POS. Vitrine gratuite à vie ; caisse POS avec 14 jours d'essai gratuit. Pour cafés, restaurants et warungs.",
-        ogTitle: "Epidom — Vitrine en ligne et caisse POS pour le F&B",
+          ? "Une caisse en temps réel, plus votre menu, vos commandes et paiements en ligne dans un seul lien. Vitrine gratuite à vie ; caisse avec 14 jours d'essai."
+          : "Une caisse en temps réel, plus votre menu et vos commandes en ligne dans un seul lien. Vitrine gratuite à vie ; caisse avec 14 jours d'essai gratuit.",
+        ogTitle: "Epidom — Caisse en temps réel et commande en ligne",
         ogDescription:
-          "Page menu, commandes en ligne et caisse POS dans un seul lien. Vitrine gratuite à vie.",
+          "Une caisse en temps réel, plus votre menu et vos commandes en ligne dans un seul lien. Vitrine gratuite à vie.",
       },
       id: {
-        title: "Epidom — Toko Online, Menu & Kasir POS untuk Bisnis F&B",
+        title: "Aplikasi Kasir Cafe & Restoran + Menu QR — EPIDOM",
         description: STOREFRONT_ONLINE_PAYMENTS_ENABLED
-          ? "Halaman menu, pesanan online, dan pembayaran dalam satu link, plus kasir POS. Halaman toko gratis selamanya; POS dengan uji coba gratis 14 hari. Untuk kafe, restoran, dan warung."
-          : "Halaman menu dan pesanan online dalam satu link, plus kasir POS. Halaman toko gratis selamanya; POS dengan uji coba gratis 14 hari. Untuk kafe, restoran, dan warung.",
-        ogTitle: "Epidom — Toko Online & Kasir POS untuk F&B",
+          ? "Kasir realtime, plus menu, pesanan online, dan pembayaran dalam satu link. Halaman toko gratis selamanya; POS dengan uji coba gratis 14 hari."
+          : "Kasir realtime, plus menu dan pesanan online dalam satu link. Halaman toko gratis selamanya; POS dengan uji coba gratis 14 hari. Untuk kafe dan restoran.",
+        ogTitle: "Epidom — Aplikasi Kasir Realtime & Pesanan Online",
         ogDescription:
-          "Halaman menu, pesanan online, dan kasir POS dalam satu link. Halaman toko gratis selamanya.",
+          "Kasir realtime, plus menu dan pesanan online dalam satu link. Halaman toko gratis selamanya.",
       },
     },
   },
@@ -114,28 +125,28 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
     ],
     copy: {
       en: {
-        title: "Pricing — EPIDOM",
+        title: "Pricing: POS from {price}/mo, Free Storefront — EPIDOM",
         description:
-          "Start free, grow as you need. Epidom plans for cafés, warungs and restaurants: free storefront forever, POS from {price}/mo after a 14-day free trial.",
-        ogTitle: "Pricing — EPIDOM · Start Free",
+          "Start free, grow as you need: a storefront free forever, and a POS from {price}/mo after a 14-day free trial. Plans for cafés, bakeries and restaurants.",
+        ogTitle: "Epidom Pricing — Start Free",
         ogDescription:
-          "Start free, grow as you need. Epidom pricing plans for cafés, restaurants and F&B businesses.",
+          "Start free, grow as you need. Epidom plans for cafés, bakeries and restaurants.",
       },
       fr: {
-        title: "Tarifs — EPIDOM",
+        title: "Tarifs caisse : dès {price}/mois, vitrine gratuite — EPIDOM",
         description:
-          "Commencez gratuitement, évoluez selon vos besoins. Forfaits Epidom pour cafés, warungs et restaurants : vitrine gratuite à vie, caisse POS à partir de {price}/mois après 14 jours d'essai gratuit.",
-        ogTitle: "Tarifs — EPIDOM · Commencez gratuitement",
+          "Commencez gratuitement : vitrine gratuite à vie, caisse à partir de {price}/mois après 14 jours d'essai gratuit. Pour cafés, boulangeries et restaurants.",
+        ogTitle: "Tarifs Epidom — Commencez gratuitement",
         ogDescription:
-          "Commencez gratuitement, évoluez selon vos besoins. Les forfaits Epidom pour cafés, restaurants et établissements F&B.",
+          "Commencez gratuitement, évoluez selon vos besoins. Les forfaits Epidom pour cafés, boulangeries et restaurants.",
       },
       id: {
-        title: "Harga — EPIDOM",
+        title: "Harga Aplikasi Kasir Cafe: mulai {price}/bulan — EPIDOM",
         description:
-          "Mulai gratis, berkembang sesuai kebutuhan. Paket Epidom untuk kafe, warung, dan restoran: halaman toko gratis selamanya, POS mulai {price}/bulan setelah uji coba gratis 14 hari.",
-        ogTitle: "Harga — EPIDOM · Mulai Gratis",
+          "Mulai gratis: halaman toko gratis selamanya, kasir POS mulai {price}/bulan setelah uji coba gratis 14 hari. Paket untuk kafe, warung, dan restoran.",
+        ogTitle: "Harga Epidom — Mulai Gratis",
         ogDescription:
-          "Mulai gratis, berkembang sesuai kebutuhan. Paket harga Epidom untuk kafe, restoran, dan bisnis F&B.",
+          "Mulai gratis, berkembang sesuai kebutuhan. Paket Epidom untuk kafe, warung, dan restoran.",
       },
     },
   },
@@ -155,7 +166,7 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
       fr: {
         title: "À propos d'Epidom — Vitrine et caisse POS pour le F&B",
         description:
-          "Epidom est conçu par une petite équipe produit de Prionation, qui travaille depuis Bali et Paris avec des établissements F&B. Un seul lien pour votre menu, vos commandes et vos paiements.",
+          "Epidom est conçu par une petite équipe de Prionation, entre Bali et Paris, avec des établissements F&B. Un seul lien pour menu, commandes et paiements.",
         ogTitle: "À propos d'Epidom",
         ogDescription:
           "Conçu par une petite équipe de Prionation, depuis Bali et Paris. Un seul lien pour le menu, les commandes et les paiements.",
@@ -212,34 +223,35 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
     ],
     copy: {
       en: {
-        title: "Features — EPIDOM",
+        title: "Features: POS, Kitchen Display, Stock & Staff — EPIDOM",
         description:
-          "Everything Epidom offers: a free menu page, POS cashier, kitchen display (KDS), inventory management, operational reports and multi-outlet, for F&B businesses.",
-        ogTitle: "Full Features — EPIDOM F&B Platform",
+          "Everything Epidom offers: a free menu page, POS, kitchen display (KDS), stock and recipe costing, staff schedules, finance reports and multi-outlet.",
+        ogTitle: "Epidom Features — POS, Kitchen & Back Office",
         ogDescription:
-          "From a free menu page to a POS cashier and operational reports. One platform for cafés, warungs and restaurants.",
+          "From a free menu page to a POS, kitchen display and back office. One platform for cafés, bakeries and restaurants.",
       },
       fr: {
-        title: "Fonctionnalités — EPIDOM",
+        title: "Caisse, écran cuisine, stocks et planning d'équipe — EPIDOM",
         description:
-          "Tout ce que propose Epidom : page menu gratuite, caisse POS, écran cuisine (KDS), gestion des stocks, rapports d'exploitation et multi-établissements, pour les établissements F&B.",
-        ogTitle: "Toutes les fonctionnalités — la plateforme F&B EPIDOM",
+          "Tout Epidom : page menu gratuite, caisse, écran cuisine (KDS), stocks et coût des recettes, planning d'équipe, rapports financiers et multi-établissements.",
+        ogTitle: "Fonctionnalités Epidom — caisse, cuisine et back-office",
         ogDescription:
-          "De la page menu gratuite à la caisse POS et aux rapports d'exploitation. Une seule plateforme pour cafés, warungs et restaurants.",
+          "De la page menu gratuite à la caisse, à l'écran cuisine et au back-office. Une seule plateforme pour cafés, boulangeries et restaurants.",
       },
       id: {
-        title: "Fitur — EPIDOM",
+        title: "Fitur Aplikasi Kasir: Dapur, Stok & Jadwal Staf — EPIDOM",
         description:
-          "Semua yang ditawarkan Epidom: halaman menu gratis, kasir POS, kitchen display (KDS), manajemen stok, laporan operasional, dan multi-outlet untuk bisnis F&B.",
-        ogTitle: "Fitur Lengkap — Platform F&B EPIDOM",
+          "Semua fitur Epidom: halaman menu gratis, kasir POS, kitchen display (KDS), stok dan HPP resep, jadwal staf, laporan keuangan, dan multi-outlet.",
+        ogTitle: "Fitur Epidom — Kasir, Dapur & Back Office",
         ogDescription:
-          "Dari halaman menu gratis hingga kasir POS dan laporan operasional. Satu platform untuk kafe, warung, dan restoran.",
+          "Dari halaman menu gratis hingga kasir POS, layar dapur, dan back office. Satu platform untuk kafe, warung, dan restoran.",
       },
     },
   },
 
   partners: {
     path: "/partners",
+    noindex: true,
     copy: {
       en: {
         title: "Partners — EPIDOM",
@@ -261,6 +273,7 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
 
   careers: {
     path: "/careers",
+    noindex: true,
     copy: {
       en: {
         title: "Careers — EPIDOM",
@@ -282,6 +295,7 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
 
   press: {
     path: "/press",
+    noindex: true,
     copy: {
       en: {
         title: "Press — EPIDOM",
@@ -324,19 +338,19 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
     path: "/compare",
     copy: {
       en: {
-        title: "Compare Epidom — EPIDOM",
+        title: "Epidom vs. Moka, Majoo, Zelty, SumUp & Sunday — EPIDOM",
         description:
-          "Factual, sourced comparisons between Epidom and the POS and ordering tools you already use.",
+          "Factual, sourced comparisons between Epidom and tools you may already use: Moka, Majoo, Klikit, Zelty, SumUp POS Pro and Sunday.",
       },
       fr: {
-        title: "Comparer Epidom — EPIDOM",
+        title: "Alternative à Zelty, Tiller (SumUp) et Sunday — EPIDOM",
         description:
-          "Des comparaisons factuelles et sourcées entre Epidom et les outils de caisse et de commande que vous utilisez déjà.",
+          "Des comparatifs factuels et sourcés entre Epidom et les outils que vous utilisez peut-être déjà : Zelty, SumUp POS Pro (ex-Tiller) et Sunday.",
       },
       id: {
-        title: "Bandingkan Epidom — EPIDOM",
+        title: "Alternatif Moka, Majoo & Klikit: Perbandingan — EPIDOM",
         description:
-          "Perbandingan faktual dan bersumber antara Epidom dan alat kasir serta pemesanan yang sudah Anda pakai.",
+          "Perbandingan faktual dan bersumber antara Epidom dan aplikasi kasir serta pemesanan yang mungkin sudah Anda pakai: Moka, Majoo, dan Klikit.",
       },
     },
   },
@@ -351,22 +365,23 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
       "avoid delivery app fees",
       "deliveroo commission restaurant",
     ],
+    // Each language's page is about its own market's apps: fr covers Uber Eats
+    // and Deliveroo, id and en GoFood, GrabFood and ShopeeFood.
     copy: {
       en: {
-        title: "Epidom vs. GoFood, GrabFood, ShopeeFood & Delivery-App Commission",
+        title: "GoFood, GrabFood, ShopeeFood Commission Compared — EPIDOM",
         description:
-          "Every order through a delivery app pays a commission. A storefront you own doesn't. Compare Epidom's commission-free online ordering with delivery-platform fees.",
+          "Every delivery-app order pays a commission; a storefront you own doesn't. Compare GoFood, GrabFood and ShopeeFood fees with Epidom's commission-free ordering.",
       },
       fr: {
-        title:
-          "Epidom face aux commissions de GoFood, GrabFood, ShopeeFood et des applis de livraison",
+        title: "Commission Uber Eats et Deliveroo : le coût réel — EPIDOM",
         description:
-          "Chaque commande passée par une appli de livraison supporte une commission. Une vitrine qui vous appartient n'en prélève pas. Comparez la commande en ligne d'Epidom, sans commission, aux frais des plateformes de livraison.",
+          "Chaque commande Uber Eats ou Deliveroo paie une commission ; une vitrine qui vous appartient, non. Comparez avec la commande en ligne Epidom, sans commission.",
       },
       id: {
-        title: "Epidom vs. Komisi GoFood, GrabFood, ShopeeFood & Aplikasi Pengantaran",
+        title: "Komisi GoFood, GrabFood, ShopeeFood: Bandingkan — EPIDOM",
         description:
-          "Setiap pesanan lewat aplikasi pengantaran dikenai komisi. Toko online milik Anda sendiri tidak. Bandingkan pemesanan online Epidom tanpa komisi dengan biaya platform pengantaran.",
+          "Setiap pesanan lewat aplikasi pengantaran kena komisi; toko online milik Anda tidak. Bandingkan biaya GoFood, GrabFood, ShopeeFood dengan pemesanan Epidom.",
       },
     },
   },
@@ -405,20 +420,19 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
     keywords: ["epidom blog", "tips warung", "f&b business tips indonesia"],
     copy: {
       en: {
-        title: "Blog — EPIDOM",
+        title: "Blog: Guides for Cafés & Restaurants — EPIDOM",
         description:
-          "Guides, stories and tips for warung, café, and restaurant owners on running a smarter F&B business.",
+          "Guides for café and restaurant owners: free QR code menus, delivery-app commission and running a smarter F&B business.",
       },
       fr: {
-        // "Blog" is the word in all three languages.
-        title: "Blog — EPIDOM",
+        title: "Blog : conseils pour cafés et restaurants — EPIDOM",
         description:
-          "Guides, récits et conseils pour les gérants de warungs, de cafés et de restaurants qui veulent mieux piloter leur établissement F&B.",
+          "Guides et conseils pour les gérants de cafés et de restaurants : choisir sa caisse, menu QR code gratuit, commissions Deliveroo et Uber Eats.",
       },
       id: {
-        title: "Blog — EPIDOM",
+        title: "Blog: Tips Bisnis Kafe & Warung — EPIDOM",
         description:
-          "Panduan, cerita, dan tips untuk pemilik warung, kafe, dan restoran dalam menjalankan bisnis F&B yang lebih cerdas.",
+          "Panduan dan tips untuk pemilik warung, kafe, dan restoran: sistem kasir digital, menu QR code gratis, dan komisi GoFood serta GrabFood.",
       },
     },
   },
@@ -457,18 +471,19 @@ function posPrice(locale: Locale): string {
  * tests can walk every page in every locale.
  */
 export function buildPageMetadata(page: MarketingMetaPage, locale: Locale): Metadata {
-  const { path, keywords, copy } = PAGES[page];
+  const { path, keywords, copy, noindex } = PAGES[page];
   const { title, description, ogTitle, ogDescription } = copy[locale];
   const fill = (text: string) => text.replace("{price}", posPrice(locale));
 
   return buildLocalizedMetadata({
     basePath: path,
     locale,
-    title,
+    title: fill(title),
     description: fill(description),
-    ogTitle,
+    ogTitle: ogTitle && fill(ogTitle),
     ogDescription: ogDescription && fill(ogDescription),
     keywords,
+    noindex,
   });
 }
 

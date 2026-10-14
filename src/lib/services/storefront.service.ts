@@ -138,10 +138,24 @@ export class StorefrontService {
    * sitemap for the duration of the deactivation.
    */
   async getPublishedSlugsForSitemap() {
-    return prisma.storefront.findMany({
+    const storefronts = await prisma.storefront.findMany({
       where: { isPublished: true, store: { business: { user: { deactivatedAt: null } } } },
-      select: { slug: true, updatedAt: true },
+      select: {
+        slug: true,
+        displayName: true,
+        updatedAt: true,
+        // Counted per category, like the public menu shows them, so the
+        // sitemap's indexability check (features/storefront/lib/indexing.ts)
+        // agrees with the noindex the page itself emits.
+        menuCategories: {
+          select: { _count: { select: { items: { where: { isAvailable: true } } } } },
+        },
+      },
     });
+    return storefronts.map(({ menuCategories, ...storefront }) => ({
+      ...storefront,
+      availableMenuItemCount: menuCategories.reduce((sum, c) => sum + c._count.items, 0),
+    }));
   }
 
   /**

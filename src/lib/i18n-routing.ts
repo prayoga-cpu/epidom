@@ -81,9 +81,16 @@ export function detectLocaleFromAcceptLanguage(header: string | null): Locale {
  * canonical (fr, unprefixed) content at "/" — never redirected by guessed
  * language, per Google's own guidance against geo/language auto-redirects
  * breaking crawlability. Matched case-insensitively against User-Agent.
+ *
+ * Most crawlers say "bot" somewhere; the named tools after the generic words
+ * don't: Search Console's URL inspection (Google-InspectionTool), Google's
+ * other fetchers (GoogleOther), PageSpeed Insights/Lighthouse
+ * (Chrome-Lighthouse), Bing's preview and Pinterest. Without them the URL
+ * inspection tool and PageSpeed were sent to /en like an English browser and
+ * reported on the wrong page.
  */
 const BOT_USER_AGENT_PATTERN =
-  /bot|crawl|spider|slurp|googlebot|bingbot|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|applebot|ahrefsbot|semrushbot|mj12bot|gptbot|claude|anthropic|perplexitybot|ccbot|oai-searchbot/i;
+  /bot|crawl|spider|slurp|googlebot|bingbot|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|applebot|ahrefsbot|semrushbot|mj12bot|gptbot|claude|anthropic|perplexitybot|ccbot|oai-searchbot|google-inspectiontool|googleother|chrome-lighthouse|bingpreview|pinterest/i;
 
 export function isLikelyBot(userAgent: string | null): boolean {
   return userAgent ? BOT_USER_AGENT_PATTERN.test(userAgent) : false;

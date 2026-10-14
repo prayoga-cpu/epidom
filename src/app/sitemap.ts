@@ -10,6 +10,7 @@ import { mokaComparison } from "@/features/marketing/compare/data/moka";
 import { sumupPosProComparison } from "@/features/marketing/compare/data/sumup-pos-pro";
 import { sundayComparison } from "@/features/marketing/compare/data/sunday";
 import { zeltyComparison } from "@/features/marketing/compare/data/zelty";
+import { isStorefrontIndexable } from "@/features/storefront/lib/indexing";
 
 // Competitor comparison pages, each authored in only 1-2 locales (each
 // competitor is only relevant to one market). The locales are read off the
@@ -36,6 +37,10 @@ const BASE_URL = "https://epidom.fr";
 // Auth-gated (app), API, and legal-boilerplate routes (privacy/terms/gdpr/
 // cookie-policy/refund-policy) are intentionally excluded — low search value,
 // not worth crawl budget.
+// /careers, /press and /partners are placeholder pages for now (no roles, no
+// press kit, no partner program yet) and are noindexed by their metadata
+// (PAGES in page-metadata.ts), so they stay off the sitemap until they carry
+// real content.
 // /payments and /status are not listed either: those URLs are retired and
 // 308-redirect (to /pricing and /contact), and a redirecting URL doesn't belong
 // in a sitemap (they also stay out of robots.txt's disallow list on purpose, so
@@ -51,9 +56,6 @@ const STATIC_ROUTES: Array<{ path: string; changeFrequency: MetadataRoute.Sitema
   { path: "/about", changeFrequency: "monthly", priority: 0.6 },
   { path: "/services", changeFrequency: "monthly", priority: 0.7 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.5 },
-  { path: "/partners", changeFrequency: "monthly", priority: 0.4 },
-  { path: "/careers", changeFrequency: "monthly", priority: 0.3 },
-  { path: "/press", changeFrequency: "monthly", priority: 0.3 },
   { path: "/blog", changeFrequency: "weekly", priority: 0.7 },
   { path: "/docs", changeFrequency: "weekly", priority: 0.6 },
   { path: "/build-with-us", changeFrequency: "monthly", priority: 0.4 },
@@ -121,10 +123,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   );
 
+  // Only storefronts worth indexing: test pages and stores without a real menu
+  // are noindexed by their own page, so listing them here would contradict it.
   let storefrontEntries: MetadataRoute.Sitemap = [];
   try {
     const storefronts = await storefrontService.getPublishedSlugsForSitemap();
-    storefrontEntries = storefronts.map((s) => ({
+    storefrontEntries = storefronts.filter(isStorefrontIndexable).map((s) => ({
       url: `${BASE_URL}/@${s.slug}`,
       lastModified: s.updatedAt,
       changeFrequency: "weekly",

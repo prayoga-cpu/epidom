@@ -15,13 +15,13 @@ export const generateMetadata = pageMetadata("services");
  */
 export default function ServicesPage() {
   return (
-    <main className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-hidden">
       <PageTitle />
       <ProblemPickerSection />
       <SpacesSection />
       <PosTourSection />
       <FeaturesShowcaseSection />
       <ClosingCtaSection />
-    </main>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { storefrontService } from "@/lib/services";
 import { PublicProfile } from "@/features/storefront/components/public-profile";
 import { StorefrontStructuredData } from "@/components/seo/structured-data";
 import { resolveGoogleLinks } from "@/lib/utils/google-review";
+import { storefrontRobots } from "@/features/storefront/lib/indexing";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -34,6 +35,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${storefront.displayName} | Epidom Storefront`,
     description,
     alternates: { canonical: url },
+    // Test pages and stores without a real menu stay out of search results
+    // (and out of the sitemap — features/storefront/lib/indexing.ts).
+    robots: storefrontRobots(storefront),
     openGraph: {
       title: storefront.displayName,
       description,

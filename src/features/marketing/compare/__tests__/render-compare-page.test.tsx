@@ -242,3 +242,35 @@ describe("content and fallback behaviour are unchanged", () => {
     );
   });
 });
+
+describe("compare page breadcrumbs", () => {
+  const breadcrumbOf = (container: HTMLElement) => {
+    const scripts = [...container.querySelectorAll('script[type="application/ld+json"]')];
+    const data = scripts.map((s) => JSON.parse(s.textContent ?? "{}"));
+    return data.find((d) => d["@type"] === "BreadcrumbList");
+  };
+
+  it("walks Home > Compare > competitor in the locale whose copy is served", async () => {
+    requestLocale = "id";
+    const { container } = render(await CompareCompetitorPage({ dataMap: sundayComparison }));
+    const crumbs = breadcrumbOf(container);
+    expect(crumbs.itemListElement.map((i: { item: string }) => i.item)).toEqual([
+      `${BASE}/en`,
+      `${BASE}/en/compare`,
+      `${BASE}/en/compare/sunday`,
+    ]);
+    expect(crumbs.itemListElement[2].name).toBe(sundayComparison.en!.eyebrow);
+    expect(crumbs.itemListElement.map((i: { position: number }) => i.position)).toEqual([1, 2, 3]);
+  });
+
+  it("uses the French labels and unprefixed URLs on a French page", async () => {
+    requestLocale = "fr";
+    const { container } = render(await CompareCompetitorPage({ dataMap: sundayComparison }));
+    const crumbs = breadcrumbOf(container);
+    expect(crumbs.itemListElement[0]).toMatchObject({ name: "Accueil", item: `${BASE}/` });
+    expect(crumbs.itemListElement[1]).toMatchObject({
+      name: "Comparatifs",
+      item: `${BASE}/compare`,
+    });
+  });
+});

@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { LANGUAGE_OPTIONS, rememberLocaleChoice } from "@/components/lang/language-options";
 import { trackEvent } from "@/lib/analytics";
 import {
   PRIONATION_BOOKING_URL,
@@ -355,6 +356,27 @@ export const SiteFooter = memo(function SiteFooter() {
             ))}
             <span>epidom.fr</span>
           </div>
+          {/* Plain links to each language's home page. The header switcher is a
+              button that only renders its options once opened, so without these
+              a crawler finds /id and /en through hreflang alone. A full page
+              load, after remembering the pick like the switcher does, so the
+              proxy doesn't send the visitor straight back. */}
+          <nav aria-label={t("footer.languages")} style={{ display: "flex", gap: "0 14px" }}>
+            {LANGUAGE_OPTIONS.map((opt) => (
+              <a
+                key={opt.value}
+                href={getLocalizedPath("/", opt.value)}
+                hrefLang={opt.value}
+                lang={opt.value}
+                aria-current={opt.value === locale ? "true" : undefined}
+                onClick={() => rememberLocaleChoice(opt.value)}
+                style={{ color: "inherit", textDecoration: "none" }}
+                className="inline-flex min-h-10 items-center hover:text-white/55 aria-[current=true]:text-white/55"
+              >
+                {opt.label}
+              </a>
+            ))}
+          </nav>
         </div>
       </Container>
     </footer>

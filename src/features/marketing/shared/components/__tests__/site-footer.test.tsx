@@ -105,3 +105,30 @@ describe("SiteFooter Manage cookies control", () => {
     expect(screen.queryByRole("link", { name: "footer.manageCookies" })).toBeNull();
   });
 });
+
+describe("SiteFooter language links", () => {
+  it.each(["fr", "id", "en"] as const)(
+    "%s: links every language's home page with a plain, crawlable <a>",
+    (locale) => {
+      h.locale = locale;
+      render(<SiteFooter />);
+      const nav = screen.getByRole("navigation", { name: "footer.languages" });
+      const links = [...nav.querySelectorAll("a")];
+      expect(links.map((a) => [a.getAttribute("href"), a.getAttribute("hreflang")])).toEqual([
+        ["/", "fr"],
+        ["/id", "id"],
+        ["/en", "en"],
+      ]);
+      expect(nav.querySelector('[aria-current="true"]')?.getAttribute("hreflang")).toBe(locale);
+    }
+  );
+
+  it("remembers the pick in the cookie the proxy reads, so it doesn't redirect back", () => {
+    h.locale = "en";
+    render(<SiteFooter />);
+    const french = screen.getByRole("link", { name: "Français" });
+    french.addEventListener("click", (e) => e.preventDefault());
+    french.click();
+    expect(document.cookie).toMatch(/epidom_locale_pref=fr/);
+  });
+});

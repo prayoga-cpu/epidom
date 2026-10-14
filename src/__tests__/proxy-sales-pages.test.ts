@@ -143,3 +143,30 @@ describe("next.config rewrites: URL to page file", () => {
     );
   });
 });
+
+describe("next.config headers: sales pages stay out of search results", () => {
+  const NOINDEX = [{ key: "X-Robots-Tag", value: "noindex, follow" }];
+
+  it("sends noindex on the slug in every language and on the raw files", async () => {
+    const headers = await nextConfig.headers!();
+    expect(headers).toEqual(
+      expect.arrayContaining([
+        { source: "/:page(sales-page-\\d+)", headers: NOINDEX },
+        { source: "/:locale(en|id)/:page(sales-page-\\d+)", headers: NOINDEX },
+        { source: "/sales-pages/:file*", headers: NOINDEX },
+      ])
+    );
+  });
+
+  it("never noindexes the rest of the site (only dev.epidom.fr has a site-wide rule)", async () => {
+    const headers = await nextConfig.headers!();
+    const siteWideNoindex = headers.filter(
+      (rule) =>
+        rule.source === "/:path*" &&
+        rule.headers.some((h) => h.key === "X-Robots-Tag" && /noindex/.test(h.value))
+    );
+    for (const rule of siteWideNoindex) {
+      expect(rule.has).toEqual([{ type: "host", value: "dev\\.epidom\\.fr" }]);
+    }
+  });
+});

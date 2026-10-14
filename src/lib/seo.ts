@@ -322,6 +322,8 @@ export interface LocalizedPageSEO {
   keywords?: string[];
   /** Locales the page really has its own copy in. Defaults to all of them. */
   authoredLocales?: readonly Locale[];
+  /** Keeps the page out of search results while still letting crawlers follow its links. */
+  noindex?: boolean;
 }
 
 /**
@@ -343,6 +345,7 @@ export function buildLocalizedMetadata({
   ogDescription = description,
   keywords,
   authoredLocales = LOCALES,
+  noindex = false,
 }: LocalizedPageSEO): Metadata {
   const { servedLocale, canonical, languages } = buildLocaleAlternates({
     basePath,
@@ -365,44 +368,85 @@ export function buildLocalizedMetadata({
       locale: OG_LOCALE[servedLocale],
     },
     twitter: { ...defaultSEO.twitter, title: ogTitle, description: ogDescription },
+    ...(noindex
+      ? { robots: { index: false, follow: true, googleBot: { index: false, follow: true } } }
+      : {}),
   });
 }
 
+/** Section names a breadcrumb trail passes through, in each site language. */
+export const BREADCRUMB_LABELS: Record<
+  Locale,
+  { home: string; blog: string; docs: string; compare: string }
+> = {
+  fr: { home: "Accueil", blog: "Blog", docs: "Documentation", compare: "Comparatifs" },
+  id: { home: "Beranda", blog: "Blog", docs: "Dokumentasi", compare: "Perbandingan" },
+  en: { home: "Home", blog: "Blog", docs: "Docs", compare: "Compare" },
+};
+
+/**
+ * Breadcrumb items (for BreadcrumbStructuredData) from the home page down to a
+ * page, each an absolute URL in `locale`. `trail` is everything after Home,
+ * with unprefixed paths.
+ */
+export function buildBreadcrumbs(
+  locale: Locale,
+  trail: ReadonlyArray<{ name: string; path: string }>
+): Array<{ name: string; url: string }> {
+  return [{ name: BREADCRUMB_LABELS[locale].home, path: "/" }, ...trail].map(({ name, path }) => ({
+    name,
+    url: `${SITE_ORIGIN}${getLocalizedPath(path, locale)}`,
+  }));
+}
+
 // Structured Data for JSON-LD
+//
+// Each type carries only the properties schema.org defines for it: `logo` and
+// `contactPoint` belong to an Organization, not to a WebSite or a
+// SoftwareApplication (Google's Rich Results test flags them there), and
+// `sameAs` on a SoftwareApplication would claim the Instagram account *is* the
+// app. The caller adds the rest (language, offers, a localized description)
+// through `data`.
 export function generateStructuredData(
   type: "website" | "organization" | "product" | "service",
   data?: any
 ) {
   const baseUrl = "https://epidom.fr";
+  const logo = `${baseUrl}/images/icon-512.png`;
+  const image = `${baseUrl}/images/og-image.png`;
+  // Kept in sync with SOCIAL in site-footer.tsx — Instagram is the only
+  // actively maintained account.
+  const sameAs = ["https://instagram.com/epidom.fr"];
+  const contactPoint = {
+    "@type": "ContactPoint",
+    contactType: "customer service",
+    email: SUPPORT_EMAIL_PRIMARY,
+  };
 
-  const structuredData = {
+  const base = {
     "@context": "https://schema.org",
-    "@type":
-      type === "website"
-        ? "WebSite"
-        : type === "organization"
-          ? "Organization"
-          : type === "product"
-            ? "SoftwareApplication"
-            : "Service",
     name: "Epidom",
     description:
       "Online store, menu page, and POS cashier platform for cafés, warungs, and restaurants.",
     url: baseUrl,
-    logo: `${baseUrl}/images/icon-512.png`,
-    image: `${baseUrl}/images/og-image.png`,
-    // Kept in sync with SOCIAL in site-footer.tsx — Instagram is the only
-    // actively maintained account.
-    sameAs: ["https://instagram.com/epidom.fr"],
-    contactPoint: {
-      "@type": "ContactPoint",
-      contactType: "customer service",
-      email: SUPPORT_EMAIL_PRIMARY,
-    },
-    // No foundingDate: nothing in the repo supports a year, and JSON-LD is a
-    // claim made to search engines.
-    ...data,
   };
 
-  return structuredData;
+  // No foundingDate on any of them: nothing in the repo supports a year, and
+  // JSON-LD is a claim made to search engines.
+  const byType = {
+    website: {
+      "@type": "WebSite",
+      publisher: { "@type": "Organization", name: "Epidom", url: baseUrl },
+    },
+    organization: { "@type": "Organization", logo, image, sameAs, contactPoint },
+    product: { "@type": "SoftwareApplication", image },
+    service: {
+      "@type": "Service",
+      logo,
+      image,
+      provider: { "@type": "Organization", name: "Epidom", url: baseUrl },
+    },
+  } as const;
+
+  return { ...base, ...byType[type], ...data };
 }

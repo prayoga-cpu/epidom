@@ -132,6 +132,59 @@ describe.each(KEYS)("%s copy across locales", (page) => {
   });
 });
 
+describe("search snippets", () => {
+  const indexable = KEYS.filter((page) => !PAGES[page].noindex);
+
+  it.each(indexable.flatMap((page) => LOCALES.map((locale) => [page, locale] as const)))(
+    "%s in %s: title fits in 60 characters and description in 160, once filled",
+    (page, locale) => {
+      const md = buildPageMetadata(page, locale);
+      expect(titleOf(md).length, titleOf(md)).toBeLessThanOrEqual(60);
+      expect(String(md.description).length, String(md.description)).toBeLessThanOrEqual(160);
+    }
+  );
+
+  it("never says warung to a French reader", () => {
+    // The visible snippets; `keywords` is one English list shared by all locales.
+    for (const page of KEYS) {
+      const md = buildPageMetadata(page, "fr");
+      const og = md.openGraph as { title?: string; description?: string };
+      const text = [titleOf(md), md.description, og.title, og.description].join("\n");
+      expect(text, page).not.toMatch(/warung/i);
+    }
+  });
+
+  it("leads with what buyers search for, not the brand, on the pages that sell", () => {
+    expect(titleOf(buildPageMetadata("home", "id"))).toMatch(/^Aplikasi Kasir/);
+    expect(titleOf(buildPageMetadata("home", "en"))).toMatch(/^POS/);
+    expect(titleOf(buildPageMetadata("home", "fr"))).toMatch(/caisse/);
+    expect(titleOf(buildPageMetadata("pricing", "id"))).toMatch(/^Harga Aplikasi Kasir/);
+  });
+});
+
+describe("noindex", () => {
+  const PLACEHOLDERS: MarketingMetaPage[] = ["careers", "press", "partners"];
+
+  it.each(LOCALES)("keeps the placeholder pages out of search results in %s", (locale) => {
+    for (const page of PLACEHOLDERS) {
+      expect(buildPageMetadata(page, locale).robots, page).toMatchObject({
+        index: false,
+        follow: true,
+      });
+    }
+  });
+
+  it("leaves every other page indexable", () => {
+    for (const page of KEYS.filter((k) => !PLACEHOLDERS.includes(k))) {
+      for (const locale of LOCALES) {
+        expect(buildPageMetadata(page, locale).robots, `${page} ${locale}`).toMatchObject({
+          index: true,
+        });
+      }
+    }
+  });
+});
+
 describe("pricing description", () => {
   const otherPrices = (locale: Locale) =>
     LOCALES.filter((l) => l !== locale).flatMap((l) =>
@@ -160,6 +213,11 @@ describe("pricing description", () => {
     expect(nbspToSpace(String(buildPageMetadata("pricing", "id").description))).toContain(
       "Rp 229k"
     );
+  });
+
+  it.each(LOCALES)("puts the %s price in the title too", (locale) => {
+    const title = nbspToSpace(titleOf(buildPageMetadata("pricing", locale)));
+    expect(title).toContain(formatPlanPrice("POS", LOCALE_PRICE_CURRENCY[locale], "monthly"));
   });
 
   it("does not quote a price on any other page", () => {

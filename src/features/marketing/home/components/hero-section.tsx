@@ -104,9 +104,11 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
   const { t, locale } = useI18n();
   const trialHref = usePosTrialHref();
   // One letter of the "realtime" word is drawn as a gold lightning bolt (see
-  // BOLT_LETTER). Screen readers get the plain title from the sr-only copy; the
-  // drawn copy keeps the replaced letter in its text, undrawn, so search engines
-  // read the word whole there too ("REALTIME", not "REALTME").
+  // BOLT_LETTER). The drawn copy keeps the replaced letter in its text, undrawn,
+  // so the h1's text is the title exactly once ("REALTIME", not "REALTME", and
+  // not the title twice, as when a second sr-only copy sat beside it). Screen
+  // readers get the plain title from the h1's aria-label, so they never read
+  // the word in pieces around the drawing.
   const title = t("redesign.landing.hero.title");
   const boltMatch = BOLT_LETTER.exec(title);
   const boltAt = boltMatch ? boltMatch.index + (boltMatch[1] ?? boltMatch[2] ?? "").length : -1;
@@ -240,11 +242,11 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
             <div className="flex max-w-full flex-col">
               <h1
                 id="hero-title"
+                aria-label={boltAt >= 0 ? title : undefined}
                 style={{ "--title-em": titleEm } as React.CSSProperties}
                 className="epi-display text-epi-cream-50 sm:short:[--title-size:clamp(44px,min(9.5vw,12svh),144px)] m-0 max-w-[8.2em] text-[length:var(--title-size)] text-balance [--title-size:clamp(52px,min(9.5vw,14svh),144px)] supports-[width:1cqi]:max-w-none supports-[width:1cqi]:text-[length:min(var(--title-size),calc(100cqi/var(--title-em)))] supports-[width:1cqi]:whitespace-nowrap"
               >
-                {boltAt >= 0 ? <span className="sr-only">{title}</span> : null}
-                <span ref={titleRef} aria-hidden={boltAt >= 0 ? true : undefined}>
+                <span ref={titleRef}>
                   {boltAt >= 0 ? (
                     <>
                       {title.slice(0, boltAt)}

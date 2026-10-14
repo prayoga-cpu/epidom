@@ -14,7 +14,13 @@ import { zeltyComparison } from "@/features/marketing/compare/data/zelty";
 
 // The DB-backed storefront list is the only thing the sitemap fetches at
 // request time; everything else is static content.
-let storefronts: () => Promise<Array<{ slug: string; updatedAt: Date }>>;
+type SitemapStorefront = {
+  slug: string;
+  displayName: string;
+  updatedAt: Date;
+  availableMenuItemCount: number;
+};
+let storefronts: () => Promise<SitemapStorefront[]>;
 vi.mock("@/lib/services", () => ({
   storefrontService: { getPublishedSlugsForSitemap: () => storefronts() },
 }));
@@ -42,7 +48,14 @@ const serialised = (e: Entry) =>
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(FAKE_NOW);
-  storefronts = async () => [{ slug: "cafe-a", updatedAt: STOREFRONT_UPDATED }];
+  storefronts = async () => [
+    {
+      slug: "cafe-a",
+      displayName: "Café A",
+      updatedAt: STOREFRONT_UPDATED,
+      availableMenuItemCount: 12,
+    },
+  ];
   entries = await sitemap();
 });
 
@@ -137,6 +150,38 @@ describe("sitemap coverage", () => {
     expect(new Set(urls).size).toBe(urls.length);
   });
 
+  it("lists only storefronts worth indexing: no test pages, no store without a real menu", async () => {
+    storefronts = async () => [
+      {
+        slug: "cafe-a",
+        displayName: "Café A",
+        updatedAt: STOREFRONT_UPDATED,
+        availableMenuItemCount: 12,
+      },
+      {
+        slug: "testing",
+        displayName: "testing",
+        updatedAt: STOREFRONT_UPDATED,
+        availableMenuItemCount: 9,
+      },
+      {
+        slug: "demo-cmsbjfr6",
+        displayName: "Demo",
+        updatedAt: STOREFRONT_UPDATED,
+        availableMenuItemCount: 9,
+      },
+      { slug: "sfa", displayName: "sfa", updatedAt: STOREFRONT_UPDATED, availableMenuItemCount: 0 },
+      {
+        slug: "two-items",
+        displayName: "Two Items",
+        updatedAt: STOREFRONT_UPDATED,
+        availableMenuItemCount: 2,
+      },
+    ];
+    const listed = (await sitemap()).filter((e) => e.url.includes("/@")).map((e) => e.url);
+    expect(listed).toEqual([`${BASE}/@cafe-a`]);
+  });
+
   it("still returns the static entries when the database is unavailable", async () => {
     storefronts = async () => {
       throw new Error("db down");
@@ -151,7 +196,19 @@ describe("sitemap vs the marketing PAGES table", () => {
   // PAGES paths that are deliberately absent from the sitemap, and why. Adding a
   // page to PAGES without listing it in sitemap.ts fails the test below until it
   // is either listed there or given a reason here.
-  const NOT_IN_SITEMAP: Record<string, string> = {};
+  const NOT_IN_SITEMAP: Record<string, string> = {
+    "/careers": "placeholder page (no open roles), noindexed until it has content",
+    "/press": "placeholder page (no press kit yet), noindexed until it has content",
+    "/partners": "placeholder page (no partner program yet), noindexed until it has content",
+  };
+
+  it("excludes exactly the pages PAGES marks noindex", () => {
+    const noindexPaths = Object.values(PAGES)
+      .filter((page) => page.noindex)
+      .map((page) => page.path)
+      .sort();
+    expect(Object.keys(NOT_IN_SITEMAP).sort()).toEqual(noindexPaths);
+  });
 
   const pagePaths = Object.values(PAGES).map((page) => page.path);
 

@@ -4804,6 +4804,7 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
     linkGdpr: "GDPR",
     manageCookies: "Kelola cookie",
     infrastructuredBy: "Infrastruktur oleh",
+    languages: "Bahasa",
     meetUs: "Temui kami",
   },
   cookie: {
@@ -7105,8 +7106,8 @@ lifetime: "Akses seumur hidup",
       onlineBodyPayAtCounter: "Pelanggan memesan dari link menu Anda lewat ponsel dan membayar di kasir. Pesanannya masuk ke antrian Anda.",
     },
     servicesPage: {
-      title1: "Kasir, dapur,",
-      titleAccent: "dan back office.",
+      title1: "Aplikasi kasir, layar dapur, dan back office",
+      titleAccent: "untuk kafe dan restoran",
       spacesEyebrow: "Epidom 3",
       spacesTitle1: "Tiga ruang.",
       spacesTitle2: "Satu data yang sama.",

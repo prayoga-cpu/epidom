@@ -4778,6 +4778,7 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
     linkGdpr: "GDPR",
     manageCookies: "Manage cookies",
     infrastructuredBy: "Infrastructured by",
+    languages: "Languages",
     meetUs: "Meet us",
   },
   cookie: {
@@ -7068,8 +7069,8 @@ lifetime: "Lifetime access",
       onlineBodyPayAtCounter: "Customers order from your menu link on their phone and pay at the counter. The order lands in your queue.",
     },
     servicesPage: {
-      title1: "The counter, the kitchen",
-      titleAccent: "and the back office.",
+      title1: "POS, kitchen display and back office",
+      titleAccent: "for cafés and restaurants",
       spacesEyebrow: "Epidom 3",
       spacesTitle1: "Three spaces.",
       spacesTitle2: "One set of data.",

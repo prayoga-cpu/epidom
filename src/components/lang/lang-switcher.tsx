@@ -2,14 +2,11 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useI18n } from "./i18n-provider";
-import { stripLocalePrefix, getLocalizedPath, LOCALE_PREF_COOKIE } from "@/lib/i18n-routing";
+import { stripLocalePrefix, getLocalizedPath } from "@/lib/i18n-routing";
+import { LANGUAGE_OPTIONS, rememberLocaleChoice } from "./language-options";
 
-/** Exported so other language pickers (POS Mode's More menu) offer the same set, in the same order. */
-export const LANGUAGE_OPTIONS = [
-  { label: "Français", value: "fr", short: "FR", flag: "🇫🇷" },
-  { label: "Indonesia", value: "id", short: "ID", flag: "🇮🇩" },
-  { label: "English", value: "en", short: "EN", flag: "🇺🇸" },
-] as const;
+/** Re-exported so other language pickers (POS Mode's More menu) offer the same set, in the same order. */
+export { LANGUAGE_OPTIONS };
 
 export default function LangSwitcher({
   className = "",
@@ -123,13 +120,7 @@ export default function LangSwitcher({
                   setLocale(opt.value);
                   setOpen(false);
                   if (urlDriven) {
-                    // Real HTTP cookie (not the localStorage-based
-                    // preference setLocale already wrote) so the Edge proxy
-                    // can honor this pick on every future unprefixed visit
-                    // — see src/lib/i18n-routing.ts.
-                    try {
-                      document.cookie = `${LOCALE_PREF_COOKIE}=${opt.value}; path=/; max-age=${60 * 60 * 24 * 365}`;
-                    } catch {}
+                    rememberLocaleChoice(opt.value);
                     if (pathname) {
                       const { basePath } = stripLocalePrefix(pathname);
                       router.push(getLocalizedPath(basePath, opt.value));

@@ -16,10 +16,12 @@ import { LandingPageSections } from "@/features/marketing/home/components/landin
 import { ResumeLastVisited } from "@/features/marketing/home/components/resume-last-visited";
 import { storefrontService } from "@/lib/services";
 import { pageMetadata } from "@/features/marketing/seo/page-metadata";
+import { getRequestLocale } from "@/features/marketing/legal/metadata";
 
 export const generateMetadata = pageMetadata("home");
 
-export default function HomePage() {
+export default async function HomePage() {
+  const locale = await getRequestLocale();
   // Real, currently-published storefront the Storefront card links to — never
   // hardcoded (see storefrontService.getExampleStorefrontSlug), so it can't
   // go stale or 404 if that merchant unpublishes later. Not awaited: the hero
@@ -29,12 +31,12 @@ export default function HomePage() {
 
   return (
     <>
-      <ProductStructuredData />
+      <ProductStructuredData locale={locale} />
       <ResumeLastVisited />
 
-      <main className="w-full overflow-x-hidden">
+      <div className="w-full overflow-x-hidden">
         <LandingPageSections exampleStorefrontSlug={exampleStorefrontSlug} />
-      </main>
+      </div>
     </>
   );
 }

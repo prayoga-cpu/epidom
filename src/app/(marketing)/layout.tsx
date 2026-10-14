@@ -62,12 +62,14 @@ export default async function LandingLayout({
       className={`${jost.variable} ${imFell.variable} ${oswald.variable} epidom-dark-page`}
       style={{ fontFamily: "var(--epi-font-body)" }}
     >
-      <WebsiteStructuredData />
-      <OrganizationStructuredData />
+      <WebsiteStructuredData locale={initialLocale} />
+      <OrganizationStructuredData locale={initialLocale} />
       <ErrorBoundary>
         <Suspense fallback={<LoadingPage />}>
           <EagerI18nProvider initialLocale={initialLocale}>
             <SiteHeader />
+            {/* The one <main> landmark of every marketing page: pages wrap their own
+                content in a <div>, never a second <main>. */}
             <main>{children}</main>
             <SiteFooter />
             <CookieConsentBar />

@@ -171,17 +171,19 @@ describe("HeroSection", () => {
     (loc, before, after) => {
       mockLocale.value = loc;
       render(<HeroSection onOpenMigration={() => {}} />);
-      const bolts = screen.getByRole("heading", { level: 1 }).querySelectorAll("svg");
+      const h1 = screen.getByRole("heading", { level: 1 });
+      const bolts = h1.querySelectorAll("svg");
       expect(bolts).toHaveLength(1);
       expect(bolts[0]).toHaveAttribute("aria-hidden", "true");
-      const visual = bolts[0].parentElement!;
-      expect(visual).toHaveAttribute("aria-hidden", "true");
       // The letter the bolt stands for stays in the drawn copy's text, undrawn,
       // so search engines read "REALTIME" there, not "REALTME".
       const title = text(loc, "redesign.landing.hero.title");
-      const letter = visual.querySelector(".sr-only")?.textContent;
+      const letter = bolts[0].parentElement!.querySelector(".sr-only")?.textContent;
       expect(`${before}${letter}${after}`).toBe(title);
-      expect(visual.textContent).toBe(title);
+      // ...and the h1 holds the title once: no second copy beside the drawing
+      // for a crawler to read as "TitleTitle".
+      expect(h1.textContent).toBe(title);
+      expect(h1).toHaveAttribute("aria-label", title);
     }
   );
 

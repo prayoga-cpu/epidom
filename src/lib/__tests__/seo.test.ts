@@ -159,9 +159,15 @@ describe("generateStructuredData", () => {
     });
   });
 
-  it("carries the same contact point on every structured-data type", () => {
-    for (const type of ["website", "organization", "product", "service"] as const) {
-      expect(generateStructuredData(type).contactPoint.email).toBe(SUPPORT_EMAIL_PRIMARY);
+  it("puts the contact point and logo only on the Organization, where schema.org defines them", () => {
+    expect(generateStructuredData("organization")).toMatchObject({
+      contactPoint: { email: SUPPORT_EMAIL_PRIMARY },
+      logo: "https://epidom.fr/images/icon-512.png",
+    });
+    for (const type of ["website", "product"] as const) {
+      const data = generateStructuredData(type);
+      expect(data, type).not.toHaveProperty("contactPoint");
+      expect(data, type).not.toHaveProperty("logo");
     }
   });
 

@@ -3,10 +3,13 @@ import { headers } from "next/headers";
 import type { Metadata } from "next";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { LOCALE_HEADER, DEFAULT_LOCALE, getLocalizedPath } from "@/lib/i18n-routing";
-import { buildLocalizedMetadata } from "@/lib/seo";
+import { BREADCRUMB_LABELS, buildBreadcrumbs, buildLocalizedMetadata } from "@/lib/seo";
 import { getBlogPost } from "@/features/marketing/blog/content";
 import { BlogPostView } from "@/features/marketing/blog/components/blog-post-view";
-import { BlogPostingStructuredData } from "@/components/seo/structured-data";
+import {
+  BlogPostingStructuredData,
+  BreadcrumbStructuredData,
+} from "@/components/seo/structured-data";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -48,14 +51,20 @@ export default async function BlogPostPage({ params }: PageProps) {
   const canonical = `https://epidom.fr${getLocalizedPath(`/blog/${slug}`, locale)}`;
 
   return (
-    <main className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-hidden">
       <BlogPostingStructuredData
         url={canonical}
         title={post.title}
         description={post.description}
         datePublished={post.date}
       />
+      <BreadcrumbStructuredData
+        items={buildBreadcrumbs(locale, [
+          { name: BREADCRUMB_LABELS[locale].blog, path: "/blog" },
+          { name: post.title, path: `/blog/${slug}` },
+        ])}
+      />
       <BlogPostView locale={locale} post={post} />
-    </main>
+    </div>
   );
 }

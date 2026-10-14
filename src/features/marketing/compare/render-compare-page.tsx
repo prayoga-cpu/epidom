@@ -1,7 +1,14 @@
 import { headers } from "next/headers";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { LOCALE_HEADER, DEFAULT_LOCALE } from "@/lib/i18n-routing";
-import { buildLocalizedMetadata, getAuthoredLocales, resolveServedLocale } from "@/lib/seo";
+import {
+  BREADCRUMB_LABELS,
+  buildBreadcrumbs,
+  buildLocalizedMetadata,
+  getAuthoredLocales,
+  resolveServedLocale,
+} from "@/lib/seo";
+import { BreadcrumbStructuredData } from "@/components/seo/structured-data";
 import { CompetitorComparison } from "./components/competitor-comparison";
 import type { CompetitorComparisonData } from "./types";
 
@@ -57,10 +64,17 @@ export async function CompareCompetitorPage({
 }: {
   dataMap: Partial<Record<Locale, CompetitorComparisonData>>;
 }) {
-  const { data } = await resolveCompareData(dataMap);
+  const { servedLocale, data } = await resolveCompareData(dataMap);
   return (
-    <main className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-hidden">
+      {/* In the served locale: the trail points at the copy the canonical names. */}
+      <BreadcrumbStructuredData
+        items={buildBreadcrumbs(servedLocale, [
+          { name: BREADCRUMB_LABELS[servedLocale].compare, path: "/compare" },
+          { name: data.eyebrow, path: `/compare/${data.slug}` },
+        ])}
+      />
       <CompetitorComparison data={data} />
-    </main>
+    </div>
   );
 }

@@ -5,7 +5,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 /**
  * The Features page's title. The visible hero was removed (11.10.2026), so the
  * page opens on the problem picker; the h1 stays for screen readers and search
- * engines.
+ * engines, so it names what the page is about ("POS, kitchen display and back
+ * office for cafés and restaurants") rather than a slogan.
  *
  * The padding clears the floating site header (16px from the top, about 60px
  * tall). Added to the first section's own top padding (56/80/120px, see

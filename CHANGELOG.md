@@ -9,6 +9,16 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.12.1] - 2026-10-14 · fix
+
+Search engines now find the right Epidom pages, in the right language.
+
+- **Clearer search results.** The homepage, Pricing, Features and Compare pages now say what they offer in their titles, in each language: "aplikasi kasir cafe" in Indonesian, "caisse" and "commande en ligne" in French, "POS" in English. The Pricing title shows the monthly price in your currency.
+- **Your storefront in Google once its menu is ready.** A storefront page is offered to search engines once it has at least three available menu items. Test pages never are. Anyone with the link can still open the page either way.
+- **No duplicates in search.** The sales pages, and the Careers, Press and Partners pages (which have no content yet), are no longer offered to search engines.
+- **Language links in the footer.** The footer now links to the French, Indonesian and English sites.
+- **Plans and breadcrumbs for search engines.** Search engines now get each plan's monthly price in the page's currency, and a breadcrumb trail on articles, guides and comparisons.
+
 ## [3.12.0] - 2026-10-13 · ux
 
 Real screens of today's Epidom on the website and the sign-in page, in place of pictures of the old app.

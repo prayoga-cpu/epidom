@@ -11,8 +11,8 @@ export default async function ComparePage() {
   const locale = (headersList.get(LOCALE_HEADER) as Locale | null) ?? DEFAULT_LOCALE;
 
   return (
-    <main className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-hidden">
       <CompareHub locale={locale} />
-    </main>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { storefrontService } from "@/lib/services";
 import { prisma } from "@/lib/prisma";
 import { PublicItemDetail } from "@/features/storefront/components/public-item-detail";
 import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
+import { storefrontRobots } from "@/features/storefront/lib/indexing";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -34,6 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description:
       item.description ||
       `Pesan ${item.name} dari ${storefront.displayName} langsung via WhatsApp.`,
+    robots: storefrontRobots(storefront),
   };
 }
 

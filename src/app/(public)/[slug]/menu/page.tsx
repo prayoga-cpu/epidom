@@ -3,6 +3,7 @@ import { storefrontService } from "@/lib/services";
 import { PublicMenu } from "@/features/storefront/components/public-menu";
 import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
 import { MenuStructuredData } from "@/components/seo/structured-data";
+import { storefrontRobots } from "@/features/storefront/lib/indexing";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -27,6 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `Menu - ${storefront.displayName} | Epidom Storefront`,
     description,
     alternates: { canonical: url },
+    robots: storefrontRobots(storefront),
     openGraph: { title: `${storefront.displayName} Menu`, description, url, type: "website" },
   };
 }

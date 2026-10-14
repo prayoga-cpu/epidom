@@ -48,7 +48,7 @@ function markRedirectUncacheable(response: NextResponse): NextResponse {
   response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
   response.headers.set(
     "Vary",
-    "Cookie, RSC, Next-Router-Prefetch, Next-Router-State-Tree, Next-Url"
+    "Cookie, Accept-Language, RSC, Next-Router-Prefetch, Next-Router-State-Tree, Next-Url"
   );
   return response;
 }
@@ -427,7 +427,9 @@ export default async function proxy(req: NextRequest) {
       if (preferred !== DEFAULT_LOCALE) {
         const redirectUrl = req.nextUrl.clone();
         redirectUrl.pathname = getLocalizedPath(basePath, preferred);
-        return NextResponse.redirect(redirectUrl);
+        // Decided per visitor (language cookie, then Accept-Language), so no
+        // shared cache may hand one visitor's redirect to the next.
+        return markRedirectUncacheable(NextResponse.redirect(redirectUrl));
       }
       // fr has no prefix, so the path already resolves to the right route.
       return NextResponse.next({ request: { headers: localizedRequestHeaders } });
