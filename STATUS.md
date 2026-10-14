@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current focus: SEO and website rework — Phases 0–3 shipped (3.12.1–3.17.1); open: Phase 4 (operator), field Web Vitals decision
+## Current focus: SEO and website rework — Phases 0–3 shipped (3.12.1–3.17.2); open: Phase 4 (operator), field Web Vitals decision
 
 _(AI agents: this file tracks the SEO/website phases below. Tick a box the moment an item is done and add the version it shipped in; don't re-describe finished work in prose. Anything that needs the operator goes in "Operator to-do". The previous STATUS.md (v3 dashboard revamp, releases 3.3.0–3.12.0, and their open operator to-dos) is archived unchanged at `docs/status-archive/2026-10-14-v3-revamp-and-releases.md`; its open items are listed at the bottom so they stay visible.)_
 
@@ -56,7 +56,9 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
   | `/compare/zelty` | 189 ms | 1.96 s | 3.00 s | first paragraph |
 
   \*Network variance: a single traced run of the same page gave FCP 1.9 s / LCP 2.7 s. The trace showed the bottleneck: the 42 KB render-blocking stylesheet finished at ~1.76 s because 7 preloaded font files (~238 KB) were downloading alongside it, two of them never used on a marketing page.
-- [x] **Fewer font preloads** (3.17.1): GeistMono (57 KB, monospace, never painted first) is no longer preloaded on any page: `src/lib/fonts.ts` declares it with `preload: false` (same file and fallbacks as `geist/font/mono`) for the root, auth, Back Office and POS layouts, and a test fails if anything imports the package's version again; IM Fell's upright face is dropped (its only user, `.epi-script`, is always italic). Not done: Geist Sans (57 KB) is still preloaded on marketing pages, which never render it. It is the app's and storefronts' font, set on `<html>` so that portaled dialogs inherit it, and moving it out of the root layout is a bigger change. Re-measure after 3.17.1 deploys.
+- [x] **Fewer font preloads** (3.17.1): GeistMono (57 KB, monospace, never painted first) is no longer preloaded on any page: `src/lib/fonts.ts` declares it with `preload: false` (same file and fallbacks as `geist/font/mono`) for the root, auth, Back Office and POS layouts, and a test fails if anything imports the package's version again; IM Fell's upright face is dropped (its only user, `.epi-script`, is always italic). Not done: Geist Sans (57 KB) is still preloaded on marketing pages, which never render it. It is the app's and storefronts' font, set on `<html>` so that portaled dialogs inherit it, and moving it out of the root layout is a bigger change.
+
+  **After 3.17.1** (same method, 2026-10-14): the home page preloads 5 font files instead of 7, and the blog post's stylesheet finishes at 1.36 s instead of 1.76 s. Medians: `/` FCP 1.68 s / LCP 1.68 s (was 3.04 s), `/id` 1.69 / 1.69, `/en` 1.70 / 1.70, `/pricing` 1.49 / 1.49, `/id/pricing` 1.51 / 1.51, `/calcul-cout-de-revient` 1.57 / 1.57, blog post 1.56 / 1.56, `/compare/zelty` 1.52 / 1.52; CLS 0 everywhere. Part of the gain is network variance between runs (a single traced home run gave LCP 2.0 s, the hero image), but every page is now under Google's 2.5 s "good" LCP line in this lab setup.
 - [ ] **Real-user Web Vitals go nowhere.** `src/lib/web-vitals.ts` beacons LCP/CLS/INP/FCP/TTFB from every production page view to `/api/analytics/web-vitals`, whose handler discards them, so each visit costs function calls and yields no field data. Decision needed (see Decisions).
 
 ## Phase 2 — Pages that rank — ✅ 3.14.0 + 3.15.0
