@@ -1,33 +1,22 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Locale } from "@/components/lang/i18n-provider";
-import { LOCALE_HEADER, LOCALES } from "@/lib/i18n-routing";
+import { LOCALES } from "@/lib/i18n-routing";
 import { OG_LOCALE } from "@/lib/seo";
 import { getAllBlogPostParams, getBlogPost } from "@/features/marketing/blog/content";
-
-// The locale header the proxy sets on a request; null = header absent.
-let requestLocale: string | null = null;
-vi.mock("next/headers", () => ({
-  headers: async () => {
-    const h = new Headers();
-    if (requestLocale) h.set(LOCALE_HEADER, requestLocale);
-    return h;
-  },
-}));
 
 // Only the metadata is under test, not the article markup.
 vi.mock("@/features/marketing/blog/components/blog-post-view", () => ({
   BlogPostView: () => null,
 }));
 
-import { generateMetadata } from "@/app/(marketing)/blog/[slug]/page";
+import { generateMetadata } from "@/app/(marketing)/m/[locale]/blog/[slug]/page";
 
 const BASE = "https://epidom.fr";
 const urlOf = (locale: Locale, slug: string) =>
   `${BASE}${locale === "fr" ? "" : `/${locale}`}/blog/${slug}`;
 
 async function metadataFor(locale: Locale, slug: string) {
-  requestLocale = locale;
-  const md = await generateMetadata({ params: Promise.resolve({ slug }) });
+  const md = await generateMetadata({ params: Promise.resolve({ locale, slug }) });
   return {
     md,
     canonical: md.alternates?.canonical as string,
@@ -110,8 +99,7 @@ describe("blog article that does not exist in the requested locale", () => {
   it("returns the not-found title and no alternates", async () => {
     // an English slug asked for on the French site is a 404 (no cross-locale fallback)
     const { slug } = PARAMS.find((p) => p.locale === "en")!;
-    requestLocale = "fr";
-    const md = await generateMetadata({ params: Promise.resolve({ slug }) });
+    const md = await generateMetadata({ params: Promise.resolve({ locale: "fr", slug }) });
     expect(md.title).toBe("Not found | Epidom");
     expect(md.alternates).toBeUndefined();
   });

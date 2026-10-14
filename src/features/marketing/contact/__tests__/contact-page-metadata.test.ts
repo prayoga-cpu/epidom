@@ -6,17 +6,11 @@ vi.mock("@/features/marketing/contact/components/contact-page-client", () => ({
   ContactPageClient: () => null,
 }));
 
-// The metadata is per-locale now: the proxy sets this header on every request.
-const mocks = vi.hoisted(() => ({ locale: "en" }));
-vi.mock("next/headers", () => ({
-  headers: async () => new Headers({ "x-epidom-locale": mocks.locale }),
-}));
+import { generateMetadata } from "@/app/(marketing)/m/[locale]/contact/page";
 
-import { generateMetadata } from "@/app/(marketing)/contact/page";
-
+// The metadata is per-locale: the page reads its language from its route segment.
 async function metadataFor(locale: "fr" | "id" | "en") {
-  mocks.locale = locale;
-  return generateMetadata();
+  return generateMetadata({ params: Promise.resolve({ locale }) });
 }
 
 describe("/contact metadata", () => {

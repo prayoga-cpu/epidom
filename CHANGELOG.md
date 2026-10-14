@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.16.0] - 2026-10-14 · infra
+
+The website's pages now load instantly from the edge.
+
+- **Pre-built pages.** Every page of epidom.fr (home, pricing, features, guides, comparisons, blog, docs, legal) is now built ahead of time in each language and served from the CDN, instead of being put together on our server for every visit. Pages that used to take 0.3 to 1.5 seconds to start arriving now start in a few milliseconds.
+- **Missing pages say so.** An address that doesn't exist on the blog or in the docs now returns a proper "not found" to search engines, instead of an empty page.
+
 ## [3.15.0] - 2026-10-14 · feat
 
 A bigger, corrected blog, in all three languages.

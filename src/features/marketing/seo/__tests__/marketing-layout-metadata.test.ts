@@ -17,7 +17,7 @@ vi.mock("@/components/lang/seeded-i18n-provider", () => ({
   SeededI18nProvider: ({ children }: { children: unknown }) => children,
 }));
 
-import { metadata } from "@/app/(marketing)/layout";
+import { metadata } from "@/app/(marketing)/m/[locale]/layout";
 
 describe("marketing layout fallback metadata", () => {
   const description = String(metadata.description);

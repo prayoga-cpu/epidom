@@ -1,17 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { Locale } from "@/components/lang/i18n-provider";
-import { LOCALE_HEADER } from "@/lib/i18n-routing";
+import { toLocale } from "@/features/marketing/seo/route-locale";
 
-// The locale header the proxy sets on a request; null = header absent.
+// The route's language segment (src/app/(marketing)/m/[locale]); null = none,
+// which falls back to fr like an unknown segment.
 let requestLocale: string | null = null;
-vi.mock("next/headers", () => ({
-  headers: async () => {
-    const h = new Headers();
-    if (requestLocale) h.set(LOCALE_HEADER, requestLocale);
-    return h;
-  },
-}));
+const route = () => toLocale(requestLocale ?? undefined);
 
 // Only the data handed to the component matters here, not how it renders.
 vi.mock("../components/competitor-comparison", () => ({
@@ -37,7 +32,7 @@ const ALL: Locale[] = ["fr", "id", "en"];
 
 async function metadataFor(map: typeof sundayComparison, locale: string | null) {
   requestLocale = locale;
-  const md = await buildCompareMetadata(map, ["kw"]);
+  const md = buildCompareMetadata(map, ["kw"], route());
   return {
     md,
     canonical: md.alternates?.canonical as string,
@@ -214,7 +209,7 @@ describe("compare social card", () => {
 describe("content and fallback behaviour are unchanged", () => {
   it("still serves English copy to a visitor on a locale that was not authored", async () => {
     requestLocale = "id";
-    const { locale, servedLocale, data } = await resolveCompareData(sundayComparison);
+    const { locale, servedLocale, data } = resolveCompareData(sundayComparison, route());
     expect(locale).toBe("id");
     expect(servedLocale).toBe("en");
     expect(data).toBe(sundayComparison.en);
@@ -222,21 +217,21 @@ describe("content and fallback behaviour are unchanged", () => {
 
   it("serves the authored locale's own copy when there is one", async () => {
     requestLocale = "fr";
-    const { data } = await resolveCompareData(sundayComparison);
+    const { data } = resolveCompareData(sundayComparison, route());
     expect(data).toBe(sundayComparison.fr);
   });
 
   it("falls back to the first authored locale when English is missing too", async () => {
     requestLocale = "en";
     const onlyId = { id: mokaComparison.id };
-    const { servedLocale, data } = await resolveCompareData(onlyId);
+    const { servedLocale, data } = resolveCompareData(onlyId, route());
     expect(servedLocale).toBe("id");
     expect(data).toBe(mokaComparison.id);
   });
 
   it("renders the fallback copy on the page", async () => {
     requestLocale = "id";
-    render(await CompareCompetitorPage({ dataMap: sundayComparison }));
+    render(CompareCompetitorPage({ dataMap: sundayComparison, locale: route() }));
     expect(screen.getByTestId("comparison").textContent).toBe(
       `sunday|${sundayComparison.en!.eyebrow}`
     );
@@ -252,7 +247,9 @@ describe("compare page breadcrumbs", () => {
 
   it("walks Home > Compare > competitor in the locale whose copy is served", async () => {
     requestLocale = "id";
-    const { container } = render(await CompareCompetitorPage({ dataMap: sundayComparison }));
+    const { container } = render(
+      CompareCompetitorPage({ dataMap: sundayComparison, locale: route() })
+    );
     const crumbs = breadcrumbOf(container);
     expect(crumbs.itemListElement.map((i: { item: string }) => i.item)).toEqual([
       `${BASE}/en`,
@@ -265,7 +262,9 @@ describe("compare page breadcrumbs", () => {
 
   it("uses the French labels and unprefixed URLs on a French page", async () => {
     requestLocale = "fr";
-    const { container } = render(await CompareCompetitorPage({ dataMap: sundayComparison }));
+    const { container } = render(
+      CompareCompetitorPage({ dataMap: sundayComparison, locale: route() })
+    );
     const crumbs = breadcrumbOf(container);
     expect(crumbs.itemListElement[0]).toMatchObject({ name: "Accueil", item: `${BASE}/` });
     expect(crumbs.itemListElement[1]).toMatchObject({

@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-epidom-locale": "id" }) }));
-
-import { buildLegalMetadata, getRequestLocale, legalMetadata, type LegalPage } from "../metadata";
+import { buildLegalMetadata, legalMetadata, type LegalPage } from "../metadata";
 
 const PAGES: LegalPage[] = ["privacy", "cookie-policy", "gdpr", "terms", "refund-policy"];
 
@@ -54,9 +52,8 @@ describe("legal page metadata", () => {
     );
   });
 
-  it("uses the locale header the proxy sets", async () => {
-    expect(await getRequestLocale()).toBe("id");
-    const meta = await legalMetadata("privacy")();
+  it("reads the locale from the page's route segment", async () => {
+    const meta = await legalMetadata("privacy")({ params: Promise.resolve({ locale: "id" }) });
     expect(meta.alternates?.canonical).toBe("https://epidom.fr/id/privacy");
   });
 

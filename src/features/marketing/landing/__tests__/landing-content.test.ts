@@ -7,7 +7,7 @@ import { buildLandingMetadata, landingHreflang } from "../metadata";
 import type { LandingGroup } from "../registry";
 import type { LandingPage } from "../types";
 
-const ROUTES = resolve(process.cwd(), "src/app/(marketing)");
+const ROUTES = resolve(process.cwd(), "src/app/(marketing)/m/[locale]");
 
 /** Every string a visitor (or a search snippet) reads on a page. */
 function texts(page: LandingPage): string[] {
@@ -50,7 +50,9 @@ describe("landing registry ↔ content ↔ routes", () => {
       expect(existsSync(file), file).toBe(true);
       const source = readFileSync(file, "utf8");
       expect(source).toContain(`landingMetadata("${slug}")`);
-      expect(source).toContain(`<LandingRoute slug="${slug}" />`);
+      expect(source).toContain(
+        `<LandingRoute slug="${slug}" locale={await routeLocale(params)} />`
+      );
       expect(LANDING_LABELS[slug], slug).toBeTruthy();
     }
   });

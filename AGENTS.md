@@ -85,7 +85,7 @@ Always run `pnpm type-check && pnpm lint` before committing.
 src/
 ├── app/
 │   ├── (app)/         # authenticated app surface
-│   ├── (marketing)/   # public marketing site
+│   ├── (marketing)/   # public marketing site: pages under m/[locale]/ (static; the proxy rewrites /x, /id/x, /en/x there)
 │   ├── (public)/      # [Phase 1] public storefronts at /@slug
 │   └── api/
 ├── features/          # FDA: one folder per feature, contains its own components/hooks

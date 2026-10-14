@@ -1,6 +1,4 @@
-import { headers } from "next/headers";
 import type { Locale } from "@/components/lang/i18n-provider";
-import { LOCALE_HEADER, DEFAULT_LOCALE } from "@/lib/i18n-routing";
 import {
   BREADCRUMB_LABELS,
   buildBreadcrumbs,
@@ -23,11 +21,10 @@ import type { CompetitorComparisonData } from "./types";
  * actually get. Metadata must be built from the latter (see
  * buildCompareMetadata), which is why both come back.
  */
-export async function resolveCompareData(
-  dataMap: Partial<Record<Locale, CompetitorComparisonData>>
-): Promise<{ locale: Locale; servedLocale: Locale; data: CompetitorComparisonData }> {
-  const headersList = await headers();
-  const requested = (headersList.get(LOCALE_HEADER) as Locale | null) ?? DEFAULT_LOCALE;
+export function resolveCompareData(
+  dataMap: Partial<Record<Locale, CompetitorComparisonData>>,
+  requested: Locale
+): { locale: Locale; servedLocale: Locale; data: CompetitorComparisonData } {
   const servedLocale = resolveServedLocale(getAuthoredLocales(dataMap), requested);
   return { locale: requested, servedLocale, data: dataMap[servedLocale]! };
 }
@@ -43,11 +40,12 @@ export async function resolveCompareData(
  * follows the locale actually served (an /id visit that gets English copy says
  * en_US, not id_ID) and the share image and Twitter text are kept.
  */
-export async function buildCompareMetadata(
+export function buildCompareMetadata(
   dataMap: Partial<Record<Locale, CompetitorComparisonData>>,
-  keywords: string[]
+  keywords: string[],
+  requested: Locale
 ) {
-  const { locale, data } = await resolveCompareData(dataMap);
+  const { locale, data } = resolveCompareData(dataMap, requested);
   return buildLocalizedMetadata({
     basePath: `/compare/${data.slug}`,
     locale,
@@ -59,12 +57,15 @@ export async function buildCompareMetadata(
   });
 }
 
-export async function CompareCompetitorPage({
+export function CompareCompetitorPage({
   dataMap,
+  locale,
 }: {
   dataMap: Partial<Record<Locale, CompetitorComparisonData>>;
+  /** The route's language (the copy served may fall back, see resolveCompareData). */
+  locale: Locale;
 }) {
-  const { servedLocale, data } = await resolveCompareData(dataMap);
+  const { servedLocale, data } = resolveCompareData(dataMap, locale);
   return (
     <div className="w-full overflow-x-hidden">
       {/* In the served locale: the trail points at the copy the canonical names. */}

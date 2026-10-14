@@ -312,7 +312,7 @@ export const OG_LOCALE: Record<Locale, string> = { fr: "fr_FR", id: "id_ID", en:
 export interface LocalizedPageSEO {
   /** Unprefixed path of the page ("/pricing", "/" for home). */
   basePath: string;
-  /** The locale the request asked for (from the proxy's x-epidom-locale header). */
+  /** The locale the page is served in (its route segment, src/app/(marketing)/m/[locale]). */
   locale: Locale;
   title: string;
   description: string;

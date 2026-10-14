@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import type { Locale } from "@/components/lang/i18n-provider";
 import { BreadcrumbStructuredData } from "@/components/seo/structured-data";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { BREADCRUMB_LABELS } from "@/lib/seo";
@@ -21,9 +22,11 @@ export function landingMetadata(slug: string) {
  * language through (other prefixes get a 308 to it), so the marketing
  * layout's i18n is already in the page's language here.
  */
-export function LandingRoute({ slug }: { slug: string }) {
+export function LandingRoute({ slug, locale }: { slug: string; locale: Locale }) {
   const page = getLandingPage(slug);
-  if (!page) notFound();
+  // Prerendered for every language segment; only its own language is a page
+  // (the proxy 308s the others before they get here).
+  if (!page || page.locale !== locale) notFound();
 
   // Other pages in the same language: tools first, then businesses, then features.
   const related = landingLinksFor(page.locale)

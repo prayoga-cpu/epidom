@@ -3,15 +3,9 @@ import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { LOCALE_PRICE_CURRENCY, formatPlanPrice } from "@/lib/constants/plan-pricing";
-import { DEFAULT_LOCALE, LOCALES, LOCALE_HEADER, getLocalizedPath } from "@/lib/i18n-routing";
+import { DEFAULT_LOCALE, LOCALES, getLocalizedPath } from "@/lib/i18n-routing";
 import { OG_LOCALE } from "@/lib/seo";
 import { PAGES, buildPageMetadata, pageMetadata, type MarketingMetaPage } from "../page-metadata";
-
-const mocks = vi.hoisted(() => ({ locale: undefined as string | undefined }));
-
-vi.mock("next/headers", () => ({
-  headers: async () => new Headers(mocks.locale ? { "x-epidom-locale": mocks.locale } : {}),
-}));
 
 const SITE = "https://epidom.fr";
 const KEYS = Object.keys(PAGES) as MarketingMetaPage[];
@@ -286,7 +280,7 @@ describe("partners description", () => {
 });
 
 describe("page files", () => {
-  const appDir = resolve(process.cwd(), "src/app/(marketing)");
+  const appDir = resolve(process.cwd(), "src/app/(marketing)/m/[locale]");
 
   it.each(KEYS)(
     "%s exports locale-aware generateMetadata, not a static metadata object",
@@ -299,29 +293,16 @@ describe("page files", () => {
 });
 
 describe("pageMetadata()", () => {
-  beforeEach(() => {
-    mocks.locale = undefined;
-  });
+  const params = (locale: string) => ({ params: Promise.resolve({ locale }) });
 
-  it.each(LOCALES)("reads the request locale from the proxy header (%s)", async (locale) => {
-    mocks.locale = locale;
-    const md = await pageMetadata("pricing")();
+  it.each(LOCALES)("reads the locale from the page's route segment (%s)", async (locale) => {
+    const md = await pageMetadata("pricing")(params(locale));
     expect(canonicalOf(md)).toBe(`${SITE}${getLocalizedPath("/pricing", locale)}`);
   });
 
-  it("falls back to fr when the header is missing", async () => {
-    const md = await pageMetadata("about")();
+  it("falls back to fr for a segment that isn't a site language", async () => {
+    const md = await pageMetadata("about")(params("de"));
     expect(canonicalOf(md)).toBe(`${SITE}/about`);
     expect((md.openGraph as { locale?: string }).locale).toBe("fr_FR");
-  });
-
-  it("falls back to fr when the header holds something else", async () => {
-    mocks.locale = "de";
-    const md = await pageMetadata("about")();
-    expect(canonicalOf(md)).toBe(`${SITE}/about`);
-  });
-
-  it("uses the same header name the proxy sets", () => {
-    expect(LOCALE_HEADER).toBe("x-epidom-locale");
   });
 });

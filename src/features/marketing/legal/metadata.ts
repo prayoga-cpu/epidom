@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { routeLocale, type LocaleParams } from "@/features/marketing/seo/route-locale";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { generateMetadata as buildSeoMetadata, type SEOConfig } from "@/lib/seo";
-import { DEFAULT_LOCALE, LOCALE_HEADER, LOCALES, getLocalizedPath } from "@/lib/i18n-routing";
+import { DEFAULT_LOCALE, LOCALES, getLocalizedPath } from "@/lib/i18n-routing";
 
 export type LegalPage = "privacy" | "cookie-policy" | "gdpr" | "terms" | "refund-policy";
 
@@ -123,15 +123,9 @@ export function buildLegalMetadata(page: LegalPage, locale: Locale): Metadata {
   });
 }
 
-/** The locale the proxy resolved for this request (falls back to the default). */
-export async function getRequestLocale(): Promise<Locale> {
-  const value = (await headers()).get(LOCALE_HEADER);
-  return value === "en" || value === "fr" || value === "id" ? value : DEFAULT_LOCALE;
-}
-
 /** `export const generateMetadata = legalMetadata("privacy")` in a page file. */
 export function legalMetadata(page: LegalPage) {
-  return async function generateMetadata(): Promise<Metadata> {
-    return buildLegalMetadata(page, await getRequestLocale());
+  return async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
+    return buildLegalMetadata(page, await routeLocale(params));
   };
 }

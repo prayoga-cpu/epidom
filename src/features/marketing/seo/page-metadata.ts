@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { Locale } from "@/components/lang/i18n-provider";
-import { getRequestLocale } from "@/features/marketing/legal/metadata";
+import { routeLocale, type LocaleParams } from "./route-locale";
 import { LOCALE_PRICE_CURRENCY, formatPlanPrice } from "@/lib/constants/plan-pricing";
 import { buildLocalizedMetadata } from "@/lib/seo";
 import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
@@ -489,7 +489,7 @@ export function buildPageMetadata(page: MarketingMetaPage, locale: Locale): Meta
 
 /** `export const generateMetadata = pageMetadata("pricing")` in a page file. */
 export function pageMetadata(page: MarketingMetaPage) {
-  return async function generateMetadata(): Promise<Metadata> {
-    return buildPageMetadata(page, await getRequestLocale());
+  return async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
+    return buildPageMetadata(page, await routeLocale(params));
   };
 }

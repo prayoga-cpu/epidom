@@ -52,7 +52,7 @@ const COMPETITOR_COMPARISONS = [
 
 const BASE_URL = "https://epidom.fr";
 
-// Static marketing routes. Keep in sync with src/app/(marketing)/*/page.tsx
+// Static marketing routes. Keep in sync with src/app/(marketing)/m/[locale]/*/page.tsx
 // and the LOCALIZED_MARKETING_PATHS allowlist in src/proxy.ts; the "sitemap vs
 // PAGES" test in src/app/__tests__/sitemap.test.ts fails when a page in the
 // metadata table (features/marketing/seo/page-metadata.ts) is neither listed

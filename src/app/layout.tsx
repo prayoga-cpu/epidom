@@ -1,5 +1,4 @@
 import type React from "react";
-import { headers } from "next/headers";
 import { Bebas_Neue } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
@@ -17,8 +16,6 @@ import { ChunkErrorReloader } from "@/components/providers/chunk-error-reloader"
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ZOOM_BOOT_SCRIPT } from "@/lib/app-zoom";
-import { resolveHtmlLang } from "@/lib/html-lang";
-import { LOCALE_HEADER } from "@/lib/i18n-routing";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
 import { Metadata, Viewport } from "next";
@@ -75,18 +72,18 @@ export const viewport: Viewport = {
 // optimisation. Unset VERCEL_ENV (local dev/build) keeps tracking as it always was.
 const TRACKING_ENABLED = !process.env.VERCEL_ENV || process.env.VERCEL_ENV === "production";
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Server HTML of a fr/id marketing page must say lang="fr"/"id" — a crawler
-  // reads that before any script runs, and I18nProvider only corrects it after
-  // hydration. Other routes carry no locale header and stay "en".
-  const lang = resolveHtmlLang((await headers()).get(LOCALE_HEADER));
-
+  // No `lang` here: this layout serves every route and can't know the page's
+  // language without reading the request, which would make every page
+  // dynamic. The marketing layout (src/app/(marketing)/m/[locale]/layout.tsx)
+  // marks its content with lang and sets this element's lang while the HTML
+  // parses; the storefront and the app set it from their I18nProvider.
   return (
-    <html lang={lang} data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/* Applies the device's saved UI zoom before first paint, so a 70%
             or 150% preference doesn't render at 100% and snap on hydration.

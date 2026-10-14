@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current focus: SEO and website rework — Phases 0 and 3 live, Phase 2 pages in 3.14.0, Phase 1 static rendering next
+## Current focus: SEO and website rework — Phases 0–3 shipped (3.12.1–3.16.0); open: OG images, CWV baseline, Phase 4 (operator)
 
 _(AI agents: this file tracks the SEO/website phases below. Tick a box the moment an item is done and add the version it shipped in; don't re-describe finished work in prose. Anything that needs the operator goes in "Operator to-do". The previous STATUS.md (v3 dashboard revamp, releases 3.3.0–3.12.0, and their open operator to-dos) is archived unchanged at `docs/status-archive/2026-10-14-v3-revamp-and-releases.md`; its open items are listed at the bottom so they stay visible.)_
 
@@ -15,7 +15,7 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 0 — Hygiene | Remove junk from the index, retarget titles, fix the H1 and structured data, crawler access | ✅ live in 3.12.1 (b7b36aec, 2026-10-14) |
-| 1 — Speed | Static marketing pages, one language bundle per visitor, image/favicon weight, Core Web Vitals baseline | 🟡 bundle + favicon in 3.13.0; static pages, OG images, CWV open |
+| 1 — Speed | Static marketing pages, one language bundle per visitor, image/favicon weight, Core Web Vitals baseline | 🟡 bundle + favicon 3.13.0, static pages 3.16.0; OG images + CWV open |
 | 2 — Pages that rank | Free tools, vertical pages, feature pages, more comparison pages, blog cadence | ✅ 3.14.0 (tools, 32 landing pages, 10 comparisons) + 3.15.0 (blog); ongoing cadence is the operator's |
 | 3 — Storefront loop | Server-rendered menus, store-language metadata, LocalBusiness detail, "Powered by" link | ✅ 3.13.0 |
 | 4 — Authority | Search Console, Business Profile, Play Store listing, directories, listicles, data PR | ⬜ not started |
@@ -38,7 +38,7 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 
 ## Phase 1 — Speed
 
-- [ ] Derive the locale from the URL instead of `headers()` in `src/app/layout.tsx` and `src/app/(marketing)/layout.tsx`, so marketing pages can be static/ISR (today every request renders on the server; TTFB measured 0.35–1.5 s). Needs multiple root layouts and an internal locale segment (a `[locale]` folder would clash with the storefront's `(public)/[slug]`); scheduled last.
+- [x] **Marketing pages are static** (3.16.0). All marketing routes moved to `src/app/(marketing)/m/[locale]/` (`generateStaticParams` for fr/id/en, `dynamicParams = false`); the proxy rewrites every public marketing URL there (`/pricing` → `/m/fr/pricing`, `/id/pricing` → `/m/id/pricing`) and 308s direct `/m/*` visits to the public URL. Pages read the language from `params` (`src/features/marketing/seo/route-locale.ts`); the root layout no longer calls `headers()` (no `lang` on `<html>`: the marketing layout puts `lang` on its wrapper and sets `<html lang>` with an inline script; storefront/app set it from I18nProvider). Home and changelog revalidate hourly. Built output: every `/m/[locale]/…` route ● SSG; served with `x-nextjs-cache: HIT`, TTFB ~7–23 ms locally (was 350–1,500 ms on prod). Unknown blog/docs slugs now 404 (they were soft-404 200s). Checked in Chromium: `<html lang>` per page, soft navigation, header language switch.
 - [x] **Only the visitor's language file** (3.13.0). `SeededI18nProvider` (`src/components/lang/seeded-i18n-provider.tsx`, a client module) lazy-loads one `seeded-i18n-{fr,id,en}.tsx`. Measured on a production build: every page loaded both the fr (318 KB) and id (299 KB) chunks; now only its own. Raw JS per page: `/en` 1948 → 1333 KB, `/` 1948 → 1651 KB, `/id` 1948 → 1632 KB. The same `next/dynamic` calls in a server component did NOT split (all chunks stayed in the script tags). Header language switch and hydration checked in headless Chromium (no console errors).
 - [x] **Favicon 581 KB → 8 KB** (3.13.0): the old file's own 16/32/48 px images repacked as PNG entries, same artwork.
 - [ ] Per-page Open Graph images (`opengraph-image.tsx`) for home, pricing, blog posts, compare pages.

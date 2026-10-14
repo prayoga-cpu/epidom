@@ -45,6 +45,13 @@ const RSC_UNION_QUERY = "_rsc";
  * `Vary` names the request dimensions that actually change the answer, so an
  * intermediary that ignores `no-store` still can't cross the wires.
  */
+/** The internal route a public marketing URL is served from: src/app/(marketing)/m/[locale]/. */
+function marketingRewriteUrl(req: NextRequest, locale: Locale, basePath: string): URL {
+  const url = req.nextUrl.clone();
+  url.pathname = `/m/${locale}${basePath === "/" ? "" : basePath}`;
+  return url;
+}
+
 function markRedirectUncacheable(response: NextResponse): NextResponse {
   response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
   response.headers.set(
@@ -247,6 +254,15 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL(getLocalizedPath(replacement, locale), req.url), 308);
   }
 
+  // Marketing pages are served from src/app/(marketing)/m/[locale]/ (static,
+  // the language in the path). That internal address is never a public one:
+  // a direct visit goes to the page's real URL.
+  const internal = /^\/m\/(fr|id|en)(\/.*)?$/.exec(path);
+  if (internal) {
+    const target = getLocalizedPath(internal[2] || "/", internal[1] as Locale);
+    return NextResponse.redirect(new URL(target, req.url), 308);
+  }
+
   // A search landing page exists in ONE language at its own slug
   // (features/marketing/landing/registry.ts): /id/kalkulator-hpp is the page,
   // so the same slug under another prefix (or none) goes there for good. Like
@@ -428,9 +444,8 @@ export default async function proxy(req: NextRequest) {
     if (!isLocalizedMarketingPath) {
       return response;
     }
-    // Locale must travel as a REQUEST header (not a response header) to be
-    // readable via headers() in the (marketing) layout Server Component —
-    // see src/app/(marketing)/layout.tsx.
+    // The pages take their language from the rewritten path (below); the
+    // header still travels with the request for any server code that reads it.
     const localizedRequestHeaders = new Headers(req.headers);
     localizedRequestHeaders.set(LOCALE_HEADER, locale);
     localizedRequestHeaders.set("x-request-id", requestId);
@@ -445,15 +460,14 @@ export default async function proxy(req: NextRequest) {
         // shared cache may hand one visitor's redirect to the next.
         return markRedirectUncacheable(NextResponse.redirect(redirectUrl));
       }
-      // fr has no prefix, so the path already resolves to the right route.
-      return NextResponse.next({ request: { headers: localizedRequestHeaders } });
     }
-    // /id and /en: browser keeps the prefixed URL, rewritten internally to
-    // the unprefixed route (no [locale] segment/folder exists — see
-    // src/lib/i18n-routing.ts for why).
-    const rewriteUrl = req.nextUrl.clone();
-    rewriteUrl.pathname = basePath;
-    return NextResponse.rewrite(rewriteUrl, { request: { headers: localizedRequestHeaders } });
+    // Every language is rewritten to the internal locale segment the pages
+    // live in (`/pricing` → `/m/fr/pricing`, `/id/pricing` → `/m/id/pricing`):
+    // the browser keeps the public URL, and the page reads its language from
+    // the route, so it can be prerendered.
+    return NextResponse.rewrite(marketingRewriteUrl(req, locale, basePath), {
+      request: { headers: localizedRequestHeaders },
+    });
   }
 
   // PROTECTED ROUTES - Require authentication
