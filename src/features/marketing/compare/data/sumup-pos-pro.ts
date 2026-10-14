@@ -6,6 +6,8 @@ import type { CompetitorComparisonData } from "../types";
 // footer reads "© 2026 SumUp POS Pro"). No public pricing — demo/"talk to
 // an expert" only. No customer-facing storefront feature found. Do not add
 // claims beyond what's confirmed there.
+// Epidom column corrected 2026-10-14: only the storefront page is free; online
+// ordering is a POS-plan feature (14-day trial). No setup-time claims.
 export const sumupPosProComparison: Partial<Record<Locale, CompetitorComparisonData>> = {
   fr: {
     slug: "sumup-pos-pro",
@@ -16,19 +18,19 @@ export const sumupPosProComparison: Partial<Record<Locale, CompetitorComparisonD
     rows: [
       { feature: "Tarifs publics", epidom: "Prix affichés, aucun appel commercial requis", competitor: "Non publiés — demande de démo obligatoire" },
       { feature: "Vitrine / menu en ligne", epidom: "Gratuite, pour toujours", competitor: "Non trouvée sur leur site" },
-      { feature: "Mise en route", epidom: "Libre-service, ~5 minutes", competitor: "Processus commercial (démo, devis)" },
-      { feature: "Forfait gratuit", epidom: "Oui, sans limite de temps", competitor: "Non mentionné" },
+      { feature: "Mise en route", epidom: "En libre-service, sans démo ni devis", competitor: "Processus commercial (démo, devis)" },
+      { feature: "Forfait gratuit", epidom: "Oui : la vitrine, sans limite de temps", competitor: "Non mentionné" },
     ],
-    note: "Données SumUp POS Pro (ex-Tiller Systems) vérifiées sur tillersystems.com en août 2026 — le domaine historique tiller-systems.com n'est plus actif. Aucune page tarifaire publique trouvée ; comparaison limitée à ce qui est confirmé.",
+    note: "Données SumUp POS Pro (ex-Tiller Systems) vérifiées sur tillersystems.com en août 2026 — le domaine historique tiller-systems.com n'est plus actif. Aucune page tarifaire publique trouvée ; comparaison limitée à ce qui est confirmé.",
     faqEyebrow: "Questions",
     faqTitle: "Epidom vs SumUp POS Pro",
     faqs: [
       {
-        q: "Tiller existe encore ?",
+        q: "Tiller existe encore ?",
         a: "La marque Tiller a été rachetée par SumUp en 2021 et opère désormais sous le nom SumUp POS Pro — même produit, nouveau nom.",
       },
       {
-        q: "Pourquoi Epidom affiche ses prix et pas SumUp POS Pro ?",
+        q: "Pourquoi Epidom affiche ses prix et pas SumUp POS Pro ?",
         a: "Les caisses pensées pour les grandes chaînes ou les besoins sur mesure passent souvent par un devis personnalisé. Epidom vise les petits établissements indépendants avec un tarif fixe et public, pas d'appel commercial nécessaire pour démarrer.",
       },
     ],
@@ -44,8 +46,8 @@ export const sumupPosProComparison: Partial<Record<Locale, CompetitorComparisonD
     rows: [
       { feature: "Public pricing", epidom: "Prices shown, no sales call required", competitor: "Not published — demo request required" },
       { feature: "Online storefront/menu", epidom: "Free, forever", competitor: "Not found on their site" },
-      { feature: "Getting started", epidom: "Self-serve, ~5 minutes", competitor: "Sales-driven process (demo, quote)" },
-      { feature: "Free plan", epidom: "Yes, no time limit", competitor: "Not mentioned" },
+      { feature: "Getting started", epidom: "Self-serve, no demo or quote", competitor: "Sales-driven process (demo, quote)" },
+      { feature: "Free plan", epidom: "Yes: the storefront, no time limit", competitor: "Not mentioned" },
     ],
     note: "SumUp POS Pro (formerly Tiller Systems) facts verified on tillersystems.com as of August 2026 — the historical tiller-systems.com domain is no longer active. No public pricing page was found; comparison limited to what's confirmed.",
     faqEyebrow: "Questions",

@@ -13,6 +13,7 @@ import {
 } from "./lib/i18n-routing";
 import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE, isResumableAppPath } from "./lib/last-visited";
 import { isSalesPagePath } from "./lib/sales-pages";
+import { landingLocaleFor } from "./features/marketing/landing/registry";
 import type { Locale } from "./components/lang/i18n-provider";
 
 // Next 16's App Router marks a client-side navigation with the `rsc: 1`
@@ -246,10 +247,20 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL(getLocalizedPath(replacement, locale), req.url), 308);
   }
 
+  // A search landing page exists in ONE language at its own slug
+  // (features/marketing/landing/registry.ts): /id/kalkulator-hpp is the page,
+  // so the same slug under another prefix (or none) goes there for good. Like
+  // the retired paths above, the answer depends only on the path.
+  const landingLocale = landingLocaleFor(basePath);
+  if (landingLocale && locale !== landingLocale) {
+    return NextResponse.redirect(new URL(getLocalizedPath(basePath, landingLocale), req.url), 308);
+  }
+
   // /compare/*, /blog/*, /docs/* are open-ended sets of pages (comparison
   // pages, blog posts, docs guides) — prefix-matched so a new one doesn't
   // require a proxy change, unlike the fixed single-page routes above.
   const isLocalizedMarketingPath =
+    landingLocale !== undefined ||
     LOCALIZED_MARKETING_PATHS.has(basePath) ||
     basePath.startsWith("/compare") ||
     basePath.startsWith("/blog/") ||
@@ -374,12 +385,14 @@ export default async function proxy(req: NextRequest) {
 
   // Check if current path is a public route — matched against basePath so
   // /id/about and /en/pricing are recognized the same as /about and /pricing.
-  const isPublicRoute = publicRoutes.some((route) => {
-    if (route === "/") {
-      return basePath === "/";
-    }
-    return basePath.startsWith(route);
-  });
+  const isPublicRoute =
+    landingLocale !== undefined ||
+    publicRoutes.some((route) => {
+      if (route === "/") {
+        return basePath === "/";
+      }
+      return basePath.startsWith(route);
+    });
 
   // Also allow public storefront routes which start with /@
   const isStorefrontRoute = basePath.startsWith("/@");
@@ -423,7 +436,8 @@ export default async function proxy(req: NextRequest) {
     localizedRequestHeaders.set("x-request-id", requestId);
 
     if (locale === DEFAULT_LOCALE) {
-      const preferred = preferredLocaleForUnprefixedVisit(req);
+      // A French landing page has no other language to send anyone to.
+      const preferred = landingLocale ? DEFAULT_LOCALE : preferredLocaleForUnprefixedVisit(req);
       if (preferred !== DEFAULT_LOCALE) {
         const redirectUrl = req.nextUrl.clone();
         redirectUrl.pathname = getLocalizedPath(basePath, preferred);

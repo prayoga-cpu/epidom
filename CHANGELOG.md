@@ -9,6 +9,17 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.14.0] - 2026-10-14 · feat
+
+Free calculators, a guide for each kind of business and feature, and ten new comparisons.
+
+- **Recipe cost calculator.** Work out what one portion of a dish costs from your ingredients, and the price that keeps your food cost where you want it: calcul du coût de revient in French, kalkulator HPP in Indonesian, recipe cost calculator in English. Your numbers stay in your browser.
+- **Delivery-app commission calculator.** A page of its own in each language, built on the homepage calculator: how much moving some of your delivery-app orders to your own ordering link would save.
+- **Guides for your business.** New pages for cafés, restaurants and bakeries, and for the features owners ask about: online ordering without commission, the QR code menu, working offline, the kitchen display, stock and recipes, staff scheduling and receipt printers. Each one says which plan includes what, with its price.
+- **Ten new comparisons.** Epidom next to L'Addition, Lightspeed, Innovorder, Popina and Zettle in France, and Pawoon, Qasir, Olsera, ESB and Kasir Pintar in Indonesia. Every fact about another product comes from its own website, with the date it was checked.
+- **Corrected comparisons.** The existing comparison pages said online ordering was part of the free plan and that setup took about five minutes. Online ordering is part of the POS plan (14 days free), and those lines now say so.
+- **Guides & tools in the footer.** Every page now links to the guides and calculators in its language.
+
 ## [3.13.0] - 2026-10-14 · feat
 
 Storefront pages that speak the shop's language and show its dishes, and a lighter website.

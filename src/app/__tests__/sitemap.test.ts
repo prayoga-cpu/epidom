@@ -11,6 +11,9 @@ import { mokaComparison } from "@/features/marketing/compare/data/moka";
 import { sumupPosProComparison } from "@/features/marketing/compare/data/sumup-pos-pro";
 import { sundayComparison } from "@/features/marketing/compare/data/sunday";
 import { zeltyComparison } from "@/features/marketing/compare/data/zelty";
+import { LANDING_PAGES } from "@/features/marketing/landing/content";
+import { landingHreflang, landingUrl } from "@/features/marketing/landing/metadata";
+import type { LandingGroup } from "@/features/marketing/landing/registry";
 
 // The DB-backed storefront list is the only thing the sitemap fetches at
 // request time; everything else is static content.
@@ -296,6 +299,26 @@ describe("sitemap hreflang", () => {
   it("gives blog and docs entries no cross-locale alternates (content is not translated 1:1)", () => {
     for (const e of entries.filter((e) => /\/(blog|docs)\/[^/]+$/.test(e.url))) {
       expect(e.alternates, e.url).toBeUndefined();
+    }
+  });
+});
+
+describe("sitemap landing pages", () => {
+  it("lists every landing page once, in its own language, dated, with its siblings as hreflang", () => {
+    for (const page of LANDING_PAGES) {
+      const e = byUrl(landingUrl(page.slug, page.locale));
+      expect(e, page.slug).toBeDefined();
+      expect(e!.lastModified).toBe(page.updated);
+      expect(e!.alternates?.languages).toEqual(landingHreflang(page.group as LandingGroup));
+    }
+  });
+
+  it("never lists a landing page under another language's prefix", () => {
+    for (const page of LANDING_PAGES) {
+      for (const locale of ["fr", "id", "en"] as Locale[]) {
+        if (locale === page.locale) continue;
+        expect(byUrl(urlOf(`/${page.slug}`, locale)), `${locale} ${page.slug}`).toBeUndefined();
+      }
     }
   });
 });

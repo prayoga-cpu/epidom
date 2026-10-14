@@ -10,7 +10,20 @@ import { mokaComparison } from "@/features/marketing/compare/data/moka";
 import { sumupPosProComparison } from "@/features/marketing/compare/data/sumup-pos-pro";
 import { sundayComparison } from "@/features/marketing/compare/data/sunday";
 import { zeltyComparison } from "@/features/marketing/compare/data/zelty";
+import { ladditionComparison } from "@/features/marketing/compare/data/laddition";
+import { lightspeedComparison } from "@/features/marketing/compare/data/lightspeed";
+import { innovorderComparison } from "@/features/marketing/compare/data/innovorder";
+import { popinaComparison } from "@/features/marketing/compare/data/popina";
+import { zettleComparison } from "@/features/marketing/compare/data/zettle";
+import { pawoonComparison } from "@/features/marketing/compare/data/pawoon";
+import { qasirComparison } from "@/features/marketing/compare/data/qasir";
+import { olseraComparison } from "@/features/marketing/compare/data/olsera";
+import { esbComparison } from "@/features/marketing/compare/data/esb";
+import { kasirPintarComparison } from "@/features/marketing/compare/data/kasir-pintar";
 import { isStorefrontIndexable } from "@/features/storefront/lib/indexing";
+import { LANDING_PAGES } from "@/features/marketing/landing/content";
+import { landingHreflang, landingUrl } from "@/features/marketing/landing/metadata";
+import type { LandingGroup } from "@/features/marketing/landing/registry";
 
 // Competitor comparison pages, each authored in only 1-2 locales (each
 // competitor is only relevant to one market). The locales are read off the
@@ -25,6 +38,16 @@ const COMPETITOR_COMPARISONS = [
   sundayComparison,
   sumupPosProComparison,
   zeltyComparison,
+  ladditionComparison,
+  lightspeedComparison,
+  innovorderComparison,
+  popinaComparison,
+  zettleComparison,
+  pawoonComparison,
+  qasirComparison,
+  olseraComparison,
+  esbComparison,
+  kasirPintarComparison,
 ];
 
 const BASE_URL = "https://epidom.fr";
@@ -125,6 +148,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Only storefronts worth indexing: test pages and stores without a real menu
   // are noindexed by their own page, so listing them here would contradict it.
+  // Search landing pages: each at its own slug in its own language, with its
+  // siblings in the other languages (different slugs) as hreflang.
+  const landingEntries: MetadataRoute.Sitemap = LANDING_PAGES.map((page) => ({
+    url: landingUrl(page.slug, page.locale),
+    lastModified: page.updated,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+    alternates: { languages: landingHreflang(page.group as LandingGroup) },
+  }));
+
   let storefrontEntries: MetadataRoute.Sitemap = [];
   try {
     const storefronts = await storefrontService.getPublishedSlugsForSitemap();
@@ -153,6 +186,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...blogEntries,
     ...docsEntries,
     ...competitorCompareEntries,
+    ...landingEntries,
     ...storefrontEntries,
   ];
 }

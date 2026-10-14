@@ -4,6 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { LANGUAGE_OPTIONS, rememberLocaleChoice } from "@/components/lang/language-options";
+import { landingLinksFor } from "@/features/marketing/landing/registry";
 import { trackEvent } from "@/lib/analytics";
 import {
   PRIONATION_BOOKING_URL,
@@ -78,7 +79,7 @@ export const SiteFooter = memo(function SiteFooter() {
       <Container maxWidth="7xl" className="relative z-10 px-4 sm:px-6 lg:px-8">
         {/* Top grid */}
         <div
-          className="grid grid-cols-2 gap-8 pb-16 sm:grid-cols-3 lg:grid-cols-[1.4fr_repeat(4,1fr)]"
+          className="grid grid-cols-2 gap-8 pb-16 sm:grid-cols-3 lg:grid-cols-[1.4fr_repeat(5,1fr)]"
           style={{
             borderBottom: "1px solid rgba(255,255,255,0.07)",
           }}
@@ -138,6 +139,17 @@ export const SiteFooter = memo(function SiteFooter() {
               { label: t("footer.linkDocs"), href: getLocalizedPath("/docs", locale) },
               { label: t("footer.linkChangelog"), href: getLocalizedPath("/changelog", locale) },
             ]}
+          />
+
+          {/* Guides & tools: this language's search landing pages (calculators,
+              POS by business type, features). Labels come from the light
+              registry, not the pages' content. */}
+          <FooterCol
+            heading={t("landing.view.tools")}
+            links={landingLinksFor(locale).map((link) => ({
+              label: link.label,
+              href: getLocalizedPath(`/${link.slug}`, locale),
+            }))}
           />
 
           {/* Company */}

@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current focus: SEO and website rework — Phase 0 live (3.12.1), Phase 3 + part of Phase 1 in 3.13.0, Phase 2 in progress
+## Current focus: SEO and website rework — Phases 0 and 3 live, Phase 2 pages in 3.14.0, Phase 1 static rendering next
 
 _(AI agents: this file tracks the SEO/website phases below. Tick a box the moment an item is done and add the version it shipped in; don't re-describe finished work in prose. Anything that needs the operator goes in "Operator to-do". The previous STATUS.md (v3 dashboard revamp, releases 3.3.0–3.12.0, and their open operator to-dos) is archived unchanged at `docs/status-archive/2026-10-14-v3-revamp-and-releases.md`; its open items are listed at the bottom so they stay visible.)_
 
@@ -16,7 +16,7 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 | --- | --- | --- |
 | 0 — Hygiene | Remove junk from the index, retarget titles, fix the H1 and structured data, crawler access | ✅ live in 3.12.1 (b7b36aec, 2026-10-14) |
 | 1 — Speed | Static marketing pages, one language bundle per visitor, image/favicon weight, Core Web Vitals baseline | 🟡 bundle + favicon in 3.13.0; static pages, OG images, CWV open |
-| 2 — Pages that rank | Free tools, vertical pages, feature pages, more comparison pages, blog cadence | ⬜ not started |
+| 2 — Pages that rank | Free tools, vertical pages, feature pages, more comparison pages, blog cadence | 🟡 tools + 32 landing pages + 10 comparisons in 3.14.0; blog open |
 | 3 — Storefront loop | Server-rendered menus, store-language metadata, LocalBusiness detail, "Powered by" link | ✅ 3.13.0 |
 | 4 — Authority | Search Console, Business Profile, Play Store listing, directories, listicles, data PR | ⬜ not started |
 
@@ -44,31 +44,34 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 - [ ] Per-page Open Graph images (`opengraph-image.tsx`) for home, pricing, blog posts, compare pages.
 - [ ] Core Web Vitals baseline for `/`, `/id`, `/en`, `/pricing` (PageSpeed API quota was exhausted on 2026-10-14) and again after the changes above.
 
-## Phase 2 — Pages that rank
+## Phase 2 — Pages that rank — 🟡 3.14.0 (blog work open)
 
-Free tools (link magnets, no NF525 dependency):
+Landing system (3.14.0): `src/features/marketing/landing/` — `registry.ts` (slug → language + hreflang group, link labels; imported by the proxy, sitemap and footer), `content/<group>.ts` (one `LandingPage` per language, server-only), `render-landing-page.tsx` + `components/landing-page-view.tsx`, a route folder per slug in `src/app/(marketing)/<slug>/page.tsx`. A page exists in ONE language at its own slug; the proxy 308s the slug under any other prefix to it and never redirects it by browser language. hreflang links the group's siblings at their own slugs. Tests: registry ↔ content ↔ route files, titles ≤ 60 / descriptions ≤ 160, ≥ 550 words, banned claims, own-currency prices, French typography (`landing-content.test.ts`), proxy (`proxy-landing-pages.test.ts`), sitemap. Content written from `FACTS.md` (product facts sheet in the session scratchpad: plans, prices, what each plan includes).
 
-- [ ] Recipe cost / margin calculator — fr "calcul coût de revient recette", id "kalkulator HPP menu" (reuse `src/features/marketing/home/lib/margin-calculator.ts`).
-- [ ] Delivery-app commission calculator as its own page in 3 languages (fr Uber Eats/Deliveroo, id GoFood/GrabFood/ShopeeFood).
-- [ ] Free QR menu page where the free storefront is the tool (fr "menu QR code gratuit", id "menu QR code gratis").
+Free tools:
 
-Vertical and feature pages (written per language with localized slugs, like blog and docs):
+- [x] **Recipe cost / HPP calculator** (3.14.0): `/calcul-cout-de-revient`, `/id/kalkulator-hpp`, `/en/recipe-cost-calculator`. New `RecipeCostCalculator` + `lib/recipe-cost.ts` (ingredients by pack price/size/quantity, portions, packaging, target food cost, optional selling price; tested).
+- [x] **Delivery-app commission calculator pages** (3.14.0): `/calcul-commission-uber-eats`, `/id/kalkulator-komisi-gofood`, `/en/delivery-app-commission-calculator`, embedding the home `MarginCalculatorSection`.
+- [x] **Free QR menu pages** (3.14.0): `/menu-qr-code-gratuit`, `/id/menu-qr-code-gratis`, `/en/free-qr-code-menu` (viewing is free; ordering is POS).
 
-- [ ] id: aplikasi-kasir-cafe, aplikasi-kasir-restoran, aplikasi-kasir-toko-roti, aplikasi-kasir-offline.
-- [ ] fr: commande-en-ligne-restaurant, menu-qr-code; logiciel-caisse-cafe and logiciel-caisse-boulangerie **after the NF525 decision**.
-- [ ] en: bakery-pos, cafe-pos, commission-free-online-ordering.
-- [ ] Split `/services` into feature pages: kitchen display, stock and recipe costs, staff scheduling, offline till, receipt printers.
+Vertical and feature pages (3.14.0):
 
-Comparison pages (`src/features/marketing/compare/data/`):
+- [x] id: aplikasi-kasir-cafe, aplikasi-kasir-restoran, aplikasi-kasir-toko-roti, aplikasi-kasir-offline; en: cafe-pos-system, bakery-pos-system, offline-pos-system.
+- [x] Online ordering: fr commande-en-ligne-restaurant, id pesan-online-tanpa-komisi, en commission-free-online-ordering.
+- [x] Feature pages in 3 languages: kitchen display (ecran-cuisine-kds / layar-dapur-kds / kitchen-display-system), stock & recipes (gestion-stock-restaurant / aplikasi-stok-bahan-baku / restaurant-inventory-software), staff scheduling (planning-personnel-restaurant / jadwal-shift-karyawan / restaurant-staff-scheduling), offline (caisse-hors-ligne), receipt printers (imprimante-ticket-caisse / printer-struk-kasir / receipt-printer-pos).
+- [ ] fr logiciel-caisse-cafe and logiciel-caisse-boulangerie — **after the NF525 decision**.
+- [x] Footer "Guides & tools" column with the language's landing pages (3.14.0). `/services` itself is unchanged (it still links nothing to the feature pages).
 
-- [ ] fr: L'Addition, Lightspeed, Tiller (SumUp), Innovorder, Popina.
-- [ ] id: Pawoon, Qasir, Olsera, ESB, Kasir Pintar.
-- [ ] Link the individual comparison pages from the footer.
+Comparison pages (3.14.0):
+
+- [x] fr: L'Addition, Lightspeed, Innovorder, Popina, Zettle (Tiller is the existing SumUp POS Pro page). id: Pawoon, Qasir, Olsera, ESB, Kasir Pintar. Drafted by research agents, then a legal pass: competitor facts only from the competitor's own site/help centre (re-fetched 2026-10-14), feature rows without official evidence deleted ("not mentioned" never stands for "doesn't have"). Lightspeed's draft claimed "no offline mode" — false per its help centre; its official pricing page was unreadable (403), so the page compares no price. Popina's pricing page was unreadable too.
+- [x] **The 6 existing comparison pages were wrong** about Epidom: they promised free online ordering and "~5 minutes" setup. Corrected (3.14.0) and pinned by `compare-data-claims.test.ts`.
+- [x] Individual comparison pages are linked from the `/compare` hub (all 17); the footer links the hub only (17 links would swamp it).
 
 Content:
 
 - [ ] Blog cadence: 2 posts/month in fr and id (1,000–1,800 words), each linking to a vertical or tool page.
-- [ ] Expand the 8 existing ~300-word posts; add `dateModified` (an `updated` field) to posts and the sitemap.
+- [ ] Expand the 8 existing ~300-word posts (some still say ordering is free); add `dateModified` (an `updated` field) to posts and the sitemap.
 
 ## Phase 3 — Storefront loop — ✅ 3.13.0
 

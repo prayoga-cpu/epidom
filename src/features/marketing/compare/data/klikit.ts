@@ -5,6 +5,8 @@ import type { CompetitorComparisonData } from "../types";
 // custom-quoted, not public; they do advertise a zero-commission "Owned
 // Channel" branded ordering website. Do not add claims beyond what's
 // confirmed there.
+// Epidom column corrected 2026-10-14: only the storefront page is free; online
+// ordering is a POS-plan feature (14-day trial). No setup-time claims.
 export const klikitComparison: Partial<Record<Locale, CompetitorComparisonData>> = {
   id: {
     slug: "klikit",
@@ -14,8 +16,8 @@ export const klikitComparison: Partial<Record<Locale, CompetitorComparisonData>>
     colCompetitor: "Klikit",
     rows: [
       { feature: "Transparansi harga", epidom: "Harga publik, sama buat semua merchant", competitor: "Disesuaikan per merchant, hubungi sales buat penawaran" },
-      { feature: "Toko online tanpa komisi", epidom: "Gratis selamanya, tier Free", competitor: "Ada (\"Owned Channel\"), bagian dari paket custom" },
-      { feature: "Setup", epidom: "Self-serve, ~5 menit", competitor: "Proses onboarding lewat sales/demo" },
+      { feature: "Toko online tanpa komisi", epidom: "Termasuk paket POS (Rp 229.000/bulan, uji coba 14 hari)", competitor: "Ada (\"Owned Channel\"), bagian dari paket custom" },
+      { feature: "Setup", epidom: "Self-serve, tanpa demo", competitor: "Proses onboarding lewat sales/demo" },
       { feature: "Cocok buat", epidom: "Warung/kafe satu outlet yang baru mulai online", competitor: "Bisnis dengan pesanan dari banyak platform aggregator sekaligus" },
     ],
     note: "Data Klikit diambil dari klikit.io per Agustus 2026. Klikit nggak mempublikasikan harga di situsnya — bandingan di atas soal transparansi dan cara akses, bukan perbandingan fitur lengkap.",
@@ -42,8 +44,8 @@ export const klikitComparison: Partial<Record<Locale, CompetitorComparisonData>>
     colCompetitor: "Klikit",
     rows: [
       { feature: "Pricing transparency", epidom: "Public pricing, same for every merchant", competitor: "Tailored per merchant, contact sales for a quote" },
-      { feature: "Zero-commission storefront", epidom: "Free forever, Free tier", competitor: "Available (\"Owned Channel\"), part of a custom plan" },
-      { feature: "Setup", epidom: "Self-serve, ~5 minutes", competitor: "Sales/demo-driven onboarding" },
+      { feature: "Zero-commission storefront", epidom: "Included in the POS plan (Rp 229,000/month, 14-day trial)", competitor: "Available (\"Owned Channel\"), part of a custom plan" },
+      { feature: "Setup", epidom: "Self-serve, no demo", competitor: "Sales/demo-driven onboarding" },
       { feature: "Best fit for", epidom: "Single-outlet cafés/warungs just getting started online", competitor: "Businesses juggling orders from many aggregator platforms at once" },
     ],
     note: "Klikit facts sourced from klikit.io as of August 2026. Klikit doesn't publish pricing on its site — the comparison above is about transparency and access, not a full feature match.",

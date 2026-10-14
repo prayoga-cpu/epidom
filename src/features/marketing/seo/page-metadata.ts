@@ -338,19 +338,19 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
     path: "/compare",
     copy: {
       en: {
-        title: "Epidom vs. Moka, Majoo, Zelty, SumUp & Sunday — EPIDOM",
+        title: "Epidom vs. Moka, Pawoon, Zelty, Lightspeed & More — EPIDOM",
         description:
-          "Factual, sourced comparisons between Epidom and tools you may already use: Moka, Majoo, Klikit, Zelty, SumUp POS Pro and Sunday.",
+          "Factual comparisons, sourced from each tool's own site: Moka, Majoo, Pawoon, Qasir, Olsera, ESB, Zelty, L'Addition, Lightspeed, Innovorder and more.",
       },
       fr: {
-        title: "Alternative à Zelty, Tiller (SumUp) et Sunday — EPIDOM",
+        title: "Alternative à Zelty, L'Addition, Lightspeed, Sunday — EPIDOM",
         description:
-          "Des comparatifs factuels et sourcés entre Epidom et les outils que vous utilisez peut-être déjà : Zelty, SumUp POS Pro (ex-Tiller) et Sunday.",
+          "Des comparatifs factuels, sourcés sur le site de chaque outil : Zelty, L'Addition, Lightspeed, Innovorder, Popina, Zettle, SumUp POS Pro, Sunday.",
       },
       id: {
-        title: "Alternatif Moka, Majoo & Klikit: Perbandingan — EPIDOM",
+        title: "Alternatif Moka, Majoo, Pawoon, Qasir & ESB — EPIDOM",
         description:
-          "Perbandingan faktual dan bersumber antara Epidom dan aplikasi kasir serta pemesanan yang mungkin sudah Anda pakai: Moka, Majoo, dan Klikit.",
+          "Perbandingan faktual, bersumber dari situs resmi tiap aplikasi: Moka, Majoo, Pawoon, Qasir, Olsera, ESB, Kasir Pintar, dan Klikit.",
       },
     },
   },
