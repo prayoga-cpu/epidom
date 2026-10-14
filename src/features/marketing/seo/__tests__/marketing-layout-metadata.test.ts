@@ -13,8 +13,8 @@ vi.mock("@/features/marketing/shared/components/site-footer", () => ({ SiteFoote
 vi.mock("@/features/marketing/shared/components/cookie-consent-bar", () => ({
   CookieConsentBar: () => null,
 }));
-vi.mock("@/components/lang/i18n-provider-eager", () => ({
-  EagerI18nProvider: ({ children }: { children: unknown }) => children,
+vi.mock("@/components/lang/seeded-i18n-provider", () => ({
+  SeededI18nProvider: ({ children }: { children: unknown }) => children,
 }));
 
 import { metadata } from "@/app/(marketing)/layout";

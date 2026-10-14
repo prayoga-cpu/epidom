@@ -127,9 +127,9 @@ describe("sitemap lastModified", () => {
     for (const e of compare) expect(e.lastModified, e.url).toBeUndefined();
   });
 
-  it("keeps the storefront's own updatedAt", () => {
-    const e = byUrl(`${BASE}/@cafe-a`);
-    expect(e?.lastModified).toBe(STOREFRONT_UPDATED);
+  it("keeps the storefront's own updatedAt, on its profile and its menu", () => {
+    expect(byUrl(`${BASE}/@cafe-a`)?.lastModified).toBe(STOREFRONT_UPDATED);
+    expect(byUrl(`${BASE}/@cafe-a/menu`)?.lastModified).toBe(STOREFRONT_UPDATED);
   });
 });
 
@@ -179,7 +179,7 @@ describe("sitemap coverage", () => {
       },
     ];
     const listed = (await sitemap()).filter((e) => e.url.includes("/@")).map((e) => e.url);
-    expect(listed).toEqual([`${BASE}/@cafe-a`]);
+    expect(listed).toEqual([`${BASE}/@cafe-a`, `${BASE}/@cafe-a/menu`]);
   });
 
   it("still returns the static entries when the database is unavailable", async () => {

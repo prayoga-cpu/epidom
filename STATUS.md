@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current focus: SEO and website rework — Phase 0 code-complete (3.12.1, not deployed), Phase 1 next
+## Current focus: SEO and website rework — Phase 0 live (3.12.1), Phase 3 + part of Phase 1 in 3.13.0, Phase 2 in progress
 
 _(AI agents: this file tracks the SEO/website phases below. Tick a box the moment an item is done and add the version it shipped in; don't re-describe finished work in prose. Anything that needs the operator goes in "Operator to-do". The previous STATUS.md (v3 dashboard revamp, releases 3.3.0–3.12.0, and their open operator to-dos) is archived unchanged at `docs/status-archive/2026-10-14-v3-revamp-and-releases.md`; its open items are listed at the bottom so they stay visible.)_
 
@@ -14,15 +14,15 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| 0 — Hygiene | Remove junk from the index, retarget titles, fix the H1 and structured data, crawler access | ✅ code-complete in 3.12.1 (uncommitted, not deployed) |
-| 1 — Speed | Static marketing pages, one language bundle per visitor, image/favicon weight, Core Web Vitals baseline | ⬜ not started |
+| 0 — Hygiene | Remove junk from the index, retarget titles, fix the H1 and structured data, crawler access | ✅ live in 3.12.1 (b7b36aec, 2026-10-14) |
+| 1 — Speed | Static marketing pages, one language bundle per visitor, image/favicon weight, Core Web Vitals baseline | 🟡 bundle + favicon in 3.13.0; static pages, OG images, CWV open |
 | 2 — Pages that rank | Free tools, vertical pages, feature pages, more comparison pages, blog cadence | ⬜ not started |
-| 3 — Storefront loop | Server-rendered menus, store-language metadata, LocalBusiness detail, "Powered by" link | ⬜ not started |
+| 3 — Storefront loop | Server-rendered menus, store-language metadata, LocalBusiness detail, "Powered by" link | ✅ 3.13.0 |
 | 4 — Authority | Search Console, Business Profile, Play Store listing, directories, listicles, data PR | ⬜ not started |
 
 ---
 
-## Phase 0 — Hygiene — ✅ code-complete in 3.12.1 (2026-10-14), not deployed
+## Phase 0 — Hygiene — ✅ live in 3.12.1 (pushed b7b36aec, 2026-10-14)
 
 - [x] **Sitemap stops submitting test and empty storefronts** (3.12.1). One rule, `isStorefrontIndexable` in `src/features/storefront/lib/indexing.ts` (not a test/demo name, at least `MIN_INDEXABLE_MENU_ITEMS` = 3 available menu items), drives both the sitemap and `noindex, follow` on `/@slug`, `/@slug/menu` and item pages. Against the dev DB: 24 → 14 storefronts listed; `@testing`, `@testings`, `@demo-cmsbjfr6`, `@sfa` noindexed; also `@lecomptoir-paris` (fewer than 3 available items — see Decisions).
 - [x] **Sales pages are `noindex`** (3.12.1). `X-Robots-Tag: noindex, follow` in `next.config.ts` on `/sales-page-N`, `/{en,id}/sales-page-N` and `/sales-pages/*`; the home page has none.
@@ -33,13 +33,15 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 - [x] **Crawler access** (3.12.1). Google-InspectionTool, GoogleOther, Chrome-Lighthouse, BingPreview, Pinterest exempt from the language redirect; the redirect is `private, no-store` with `Vary: Cookie, Accept-Language, …`; footer links `/`, `/id`, `/en` with plain `<a hreflang>` (language list + cookie helper moved to `src/components/lang/language-options.ts`).
 - [x] **One `<main>` per page** (3.12.1): the marketing layout's; 12 page wrappers are `<div>`s.
 - [x] Tests + type check pass (3.12.1): full suite ran once (518 files, the one failure fixed and re-run), then the 32 affected files; `tsc --noEmit` 0 errors; `next build` passed; the built app was checked with curl as Googlebot on port 3100 (titles, h1, robots, JSON-LD, headers, redirect, footer links, sitemap). CHANGELOG 3.12.1 · fix.
-- [ ] **Not verified:** the footer language row in a real browser or on a phone (layout only checked in markup); Google's Rich Results Test on the new JSON-LD (needs the deployed URL); nothing deployed yet.
+- [x] **Deployed and checked on epidom.fr** (2026-10-14): `/id` title, `X-Robots-Tag` on `/sales-page-1`, `noindex` on `/@testing` and `/careers`, sitemap 94 URLs, h1 once. Footer language row checked in headless Chromium at 390 px and 1440 px (40 px tall links, no horizontal overflow, no console errors).
+- [ ] Google's Rich Results Test on the live JSON-LD (operator: it needs a Google login).
 
 ## Phase 1 — Speed
 
-- [ ] Derive the locale from the URL instead of `headers()` in `src/app/layout.tsx` and `src/app/(marketing)/layout.tsx`, so marketing pages can be static/ISR (today every request renders on the server; TTFB measured 0.35–1.5 s).
-- [ ] Load only the visitor's language file (`src/components/lang/i18n-provider-eager.tsx` imports fr + id + en, ~1.1 MB of source, on every marketing page).
-- [ ] `public/favicon.ico` 581 KB → < 20 KB; per-page Open Graph images (`opengraph-image.tsx`) for home, pricing, blog posts, compare pages.
+- [ ] Derive the locale from the URL instead of `headers()` in `src/app/layout.tsx` and `src/app/(marketing)/layout.tsx`, so marketing pages can be static/ISR (today every request renders on the server; TTFB measured 0.35–1.5 s). Needs multiple root layouts and an internal locale segment (a `[locale]` folder would clash with the storefront's `(public)/[slug]`); scheduled last.
+- [x] **Only the visitor's language file** (3.13.0). `SeededI18nProvider` (`src/components/lang/seeded-i18n-provider.tsx`, a client module) lazy-loads one `seeded-i18n-{fr,id,en}.tsx`. Measured on a production build: every page loaded both the fr (318 KB) and id (299 KB) chunks; now only its own. Raw JS per page: `/en` 1948 → 1333 KB, `/` 1948 → 1651 KB, `/id` 1948 → 1632 KB. The same `next/dynamic` calls in a server component did NOT split (all chunks stayed in the script tags). Header language switch and hydration checked in headless Chromium (no console errors).
+- [x] **Favicon 581 KB → 8 KB** (3.13.0): the old file's own 16/32/48 px images repacked as PNG entries, same artwork.
+- [ ] Per-page Open Graph images (`opengraph-image.tsx`) for home, pricing, blog posts, compare pages.
 - [ ] Core Web Vitals baseline for `/`, `/id`, `/en`, `/pricing` (PageSpeed API quota was exhausted on 2026-10-14) and again after the changes above.
 
 ## Phase 2 — Pages that rank
@@ -68,13 +70,15 @@ Content:
 - [ ] Blog cadence: 2 posts/month in fr and id (1,000–1,800 words), each linking to a vertical or tool page.
 - [ ] Expand the 8 existing ~300-word posts; add `dateModified` (an `updated` field) to posts and the sitemap.
 
-## Phase 3 — Storefront loop
+## Phase 3 — Storefront loop — ✅ 3.13.0
 
-- [ ] Server-render the menu on `/@slug` (today ~30 crawlable words; the menu is only behind "View Menu & Order").
-- [ ] Storefront metadata in the store's language (from its currency/country), title "{Name} — Menu & commande en ligne, {city}"; replace the "Welcome to our store!" default.
-- [ ] `FoodEstablishment` gains `address`, `geo`, `servesCuisine`, `priceRange` where the store has them.
-- [ ] "Powered by Epidom" links to a localized landing page, not `/`.
-- [ ] Prompt merchants to use their store page as the menu/order link on Google Maps.
+- [x] **Store pages in the store's language** (3.13.0). New `src/app/(public)/[slug]/layout.tsx` wraps every store page in `SeededI18nProvider followVisitorPreference`: the server renders the store's language (`resolveStorefrontLocale`: rupiah → id, euro → fr, else an explicit fr/en business language, else en — `Business.locale` defaults to "id", so a Paris café in euros was stored as Indonesian), then the visitor's saved choice / browser language takes over after hydration (`I18nProvider defaultLocale`). `<div lang>` marks the content (`StoreLanguage`). Checked in Chromium: server `lang=id`, an English browser switches to `en`, no hydration errors.
+- [x] **The profile page shows dishes** (3.13.0): "On the menu", up to 6 available items with prices, featured first (`pickMenuHighlights`). The menu page was already server-rendered (items + prices in the HTML); `/@slug/menu` is now in the sitemap for indexable stores.
+- [x] **Store-language titles and snippets** (3.13.0, `src/features/storefront/lib/storefront-metadata.ts`): "Ellens Bakery — Menu & Pesan Online, {city}" ("online ordering" only when the store accepts orders); the "Welcome to our store!" default is ignored; the menu page's description names real dishes; og:locale follows the store.
+- [x] **JSON-LD** (3.13.0): CafeOrCoffeeShop / Bakery / Restaurant / BarOrPub / FastFoodRestaurant from `Business.businessType`, `priceRange` from the menu, `PostalAddress` only when there is a street or city (a country alone is often the onboarding default). No `geo`: the Store model has no coordinates.
+- [x] **"Powered by Epidom"** links to `/`, `/id` or `/en` by the language being read (3.13.0).
+- [x] **Merchant prompt** (3.13.0): Storefront → Google Reviews has a "Use this page as your menu on Google Maps" card with the `/@slug/menu` link, a copy button and the 3 Business Profile steps.
+- [ ] Not done: a store-language default description in the product itself (new storefronts are still created with the English "Welcome to our store!").
 
 ## Phase 4 — Authority
 
@@ -120,7 +124,7 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Operator to-do (SEO)
 
-- [ ] Commit and deploy 3.12.1 (Phase 0 is in the working tree only). Then check `https://epidom.fr/` and `/id/pricing` in Search Console's URL Inspection and Google's Rich Results Test (expect SoftwareApplication with 3 offers, FAQPage, BreadcrumbList on blog/compare pages).
+- [ ] Check `https://epidom.fr/` and `/id/pricing` in Search Console's URL Inspection and Google's Rich Results Test (expect SoftwareApplication with 3 offers, FAQPage, BreadcrumbList on blog/compare pages). 3.12.1 is deployed.
 - [ ] Verify `epidom.fr` in Google Search Console (domain property) and Bing Webmaster; submit `https://epidom.fr/sitemap.xml`; after Phase 0 deploys, request removal of the test storefront URLs (`/@testing`, `/@testings`, `/@demo-cmsbjfr6`, `/@sfa`) if they show as indexed.
 - [ ] Share a Search Console export (top queries, pages, indexed count) so the keyword tracker gets real numbers.
 - [ ] Clean up or unpublish the test storefronts in production (`testing`, `testings`, `demo-cmsbjfr6`, `planb-261-1`): Phase 0 hides them from search, it doesn't delete them.

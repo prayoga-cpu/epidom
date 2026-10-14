@@ -1,9 +1,14 @@
 import { notFound } from "next/navigation";
-import { storefrontService } from "@/lib/services";
 import { prisma } from "@/lib/prisma";
 import { PublicItemDetail } from "@/features/storefront/components/public-item-detail";
 import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
 import { storefrontRobots } from "@/features/storefront/lib/indexing";
+import {
+  cleanStorefrontSlug,
+  getPublicStorefront,
+  storefrontLocaleOf,
+} from "@/features/storefront/lib/public-storefront";
+import { storefrontItemDescription } from "@/features/storefront/lib/storefront-metadata";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -12,8 +17,8 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug, itemId } = await params;
-  const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
-  const storefront = await storefrontService.getStorefrontBySlug(cleanSlug);
+  const cleanSlug = cleanStorefrontSlug(slug);
+  const storefront = await getPublicStorefront(cleanSlug);
 
   if (!storefront) {
     return { title: "Store Not Found | Epidom" };
@@ -34,16 +39,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${item.name} - ${storefront.displayName} | Epidom`,
     description:
       item.description ||
-      `Pesan ${item.name} dari ${storefront.displayName} langsung via WhatsApp.`,
+      storefrontItemDescription(item.name, storefront.displayName, storefrontLocaleOf(storefront)),
     robots: storefrontRobots(storefront),
   };
 }
 
 export default async function ItemDetailPage({ params }: PageProps) {
   const { slug, itemId } = await params;
-  const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
+  const cleanSlug = cleanStorefrontSlug(slug);
 
-  const storefront = await storefrontService.getStorefrontBySlug(cleanSlug);
+  const storefront = await getPublicStorefront(cleanSlug);
 
   if (!storefront || !storefront.isPublished) {
     notFound();

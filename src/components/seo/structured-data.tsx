@@ -242,6 +242,11 @@ export function StorefrontStructuredData({
   tiktokUrl,
   googleMapsUrl,
   openingHours,
+  schemaType = "FoodEstablishment",
+  address,
+  city,
+  country,
+  priceRange,
 }: {
   slug: string;
   displayName: string;
@@ -254,8 +259,26 @@ export function StorefrontStructuredData({
   tiktokUrl?: string | null;
   googleMapsUrl?: string | null;
   openingHours?: unknown;
+  /** CafeOrCoffeeShop, Bakery, Restaurant… (schemaTypeForBusiness): all FoodEstablishments. */
+  schemaType?: string;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  /** "Rp 3.000 – Rp 25.000", from the menu's own prices. */
+  priceRange?: string;
 }) {
   const url = `https://epidom.fr/@${slug}`;
+  // A street or a city makes an address; a country alone is too often the
+  // onboarding default to state as a fact.
+  const postalAddress =
+    address || city
+      ? {
+          "@type": "PostalAddress",
+          ...(address ? { streetAddress: address } : {}),
+          ...(city ? { addressLocality: city } : {}),
+          ...(country ? { addressCountry: country } : {}),
+        }
+      : undefined;
   const hours = (openingHours as StorefrontOpeningHours) || {};
   const openingHoursSpecification = (Object.keys(SCHEMA_DAY) as Array<keyof StorefrontOpeningHours>)
     .map((day) => {
@@ -272,7 +295,7 @@ export function StorefrontStructuredData({
 
   const data = {
     "@context": "https://schema.org",
-    "@type": "FoodEstablishment",
+    "@type": schemaType,
     name: displayName,
     description: tagline || description || undefined,
     url,
@@ -280,6 +303,8 @@ export function StorefrontStructuredData({
     image: heroImageUrl || logoUrl || undefined,
     telephone: whatsappNumber || undefined,
     sameAs: [instagramUrl, tiktokUrl, googleMapsUrl].filter(Boolean),
+    ...(postalAddress ? { address: postalAddress } : {}),
+    ...(priceRange ? { priceRange } : {}),
     ...(openingHoursSpecification.length > 0 ? { openingHoursSpecification } : {}),
   };
 

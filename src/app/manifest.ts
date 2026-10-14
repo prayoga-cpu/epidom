@@ -46,11 +46,11 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "en",
     dir: "ltr",
     icons: [
-      // favicon.ico is intentionally NOT listed here. It is a 580 KB multi-
-      // resolution .ico, and declaring it with sizes "any" invites installers
-      // to prefer it over the 6-37 KB PNGs below — half a megabyte to draw one
-      // home-screen icon on a merchant's phone. It stays the browser-tab icon
-      // via metadata.icons in src/app/layout.tsx.
+      // favicon.ico is intentionally NOT listed here. It only holds 16, 32 and
+      // 48 px images (8 KB; it was a 580 KB, nine-size file until 3.13.0), too
+      // small for a home-screen icon, and declaring it with sizes "any" would
+      // invite installers to pick it over the PNGs below. It stays the
+      // browser-tab icon via metadata.icons in src/app/layout.tsx.
       {
         src: "/images/icon-192.png",
         sizes: "192x192",

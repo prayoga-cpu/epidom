@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ExternalLink, Link2Off, Loader2, MapPin, QrCode, Star } from "lucide-react";
+import { Copy, ExternalLink, Link2Off, Loader2, MapPin, QrCode, Star } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { storefrontApi } from "@/lib/api";
 import { ApiClientError } from "@/lib/api/client";
@@ -26,6 +26,7 @@ const PLACE_ID_FINDER_URL =
   "https://developers.google.com/maps/documentation/places/web-service/place-id";
 
 export interface StorefrontReviewsData {
+  slug?: string;
   displayName?: string;
   isPublished?: boolean;
   googleMapsUrl?: string | null;
@@ -339,6 +340,8 @@ export function StorefrontReviews({ storeId, storefront, onSaved }: StorefrontRe
         </Card>
       )}
 
+      {storefront?.slug && <GoogleMapsMenuLink slug={storefront.slug} />}
+
       {reviewUrl && (
         <QrCodeDialog
           open={showQr}
@@ -352,5 +355,58 @@ export function StorefrontReviews({ storeId, storefront, onSaved }: StorefrontRe
 
       {confirmDialog}
     </div>
+  );
+}
+
+/**
+ * Asks the owner to use their Epidom menu as the menu link of their Google
+ * Business Profile: people who find the shop on Maps land on the real menu,
+ * and the link from Google helps the page rank for the shop's own name.
+ * Nothing to save here: the owner pastes the link into Google themselves.
+ */
+function GoogleMapsMenuLink({ slug }: { slug: string }) {
+  const { t } = useI18n();
+  const menuUrl = `https://epidom.fr/@${slug}/menu`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(menuUrl);
+      toast.success(t("storefront.reviews.linkCopied"));
+    } catch {
+      // Clipboard blocked (insecure context, permissions): the link stays
+      // visible and selectable in the field.
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="size-5" />
+          {t("storefront.reviews.mapsMenuTitle")}
+        </CardTitle>
+        <CardDescription>{t("storefront.reviews.mapsMenuDesc")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <ol className="text-muted-foreground list-decimal space-y-1 pl-5 text-sm">
+          <li>{t("storefront.reviews.mapsMenuStep1")}</li>
+          <li>{t("storefront.reviews.mapsMenuStep2")}</li>
+          <li>{t("storefront.reviews.mapsMenuStep3")}</li>
+        </ol>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            readOnly
+            value={menuUrl}
+            aria-label={t("storefront.reviews.mapsMenuTitle")}
+            onFocus={(e) => e.currentTarget.select()}
+            className="font-mono text-sm"
+          />
+          <Button type="button" variant="outline" className="min-h-10 shrink-0" onClick={copy}>
+            <Copy className="size-4" />
+            {t("storefront.reviews.copyLink")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

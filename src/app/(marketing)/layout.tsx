@@ -4,7 +4,7 @@ import { SiteHeader } from "@/features/marketing/shared/components/site-header";
 import { SiteFooter } from "@/features/marketing/shared/components/site-footer";
 import { Suspense } from "react";
 import type { Locale } from "@/components/lang/i18n-provider";
-import { EagerI18nProvider } from "@/components/lang/i18n-provider-eager";
+import { SeededI18nProvider } from "@/components/lang/seeded-i18n-provider";
 import { CookieConsentBar } from "@/features/marketing/shared/components/cookie-consent-bar";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { LoadingPage } from "@/features/loading/loading-page";
@@ -66,14 +66,14 @@ export default async function LandingLayout({
       <OrganizationStructuredData locale={initialLocale} />
       <ErrorBoundary>
         <Suspense fallback={<LoadingPage />}>
-          <EagerI18nProvider initialLocale={initialLocale}>
+          <SeededI18nProvider locale={initialLocale}>
             <SiteHeader />
             {/* The one <main> landmark of every marketing page: pages wrap their own
                 content in a <div>, never a second <main>. */}
             <main>{children}</main>
             <SiteFooter />
             <CookieConsentBar />
-          </EagerI18nProvider>
+          </SeededI18nProvider>
         </Suspense>
       </ErrorBoundary>
     </div>

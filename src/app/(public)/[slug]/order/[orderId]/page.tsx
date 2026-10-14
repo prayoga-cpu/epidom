@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { storefrontService } from "@/lib/services";
+import {
+  cleanStorefrontSlug,
+  getPublicStorefront,
+} from "@/features/storefront/lib/public-storefront";
 import { OrderStatusClient } from "@/features/storefront/components/order-status-client";
 import { resolveGoogleLinks } from "@/lib/utils/google-review";
 import type { Metadata } from "next";
@@ -18,10 +21,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function OrderStatusPage({ params }: PageProps) {
   const { slug, orderId } = await params;
-  const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
+  const cleanSlug = cleanStorefrontSlug(slug);
 
   const [storefront, order] = await Promise.all([
-    storefrontService.getStorefrontBySlug(cleanSlug),
+    getPublicStorefront(cleanSlug),
     prisma.order.findUnique({
       where: { id: orderId },
       include: {

@@ -7021,6 +7021,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     openingHours: "Horaires d'ouverture",
     closed: "Fermé",
     poweredBy: "Propulsé par",
+    onTheMenu: "À la carte",
+    seeFullMenu: "Voir tout le menu",
     days: {
       monday: "Lundi",
       tuesday: "Mardi",
@@ -7097,6 +7099,13 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       howPlaceIdLink: "Trouver votre Place ID",
       policyNote:
         "Google interdit de récompenser les avis ou de ne solliciter que les clients satisfaits. Ce bouton est proposé à tous vos clients.",
+      mapsMenuTitle: "Utilisez cette page comme menu sur Google Maps",
+      mapsMenuDesc: "Les clients qui trouvent votre établissement sur Google Maps peuvent ouvrir votre menu, et commander si la commande en ligne est activée. Cela aide aussi votre page à apparaître quand on cherche le nom de votre établissement.",
+      mapsMenuStep1: "Ouvrez votre fiche Google Business Profile : cherchez le nom de votre établissement sur Google en étant connecté, ou allez sur business.google.com.",
+      mapsMenuStep2: "Choisissez Modifier le profil, puis Menu. Sur certaines fiches, c'est dans Coordonnées, sous Lien vers le menu ou Liens de commande.",
+      mapsMenuStep3: "Collez le lien ci-dessous et enregistrez. Google peut mettre quelques jours à l'afficher.",
+      copyLink: "Copier le lien",
+      linkCopied: "Lien copié",
       appearsTitle: "Où cela apparaît",
       appearsDesc:
         "Une fois connecté, cela s'affiche automatiquement sur votre boutique en ligne publique.",

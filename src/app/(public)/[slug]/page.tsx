@@ -1,22 +1,32 @@
-import { cache } from "react";
 import { notFound } from "next/navigation";
-import { storefrontService } from "@/lib/services";
 import { PublicProfile } from "@/features/storefront/components/public-profile";
 import { StorefrontStructuredData } from "@/components/seo/structured-data";
 import { resolveGoogleLinks } from "@/lib/utils/google-review";
 import { storefrontRobots } from "@/features/storefront/lib/indexing";
+import {
+  cleanStorefrontSlug,
+  getPublicStorefront,
+  menuPriceRange,
+  pickMenuHighlights,
+  storefrontLocaleOf,
+} from "@/features/storefront/lib/public-storefront";
+import {
+  DEFAULT_STOREFRONT_DESCRIPTION,
+  schemaTypeForBusiness,
+  storefrontDescription,
+  storefrontTitle,
+} from "@/features/storefront/lib/storefront-metadata";
+import { OG_LOCALE } from "@/lib/seo";
 import type { Metadata } from "next";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-const getStorefront = cache((slug: string) => storefrontService.getStorefrontBySlug(slug));
-
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
-  const storefront = await getStorefront(cleanSlug);
+  const cleanSlug = cleanStorefrontSlug(slug);
+  const storefront = await getPublicStorefront(cleanSlug);
 
   if (!storefront) {
     return {
@@ -24,30 +34,39 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  // In the store's language: these pages rank for the shop's own name.
+  const locale = storefrontLocaleOf(storefront);
+  const facts = {
+    displayName: storefront.displayName,
+    city: storefront.store.city,
+    acceptsOrders: storefront.acceptsOrders,
+    description: storefront.description,
+    tagline: storefront.tagline,
+  };
   const url = `https://epidom.fr/@${cleanSlug}`;
-  const description =
-    storefront.description ||
-    storefront.tagline ||
-    `${storefront.displayName} on Epidom. Lihat menu dan hubungi kami langsung.`;
+  const title = storefrontTitle(facts, locale);
+  const description = storefrontDescription(facts, locale);
   const image = storefront.heroImageUrl || storefront.logoUrl;
 
   return {
-    title: `${storefront.displayName} | Epidom Storefront`,
+    title,
     description,
     alternates: { canonical: url },
     // Test pages and stores without a real menu stay out of search results
     // (and out of the sitemap — features/storefront/lib/indexing.ts).
     robots: storefrontRobots(storefront),
     openGraph: {
-      title: storefront.displayName,
+      title,
       description,
       url,
       type: "website",
+      locale: OG_LOCALE[locale],
+      siteName: storefront.displayName,
       images: image ? [{ url: image }] : undefined,
     },
     twitter: {
       card: image ? "summary_large_image" : "summary",
-      title: storefront.displayName,
+      title,
       description,
       images: image ? [image] : undefined,
     },
@@ -56,9 +75,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function StorefrontPage({ params }: PageProps) {
   const { slug } = await params;
-  const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
+  const cleanSlug = cleanStorefrontSlug(slug);
 
-  const storefront = await getStorefront(cleanSlug);
+  const storefront = await getPublicStorefront(cleanSlug);
 
   if (!storefront || !storefront.isPublished) {
     notFound();
@@ -87,11 +106,18 @@ export default async function StorefrontPage({ params }: PageProps) {
   // prompts are paused — no second field to keep in sync.
   const { mapsUrl, reviewUrl } = resolveGoogleLinks(storefront);
 
+  // A few dishes with their prices, so the page that ranks for the shop's
+  // name says what it serves. Plain strings: no Decimal crosses to the client.
+  const locale = storefrontLocaleOf(storefront);
+  const priceOptions = { currency: storefront.store.currency, locale };
+  const menuHighlights = pickMenuHighlights(storefront.menuCategories, priceOptions);
+
   const serialized = {
     ...storefrontWithoutMenu,
     googleMapsUrl: mapsUrl,
     googleReviewUrl: reviewUrl,
     reservableTables,
+    menuHighlights,
   };
 
   return (
@@ -100,7 +126,9 @@ export default async function StorefrontPage({ params }: PageProps) {
         slug={cleanSlug}
         displayName={storefront.displayName}
         tagline={storefront.tagline}
-        description={storefront.description}
+        description={
+          storefront.description === DEFAULT_STOREFRONT_DESCRIPTION ? null : storefront.description
+        }
         logoUrl={storefront.logoUrl}
         heroImageUrl={storefront.heroImageUrl}
         whatsappNumber={storefront.whatsappNumber}
@@ -108,6 +136,11 @@ export default async function StorefrontPage({ params }: PageProps) {
         tiktokUrl={storefront.tiktokUrl}
         googleMapsUrl={mapsUrl}
         openingHours={storefront.openingHours}
+        schemaType={schemaTypeForBusiness(storefront.store.business.businessType)}
+        address={storefront.store.address}
+        city={storefront.store.city}
+        country={storefront.store.country}
+        priceRange={menuPriceRange(storefront.menuCategories, priceOptions)}
       />
       <PublicProfile storefront={serialized as any} />
     </>

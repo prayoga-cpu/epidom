@@ -7,9 +7,11 @@ import { seedLocale, type Lang } from "@/locales";
 import { I18nProvider, type Locale } from "./i18n-provider";
 
 /**
- * Marketing-only provider that keeps every locale resident *before* the first
- * render, instead of code-splitting them the way the app's `I18nProvider`
- * does.
+ * Keeps every locale resident *before* the first render, instead of
+ * code-splitting them the way the app's `I18nProvider` does. Tests use it to
+ * render any language synchronously; the marketing site itself now uses
+ * `SeededI18nProvider` (seeded-i18n-provider.tsx), which ships only the
+ * page's own language.
  *
  * Why marketing is the exception: its language comes from the URL, resolved in
  * middleware (`/pricing` is French, `/en/*` and `/id/*` are prefixed — see

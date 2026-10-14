@@ -21,6 +21,7 @@ import {
 import { getPremiumTheme } from "@/lib/utils/color";
 import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { getLocalizedPath } from "@/lib/i18n-routing";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { trackEvent, useTrackPageView } from "@/features/storefront/hooks/use-track-storefront-event";
@@ -79,6 +80,8 @@ interface PublicProfileProps {
     acceptsOrders: boolean;
     acceptsReservations: boolean;
     reservableTables: ReservableTable[];
+    /** A few available dishes with formatted prices (pickMenuHighlights), featured first. */
+    menuHighlights?: Array<{ name: string; price: string }>;
   };
 }
 
@@ -334,6 +337,34 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
                 {reviewCta}
               </div>
 
+              {/* A few dishes, server-rendered, so the page says what the shop serves */}
+              {storefront.menuHighlights && storefront.menuHighlights.length > 0 && (
+                <section className="border-border bg-card rounded-xl border p-4 shadow-sm">
+                  <h2 className="text-muted-foreground mb-3 text-xs font-bold tracking-wider uppercase">
+                    {t("publicProfile.onTheMenu")}
+                  </h2>
+                  <ul className="space-y-2">
+                    {storefront.menuHighlights.map((item, i) => (
+                      <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
+                        <span className="text-foreground min-w-0 truncate font-medium">
+                          {item.name}
+                        </span>
+                        <span className="text-muted-foreground shrink-0 tabular-nums">
+                          {item.price}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/@${storefront.slug}/menu`}
+                    className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold"
+                    style={{ color: "var(--store-theme)" }}
+                  >
+                    {t("publicProfile.seeFullMenu")} →
+                  </Link>
+                </section>
+              )}
+
               {/* Delivery apps */}
               {deliveries.length > 0 && (
                 <div>
@@ -439,8 +470,10 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
 
       {/* Footer — compact, brand-marked */}
       <footer className="border-border/60 mt-auto border-t py-3 text-center">
+        {/* To Epidom's home page in the language being read, not the French
+            one with a redirect in between. */}
         <Link
-          href="/"
+          href={getLocalizedPath("/", locale)}
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition"
         >
           <span className="text-[11px] font-medium">{t("publicProfile.poweredBy")}</span>

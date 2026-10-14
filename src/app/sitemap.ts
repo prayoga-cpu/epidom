@@ -128,12 +128,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let storefrontEntries: MetadataRoute.Sitemap = [];
   try {
     const storefronts = await storefrontService.getPublishedSlugsForSitemap();
-    storefrontEntries = storefronts.filter(isStorefrontIndexable).map((s) => ({
-      url: `${BASE_URL}/@${s.slug}`,
-      lastModified: s.updatedAt,
-      changeFrequency: "weekly",
-      priority: 0.6,
-    }));
+    // The profile page and the menu page (where the dishes and prices are).
+    storefrontEntries = storefronts.filter(isStorefrontIndexable).flatMap((s) => [
+      {
+        url: `${BASE_URL}/@${s.slug}`,
+        lastModified: s.updatedAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+      },
+      {
+        url: `${BASE_URL}/@${s.slug}/menu`,
+        lastModified: s.updatedAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.5,
+      },
+    ]);
   } catch {
     // Sitemap must never 500 the whole route if the DB is briefly unavailable —
     // fall back to static routes only.

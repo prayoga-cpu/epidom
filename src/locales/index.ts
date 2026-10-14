@@ -21,7 +21,8 @@ export type Lang = "en" | "fr" | "id";
  *
  * The marketing site is the exception and does NOT go through this path — its
  * locale comes from the URL and must be correct in the server-rendered HTML
- * for SEO. See `i18n-provider-eager.tsx`.
+ * for SEO, so it seeds that one language before rendering. See
+ * `src/components/lang/seeded-i18n-provider.tsx`.
  */
 export { en };
 

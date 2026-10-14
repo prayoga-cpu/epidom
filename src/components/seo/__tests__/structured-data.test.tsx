@@ -120,3 +120,37 @@ describe("BreadcrumbList", () => {
     ]);
   });
 });
+
+describe("StorefrontStructuredData", () => {
+  it("uses the business's own schema type, its address and the menu's price range", async () => {
+    const { StorefrontStructuredData } = await import("../structured-data");
+    const data = jsonLdOf(
+      <StorefrontStructuredData
+        slug="ellens-bakery"
+        displayName="Ellens Bakery"
+        schemaType="Bakery"
+        address="Jl. Raya 1"
+        city="Denpasar"
+        country="Indonesia"
+        priceRange="Rp 3.000 – Rp 25.000"
+      />
+    );
+    expect(data["@type"]).toBe("Bakery");
+    expect(data.address).toEqual({
+      "@type": "PostalAddress",
+      streetAddress: "Jl. Raya 1",
+      addressLocality: "Denpasar",
+      addressCountry: "Indonesia",
+    });
+    expect(data.priceRange).toBe("Rp 3.000 – Rp 25.000");
+    expect(data.hasMenu).toBe("https://epidom.fr/@ellens-bakery/menu");
+  });
+
+  it("stays a plain FoodEstablishment without an address when the store has none", async () => {
+    const { StorefrontStructuredData } = await import("../structured-data");
+    const data = jsonLdOf(<StorefrontStructuredData slug="x" displayName="X" />);
+    expect(data["@type"]).toBe("FoodEstablishment");
+    expect(data).not.toHaveProperty("address");
+    expect(data).not.toHaveProperty("priceRange");
+  });
+});

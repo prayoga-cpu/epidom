@@ -81,6 +81,13 @@ export class StorefrontService {
             customProductsEnabled: true,
             customProductsShowOnStorefront: true,
             customProductsLabel: true,
+            // Public facts for the storefront's search snippet and JSON-LD:
+            // where the shop is, what kind of shop it is, and the language
+            // its pages are served in (features/storefront/lib/).
+            address: true,
+            city: true,
+            country: true,
+            business: { select: { locale: true, businessType: true } },
           },
         },
       },

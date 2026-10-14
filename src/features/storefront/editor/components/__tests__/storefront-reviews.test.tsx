@@ -255,3 +255,25 @@ describe("StorefrontReviews — unpublished store", () => {
     expect(screen.queryByText("storefront.reviews.unpublishedNote")).toBeNull();
   });
 });
+
+describe("Google Maps menu link", () => {
+  it("offers the storefront's menu URL to paste into Google, connected or not", async () => {
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    renderReviews({ ...disconnected, slug: "warung-budi" });
+    expect(screen.getByText("storefront.reviews.mapsMenuTitle")).toBeInTheDocument();
+    const field = screen.getByDisplayValue("https://epidom.fr/@warung-budi/menu");
+    expect(field).toHaveAttribute("readonly");
+    fireEvent.click(screen.getByRole("button", { name: /storefront.reviews.copyLink/ }));
+    await waitFor(() =>
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        "https://epidom.fr/@warung-budi/menu"
+      )
+    );
+    expect(toast.success).toHaveBeenCalledWith("storefront.reviews.linkCopied");
+  });
+
+  it("is not shown before the storefront has a slug", () => {
+    renderReviews(disconnected);
+    expect(screen.queryByText("storefront.reviews.mapsMenuTitle")).not.toBeInTheDocument();
+  });
+});

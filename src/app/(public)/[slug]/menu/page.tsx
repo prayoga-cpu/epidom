@@ -1,9 +1,18 @@
 import { notFound } from "next/navigation";
-import { storefrontService } from "@/lib/services";
 import { PublicMenu } from "@/features/storefront/components/public-menu";
 import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
 import { MenuStructuredData } from "@/components/seo/structured-data";
 import { storefrontRobots } from "@/features/storefront/lib/indexing";
+import {
+  cleanStorefrontSlug,
+  getPublicStorefront,
+  storefrontLocaleOf,
+} from "@/features/storefront/lib/public-storefront";
+import {
+  storefrontMenuDescription,
+  storefrontMenuTitle,
+} from "@/features/storefront/lib/storefront-metadata";
+import { OG_LOCALE } from "@/lib/seo";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -12,8 +21,8 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
-  const storefront = await storefrontService.getStorefrontBySlug(cleanSlug);
+  const cleanSlug = cleanStorefrontSlug(slug);
+  const storefront = await getPublicStorefront(cleanSlug);
 
   if (!storefront) {
     return {
@@ -21,23 +30,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  // In the store's language, naming real dishes: they are what people search.
+  const locale = storefrontLocaleOf(storefront);
+  const facts = {
+    displayName: storefront.displayName,
+    city: storefront.store.city,
+    acceptsOrders: storefront.acceptsOrders,
+  };
+  const itemNames = storefront.menuCategories
+    .flatMap((c) => c.items)
+    .filter((i) => i.isAvailable)
+    .map((i) => i.name);
   const url = `https://epidom.fr/@${cleanSlug}/menu`;
-  const description = `View the menu from ${storefront.displayName} and order directly via WhatsApp.`;
+  const title = storefrontMenuTitle(facts, locale);
+  const description = storefrontMenuDescription(facts, itemNames, locale);
 
   return {
-    title: `Menu - ${storefront.displayName} | Epidom Storefront`,
+    title,
     description,
     alternates: { canonical: url },
     robots: storefrontRobots(storefront),
-    openGraph: { title: `${storefront.displayName} Menu`, description, url, type: "website" },
+    openGraph: { title, description, url, type: "website", locale: OG_LOCALE[locale] },
   };
 }
 
 export default async function MenuPage({ params }: PageProps) {
   const { slug } = await params;
-  const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
+  const cleanSlug = cleanStorefrontSlug(slug);
 
-  const storefront = await storefrontService.getStorefrontBySlug(cleanSlug);
+  const storefront = await getPublicStorefront(cleanSlug);
 
   if (!storefront || !storefront.isPublished) {
     notFound();

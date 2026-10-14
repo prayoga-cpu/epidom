@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
-import { storefrontService } from "@/lib/services";
+import {
+  cleanStorefrontSlug,
+  getPublicStorefront,
+} from "@/features/storefront/lib/public-storefront";
 import { MyOrdersClient } from "@/features/storefront/components/my-orders-client";
 import type { Metadata } from "next";
 
@@ -9,8 +12,8 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
-  const storefront = await storefrontService.getStorefrontBySlug(cleanSlug);
+  const cleanSlug = cleanStorefrontSlug(slug);
+  const storefront = await getPublicStorefront(cleanSlug);
 
   if (!storefront) {
     return {
@@ -25,9 +28,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function MyOrdersPage({ params }: PageProps) {
   const { slug } = await params;
-  const cleanSlug = decodeURIComponent(slug).replace(/^@/, "");
+  const cleanSlug = cleanStorefrontSlug(slug);
 
-  const storefront = await storefrontService.getStorefrontBySlug(cleanSlug);
+  const storefront = await getPublicStorefront(cleanSlug);
 
   if (!storefront || !storefront.isPublished) {
     notFound();

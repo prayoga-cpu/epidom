@@ -9,6 +9,17 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.13.0] - 2026-10-14 · feat
+
+Storefront pages that speak the shop's language and show its dishes, and a lighter website.
+
+- **Your storefront in your language.** Your public page, menu and order pages now open in your shop's language (Indonesian for a rupiah shop, French for a euro shop), so Google and first-time visitors read them the way your customers do. A visitor whose phone is set to another language still sees theirs, as before.
+- **Dishes on your storefront page.** Your page now shows a few dishes with their prices under "On the menu", featured dishes first, with a link to the full menu.
+- **Better search results for your shop.** Your page's title in Google now says what visitors get, for example "Ellens Bakery — Menu & Pesan Online", with your city when you have entered one. Your menu page lists real dishes in its description and is now offered to search engines too.
+- **Put your menu on Google Maps.** Storefront → Google Reviews has a new card with your menu link and the three steps to add it to your Google Business Profile, so people who find you on Maps can open your menu.
+- **A lighter website.** Each page of epidom.fr now loads only the language you read, about a third less JavaScript on English pages, and the browser-tab icon went from 580 KB to 8 KB.
+- **"Powered by Epidom"** on storefronts now opens Epidom's site in the language the visitor is reading.
+
 ## [3.12.1] - 2026-10-14 · fix
 
 Search engines now find the right Epidom pages, in the right language.

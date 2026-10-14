@@ -73,6 +73,7 @@ function get(obj: TranslationObject, path: string): TranslationValue | undefined
 export function I18nProvider({
   children,
   initialLocale,
+  defaultLocale,
 }: {
   children: React.ReactNode;
   /**
@@ -84,15 +85,24 @@ export function I18nProvider({
    * keep the original client-preference-driven behavior.
    */
   initialLocale?: Locale;
+  /**
+   * The language the server renders (and the first client render repeats,
+   * so hydration matches) when the URL doesn't fix one: the public
+   * storefront passes its store's language. Unlike `initialLocale`, the
+   * visitor's saved choice or browser language still takes over after
+   * hydration. Its dictionary must already be resident (SeededI18nProvider).
+   */
+  defaultLocale?: Locale;
 }) {
-  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? "en");
+  const startLocale = initialLocale ?? defaultLocale ?? "en";
+  const [locale, setLocaleState] = useState<Locale>(startLocale);
   /**
    * The locale whose dictionary is loaded and therefore renderable. Lags
    * `locale` only while a non-English chunk is downloading; everything reads
    * through this so a half-applied switch can never render raw keys.
    */
   const [loadedLocale, setLoadedLocale] = useState<Locale>(() =>
-    isLocaleLoaded(initialLocale ?? "en") ? (initialLocale ?? "en") : "en"
+    isLocaleLoaded(startLocale) ? startLocale : "en"
   );
 
   // Pull in the active locale's chunk whenever it isn't resident yet. `en` is
