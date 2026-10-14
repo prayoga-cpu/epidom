@@ -69,7 +69,7 @@ export async function PATCH(
     // Verify order belongs to this store
     const existing = await prisma.order.findFirst({
       where: { id: orderId, storeId },
-      include: { table: true, payments: { select: { id: true } } },
+      include: { payments: { select: { id: true } } },
     });
 
     if (!existing) {

@@ -46,23 +46,32 @@ export const GET = withApiHandler(
     // Every figure the KPI cards and P&L show — the same function each row
     // of the All outlets roll-up uses, so the two can never disagree.
     const orderFilters = { ...shiftWhere, ...channelWhere, ...paymentWhere };
-    const summary = await computeStoreFinanceSummary(storeId!, { from, to }, orderFilters);
+    const [summary, rawOrders] = await Promise.all([
+      computeStoreFinanceSummary(storeId!, { from, to }, orderFilters),
 
-    // Daily breakdown — grouped in memory to avoid Prisma groupBy
-    // timezone/timestamp issues. Each day carries the P&L lines the KPI cards
-    // show, so the Daily tab's column totals equal the cards.
-    const rawOrders = await prisma.order.findMany({
-      where: {
-        storeId,
-        status: { notIn: NON_REVENUE_STATUSES },
-        orderDate: { gte: from, lte: to },
-        ...shiftWhere,
-        ...channelWhere,
-        ...paymentWhere,
-      },
-      select: { orderDate: true, total: true, discountAmount: true, tax: true, refundAmount: true },
-      orderBy: { orderDate: "asc" },
-    });
+      // Daily breakdown — grouped in memory to avoid Prisma groupBy
+      // timezone/timestamp issues. Each day carries the P&L lines the KPI cards
+      // show, so the Daily tab's column totals equal the cards. Independent of
+      // the summary, so it is read alongside it.
+      prisma.order.findMany({
+        where: {
+          storeId,
+          status: { notIn: NON_REVENUE_STATUSES },
+          orderDate: { gte: from, lte: to },
+          ...shiftWhere,
+          ...channelWhere,
+          ...paymentWhere,
+        },
+        select: {
+          orderDate: true,
+          total: true,
+          discountAmount: true,
+          tax: true,
+          refundAmount: true,
+        },
+        orderBy: { orderDate: "asc" },
+      }),
+    ]);
 
     const buckets = bucketOrdersByDay(rawOrders);
 

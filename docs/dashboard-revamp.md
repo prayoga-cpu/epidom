@@ -1,5 +1,11 @@
 # Epidom, Dashboard Shell Split, Wireframe Spec
 
+> **Status: shipped 2026-09-17 (POS Mode, commit 5ee92483), with as-built notes from 2026-09-24/26
+> inline below. Design record — kept at this path because source comments cite it.** The wireframes
+> are the plan as drawn; where the build differs, the "As built" notes win. POS Mode lives in
+> `src/app/(app)/store/[storeId]/(pos-mode)/`; the Back Office follow-up (rollout step 3) is
+> `docs/back-office-revamp.md`, shipped in 2.85.0.
+
 POS Mode and Back Office as two distinct shells, not one responsive layout. Built from Section 4 (roles/access), Section 9.2 (current nav), Section 10 (hard UX constraints), and Section 12 (synthesis) of the source sitemap brief, cross-referenced against how Moka POS, Square, Toast, and sunday each structure this split in their live products.
 
 ---

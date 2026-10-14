@@ -8,10 +8,9 @@ interface PrionationLogoFullProps {
 }
 
 /**
- * Full Prionation brand lockup (wordmark + mark badge) — distinct from the
- * small monogram in prionation-mark.tsx, used where Prionation needs to be
- * a prominent, identifiable brand element (e.g. the "build with us" CTA),
- * not just a footer credit accent. Fixed white/black fills by design — this
+ * Full Prionation brand lockup (wordmark + mark badge), used where Prionation
+ * needs to be a prominent, identifiable brand element (e.g. the "build with
+ * us" CTA), not just a footer credit accent. Fixed white/black fills by design — this
  * is a lockup meant for dark surfaces, not a currentColor-adaptive icon.
  */
 export const PrionationLogoFull = memo(function PrionationLogoFull({

@@ -66,7 +66,10 @@ substitute for pointing it at the right place.
 ```bash
 # 1. Stand up a fresh target database (see "Scratch database" below for a
 #    local example) and apply the schema — the backup only carries data.
-DATABASE_URL=<target> pnpm prisma migrate deploy
+#    Set DIRECT_URL too: prisma.config.ts migrates through DIRECT_URL when it
+#    is set, and it loads .env — whose DIRECT_URL would otherwise win, so the
+#    migration would run against this app's own database, not the target.
+DATABASE_URL=<target> DIRECT_URL=<target> pnpm prisma migrate deploy
 
 # 2. Restore the data for a given day
 pnpm restore:backup --date=2026-08-10 --target=<target-connection-string>
@@ -102,7 +105,7 @@ docker run --name epidom-restore-drill \
   -d postgres:16
 
 TARGET="postgresql://epidom:epidom@localhost:5433/epidom_restore_drill"
-DATABASE_URL=$TARGET pnpm prisma migrate deploy
+DATABASE_URL=$TARGET DIRECT_URL=$TARGET pnpm prisma migrate deploy
 pnpm restore:backup --date=<YYYY-MM-DD> --target=$TARGET
 
 # Tear down when done

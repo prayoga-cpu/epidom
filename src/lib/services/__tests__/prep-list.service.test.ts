@@ -250,12 +250,45 @@ describe("getPrepList", () => {
     ]);
     // 6 already sold-and-drawn: they are not stock the kitchen must rebuild.
     prismaMock.productionBatch.findMany.mockResolvedValue([
-      { plannedQuantity: 6, settledQuantity: 0 },
+      { productId: "prod-1", plannedQuantity: 6, settledQuantity: 0 },
     ]);
 
     const rows = await productionBatchService.getPrepList("store-1");
     expect(rows[0].suggested).toBe(10);
     expect(rows[0].outstandingShortfall).toBe(6);
+  });
+
+  it("reads every product's shortfall debt in one query and keeps each to its product", async () => {
+    const product = (id: string, name: string) => ({
+      id,
+      name,
+      department: "KITCHEN",
+      unit: "piece",
+      currentStock: 4,
+      minStock: 20,
+      primaryRecipe: { id: `recipe-${id}`, name: `${name} dough`, storeId: "store-1" },
+    });
+    prismaMock.product.findMany.mockResolvedValue([
+      product("prod-1", "Croissant"),
+      product("prod-2", "Pain au chocolat"),
+    ]);
+    prismaMock.productionBatch.findMany.mockResolvedValue([
+      { productId: "prod-1", plannedQuantity: 6, settledQuantity: 0 },
+      { productId: "prod-1", plannedQuantity: 5, settledQuantity: 4 },
+      // Over-settled: contributes 0, never a negative.
+      { productId: "prod-2", plannedQuantity: 2, settledQuantity: 3 },
+    ]);
+
+    const rows = await productionBatchService.getPrepList("store-1");
+
+    expect(prismaMock.productionBatch.findMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.productionBatch.findMany.mock.calls[0][0].where.productId).toEqual({
+      in: ["prod-1", "prod-2"],
+    });
+    expect(rows.map((r) => [r.productId, r.outstandingShortfall, r.suggested])).toEqual([
+      ["prod-1", 7, 9],
+      ["prod-2", 0, 16],
+    ]);
   });
 
   it("omits a cross-store primary recipe", async () => {

@@ -8,8 +8,8 @@ How Epidom charges, who pays whom, and how the payment flows are wired.
 
 | Flow                                      | Provider                 | Currency                    | Frequency           |
 | ----------------------------------------- | ------------------------ | --------------------------- | ------------------- |
-| **SaaS subscription** (merchant → Epidom) | Stripe                   | IDR (primary), EUR (legacy) | Monthly recurring   |
-| **Customer payments** (diner → merchant)  | Xendit                   | IDR                         | Per order           |
+| **SaaS subscription** (merchant → Epidom) | Stripe                   | EUR (base), USD and IDR     | Monthly or yearly   |
+| **Customer payments** (diner → merchant)  | Xendit (currently off)   | IDR                         | Per order           |
 | **Connect payouts** (Epidom → merchant)   | Stripe Connect, optional | IDR / EUR                   | Per order, Phase 5+ |
 
 The two flows live in different modules and never share code paths. See `/docs/ARCHITECTURE.md` section 5.
@@ -18,14 +18,16 @@ The two flows live in different modules and never share code paths. See `/docs/A
 
 ## Pricing tiers
 
-The current public pricing for Indonesia.
+The current public pricing, per month before tax. Yearly figures are the per-month equivalent when billed yearly. France (EUR) is the primary market, then Indonesia (IDR); USD is quoted on the English site.
 
-| Tier       | IDR/month  | USD equiv | Trial              |
-| ---------- | ---------- | --------- | ------------------ |
-| FREE       | Rp 0       | $0        | n/a, free forever  |
-| POS        | Rp 229,000 | $14.99    | 14 days            |
-| OPERATIONS | Rp 459,000 | $29.99    | 14 days            |
-| ENTERPRISE | Custom     | Custom    | Sales-assisted     |
+| Tier       | EUR monthly (yearly) | USD monthly (yearly) | IDR monthly (yearly)        | Trial             |
+| ---------- | -------------------- | -------------------- | --------------------------- | ----------------- |
+| FREE       | €0                   | $0                   | Rp 0                        | n/a, free forever |
+| POS        | €13.99 (€11.49)      | $14.99 ($12.49)      | Rp 229,000 (Rp 189,000)     | 14 days           |
+| OPERATIONS | €27.99 (€23.49)      | $29.99 ($24.99)      | Rp 459,000 (Rp 379,000)     | none (POS only)   |
+| ENTERPRISE | Custom               | Custom               | Custom                      | Sales-assisted    |
+
+The 14-day trial is POS-only and first-subscription-only (`src/lib/plans/pos-trial.ts`, `POS_TRIAL_DAYS`); Checkout collects a card and charges nothing until it ends.
 
 (Raised from the original Rp 99k/249k/499k+ figures — see `CHANGELOG.md` 2.24.1. Enterprise moved to
 custom/sales-assisted pricing rather than a fixed Rp 499,000+ floor.)
@@ -45,7 +47,7 @@ priced per engagement.
 imports from it, and `src/lib/constants/__tests__/plan-pricing.test.ts` fails if any locale's price
 string on `/pricing` or the home teaser differs from it. The Stripe Price objects mirror it: EUR is
 the base currency, with USD and IDR as `currency_options` on the same Price (see "Products and prices"
-below). Note `docs/STRATEGY.md` still quotes the older Rp 99k / 249k POS and OPERATIONS figures.
+below).
 
 **Plan activation without payment:** `SubscriptionService.activateFree` is FREE-only (it throws for
 anything else) and `POST /api/subscriptions/activate-free` accepts only `plan: "FREE"`. The single
@@ -56,7 +58,7 @@ Pricing rationale and the Indonesian SaaS benchmarks behind these numbers are in
 
 ### Annual discount
 
-- 20% off when paid annually
+- About 16-18% off when paid annually (not 20%): POS EUR 13.99 → 11.49 per month (17.9%), USD 14.99 → 12.49 (16.7%), IDR 229,000 → 189,000 (17.5%); OPERATIONS EUR 27.99 → 23.49 (16.1%), USD 29.99 → 24.99 (16.7%), IDR 459,000 → 379,000 (17.4%)
 - Stripe price IDs for annual variants live alongside monthly ones
 
 ### Free tier limits
@@ -205,6 +207,7 @@ Clearing (`clearCustomPrice`) nulls every custom-price field. A still-pending qu
 
 ## Xendit setup (customer payments)
 
+> **Currently dormant.** Storefront online payment is switched off: `STOREFRONT_ONLINE_PAYMENTS_ENABLED = false` in `src/config/storefront-ordering.config.ts` (since 3.8.0, 2026-10-06; see `CHANGELOG.md`). Every storefront order is placed unpaid and the cashier takes payment at the counter with Mark as Paid, so the flow below does not run today. The code is kept (`src/app/api/webhooks/xendit/`, `src/lib/payments/providers/xendit.ts`) and returns if the flag is switched on.
 ### Supported methods (Phase 2)
 
 | Method                          | Settlement | Xendit fee      |
@@ -343,7 +346,7 @@ Refund operations are manual through the Stripe dashboard. Document the reason i
 | `order.currency`                | string (`IDR`, `EUR`) | displayed with merchant's currency |
 | `order.subtotal`, `order.total` | Decimal(12, 2)        | localized formatting               |
 
-Indonesia uses period `.` for thousands and comma `,` for decimals: `Rp 99.000,00`. Use `Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" })`.
+Indonesia uses period `.` for thousands and comma `,` for decimals: `Rp 229.000,00`. Use `Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" })`.
 
 ---
 
@@ -351,7 +354,7 @@ Indonesia uses period `.` for thousands and comma `,` for decimals: `Rp 99.000,0
 
 1. Should we charge Xendit fees back to merchants on FREE tier, or absorb them? (Current: pass through.)
 2. Will we offer a "social tier" below FREE for menu-only with no ordering? (Possibly Phase 2 decision.)
-3. Annual discount: 20% or 17%? (20% chosen; revisit after 6 months of conversion data.)
+3. Annual discount: 20% or 17%? (Resolved in code: about 16-18% per currency, see "Annual discount"; revisit after 6 months of conversion data.)
 4. When does Stripe Connect 80/20 ship? (Targeting Phase 5, contingent on legal.)
 5. Should OPERATIONS be priced per outlet? (Answered 2026-09-27: no. Prices are unchanged; OPERATIONS is capped at 3 outlets and a 4th needs ENTERPRISE.)
 6. Should ENTERPRISE publish a "from" price? (Current: custom quote only, via "Talk to us". Competitors sell the 4th outlet online, and sales-led tiers usually start at 10+ outlets. Undecided.)

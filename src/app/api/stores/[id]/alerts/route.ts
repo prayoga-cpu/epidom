@@ -38,7 +38,10 @@ export const GET = withApiHandler(
     // a column-to-column comparison Prisma can't express without raw SQL.
     // Narrowing the projection is the behaviour-preserving half of that fix —
     // the same rows come back, in the same order.
-    const allMaterials = await prisma.material.findMany({
+    //
+    // Read in parallel with the unpaid-orders query below — the two are
+    // independent, and this endpoint is on every dashboard load.
+    const allMaterialsQuery = prisma.material.findMany({
       where: {
         storeId,
       },
@@ -58,6 +61,32 @@ export const GET = withApiHandler(
         },
       },
     });
+
+    // Pay Later orders that are still unpaid — computed live from Order the
+    // same way low stock is computed live from Material, rather than a
+    // persisted Alert row, so it can never go stale. Not scoped to DELIVERED
+    // only: production no longer gates on payment, so a Pay Later tab can sit
+    // unpaid all the way from CONFIRMED through READY before ever reaching
+    // DELIVERED — this needs to surface regardless of production stage.
+    const unpaidOrdersQuery = prisma.order.findMany({
+      where: {
+        storeId,
+        paymentMethod: "PAY_LATER",
+        paymentStatus: "PENDING",
+        status: { in: ["CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED"] },
+      },
+      orderBy: { deliveredDate: "asc" },
+      select: {
+        id: true,
+        orderNumber: true,
+        customerName: true,
+        total: true,
+        deliveredDate: true,
+        createdAt: true,
+      },
+    });
+
+    const [allMaterials, unpaidOrders] = await Promise.all([allMaterialsQuery, unpaidOrdersQuery]);
 
     // Filter materials that are oversold or below their reorder threshold
     const lowStockMaterials = allMaterials
@@ -143,30 +172,6 @@ export const GET = withApiHandler(
         })),
         createdAt: new Date().toISOString(), // Dynamic timestamp for the alert
       };
-    });
-
-    // Pay Later orders that are still unpaid — computed live from Order the
-    // same way low stock is computed live from Material, rather than a
-    // persisted Alert row, so it can never go stale. Not scoped to DELIVERED
-    // only: production no longer gates on payment, so a Pay Later tab can sit
-    // unpaid all the way from CONFIRMED through READY before ever reaching
-    // DELIVERED — this needs to surface regardless of production stage.
-    const unpaidOrders = await prisma.order.findMany({
-      where: {
-        storeId,
-        paymentMethod: "PAY_LATER",
-        paymentStatus: "PENDING",
-        status: { in: ["CONFIRMED", "IN_PRODUCTION", "READY", "DELIVERED"] },
-      },
-      orderBy: { deliveredDate: "asc" },
-      select: {
-        id: true,
-        orderNumber: true,
-        customerName: true,
-        total: true,
-        deliveredDate: true,
-        createdAt: true,
-      },
     });
 
     const unpaidOrderAlerts = unpaidOrders.map((order) => ({

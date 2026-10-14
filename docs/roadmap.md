@@ -1,8 +1,8 @@
 # Roadmap
 
-The phased migration from the original cookie-bar inventory codebase to the new Indonesian F&B storefront-first platform. Each phase is independently shippable.
+The phased migration from the original cookie-bar inventory codebase to the new F&B storefront-first platform. Each phase is independently shippable.
 
-Always check `/docs/PHASE_0_CLEANUP.md` for the immediately active task list.
+> **Status (as of 3.17.0, 2026-10-14):** Phases 0 to 4 have shipped and **Phase 5 (Aggregator + Finance) is current and the final planned phase** (AGENTS.md §2). The primary market is now France (re-prioritized 2026-08-10), then Indonesia, then worldwide. The phase write-ups below are kept as the historical plan: they were written for an Indonesia-first launch, and a few details (the `DIRECT` source value, `fr` frozen, some file paths) have since changed and are corrected in place. Release dates are in `CHANGELOG.md` at the repo root.
 
 ---
 
@@ -30,7 +30,7 @@ So: ~3 months to public free launch, ~6 months to a full ladder.
 - `SubscriptionPlan` enum renamed: `FREE`, `POS`, `OPERATIONS`, `ENTERPRISE`
 - Cookie-bar references removed from all marketing copy
 - Dead packages removed from `package.json`
-- `fr` locale frozen, no new strings added
+- `fr` locale frozen, no new strings added (reversed 2026-08-10: `fr` is now the primary locale and real French strings are expected, AGENTS.md §2 and §7.2)
 - `/docs` set updated to reflect the new direction
 
 **Files affected:**
@@ -40,8 +40,6 @@ So: ~3 months to public free launch, ~6 months to a full ladder.
 - `src/app/(marketing)/*`
 - `src/lib/seo.ts`
 - `package.json`
-
-See `/docs/PHASE_0_CLEANUP.md` for the day-by-day task list.
 
 **Done when:** a new developer reading the repo cannot tell it was ever a cookie-bar app.
 
@@ -59,15 +57,15 @@ See `/docs/PHASE_0_CLEANUP.md` for the day-by-day task list.
 
 **New routes:**
 
-- `src/app/(public)/@[slug]/page.tsx` (storefront)
-- `src/app/(public)/@[slug]/menu/page.tsx`
-- `src/app/(public)/@[slug]/menu/[itemId]/page.tsx`
+- `src/app/(public)/[slug]/page.tsx` (storefront; served at `/@slug` through the proxy rewrite)
+- `src/app/(public)/[slug]/menu/page.tsx`
+- `src/app/(public)/[slug]/menu/[itemId]/page.tsx`
 - `src/app/api/public/storefront/[slug]/route.ts`
 
 **New features:**
 
 - `src/features/storefront/editor/` (in-app editor)
-- `src/features/storefront/analytics/` (basic view count)
+- Basic view count and event analytics: `src/features/storefront/hooks/use-track-storefront-event.ts` (client tracking) and `src/app/api/stores/[id]/storefront/analytics/route.ts` (merchant read)
 
 **Onboarding rewrite:**
 
@@ -109,13 +107,13 @@ See `/docs/PHASE_0_CLEANUP.md` for the day-by-day task list.
 
 **New abstractions:**
 
-- `src/lib/payments/providers/{stripe,xendit}.ts` + selector by region
-- `src/lib/notifications/providers/{fonnte,whatsapp-business}.ts` + selector
+- `src/lib/payments/providers/{stripe-customer,xendit}.ts`, routed by payment method in `src/lib/payments/index.ts` (`initiatePayment`)
+- `src/lib/notifications/providers/fonnte.ts` (the WhatsApp Business provider was never built)
 
 **New routes:**
 
-- `src/app/(public)/@[slug]/order/page.tsx` (cart + checkout)
-- `src/app/(public)/@[slug]/order/[orderId]/page.tsx` (status)
+- `src/app/(public)/[slug]/menu/page.tsx` (cart + checkout, part of the menu page)
+- `src/app/(public)/[slug]/order/[orderId]/page.tsx` (status) and `src/app/(public)/[slug]/orders/page.tsx` (order lookup)
 - `src/app/api/public/orders/route.ts`
 - `src/app/api/webhooks/xendit/route.ts`
 - `src/app/api/stores/[id]/orders/stream/route.ts` (SSE)
@@ -155,10 +153,11 @@ See `/docs/PHASE_0_CLEANUP.md` for the day-by-day task list.
 
 **New routes:**
 
-- `src/app/(app)/store/[storeId]/(dashboard)/pos/page.tsx`
-- `src/app/(app)/store/[storeId]/(dashboard)/pos/orders/page.tsx`
-- `src/app/(app)/store/[storeId]/(dashboard)/pos/kds/page.tsx`
-- `src/app/(app)/store/[storeId]/(dashboard)/tables/page.tsx`
+- `src/app/(app)/store/[storeId]/(pos-mode)/pos/page.tsx`
+- `src/app/(app)/store/[storeId]/(pos-mode)/pos/orders/page.tsx`
+- `src/app/(app)/store/[storeId]/(pos-mode)/pos/kds/page.tsx`
+- `src/app/(app)/store/[storeId]/(pos-mode)/pos/operational/page.tsx` (shift, schedule, clock tabs, added later)
+- `src/app/(app)/store/[storeId]/(pos-mode)/tables/page.tsx`
 
 **New integrations:**
 
@@ -230,7 +229,7 @@ These were not deleted in Phase 0; just hidden. They come back behind plan gatin
 
 **New schema:**
 
-- `Order.source` enum: `DIRECT`, `GOFOOD`, `GRABFOOD`, `SHOPEEFOOD`, `TOKOPEDIA`
+- `Order.source` enum: `MANUAL` (default), `STOREFRONT`, `POS`, `GOFOOD`, `GRABFOOD`, `SHOPEEFOOD`, `TOKOPEDIA`, later also `UBER_EATS`, `DELIVEROO`, `JUST_EAT`, `DOORDASH`, `GRUBHUB`, `OTHER_ONLINE` (originally planned with a `DIRECT` value)
 - `AggregatorConnection` (linking merchant accounts to their delivery platform accounts)
 
 **Aggregator ingestion (realistic approach):**
@@ -333,9 +332,8 @@ These apply across phases. Listed once here so we don't re-debate them.
 
 **Locale strategy**
 
-- `id` is primary
-- `en` is secondary, must stay in sync with `id`
-- `fr` is frozen as of Phase 0. Not deleted, not updated.
+- `fr` is primary (France, re-prioritized 2026-08-10), then `id`, then `en`. New strings go in all three locale files with real French in `fr.ts` (AGENTS.md §2, §7.2)
+- Historical: through Phase 0 to 4 planning, `id` was primary, `en` secondary, and `fr` was frozen ("not deleted, not updated"). That was reversed on 2026-08-10.
 
 ---
 
@@ -359,7 +357,7 @@ A phase is "done" when:
 1. All listed acceptance criteria pass
 2. Tests cover the critical paths added in the phase
 3. Docs in `/docs` reflect the changes
-4. The Changelog (`docs/CHANGELOG.md`) has an entry
+4. The Changelog (`CHANGELOG.md` at the repo root) has an entry
 5. At least 5 friendly users have used the new functionality without manual intervention
 
 No phase ships without all five.

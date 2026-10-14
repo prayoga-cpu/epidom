@@ -1,9 +1,17 @@
 # Epidom, Website Redesign Brief, Page by Page
 
-> **Status, 2026-09-21: implemented (v2.97.0 → v2.99.0, uncommitted on `epidom-revamp`).** About eight
+> **Status, 2026-09-21: implemented (v2.97.0 → v2.99.0), since shipped to `main` (2c1a2bd1).** About eight
 > claims in this brief were wrong when checked against the code, and several important issues were
 > missing. **Read the [Implementation log](#implementation-log-2026-09-21) at the bottom before acting on
-> anything below.** The body of the brief is left as written, for the record.
+> anything below.** The body of the brief is left as written, for the record. Design record — the
+> SEO work in 3.12.1 → 3.17.0 (landing pages, comparisons, blog) has since superseded much of the
+> Tier 2/3 page list; STATUS.md tracks that.
+>
+> **Re-checked 2026-10-14:** the legacy `new_year_2025` promo route is gone (only a Stripe-webhook
+> test fixture still names it). The **Switch plan → Free bug is still open**:
+> `subscriptionService.activateFree` (src/lib/services/subscription.service.ts) upserts the local row
+> to FREE/ACTIVE and never cancels the Stripe subscription, so a paying customer who switches to Free
+> keeps being billed.
 
 Companion to the codebase-derived sitemap brief (13 Sep 2026). That document is the "before" picture. This one is the "do this" direction, page by page, built from four competitor references, real, current, fetched the day this brief was written: squareup.com, mokapos.com, sundayapp.com, pos.toasttab.com.
 

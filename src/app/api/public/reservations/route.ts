@@ -118,26 +118,32 @@ export async function GET(request: Request) {
     return NextResponse.json(createSuccessResponse({ tables: [] }));
   }
 
-  const tables = await prisma.table.findMany({
-    where: { storeId: storefront.storeId, reservationEnabled: true },
-    select: { id: true, label: true, capacity: true },
-    orderBy: { label: "asc" },
-  });
+  // If a date is provided, include existing reservations for that day so the client can show conflicts.
+  // The two reads are independent, so they run in parallel.
+  const reservationsQuery: Promise<
+    Array<{ tableId: string | null; scheduledAt: Date; status: string }>
+  > = date
+    ? prisma.reservation.findMany({
+        where: {
+          storeId: storefront.storeId,
+          scheduledAt: {
+            gte: new Date(`${date}T00:00:00Z`),
+            lte: new Date(`${date}T23:59:59Z`),
+          },
+          status: { in: ["PENDING", "CONFIRMED"] },
+        },
+        select: { tableId: true, scheduledAt: true, status: true },
+      })
+    : Promise.resolve([]);
 
-  // If a date is provided, include existing reservations for that day so the client can show conflicts
-  let reservations: Array<{ tableId: string | null; scheduledAt: Date; status: string }> = [];
-  if (date) {
-    const start = new Date(`${date}T00:00:00Z`);
-    const end = new Date(`${date}T23:59:59Z`);
-    reservations = await prisma.reservation.findMany({
-      where: {
-        storeId: storefront.storeId,
-        scheduledAt: { gte: start, lte: end },
-        status: { in: ["PENDING", "CONFIRMED"] },
-      },
-      select: { tableId: true, scheduledAt: true, status: true },
-    });
-  }
+  const [tables, reservations] = await Promise.all([
+    prisma.table.findMany({
+      where: { storeId: storefront.storeId, reservationEnabled: true },
+      select: { id: true, label: true, capacity: true },
+      orderBy: { label: "asc" },
+    }),
+    reservationsQuery,
+  ]);
 
   return NextResponse.json(createSuccessResponse({ tables, reservations }));
 }

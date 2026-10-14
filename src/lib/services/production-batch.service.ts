@@ -181,6 +181,33 @@ export class ProductionBatchService {
   }
 
   /**
+   * `getOutstandingDrawnShortfall` for many products in one query: the same
+   * filter and the same per-batch term, summed per product. Products with no
+   * such batch are absent from the map (read them as 0).
+   */
+  private async getOutstandingDrawnShortfallByProduct(
+    productIds: string[]
+  ): Promise<Map<string, number>> {
+    const totals = new Map<string, number>();
+    if (productIds.length === 0) return totals;
+
+    const batches = await prisma.productionBatch.findMany({
+      where: {
+        productId: { in: productIds },
+        triggerType: ProductionTriggerType.ORDER_SHORTFALL,
+        materialsDrawnAt: { not: null },
+        status: { not: ProductionStatus.CANCELLED },
+      },
+      select: { productId: true, plannedQuantity: true, settledQuantity: true },
+    });
+    for (const b of batches) {
+      const outstanding = Math.max(0, Number(b.plannedQuantity) - Number(b.settledQuantity));
+      totals.set(b.productId, (totals.get(b.productId) ?? 0) + outstanding);
+    }
+    return totals;
+  }
+
+  /**
    * Net a new production run against outstanding drawn-shortfall debt, oldest
    * batch first, and return how much of `quantity` was absorbed.
    *
@@ -268,14 +295,22 @@ export class ProductionBatchService {
       orderBy: { name: "asc" },
     });
 
+    // The FK is global; never surface another store's recipe as prep work.
+    const eligible = products.filter(
+      (product) => product.primaryRecipe && product.primaryRecipe.storeId === storeId
+    );
+    // One query for every product's shortfall debt, not one per product.
+    const shortfallByProduct = await this.getOutstandingDrawnShortfallByProduct(
+      eligible.map((product) => product.id)
+    );
+
     const rows = [];
-    for (const product of products) {
-      // The FK is global; never surface another store's recipe as prep work.
-      if (!product.primaryRecipe || product.primaryRecipe.storeId !== storeId) continue;
+    for (const product of eligible) {
+      if (!product.primaryRecipe) continue;
 
       const currentStock = Number(product.currentStock);
       const parLevel = Number(product.minStock);
-      const outstandingShortfall = await this.getOutstandingDrawnShortfall(product.id);
+      const outstandingShortfall = shortfallByProduct.get(product.id) ?? 0;
 
       // Below par by this much, minus what has already been paid for in
       // ingredients but not yet logged.
@@ -1417,6 +1452,22 @@ export class ProductionBatchService {
     orderId: string,
     storeId: string
   ): Promise<{ batchesCreated: number }> {
+    // Gated exactly like recordDrawnShortfalls, and the asymmetry was a real
+    // bug: this drafter had no gate while the settlement side did. For a
+    // default store (productionEnabled is @default(false)) that meant
+    // ORDER_SHORTFALL batches were created here, materials genuinely left at
+    // the sale, but `materialsDrawnAt` was never stamped — so the debt read as
+    // zero forever and the next production run drew the same materials a
+    // second time. Reached by configuration, not by exception.
+    //
+    // Checked before loading the order: that read pulls every line's recipe
+    // tree, and most stores (the default) would just discard it here.
+    const store = await prisma.store.findUnique({
+      where: { id: storeId },
+      select: { productionEnabled: true },
+    });
+    if (!store?.productionEnabled) return { batchesCreated: 0 };
+
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -1431,19 +1482,6 @@ export class ProductionBatchService {
     });
 
     if (!order || order.storeId !== storeId) return { batchesCreated: 0 };
-
-    // Gated exactly like recordDrawnShortfalls, and the asymmetry was a real
-    // bug: this drafter had no gate while the settlement side did. For a
-    // default store (productionEnabled is @default(false)) that meant
-    // ORDER_SHORTFALL batches were created here, materials genuinely left at
-    // the sale, but `materialsDrawnAt` was never stamped — so the debt read as
-    // zero forever and the next production run drew the same materials a
-    // second time. Reached by configuration, not by exception.
-    const store = await prisma.store.findUnique({
-      where: { id: storeId },
-      select: { productionEnabled: true },
-    });
-    if (!store?.productionEnabled) return { batchesCreated: 0 };
 
     interface ShortfallCandidate {
       productId: string;

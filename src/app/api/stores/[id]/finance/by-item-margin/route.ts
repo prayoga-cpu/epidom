@@ -40,38 +40,40 @@ export const GET = withApiHandler(
     const to = new Date(searchParams.get("to") ?? now.toISOString());
     const shiftWhere = shiftFilter(searchParams);
 
-    const items = await prisma.orderItem.findMany({
-      where: {
-        order: {
-          storeId,
-          status: { notIn: NON_REVENUE_STATUSES },
-          orderDate: { gte: from, lte: to },
-          ...shiftWhere,
-          ...channelFilter(searchParams.get("channel")),
-          ...paymentMethodFilter(searchParams.get("paymentMethod")),
-        },
-        // Combined via AND, same reasoning as top-items: both filters can
-        // independently produce their own "OR" clause.
-        AND: [
-          categoryFilter(searchParams.get("category")),
-          departmentFilter(searchParams.get("department")),
-        ],
-      },
-      select: {
-        name: true,
-        quantity: true,
-        total: true,
-        unitCostSnapshot: true,
-        optionCostSnapshot: true,
-      },
-    });
-
     // item.total is already literal in the owner's own currency;
     // unitCostSnapshot is a frozen copy of Product.costPrice, stored in IDR
     // (the platform base currency) — convert before buildItemMarginRows
     // combines them into a margin, or the result mixes units for any
-    // non-IDR store.
-    const { rate: ownerRate } = await storefrontService.getOwnerCurrencyAndRate(storeId!);
+    // non-IDR store. The rate doesn't depend on the lines, so it's fetched
+    // alongside them.
+    const [items, { rate: ownerRate }] = await Promise.all([
+      prisma.orderItem.findMany({
+        where: {
+          order: {
+            storeId,
+            status: { notIn: NON_REVENUE_STATUSES },
+            orderDate: { gte: from, lte: to },
+            ...shiftWhere,
+            ...channelFilter(searchParams.get("channel")),
+            ...paymentMethodFilter(searchParams.get("paymentMethod")),
+          },
+          // Combined via AND, same reasoning as top-items: both filters can
+          // independently produce their own "OR" clause.
+          AND: [
+            categoryFilter(searchParams.get("category")),
+            departmentFilter(searchParams.get("department")),
+          ],
+        },
+        select: {
+          name: true,
+          quantity: true,
+          total: true,
+          unitCostSnapshot: true,
+          optionCostSnapshot: true,
+        },
+      }),
+      storefrontService.getOwnerCurrencyAndRate(storeId!),
+    ]);
 
     const rows = buildItemMarginRows(
       items.map((item) => ({

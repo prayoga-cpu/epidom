@@ -1,5 +1,13 @@
 # Epidom, Back Office Revamp — Phase 2 of the Dashboard Revamp
 
+> **Status: shipped in 2.85.0 (2026-09-17). Design record — kept at this path because source
+> comments cite it** (navigation.config.ts, sidebar.tsx, menu-manager.tsx and others). The brief
+> below is left as written; it describes the code before the change.
+>
+> **Still open:** the P1 "split `finance-client.tsx` into per-tab files" item was deferred and never
+> done — the file has since grown to ~3,900 lines (≈160 KB), and `components/tabs/` does not exist.
+> Line counts quoted below (2,850 / 1,451) are from 2026-09.
+
 Companion to `docs/dashboard-revamp.md` (Phase 1, POS Mode — shipped). That document explicitly deferred Back Office's own shell to "Phase 2, revisit once POS Mode has shipped and real usage data exists." This is that phase, built the same way Phase 1 and the website redesign brief were: a deep audit of the current code, four live competitor fetches (Moka, Square, Toast, sunday — their *management*-side products specifically this time, not their POS terminals), and a pass through this project's own strategy docs (STRATEGY.md, FEATURES.md, roadmap.md, AGENTS.md).
 
 ---

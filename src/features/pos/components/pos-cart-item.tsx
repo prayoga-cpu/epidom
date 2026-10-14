@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Minus, Plus, Trash2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -19,7 +20,15 @@ interface PosCartItemProps {
  * steppers stay always-visible (no tap-to-reveal): a cashier on a tablet needs
  * them without a second gesture, and every control here is >= 40px.
  */
-export function PosCartItem({ item, onUpdateQuantity, onRemove, onEdit }: PosCartItemProps) {
+// Memoized: the cart keeps an untouched line's object identity across edits
+// and its callbacks are stable store actions, so editing one line no longer
+// re-renders every other line on the bill.
+export const PosCartItem = memo(function PosCartItem({
+  item,
+  onUpdateQuantity,
+  onRemove,
+  onEdit,
+}: PosCartItemProps) {
   const { t } = useI18n();
   // Cart amounts (unit price, modifiers, line total) are literal in the
   // store's display currency, never IDR — passing `currency` skips
@@ -136,4 +145,4 @@ export function PosCartItem({ item, onUpdateQuantity, onRemove, onEdit }: PosCar
       </div>
     </div>
   );
-}
+});

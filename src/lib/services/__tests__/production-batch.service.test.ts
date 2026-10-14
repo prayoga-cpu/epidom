@@ -119,6 +119,20 @@ describe("draftShortfallBatchesForOrder", () => {
     };
   }
 
+  it("drafts nothing when the store has production off, without loading the order's recipes", async () => {
+    prismaMock.store.findUnique.mockResolvedValueOnce({ productionEnabled: false });
+    prismaMock.order.findUnique.mockResolvedValue(orderWithItem());
+
+    const result = await productionBatchService.draftShortfallBatchesForOrder(
+      "order-1",
+      "store-1"
+    );
+
+    expect(result.batchesCreated).toBe(0);
+    expect(prismaMock.order.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
   it("drafts an IN_PROGRESS ORDER_SHORTFALL batch sized to the shortfall, linked to the item", async () => {
     prismaMock.order.findUnique.mockResolvedValue(orderWithItem());
 

@@ -1,7 +1,7 @@
 # Offline POS
 
 How Epidom keeps selling without internet, what it promises, what it doesn't,
-and what's next. Current as of 3.3.6.
+and what's next. Current as of 3.3.6; re-checked against the code on 2026-10-14 (version 3.17.0).
 
 ---
 
@@ -123,7 +123,8 @@ In order of value for a store that needs the till to work through long outages:
 
 1. **Offline shift and cash drawer.** Queue shift open/close and cash movements
    with client-generated ids, like sales. The hard part is the one-shift-per-store
-   rule when two devices act offline at once (`project_shift_page`).
+   rule when two devices act offline at once (see `src/features/pos/hooks/use-active-shift.ts` and
+   `src/lib/services/shift-link.ts`).
 2. **Local-first sync engine** (e.g. PowerSync, which replicates Postgres into
    SQLite on each device; writes still go through our API, so server-side rules
    stay). This gives a full local read model (today's history, reports) and

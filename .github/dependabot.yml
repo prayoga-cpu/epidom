@@ -50,6 +50,28 @@ updates:
       - dependency-name: "react-dom"
         update-types: ["version-update:semver-major"]
 
+  # Electron desktop shell (desktop/, npm + its own package-lock.json). It is
+  # not part of the pnpm workspace, so the root entry above never sees it —
+  # without this, Electron security releases would go unnoticed.
+  - package-ecosystem: "npm"
+    directory: "/desktop"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    groups:
+      desktop-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    labels:
+      - "dependencies"
+      - "desktop"
+
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"

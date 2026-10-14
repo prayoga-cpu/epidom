@@ -51,13 +51,15 @@ How the codebase is organized and why. This doc evolves as the product evolves. 
 
 Next.js App Router groups in `src/app/`:
 
-| Group         | Auth     | Purpose                              | Caching                       |
-| ------------- | -------- | ------------------------------------ | ----------------------------- |
-| `(marketing)` | None     | Public landing, pricing, terms       | Static, ISR                   |
-| `(public)`    | None     | Per-merchant storefronts at `/@slug` | Static with revalidation tags |
-| `(app)`       | Required | Authenticated merchant dashboard     | Server-rendered               |
+| Group         | Auth     | Purpose                                                                                                           | Caching                                                                  |
+| ------------- | -------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `(marketing)` | None     | Landing, pricing, guides, blog, comparisons, under `m/[locale]`                                                   | Prerendered, served from the CDN                                         |
+| `(public)`    | None     | Per-merchant storefronts (`[slug]`, shown as `/@slug`) and `r/[orderId]` receipts                                 | Server-rendered; the storefront lookup is request-deduped with `cache()` |
+| `(app)`       | Required | Authenticated app: `(auth)`, `(stores)`, `store/[storeId]`, `admin`, `owner`, `checkout`, `onboarding`, `profile` | Server-rendered                                                          |
 
-The `(public)` group is the heart of the new positioning. Every storefront is statically cached and only revalidates when the merchant edits their menu. This keeps load times under 2 seconds even on poor Indonesian mobile connections.
+`src/proxy.ts` rewrites marketing URLs onto `(marketing)/m/[locale]` and treats paths starting with `/@` as public storefront routes. Inside `store/[storeId]` there are two sub-groups: `(dashboard)` (the back office: menu, finance, schedule, staff, shifts, billing, ...) and `(pos-mode)` (the POS and tables screens).
+
+The `(public)` group is the heart of the new positioning: a storefront has to load quickly on poor Indonesian mobile connections.
 
 ---
 
@@ -67,33 +69,35 @@ The `(public)` group is the heart of the new positioning. Every storefront is st
 src/
 ├── app/                      # Routes only. Pages stay thin.
 ├── features/                 # Domain logic, one folder per feature
+│   ├── admin/                # Platform admin (/admin)
 │   ├── auth/
-│   ├── storefront/           # Phase 1
-│   │   ├── editor/           # In-app storefront editor
-│   │   ├── public/           # Public-facing storefront components
-│   │   └── analytics/
-│   ├── orders/               # Phase 2
-│   ├── pos/                  # Phase 3
-│   ├── operations/           # Phase 4
-│   │   ├── shifts/
-│   │   ├── kds/
-│   │   └── inventory/
-│   ├── finance/              # Phase 5
-│   ├── dashboard/            # Cross-feature dashboard shell
+│   ├── billing/
+│   ├── checkout/
+│   ├── dashboard/            # Back office: menu, finance, schedule, staff, shifts, ...
+│   ├── guide/
+│   ├── loading/
 │   ├── marketing/            # Marketing site components
-│   └── onboarding/
+│   ├── onboarding/
+│   ├── pos/                  # POS, incl. the offline queues (hooks/)
+│   ├── pos-mode/             # POS Mode shell: tab bar, status bar, overflow menu, store switcher
+│   ├── store-transfer/
+│   ├── storefront/           # Public storefront + editor
+│   └── stores/
 ├── components/               # Shared, generic UI only (shadcn primitives)
 │   ├── ui/
 │   └── providers/
 ├── lib/                      # Core, framework-level utilities
-│   ├── auth/
+│   ├── auth/                 # Session + plan/permission guards
 │   ├── prisma.ts
 │   ├── payments/             # Payment provider abstraction
-│   ├── notifications/        # Notification provider abstraction
+│   ├── notifications/        # WhatsApp (Fonnte) notifications
+│   ├── inngest/              # Background jobs
+│   ├── realtime/             # Pusher publish/subscribe
 │   ├── services/             # Cross-feature business logic
 │   ├── validation/           # Zod schemas
 │   └── seo.ts
-├── locales/                  # i18n strings
+├── config/                   # Plan, rate-limit, permission and fee config
+├── locales/                  # i18n strings (en, fr, id)
 └── types/                    # Cross-cutting types
 ```
 
@@ -121,7 +125,7 @@ User
            ├── Order                   [Phase 2]
            │    └── OrderItem (1:N)
            ├── Shift                   [Phase 4]
-           └── Staff                   [Phase 4]
+           └── StaffMember             [Phase 4]
 ```
 
 ### Scoping rule
@@ -140,7 +144,7 @@ const orders = await prisma.order.findMany({
 });
 ```
 
-A failing test in `src/test/tenant-isolation.test.ts` catches accidental cross-tenant reads.
+Tenant scoping is enforced by the guards in `src/lib/auth/` and `src/lib/utils/store-verification.ts` (`verifyStoreAccess`); the guards have tests in `src/lib/auth/__tests__/`. There is no dedicated cross-tenant test suite, so review every new query for the `storeId` scope.
 
 ### Decimal everywhere
 
@@ -164,26 +168,19 @@ Two completely different payment flows. Architecturally separated.
 │  SaaS Subscription Billing │         │   Customer Payments        │
 │  (merchants pay Epidom)    │         │   (diners pay merchants)   │
 │                            │         │                            │
-│  Provider: Stripe          │         │  Provider: Xendit          │
-│  Currency: IDR, EUR        │         │  Currency: IDR             │
+│  Provider: Stripe          │         │  Providers: Xendit, Stripe │
+│  Currency: EUR (+USD, IDR) │         │  Currency: IDR (Xendit)    │
 │  Methods: Card             │         │  Methods: QRIS, GoPay,     │
-│                            │         │           OVO, DANA, Bank  │
-│  src/lib/payments/         │         │  src/lib/payments/         │
-│    providers/stripe.ts     │         │    providers/xendit.ts     │
+│                            │         │    OVO, DANA, ShopeePay,   │
+│  src/lib/stripe.ts         │         │    Bank (Xendit), Card     │
+│  src/app/api/subscriptions │         │  src/lib/payments/         │
+│                            │         │    providers/xendit.ts     │
+│                            │         │    providers/stripe-       │
+│                            │         │      customer.ts           │
 └────────────────────────────┘         └────────────────────────────┘
 ```
 
-Selector pattern in `src/lib/payments/index.ts`:
-
-```typescript
-export function getSubscriptionProvider() {
-  return stripeProvider;
-}
-
-export function getCustomerPaymentProvider(region: "ID" | "FR") {
-  return region === "ID" ? xenditProvider : stripeProvider;
-}
-```
+Customer payments go through one entry point in `src/lib/payments/index.ts`: `initiatePayment(req)` routes by payment method (`isIndonesianPayment(method)` is true for QRIS, GoPay, OVO, DANA, ShopeePay and bank transfer, which use Xendit; `STRIPE_CARD` uses `stripe-customer.ts`). SaaS subscription billing does not use this module.
 
 This keeps the two flows from leaking into each other and makes it trivial to swap providers (Xendit → Midtrans for IDN, for example) without touching feature code.
 
@@ -195,14 +192,19 @@ Indonesian merchants live on WhatsApp. Email is secondary. The notification laye
 
 ```
 src/lib/notifications/
-├── providers/
-│   ├── fonnte.ts             # v1, unofficial WhatsApp gateway
-│   ├── whatsapp-business.ts  # v2, official Meta WhatsApp Business API
-│   ├── resend.ts             # Email
-│   └── index.ts              # Provider selector
-├── orchestrator.ts           # Multi-channel dispatcher
-└── templates/                # Message templates by event type
+├── index.ts                  # notifyMerchantNewOrder, notifyCustomerReceipt
+└── providers/
+    └── fonnte.ts             # Unofficial WhatsApp gateway (disabled without a token)
 ```
+
+Other channels live outside this folder:
+
+- **Email**: Resend, via `src/lib/services/email.service.ts`.
+- **Browser push**: `web-push` (VAPID) in `src/lib/push/`.
+- **Merchant alerts** (new order, low/critical stock): MagicBell in `src/lib/magicbell/`.
+- **Live UI updates**: Pusher in `src/lib/realtime/`; the app polls when Pusher is not configured.
+
+The official WhatsApp Business API is not implemented.
 
 Events that trigger notifications:
 
@@ -225,10 +227,18 @@ Inngest, from Phase 2 onwards.
 src/lib/inngest/
 ├── client.ts
 └── functions/
-    ├── send-order-notification.ts
-    ├── retry-failed-webhook.ts
-    ├── daily-finance-rollup.ts      # Phase 5
-    └── parse-aggregator-email.ts    # Phase 5
+    ├── audit-alerts.ts
+    ├── audit-retention.ts
+    ├── check-backup-freshness.ts
+    ├── custom-development-notification.ts
+    ├── feedback-notification.ts
+    ├── nightly-database-backup.ts
+    ├── order-notification.ts
+    ├── parse-aggregator-email.ts
+    ├── purge-expired-accounts.ts
+    ├── send-customer-receipt.ts
+    ├── send-receipt-email-on-order.ts
+    └── stock-integrity-sweep.ts
 ```
 
 All async work that takes more than 1 second goes through Inngest. API routes stay fast.
@@ -269,22 +279,13 @@ These feed directly into `/api/stores/[id]/finance/channels` net-revenue calcula
 
 ## 8. Caching strategy
 
-| Surface                              | Strategy                                         |
-| ------------------------------------ | ------------------------------------------------ |
-| `(marketing)`                        | Static, regenerated on deploy                    |
-| `(public)/@[slug]`                   | Static with `revalidate` tag `storefront:[slug]` |
-| `(public)/@[slug]/menu`              | Same tag as parent storefront                    |
-| `(app)/store/[storeId]/*`            | Server-rendered, no cache                        |
-| API routes returning storefront data | Cached at edge with the same tag                 |
+| Surface                              | Strategy                                                                                            |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `(marketing)/m/[locale]`             | Prerendered at build, served from the CDN (`changelog` revalidates hourly)                          |
+| `(public)/[slug]` (storefront, menu) | Server-rendered per request; `getPublicStorefront` is deduped within a request with React `cache()` |
+| `(app)/store/[storeId]/*`            | Server-rendered, no cache                                                                           |
 
-When a merchant edits their storefront:
-
-```typescript
-import { revalidateTag } from "next/cache";
-revalidateTag(`storefront:${slug}`);
-```
-
-This invalidates both the page and the API response. Customers see the change within seconds.
+There is no `revalidateTag` usage today: a menu edit shows on the next request.
 
 ---
 
@@ -357,8 +358,8 @@ The POS surface must work without internet. Indonesian power and internet are un
 │                              └──────────┬───────────┘  │
 └─────────────────────────────────────────┼───────────────┘
                                           │
-                                  Service Worker
-                                  syncs on reconnect
+                          App replays the queue on reconnect
+                          (use-offline-sync.ts)
                                           │
                                           ▼
                               ┌──────────────────────┐
@@ -373,7 +374,7 @@ Key principles:
 - Conflict resolution is last-write-wins for most fields, with manual review for cash reconciliation discrepancies
 
 **As built (3.3.6):** the diagram above was the Phase 3 plan. What shipped is a
-service worker for the screens, an IndexedDB mirror of the TanStack Query cache
+service worker (`public/sw.js`, caching only: no background sync) for the screens, an IndexedDB mirror of the TanStack Query cache
 for reads, and three IndexedDB write queues (sales, table status, production
 logs) replayed through one loop with server-side idempotency keys. A sale keeps
 its own time and shift on replay, and nothing in a queue is ever deleted without
@@ -386,26 +387,33 @@ in-store hub) are in [`OFFLINE_POS.md`](./OFFLINE_POS.md).
 
 ## 12. Cross-cutting concerns
 
-| Concern            | Solution                                                                                      |
-| ------------------ | --------------------------------------------------------------------------------------------- |
-| **Logging**        | Server-side: `console.log` to Vercel logs in dev; Sentry in prod                              |
-| **Error tracking** | Sentry (to be added in Phase 1)                                                               |
-| **Rate limiting**  | Upstash Redis + `@upstash/ratelimit`, applied to public POST endpoints                        |
-| **CSRF**           | Better Auth handles for `(app)` surface; public endpoints rely on origin checks + rate limits |
-| **Validation**     | Zod everywhere, never trust unvalidated input                                                 |
-| **Analytics**      | Vercel Analytics for web vitals; PostHog (to be added Phase 2) for product analytics          |
-| **Feature flags**  | `src/lib/feature-flags.ts`, environment-variable-driven                                       |
+| Concern            | Solution                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Logging**        | `src/lib/logger.ts`: console output in dev, JSON lines in prod (Vercel logs), with request IDs                                             |
+| **Error tracking** | None beyond Vercel logs; no third-party error tracker is installed                                                                         |
+| **Rate limiting**  | In-memory `Map` (`src/lib/middleware/rate-limit.ts`, config in `src/config/rate-limit.config.ts`); per-instance, not shared across lambdas |
+| **CSRF**           | Better Auth handles for `(app)` surface; public endpoints rely on origin checks + rate limits                                              |
+| **Validation**     | Zod everywhere, never trust unvalidated input                                                                                              |
+| **Analytics**      | Vercel Analytics for web vitals; optional Google Analytics and Meta Pixel, loaded only after cookie consent (`src/components/analytics/`)  |
+| **Plan gating**    | No env feature flags. Plan and feature gates: `src/lib/auth/require-plan.ts`, `require-store-feature.ts`, `require-feature.ts`             |
 
 ---
 
 ## 13. Deployment
 
-| Environment | Branch    | URL                      | Database                                  |
-| ----------- | --------- | ------------------------ | ----------------------------------------- |
-| Development | (local)   | `localhost:3000`         | Local Postgres or Docker                  |
-| Preview     | All PRs   | `epidom-pr-N.vercel.app` | Neon preview branch                       |
-| Staging     | `staging` | `staging.epidom.fr`      | Neon staging                              |
-| Production  | `main`    | `epidom.fr`              | Neon prod (Singapore region from Phase 3) |
+| Environment | Branch         | URL              | Database                                             |
+| ----------- | -------------- | ---------------- | ---------------------------------------------------- |
+| Development | (local)        | `localhost:3000` | Neon `development` branch (see `DATABASE.md`)        |
+| Preview     | tracked branch | `dev.epidom.fr`  | Neon `development` branch, reset nightly from `main` |
+| Production  | `main`         | `epidom.fr`      | Neon `main` branch                                   |
+
+Local dev and Vercel Preview deployments share the `development` Neon branch and never touch production data. Merging to `main` deploys to production. The nightly reset and the redeploy of `dev.epidom.fr` are described in [`DATABASE.md`](./DATABASE.md) ("Development vs production database").
+
+----------- | --------- | ------------------------ | ----------------------------------------- |
+| Development | (local) | `localhost:3000` | Local Postgres or Docker |
+| Preview | All PRs | `epidom-pr-N.vercel.app` | Neon preview branch |
+| Staging | `staging` | `staging.epidom.fr` | Neon staging |
+| Production | `main` | `epidom.fr` | Neon prod (Singapore region from Phase 3) |
 
 Every PR gets a preview deployment with its own database branch. Merging to `staging` deploys to staging. Merging to `main` deploys to prod after a manual approval gate.
 

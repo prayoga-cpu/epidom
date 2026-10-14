@@ -72,7 +72,6 @@ const CACHEABLE_PATH_PREFIXES = [
   "/_next/static/", // content-hashed and immutable (JS, CSS, next/font media)
   "/images/",
   "/payment-logos/",
-  "/map-styles/",
   "/fonts/",
 ];
 

@@ -1,42 +1,46 @@
 # Epidom
 
-> Epidom is a free public storefront, ordering, and POS operating system for small food & beverage businesses (café, restaurant, warung, home kitchen). It replaces the Linktree + paper/PDF menu + WhatsApp-ordering combination most small F&B businesses use today, then ladders into paid cashier, kitchen, inventory, and finance tools as a business grows.
+> Epidom is a free public storefront and QR menu for small food & beverage businesses (café, restaurant, bakery, warung, home kitchen), with paid plans that add online ordering, a point-of-sale cashier, kitchen display, staff and stock tools, and finance reports as a business grows. It replaces the Linktree + paper/PDF menu + WhatsApp-ordering combination many small F&B businesses use today.
 
 ## What Epidom is
 
-- A merchant creates a free public storefront page (`https://epidom.fr/@their-shop-name`) with their menu, theme, and online ordering — card/Stripe payments (France/worldwide) or QRIS/local payments (Indonesia).
-- The storefront is free forever. Paid tiers add a point-of-sale cashier, kitchen display, staff shift management, inventory/recipe costing, and multi-outlet finance reporting.
-- Primary market: France. Secondary market: Indonesia. Also usable worldwide.
+- A merchant creates a free public storefront page (`https://epidom.fr/@their-shop-name`) with their menu, theme and QR code. The storefront is free forever.
+- Online ordering from the storefront, the POS cashier, the kitchen display and table reservations are part of the POS plan (14-day free trial). Storefront orders are currently paid at the counter; online payment from the storefront is switched off.
+- The Operations plan adds staff, stock, recipe-costing and finance tools; Enterprise adds unlimited outlets and custom builds.
+- Primary market: France. Secondary market: Indonesia. Also usable worldwide. The site is in French (default), Indonesian (`/id/`) and English (`/en/`).
 
-## Pricing (EUR, billed monthly; IDR/USD equivalents shown on epidom.fr/pricing)
+## Pricing (billed monthly, or yearly at a lower monthly rate; EUR / USD / IDR shown on epidom.fr/en/pricing)
 
-- **Free** — €0. Public storefront, digital menu, QR ordering, online payments, order notifications.
-- **POS** — €13.99/mo (~Rp 229,000 / ~$14.99). Adds cashier register, order list, receipts, basic kitchen display.
-- **Operations** — €27.99/mo (~Rp 459,000 / ~$29.99). Adds shift management, full kitchen display, inventory & recipe costing, low-stock alerts, up to 3 outlets, and financial reports (P&L, margins, cash reconciliation) with an all-outlets roll-up.
+- **Free** — €0. Menu page + QR code, a Google Reviews button, visits and taps counted, WhatsApp notifications, 1 outlet.
+- **POS** — €13.99/mo (~$14.99 / Rp 229,000), 14 days free. Everything in Free, plus POS on any device, kitchen display (KDS), table management with QR codes and reservations, thermal receipt printing, bank transfer / card / cash, and online ordering from the storefront.
+- **Operations** — €27.99/mo (~$29.99 / Rp 459,000). Everything in POS, plus staff roles and PIN access control, recipes and COGS, automatic stock and alerts, shift scheduling and rosters, selfie + geolocation attendance, waste and loss tracking, up to 3 outlets, full financial reports (P&L, margins, cash-up) and an all-outlets roll-up.
 - **Enterprise** — custom pricing, sales-led. Unlimited outlets (4 or more), plus your own internal system or website, scoped and built with the Prionation team (the company behind Epidom): custom integrations (accounting, delivery apps, payments), priority support, onboarding and data migration, a dedicated account manager and custom SLAs.
 
 ## Who it's for
 
-Independent café, restaurant, coffee shop, warung (small Indonesian food stall), and home-kitchen operators — typically 1-20 staff, currently relying on Instagram + WhatsApp + a paper or PDF menu, looking to accept online orders without paying delivery-platform commissions.
+Independent café, restaurant, bakery, coffee shop, warung (small Indonesian food stall) and home-kitchen operators — typically 1-20 staff, currently relying on Instagram + WhatsApp + a paper or PDF menu.
 
 ## How Epidom compares
 
-- **vs. Sunday, Tiller, Innovorder, Zelty (France):** Epidom covers the full ladder from storefront through operations — free forever at the entry point — not just tableside QR payment.
-- **vs. Moka POS, Majoo, Klikit, Pawoon, iSeller, Olsera (Indonesia POS incumbents):** Epidom's free tier includes a real public ordering storefront; these competitors charge from day one and mostly don't offer a customer-facing ordering page.
-- **vs. Deliveroo / Uber Eats / GoFood / GrabFood / ShopeeFood:** Epidom is commission-free — merchants keep 100% of each order instead of paying delivery-platform commission.
-- **vs. Linktree + a PDF/paper menu + WhatsApp ordering:** Epidom replaces that stitched-together setup with one page that also takes payment and tracks orders.
+- Side-by-side comparisons with POS and ordering products in France (e.g. Sunday, Zelty, Innovorder, L'Addition, Lightspeed, Popina, Zettle, SumUp) and Indonesia (e.g. Moka, Majoo, Klikit, Pawoon, Qasir, Olsera, ESB, Kasir Pintar) are linked from the comparison hubs — https://epidom.fr/compare (French), https://epidom.fr/id/compare (Indonesian) and https://epidom.fr/en/compare — each comparison in its own market's language. Every fact about another product there is taken from its own website, with the date it was checked.
+- **vs. delivery apps (Uber Eats, Deliveroo, GoFood, GrabFood, ShopeeFood):** orders placed through a merchant's own Epidom storefront carry no per-order commission; the merchant pays the plan subscription instead. A calculator shows the difference: https://epidom.fr/en/delivery-app-commission-calculator
+- **vs. Linktree + a PDF/paper menu + WhatsApp ordering:** Epidom replaces that stitched-together setup with one page, free for the menu and QR code, with ordering on the POS plan.
 
 ## Key pages
 
-- Homepage: https://epidom.fr/
-- Pricing: https://epidom.fr/pricing
-- About: https://epidom.fr/about
-- Services / features: https://epidom.fr/services
-- Custom builds (Enterprise, with Prionation): https://epidom.fr/build-with-us
-- Contact: https://epidom.fr/contact
-- Changelog (product release notes): https://epidom.fr/changelog
+- Homepage: https://epidom.fr/en
+- Pricing: https://epidom.fr/en/pricing
+- Features / services: https://epidom.fr/en/services
+- Comparisons: https://epidom.fr/en/compare
+- Blog and guides: https://epidom.fr/en/blog
+- Free tools: https://epidom.fr/en/recipe-cost-calculator, https://epidom.fr/en/delivery-app-commission-calculator
+- Guides by business and feature: https://epidom.fr/en/cafe-pos-system, https://epidom.fr/en/bakery-pos-system, https://epidom.fr/en/free-qr-code-menu, https://epidom.fr/en/commission-free-online-ordering, https://epidom.fr/en/offline-pos-system, https://epidom.fr/en/kitchen-display-system, https://epidom.fr/en/restaurant-inventory-software, https://epidom.fr/en/restaurant-staff-scheduling, https://epidom.fr/en/receipt-printer-pos
+- About: https://epidom.fr/en/about
+- Custom builds (Enterprise, with Prionation): https://epidom.fr/en/build-with-us
+- Contact: https://epidom.fr/en/contact
+- Changelog (product release notes): https://epidom.fr/en/changelog
 - Example live storefront: a published `/@slug` page reachable from the homepage
 
 ## Contact
 
-For business inquiries: see https://epidom.fr/contact
+For business inquiries: see https://epidom.fr/en/contact

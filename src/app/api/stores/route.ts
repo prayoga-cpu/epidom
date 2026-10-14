@@ -15,11 +15,16 @@ import { getLinkedStaffForUser, linkedStaffLandingPath } from "@/lib/auth/staff-
  */
 export const GET = withApiHandler(
   async (request, { userId }) => {
-    const business = await businessService.getBusinessByUserId(userId);
-    const owned = business ? await businessService.getStoresByBusinessId(business.id) : [];
+    // The staff link only needs the user, so it runs alongside the owned-store
+    // chain (business → stores) instead of after it.
+    const [owned, link] = await Promise.all([
+      businessService
+        .getBusinessByUserId(userId)
+        .then((business) => (business ? businessService.getStoresByBusinessId(business.id) : [])),
+      getLinkedStaffForUser(userId),
+    ]);
     const ownedRows = owned.map((store) => ({ ...store, accessRole: "owner" as const }));
 
-    const link = await getLinkedStaffForUser(userId);
     // Owner access outranks staff access to the same store (someone linked as
     // staff who later became the owner through a transfer) — never list it twice.
     if (!link || owned.some((store) => store.id === link.storeId)) {

@@ -8,12 +8,14 @@ If you add a feature, update this doc in the same PR. If a feature is in develop
 
 ## Tier overview
 
-| Tier           | Price (IDR/mo) | Who it's for                                          | Phase delivered |
-| -------------- | -------------- | ----------------------------------------------------- | --------------- |
-| **FREE**       | Rp 0           | Any merchant who wants a public storefront            | Phase 1-2       |
-| **POS**        | Rp 229,000     | Merchant with a cashier and >50 orders/day            | Phase 3         |
-| **OPERATIONS** | Rp 459,000     | Multi-staff café or restaurant, up to 3 outlets       | Phase 4-5       |
-| **ENTERPRISE** | Custom         | A group of 4+ outlets, or a custom build with us      | Service tier    |
+| Tier           | Price per month (EUR / USD / IDR; yearly billing in brackets, per month)          | Who it's for                                          | Phase delivered |
+| -------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------- | --------------- |
+| **FREE**       | €0 / $0 / Rp 0                                                                    | Any merchant who wants a public storefront            | Phase 1-2       |
+| **POS**        | €13.99 (€11.49) / $14.99 ($12.49) / Rp 229,000 (Rp 189,000)                       | Merchant with a cashier and >50 orders/day            | Phase 3         |
+| **OPERATIONS** | €27.99 (€23.49) / $29.99 ($24.99) / Rp 459,000 (Rp 379,000)                       | Multi-staff café or restaurant, up to 3 outlets       | Phase 4-5       |
+| **ENTERPRISE** | Custom                                                                            | A group of 4+ outlets, or a custom build with us      | Service tier    |
+
+France is the primary market (EUR), then Indonesia (IDR); the English site quotes USD. Prices are the table in `src/lib/constants/plan-pricing.ts`. Paying yearly saves about 16-18% against twelve monthly payments (not 20%). POS has a 14-day free trial (POS only, first subscription only; `src/lib/plans/pos-trial.ts`).
 
 Each tier includes everything in the tier below. The upgrade always preserves data.
 
@@ -43,32 +45,13 @@ The wedge. Forever free. Replaces Linktree + Google Drive menu + WhatsApp orderi
 ### Menu listing _(Phase 1)_
 
 - Unlimited menu categories
-- Up to 50 menu items on FREE tier
+- Up to 50 inventory products on FREE tier (storefront menu items themselves are not capped)
 - Item photos, names, prices, descriptions
 - "Sold out" toggle per item
 - Featured items
 - Modifier options (size, spice level, add-ons)
 
-### Direct ordering _(Phase 2)_
-
-- Customer cart and checkout
-- Dine-in (with table number), takeaway, or self-delivery
-- Customer phone number capture
-- Order notes
-
-### Indonesian payments _(Phase 2)_
-
-- QRIS payment integration
-- GoPay, OVO, DANA, ShopeePay
-- Bank transfer
-- Cash (mark as paid manually)
-- **Storefront online payment is switched off for now (3.8.0).** Every storefront order is "pay at the cashier": placed unpaid, the till is alerted (POS bell + device push), and the cashier settles it with Mark as Paid. The gateways above stay wired behind `STOREFRONT_ONLINE_PAYMENTS_ENABLED` (`src/config/storefront-ordering.config.ts`)
-
-### Notifications _(Phase 2)_
-
-- WhatsApp notification to merchant on new order
-- Real-time dashboard updates via SSE
-- WhatsApp order confirmation to customer
+Online ordering, payments and order notifications are not part of FREE: online ordering and table reservations need the POS plan (`FEATURE_MIN_PLAN.onlineOrders` / `tableReservations`). They are listed under the POS tier below.
 
 ### Basic analytics _(Phase 2)_
 
@@ -80,27 +63,48 @@ The wedge. Forever free. Replaces Linktree + Google Drive menu + WhatsApp orderi
 
 ### Free tier limits
 
-| Resource               | Limit     |
-| ---------------------- | --------- |
-| Storefronts            | 1         |
-| Menu items             | 50        |
-| Orders per month       | 200       |
-| Storage (images)       | 500 MB    |
-| WhatsApp notifications | 100/month |
+| Resource               | Limit                                    |
+| ---------------------- | ---------------------------------------- |
+| Storefronts            | 1                                        |
+| Products (inventory)   | 50                                       |
+| Orders per month       | 200 (not enforced in code yet)           |
+| Storage (images)       | 500 MB (not enforced in code yet)        |
+| WhatsApp notifications | 100/month (not enforced in code yet)     |
 
-Hitting any of these prompts an upgrade to POS tier.
+Storefronts (`PLAN_MAX_STORES`) and inventory products (`maxProducts` in `src/config/stripe.config.ts`, checked by `subscriptionService.canCreateProduct` when a product is created) are enforced. Storefront menu items are not counted against it. Hitting the product limit prompts an upgrade to POS tier.
 
 ---
 
-## POS tier (Rp 229,000/mo)
+## POS tier (€13.99 / $14.99 / Rp 229,000 per month)
 
 For merchants who run service in-person. Everything in FREE, plus:
+
+### Online ordering _(Phase 2; POS plan)_
+
+- Customer cart and checkout on the storefront
+- Dine-in (with table number), takeaway, or self-delivery
+- Customer phone number capture
+- Order notes
+- Table reservations from the storefront (`FEATURE_MIN_PLAN.tableReservations`)
+- **Storefront online payment is switched off for now (3.8.0).** Every storefront order is "pay at the cashier": placed unpaid, the till is alerted (POS bell + device push), and the cashier settles it with Mark as Paid. The gateways below stay wired behind `STOREFRONT_ONLINE_PAYMENTS_ENABLED = false` (`src/config/storefront-ordering.config.ts`) and return if it is switched on
+
+### Online payments _(Phase 2; switched off, see above)_
+
+- QRIS payment integration
+- GoPay, OVO, DANA, ShopeePay
+- Bank transfer
+- Cash (mark as paid manually)
+
+### Notifications _(Phase 2)_
+
+- WhatsApp notification to merchant on new order
+- Real-time dashboard updates via SSE
+- WhatsApp order confirmation to customer
 
 ### Cashier mode _(Phase 3)_
 
 - Tablet and phone optimized POS
 - Quick-add items by category or search
-- Apply discounts (percentage or fixed)
 - Service charge and tax presets
 - Multiple payment methods per order (split tender)
 - Order modifications and refunds
@@ -152,20 +156,25 @@ For merchants who run service in-person. Everything in FREE, plus:
 
 ### POS tier limits
 
-| Resource               | Limit       |
-| ---------------------- | ----------- |
-| Storefronts            | 1           |
-| Menu items             | 500         |
-| Orders per month       | Unlimited   |
-| Storage                | 5 GB        |
-| WhatsApp notifications | 1,000/month |
-| POS terminals          | 2           |
+| Resource               | Limit                                     |
+| ---------------------- | ----------------------------------------- |
+| Storefronts            | 1                                         |
+| Products (inventory)   | 500                                       |
+| Orders per month       | Unlimited                                 |
+| Storage                | 5 GB (not enforced in code yet)           |
+| WhatsApp notifications | 1,000/month (not enforced in code yet)    |
+| POS terminals          | 2 (not enforced in code yet)              |
 
 ---
 
-## OPERATIONS tier (Rp 459,000/mo)
+## OPERATIONS tier (€27.99 / $29.99 / Rp 459,000 per month)
 
 For merchants with staff, ingredient cost concerns, or a second or third outlet. Everything in POS, plus:
+
+### Discounts and promotions _(Phase 3; OPERATIONS)_
+
+- Cart-line discounts in POS Mode (percentage or fixed): `FEATURE_MIN_PLAN.discounts`
+- Discount presets, coupons and loyalty points: `FEATURE_MIN_PLAN.loyaltyAndPromotions`, also enforced on the server routes. Attaching a plain customer to a sale stays at POS
 
 ### Shift management _(Phase 4)_
 
@@ -254,16 +263,16 @@ For merchants with staff, ingredient cost concerns, or a second or third outlet.
 
 ### Operations tier limits
 
-| Resource               | Limit                      |
-| ---------------------- | -------------------------- |
-| Storefronts            | Up to 3 (one per outlet)   |
-| Outlets                | Up to 3                    |
-| Menu items             | Unlimited                  |
-| Orders per month       | Unlimited                  |
-| Storage                | 25 GB                      |
-| WhatsApp notifications | 5,000/month                |
-| POS terminals          | 5                          |
-| Staff accounts         | 15                         |
+| Resource               | Limit                                      |
+| ---------------------- | ------------------------------------------ |
+| Storefronts            | Up to 3 (one per outlet)                   |
+| Outlets                | Up to 3                                    |
+| Products (inventory)   | Unlimited                                  |
+| Orders per month       | Unlimited                                  |
+| Storage                | 25 GB (not enforced in code yet)           |
+| WhatsApp notifications | 5,000/month (not enforced in code yet)     |
+| POS terminals          | 5 (not enforced in code yet)               |
+| Staff accounts         | 15 (not enforced in code yet)              |
 
 A 4th outlet needs ENTERPRISE (since 2026-09-27; before that, one Operations subscription covered unlimited outlets). Prices are unchanged. Whether to publish an ENTERPRISE "from" price for that step is an open decision, not implemented.
 
@@ -314,10 +323,10 @@ Starting defaults; an engagement can set its own terms.
 | ---------------------- | ----------------------------------------- |
 | Storefronts            | Unlimited (one per outlet)                |
 | Outlets                | Unlimited (4 and up)                      |
-| Menu items             | Unlimited                                 |
+| Products (inventory)   | Unlimited                                 |
 | Orders                 | Unlimited                                 |
-| Storage                | 250 GB                                    |
-| WhatsApp notifications | 25,000/month                              |
+| Storage                | 250 GB (not enforced in code yet)         |
+| WhatsApp notifications | 25,000/month (not enforced in code yet)   |
 | POS terminals          | Unlimited                                 |
 | Staff accounts         | Unlimited                                 |
 | Support                | Priority WhatsApp, email, scheduled calls |
@@ -330,9 +339,9 @@ These ship across all tiers, from FREE upward.
 
 ### Internationalization _(always)_
 
-- Bahasa Indonesia (`id`), primary
-- English (`en`), secondary
-- French (`fr`), frozen — legacy only
+- French (`fr`), primary (primary market since 2026-08-10; live and maintained, new French copy is expected)
+- Bahasa Indonesia (`id`), secondary market
+- English (`en`), worldwide (USD pricing)
 
 ### Mobile-first design _(always)_
 
@@ -364,7 +373,7 @@ These existed in the original codebase. They are not deleted — they're paused 
 | ------------------------------- | ------------------------------------- | -------------------------------------------------- |
 | Cookie-bar-specific copy        | Removed in Phase 0                    | Will not return                                    |
 | Stripe Connect 80/20 (original) | Paused                                | Returns in Phase 5+ ENTERPRISE tier, pending legal |
-| French market positioning       | Paused                                | Re-evaluate after 5,000 paying IDN merchants       |
+| French market positioning       | Resolved 2026-08-10                   | Reactivated as the primary market, `fr` maintained |
 | Production batch UI             | Hidden behind feature flag in Phase 0 | Back on OPERATIONS, opt-in per store               |
 | AI CSV import for inventory     | Code retained, UI hidden              | Returns in Phase 4 OPERATIONS tier                 |
 | Maps (Leaflet, MapLibre)        | Removed in Phase 0                    | Not returning unless a clear use case emerges      |
@@ -381,6 +390,10 @@ Decisions about what to ship, when, and why. Append-only.
 - Paused all French market features
 - Archived cookie-bar copy
 - Hidden production / inventory / alerts behind feature flag, to be re-exposed in Phase 4
+
+### 2026-08-10, French market reactivated
+
+- France became the primary market and `fr` a maintained locale again, ahead of the original "5,000 paying Indonesian merchants" trigger (see `docs/STRATEGY.md` section 3 and `AGENTS.md` section 2). The "Paused all French market features" item above is superseded.
 
 ### 2026-08-14, two-tier stock (2.70.0)
 
@@ -420,6 +433,12 @@ The operational half of two-tier stock. Batch-produced items only stay in stock 
 - **Accepting a store ownership transfer checks the recipient's limit** (`acceptStoreTransfer` in `store-transfer.service.ts`). It is refused with `SUBSCRIPTION_LIMIT_EXCEEDED` and `details.requiredPlan`, inside the transaction, so the invite is not consumed. Before, transferred stores were grandfathered past the limit.
 - **Downgrades never remove or lock stores**, whatever the path (Stripe portal / webhook, cancel then activate Free, admin set-plan, beta switch). A business above its new plan's limit keeps every store working but cannot create or receive another. No schema change.
 - Prices unchanged. The cap answers the per-outlet pricing question for OPERATIONS. Still open: whether to publish an ENTERPRISE "from" price. Competitors sell the 4th outlet online, and sales-led tiers usually start at 10+ outlets.
+
+### 2026-10, storefront online payment off; ordering belongs to POS (3.8.0, 3.14.0)
+
+- `STOREFRONT_ONLINE_PAYMENTS_ENABLED` is `false` (3.8.0): storefront orders are placed unpaid and settled at the cashier. The Xendit / Stripe Connect code stays wired.
+- Online ordering and table reservations are POS features (`FEATURE_MIN_PLAN.onlineOrders` / `tableReservations`); FREE is the storefront and its QR menu. Discounts, coupons and loyalty are OPERATIONS.
+- Prices are quoted in EUR, USD and IDR from `src/lib/constants/plan-pricing.ts`; yearly saves about 16-18%.
 
 ### Future decisions to log here
 

@@ -11,6 +11,10 @@ Prisma schema, models, migrations, and the rules every query must follow.
 - Migrations in `prisma/migrations/`
 - Generator targets default Prisma Client
 
+> **`prisma/schema.prisma` is the source of truth.** The model and enum excerpts in this file are illustrative (grouped by the phase that introduced them, with unrelated fields trimmed as `// …`); when they disagree with the schema, the schema wins.
+>
+> **Connection setup.** Runtime queries go through the `PrismaPg` driver adapter (`@prisma/adapter-pg`) constructed in `src/lib/prisma.ts` (Prisma 7 requires a driver adapter). Migrations are run by the Prisma CLI via `prisma.config.ts`, which takes its URL from `directDatabaseUrl()` in `src/lib/db/connection-string.ts`: `DIRECT_URL` is preferred, otherwise a direct endpoint is derived from `DATABASE_URL`.
+
 ---
 
 ## Schema overview
@@ -59,9 +63,9 @@ await prisma.order.findMany({ where: { storeId, status: "PENDING" } });
 await prisma.order.findMany({ where: { status: "PENDING" } });
 ```
 
-A test in `src/test/tenant-isolation.test.ts` catches accidental cross-tenant queries by inspecting Prisma logs in test mode.
+There is no automated test that scans queries for a missing `storeId`; isolation is enforced by the store-scoping guards in `src/lib/auth/` (tests in `src/lib/auth/__tests__/`) and the ownership checks in `src/lib/utils/store-verification.ts`. Every route and service must call them and put `storeId` in the `where`.
 
-The only exceptions: `User`, `Subscription`, `Business`, `Session`, `Account`, `Verification`, `ExchangeRate`. These are scoped to `User` or are global lookup tables.
+The exceptions are models not owned by a single store: the account and identity tables (`User`, `Session`, `Account`, `Verification`), the tenant roots and billing (`Business`, `BusinessFinanceSettings`, `Subscription`), global lookup/operational tables (`ExchangeRate`, `Release`, `BackupRun`, `RestoreRun`, `ActionAnnotation`, `SalesPageEvent`), plus child rows that inherit their scope through a parent (`OrderItem`, `MenuItem`, `MenuCategory`, `StockMovement` …). The list grows with the schema, so check `prisma/schema.prisma` for a model without a `storeId` before assuming it is scoped.
 
 ---
 
@@ -190,20 +194,22 @@ model Order {
   // existing fields preserved
 
   storefrontId       String?
-  orderType          OrderType    @default(DINE_IN)
+  orderType          OrderType     @default(DINE_IN)
   tableNumber        String?
-  customerName       String?
-  customerPhone      String?
-  customerNotes      String?
-  paymentMethod      PaymentMethod?
+  paymentMethod      PaymentMethod @default(CASH)
   paymentStatus      PaymentStatus @default(PENDING)
   paymentProviderRef String?
-  source             OrderSource   @default(DIRECT)
+  source             OrderSource   @default(MANUAL)
+  // …
 
-  storefront         Storefront?  @relation(fields: [storefrontId], references: [id])
+  storefront         Storefront?   @relation(fields: [storefrontId], references: [id], onDelete: SetNull)
 
-  @@index([storefrontId, createdAt])
-  @@index([customerPhone])
+  @@index([storeId])
+  @@index([storefrontId])
+  @@index([paymentStatus])
+  @@index([orderDate])
+  @@index([storeId, refundedAt])
+  // … (status, dueDate, customerId, splitGroupId, tableId, shiftId)
 }
 
 enum OrderType {
@@ -220,22 +226,40 @@ enum PaymentMethod {
   DANA
   SHOPEEPAY
   BANK_TRANSFER
-  CARD
+  STRIPE_CARD
+  PAY_LATER
+  LINKAJA
+  CHEQUE
+  TITRE_RESTAURANT
+  PAYPAL
+  APPLE_PAY
+  GOOGLE_PAY
+  OTHER   // label typed by the cashier is stored in Order.paymentNote
+  SPLIT   // set only when 2+ tenders paid the bill; breakdown lives in OrderPayment
 }
 
 enum PaymentStatus {
   PENDING
   PAID
   FAILED
+  EXPIRED
   REFUNDED
 }
 
 enum OrderSource {
-  DIRECT
+  MANUAL
+  STOREFRONT
+  POS
   GOFOOD
   GRABFOOD
   SHOPEEFOOD
   TOKOPEDIA
+  UBER_EATS
+  DELIVEROO
+  JUST_EAT
+  DOORDASH
+  GRUBHUB
+  OTHER_ONLINE
 }
 ```
 
@@ -243,17 +267,22 @@ enum OrderSource {
 
 ```prisma
 model Table {
-  id            String      @id @default(cuid())
-  storeId       String
-  number        String
-  seatCapacity  Int         @default(4)
-  zone          String?
-  isActive      Boolean     @default(true)
+  id                 String        @id @default(cuid())
+  storeId            String
+  label              String
+  capacity           Int           @default(4)
+  status             TableStatus   @default(AVAILABLE)
+  reservationEnabled Boolean       @default(false)
+  positionX          Int?
+  positionY          Int?
+  // …
 
-  store         Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  orders        Order[]
+  store              Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orders             Order[]
+  reservations       Reservation[]
 
-  @@unique([storeId, number])
+  @@unique([storeId, label])
+  @@index([storeId])
   @@map("tables")
 }
 ```
@@ -284,17 +313,21 @@ enum OrderItemStatus {
 model StaffMember {
   id          String      @id @default(cuid())
   storeId     String
-  userId      String?
   name        String
-  phone       String?
+  username    String?     // PIN-gate login, unique per store
   role        StaffRole   @default(CASHIER)
-  pin         String?     // hashed
+  pin         String?     // bcrypt hash
   isActive    Boolean     @default(true)
+  userId      String?     @unique  // linked Epidom account, at most one StaffMember per User
+  // … (email, whatsapp, allowedPages, payType/payRate, contractType, inviteStatus, …)
 
-  store       Store       @relation(fields: [storeId], references: [id])
-  user        User?       @relation(fields: [userId], references: [id])
-  shifts      Shift[]
+  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shifts      Shift[]     @relation("ShiftOpenedBy")
+  closedShifts Shift[]    @relation("ShiftClosedBy")
 
+  @@unique([storeId, username])
+  @@index([storeId])
   @@map("staff_members")
 }
 
@@ -303,25 +336,31 @@ enum StaffRole {
   MANAGER
   CASHIER
   KITCHEN
-  WAITER
 }
 
 model Shift {
-  id              String      @id @default(cuid())
-  storeId         String
-  staffMemberId   String
-  clockInAt       DateTime    @default(now())
-  clockOutAt      DateTime?
-  openingCash     Decimal?    @db.Decimal(12, 2)
-  closingCash     Decimal?    @db.Decimal(12, 2)
-  expectedCash    Decimal?    @db.Decimal(12, 2)
-  discrepancy     Decimal?    @db.Decimal(12, 2)
-  notes           String?
+  id                    String         @id @default(cuid())
+  storeId               String
+  staffMemberId         String         // who opened the till
+  openedAt              DateTime       @default(now())
+  closedAt              DateTime?
+  openingCash           Decimal        @db.Decimal(12, 2)
+  closingCash           Decimal?       @db.Decimal(12, 2)
+  expectedCash          Decimal?       @db.Decimal(12, 2)  // calculated from orders
+  cashDifference        Decimal?       @db.Decimal(12, 2)  // closingCash - expectedCash
+  notes                 String?
+  closedByStaffMemberId String?        // who signed the till off
+  closedFromBackOffice  Boolean        @default(false)
 
-  store           Store       @relation(fields: [storeId], references: [id])
-  staffMember     StaffMember @relation(fields: [staffMemberId], references: [id])
-  orders          Order[]
+  store                 Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember           StaffMember    @relation("ShiftOpenedBy", fields: [staffMemberId], references: [id], onDelete: Cascade)
+  closedBy              StaffMember?   @relation("ShiftClosedBy", fields: [closedByStaffMemberId], references: [id], onDelete: SetNull)
+  orders                Order[]
+  cashMovements         CashMovement[]
 
+  @@index([storeId])
+  @@index([staffMemberId])
+  @@index([openedAt])
   @@map("shifts")
 }
 ```
@@ -451,7 +490,7 @@ enum SubscriptionStatus {
 }
 ```
 
-Migration: `prisma/migrations/<timestamp>_rename_subscription_plans/`. Handles the enum swap manually with explicit SQL. See `/docs/PHASE_0_CLEANUP.md` task 1.2.
+Migration: `prisma/migrations/<timestamp>_rename_subscription_plans/`. Handles the enum swap manually with explicit SQL (the actual folder is `prisma/migrations/20260521000000_rename_subscription_plans/`).
 
 ---
 

@@ -67,3 +67,8 @@ desktop/smoke.png
 android/twa/
 *.keystore
 *.jks
+
+# Per-machine tool state: Claude Code's local permissions and the old
+# CodeGraph index. Shared Claude settings belong in .claude/settings.json.
+.claude/settings.local.json
+.codegraph/

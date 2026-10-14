@@ -56,7 +56,7 @@ If a task is not aligned with Phase 5, ask the operator before proceeding.
 - **Notifications**: Fonnte for WhatsApp v1, migrating to WhatsApp Business API later
 - **Background jobs**: Inngest (introduced in Phase 2)
 - **Email**: Resend
-- **Storage**: Vercel Blob, migrating to Cloudflare R2 in Phase 3+
+- **Storage**: Vercel Blob for uploads (`src/lib/storage/`). Cloudflare R2 is used only for the nightly database backup (`src/lib/backup/`, `R2_*` vars)
 
 ---
 
@@ -91,7 +91,9 @@ src/
 ├── features/          # FDA: one folder per feature, contains its own components/hooks
 ├── components/        # SHARED UI only (shadcn primitives, providers)
 ├── lib/               # core logic (auth, prisma, services, validation)
-├── locales/           # id.ts (primary), en.ts. fr.ts is deprecated.
+├── config/            # static config: nav, staff permissions, Stripe, rate limits, payment fees
+├── hooks/             # shared client hooks (debounce, network status, realtime channel, ...)
+├── locales/           # fr.ts (primary), id.ts, en.ts
 └── types/
 prisma/
 └── schema.prisma
@@ -158,7 +160,7 @@ These five bug classes have each caused real, shipped breakage on iPad Safari. C
 **i18n**
 
 - Every user-facing string goes through `useI18n()`.
-- Add the string to `src/locales/id.ts` and `src/locales/en.ts`. Do not add to `fr.ts`.
+- Add the string to all three locale files: `src/locales/fr.ts`, `src/locales/id.ts` and `src/locales/en.ts`, with real French in `fr.ts` (see §7.2).
 
 **Changelog & versioning**
 

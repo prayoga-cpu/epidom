@@ -170,29 +170,42 @@ export async function buildPosSettlement(args: {
     throw new SettlementError("Pay Later is not enabled for this store", 422);
   }
 
-  // Independent reads (both only need storeId) — run concurrently instead of
-  // two sequential round trips on the critical checkout path.
-  const [built, financeSettings] = await Promise.all([
-    validateAndBuildOrderItems(storeId, input.items, { tolerant }),
-    resolveFinanceSettingsForOrder(storeId),
+  // Independent reads (all only need storeId + the request) — run concurrently
+  // instead of sequential round trips on the critical checkout path. Settled,
+  // not raced: each failure is re-raised below in the order the reads used to
+  // run (items/finance, then customer, then table), so which error a bad
+  // request gets back is unchanged.
+  const [core, customerLookup, tableLookup] = await Promise.allSettled([
+    Promise.all([
+      validateAndBuildOrderItems(storeId, input.items, { tolerant }),
+      resolveFinanceSettingsForOrder(storeId),
+    ]),
+    input.customerId
+      ? prisma.customer.findFirst({
+          where: { id: input.customerId, storeId },
+          select: { id: true, name: true, phone: true, email: true },
+        })
+      : Promise.resolve(null),
+    resolveStoreTableId(storeId, input.tableId, input.orderType),
   ]);
+  if (core.status === "rejected") throw core.reason;
+  const [built, financeSettings] = core.value;
   const { orderItems, subtotal } = built;
 
   const warnings: string[] = [...built.warnings];
 
   let customer: SettlementCustomer | null = null;
   if (input.customerId) {
-    customer = await prisma.customer.findFirst({
-      where: { id: input.customerId, storeId },
-      select: { id: true, name: true, phone: true, email: true },
-    });
+    if (customerLookup.status === "rejected") throw customerLookup.reason;
+    customer = customerLookup.value;
     if (!customer) {
       if (!tolerant) throw new SettlementError("Customer not found", 422);
       warnings.push("Customer not found; the sale was recorded without it");
     }
   }
 
-  const tableId = await resolveStoreTableId(storeId, input.tableId, input.orderType);
+  if (tableLookup.status === "rejected") throw tableLookup.reason;
+  const tableId = tableLookup.value;
 
   const discount = await resolveOrderDiscount({
     storeId,

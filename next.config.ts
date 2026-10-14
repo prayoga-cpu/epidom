@@ -34,10 +34,10 @@ const nextConfig: NextConfig = {
           }
         : false,
   },
-  // Performance optimizations
-  experimental: {
-    optimizeCss: true,
-  },
+  // No `experimental.optimizeCss`: Next only applies it in the Pages Router
+  // renderer (server/post-process.js), which this App Router app never uses,
+  // and there it require()s `critters`, which isn't installed — so the flag
+  // did nothing except risk crashing Next's built-in Pages error fallback.
   // Enable compression
   compress: true,
 

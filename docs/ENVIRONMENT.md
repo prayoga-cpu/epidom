@@ -18,9 +18,9 @@ When you add a new env var to the codebase, update this doc and `.env.example` i
 | Inngest       | Background jobs        | Phase 2     |
 | Resend        | Transactional email    | Existing    |
 | Google OAuth  | Google login button    | Existing    |
-| Sentry        | Error tracking         | Phase 1     |
-| Upstash Redis | Rate limiting          | Phase 1     |
-| Feature flags | Hiding legacy surfaces | Phase 0     |
+| Pusher        | Live updates (optional, polls without) | Maintenance |
+| OpenAI        | Aggregator email parsing (optional) | Phase 5 |
+| Analytics     | GA / Meta Pixel (optional, consent-gated) | Maintenance |
 | Web Push      | Order/low-stock push notifications | Maintenance |
 | Android app   | Play Store app opens full-screen | Maintenance |
 
@@ -32,14 +32,30 @@ When you add a new env var to the codebase, update this doc and `.env.example` i
 # Public URL of your app
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Database
+# Database: pooled connection used by the app at runtime (PostgreSQL only)
 DATABASE_URL="postgresql://user:pass@localhost:5432/epidom"
-# For local dev with SQLite fallback (not recommended)
-# DATABASE_URL="file:./dev.db"
+# Direct (non-pooled) connection for migrations and bulk COPY
+DIRECT_URL="postgresql://user:pass@localhost:5432/epidom"
 
-# Operator email (used for low-level system notifications)
+# Operator email: the account that gets the /admin dashboard
 EPIDOM_OWNER_EMAIL=owner@epidom.fr
 ```
+
+- `NEXT_PUBLIC_APP_URL` is the app's public origin. `NEXTAUTH_URL` is a legacy fallback, read only
+  where `NEXT_PUBLIC_APP_URL` or the request origin is missing (subscription checkout/portal,
+  Stripe Connect). Leave it unset unless an old deployment still sets it.
+- `DATABASE_URL` is the pooled URL (Neon: the `-pooler` host). The schema is PostgreSQL only;
+  there is no SQLite fallback.
+- `DIRECT_URL` is the non-pooled URL used by the Prisma CLI (`prisma.config.ts`) and the backup/restore
+  scripts. Optional in practice: `directDatabaseUrl()` in `src/lib/db/connection-string.ts` uses it when
+  set and otherwise derives the direct host from a pooled `DATABASE_URL` by dropping `-pooler`. Set it
+  explicitly on Vercel so migrations never depend on that derivation.
+- `EPIDOM_OWNER_EMAIL` (server) and `NEXT_PUBLIC_EPIDOM_OWNER_EMAIL` (client-visible) identify the operator
+  account for the admin dashboard; the `NEXT_PUBLIC_` one takes precedence when both are set.
+- `NEXT_PUBLIC_API_URL` is optional: the base URL of the client API wrapper (`src/lib/api/client.ts`),
+  defaulting to `/api`. Leave it unset.
+- `LOG_QUERIES=true` logs each Prisma query with its duration. Development only
+  (`NODE_ENV=development`, see `src/lib/prisma.ts`); ignored in production.
 
 ---
 
@@ -48,6 +64,9 @@ EPIDOM_OWNER_EMAIL=owner@epidom.fr
 ```bash
 # Generate with: openssl rand -hex 32
 BETTER_AUTH_SECRET=<random-hex-string>
+
+# Legacy fallback, only read when BETTER_AUTH_SECRET is unset
+# NEXTAUTH_SECRET=<random-hex-string>
 
 # Google OAuth (for "Sign in with Google")
 GOOGLE_CLIENT_ID=<from-google-cloud-console>
@@ -69,9 +88,6 @@ GOOGLE_CLIENT_SECRET=<from-google-cloud-console>
 # Server-side
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
-
-# Client-side
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 
 # Price IDs, one per plan per cadence (from the same account as the keys)
 NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY=price_...
@@ -106,7 +122,6 @@ The CLI prints the webhook secret. Paste it into `STRIPE_WEBHOOK_SECRET`.
 ```bash
 XENDIT_SECRET_KEY=xnd_development_...
 XENDIT_WEBHOOK_TOKEN=<from-xendit-dashboard>
-XENDIT_CALLBACK_URL=https://your-tunnel-url.com/api/webhooks/xendit
 ```
 
 **Where to get keys:**
@@ -115,6 +130,7 @@ XENDIT_CALLBACK_URL=https://your-tunnel-url.com/api/webhooks/xendit
 2. Get test mode API keys from Dashboard → Settings → Developers → API Keys
 3. Configure webhooks at Dashboard → Settings → Webhooks
 4. Set `XENDIT_WEBHOOK_TOKEN` to the verification token shown
+5. Point the webhook URL at `{APP_URL}/api/webhooks/xendit`
 
 **Local development with webhooks:**
 Use `ngrok http 3000` or Cloudflare Tunnel, point Xendit's webhook callback at your tunnel URL.
@@ -150,33 +166,15 @@ FONNTE_API_TOKEN=<from-fonnte-dashboard>
   same QR-scan model and same ban risk as Fonnte. Only worth it if you need
   something working again in the next hour; budget to migrate off it later.
 - **Official Meta WhatsApp Cloud API via a BSP** (Twilio, MessageBird,
-  360dialog) — see the section below. Requires a verified Meta Business
+  360dialog) — requires a verified Meta Business
   account and per-template message approval, but won't get your number
-  banned and is the actual production-grade path.
+  banned and is the actual production-grade path. Not implemented in the app today: it would
+  need a new provider next to `src/lib/notifications/providers/fonnte.ts`.
 - **Twilio WhatsApp API** specifically — same BSP category as above, but
   worth calling out on its own since it's the easiest of the three to get a
   sandbox running same-day (Twilio's WhatsApp sandbox needs no Meta Business
   verification to start testing), then graduate to a paid Twilio WhatsApp
   Sender once ready for production.
-
----
-
-## WhatsApp Business API (Phase 4+, migration target)
-
-Official Meta Cloud API, accessed through a BSP partner:
-
-```bash
-WHATSAPP_PHONE_NUMBER_ID=<from-meta-business>
-WHATSAPP_BUSINESS_ACCOUNT_ID=<from-meta-business>
-WHATSAPP_ACCESS_TOKEN=<system-user-token>
-WHATSAPP_WEBHOOK_VERIFY_TOKEN=<your-own-secret>
-```
-
-Requires:
-
-- Verified Meta Business account
-- WhatsApp Business API access (apply through a BSP partner like Twilio, MessageBird, or 360dialog)
-- Per-template message approval
 
 ---
 
@@ -276,53 +274,107 @@ shows a slim browser bar at the top.
 
 ---
 
-## Sentry (error tracking, Phase 1+)
+## Pusher (live updates) — optional
 
 ```bash
-SENTRY_DSN=https://...@sentry.io/...
-SENTRY_AUTH_TOKEN=<for-source-map-uploads>
-NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
+# Server-side (publishing events)
+PUSHER_APP_ID=<from-pusher-channels>
+PUSHER_KEY=<from-pusher-channels>
+PUSHER_SECRET=<from-pusher-channels>
+PUSHER_CLUSTER=<e.g. ap1>
+
+# Client-side (subscribing)
+NEXT_PUBLIC_PUSHER_KEY=<same-as-PUSHER_KEY>
+NEXT_PUBLIC_PUSHER_CLUSTER=<same-as-PUSHER_CLUSTER>
 ```
 
-**Where to get keys:**
+Pushes live updates (orders, materials, products, recipes, stock, presence) to open dashboards and
+the POS. Code: `src/lib/realtime/` (`pusher-server.ts`, `pusher-client.ts`, `publish.ts`).
 
-1. Sign up at sentry.io
-2. Create a Next.js project
-3. Run `npx @sentry/wizard@latest -i nextjs` (one-time setup)
+**Where to get keys:** create a Channels app at dashboard.pusher.com (free tier is enough to start)
+and copy the app id, key, secret and cluster from App Keys.
+
+Optional. The server publishes only when all four `PUSHER_*` vars are set, and the browser subscribes
+only when both `NEXT_PUBLIC_PUSHER_*` vars are set; otherwise every surface keeps working on its
+existing polling (see AGENTS.md "Graceful Degradation"). The `NEXT_PUBLIC_` values are inlined at build
+time, so redeploy after changing them.
 
 ---
 
-## Upstash Redis (rate limiting, Phase 1+)
+## OpenAI (aggregator email parsing) — optional
 
 ```bash
-UPSTASH_REDIS_REST_URL=https://...upstash.io
-UPSTASH_REDIS_REST_TOKEN=<from-upstash-console>
+OPENAI_API_KEY=sk-...
 ```
 
-**Where to get keys:**
-
-1. Sign up at upstash.com
-2. Create a Redis database in Singapore region
-3. Copy REST URL and token
-
-Used for: public order endpoint rate limiting, OTP throttling.
+Used by the `parse-aggregator-email` Inngest function (`src/lib/inngest/functions/parse-aggregator-email.ts`)
+to turn forwarded GoFood/GrabFood/ShopeeFood/Tokopedia emails into orders. Get a key at
+platform.openai.com. Optional: without it the email is stored with `parseStatus: "manual"` for manual review.
 
 ---
 
-## Feature flags (Phase 0+)
+## Inbound email webhook secret — optional
 
 ```bash
-# Legacy inventory / production surfaces, hidden until Phase 4
-NEXT_PUBLIC_FEATURE_LEGACY_INVENTORY=false
-
-# Storefront editor (Phase 1 development toggle)
-NEXT_PUBLIC_FEATURE_STOREFRONT_EDITOR=false
-
-# Aggregator dashboard (Phase 5 development toggle)
-NEXT_PUBLIC_FEATURE_AGGREGATOR=false
+EMAIL_WEBHOOK_SECRET=<your-own-secret>
 ```
 
-Flag values are read at build time in client code (`NEXT_PUBLIC_*` prefix) and at request time on the server.
+Shared secret for `POST /api/webhooks/email` (`src/app/api/webhooks/email/route.ts`). When set, requests
+must send it in the `x-webhook-secret` header or get a 401. When unset the check is skipped, so set it
+in production.
+
+---
+
+## Demo seeding secret — optional
+
+```bash
+SEED_DEMO_SECRET=<your-own-secret>
+```
+
+Required to call `POST /api/admin/seed-demo` (creates the demo account and store). Callers send it in the
+`x-seed-secret` header. When unset the route answers 500 "not configured", so it stays disabled by default.
+
+---
+
+## Exchange rates — optional
+
+```bash
+EXCHANGE_RATE_API_KEY=<from-exchangerate-api.com>
+# Defaults to https://v6.exchangerate-api.com/v6
+EXCHANGE_RATE_API_URL=https://v6.exchangerate-api.com/v6
+```
+
+Live currency conversion for the display currency (`src/lib/services/exchange-rate.service.ts`,
+`/api/exchange-rates`) and the admin revenue page. Get a key at exchangerate-api.com (free tier: 1,500
+requests/month). Without a key the admin revenue page falls back to built-in approximate rates.
+
+---
+
+## Analytics (Google Analytics, Meta Pixel) — optional
+
+```bash
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_META_PIXEL_ID=<pixel-id>
+```
+
+Both scripts load client-side only after the visitor grants the matching cookie consent
+(`src/components/analytics/tracking-vendors.ts`). The IDs are public, and the code ships hardcoded
+fallbacks for the production IDs, so these only need setting to point a different environment at a
+different property or pixel. Vercel Analytics needs no variable.
+
+---
+
+## Audit trail kill switches — optional
+
+```bash
+AUDIT_CAPTURE=off      # stop ALL audit writes
+AUDIT_SNAPSHOTS=off    # stop only Layer 3 entity snapshots
+```
+
+Read per call in `src/lib/audit/config.ts`. Fail-open by design: unset, or any value other than
+`off`, `false`, `0` or `disabled`, means capture is ON, so a missing variable never silently disables
+the trail. Use them to shed write load without a deploy; snapshots (a Serializable transaction across
+the cascade graph) are the part most likely to need disabling.
 
 ---
 
@@ -407,6 +459,10 @@ R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET_NAME=
+
+# Only for scripts/restore-from-backup.ts: the disposable database to restore into
+# (or pass --target=...). The script refuses the app's own live database.
+RESTORE_DATABASE_URL=
 ```
 
 ---
@@ -438,58 +494,7 @@ Slack) per category in the MagicBell dashboard, not in this app's code.
 
 Keep `.env.example` current. Every required env var must appear here with a placeholder value and a one-line comment explaining what it's for. Never commit a `.env` file with real secrets.
 
-Example structure:
-
-```bash
-# === Core app ===
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-DATABASE_URL=postgresql://user:pass@localhost:5432/epidom
-
-# === Authentication ===
-BETTER_AUTH_SECRET=generate-with-openssl-rand-hex-32
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-
-# === Stripe (SaaS billing) ===
-STRIPE_SECRET_KEY=sk_test_
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_
-STRIPE_WEBHOOK_SECRET=whsec_
-# Price IDs, one per plan per cadence
-NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY=
-NEXT_PUBLIC_STRIPE_PRICE_ID_POS_YEARLY=
-NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY=
-NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_YEARLY=
-
-# === Xendit (customer payments, Phase 2) ===
-XENDIT_SECRET_KEY=
-XENDIT_WEBHOOK_TOKEN=
-XENDIT_CALLBACK_URL=
-
-# === Inngest (background jobs, Phase 2) ===
-INNGEST_EVENT_KEY=
-INNGEST_SIGNING_KEY=
-
-# === Resend (email) ===
-RESEND_API_KEY=re_
-EMAIL_FROM=Epidom <noreply@epidom.fr>
-
-# === Sentry (error tracking, Phase 1) ===
-SENTRY_DSN=
-SENTRY_AUTH_TOKEN=
-NEXT_PUBLIC_SENTRY_DSN=
-
-# === Upstash Redis (rate limiting, Phase 1) ===
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-
-# === Feature flags ===
-NEXT_PUBLIC_FEATURE_LEGACY_INVENTORY=false
-NEXT_PUBLIC_FEATURE_STOREFRONT_EDITOR=false
-NEXT_PUBLIC_FEATURE_AGGREGATOR=false
-
-# === Operator ===
-EPIDOM_OWNER_EMAIL=owner@epidom.fr
-```
+The checked-in `.env.example` is the source of truth for the full variable list and its placeholders; this doc explains each group. Don't keep a second copy of the file here.
 
 ---
 

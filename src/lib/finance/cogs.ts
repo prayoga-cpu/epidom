@@ -62,9 +62,9 @@ export async function sumCogsBase(orderWhere: Prisma.OrderWhereInput): Promise<C
   }
   const ids = orders.map((o) => o.id);
 
-  const [snapshot] = await prisma.$queryRaw<
-    { cogs: number; unknown_lines: number; unknown_revenue: number }[]
-  >(Prisma.sql`
+  // The snapshot and legacy terms each read only `ids`, so they run together.
+  const [[snapshot], [legacy]] = await Promise.all([
+    prisma.$queryRaw<{ cogs: number; unknown_lines: number; unknown_revenue: number }[]>(Prisma.sql`
     SELECT
       COALESCE(SUM(
         CASE WHEN oi."unitCostSnapshot" IS NOT NULL
@@ -75,11 +75,11 @@ export async function sumCogsBase(orderWhere: Prisma.OrderWhereInput): Promise<C
                         THEN oi."total" ELSE 0 END), 0)::float8      AS unknown_revenue
       FROM "order_items" oi
      WHERE oi."orderId" = ANY(${ids})
-  `);
+  `),
 
-  // Legacy term: only orders with no snapshot anywhere, so the two sources can
-  // never double-count the same order.
-  const [legacy] = await prisma.$queryRaw<{ cogs: number }[]>(Prisma.sql`
+    // Legacy term: only orders with no snapshot anywhere, so the two sources can
+    // never double-count the same order.
+    prisma.$queryRaw<{ cogs: number }[]>(Prisma.sql`
     SELECT COALESCE(SUM(ABS(sm."quantity") * m."unitCost"), 0)::float8 AS cogs
       FROM "stock_movements" sm
       JOIN "ingredients" m ON m."id" = sm."materialId"
@@ -89,7 +89,8 @@ export async function sumCogsBase(orderWhere: Prisma.OrderWhereInput): Promise<C
              SELECT 1 FROM "order_items" oi
               WHERE oi."orderId" = sm."orderId"
                 AND oi."unitCostSnapshot" IS NOT NULL)
-  `);
+  `),
+  ]);
 
   return {
     cogsBase: Number(snapshot?.cogs ?? 0) + Number(legacy?.cogs ?? 0),
@@ -115,9 +116,10 @@ export async function sumCogsBaseByStore(
   const ids = orders.map((o) => o.id);
   const storeByOrder = new Map(orders.map((o) => [o.id, o.storeId]));
 
-  const snapshotRows = await prisma.$queryRaw<
-    { orderId: string; cogs: number; unknown_lines: number; unknown_revenue: number }[]
-  >(Prisma.sql`
+  const [snapshotRows, legacyRows] = await Promise.all([
+    prisma.$queryRaw<
+      { orderId: string; cogs: number; unknown_lines: number; unknown_revenue: number }[]
+    >(Prisma.sql`
     SELECT oi."orderId" AS "orderId",
       COALESCE(SUM(
         CASE WHEN oi."unitCostSnapshot" IS NOT NULL
@@ -129,9 +131,8 @@ export async function sumCogsBaseByStore(
       FROM "order_items" oi
      WHERE oi."orderId" = ANY(${ids})
      GROUP BY oi."orderId"
-  `);
-
-  const legacyRows = await prisma.$queryRaw<{ orderId: string; cogs: number }[]>(Prisma.sql`
+  `),
+    prisma.$queryRaw<{ orderId: string; cogs: number }[]>(Prisma.sql`
     SELECT sm."orderId" AS "orderId",
            COALESCE(SUM(ABS(sm."quantity") * m."unitCost"), 0)::float8 AS cogs
       FROM "stock_movements" sm
@@ -143,7 +144,8 @@ export async function sumCogsBaseByStore(
               WHERE oi."orderId" = sm."orderId"
                 AND oi."unitCostSnapshot" IS NOT NULL)
      GROUP BY sm."orderId"
-  `);
+  `),
+  ]);
 
   const bump = (orderId: string, patch: Partial<CogsResult>) => {
     const storeId = storeByOrder.get(orderId);

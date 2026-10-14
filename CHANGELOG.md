@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.17.2] - 2026-10-14 · infra
+
+Faster screens in the Back Office, at the till and on the storefront.
+
+- **Faster dashboards and reports.** The dashboard alerts, the finance summary, margins by item, sales by shift, the shift report and your list of stores now fetch their data at the same time instead of one after another. The prep list reads every product's outstanding production in one go instead of one product at a time.
+- **Faster checkout at the till.** Completing a sale checks the items, the customer and the table together. Changing one line on the bill no longer redraws the other lines, and adding an item no longer redraws the whole menu.
+- **Lighter storefront.** The phone number field in the order and reservation forms loads when it is needed (it starts as soon as the first item goes in the basket), so a menu opens with less to download.
+- **Housekeeping.** Unused files, images and one unused library removed; the project documentation brought up to date.
+
 ## [3.17.1] - 2026-10-14 · fix
 
 Switching stores on a phone no longer brings up the keyboard.

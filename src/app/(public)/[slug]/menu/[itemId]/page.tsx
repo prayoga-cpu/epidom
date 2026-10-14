@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PublicItemDetail } from "@/features/storefront/components/public-item-detail";
@@ -15,6 +16,29 @@ interface PageProps {
   params: Promise<{ slug: string; itemId: string }>;
 }
 
+// One lookup per request, shared by generateMetadata and the page — they used
+// to run the same `where` back to back. Metadata only reads name/description,
+// so the page's richer shape serves both.
+const getStorefrontItem = cache((storefrontId: string, itemId: string) =>
+  prisma.menuItem.findFirst({
+    where: {
+      id: itemId,
+      storefrontId,
+    },
+    include: {
+      product: {
+        select: {
+          productLine: true,
+          optionGroups: {
+            orderBy: { displayOrder: "asc" },
+            include: { options: { orderBy: { displayOrder: "asc" } } },
+          },
+        },
+      },
+    },
+  })
+);
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug, itemId } = await params;
   const cleanSlug = cleanStorefrontSlug(slug);
@@ -24,12 +48,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: "Store Not Found | Epidom" };
   }
 
-  const item = await prisma.menuItem.findFirst({
-    where: {
-      id: itemId,
-      storefrontId: storefront.id,
-    },
-  });
+  const item = await getStorefrontItem(storefront.id, itemId);
 
   if (!item) {
     return { title: `Item Not Found | ${storefront.displayName}` };
@@ -54,23 +73,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const item = await prisma.menuItem.findFirst({
-    where: {
-      id: itemId,
-      storefrontId: storefront.id,
-    },
-    include: {
-      product: {
-        select: {
-          productLine: true,
-          optionGroups: {
-            orderBy: { displayOrder: "asc" },
-            include: { options: { orderBy: { displayOrder: "asc" } } },
-          },
-        },
-      },
-    },
-  });
+  const item = await getStorefrontItem(storefront.id, itemId);
 
   if (!item) {
     notFound();

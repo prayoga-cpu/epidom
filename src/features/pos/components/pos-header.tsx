@@ -30,8 +30,10 @@ export function PosHeader({ onCartClick }: PosHeaderProps) {
   // passing `currency` skips formatPrice's default base-currency conversion.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
   const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
-  const cart = usePosCart();
-  const totalItems = cart.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  // Primitive selectors: the button re-renders only when the count or the
+  // total actually changes, not on every cart-store update.
+  const totalItems = usePosCart((s) => s.items.reduce((sum, item) => sum + item.quantity, 0));
+  const total = usePosCart((s) => s.total);
 
   return (
     <Button
@@ -44,7 +46,7 @@ export function PosHeader({ onCartClick }: PosHeaderProps) {
       {/* Named for a screen reader; the count and total still read after it. */}
       <span className="sr-only">{t("pos.cart.open")}</span>
       {totalItems > 0 && <span className="font-semibold">{totalItems}</span>}
-      {cart.total > 0 && <span className="font-bold">{formatPrice(cart.total)}</span>}
+      {total > 0 && <span className="font-bold">{formatPrice(total)}</span>}
     </Button>
   );
 }

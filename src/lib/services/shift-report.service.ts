@@ -90,7 +90,9 @@ export async function buildShiftReport(
   request: ShiftReportRequest
 ): Promise<ShiftReportResult> {
   let window: { from: Date; to: Date; isOpen: boolean };
-  let cashDrawer: ShiftReportCashDrawer | null = null;
+  // Started here, awaited with the order reads below — they only need the
+  // window, so the two phases no longer run back to back.
+  let cashDrawerQuery: Promise<ShiftReportCashDrawer | null>;
   let shiftLabel: string | null = null;
 
   if (request.shiftId) {
@@ -108,15 +110,17 @@ export async function buildShiftReport(
     // only WRITTEN at close, so a mid-shift report used to print an opening
     // float and nothing else. Recomputing also means a movement recorded after
     // the till was closed is reflected the next time the report is opened.
-    cashDrawer = {
-      scope: "SHIFT",
-      staffName: shift.staffMember?.name ?? null,
-      openedAt: shift.openedAt.toISOString(),
-      closedAt: shift.closedAt?.toISOString() ?? null,
-      tillCount: 1,
-      hasOpenTill: shift.closedAt === null,
-      ...(await getShiftCashOnHand(storeId, shift)),
-    };
+    cashDrawerQuery = getShiftCashOnHand(storeId, shift).then(
+      (cashOnHand): ShiftReportCashDrawer => ({
+        scope: "SHIFT",
+        staffName: shift.staffMember?.name ?? null,
+        openedAt: shift.openedAt.toISOString(),
+        closedAt: shift.closedAt?.toISOString() ?? null,
+        tillCount: 1,
+        hasOpenTill: shift.closedAt === null,
+        ...cashOnHand,
+      })
+    );
   } else {
     const now = new Date();
     // Default to "today so far" rather than all-time — an unscoped report over
@@ -129,25 +133,28 @@ export async function buildShiftReport(
     // daily report previously had no answer for at all: with two cashiers,
     // "what is in the register at the end of the day" is both tills plus the
     // cash orders and movements that were linked to neither.
-    const position = await getWindowCashOnHand(storeId, from, to);
-    if (hasCashActivity(position.total, position.perShift.length)) {
-      cashDrawer = {
-        scope: "STORE_DAY",
-        // No single cashier owns a store-wide figure — naming one would imply
-        // an accountability that does not exist.
-        staffName: null,
-        openedAt: from.toISOString(),
-        closedAt: to.toISOString(),
-        tillCount: position.perShift.length,
-        hasOpenTill: position.hasOpenTill,
-        ...position.total,
-      };
-    }
+    cashDrawerQuery = getWindowCashOnHand(storeId, from, to).then(
+      (position): ShiftReportCashDrawer | null =>
+        hasCashActivity(position.total, position.perShift.length)
+          ? {
+              scope: "STORE_DAY",
+              // No single cashier owns a store-wide figure — naming one would imply
+              // an accountability that does not exist.
+              staffName: null,
+              openedAt: from.toISOString(),
+              closedAt: to.toISOString(),
+              tillCount: position.perShift.length,
+              hasOpenTill: position.hasOpenTill,
+              ...position.total,
+            }
+          : null
+    );
   }
 
   const dateRange = { gte: window.from, lte: window.to };
 
-  const [store, financeSettings, orders, cancelledOrders] = await Promise.all([
+  const [cashDrawer, store, financeSettings, orders, cancelledOrders] = await Promise.all([
+    cashDrawerQuery,
     prisma.store.findUnique({ where: { id: storeId }, select: { name: true } }),
     getFinanceSettings(storeId),
     prisma.order.findMany({

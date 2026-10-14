@@ -16,7 +16,7 @@
 | State           | TanStack Query v5                                      |
 | UI              | shadcn/ui (New York) · Tailwind CSS 4 · Radix · Lucide |
 | Theme           | next-themes · epi-navy dark tokens · epi-cream light   |
-| i18n            | Custom provider — `id` primary, `en` secondary         |
+| i18n            | Custom provider — `fr` primary, then `id`, `en`        |
 | Email           | Resend                                                 |
 | Storage         | Vercel Blob                                            |
 | Background jobs | Inngest                                                |
@@ -28,8 +28,8 @@
 
 ### Prerequisites
 
-- Node.js 20 LTS
-- pnpm ≥ 9
+- Node.js 22
+- pnpm 10 (pnpm 9 rejects the config-only `pnpm-workspace.yaml`)
 - PostgreSQL 14+ (local) **or** a Neon/Vercel Postgres database
 
 ### 1. Install
@@ -55,14 +55,14 @@ See `.env.example` for the complete reference.
 
 ```bash
 pnpm prisma migrate deploy   # apply all migrations
-pnpm tsx seed-dummy.ts       # seed demo@epidom.com / password123
+# demo data: POST /api/admin/seed-demo with header x-seed-secret = SEED_DEMO_SECRET (demo@epidom.fr / password123)
 ```
 
 ### 4. Run
 
 ```bash
 pnpm dev        # Turbopack dev server → http://localhost:3000
-pnpm build      # production build (runs migrate deploy first)
+pnpm build      # production build (runs migrate deploy + changelog sync first)
 pnpm start      # serve production build
 ```
 
@@ -71,7 +71,7 @@ pnpm start      # serve production build
 ```bash
 pnpm type-check            # tsc --noEmit
 pnpm lint                  # ESLint
-pnpm test                  # Vitest (~340 tests)
+pnpm test                  # Vitest (500+ test files)
 pnpm prisma studio         # DB GUI
 pnpm prisma migrate reset  # ⚠️ wipes local DB — dev only
 ```
@@ -93,16 +93,15 @@ src/
 │   │       ├── dashboard/ # Stock overview, alerts, production chart
 │   │       ├── data/      # Products · Materials · Recipes · Suppliers
 │   │       ├── management/# Deliveries · Production · History · Stock
-│   │       ├── tracking/  # Stock levels + Recent movements
 │   │       ├── alerts/    # Low-stock & critical alerts
 │   │       ├── storefront/# Storefront editor + analytics
-│   │       ├── pos/       # POS cashier
-│   │       ├── pos/orders/# Order queue
-│   │       ├── pos/kds/   # Kitchen Display System
-│   │       ├── pos/tables/# Table management + reservations
 │   │       ├── staff/     # Staff management
 │   │       ├── shifts/    # Shift management
 │   │       └── finance/   # Finance reports + All outlets roll-up
+│   │   └── store/[storeId]/(pos-mode)/
+│   │       ├── pos/       # POS cashier · orders/ · kds/ · operational/ (shift, schedule, clock)
+│   │       └── tables/    # Table management + reservations
+│   │   (+ store/[storeId]/pos/display — chrome-free customer display)
 │   ├── (marketing)/       # Public marketing site
 │   ├── (public)/          # Public storefronts /@slug
 │   └── api/               # REST API routes
@@ -110,7 +109,7 @@ src/
 ├── components/            # Shared UI (shadcn primitives, providers)
 ├── hooks/                 # Shared custom hooks
 ├── lib/                   # Auth, Prisma, services, validation, utils
-├── locales/               # id.ts (primary) · en.ts
+├── locales/               # fr.ts (primary) · id.ts · en.ts
 └── types/                 # TypeScript DTOs
 ```
 
@@ -239,23 +238,23 @@ Public endpoints re-check the **owner's** plan (`api/public/orders`, `api/public
 
 #### Account, platform & cross-tier
 
-| Feature                      | What it does                                                                                                                                                          | Plan                                  | Status                                                                                                   |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Auth                         | Better Auth — email/password + Google OAuth, email verification with resend, password reset; OAuth failures land on `/login` with a readable toast                    | All                                   | ✅                                                                                                       |
-| Guided onboarding            | 5 steps (business → logo → menu → theme → publish), AI-assisted profile analysis, menu suggestion, and logo generation; `hasOnboarded` makes the redirect server-side | All                                   | ✅                                                                                                       |
-| Multi-store                  | Store selector; multiple outlets under one `Business`                                                                                                                 | OPERATIONS (up to 3), ENTERPRISE (4+) | ✅                                                                                                       |
-| Profile & preferences        | Contact, business details, timezone (browser-detected, `timezoneUpdatedAt` records that it was really set), locale, currency, "resume where I left off"               | All                                   | ✅                                                                                                       |
-| Owner PIN                    | `Business.ownerPin` + OTP reset — how the real owner steps back out of a staff persona                                                                                | All                                   | ✅                                                                                                       |
-| Account deactivation         | Soft delete → 30-day self-service reactivation → up to 1 year support-quoted recovery → nightly purge job                                                             | All                                   | ✅                                                                                                       |
-| Billing surface              | Stripe Checkout + Customer Portal, plan switch, trial state, custom-price offers; Xendit handles **customer** payments and is kept in a separate module by rule       | All                                   | ✅                                                                                                       |
-| Stripe Connect               | Merchant onboarding, status and express dashboard links from Profile                                                                                                  | All                                   | 🟡 plumbing live; the 80/20 revenue split is not switched on                                             |
-| i18n                         | `id`, `en`, `fr` — code-split per locale (2.79.0); marketing renders its locale server-side for crawlers                                                              | All                                   | ✅                                                                                                       |
-| PWA + install prompt         | Service worker (cache-first static, network-first navigation, never intercepts `/api/`), topbar install button that hides when already installed                      | All                                   | ✅                                                                                                       |
-| Feedback & changelog         | In-app `BUG` / `FEATURE_SUGGESTION` / `GENERAL_FEEDBACK` with admin triage; in-app "what's new" from CHANGELOG                                                        | All                                   | ✅                                                                                                       |
-| Admin panel                  | Users & subscriptions, revenue, capacity, Neon platform usage, backup freshness, feedback and custom-dev triage, demo seeding                                         | Platform admin only                   | ✅                                                                                                       |
-| Nightly backup               | Inngest database backup + a freshness check that alerts if it goes stale                                                                                              | Platform                              | ✅                                                                                                       |
-| Audit log                    | Recording of sensitive admin/owner actions                                                                                                                            | —                                     | ⚪ Planned — designed in [docs/AUDIT_LOG_PLAN.md](docs/AUDIT_LOG_PLAN.md); **nothing is recorded today** |
-| Custom domains / white-label | Own domain instead of `/@slug`; remove "Powered by Epidom"                                                                                                            | ENTERPRISE                            | ⚪ Not built                                                                                             |
+| Feature                      | What it does                                                                                                                                                                                                                                   | Plan                                  | Status                                                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Auth                         | Better Auth — email/password + Google OAuth, email verification with resend, password reset; OAuth failures land on `/login` with a readable toast                                                                                             | All                                   | ✅                                                                                                         |
+| Guided onboarding            | 5 steps (business → logo → menu → theme → publish), AI-assisted profile analysis, menu suggestion, and logo generation; `hasOnboarded` makes the redirect server-side                                                                          | All                                   | ✅                                                                                                         |
+| Multi-store                  | Store selector; multiple outlets under one `Business`                                                                                                                                                                                          | OPERATIONS (up to 3), ENTERPRISE (4+) | ✅                                                                                                         |
+| Profile & preferences        | Contact, business details, timezone (browser-detected, `timezoneUpdatedAt` records that it was really set), locale, currency, "resume where I left off"                                                                                        | All                                   | ✅                                                                                                         |
+| Owner PIN                    | `Business.ownerPin` + OTP reset — how the real owner steps back out of a staff persona                                                                                                                                                         | All                                   | ✅                                                                                                         |
+| Account deactivation         | Soft delete → 30-day self-service reactivation → up to 1 year support-quoted recovery → nightly purge job                                                                                                                                      | All                                   | ✅                                                                                                         |
+| Billing surface              | Stripe Checkout + Customer Portal, plan switch, trial state, custom-price offers; Xendit handles **customer** payments (storefront online payment is switched off for now: orders are pay-at-cashier) and is kept in a separate module by rule | All                                   | ✅                                                                                                         |
+| Stripe Connect               | Merchant onboarding, status and express dashboard links from Profile                                                                                                                                                                           | All                                   | 🟡 plumbing live; the 80/20 revenue split is not switched on                                               |
+| i18n                         | `id`, `en`, `fr` — code-split per locale (2.79.0); marketing renders its locale server-side for crawlers                                                                                                                                       | All                                   | ✅                                                                                                         |
+| PWA + install prompt         | Service worker (cache-first static, network-first navigation, never intercepts `/api/`), topbar install button that hides when already installed                                                                                               | All                                   | ✅                                                                                                         |
+| Feedback & changelog         | In-app `BUG` / `FEATURE_SUGGESTION` / `GENERAL_FEEDBACK` with admin triage; in-app "what's new" from CHANGELOG                                                                                                                                 | All                                   | ✅                                                                                                         |
+| Admin panel                  | Users & subscriptions, revenue, capacity, Neon platform usage, backup freshness, feedback and custom-dev triage, demo seeding                                                                                                                  | Platform admin only                   | ✅                                                                                                         |
+| Nightly backup               | Inngest database backup + a freshness check that alerts if it goes stale                                                                                                                                                                       | Platform                              | ✅                                                                                                         |
+| Audit log                    | Recording of sensitive admin/owner actions                                                                                                                                                                                                     | —                                     | ✅ Activity events, action log and entity snapshots — see [docs/AUDIT_LOG_PLAN.md](docs/AUDIT_LOG_PLAN.md) |
+| Custom domains / white-label | Own domain instead of `/@slug`; remove "Powered by Epidom"                                                                                                                                                                                     | ENTERPRISE                            | ⚪ Not built                                                                                               |
 
 ---
 
@@ -348,22 +347,20 @@ Independent of the subscription tier — the plan sets the ceiling, these set th
 
 Recorded here so they are not mistaken for working behaviour.
 
-| Claim                                                                                                          | Reality                                                                                                                                                       |
-| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Per-tier resource limits (50 menu items, 200 orders/mo, storage and notification quotas) in `docs/FEATURES.md` | **Not enforced anywhere.** `STRIPE_CONFIG.PLAN_LIMITS` has no readers; no quota check exists in any route                                                     |
-| "WhatsApp notifications", "WhatsApp receipt", "low-stock alerts via WhatsApp"                                  | Every WhatsApp path is a **`wa.me` deep link the user taps** — there is no automated Business API. Merchant new-order alerts go out through MagicBell + email |
-| Direct ordering and reservations on FREE                                                                       | Gated at **POS** in code                                                                                                                                      |
-| Aggregator dashboard                                                                                           | Email parsing (v1) only; no direct GoFood/GrabFood/ShopeeFood API integration                                                                                 |
-| Audit logs on sensitive operations                                                                             | Planned only — see [docs/AUDIT_LOG_PLAN.md](docs/AUDIT_LOG_PLAN.md)                                                                                           |
-| Stripe Connect 80/20 revenue split                                                                             | Onboarding and status plumbing exist; the split is not switched on and needs legal review                                                                     |
-| Custom domains, white-label                                                                                    | Not built                                                                                                                                                     |
+| Claim                                                                                          | Reality                                                                                                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Per-tier resource limits (orders/month, storage and notification quotas) in `docs/FEATURES.md` | **Not enforced.** Only the store count (`PLAN_MAX_STORES`) and the inventory-product count (`maxProducts`, via `canCreateProduct`) are checked; storefront menu items, orders, storage and notifications are not capped |
+| "WhatsApp notifications", "WhatsApp receipt", "low-stock alerts via WhatsApp"                  | Every WhatsApp path is a **`wa.me` deep link the user taps** — there is no automated Business API. Merchant new-order alerts go out through MagicBell + email                                                           |
+| Aggregator dashboard                                                                           | Email parsing (v1) only; no direct GoFood/GrabFood/ShopeeFood API integration                                                                                                                                           |
+| Stripe Connect 80/20 revenue split                                                             | Onboarding and status plumbing exist; the split is not switched on and needs legal review                                                                                                                               |
+| Custom domains, white-label                                                                    | Not built                                                                                                                                                                                                               |
 
 **Source-of-truth files**, when this section and the code disagree — the code wins:
 
 - Tier → feature: [src/lib/plans/entitlements.ts](src/lib/plans/entitlements.ts)
 - Nav → required plan: [src/config/navigation.config.ts](src/config/navigation.config.ts)
 - Role → default pages: [src/config/staff-permissions.config.ts](src/config/staff-permissions.config.ts)
-- Live prices: `PLAN_PRICE_IDR` in [src/lib/utils/subscription-helpers.ts](src/lib/utils/subscription-helpers.ts) and the `/pricing` copy in [src/locales/en.ts](src/locales/en.ts)
+- Live prices: `PLAN_PRICE_IDR` in [src/lib/constants/plan-pricing.ts](src/lib/constants/plan-pricing.ts) and the `/pricing` copy in [src/locales/en.ts](src/locales/en.ts)
 - Roles, statuses, enums: [prisma/schema.prisma](prisma/schema.prisma)
 
 ---
@@ -389,12 +386,12 @@ All queries scope to `storeId`. Money uses `Prisma.Decimal` (never Float).
 - **API handler** — `withApiHandler()` in `src/lib/api-handler.ts` — auth, rate-limiting, store ownership, error serialization
 - **Plan gating** — `requirePlan(storeId, "OPERATIONS")` in layout; sidebar shows locked state gracefully
 - **Currency** — `CurrencyProvider` shares React Query cache with `useProfile`; `formatPrice()` auto-converts; propagates instantly on profile update
-- **i18n** — `useI18n()` everywhere; `id.ts` primary, `en.ts` secondary
+- **i18n** — `useI18n()` everywhere; `fr.ts` primary, then `id.ts` and `en.ts`
 
 ---
 
 ## Deployment (Vercel)
 
 1. Add `DATABASE_URL` + `DIRECT_URL` (Neon pooled vs direct endpoints) in Vercel env vars
-2. `pnpm build` runs `prisma migrate deploy && next build` automatically
+2. `pnpm build` runs `prisma migrate deploy && tsx scripts/sync-changelog.ts && next build` automatically
 3. Service worker at `/public/sw.js` — cache-first static, network-first navigation, never intercepts `/api/`

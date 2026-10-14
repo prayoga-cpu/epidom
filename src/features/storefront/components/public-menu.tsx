@@ -28,7 +28,7 @@ import { getPremiumTheme } from "@/lib/utils/color";
 import { formatCurrency } from "@/lib/utils/formatting";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
-import { PhoneInput } from "@/components/ui/phone-input";
+import { LazyPhoneInput, preloadPhoneInput } from "@/components/ui/phone-input-lazy";
 import { appendLocalOrder } from "../lib/local-orders";
 import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
 import {
@@ -244,6 +244,13 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
       console.error("Failed to save cart to localStorage", e);
     }
   }, [cart, storefront.slug]);
+
+  // The checkout form's phone field is lazy-loaded; fetch it as soon as the
+  // visitor shows intent to order, so it's ready before checkout opens.
+  const hasCartItems = cart.length > 0;
+  React.useEffect(() => {
+    if (hasCartItems) preloadPhoneInput();
+  }, [hasCartItems]);
 
   // Check URL query parameters on mount to open cart / pre-fill a table (e.g. scanned from a table's QR code)
   React.useEffect(() => {
@@ -1058,7 +1065,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                 <label className="text-muted-foreground pl-1 text-[11px] font-extrabold tracking-widest uppercase">
                   {t("publicOrder.checkoutForm.whatsappLabel")}
                 </label>
-                <PhoneInput
+                <LazyPhoneInput
                   placeholder={t("publicOrder.checkoutForm.whatsappPlaceholder")}
                   defaultCountry="ID"
                   value={customerPhone}

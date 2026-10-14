@@ -11,6 +11,12 @@
 > beyond the ~17 curated actions shipped here (§12 lists what's covered), and the two written
 > compliance decisions in §8 are still open — Layer 3 (snapshots) is live in code but those
 > decisions should be resolved before it accumulates real customer data in production.
+>
+> Design record — kept at this path because source comments cite its sections (§8, §9). §1–§7 are
+> the plan as written before the build: §1's "nothing an admin does is recorded" describes the state
+> before 2026-09-03 (`ActivityEvent`, `ActionLog` and `EntitySnapshot` now exist), and the Phase 0
+> prerequisites it lists (e.g. the Prisma version fix in AGENTS.md/DATABASE.md) are done. §12 is the
+> as-built record.
 
 ---
 

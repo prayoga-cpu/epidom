@@ -23,7 +23,7 @@ import { EpidomMark } from "@/features/marketing/shared/components/epidom-logo";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
-import { PhoneInput } from "@/components/ui/phone-input";
+import { LazyPhoneInput } from "@/components/ui/phone-input-lazy";
 import { trackEvent, useTrackPageView } from "@/features/storefront/hooks/use-track-storefront-event";
 
 interface CustomLink {
@@ -612,7 +612,7 @@ function ReservationModal({ slug, tables, onClose }: ReservationModalProps) {
                 <label className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                   {t("publicProfile.reservation.phoneLabel")}
                 </label>
-                <PhoneInput
+                <LazyPhoneInput
                   placeholder={t("publicProfile.reservation.phonePlaceholder")}
                   defaultCountry="ID"
                   value={form.guestPhone}

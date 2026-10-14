@@ -37,13 +37,12 @@ export const GET = withApiHandler(
     );
     const to = new Date(searchParams.get("to") ?? now.toISOString());
 
-    const store = await prisma.store.findUnique({
-      where: { id: storeId },
-      select: { business: { select: { timezone: true } } },
-    });
-    const timezone = store?.business.timezone ?? "UTC";
-
-    const [scheduleShifts, orders] = await Promise.all([
+    // The timezone is only needed after these reads, so it's fetched with them.
+    const [store, scheduleShifts, orders] = await Promise.all([
+      prisma.store.findUnique({
+        where: { id: storeId },
+        select: { business: { select: { timezone: true } } },
+      }),
       prisma.scheduleShift.findMany({
         where: { storeId, isActive: true },
         select: { id: true, name: true, startTime: true, endTime: true, color: true },
@@ -53,6 +52,7 @@ export const GET = withApiHandler(
         select: { total: true, orderDate: true },
       }),
     ]);
+    const timezone = store?.business.timezone ?? "UTC";
 
     const fromKey = getBusinessDateKey(from, timezone);
     const toKey = getBusinessDateKey(to, timezone);

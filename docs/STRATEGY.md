@@ -23,7 +23,7 @@ The original Epidom positioning was "cookie bar inventory management for France.
 | Owner.com hit $1B valuation in 2025 doing this playbook in the US                                                      | Thesis is validated at the venture scale                                       |
 | Sunday raised $100M+ for QR pay alone, then retreated from 4 markets                                                   | A standalone QR layer is not sticky enough. The ladder matters.                |
 
-The pivot trades a saturated niche (French bakeries) for a defensible wedge (Indonesian customer-facing layer) with a clearer monetization ladder.
+The pivot originally traded a saturated niche (French bakeries) for a defensible wedge (Indonesian customer-facing layer) with a clearer monetization ladder. Since 2026-08-10 the same storefront-first ladder is pointed at France first, with Indonesia second (see §3); the Indonesian findings above still hold.
 
 ---
 
@@ -37,12 +37,12 @@ The pivot trades a saturated niche (French bakeries) for a defensible wedge (Ind
 
 ### Customer segments
 
-| Tier                          | Who                                                                  | Trigger to upgrade                                                                                            |
-| ----------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **FREE**                      | Solo warung, home baker, food truck, single-location café            | They open shop, post on Instagram, customers want to order online                                             |
-| **POS** (~IDR 99k/mo)         | Café or warung doing >50 orders/day with a cashier                   | They hire a cashier, can't manage orders by hand                                                              |
-| **OPERATIONS** (~IDR 249k/mo) | Multi-staff café or restaurant, up to 3 outlets                      | They hire a second shift or open a second outlet, need ingredient cost control, shift handover and a real P&L |
-| **ENTERPRISE** (custom)       | A group of 4+ outlets, or a business that wants its own system built | They open a 4th outlet, or need a custom build, integration or SLA the standard product doesn't cover         |
+| Tier                                 | Who                                                                  | Trigger to upgrade                                                                                            |
+| ------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **FREE**                             | Solo warung, home baker, food truck, single-location café            | They open shop, post on Instagram, customers want to order online (ordering is part of POS)                   |
+| **POS** (€13.99 / Rp 229k/mo)        | Café or warung doing >50 orders/day with a cashier                   | They hire a cashier, can't manage orders by hand                                                              |
+| **OPERATIONS** (€27.99 / Rp 459k/mo) | Multi-staff café or restaurant, up to 3 outlets                      | They hire a second shift or open a second outlet, need ingredient cost control, shift handover and a real P&L |
+| **ENTERPRISE** (custom)              | A group of 4+ outlets, or a business that wants its own system built | They open a 4th outlet, or need a custom build, integration or SLA the standard product doesn't cover         |
 
 ---
 
@@ -56,7 +56,7 @@ The wedge is the **public storefront** (`epidom.fr/@warung-pak-budi`). Free fore
 
 Why this is the right wedge:
 
-- **Activation cost is near zero.** A merchant signs up, picks a theme, adds 3 menu items, publishes. Done in 5 minutes.
+- **Activation cost is near zero.** A merchant signs up, picks a theme, adds 3 menu items, publishes. Quick to set up (the "about five minutes" claim was removed from marketing in 3.14.0, so don't promise a duration).
 - **Visible value on day 1.** They share the link on Instagram, customers actually use it.
 - **Built-in distribution.** Every storefront page is a marketing surface that shows "Powered by Epidom" (until they pay to remove it).
 - **Data lock-in over time.** Once they have 200 orders in our system, they don't want to switch.
@@ -67,7 +67,7 @@ The POS, KDS, and inventory features upsell _after_ we have the storefront relat
 
 ## 5. Competitive landscape
 
-### Direct competitors (Indonesia)
+### Direct competitors (Indonesia, the secondary market; French POS players are in §2)
 
 | Competitor                  | Strength                                    | Where we win                                                               |
 | --------------------------- | ------------------------------------------- | -------------------------------------------------------------------------- |
@@ -103,12 +103,13 @@ FREE         POS          OPERATIONS           ENTERPRISE (service)
    |           |               |                    |
    v           v               v                    v
 Storefront  + Cashier     + Shift mgmt         + Unlimited outlets (4+)
-Menu        + Order list  + Kitchen Display    + Your own system, built
-QR ordering + Receipts    + Inventory            with the Prionation team
-QRIS pay    + Basic KDS   + Recipe cost        + Custom integrations
-WhatsApp                  + Stock deduction    + Priority support, SLAs
-notify                    + Low stock alerts   + Stripe Connect 80/20 (optional)
-                          + Multi-outlet (up to 3)
+Menu        + Online      + Kitchen Display    + Your own system, built
+QR code       ordering    + Inventory            with the Prionation team
+              (pay at     + Recipe cost        + Custom integrations
+              counter)    + Stock deduction    + Priority support, SLAs
+            + Order list  + Low stock alerts   + Stripe Connect 80/20 (optional)
+            + Receipts    + Discounts, loyalty
+            + Basic KDS   + Multi-outlet (up to 3)
                           + Finance reports
                             (incl. all-outlets roll-up)
 ```
@@ -117,22 +118,26 @@ Since 2026-09-26, ENTERPRISE is a consultation / custom-build service, not a fea
 
 Since 2026-09-27, outlets are capped per plan (`PLAN_MAX_STORES`): FREE and POS 1, OPERATIONS up to 3, ENTERPRISE unlimited. Opening a 4th outlet is the business event that leads to ENTERPRISE, which stays sales-led.
 
+Ordering is a POS feature, not FREE (`FEATURE_MIN_PLAN.onlineOrders`); discounts, coupons and loyalty are OPERATIONS. Storefront online payment (QRIS, e-wallets, card) is switched off (`STOREFRONT_ONLINE_PAYMENTS_ENABLED = false`, 3.8.0): storefront orders are paid at the cashier, and the payment code is dormant, not removed.
+
 Each tier upgrade is triggered by a clear business event, not a feature gate. Upgrade prompts should explain the event ("You've onboarded your 2nd cashier. Time to add Shifts.") rather than the feature.
 
 ---
 
 ## 7. Pricing rationale
 
-| Tier       | Indonesia (IDR/mo) | France-ready price (EUR/mo) | Why                                                        |
-| ---------- | ------------------ | --------------------------- | ---------------------------------------------------------- |
-| FREE       | Rp 0               | €0                          | Wedge. Forever free.                                       |
-| POS        | Rp 99,000 (~$6)    | €19                         | Beats Klikit's Rp 390k by being focused on small operators |
-| OPERATIONS | Rp 249,000 (~$15)  | €49                         | Where most revenue comes from                              |
-| ENTERPRISE | Custom             | Custom                      | 4+ outlets and custom builds, priced per engagement        |
+| Tier       | France (EUR/mo) | Indonesia (IDR/mo) | Worldwide (USD/mo) | Why                                                                  |
+| ---------- | --------------- | ------------------ | ------------------ | -------------------------------------------------------------------- |
+| FREE       | €0              | Rp 0               | $0                 | Wedge. Forever free.                                                 |
+| POS        | €13.99          | Rp 229,000 (~$14)  | $14.99             | Still under the Rp 390k we cite for Klikit, aimed at small operators |
+| OPERATIONS | €27.99          | Rp 459,000 (~$28)  | $29.99             | Where most revenue comes from                                        |
+| ENTERPRISE | Custom          | Custom             | Custom             | 4+ outlets and custom builds, priced per engagement                  |
+
+Yearly billing is about 16-18% cheaper per month (EUR 11.49 / 23.49, USD 12.49 / 24.99, IDR 189,000 / 379,000), not 20%. POS has a 14-day free trial. The single source in code is `src/lib/constants/plan-pricing.ts`. (Earlier drafts here said Rp 99k / 249k and €19 / €49; those are obsolete, see `CHANGELOG.md` 2.24.1.)
 
 Settled 2026-09-27: OPERATIONS is not priced per outlet. It is capped at 3 outlets, and a 4th needs ENTERPRISE. Prices are unchanged. Open: whether to publish an ENTERPRISE "from" price. Competitors sell the 4th outlet online, and sales-led tiers usually start at 10+ outlets. Not decided.
 
-The IDR pricing matters more than any other number in this strategy. Reference: Indonesian SME SaaS ARPU benchmarks suggest pain threshold ~Rp 300k/month for software, soft ceiling ~Rp 500k for non-payment SaaS.
+The IDR pricing matters more than any other number for the Indonesian market. Reference: Indonesian SME SaaS ARPU benchmarks suggest pain threshold ~Rp 300k/month for software, soft ceiling ~Rp 500k for non-payment SaaS.
 
 ---
 
@@ -141,7 +146,7 @@ The IDR pricing matters more than any other number in this strategy. Reference: 
 Two streams, kept architecturally separate:
 
 1. **SaaS subscriptions** (recurring): merchants pay Epidom monthly via Stripe.
-2. **Payment processing** (future, Stripe Connect 80/20 model from original codebase): if a merchant accepts customer payments through us via QRIS/Xendit, we take a small margin on each transaction. **This is opt-in and only offered as part of an ENTERPRISE engagement.**
+2. **Payment processing** (future, Stripe Connect 80/20 model from original codebase): if a merchant accepts customer payments through us via QRIS/Xendit (storefront online payment is currently switched off, 3.8.0), we take a small margin on each transaction. **This is opt-in and only offered as part of an ENTERPRISE engagement.**
 
 We are not a payment facilitator at scale. We are a SaaS company that integrates one. Important for regulatory positioning (BI / OJK).
 
@@ -191,9 +196,9 @@ These metrics are reviewed monthly. Strategy changes get logged in the Changelog
 
 ## 12. Open strategic questions
 
-These are unresolved. Decide before Phase 2 closes.
+These are unresolved. (Written before Phase 2 closed; Phase 2 is now closed, so items are revisited as the product evolves rather than blocking a phase.)
 
-1. Do we charge for QRIS transaction fees on the FREE tier? (Probably yes, ~0.7% on top of Xendit's 0.7% = 1.4% to the merchant. Aligns incentives, keeps free tier sustainable.)
+1. Do we charge for QRIS transaction fees on the FREE tier? **Moot for now:** storefront online payment is switched off (3.8.0) and ordering is a POS feature, so no gateway fees are collected on FREE. Revisit if online payment is switched back on. (Original thinking: ~0.7% on top of Xendit's 0.7% = 1.4% to the merchant. Aligns incentives, keeps free tier sustainable.)
 2. Do we white-label for kopi chains (e.g., Janji Jiwa, Kopi Kenangan franchises)? (Maybe, in Phase 5.)
 3. Do we go after small home-kitchen / catering operators with a sub-FREE "social tier" that's just a menu page? (Possibly, easy to add.)
 4. ~~When do we reactivate French market?~~ **Resolved 2026-08-10: reactivated now and promoted to primary market**, ahead of the original "5,000 paying Indonesian merchants" trigger — see §3.

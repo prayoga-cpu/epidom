@@ -77,7 +77,9 @@ export function PosShell({ store, menuSetupHref = null }: PosShellProps) {
   const [configuringItem, setConfiguringItem] = useState<PosMenuItem | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const viewMode = usePosViewMode((s) => s.viewMode);
-  const cart = usePosCart();
+  // Only the action, not the whole store: subscribing to everything re-rendered
+  // the shell — and the full menu grid under it — on every cart change.
+  const addItem = usePosCart((s) => s.addItem);
   // The cart is saved on the device, so it would otherwise follow the cashier
   // into whichever store they open next. See bindStore.
   const bindCartToStore = usePosCart((s) => s.bindStore);
@@ -103,7 +105,7 @@ export function PosShell({ store, menuSetupHref = null }: PosShellProps) {
   const handleItemClick = (item: PosMenuItem) => {
     const groups = getMergedOptionGroups(item, item.product);
     if (groups.length === 0) {
-      cart.addItem(item.id, item.name, item.price, 1, [], item.imageUrl);
+      addItem(item.id, item.name, item.price, 1, [], item.imageUrl);
       return;
     }
     setConfiguringItem(item);
@@ -316,7 +318,7 @@ export function PosShell({ store, menuSetupHref = null }: PosShellProps) {
             groups={getMergedOptionGroups(configuringItem, configuringItem.product)}
             formatPrice={formatPrice}
             onConfirm={({ selectedOptions, notes }) => {
-              cart.addItem(
+              addItem(
                 configuringItem.id,
                 configuringItem.name,
                 configuringItem.price,

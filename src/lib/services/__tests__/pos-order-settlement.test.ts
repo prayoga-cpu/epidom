@@ -346,6 +346,35 @@ describe("buildPosSettlement — customer snapshot", () => {
     ).rejects.toMatchObject({ status: 422 });
   });
 
+  it("reports a bad cart before a bad customer, though both are looked up together", async () => {
+    // The item/customer/table reads run concurrently; the error a request gets
+    // back must still be the one the old sequential order produced.
+    prismaMock.customer.findFirst.mockResolvedValue(null);
+    vi.mocked(validateAndBuildOrderItems).mockRejectedValueOnce(
+      new OrderBuildError("Menu item not found")
+    );
+    await expect(
+      buildPosSettlement({
+        storeId: "store-1",
+        store: STORE,
+        input: legacyInput({ customerId: "cus-other" }),
+      })
+    ).rejects.toBeInstanceOf(OrderBuildError);
+    expect(prismaMock.customer.findFirst).toHaveBeenCalled();
+  });
+
+  it("reports a missing customer before a failed table lookup", async () => {
+    prismaMock.customer.findFirst.mockResolvedValue(null);
+    prismaMock.table.findFirst.mockRejectedValueOnce(new Error("db down"));
+    await expect(
+      buildPosSettlement({
+        storeId: "store-1",
+        store: STORE,
+        input: legacyInput({ customerId: "cus-other", tableId: "t-1", orderType: "DINE_IN" }),
+      })
+    ).rejects.toMatchObject({ status: 422, message: "Customer not found" });
+  });
+
   it("stays strict for a LIVE checkout, which marks itself", async () => {
     // Since 3.3.7 the online checkout sends clientRequestId too (an idempotency
     // key). It is not a replay, and a bad customer is still a 422.
