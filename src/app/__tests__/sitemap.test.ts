@@ -92,14 +92,14 @@ describe("sitemap lastModified", () => {
     }
   });
 
-  it("gives every blog entry its own post's date", () => {
+  it("gives every blog entry its own post's date (its last revision when it has one)", () => {
     const params = getAllBlogPostParams();
     expect(params.length).toBeGreaterThan(0);
     for (const { locale, slug } of params) {
       const post = getBlogPosts(locale).find((p) => p.slug === slug)!;
       const e = byUrl(urlOf(`/blog/${slug}`, locale));
       expect(e, `${locale}/${slug}`).toBeDefined();
-      expect(e!.lastModified).toBe(post.date);
+      expect(e!.lastModified).toBe(post.updated ?? post.date);
     }
   });
 

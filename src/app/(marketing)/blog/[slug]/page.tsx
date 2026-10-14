@@ -57,6 +57,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         title={post.title}
         description={post.description}
         datePublished={post.date}
+        dateModified={post.updated}
       />
       <BreadcrumbStructuredData
         items={buildBreadcrumbs(locale, [

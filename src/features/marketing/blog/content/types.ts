@@ -16,4 +16,14 @@ export interface BlogAuthor {
 /** A blog post: the shared Article shape plus an optional author. */
 export interface BlogPost extends Article {
   author?: BlogAuthor;
+  /**
+   * ISO date of the last real revision (rewrite, correction), when it differs
+   * from `date`. Feeds the sitemap's lastModified and BlogPosting dateModified.
+   */
+  updated?: string;
+  /**
+   * Slugs of landing pages in the post's own language (calculators, guides —
+   * src/features/marketing/landing/registry.ts), linked under the article.
+   */
+  related?: string[];
 }

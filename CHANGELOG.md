@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.15.0] - 2026-10-14 · feat
+
+A bigger, corrected blog, in all three languages.
+
+- **Every article rewritten and expanded.** The eight existing articles are now full guides, with steps, worked examples and mistakes to avoid. They also no longer say online ordering is free or that setup takes five minutes: the storefront page and its QR code are free, and online ordering is part of the POS plan (14 days free).
+- **Five new guides.** In French, how to build a recipe card (fiche technique) and what to buy to open a café. In Indonesian, how to set a menu price that keeps you profitable and what a small café needs to start. In English, how to price a café menu, with a worked example.
+- **Tools and guides under each article.** Each article now links to the calculators and guides in its language.
+- **Revision dates for search engines.** A rewritten article tells search engines when it was last revised.
+
 ## [3.14.0] - 2026-10-14 · feat
 
 Free calculators, a guide for each kind of business and feature, and ten new comparisons.

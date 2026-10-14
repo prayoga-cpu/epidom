@@ -380,11 +380,14 @@ export function BlogPostingStructuredData({
   title,
   description,
   datePublished,
+  dateModified,
 }: {
   url: string;
   title: string;
   description: string;
   datePublished: string;
+  /** The last real revision, when there was one. */
+  dateModified?: string;
 }) {
   const data = {
     "@context": "https://schema.org",
@@ -393,6 +396,7 @@ export function BlogPostingStructuredData({
     headline: title,
     description,
     datePublished,
+    dateModified: dateModified ?? datePublished,
     author: { "@type": "Organization", name: "Epidom" },
     publisher: {
       "@type": "Organization",

@@ -118,7 +118,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // edited article keeps its original lastmod until one exists.
   const blogEntries: MetadataRoute.Sitemap = getAllBlogPostParams().map(({ locale, slug }) => ({
     url: `${BASE_URL}${getLocalizedPath(`/blog/${slug}`, locale)}`,
-    lastModified: getBlogPost(locale, slug)?.date,
+    lastModified: getBlogPost(locale, slug)?.updated ?? getBlogPost(locale, slug)?.date,
     changeFrequency: "monthly",
     priority: 0.6,
   }));

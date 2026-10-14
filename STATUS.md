@@ -16,7 +16,7 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 | --- | --- | --- |
 | 0 — Hygiene | Remove junk from the index, retarget titles, fix the H1 and structured data, crawler access | ✅ live in 3.12.1 (b7b36aec, 2026-10-14) |
 | 1 — Speed | Static marketing pages, one language bundle per visitor, image/favicon weight, Core Web Vitals baseline | 🟡 bundle + favicon in 3.13.0; static pages, OG images, CWV open |
-| 2 — Pages that rank | Free tools, vertical pages, feature pages, more comparison pages, blog cadence | 🟡 tools + 32 landing pages + 10 comparisons in 3.14.0; blog open |
+| 2 — Pages that rank | Free tools, vertical pages, feature pages, more comparison pages, blog cadence | ✅ 3.14.0 (tools, 32 landing pages, 10 comparisons) + 3.15.0 (blog); ongoing cadence is the operator's |
 | 3 — Storefront loop | Server-rendered menus, store-language metadata, LocalBusiness detail, "Powered by" link | ✅ 3.13.0 |
 | 4 — Authority | Search Console, Business Profile, Play Store listing, directories, listicles, data PR | ⬜ not started |
 
@@ -44,7 +44,7 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 - [ ] Per-page Open Graph images (`opengraph-image.tsx`) for home, pricing, blog posts, compare pages.
 - [ ] Core Web Vitals baseline for `/`, `/id`, `/en`, `/pricing` (PageSpeed API quota was exhausted on 2026-10-14) and again after the changes above.
 
-## Phase 2 — Pages that rank — 🟡 3.14.0 (blog work open)
+## Phase 2 — Pages that rank — ✅ 3.14.0 + 3.15.0
 
 Landing system (3.14.0): `src/features/marketing/landing/` — `registry.ts` (slug → language + hreflang group, link labels; imported by the proxy, sitemap and footer), `content/<group>.ts` (one `LandingPage` per language, server-only), `render-landing-page.tsx` + `components/landing-page-view.tsx`, a route folder per slug in `src/app/(marketing)/<slug>/page.tsx`. A page exists in ONE language at its own slug; the proxy 308s the slug under any other prefix to it and never redirects it by browser language. hreflang links the group's siblings at their own slugs. Tests: registry ↔ content ↔ route files, titles ≤ 60 / descriptions ≤ 160, ≥ 550 words, banned claims, own-currency prices, French typography (`landing-content.test.ts`), proxy (`proxy-landing-pages.test.ts`), sitemap. Content written from `FACTS.md` (product facts sheet in the session scratchpad: plans, prices, what each plan includes).
 
@@ -70,8 +70,9 @@ Comparison pages (3.14.0):
 
 Content:
 
-- [ ] Blog cadence: 2 posts/month in fr and id (1,000–1,800 words), each linking to a vertical or tool page.
-- [ ] Expand the 8 existing ~300-word posts (some still say ordering is free); add `dateModified` (an `updated` field) to posts and the sitemap.
+- [x] **The 8 existing posts rewritten** (3.15.0): 1,000–1,600 words each, free-ordering / "5 minutes" claims removed, `updated` (→ sitemap lastModified + BlogPosting dateModified) and `related` landing links (rendered under the article). Guarded by `blog-content-claims.test.ts`.
+- [x] **5 new posts** (3.15.0): fr fiche-technique-recette-modele-cafe-boulangerie, ouvrir-un-cafe-materiel-outils-de-caisse; id cara-menentukan-harga-jual-menu-kafe, modal-buka-kafe-kecil-peralatan-dan-aplikasi; en how-to-price-a-cafe-menu.
+- [ ] Blog cadence going forward: 2 posts/month in fr and id (operator/content owner; the brief used for these is in the session scratchpad `phase2/BLOG_BRIEF.md`).
 
 ## Phase 3 — Storefront loop — ✅ 3.13.0
 
