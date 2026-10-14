@@ -1,7 +1,7 @@
 import type React from "react";
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { geistMono } from "@/lib/fonts";
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { Suspense } from "react";
 import { I18nProvider } from "@/components/lang/i18n-provider";
@@ -20,7 +20,7 @@ export default function LoginLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+    <div className={`font-sans ${GeistSans.variable} ${geistMono.variable}`}>
       <ErrorBoundary>
         <Suspense fallback={<LoadingPage />}>
           <SessionProvider>

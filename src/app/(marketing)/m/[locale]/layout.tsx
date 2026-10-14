@@ -21,10 +21,12 @@ const jost = Jost({
   display: "swap",
 });
 
+// Italic only: its one user, `.epi-script` (globals.css), is always italic, and
+// every face listed here is preloaded on every marketing page.
 const imFell = IM_Fell_French_Canon({
   subsets: ["latin"],
   weight: ["400"],
-  style: ["normal", "italic"],
+  style: ["italic"],
   variable: "--font-im-fell",
   display: "swap",
 });

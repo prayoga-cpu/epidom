@@ -1912,8 +1912,6 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
       select: "Pilih toko",
       createFirst: "Buat Toko",
       createNew: "Buat toko baru",
-      searchPlaceholder: "Cari toko...",
-      noStores: "Tidak ada toko ditemukan",
       yourStores: "Toko Anda",
     },
     alertsCard: {

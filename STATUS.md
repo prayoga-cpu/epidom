@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current focus: SEO and website rework — Phases 0–3 shipped (3.12.1–3.16.0); open: OG images, CWV baseline, Phase 4 (operator)
+## Current focus: SEO and website rework — Phases 0–3 shipped (3.12.1–3.17.1); open: Phase 4 (operator), field Web Vitals decision
 
 _(AI agents: this file tracks the SEO/website phases below. Tick a box the moment an item is done and add the version it shipped in; don't re-describe finished work in prose. Anything that needs the operator goes in "Operator to-do". The previous STATUS.md (v3 dashboard revamp, releases 3.3.0–3.12.0, and their open operator to-dos) is archived unchanged at `docs/status-archive/2026-10-14-v3-revamp-and-releases.md`; its open items are listed at the bottom so they stay visible.)_
 
@@ -15,7 +15,7 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 0 — Hygiene | Remove junk from the index, retarget titles, fix the H1 and structured data, crawler access | ✅ live in 3.12.1 (b7b36aec, 2026-10-14) |
-| 1 — Speed | Static marketing pages, one language bundle per visitor, image/favicon weight, Core Web Vitals baseline | 🟡 bundle + favicon 3.13.0, static pages 3.16.0; OG images + CWV open |
+| 1 — Speed | Static marketing pages, one language bundle per visitor, image/favicon weight, Core Web Vitals baseline | ✅ bundle + favicon 3.13.0, static pages 3.16.0, share images 3.17.0, lab baseline + font preloads 3.17.1; field data open |
 | 2 — Pages that rank | Free tools, vertical pages, feature pages, more comparison pages, blog cadence | ✅ 3.14.0 (tools, 32 landing pages, 10 comparisons) + 3.15.0 (blog); ongoing cadence is the operator's |
 | 3 — Storefront loop | Server-rendered menus, store-language metadata, LocalBusiness detail, "Powered by" link | ✅ 3.13.0 |
 | 4 — Authority | Search Console, Business Profile, Play Store listing, directories, listicles, data PR | ⬜ not started |
@@ -42,7 +42,22 @@ _(AI agents: this file tracks the SEO/website phases below. Tick a box the momen
 - [x] **Only the visitor's language file** (3.13.0). `SeededI18nProvider` (`src/components/lang/seeded-i18n-provider.tsx`, a client module) lazy-loads one `seeded-i18n-{fr,id,en}.tsx`. Measured on a production build: every page loaded both the fr (318 KB) and id (299 KB) chunks; now only its own. Raw JS per page: `/en` 1948 → 1333 KB, `/` 1948 → 1651 KB, `/id` 1948 → 1632 KB. The same `next/dynamic` calls in a server component did NOT split (all chunks stayed in the script tags). Header language switch and hydration checked in headless Chromium (no console errors).
 - [x] **Favicon 581 KB → 8 KB** (3.13.0): the old file's own 16/32/48 px images repacked as PNG entries, same artwork.
 - [x] **Per-page share images** (3.17.0): `/og/<landing|blog|compare>/<locale>/<slug>` (`src/app/og/[kind]/[locale]/[slug]/route.tsx`, `next/og`, Geist from the `geist` package, prerendered, `dynamicParams = false`); landing, blog and comparison metadata point at their own image (not file-based `opengraph-image`: that would live under the internal `/m/` path the proxy redirects). Home/pricing keep the site-wide `og-image.png`.
-- [ ] Core Web Vitals baseline for `/`, `/id`, `/en`, `/pricing` (PageSpeed API quota was exhausted on 2026-10-14) and again after the changes above.
+- [x] **Core Web Vitals lab baseline** (2026-10-14, on 3.17.0 in production). The PageSpeed API was still over its daily quota, so measured with Playwright Chromium from Bali: 412×823 phone viewport, 150 ms RTT, 1.6 Mbps down, 4× CPU slowdown (Lighthouse's mobile throttling), fresh browser per run, median of 3. Script: `cwv.cjs` in the session scratchpad. No "before" lab numbers exist; before 3.16.0 only TTFB was measured (350–1,500 ms). CLS was 0 on every page.
+
+  | Page | TTFB | FCP | LCP | LCP element |
+  | --- | --- | --- | --- | --- |
+  | `/` | 177 ms | 1.97 s | 3.04 s | hero image |
+  | `/id` | 129 ms | 1.88 s | 2.50 s | hero image |
+  | `/en` | 168 ms | 1.98 s | 2.62 s | hero image |
+  | `/pricing` | 133 ms | 1.74 s | 2.30 s | h1 |
+  | `/id/pricing` | 140 ms | 1.83 s | 2.53 s | h1 |
+  | `/calcul-cout-de-revient` | 262 ms | 2.79 s | 3.99 s | first paragraph |
+  | `/blog/reduire-commission-deliveroo-uber-eats` | 333 ms | 3.06 s | 5.62 s* | first paragraph |
+  | `/compare/zelty` | 189 ms | 1.96 s | 3.00 s | first paragraph |
+
+  \*Network variance: a single traced run of the same page gave FCP 1.9 s / LCP 2.7 s. The trace showed the bottleneck: the 42 KB render-blocking stylesheet finished at ~1.76 s because 7 preloaded font files (~238 KB) were downloading alongside it, two of them never used on a marketing page.
+- [x] **Fewer font preloads** (3.17.1): GeistMono (57 KB, monospace, never painted first) is no longer preloaded on any page: `src/lib/fonts.ts` declares it with `preload: false` (same file and fallbacks as `geist/font/mono`) for the root, auth, Back Office and POS layouts, and a test fails if anything imports the package's version again; IM Fell's upright face is dropped (its only user, `.epi-script`, is always italic). Not done: Geist Sans (57 KB) is still preloaded on marketing pages, which never render it. It is the app's and storefronts' font, set on `<html>` so that portaled dialogs inherit it, and moving it out of the root layout is a bigger change. Re-measure after 3.17.1 deploys.
+- [ ] **Real-user Web Vitals go nowhere.** `src/lib/web-vitals.ts` beacons LCP/CLS/INP/FCP/TTFB from every production page view to `/api/analytics/web-vitals`, whose handler discards them, so each visit costs function calls and yields no field data. Decision needed (see Decisions).
 
 ## Phase 2 — Pages that rank — ✅ 3.14.0 + 3.15.0
 
@@ -124,6 +139,7 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 - [ ] **NF525.** The 2025 finance law removed the publisher's self-attestation; the **2026 finance law (n° 2026-103, art. 125) restored it**. Epidom can issue its own attestation only if the till really meets the four conditions (records can't be altered, secured, kept, archived). Confirm with an accountant. Until decided: French pages lead with online ordering, QR menu and cost tools, not "logiciel de caisse"; Capterra/Appvizer listings wait.
 - [ ] **Features H1 visible or not.** 3.11.0 hid it at your request; Phase 0 keeps it hidden but makes its text name the product. A visible H1 is a slightly stronger signal.
+- [ ] **Real-user Web Vitals.** Today they are sent from every page view and discarded (Phase 1). Either send them to Google Analytics as events, only for visitors who accepted analytics (field data for every page; recommended), or remove the reporter and its endpoint (saves the calls; rely on Search Console's Core Web Vitals report once the site has enough Chrome traffic).
 - [ ] **Storefront index threshold.** Phase 0 noindexes stores with fewer than 3 available menu items (`MIN_INDEXABLE_MENU_ITEMS`). Lower it if real merchants with tiny menus should stay indexed.
 
 ## Operator to-do (SEO)

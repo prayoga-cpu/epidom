@@ -6,15 +6,13 @@ import { Check, ChevronsUpDown, Store, MapPin, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStores } from "@/features/stores/stores/hooks/use-stores";
 import { useCurrentStore } from "./hooks/use-current-store";
@@ -26,11 +24,15 @@ import { usePosSession } from "@/features/pos/hooks/use-pos-session";
  * Store Switcher Component
  *
  * Displays current store and allows switching between stores.
- * Uses Command component for searchable dropdown with keyboard navigation.
- * Placed in topbar for global access across dashboard.
+ * Placed in topbar for global access across dashboard, and in the mobile drawer.
+ *
+ * A plain dropdown, not a search box: an account has a handful of stores (the
+ * plan caps how many), and on a phone a search field takes focus on open and
+ * brings up the keyboard over the list. Arrow keys and type-to-jump still work
+ * on desktop (Radix menu typeahead on the store name).
  *
  * Features:
- * - Searchable store list
+ * - Store list, capped and scrolling past a dozen or so
  * - Current store highlighting
  * - Empty state with link to stores page
  * - Loading and error states
@@ -94,12 +96,10 @@ export function StoreSwitcher() {
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          role="combobox"
-          aria-expanded={open}
           aria-label={t("dashboard.storeSelector.label")}
           className="text-foreground h-9 w-[140px] justify-between rounded-2xl text-xs sm:w-[160px] sm:text-sm lg:w-[180px] lg:text-sm"
         >
@@ -111,50 +111,48 @@ export function StoreSwitcher() {
           </div>
           <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50 sm:ml-2 sm:h-4 sm:w-4" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[220px] p-0" align="end">
-        <Command>
-          <CommandInput placeholder={t("dashboard.storeSelector.searchPlaceholder")} />
-          <CommandList>
-            <CommandEmpty>{t("dashboard.storeSelector.noStores")}</CommandEmpty>
-            <CommandGroup heading={t("dashboard.storeSelector.yourStores")}>
-              {stores.map((store) => (
-                <CommandItem
-                  key={store.id}
-                  value={store.name}
-                  onSelect={() => handleSelectStore(store.id)}
-                  className="cursor-pointer"
-                >
-                  <div className="flex flex-1 items-center gap-2">
-                    <Check
-                      className={cn(
-                        "h-4 w-4 shrink-0",
-                        storeId === store.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-1 flex-col gap-0.5 overflow-hidden">
-                      <span className="truncate font-medium">{store.name}</span>
-                      {store.city && (
-                        <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                          <MapPin className="h-3 w-3" />
-                          {store.city}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            <CommandSeparator />
-            <CommandGroup>
-              <CommandItem onSelect={handleCreateStore} className="cursor-pointer">
-                <Plus className="mr-1 hidden h-4 w-4 sm:inline" />
-                {t("dashboard.storeSelector.createNew")}
-              </CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuTrigger>
+      {/* As wide as the trigger (full width in the mobile drawer), never narrower than 220px. */}
+      <DropdownMenuContent
+        align="end"
+        className="w-(--radix-dropdown-menu-trigger-width) min-w-[220px]"
+      >
+        <DropdownMenuLabel className="text-muted-foreground text-xs">
+          {t("dashboard.storeSelector.yourStores")}
+        </DropdownMenuLabel>
+        <div className="max-h-64 overflow-y-auto">
+          {stores.map((store) => (
+            <DropdownMenuItem
+              key={store.id}
+              textValue={store.name}
+              aria-current={storeId === store.id ? "true" : undefined}
+              onSelect={() => handleSelectStore(store.id)}
+              className="min-h-11 cursor-pointer"
+            >
+              <Check
+                className={cn(
+                  "h-4 w-4 shrink-0",
+                  storeId === store.id ? "opacity-100" : "opacity-0"
+                )}
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate font-medium">{store.name}</span>
+                {store.city && (
+                  <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                    <MapPin className="h-3 w-3" />
+                    <span className="truncate">{store.city}</span>
+                  </span>
+                )}
+              </div>
+            </DropdownMenuItem>
+          ))}
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={handleCreateStore} className="min-h-11 cursor-pointer">
+          <Plus className="h-4 w-4" />
+          {t("dashboard.storeSelector.createNew")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

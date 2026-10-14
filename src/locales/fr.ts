@@ -1843,8 +1843,6 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       select: "Sélectionner un magasin",
       createFirst: "Créer un Magasin",
       createNew: "Créer un nouveau magasin",
-      searchPlaceholder: "Rechercher un magasin...",
-      noStores: "Aucun magasin trouvé",
       yourStores: "Vos Magasins",
     },
     alertsCard: {

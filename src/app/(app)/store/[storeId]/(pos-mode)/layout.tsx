@@ -2,7 +2,7 @@ import type React from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { geistMono } from "@/lib/fonts";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePlan } from "@/lib/auth/require-plan";
@@ -86,7 +86,7 @@ export default async function PosModeLayout({
     (subscription?.plan === "FREE" || subscription?.plan === "POS" || staffCount === 0);
 
   return (
-    <div className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+    <div className={`font-sans ${GeistSans.variable} ${geistMono.variable}`}>
       <a
         href="#main-content"
         className="focus:bg-primary focus:text-primary-foreground focus:ring-ring sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:ring-2 focus:outline-none"

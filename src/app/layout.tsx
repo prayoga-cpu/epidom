@@ -1,7 +1,7 @@
 import type React from "react";
 import { Bebas_Neue } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { geistMono } from "@/lib/fonts";
 
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { MetaPixelScript } from "@/components/analytics/meta-pixel-script";
@@ -93,7 +93,7 @@ export default function RootLayout({
         {TRACKING_ENABLED && <MetaPixelConsentBridge />}
       </head>
       <body
-        className={`font-sans ${bebasNeue.variable} ${GeistSans.variable} ${GeistMono.variable}`}
+        className={`font-sans ${bebasNeue.variable} ${GeistSans.variable} ${geistMono.variable}`}
         suppressHydrationWarning
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>

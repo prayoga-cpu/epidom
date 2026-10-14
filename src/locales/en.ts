@@ -1892,8 +1892,6 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
       select: "Select store",
       createFirst: "Create Store",
       createNew: "Create new store",
-      searchPlaceholder: "Search store...",
-      noStores: "No stores found",
       yourStores: "Your Stores",
     },
     alertsCard: {

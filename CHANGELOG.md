@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.17.1] - 2026-10-14 · fix
+
+Switching stores on a phone no longer brings up the keyboard.
+
+- **The store picker is a plain list.** Tapping the store name, in the phone menu or in the top bar, now just opens your stores to tap. There is no search box any more, so the keyboard stays down and the list stays in view. On a computer, the arrow keys and the first letter of a store's name still jump through the list.
+- **The website starts drawing sooner on mobile.** Each page used to load two font files it never uses, competing with the page's own styles on a slow connection. They are no longer fetched up front.
+
 ## [3.17.0] - 2026-10-14 · ux
 
 Link previews with each page's own title, and dropdowns you can tap.

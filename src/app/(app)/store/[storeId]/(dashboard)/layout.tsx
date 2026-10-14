@@ -2,7 +2,7 @@ import type React from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { geistMono } from "@/lib/fonts";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
@@ -79,7 +79,7 @@ export default async function Layout({
     subscription?.plan === "FREE" || subscription?.plan === "POS" || staffCount === 0;
 
   return (
-    <div className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+    <div className={`font-sans ${GeistSans.variable} ${geistMono.variable}`}>
       {/* Skip link for keyboard accessibility */}
       <a
         href="#main-content"
