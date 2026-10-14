@@ -368,6 +368,7 @@ export default async function proxy(req: NextRequest) {
     "/build-with-us",
     "/changelog",
     "/compare", // /compare/* comparison pages
+    "/og/", // share images for marketing pages, src/app/og/
     "/terms",
     "/privacy",
     "/gdpr",

@@ -324,6 +324,8 @@ export interface LocalizedPageSEO {
   authoredLocales?: readonly Locale[];
   /** Keeps the page out of search results while still letting crawlers follow its links. */
   noindex?: boolean;
+  /** The page's own 1200×630 share image (else the site-wide one). */
+  image?: string;
 }
 
 /**
@@ -346,6 +348,7 @@ export function buildLocalizedMetadata({
   keywords,
   authoredLocales = LOCALES,
   noindex = false,
+  image,
 }: LocalizedPageSEO): Metadata {
   const { servedLocale, canonical, languages } = buildLocaleAlternates({
     basePath,
@@ -366,8 +369,14 @@ export function buildLocalizedMetadata({
       description: ogDescription,
       url: canonical,
       locale: OG_LOCALE[servedLocale],
+      ...(image ? { images: [{ url: image, width: 1200, height: 630, alt: ogTitle }] } : {}),
     },
-    twitter: { ...defaultSEO.twitter, title: ogTitle, description: ogDescription },
+    twitter: {
+      ...defaultSEO.twitter,
+      title: ogTitle,
+      description: ogDescription,
+      ...(image ? { images: [image] } : {}),
+    },
     ...(noindex
       ? { robots: { index: false, follow: true, googleBot: { index: false, follow: true } } }
       : {}),

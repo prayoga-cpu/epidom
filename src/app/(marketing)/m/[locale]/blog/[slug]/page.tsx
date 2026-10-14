@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { toLocale } from "@/features/marketing/seo/route-locale";
+import { ogImageUrl } from "@/features/marketing/seo/og-url";
 import { BREADCRUMB_LABELS, buildBreadcrumbs, buildLocalizedMetadata } from "@/lib/seo";
 import { getBlogPost, getBlogPosts } from "@/features/marketing/blog/content";
 import { BlogPostView } from "@/features/marketing/blog/components/blog-post-view";
@@ -43,6 +44,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: post.description,
     ogTitle: post.title,
     authoredLocales: [locale],
+    image: ogImageUrl("blog", locale, slug),
   });
 }
 

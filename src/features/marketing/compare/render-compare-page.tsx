@@ -7,6 +7,7 @@ import {
   resolveServedLocale,
 } from "@/lib/seo";
 import { BreadcrumbStructuredData } from "@/components/seo/structured-data";
+import { ogImageUrl } from "@/features/marketing/seo/og-url";
 import { CompetitorComparison } from "./components/competitor-comparison";
 import type { CompetitorComparisonData } from "./types";
 
@@ -45,7 +46,7 @@ export function buildCompareMetadata(
   keywords: string[],
   requested: Locale
 ) {
-  const { locale, data } = resolveCompareData(dataMap, requested);
+  const { locale, servedLocale, data } = resolveCompareData(dataMap, requested);
   return buildLocalizedMetadata({
     basePath: `/compare/${data.slug}`,
     locale,
@@ -54,6 +55,7 @@ export function buildCompareMetadata(
     ogTitle: data.eyebrow,
     keywords,
     authoredLocales: getAuthoredLocales(dataMap),
+    image: ogImageUrl("compare", servedLocale, data.slug),
   });
 }
 

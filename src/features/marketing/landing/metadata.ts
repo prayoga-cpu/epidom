@@ -5,6 +5,7 @@ import { OG_LOCALE, generateMetadata } from "@/lib/seo";
 import { landingAlternates } from "./registry";
 import type { LandingGroup } from "./registry";
 import type { LandingPage } from "./types";
+import { ogImageUrl } from "@/features/marketing/seo/og-url";
 
 const SITE = "https://epidom.fr";
 
@@ -47,7 +48,7 @@ export function buildLandingMetadata(page: LandingPage): Metadata {
       type: "article",
       images: [
         {
-          url: `${SITE}/images/og-image.png`,
+          url: ogImageUrl("landing", page.locale, page.slug),
           width: 1200,
           height: 630,
           alt: page.h1,
@@ -58,7 +59,7 @@ export function buildLandingMetadata(page: LandingPage): Metadata {
       card: "summary_large_image",
       title: page.h1,
       description: page.metaDescription,
-      images: [`${SITE}/images/og-image.png`],
+      images: [ogImageUrl("landing", page.locale, page.slug)],
     },
   });
 }

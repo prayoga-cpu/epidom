@@ -4,51 +4,11 @@ import { LOCALES, getLocalizedPath } from "@/lib/i18n-routing";
 import { buildAuthoredHreflang, getAuthoredLocales } from "@/lib/seo";
 import { getAllBlogPostParams, getBlogPost } from "@/features/marketing/blog/content";
 import { getAllDocsParams, getDocsGuide } from "@/features/marketing/docs/content";
-import { klikitComparison } from "@/features/marketing/compare/data/klikit";
-import { majooComparison } from "@/features/marketing/compare/data/majoo";
-import { mokaComparison } from "@/features/marketing/compare/data/moka";
-import { sumupPosProComparison } from "@/features/marketing/compare/data/sumup-pos-pro";
-import { sundayComparison } from "@/features/marketing/compare/data/sunday";
-import { zeltyComparison } from "@/features/marketing/compare/data/zelty";
-import { ladditionComparison } from "@/features/marketing/compare/data/laddition";
-import { lightspeedComparison } from "@/features/marketing/compare/data/lightspeed";
-import { innovorderComparison } from "@/features/marketing/compare/data/innovorder";
-import { popinaComparison } from "@/features/marketing/compare/data/popina";
-import { zettleComparison } from "@/features/marketing/compare/data/zettle";
-import { pawoonComparison } from "@/features/marketing/compare/data/pawoon";
-import { qasirComparison } from "@/features/marketing/compare/data/qasir";
-import { olseraComparison } from "@/features/marketing/compare/data/olsera";
-import { esbComparison } from "@/features/marketing/compare/data/esb";
-import { kasirPintarComparison } from "@/features/marketing/compare/data/kasir-pintar";
 import { isStorefrontIndexable } from "@/features/storefront/lib/indexing";
+import { COMPETITOR_COMPARISONS } from "@/features/marketing/compare/registry";
 import { LANDING_PAGES } from "@/features/marketing/landing/content";
 import { landingHreflang, landingUrl } from "@/features/marketing/landing/metadata";
 import type { LandingGroup } from "@/features/marketing/landing/registry";
-
-// Competitor comparison pages, each authored in only 1-2 locales (each
-// competitor is only relevant to one market). The locales are read off the
-// data itself, so the sitemap can never list a locale that just falls back to
-// identical English content — a near-duplicate URL, not real unique content —
-// and always agrees with the hreflang the page itself emits (see
-// buildCompareMetadata in compare/render-compare-page.tsx).
-const COMPETITOR_COMPARISONS = [
-  mokaComparison,
-  majooComparison,
-  klikitComparison,
-  sundayComparison,
-  sumupPosProComparison,
-  zeltyComparison,
-  ladditionComparison,
-  lightspeedComparison,
-  innovorderComparison,
-  popinaComparison,
-  zettleComparison,
-  pawoonComparison,
-  qasirComparison,
-  olseraComparison,
-  esbComparison,
-  kasirPintarComparison,
-];
 
 const BASE_URL = "https://epidom.fr";
 

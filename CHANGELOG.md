@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.17.0] - 2026-10-14 · ux
+
+Link previews with each page's own title, and dropdowns you can tap.
+
+- **A picture for every shared page.** A guide, a calculator, a blog article or a comparison shared on WhatsApp, Facebook, LinkedIn or X now shows its own title in its own language, instead of the same homepage picture for every link.
+- **Bigger dropdowns.** Dropdowns that were meant to be easy to tap (in the POS dialogs, Fees & Taxes, the store form, the finance filters, the table picker and the product list) now really are 40 to 44 pixels tall. A styling rule was keeping them all at 36.
+
 ## [3.16.0] - 2026-10-14 · infra
 
 The website's pages now load instantly from the edge.

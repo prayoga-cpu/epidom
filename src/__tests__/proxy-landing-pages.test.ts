@@ -49,3 +49,11 @@ describe("proxy: search landing pages live in one language", () => {
     expect(res.headers.get("location") ?? "").not.toContain("/login");
   });
 });
+
+describe("proxy: share images", () => {
+  it("serves /og/* to anyone (link previews come without a session)", async () => {
+    const res = await proxy(request("/og/landing/id/kalkulator-hpp", GOOGLEBOT));
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.status).toBeLessThan(300);
+  });
+});

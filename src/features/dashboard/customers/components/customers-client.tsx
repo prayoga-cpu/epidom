@@ -167,10 +167,8 @@ export function CustomersClient({ storeId, canManage }: CustomersClientProps) {
 
         <div className="flex flex-wrap gap-2">
           <Select value={sort} onValueChange={(value) => setSort(value as CustomerSortOption)}>
-            {/* data-[size=default]:h-10, not h-10: the trigger's own height is set
-                under that data variant, which outranks a bare h-* class. */}
             <SelectTrigger
-              className="min-w-0 flex-1 data-[size=default]:h-10 sm:w-48 sm:flex-none"
+              className="h-10 min-w-0 flex-1 sm:w-48 sm:flex-none"
               aria-label={t("customers.toolbar.sortLabel")}
             >
               <SelectValue />
