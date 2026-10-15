@@ -112,10 +112,12 @@ export function StoreSwitcher() {
           <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50 sm:ml-2 sm:h-4 sm:w-4" />
         </Button>
       </DropdownMenuTrigger>
-      {/* As wide as the trigger (full width in the mobile drawer), never narrower than 220px. */}
+      {/* As wide as the trigger (full width in the mobile drawer), never narrower than 220px.
+          z-[80]: the phone menu drawer (Sheet) is z-[70], and at the menu's default
+          z-50 the list opened underneath it, out of sight and out of reach. */}
       <DropdownMenuContent
         align="end"
-        className="w-(--radix-dropdown-menu-trigger-width) min-w-[220px]"
+        className="z-[80] w-(--radix-dropdown-menu-trigger-width) min-w-[220px]"
       >
         <DropdownMenuLabel className="text-muted-foreground text-xs">
           {t("dashboard.storeSelector.yourStores")}

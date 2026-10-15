@@ -57,6 +57,14 @@ describe("StoreSwitcher", () => {
     expect(screen.getByRole("menuitem", { name: /Beta/ })).not.toHaveAttribute("aria-current");
   });
 
+  it("opens above the phone menu drawer (Sheet is z-[70]), not under it", () => {
+    render(<StoreSwitcher />);
+    openMenu();
+
+    expect(screen.getByRole("menu").className).toContain("z-[80]");
+    expect(screen.getByRole("menu").className).not.toMatch(/(^|\s)z-50(\s|$)/);
+  });
+
   it("goes to the chosen store's default landing page", () => {
     render(<StoreSwitcher />);
     openMenu();

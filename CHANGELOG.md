@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.17.3] - 2026-10-15 · fix
+
+The store list and the feedback form open properly from the phone menu.
+
+- **Switching stores on a phone works.** In the menu that slides in from the right, tapping the store name opened its list behind the menu, where you couldn't see or tap it. The list now opens on top of the menu.
+- **Sending feedback from the phone menu works.** The bug icon in that menu had the same problem: the feedback form opened behind the menu. It now opens on top, along with its dropdowns and its delete confirmation.
+
 ## [3.17.2] - 2026-10-14 · infra
 
 Faster screens in the Back Office, at the till and on the storefront.

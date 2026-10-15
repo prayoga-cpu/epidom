@@ -355,7 +355,12 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
+      {/* z-[80] here and on every layer opened from it (the two dropdowns, the
+          delete confirmation): the button also sits in the phone menu drawer
+          (Sheet, z-[70]), and at the default z-50 the dialog opened underneath
+          it, out of reach. */}
       <FormDialogLayout
+        className="z-[80]"
         title={t("feedback.title")}
         description={t("feedback.description")}
         maxWidth="md"
@@ -453,7 +458,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="z-[80]">
                             <SelectItem value="BUG">{t("feedback.typeBug")}</SelectItem>
                             <SelectItem value="FEATURE_SUGGESTION">
                               {t("feedback.typeFeature")}
@@ -481,7 +486,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="z-[80]">
                             {pageOptions.map((option) => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
@@ -709,7 +714,10 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
           if (!nextOpen) setDeleteTarget(null);
         }}
       >
-        <AlertDialogContent className="max-h-[calc(85dvh/var(--app-zoom,1))] overflow-y-auto">
+        <AlertDialogContent
+          className="z-[80] max-h-[calc(85dvh/var(--app-zoom,1))] overflow-y-auto"
+          overlayClassName="z-[80]"
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>{t("feedback.history.deleteConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
