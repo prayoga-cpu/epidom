@@ -3,8 +3,8 @@ import {
   buildAdjustmentsReport,
   buildSalesPatterns,
   buildTaxRows,
-  estimateLabourCost,
-  monthFractionOf,
+  labourFromPayroll,
+  type LabourPayrollInput,
 } from "../insights";
 
 describe("buildSalesPatterns", () => {
@@ -103,44 +103,94 @@ describe("buildTaxRows", () => {
   });
 });
 
-describe("estimateLabourCost", () => {
-  const staff = [
-    { id: "h", name: "Hourly", payType: "HOURLY" as const, payRate: 20, isActive: true },
-    { id: "m", name: "Salaried", payType: "MONTHLY" as const, payRate: 3000, isActive: true },
-    { id: "c", name: "Commission", payType: "SALES" as const, payRate: 5, isActive: true },
-    { id: "n", name: "No rate", payType: "NONE" as const, payRate: null, isActive: true },
-    { id: "gone", name: "Left", payType: "HOURLY" as const, payRate: 20, isActive: false },
-  ];
+describe("labourFromPayroll", () => {
+  function person(
+    over: Partial<LabourPayrollInput> & { staffMemberId: string }
+  ): LabourPayrollInput {
+    return {
+      name: over.staffMemberId,
+      payType: "HOURLY",
+      payRate: 20,
+      daysPresent: 1,
+      workedMinutes: 480,
+      incompleteDays: 0,
+      base: { kind: "hourly", rate: 20, hours: 8, amount: 160 },
+      allowanceTotal: 0,
+      overtime: { hours: 0, rate: 20, rateSource: "payRate", amount: 0 },
+      paidOvertimeMinutes: 0,
+      pendingOvertimeMinutes: 0,
+      total: 160,
+      ...over,
+    };
+  }
 
-  it("costs hours for hourly staff and a prorated salary, and lists what it can't cost", () => {
-    // 15 of September's 30 days.
-    const days = Array.from({ length: 15 }, (_, i) => `2026-09-${String(i + 1).padStart(2, "0")}`);
-    const report = estimateLabourCost(staff, new Map([["h", { minutes: 90, days: 1 }]]), days);
-
-    expect(report.monthFraction).toBe(0.5);
-    const byId = Object.fromEntries(report.rows.map((r) => [r.staffMemberId, r]));
-    expect(byId.h).toMatchObject({ basis: "hours", cost: 30, workedMinutes: 90 });
-    expect(byId.m).toMatchObject({ basis: "salary", cost: 1500 });
-    expect(byId.c).toMatchObject({ basis: "commission", cost: null });
-    expect(byId.n).toMatchObject({ basis: "none", cost: null });
-    // Inactive and never clocked in during the range: not listed at all.
-    expect(byId.gone).toBeUndefined();
-    expect(report.totals).toEqual({ workedMinutes: 90, cost: 1530, notEstimated: 2 });
-  });
-
-  it("still lists someone who has since left, for the hours they worked in the range", () => {
-    const report = estimateLabourCost(staff, new Map([["gone", { minutes: 60, days: 1 }]]), [
-      "2026-09-01",
+  it("costs each person at their payroll total and sums the parts", () => {
+    const report = labourFromPayroll([
+      person({
+        staffMemberId: "h",
+        allowanceTotal: 5,
+        overtime: { hours: 1, rate: 30, rateSource: "overtimeRate", amount: 30 },
+        paidOvertimeMinutes: 60,
+        pendingOvertimeMinutes: 90,
+        total: 195,
+      }),
+      person({
+        staffMemberId: "m",
+        payType: "MONTHLY",
+        payRate: 3100,
+        base: { kind: "monthly", rate: 3100, monthFraction: 1 / 31, amount: 100 },
+        overtime: { hours: 0, rate: null, rateSource: "none", amount: null },
+        total: 100,
+      }),
     ]);
-    expect(report.rows.find((r) => r.staffMemberId === "gone")?.cost).toBe(20);
-  });
-});
 
-describe("monthFractionOf", () => {
-  it("weighs each day by its own month's length", () => {
-    expect(monthFractionOf(["2026-02-01"])).toBeCloseTo(1 / 28, 4);
-    // All of February plus one day of March.
-    const feb = Array.from({ length: 28 }, (_, i) => `2026-02-${String(i + 1).padStart(2, "0")}`);
-    expect(monthFractionOf([...feb, "2026-03-01"])).toBeCloseTo(1 + 1 / 31, 4);
+    expect(report.rows.map((r) => r.staffMemberId)).toEqual(["h", "m"]);
+    expect(report.rows[0]).toMatchObject({ base: 160, allowances: 5, overtimePay: 30, cost: 195 });
+    expect(report.totals).toEqual({
+      workedMinutes: 960,
+      base: 260,
+      allowances: 5,
+      overtimePay: 30,
+      paidOvertimeMinutes: 60,
+      // Waiting for approval: reported, not costed.
+      pendingOvertimeMinutes: 90,
+      cost: 295,
+      notEstimated: 0,
+    });
+  });
+
+  it("lists someone with no pay rate, costing only what can be priced", () => {
+    const report = labourFromPayroll([
+      person({
+        staffMemberId: "none",
+        payType: "NONE",
+        payRate: null,
+        base: { kind: "notSet", amount: null },
+        overtime: { hours: 0, rate: null, rateSource: "none", amount: null },
+        total: 0,
+      }),
+      person({
+        staffMemberId: "allowance-only",
+        payType: "NONE",
+        payRate: null,
+        base: { kind: "notSet", amount: null },
+        allowanceTotal: 15,
+        overtime: { hours: 0, rate: null, rateSource: "none", amount: null },
+        total: 15,
+      }),
+    ]);
+
+    const byId = Object.fromEntries(report.rows.map((r) => [r.staffMemberId, r]));
+    expect(byId.none.cost).toBeNull();
+    expect(byId["allowance-only"].cost).toBe(15);
+    expect(report.totals).toMatchObject({ cost: 15, notEstimated: 2 });
+  });
+
+  it("adds up the days still missing a clock-out", () => {
+    const report = labourFromPayroll([
+      person({ staffMemberId: "a", incompleteDays: 2 }),
+      person({ staffMemberId: "b", incompleteDays: 1 }),
+    ]);
+    expect(report.incompleteDays).toBe(3);
   });
 });

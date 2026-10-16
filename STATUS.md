@@ -153,6 +153,22 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ---
 
+## Outside the SEO phases
+
+### Overtime approval — 3.18.0 (2026-10-16, not pushed)
+
+- [x] Owner switch "Overtime needs approval before it's paid" (`Store.overtimeRequiresApproval`, default off = paid automatically as before). Per staff-day Approve / Reject / Undo and "Approve all" on Schedule → Hours (`POST`/`DELETE /api/stores/[id]/attendance/overtime`, `OvertimeApproval` table). Rule in one pure function, `resolveDayOvertime` (`src/lib/attendance/overtime-approval.ts`); payroll prices only paid minutes.
+- [x] Managers can decide anyone's overtime but their own; only the owner flips the switch (a manager could otherwise switch it off to get their own overtime paid). Days still on the clock or missing a clock-out can't be decided. Each row stores minutes decided + minutes approved; minutes a later clock-out correction adds wait for their own decision, and deciding them leaves the earlier minutes alone (`nextOvertimeDecision`, so a day can be "partly approved"). To change a decision: Undo, then decide again (the API refuses a day with nothing waiting).
+- [x] Finance → Labour now reads `fetchPayroll` (same number as the Salary tab: base + allowances + paid overtime), replacing the separate `estimateLabourCost`. This adds allowances and commission to the labour cost (commission keeps 3.7.0's over-attribution caveat). Waiting overtime is shown, not costed. P&L net profit is unchanged: wages still reach it only as Salaries expenses.
+- Known limits: no partial approval (approve all of a day or none); switching approval on puts ALL recorded overtime, earlier periods included, back to waiting until approved ("Approve all" over a range restores it); no period close, so undoing a decision on a month already paid changes that month's numbers.
+
+**Operator to-do (3.18.0):**
+
+- [ ] Run `prisma migrate deploy` on the Neon **development** branch for `20261016090000_overtime_approvals` (the agent is blocked from it). Until then the Hours/Salary/Labour routes read a missing column there. Production applies it on deploy.
+- [ ] Browser check on a phone and desktop: switch on, approve/reject/undo a day, Approve all, a manager persona's own row, then the Salary tab, POS My Pay and Finance → Labour showing the same overtime.
+
+---
+
 ## Carried over from the previous STATUS.md (still open)
 
 Full text, context and line numbers: `docs/status-archive/2026-10-14-v3-revamp-and-releases.md`. Close an item here when it's done.

@@ -16,6 +16,7 @@
 import { getBusinessDateKey, getBusinessTimeHHmm } from "./business-date";
 import type { HoursAggregationResult } from "./hours-aggregation";
 import { expectedDayKey, resolveExpectedDay, type ExpectedDay, type ExpectedSource } from "./expected-hours";
+import { resolveDayOvertime, type DayOvertime } from "./overtime-approval";
 
 export type HoursDayStatus = "worked" | "onClock" | "missingClockOut" | "absent" | "noShow";
 
@@ -57,6 +58,12 @@ export interface HoursReportRow {
   regularMinutes: number;
   /** max(0, worked − expected) — all of it on a rostered day off. */
   overtimeMinutes: number;
+  /**
+   * How much of `overtimeMinutes` is paid, waiting for approval or turned
+   * down. buildHoursReport fills the no-approval default (all of it paid);
+   * fetchHoursReport resolves it against the store's decisions.
+   */
+  overtime: DayOvertime;
   /** The day's unpaired clock-in, if any — what the manager "close" correction targets. */
   openClockIn: { attendanceId: string; clockInAt: string; clockInTime: string; isOpen: boolean } | null;
   /** The person clocked in that day — what a per-day allowance counts. */
@@ -175,6 +182,7 @@ export function buildHoursReport({
             : "noShow";
 
     draft.pairs.sort((a, b) => a.clockInAt.localeCompare(b.clockInAt));
+    const overtimeMinutes = Math.max(0, draft.workedMinutes - expected.minutes);
     rows.push({
       staffMemberId: draft.staffMemberId,
       date: draft.date,
@@ -186,7 +194,8 @@ export function buildHoursReport({
       expectedWindows: expected.windows,
       differenceMinutes: draft.openClockIn ? null : draft.workedMinutes - expected.minutes,
       regularMinutes: Math.min(draft.workedMinutes, expected.minutes),
-      overtimeMinutes: Math.max(0, draft.workedMinutes - expected.minutes),
+      overtimeMinutes,
+      overtime: resolveDayOvertime(overtimeMinutes, undefined, false),
       openClockIn: draft.openClockIn,
       present: hasPairs || draft.openClockIn !== null,
       hasLongPair: draft.pairs.some((p) => p.workedMinutes > LONG_PAIR_MINUTES),

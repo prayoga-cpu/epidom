@@ -50,7 +50,11 @@ export function PayrollBreakdown({ payroll, currency, showDays = true }: Payroll
           : t("pages.payrollBaseNotSet");
 
   const overtime = payroll.overtime;
-  const showOvertime = overtime.hours > 0 || overtime.amount !== null;
+  const showOvertime =
+    overtime.hours > 0 ||
+    overtime.amount !== null ||
+    payroll.pendingOvertimeMinutes > 0 ||
+    payroll.rejectedOvertimeMinutes > 0;
   const overtimeDetail =
     overtime.rate !== null
       ? t("pages.payrollOvertimeLine").replace("{hours}", hours(overtime.hours)).replace("{rate}", money(overtime.rate, currency))
@@ -83,6 +87,22 @@ export function PayrollBreakdown({ payroll, currency, showDays = true }: Payroll
             amount={overtime.amount !== null ? money(overtime.amount, currency) : "—"}
           />
         )}
+        {payroll.pendingOvertimeMinutes > 0 && (
+          <Line
+            label={t("pages.payrollOvertimeWaitingLabel")}
+            detail={t("pages.payrollOvertimeWaitingDetail").replace("{hours}", duration(payroll.pendingOvertimeMinutes))}
+            amount="—"
+            tone="text-amber-700 dark:text-amber-400"
+          />
+        )}
+        {payroll.rejectedOvertimeMinutes > 0 && (
+          <Line
+            label={t("pages.payrollOvertimeRejectedLabel")}
+            detail={t("pages.payrollOvertimeRejectedDetail").replace("{hours}", duration(payroll.rejectedOvertimeMinutes))}
+            amount="—"
+            tone="text-muted-foreground"
+          />
+        )}
         <div className="flex items-center justify-between gap-3 px-3 py-2.5 font-semibold">
           <dt>{t("pages.payrollLineTotal")}</dt>
           <dd className="tabular-nums">{money(payroll.total, currency)}</dd>
@@ -108,11 +128,11 @@ export function PayrollBreakdown({ payroll, currency, showDays = true }: Payroll
   );
 }
 
-function Line({ label, detail, amount }: { label: string; detail: string; amount: string }) {
+function Line({ label, detail, amount, tone }: { label: string; detail: string; amount: string; tone?: string }) {
   return (
     <div className="flex items-start justify-between gap-3 px-3 py-2.5">
       <dt className="min-w-0">
-        <span className="block font-medium break-words">{label}</span>
+        <span className={`block font-medium break-words ${tone ?? ""}`}>{label}</span>
         <span className="text-muted-foreground block text-xs break-words">{detail}</span>
       </dt>
       <dd className="shrink-0 tabular-nums">{amount}</dd>
@@ -147,11 +167,32 @@ function PayrollDays({ days }: { days: HoursReportRow[] }) {
                   {signedDuration(day.differenceMinutes)}
                 </p>
               )}
+              <OvertimeDayStatus day={day} />
             </div>
           </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+/** A day's overtime approval in a word, when approval is on: waiting, approved or not approved. */
+export function OvertimeDayStatus({ day }: { day: HoursReportRow }) {
+  const { t } = useI18n();
+  const status = day.overtime.status;
+  if (status === "none" || status === "automatic") return null;
+  const [label, tone] =
+    status === "approved"
+      ? [t("pages.overtimeStatusApproved"), "text-emerald-700 dark:text-emerald-400"]
+      : status === "partial"
+        ? [t("pages.overtimeStatusPartial"), "text-emerald-700 dark:text-emerald-400"]
+        : status === "rejected"
+          ? [t("pages.overtimeStatusRejected"), "text-muted-foreground"]
+          : [t("pages.overtimeStatusWaiting"), "text-amber-700 dark:text-amber-400"];
+  return (
+    <p className={`text-xs ${tone}`}>
+      {t("pages.overtimeDayLabel")}: {label}
+    </p>
   );
 }
 

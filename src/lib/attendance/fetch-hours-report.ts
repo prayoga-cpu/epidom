@@ -3,6 +3,7 @@ import { pairAttendanceIntoWorkdays, type MissingClockOut } from "./hours-aggreg
 import { buildExpectedDays } from "./expected-hours";
 import { buildHoursReport, type HoursReportRow } from "./hours-report";
 import { addDaysToDateKey, businessDateKeyToDate, getBusinessDateKey } from "./business-date";
+import { applyOvertimeDecisions } from "./overtime-approval";
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -44,16 +45,23 @@ export function resolveReportRange(
 export interface StoreHoursSettings {
   timeZone: string;
   standardWorkMinutesPerDay: number;
+  /** Overtime is paid only once approved — see overtime-approval.ts. */
+  overtimeRequiresApproval: boolean;
 }
 
 export async function getStoreHoursSettings(storeId: string): Promise<StoreHoursSettings> {
   const store = await prisma.store.findUnique({
     where: { id: storeId },
-    select: { standardWorkMinutesPerDay: true, business: { select: { timezone: true } } },
+    select: {
+      standardWorkMinutesPerDay: true,
+      overtimeRequiresApproval: true,
+      business: { select: { timezone: true } },
+    },
   });
   return {
     timeZone: store?.business.timezone ?? "UTC",
     standardWorkMinutesPerDay: store?.standardWorkMinutesPerDay ?? 480,
+    overtimeRequiresApproval: store?.overtimeRequiresApproval ?? false,
   };
 }
 
@@ -76,7 +84,8 @@ export interface HoursReportResult {
  * The Hours tab's rows and the salary report's input, from one query path so
  * the two can never disagree. Attendance is read with a two-day pad on each
  * side so a clock-in near the range's edge still pairs with a clock-out past
- * midnight; rows are then cut back to the requested days.
+ * midnight; rows are then cut back to the requested days. Each row's overtime
+ * is resolved against the store's approval decisions when approval is on.
  */
 export async function fetchHoursReport({
   storeId,
@@ -86,9 +95,10 @@ export async function fetchHoursReport({
   settings,
   now = new Date(),
 }: FetchHoursReportParams): Promise<HoursReportResult> {
-  const { timeZone, standardWorkMinutesPerDay } = settings;
+  const { timeZone, standardWorkMinutesPerDay, overtimeRequiresApproval } = settings;
+  const dateRange = { gte: businessDateKeyToDate(fromKey), lte: businessDateKeyToDate(toKey) };
 
-  const [events, roster] = await Promise.all([
+  const [events, roster, decisions] = await Promise.all([
     prisma.attendanceRecord.findMany({
       where: {
         storeId,
@@ -107,7 +117,7 @@ export async function fetchHoursReport({
         storeId,
         status: "PUBLISHED",
         ...(staffId && { staffMemberId: staffId }),
-        date: { gte: businessDateKeyToDate(fromKey), lte: businessDateKeyToDate(toKey) },
+        date: dateRange,
       },
       select: {
         staffMemberId: true,
@@ -118,6 +128,21 @@ export async function fetchHoursReport({
         scheduleShift: { select: { startTime: true, endTime: true } },
       },
     }),
+    // Not read while approval is off: every overtime minute is paid then.
+    overtimeRequiresApproval
+      ? prisma.overtimeApproval.findMany({
+          where: { storeId, ...(staffId && { staffMemberId: staffId }), date: dateRange },
+          select: {
+            staffMemberId: true,
+            date: true,
+            decision: true,
+            minutes: true,
+            approvedMinutes: true,
+            decidedAt: true,
+            decidedByName: true,
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   const aggregation = pairAttendanceIntoWorkdays(events, standardWorkMinutesPerDay, timeZone, now);
@@ -132,15 +157,28 @@ export async function fetchHoursReport({
     }))
   );
 
-  const rows = buildHoursReport({
-    aggregation,
-    expectedDays,
-    standardWorkMinutesPerDay,
-    fromKey,
-    toKey,
-    todayKey: getBusinessDateKey(now, timeZone),
-    timeZone,
-  });
+  const rows = applyOvertimeDecisions(
+    buildHoursReport({
+      aggregation,
+      expectedDays,
+      standardWorkMinutesPerDay,
+      fromKey,
+      toKey,
+      todayKey: getBusinessDateKey(now, timeZone),
+      timeZone,
+    }),
+    decisions.map((d) => ({
+      staffMemberId: d.staffMemberId,
+      // @db.Date reads back as UTC midnight of the stored calendar day.
+      date: d.date.toISOString().slice(0, 10),
+      decision: d.decision,
+      minutes: d.minutes,
+      approvedMinutes: d.approvedMinutes,
+      decidedAt: d.decidedAt.toISOString(),
+      decidedByName: d.decidedByName,
+    })),
+    overtimeRequiresApproval
+  );
 
   const missingClockOuts = aggregation.missingClockOuts
     .map((m) => ({ ...m, date: getBusinessDateKey(new Date(m.clockInAt), timeZone) }))

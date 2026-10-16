@@ -65,10 +65,38 @@ export const manualCloseAttendanceSchema = z.object({
 });
 export type ManualCloseAttendanceInput = z.infer<typeof manualCloseAttendanceSchema>;
 
-export const attendanceSettingsSchema = z.object({
-  standardWorkMinutesPerDay: z.number().int().min(1).max(1440),
-});
+export const attendanceSettingsSchema = z
+  .object({
+    standardWorkMinutesPerDay: z.number().int().min(1).max(1440).optional(),
+    /** Owner only — the route refuses it from anyone else. */
+    overtimeRequiresApproval: z.boolean().optional(),
+  })
+  .refine(
+    (v) => v.standardWorkMinutesPerDay !== undefined || v.overtimeRequiresApproval !== undefined,
+    {
+      message: "Nothing to update",
+    }
+  );
 export type AttendanceSettingsInput = z.infer<typeof attendanceSettingsSchema>;
+
+const overtimeDayKey = z.object({
+  staffMemberId: z.string().cuid(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD"),
+});
+
+/**
+ * POST /attendance/overtime — approve or turn down overtime, one day or many
+ * (the Hours tab's "Approve all"). Which minutes the decision covers is read
+ * server-side from the day's attendance, never taken from the client.
+ */
+export const overtimeDecisionSchema = z.object({
+  decision: z.enum(["APPROVED", "REJECTED"]),
+  days: z.array(overtimeDayKey).min(1).max(500),
+});
+export type OvertimeDecisionBody = z.infer<typeof overtimeDecisionSchema>;
+
+/** DELETE /attendance/overtime — undo a decision, putting the day back to waiting. */
+export const overtimeUndoSchema = overtimeDayKey;
 
 /**
  * Query of the salary report (GET /payroll) and My Pay (GET /payroll/me —

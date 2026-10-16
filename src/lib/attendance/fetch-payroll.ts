@@ -18,6 +18,8 @@ export interface PayrollReport {
   toKey: string;
   currency: string;
   standardWorkMinutesPerDay: number;
+  /** Overtime is paid only once approved; unapproved minutes are listed, not priced. */
+  overtimeRequiresApproval: boolean;
   staff: StaffPayrollWithName[];
   total: number;
 }
@@ -131,6 +133,7 @@ export async function fetchPayroll({
     toKey,
     currency: financeSettings.currency,
     standardWorkMinutesPerDay: settings.standardWorkMinutesPerDay,
+    overtimeRequiresApproval: settings.overtimeRequiresApproval,
     staff: payroll,
     total: roundMoney(payroll.reduce((sum, p) => sum + p.total, 0)),
   };

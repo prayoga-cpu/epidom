@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { computeStaffPayroll, monthFraction, type PayrollStaffInput } from "../payroll";
 import type { HoursReportRow } from "../hours-report";
+import { resolveDayOvertime, type OvertimeDecisionInput } from "../overtime-approval";
 
 const STAFF = "staff-1";
 
+/** A day as fetchHoursReport returns it; overtime is paid automatically unless `overtime` says otherwise. */
 function day(over: Partial<HoursReportRow> = {}): HoursReportRow {
+  const overtimeMinutes = over.overtimeMinutes ?? 0;
   return {
     staffMemberId: STAFF,
     date: "2026-10-01",
@@ -16,7 +19,8 @@ function day(over: Partial<HoursReportRow> = {}): HoursReportRow {
     expectedWindows: [],
     differenceMinutes: 0,
     regularMinutes: 480,
-    overtimeMinutes: 0,
+    overtimeMinutes,
+    overtime: resolveDayOvertime(overtimeMinutes, undefined, false),
     openClockIn: null,
     present: true,
     hasLongPair: false,
@@ -185,5 +189,60 @@ describe("computeStaffPayroll — implausibly long days", () => {
     });
     expect(result.longDays).toBe(1);
     expect(result.overtime.hours).toBe(22);
+  });
+});
+
+describe("computeStaffPayroll — overtime approval", () => {
+  const decided = (decision: OvertimeDecisionInput["decision"], minutes: number): OvertimeDecisionInput => ({
+    staffMemberId: STAFF,
+    date: "2026-10-01",
+    decision,
+    minutes,
+    approvedMinutes: decision === "APPROVED" ? minutes : 0,
+    decidedAt: "2026-10-02T01:00:00.000Z",
+    decidedByName: "Owner",
+  });
+  const overtimeDay = (minutes: number, decision?: OvertimeDecisionInput) =>
+    day({
+      workedMinutes: 480 + minutes,
+      overtimeMinutes: minutes,
+      differenceMinutes: minutes,
+      overtime: resolveDayOvertime(minutes, decision, true),
+    });
+
+  it("pays no overtime that is still waiting for approval, and reports it", () => {
+    const result = computeStaffPayroll({ staff: staff(), days: [overtimeDay(90)], ...OCT });
+    expect(result.overtime).toMatchObject({ hours: 0, amount: 0 });
+    expect(result.overtimeMinutes).toBe(90);
+    expect(result.pendingOvertimeMinutes).toBe(90);
+    expect(result.paidOvertimeMinutes).toBe(0);
+    expect(result.total).toBe(160_000);
+  });
+
+  it("pays approved overtime at the overtime rate", () => {
+    const result = computeStaffPayroll({
+      staff: staff({ overtimeRate: 30000 }),
+      days: [overtimeDay(90, decided("APPROVED", 90))],
+      ...OCT,
+    });
+    expect(result.overtime).toMatchObject({ hours: 1.5, amount: 45000 });
+    expect(result.paidOvertimeMinutes).toBe(90);
+    expect(result.pendingOvertimeMinutes).toBe(0);
+    expect(result.total).toBe(205_000);
+  });
+
+  it("never pays rejected overtime", () => {
+    const result = computeStaffPayroll({ staff: staff(), days: [overtimeDay(90, decided("REJECTED", 90))], ...OCT });
+    expect(result.overtime.amount).toBe(0);
+    expect(result.rejectedOvertimeMinutes).toBe(90);
+    expect(result.total).toBe(160_000);
+  });
+
+  it("pays only the minutes approved when the day later grew, and holds the rest", () => {
+    // Approved at 60 minutes; a corrected clock-out then made it 90.
+    const result = computeStaffPayroll({ staff: staff(), days: [overtimeDay(90, decided("APPROVED", 60))], ...OCT });
+    expect(result.paidOvertimeMinutes).toBe(60);
+    expect(result.pendingOvertimeMinutes).toBe(30);
+    expect(result.overtime.amount).toBe(20000);
   });
 });

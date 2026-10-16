@@ -33,19 +33,23 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { apiClient } from "@/lib/api/client";
+import { Switch } from "@/components/ui/switch";
+import { useConfirm } from "@/components/ui/use-confirm";
+import { apiClient, ApiClientError } from "@/lib/api/client";
 import { todayLocalISO, startOfMonthLocalISO, parseLocalISO } from "@/lib/utils/date-range";
 import { toast } from "sonner";
-import { MapPin, ImageOff, Printer } from "lucide-react";
+import { MapPin, ImageOff, Printer, CheckCheck } from "lucide-react";
 import { DateRangeField } from "@/components/ui/date-range-field";
 import type { StaffRole } from "@prisma/client";
 import type { HoursReportRow } from "@/lib/attendance/hours-report";
+import { isOvertimeDecidable, type OvertimeDecisionValue } from "@/lib/attendance/overtime-approval";
 import {
   SelfiePreviewDialog,
   type SelfiePreviewItem,
 } from "@/features/dashboard/shared/selfie-preview-dialog";
 import { DayStatus, DayTimes, LongPairWarning } from "./payroll-breakdown";
 import { PayrollPanel } from "./payroll-panel";
+import { OvertimeApprovalCell } from "./overtime-approval-cell";
 import { differenceTone, useHoursFormat } from "./use-hours-format";
 
 interface StaffOption {
@@ -56,6 +60,11 @@ interface StaffOption {
 
 type LogType = "CLOCK_IN" | "CLOCK_OUT" | "ABSENCE";
 type LogTab = "log" | "hours" | "salary";
+/** Which Hours rows to show: every day, days with overtime, or overtime still waiting for approval. */
+type OvertimeFilter = "all" | "overtime" | "pending";
+
+/** The POST /attendance/overtime batch ceiling (overtimeDecisionSchema). */
+const DECISION_BATCH = 500;
 
 /** Everything this log shows. Till cash is the Shifts page's, not attendance. */
 const ATTENDANCE_TYPES: LogType[] = ["CLOCK_IN", "CLOCK_OUT", "ABSENCE"];
@@ -85,7 +94,10 @@ interface MissingClockOutRow {
 interface ScheduleLogProps {
   storeId: string;
   staff: StaffOption[];
-  /** The Salary tab — the real owner only (the payroll API enforces the same). */
+  /**
+   * The real owner: the Salary tab and the "overtime needs approval" switch
+   * (the payroll and settings APIs enforce the same).
+   */
   canSeePayroll?: boolean;
 }
 
@@ -113,6 +125,11 @@ export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleL
   const [closeAt, setCloseAt] = useState("");
   const [activeTab, setActiveTab] = useState<LogTab>("log");
   const [selfieIndex, setSelfieIndex] = useState<number | null>(null);
+  const [overtimeFilter, setOvertimeFilter] = useState<OvertimeFilter>("all");
+  // The row whose decision is in flight ("staffId:date"), or "bulk".
+  const [deciding, setDeciding] = useState<string | null>(null);
+  const [savingApproval, setSavingApproval] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
 
   const { data: logData, isLoading: logLoading } = useQuery({
     queryKey: ["schedule-log", storeId, from, to, staffId, typeFilter],
@@ -134,6 +151,8 @@ export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleL
         days: HoursDayRow[];
         missingClockOuts: MissingClockOutRow[];
         standardWorkMinutesPerDay: number;
+        overtimeRequiresApproval: boolean;
+        selfStaffMemberId: string | null;
       }>(`/stores/${storeId}/attendance/hours`, {
         from,
         to,
@@ -182,11 +201,139 @@ export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleL
   const hoursValue = hoursInput !== "" ? hoursInput : String(Math.floor(standardMinutes / 60));
   const minutesValue = minutesInput !== "" ? minutesInput : String(standardMinutes % 60);
 
-  // Salary is priced off the same hours, so anything that changes them
-  // (the standard, a clock-out correction) refreshes it too.
+  // Salary, My Pay and Finance's labour cost are priced off the same hours,
+  // so anything that changes them (the standard, a clock-out correction, an
+  // overtime decision) refreshes them too.
   const invalidateHours = () => {
     queryClient.invalidateQueries({ queryKey: ["attendance-hours", storeId] });
     queryClient.invalidateQueries({ queryKey: ["payroll", storeId] });
+    queryClient.invalidateQueries({ queryKey: ["payroll-me", storeId] });
+    queryClient.invalidateQueries({ queryKey: ["finance-labour", storeId] });
+  };
+
+  const requiresApproval = hoursData?.overtimeRequiresApproval ?? false;
+  const selfStaffMemberId = hoursData?.selfStaffMemberId ?? null;
+  const allDays = useMemo(() => hoursData?.days ?? [], [hoursData]);
+  const visibleDays = useMemo(
+    () =>
+      overtimeFilter === "overtime"
+        ? allDays.filter((d) => d.overtimeMinutes > 0)
+        : overtimeFilter === "pending"
+          ? allDays.filter((d) => d.overtime.status === "pending")
+          : allDays,
+    [allDays, overtimeFilter]
+  );
+  const waitingDays = useMemo(() => allDays.filter((d) => d.overtime.status === "pending"), [allDays]);
+  const waitingMinutes = waitingDays.reduce((sum, d) => sum + d.overtime.pendingMinutes, 0);
+  // What "Approve all" approves: finished days, never the viewer's own.
+  const approvableDays = useMemo(
+    () => waitingDays.filter((d) => isOvertimeDecidable(d) && d.staffMemberId !== selfStaffMemberId),
+    [waitingDays, selfStaffMemberId]
+  );
+
+  const decisionError = (err: unknown) => {
+    const reason =
+      err instanceof ApiClientError
+        ? (err.response.error.details as { reason?: string } | undefined)?.reason
+        : undefined;
+    toast.error(
+      reason === "self"
+        ? t("pages.overtimeOwnerApprovesYours")
+        : reason === "notDecidable"
+          ? t("pages.overtimeFinishDayFirst")
+          : reason === "alreadyDecided"
+            ? t("pages.overtimeAlreadyDecided")
+            : t("common.error")
+    );
+  };
+
+  const decideOvertime = async (day: HoursDayRow, decision: OvertimeDecisionValue) => {
+    setDeciding(`${day.staffMemberId}:${day.date}`);
+    try {
+      await apiClient.post(`/stores/${storeId}/attendance/overtime`, {
+        decision,
+        days: [{ staffMemberId: day.staffMemberId, date: day.date }],
+      });
+      toast.success(
+        (decision === "APPROVED" ? t("pages.overtimeApprovedToast") : t("pages.overtimeRejectedToast")).replace(
+          "{name}",
+          day.staff?.name ?? ""
+        )
+      );
+    } catch (err) {
+      decisionError(err);
+    } finally {
+      setDeciding(null);
+      invalidateHours();
+    }
+  };
+
+  const undoOvertime = async (day: HoursDayRow) => {
+    setDeciding(`${day.staffMemberId}:${day.date}`);
+    try {
+      const params = new URLSearchParams({ staffMemberId: day.staffMemberId, date: day.date });
+      await apiClient.delete(`/stores/${storeId}/attendance/overtime?${params.toString()}`);
+      toast.success(t("pages.overtimeUndoneToast"));
+    } catch (err) {
+      decisionError(err);
+    } finally {
+      setDeciding(null);
+      invalidateHours();
+    }
+  };
+
+  const approveAll = async () => {
+    const days = approvableDays;
+    if (days.length === 0) return;
+    const minutes = days.reduce((sum, d) => sum + d.overtime.pendingMinutes, 0);
+    const ok = await confirm({
+      title: t("pages.overtimeApproveAllTitle"),
+      description: t("pages.overtimeApproveAllDesc")
+        .replace("{count}", String(days.length))
+        .replace("{hours}", duration(minutes)),
+      confirmText: t("pages.overtimeApprove"),
+    });
+    if (!ok) return;
+    setDeciding("bulk");
+    try {
+      let decided = 0;
+      for (let i = 0; i < days.length; i += DECISION_BATCH) {
+        const result = await apiClient.post<{ decided: number }>(`/stores/${storeId}/attendance/overtime`, {
+          decision: "APPROVED",
+          days: days.slice(i, i + DECISION_BATCH).map((d) => ({ staffMemberId: d.staffMemberId, date: d.date })),
+        });
+        decided += result.decided;
+      }
+      toast.success(t("pages.overtimeApprovedAllToast").replace("{count}", String(decided)));
+    } catch (err) {
+      decisionError(err);
+    } finally {
+      setDeciding(null);
+      invalidateHours();
+    }
+  };
+
+  const toggleApproval = async (next: boolean) => {
+    if (next) {
+      const ok = await confirm({
+        title: t("pages.overtimeApprovalOnTitle"),
+        description: t("pages.overtimeApprovalOnDesc"),
+        confirmText: t("pages.overtimeApprovalOnConfirm"),
+      });
+      if (!ok) return;
+    }
+    setSavingApproval(true);
+    try {
+      await apiClient.patch(`/stores/${storeId}/attendance/settings`, { overtimeRequiresApproval: next });
+      toast.success(t("pages.attendanceSettingsSaved"));
+      if (next) setOvertimeFilter("pending");
+      else setOvertimeFilter((current) => (current === "pending" ? "all" : current));
+    } catch {
+      toast.error(t("common.error"));
+    } finally {
+      setSavingApproval(false);
+      invalidateHours();
+    }
   };
 
   const saveThreshold = async () => {
@@ -309,6 +456,23 @@ export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleL
             </SelectContent>
           </Select>
         </div>
+        {activeTab === "hours" && (
+          <div className="space-y-1">
+            <Label>{t("pages.overtimeFilterLabel")}</Label>
+            <Select value={overtimeFilter} onValueChange={(v) => setOvertimeFilter(v as OvertimeFilter)}>
+              <SelectTrigger className="w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("pages.overtimeFilterAll")}</SelectItem>
+                <SelectItem value="overtime">{t("pages.overtimeFilterOvertime")}</SelectItem>
+                {requiresApproval && (
+                  <SelectItem value="pending">{t("pages.overtimeFilterWaiting")}</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         {activeTab === "log" && (
           <div className="space-y-1">
             <Label>{t("pages.scheduleLogFilterType")}</Label>
@@ -448,8 +612,55 @@ export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleL
                 </div>
               </div>
               <p className="text-muted-foreground max-w-2xl text-xs">{t("pages.attendanceDifferenceHint")}</p>
+              {canSeePayroll ? (
+                <div className="flex items-start gap-3 border-t pt-3">
+                  <Switch
+                    id="overtime-requires-approval"
+                    className="mt-1"
+                    checked={requiresApproval}
+                    disabled={savingApproval || !hoursData}
+                    onCheckedChange={toggleApproval}
+                  />
+                  <div className="min-w-0 space-y-0.5">
+                    <Label htmlFor="overtime-requires-approval" className="block min-h-6 cursor-pointer leading-6">
+                      {t("pages.overtimeApprovalToggle")}
+                    </Label>
+                    <p className="text-muted-foreground max-w-2xl text-xs">{t("pages.overtimeApprovalToggleHint")}</p>
+                  </div>
+                </div>
+              ) : (
+                requiresApproval && (
+                  <p className="text-muted-foreground max-w-2xl border-t pt-3 text-xs">
+                    {t("pages.overtimeApprovalOnManagerNote")}
+                  </p>
+                )
+              )}
             </CardContent>
           </Card>
+
+          {requiresApproval && waitingDays.length > 0 && (
+            <Card className="border-amber-500/40">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">
+                    {t("pages.overtimeWaitingSummary")
+                      .replace("{count}", String(waitingDays.length))
+                      .replace("{hours}", duration(waitingMinutes))}
+                  </p>
+                  <p className="text-muted-foreground text-xs">{t("pages.overtimeWaitingHint")}</p>
+                </div>
+                <Button
+                  type="button"
+                  className="h-11"
+                  disabled={approvableDays.length === 0 || deciding !== null}
+                  onClick={approveAll}
+                >
+                  <CheckCheck className="mr-2 h-4 w-4" />
+                  {t("pages.overtimeApproveAll").replace("{count}", String(approvableDays.length))}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {(hoursData?.missingClockOuts.length ?? 0) > 0 && (
             <Card className="border-amber-500/40">
@@ -479,7 +690,7 @@ export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleL
           <Card>
             <CardContent className="pt-4">
               <div className="-mx-4 overflow-x-auto sm:mx-0">
-                <Table className="min-w-[820px]">
+                <Table className={requiresApproval ? "min-w-[980px]" : "min-w-[820px]"}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("common.date") ?? "Date"}</TableHead>
@@ -498,14 +709,14 @@ export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleL
                           {t("common.loading")}
                         </TableCell>
                       </TableRow>
-                    ) : (hoursData?.days.length ?? 0) === 0 ? (
+                    ) : visibleDays.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-muted-foreground text-center">
                           {t("pages.noData")}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      hoursData!.days.map((day) => (
+                      visibleDays.map((day) => (
                         <TableRow key={`${day.staffMemberId}:${day.date}`}>
                           <TableCell className="whitespace-nowrap">
                             {format(parseLocalISO(day.date), "EEE d MMM", { locale: dateLocale })}
@@ -532,11 +743,13 @@ export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleL
                             {day.differenceMinutes !== null ? signedDuration(day.differenceMinutes) : "—"}
                           </TableCell>
                           <TableCell>
-                            {day.overtimeMinutes > 0 ? (
-                              <Badge variant="secondary">{duration(day.overtimeMinutes)}</Badge>
-                            ) : (
-                              "—"
-                            )}
+                            <OvertimeApprovalCell
+                              day={day}
+                              isSelf={day.staffMemberId === selfStaffMemberId}
+                              busy={deciding !== null}
+                              onDecide={(decision) => decideOvertime(day, decision)}
+                              onUndo={() => undoOvertime(day)}
+                            />
                           </TableCell>
                         </TableRow>
                       ))
@@ -561,6 +774,7 @@ export function ScheduleLog({ storeId, staff, canSeePayroll = false }: ScheduleL
       </Tabs>
 
       <SelfiePreviewDialog items={selfies} index={selfieIndex} onIndexChange={setSelfieIndex} />
+      {confirmDialog}
 
       <Dialog open={!!closing} onOpenChange={(open) => !open && setClosing(null)}>
         <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] max-w-sm overflow-y-auto">

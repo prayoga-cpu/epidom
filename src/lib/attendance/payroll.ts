@@ -9,6 +9,10 @@
  * and is rounded to 2 decimals per line; the total is the sum of the rounded
  * lines, so the breakdown always adds up to what's shown.
  *
+ * Overtime is priced on its PAID minutes only: with the store's overtime
+ * approval on, minutes still waiting for a decision or turned down are
+ * reported but earn nothing (overtime-approval.ts).
+ *
  * Deliberately NOT done in v1: deducting a monthly salary for absences or
  * short days (the shortfall is reported, the owner decides), rounding
  * overtime into blocks, or freezing a period once paid — a rate change
@@ -59,6 +63,7 @@ export interface AllowanceLine {
 }
 
 export interface OvertimePay {
+  /** Paid hours — approved, or all of them while approval is off. */
   hours: number;
   /** The hourly rate overtime is paid at, or null when none applies. */
   rate: number | null;
@@ -78,7 +83,14 @@ export interface StaffPayroll {
   longDays: number;
   workedMinutes: number;
   regularMinutes: number;
+  /** All overtime recorded, whatever its approval. */
   overtimeMinutes: number;
+  /** The part of it that is paid. */
+  paidOvertimeMinutes: number;
+  /** Waiting for a manager's or the owner's approval — not in `total` yet. */
+  pendingOvertimeMinutes: number;
+  /** Turned down — never in `total`. */
+  rejectedOvertimeMinutes: number;
   /** Net over (+) / under (−) the expected hours, across days that are complete. */
   differenceMinutes: number;
   base: BasePay;
@@ -149,8 +161,8 @@ function computeBase(staff: PayrollStaffInput, regularMinutes: number, months: n
   }
 }
 
-function computeOvertime(staff: PayrollStaffInput, overtimeMinutes: number): OvertimePay {
-  const hours = overtimeMinutes / 60;
+function computeOvertime(staff: PayrollStaffInput, paidOvertimeMinutes: number): OvertimePay {
+  const hours = paidOvertimeMinutes / 60;
   if (staff.overtimeRate !== null) {
     return {
       hours,
@@ -178,6 +190,9 @@ export function computeStaffPayroll({ staff, days, fromKey, toKey }: ComputeStaf
   let workedMinutes = 0;
   let regularMinutes = 0;
   let overtimeMinutes = 0;
+  let paidOvertimeMinutes = 0;
+  let pendingOvertimeMinutes = 0;
+  let rejectedOvertimeMinutes = 0;
   let differenceMinutes = 0;
   let daysPresent = 0;
   let absentDays = 0;
@@ -188,6 +203,9 @@ export function computeStaffPayroll({ staff, days, fromKey, toKey }: ComputeStaf
     workedMinutes += day.workedMinutes;
     regularMinutes += day.regularMinutes;
     overtimeMinutes += day.overtimeMinutes;
+    paidOvertimeMinutes += day.overtime.paidMinutes;
+    pendingOvertimeMinutes += day.overtime.pendingMinutes;
+    rejectedOvertimeMinutes += day.overtime.rejectedMinutes;
     if (day.differenceMinutes !== null) differenceMinutes += day.differenceMinutes;
     if (day.present) daysPresent += 1;
     if (day.status === "absent" || day.status === "noShow") absentDays += 1;
@@ -197,7 +215,7 @@ export function computeStaffPayroll({ staff, days, fromKey, toKey }: ComputeStaf
 
   const months = monthFraction(fromKey, toKey);
   const base = computeBase(staff, regularMinutes, months);
-  const overtime = computeOvertime(staff, overtimeMinutes);
+  const overtime = computeOvertime(staff, paidOvertimeMinutes);
 
   const allowances: AllowanceLine[] = staff.allowances.map((allowance) => {
     const quantity = allowance.basis === "PER_DAY" ? daysPresent : months;
@@ -222,6 +240,9 @@ export function computeStaffPayroll({ staff, days, fromKey, toKey }: ComputeStaf
     workedMinutes,
     regularMinutes,
     overtimeMinutes,
+    paidOvertimeMinutes,
+    pendingOvertimeMinutes,
+    rejectedOvertimeMinutes,
     differenceMinutes,
     base,
     allowances,

@@ -152,10 +152,18 @@ export function PayrollPanel({ storeId, from, to, staffId }: PayrollPanelProps) 
                           <TableCell className="text-right tabular-nums">
                             {p.overtime.amount !== null && p.overtime.hours > 0 ? (
                               money(p.overtime.amount, currency)
-                            ) : p.overtimeMinutes > 0 ? (
-                              <span className="text-muted-foreground text-xs">{duration(p.overtimeMinutes)}</span>
-                            ) : (
+                            ) : p.paidOvertimeMinutes > 0 ? (
+                              <span className="text-muted-foreground text-xs">{duration(p.paidOvertimeMinutes)}</span>
+                            ) : p.pendingOvertimeMinutes > 0 ? null : (
                               "—"
+                            )}
+                            {p.pendingOvertimeMinutes > 0 && (
+                              <span className="block text-xs text-amber-700 dark:text-amber-400">
+                                {t("pages.payrollOvertimeWaitingShort").replace(
+                                  "{hours}",
+                                  duration(p.pendingOvertimeMinutes)
+                                )}
+                              </span>
                             )}
                           </TableCell>
                           <TableCell className="text-right font-semibold tabular-nums">

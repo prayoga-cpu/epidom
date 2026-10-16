@@ -373,6 +373,17 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
     targetIdIndex: 1,
   },
   "PATCH /api/stores/*/attendance/settings": { code: "attendance.settings.update", severity: N, targetType: "Store" },
+  // Decides what overtime is paid.
+  "POST /api/stores/*/attendance/overtime": {
+    code: "attendance.overtime.decide",
+    severity: C,
+    targetType: "OvertimeApproval",
+  },
+  "DELETE /api/stores/*/attendance/overtime": {
+    code: "attendance.overtime.undo",
+    severity: C,
+    targetType: "OvertimeApproval",
+  },
 
   // ---------------------------------------------------------- storefront
   "PATCH /api/stores/*/storefront": { code: "storefront.update", severity: N, targetType: "Storefront" },

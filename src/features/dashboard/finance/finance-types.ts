@@ -8,6 +8,7 @@ import type { DailyRow } from "@/lib/finance/report-aggregation";
 import type { CashOnHandBreakdown } from "@/lib/finance/cash-drawer";
 import type {
   AdjustmentsReport,
+  LabourReport,
   LabourRow,
   PatternCell,
   OrderTypeRow,
@@ -181,12 +182,18 @@ export interface TaxData {
   rates: TaxRateRow[];
 }
 
+/** A Labour row; every money field is null when `payHidden`. */
+export type LabourRowView = Omit<LabourRow, "allowances"> & { allowances: number | null };
+
 export interface LabourData {
-  rows: LabourRow[];
-  totals: { workedMinutes: number; cost: number; notEstimated: number };
-  monthFraction: number;
+  rows: LabourRowView[];
+  totals: LabourReport["totals"];
   missingClockOuts: number;
-  /** Not the owner: each person's rate and cost are withheld (totals stay). */
+  /** Overtime counts only once approved (Schedule → Hours). */
+  overtimeRequiresApproval: boolean;
+  /** Someone is paid commission — costed from the till shifts they opened. */
+  hasCommission: boolean;
+  /** Not the owner: each person's rate and pay are withheld (totals stay). */
   payHidden?: boolean;
 }
 

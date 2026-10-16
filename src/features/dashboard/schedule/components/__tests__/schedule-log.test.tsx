@@ -7,6 +7,7 @@ vi.mock("@/components/lang/i18n-provider", () => ({
     t: (k: string) =>
       k === "pages.attendanceDurationHourUnit" ? "h" : k === "pages.attendanceDurationMinuteUnit" ? "m" : k,
     formatDateTime: (d: string) => `DT(${d})`,
+    formatDate: (d: string) => `D(${d})`,
     intlLocale: "en-US",
   }),
 }));
@@ -16,12 +17,13 @@ vi.mock("@/components/ui/date-range-field", () => ({
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/lib/api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/client")>();
-  return { ...actual, apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } };
+  return { ...actual, apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } };
 });
 
 import { apiClient } from "@/lib/api/client";
 const post = vi.mocked(apiClient.post);
 import { ScheduleLog } from "../schedule-log";
+import { resolveDayOvertime } from "@/lib/attendance/overtime-approval";
 
 const get = vi.mocked(apiClient.get);
 
@@ -142,8 +144,10 @@ describe("ScheduleLog — selfie preview", () => {
   });
 });
 
-describe("ScheduleLog — hours against what was expected", () => {
-  const day = (over: Record<string, unknown>) => ({
+/** An Hours row as the API sends it: `overtime` resolved with approval off unless given. */
+const hoursDay = (over: Record<string, unknown>) => {
+  const overtimeMinutes = (over.overtimeMinutes as number | undefined) ?? 62;
+  return {
     staffMemberId: "clstaff000000000000000001",
     staff: STAFF[0],
     date: "2026-09-18",
@@ -163,12 +167,17 @@ describe("ScheduleLog — hours against what was expected", () => {
     expectedWindows: [{ start: "08:00", end: "16:00" }],
     differenceMinutes: 62,
     regularMinutes: 480,
-    overtimeMinutes: 62,
+    overtimeMinutes,
+    overtime: resolveDayOvertime(overtimeMinutes, undefined, false),
     openClockIn: null,
     present: true,
     hasLongPair: false,
     ...over,
-  });
+  };
+};
+
+describe("ScheduleLog — hours against what was expected", () => {
+  const day = hoursDay;
 
   it("shows how far over or under each day ran, instead of a dash", async () => {
     get.mockImplementation(async (url: string) => {
@@ -246,5 +255,130 @@ describe("ScheduleLog — closing a forgotten clock-in", () => {
       notes: "Forgot to clock out",
       timestamp: "2026-09-18T09:00:00.000Z",
     });
+  });
+});
+
+describe("ScheduleLog — overtime approval", () => {
+  const SAM = STAFF[0].id;
+  const MAYA = "clstaffmaya00000000000001";
+  const waiting = (over: Record<string, unknown> = {}) =>
+    hoursDay({ overtime: resolveDayOvertime(62, undefined, true), ...over });
+
+  function serve(days: unknown[], extra: Record<string, unknown> = {}) {
+    get.mockImplementation(async (url: string) => {
+      if (url.endsWith("/schedule/log")) return { records: [] };
+      return {
+        days,
+        missingClockOuts: [],
+        standardWorkMinutesPerDay: 480,
+        overtimeRequiresApproval: true,
+        selfStaffMemberId: null,
+        ...extra,
+      };
+    });
+  }
+
+  beforeEach(() => {
+    post.mockReset();
+    post.mockResolvedValue({ decided: 1 });
+  });
+
+  it("approves one day's overtime", async () => {
+    serve([waiting()]);
+    renderLog();
+    openTab("pages.attendanceHoursTab");
+
+    fireEvent.click(await screen.findByRole("button", { name: "pages.overtimeApprove" }));
+    await vi.waitFor(() => expect(post).toHaveBeenCalled());
+    expect(post).toHaveBeenCalledWith("/stores/s1/attendance/overtime", {
+      decision: "APPROVED",
+      days: [{ staffMemberId: SAM, date: "2026-09-18" }],
+    });
+  });
+
+  it("shows who approved a decided day, with an undo instead of the buttons", async () => {
+    serve([
+      hoursDay({
+        overtime: resolveDayOvertime(
+          62,
+          {
+            staffMemberId: SAM,
+            date: "2026-09-18",
+            decision: "APPROVED",
+            minutes: 62,
+            approvedMinutes: 62,
+            decidedAt: "2026-09-19T02:00:00.000Z",
+            decidedByName: "Ayu",
+          },
+          true
+        ),
+      }),
+    ]);
+    renderLog();
+    openTab("pages.attendanceHoursTab");
+
+    expect(await screen.findByText("pages.overtimeApprovedBy")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "pages.overtimeApprove" })).toBeNull();
+    expect(screen.getByRole("button", { name: "pages.overtimeUndo" })).toBeInTheDocument();
+  });
+
+  it("gives a manager no buttons on their own overtime", async () => {
+    serve([waiting()], { selfStaffMemberId: SAM });
+    renderLog();
+    openTab("pages.attendanceHoursTab");
+
+    expect(await screen.findByText("pages.overtimeOwnerApprovesYours")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "pages.overtimeApprove" })).toBeNull();
+  });
+
+  it("waits for the clock-out before a day can be decided", async () => {
+    serve([waiting({ status: "onClock" })]);
+    renderLog();
+    openTab("pages.attendanceHoursTab");
+
+    expect(await screen.findByText("pages.overtimeFinishDayFirst")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "pages.overtimeApprove" })).toBeNull();
+  });
+
+  it("approves every waiting day it can in one go, after asking", async () => {
+    serve(
+      [
+        waiting(),
+        waiting({ date: "2026-09-19" }),
+        // The viewer's own day and an unfinished one are left for later.
+        waiting({ staffMemberId: MAYA, staff: { id: MAYA, name: "Maya", role: "MANAGER" } }),
+        waiting({ date: "2026-09-20", status: "missingClockOut" }),
+      ],
+      { selfStaffMemberId: MAYA }
+    );
+    renderLog();
+    openTab("pages.attendanceHoursTab");
+
+    fireEvent.click(await screen.findByRole("button", { name: /pages\.overtimeApproveAll/ }));
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "pages.overtimeApprove" }));
+
+    await vi.waitFor(() => expect(post).toHaveBeenCalled());
+    expect(post).toHaveBeenCalledWith("/stores/s1/attendance/overtime", {
+      decision: "APPROVED",
+      days: [
+        { staffMemberId: SAM, date: "2026-09-18" },
+        { staffMemberId: SAM, date: "2026-09-19" },
+      ],
+    });
+  });
+
+  it("puts the approval switch in the owner's hands only", async () => {
+    serve([]);
+    const { unmount } = renderLog();
+    openTab("pages.attendanceHoursTab");
+    expect(await screen.findByText("pages.overtimeApprovalOnManagerNote")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).toBeNull();
+    unmount();
+
+    renderLog({ canSeePayroll: true });
+    openTab("pages.attendanceHoursTab");
+    // Unchecked (and disabled) until the hours load, then the store's setting.
+    await vi.waitFor(() => expect(screen.getByRole("switch")).toBeChecked());
   });
 });

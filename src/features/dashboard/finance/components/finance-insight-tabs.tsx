@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Badge } from "@/components/ui/badge";
@@ -584,6 +585,13 @@ export function LabourTab({
   const cogs = summary?.cogs ?? 0;
   const labour = data.totals.cost;
   const primeCost = Math.round((cogs + labour) * 100) / 100;
+  const pendingMinutes = data.totals.pendingOvertimeMinutes;
+  const hidden = (value: number | null, render: (v: number) => ReactNode) =>
+    data.payHidden || value == null ? (
+      <span className="text-muted-foreground font-normal">—</span>
+    ) : (
+      render(value)
+    );
   const rateLabel = (payType: PayType, rate: number | null) =>
     rate == null
       ? "—"
@@ -597,11 +605,11 @@ export function LabourTab({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           label={t("pages.financeLabourCost")}
           value={formatMoney(labour)}
-          sub={t("pages.financeEstimated")}
+          sub={t("pages.financeLabourFromPayroll")}
         />
         <StatCard
           label={t("pages.financeLabourPct")}
@@ -624,14 +632,44 @@ export function LabourTab({
           value={hoursOf(data.totals.workedMinutes)}
           sub={t("pages.financeFromAttendance")}
         />
+        <StatCard
+          label={t("pages.financeOvertimePay")}
+          value={formatMoney(data.totals.overtimePay)}
+          sub={
+            pendingMinutes > 0 ? (
+              <span className="text-amber-700 dark:text-amber-400">
+                {t("pages.financeOvertimeWaitingShort").replace("{hours}", hoursOf(pendingMinutes))}
+              </span>
+            ) : (
+              t("pages.financeOvertimePaidHours").replace(
+                "{hours}",
+                hoursOf(data.totals.paidOvertimeMinutes)
+              )
+            )
+          }
+        />
       </div>
+
+      {pendingMinutes > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+          <p className="min-w-0 flex-1">
+            {t("pages.financeOvertimeWaiting").replace("{hours}", hoursOf(pendingMinutes))}
+          </p>
+          <Link
+            href={`/store/${scope.storeId}/schedule`}
+            className="text-primary inline-flex min-h-10 items-center font-medium underline-offset-4 hover:underline"
+          >
+            {t("pages.financeOvertimeReview")}
+          </Link>
+        </div>
+      )}
 
       {data.rows.length === 0 ? (
         <p className="text-muted-foreground py-10 text-center text-sm">
           {t("pages.financeNoStaff")}
         </p>
       ) : (
-        <ScrollTable minWidth={680}>
+        <ScrollTable minWidth={980}>
           <TableHeader>
             <TableRow>
               <TableHead>{t("pages.financeStaff")}</TableHead>
@@ -639,6 +677,9 @@ export function LabourTab({
               <TableHead className="text-right">{t("pages.staffPayRate")}</TableHead>
               <TableHead className="text-right">{t("pages.financeHoursWorked")}</TableHead>
               <TableHead className="text-right">{t("pages.financeDaysWorked")}</TableHead>
+              <TableHead className="text-right">{t("pages.payrollColumnBase")}</TableHead>
+              <TableHead className="text-right">{t("pages.payrollColumnAllowances")}</TableHead>
+              <TableHead className="text-right">{t("pages.payrollColumnOvertime")}</TableHead>
               <TableHead className="text-right">{t("pages.financeLabourCost")}</TableHead>
               <TableHead className="text-right">{t("pages.financeShare")}</TableHead>
             </TableRow>
@@ -657,21 +698,45 @@ export function LabourTab({
                   {hoursOf(row.workedMinutes)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{row.workedDays}</TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">
+                <TableCell className="text-right tabular-nums">
                   {data.payHidden ? (
-                    <span className="text-muted-foreground font-normal">—</span>
-                  ) : row.cost != null ? (
-                    formatMoney(row.cost)
+                    <span className="text-muted-foreground">—</span>
+                  ) : row.base != null ? (
+                    formatMoney(row.base)
                   ) : (
-                    <span className="text-muted-foreground text-xs font-normal">
-                      {row.basis === "commission"
-                        ? t("pages.financeNotEstimatedCommission")
-                        : t("pages.financeNotEstimatedNoRate")}
+                    <span className="text-muted-foreground text-xs">
+                      {t("pages.financeNotEstimatedNoRate")}
                     </span>
                   )}
                 </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {hidden(row.allowances, (v) => (v > 0 ? formatMoney(v) : "—"))}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.paidOvertimeMinutes > 0 || row.overtimePay ? (
+                    <>
+                      {hidden(row.overtimePay, (v) => formatMoney(v))}
+                      <span className="text-muted-foreground block text-xs">
+                        {hoursOf(row.paidOvertimeMinutes)}
+                      </span>
+                    </>
+                  ) : (
+                    !row.pendingOvertimeMinutes && "—"
+                  )}
+                  {row.pendingOvertimeMinutes > 0 && (
+                    <span className="block text-xs text-amber-700 dark:text-amber-400">
+                      {t("pages.financeOvertimeWaitingShort").replace(
+                        "{hours}",
+                        hoursOf(row.pendingOvertimeMinutes)
+                      )}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right font-semibold tabular-nums">
+                  {hidden(row.cost, (v) => formatMoney(v))}
+                </TableCell>
                 <TableCell className="text-muted-foreground text-right tabular-nums">
-                  {row.cost != null ? `${sharePct(row.cost, labour)}%` : ""}
+                  {!data.payHidden && row.cost != null ? `${sharePct(row.cost, labour)}%` : ""}
                 </TableCell>
               </TableRow>
             ))}
@@ -683,6 +748,15 @@ export function LabourTab({
                 {hoursOf(data.totals.workedMinutes)}
               </TableCell>
               <TableCell />
+              <TableCell className="text-right tabular-nums">
+                {formatMoney(data.totals.base)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatMoney(data.totals.allowances)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatMoney(data.totals.overtimePay)}
+              </TableCell>
               <TableCell className="text-right tabular-nums">{formatMoney(labour)}</TableCell>
               <TableCell className="text-right tabular-nums">100%</TableCell>
             </TableRow>
@@ -692,6 +766,8 @@ export function LabourTab({
 
       <div className="bg-muted/40 text-muted-foreground space-y-1 rounded-lg border p-3 text-xs">
         <p>{t("pages.financeLabourHint")}</p>
+        {data.overtimeRequiresApproval && <p>{t("pages.financeLabourApprovalNote")}</p>}
+        {data.hasCommission && <p>{t("pages.financeLabourCommissionNote")}</p>}
         {data.payHidden && <p>{t("pages.financeLabourPayOwnerOnly")}</p>}
         {data.totals.notEstimated > 0 && (
           <p>

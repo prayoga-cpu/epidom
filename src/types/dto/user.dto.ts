@@ -76,6 +76,7 @@ export interface StoreDto {
   customProductsLabel: string | null;
   customProductsShowOnStorefront: boolean;
   standardWorkMinutesPerDay: number;
+  overtimeRequiresApproval: boolean;
 }
 
 // Subscription DTO

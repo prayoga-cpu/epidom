@@ -8,6 +8,7 @@ import {
   getStoreHoursSettings,
   resolveReportRange,
 } from "@/lib/attendance/fetch-hours-report";
+import { resolveOvertimeDecider } from "@/lib/attendance/overtime-decider";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ export const dynamic = "force-dynamic";
  * worked, what they were expected to work (published roster, else the store
  * standard) and the difference — see fetch-hours-report.ts. `from`/`to` are
  * business-local "YYYY-MM-DD" keys (an ISO datetime is still accepted).
+ * Each day's `overtime` says what's paid, waiting for approval or turned
+ * down; `selfStaffMemberId` is the viewer's own staff row, whose overtime
+ * they can't approve.
  */
 export const GET = withApiHandler(
   async (request, { storeId }) => {
@@ -37,14 +41,17 @@ export const GET = withApiHandler(
     }
     const { fromKey, toKey } = range;
 
-    const { rows, missingClockOuts } = await fetchHoursReport({
-      storeId: storeId!,
-      fromKey,
-      toKey,
-      staffId,
-      settings,
-      now,
-    });
+    const [{ rows, missingClockOuts }, decider] = await Promise.all([
+      fetchHoursReport({
+        storeId: storeId!,
+        fromKey,
+        toKey,
+        staffId,
+        settings,
+        now,
+      }),
+      resolveOvertimeDecider(storeId!),
+    ]);
 
     const staffIds = [
       ...new Set([...rows.map((r) => r.staffMemberId), ...missingClockOuts.map((m) => m.staffMemberId)]),
@@ -60,6 +67,8 @@ export const GET = withApiHandler(
         from: fromKey,
         to: toKey,
         standardWorkMinutesPerDay: settings.standardWorkMinutesPerDay,
+        overtimeRequiresApproval: settings.overtimeRequiresApproval,
+        selfStaffMemberId: decider.staffMemberId,
         days: rows.map((row) => ({ ...row, staff: staffMap.get(row.staffMemberId) ?? null })),
         missingClockOuts: missingClockOuts.map((m) => ({
           ...m,

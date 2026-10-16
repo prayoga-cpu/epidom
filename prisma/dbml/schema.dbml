@@ -139,6 +139,8 @@ Table stores {
   customProductsLabel String
   customProductsShowOnStorefront Boolean [not null, default: false]
   standardWorkMinutesPerDay Int [not null, default: 480]
+  overtimeRequiresApproval Boolean [not null, default: false]
+  overtimeApprovals overtime_approvals [not null]
   scheduleShifts schedule_shifts [not null]
   staffSchedules staff_schedules [not null]
   scheduleImages schedule_images [not null]
@@ -931,6 +933,7 @@ Table staff_members {
   attendanceRecords attendance_records [not null]
   cashMovements cash_movements [not null]
   allowances staff_allowances [not null]
+  overtimeApprovals overtime_approvals [not null]
 
   indexes {
     (storeId, username) [unique]
@@ -953,6 +956,36 @@ Table staff_allowances {
 Set on the Staff page\'s Contract card, which saves the whole list at once
 (replace-all), so there is no per-row edit history: like payRate, the
 salary report always prices a period at today\'s values.'
+}
+
+Table overtime_approvals {
+  id String [pk]
+  storeId String [not null]
+  staffMemberId String [not null]
+  date DateTime [not null, note: 'The business-local day the overtime was worked (the day of the clock-in),
+stored like StaffSchedule.date.']
+  decision OvertimeDecision [not null, note: 'The latest action on the day.']
+  minutes Int [not null]
+  approvedMinutes Int [not null]
+  decidedByUserId String [note: 'Who decided: the signed-in account, the PIN persona if one was active,
+and the name shown on the Hours tab (kept even if that staff row goes).']
+  decidedByStaffMemberId String
+  decidedByName String [not null]
+  decidedAt DateTime [default: `now()`, not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+  staffMember staff_members [not null]
+
+  indexes {
+    (staffMemberId, date) [unique]
+  }
+
+  Note: 'One row per staff member per business day: how many of the day\'s overtime
+minutes have been decided (`minutes`) and how many of those were approved
+(`approvedMinutes`, what\'s paid). If a corrected clock-out later adds more,
+the extra waits for its own decision instead of riding on the old one.
+Deleting the row puts the whole day back to waiting.'
 }
 
 Table staff_invites {
@@ -1734,6 +1767,11 @@ Enum AllowanceBasis {
   PER_MONTH
 }
 
+Enum OvertimeDecision {
+  APPROVED
+  REJECTED
+}
+
 Enum CashMovementType {
   TIP
   PETTY_IN
@@ -1983,6 +2021,10 @@ Ref: staff_members.userId - user.id [delete: Set Null]
 Ref: staff_allowances.storeId > stores.id [delete: Cascade]
 
 Ref: staff_allowances.staffMemberId > staff_members.id [delete: Cascade]
+
+Ref: overtime_approvals.storeId > stores.id [delete: Cascade]
+
+Ref: overtime_approvals.staffMemberId > staff_members.id [delete: Cascade]
 
 Ref: staff_invites.storeId > stores.id [delete: Cascade]
 

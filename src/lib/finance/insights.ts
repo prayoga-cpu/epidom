@@ -1,6 +1,6 @@
 /**
  * Pure builders for the Finance "insight" reports — sales patterns, discounts
- * & refunds, tax by rate and estimated labour cost. DB-free like
+ * & refunds, tax by rate and labour cost (priced by the payroll). DB-free like
  * report-aggregation.ts: the routes load rows, these shape them, and the
  * tests in __tests__/insights.test.ts pin the arithmetic.
  *
@@ -10,6 +10,7 @@
 
 import type { OrderType, PayType } from "@prisma/client";
 import { refundedTaxPortion } from "@/lib/finance/order-charges";
+import type { StaffPayroll } from "@/lib/attendance/payroll";
 
 type Money = number | string | { toString(): string };
 
@@ -282,17 +283,23 @@ export function buildTaxRows(orders: TaxOrderInput[]): TaxRateRow[] {
     .sort((a, b) => b.ratePct - a.ratePct);
 }
 
-// ─── Labour (estimated) ───
+// ─── Labour ───
 
-export type LabourBasis = "hours" | "salary" | "commission" | "none";
-
-export interface LabourStaffInput {
-  id: string;
-  name: string;
-  payType: PayType;
-  payRate: Money | null;
-  isActive: boolean;
-}
+/** One staff member's priced pay for the range — what fetchPayroll returns. */
+export type LabourPayrollInput = Pick<
+  StaffPayroll,
+  | "staffMemberId"
+  | "payType"
+  | "daysPresent"
+  | "workedMinutes"
+  | "incompleteDays"
+  | "base"
+  | "allowanceTotal"
+  | "overtime"
+  | "paidOvertimeMinutes"
+  | "pendingOvertimeMinutes"
+  | "total"
+> & { name: string; payRate: number | null };
 
 export interface LabourRow {
   staffMemberId: string;
@@ -301,85 +308,79 @@ export interface LabourRow {
   payRate: number | null;
   workedMinutes: number;
   workedDays: number;
-  basis: LabourBasis;
-  /** null when it can't be estimated (no rate, or commission pay). */
+  /** Base pay; null when no pay rate is set. */
+  base: number | null;
+  allowances: number;
+  /** Overtime that is paid — approved, or all of it while approval is off. */
+  paidOvertimeMinutes: number;
+  overtimePay: number | null;
+  /** Overtime still waiting for approval: not in `cost`. */
+  pendingOvertimeMinutes: number;
+  /** base + allowances + overtime pay; null when none of them could be priced. */
   cost: number | null;
 }
 
 export interface LabourReport {
   rows: LabourRow[];
-  totals: { workedMinutes: number; cost: number; notEstimated: number };
-  /** How many months of salary the range is worth (1 for a full month). */
-  monthFraction: number;
-}
-
-/** How many months a list of "YYYY-MM-DD" days amounts to: each day counts
- * 1 / the number of days in its own month. */
-export function monthFractionOf(dateKeys: string[]): number {
-  let fraction = 0;
-  for (const key of dateKeys) {
-    const [year, month] = key.split("-").map(Number);
-    fraction += 1 / new Date(Date.UTC(year, month, 0)).getUTCDate();
-  }
-  return fraction;
+  totals: {
+    workedMinutes: number;
+    base: number;
+    allowances: number;
+    overtimePay: number;
+    paidOvertimeMinutes: number;
+    pendingOvertimeMinutes: number;
+    cost: number;
+    /** Staff with no pay rate set. */
+    notEstimated: number;
+  };
+  /** Days whose clock-out is missing — their hours aren't counted until corrected. */
+  incompleteDays: number;
 }
 
 /**
- * An estimate of what the range's work cost, from each person's pay setup:
- * hourly staff by the hours they clocked, salaried staff by their salary
- * prorated to the range. Commission pay is not estimated — orders aren't tied
- * to the person who sold them — and neither is anyone with no rate set. Both
- * are listed so the gap is visible instead of silently costed at zero.
- *
- * Staff appear when active, or when they clocked hours in the range.
+ * Labour cost for the range, priced by the same payroll as the Schedule
+ * page's Salary tab (src/lib/attendance/payroll.ts) — base pay, allowances
+ * and paid overtime — so Finance and Salary always show the same number.
+ * Overtime still waiting for approval is reported but not costed. Anyone with
+ * no pay rate is listed with what could be priced, and counted, so the gap is
+ * visible instead of silently costed at zero.
  */
-export function estimateLabourCost(
-  staff: LabourStaffInput[],
-  worked: Map<string, { minutes: number; days: number }>,
-  dateKeys: string[]
-): LabourReport {
-  const monthFraction = monthFractionOf(dateKeys);
-  const rows: LabourRow[] = [];
-
-  for (const member of staff) {
-    const hours = worked.get(member.id) ?? { minutes: 0, days: 0 };
-    if (!member.isActive && hours.minutes === 0) continue;
-    const rate = member.payRate != null ? Number(member.payRate) : null;
-
-    let basis: LabourBasis = "none";
-    let cost: number | null = null;
-    if (member.payType === "HOURLY" && rate != null) {
-      basis = "hours";
-      cost = round2((hours.minutes / 60) * rate);
-    } else if (member.payType === "MONTHLY" && rate != null) {
-      basis = "salary";
-      cost = round2(rate * monthFraction);
-    } else if (member.payType === "SALES") {
-      basis = "commission";
-    }
-
-    rows.push({
-      staffMemberId: member.id,
-      name: member.name,
-      payType: member.payType,
-      payRate: rate,
-      workedMinutes: hours.minutes,
-      workedDays: hours.days,
-      basis,
-      cost,
-    });
-  }
+export function labourFromPayroll(staff: LabourPayrollInput[]): LabourReport {
+  const rows: LabourRow[] = staff.map((p) => {
+    const overtimePay = p.overtime.amount;
+    const priced = p.base.amount !== null || p.allowanceTotal > 0 || (overtimePay ?? 0) > 0;
+    return {
+      staffMemberId: p.staffMemberId,
+      name: p.name,
+      payType: p.payType,
+      payRate: p.payRate,
+      workedMinutes: p.workedMinutes,
+      workedDays: p.daysPresent,
+      base: p.base.amount,
+      allowances: p.allowanceTotal,
+      paidOvertimeMinutes: p.paidOvertimeMinutes,
+      overtimePay,
+      pendingOvertimeMinutes: p.pendingOvertimeMinutes,
+      cost: priced ? p.total : null,
+    };
+  });
 
   rows.sort((a, b) => (b.cost ?? -1) - (a.cost ?? -1) || b.workedMinutes - a.workedMinutes);
 
+  const sum = (pick: (row: LabourRow) => number | null) =>
+    round2(rows.reduce((total, row) => total + (pick(row) ?? 0), 0));
   return {
     rows,
     totals: {
-      workedMinutes: rows.reduce((sum, r) => sum + r.workedMinutes, 0),
-      cost: round2(rows.reduce((sum, r) => sum + (r.cost ?? 0), 0)),
-      notEstimated: rows.filter((r) => r.cost == null).length,
+      workedMinutes: rows.reduce((total, r) => total + r.workedMinutes, 0),
+      base: sum((r) => r.base),
+      allowances: sum((r) => r.allowances),
+      overtimePay: sum((r) => r.overtimePay),
+      paidOvertimeMinutes: rows.reduce((total, r) => total + r.paidOvertimeMinutes, 0),
+      pendingOvertimeMinutes: rows.reduce((total, r) => total + r.pendingOvertimeMinutes, 0),
+      cost: sum((r) => r.cost),
+      notEstimated: rows.filter((r) => r.base === null).length,
     },
-    // Rounded for display only — the salaries above use the exact fraction.
-    monthFraction: Math.round(monthFraction * 10000) / 10000,
+    incompleteDays: staff.reduce((total, p) => total + p.incompleteDays, 0),
   };
 }

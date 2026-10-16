@@ -9,6 +9,16 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.18.0] - 2026-10-16 · feat
+
+Overtime can now need approval before it's paid, and Finance's labour cost matches the salary report.
+
+- **Approve overtime before it's paid.** On the Schedule page's Hours tab, the owner can turn on "Overtime needs approval before it's paid". From then on, each day's overtime for each staff member waits with Approve and Reject buttons. Only approved overtime is added to pay. Waiting overtime is listed but not paid, and rejected overtime is never paid. Turned off, which is the default, overtime is paid automatically as before.
+- **Approve everything at once, or filter to what's waiting.** "Approve all" approves every waiting day in the dates and staff you're looking at, after asking first. A new Show filter lists only days with overtime, or only overtime still waiting. Each decided day shows who approved or rejected it and when, and can be undone.
+- **Managers approve, but not their own.** A manager can approve or reject anyone's overtime except their own, which goes to the owner. Only the owner can turn approval on or off. A day still on the clock, or still missing its clock-out, can be decided once the clock-out is recorded. If a corrected clock-out later adds more overtime to a day you already approved, only the extra waits for a new decision.
+- **Pay shows what's waiting.** The Salary tab, the printed salary report and each staff member's My Pay tab at the till show approved overtime in the pay. Overtime that's waiting or was rejected is listed separately, and each day shows its status.
+- **Finance's labour cost is the payroll.** Finance's Labour tab now uses the same calculation as the Salary tab: base pay, allowances and paid overtime, with a column for each. It used to be a separate estimate that left out allowances and overtime. Overtime waiting for approval is shown with a link to approve it, and isn't in the labour cost until it's approved. The Excel export has the same columns.
+
 ## [3.17.3] - 2026-10-15 · fix
 
 The store list and the feedback form open properly from the phone menu.

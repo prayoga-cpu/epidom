@@ -229,6 +229,12 @@ model Store {
   // Overtime" report — worked minutes beyond this per calendar day count as
   // overtime. Flat per-store value (no per-role/per-shift threshold in v1).
   standardWorkMinutesPerDay      Int                    @default(480)
+  // On: a day's overtime is paid only once a manager or the owner approves it
+  // on the Schedule page's Hours tab (OvertimeApproval). Off, the default:
+  // every overtime minute is paid automatically. Owner-only to change — a
+  // manager could otherwise switch it off to get their own overtime paid.
+  overtimeRequiresApproval       Boolean                @default(false)
+  overtimeApprovals              OvertimeApproval[]
   scheduleShifts                 ScheduleShift[]
   staffSchedules                 StaffSchedule[]
   scheduleImages                 ScheduleImage[]
@@ -1754,6 +1760,7 @@ model StaffMember {
   attendanceRecords AttendanceRecord[]
   cashMovements     CashMovement[]
   allowances        StaffAllowance[]
+  overtimeApprovals OvertimeApproval[]
 
   @@unique([storeId, username])
   @@index([storeId])
@@ -1790,6 +1797,46 @@ model StaffAllowance {
   @@index([storeId])
   @@index([staffMemberId])
   @@map("staff_allowances")
+}
+
+/// A manager's or the owner's decision on one staff member's overtime for one
+/// day, when Store.overtimeRequiresApproval is on. See
+/// src/lib/attendance/overtime-approval.ts for how it turns into paid minutes.
+enum OvertimeDecision {
+  APPROVED
+  REJECTED
+}
+
+/// One row per staff member per business day: how many of the day's overtime
+/// minutes have been decided (`minutes`) and how many of those were approved
+/// (`approvedMinutes`, what's paid). If a corrected clock-out later adds more,
+/// the extra waits for its own decision instead of riding on the old one.
+/// Deleting the row puts the whole day back to waiting.
+model OvertimeApproval {
+  id                     String           @id @default(cuid())
+  storeId                String
+  staffMemberId          String
+  /// The business-local day the overtime was worked (the day of the clock-in),
+  /// stored like StaffSchedule.date.
+  date                   DateTime         @db.Date
+  /// The latest action on the day.
+  decision               OvertimeDecision
+  minutes                Int
+  approvedMinutes        Int
+  /// Who decided: the signed-in account, the PIN persona if one was active,
+  /// and the name shown on the Hours tab (kept even if that staff row goes).
+  decidedByUserId        String?
+  decidedByStaffMemberId String?
+  decidedByName          String
+  decidedAt              DateTime         @default(now())
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  store                  Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  staffMember            StaffMember      @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([staffMemberId, date])
+  @@index([storeId, date])
+  @@map("overtime_approvals")
 }
 
 /// A single-use, time-limited token letting a StaffMember's contact email

@@ -1371,6 +1371,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
     }
 
     if (labour?.rows.length) {
+      const hours = (minutes: number) => Math.round((minutes / 60) * 100) / 100;
       addSheet(t("pages.financeLabour"), [
         [
           t("pages.financeStaff"),
@@ -1378,22 +1379,37 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
           t("pages.staffPayRate"),
           t("pages.financeHoursWorked"),
           t("pages.financeDaysWorked"),
+          t("pages.payrollColumnBase"),
+          t("pages.payrollColumnAllowances"),
+          t("pages.financeOvertimePaidColumn"),
+          t("pages.payrollColumnOvertime"),
+          t("pages.financeOvertimeWaitingColumn"),
           t("pages.financeLabourCost"),
         ],
         ...labour.rows.map((r) => [
           r.name,
           r.payType,
           r.payRate ?? "",
-          Math.round((r.workedMinutes / 60) * 100) / 100,
+          hours(r.workedMinutes),
           r.workedDays,
+          r.base ?? "—",
+          r.allowances ?? "—",
+          hours(r.paidOvertimeMinutes),
+          r.overtimePay ?? "—",
+          hours(r.pendingOvertimeMinutes),
           r.cost ?? "—",
         ]),
         [
           total,
           "",
           "",
-          Math.round((labour.totals.workedMinutes / 60) * 100) / 100,
+          hours(labour.totals.workedMinutes),
           "",
+          labour.totals.base,
+          labour.totals.allowances,
+          hours(labour.totals.paidOvertimeMinutes),
+          labour.totals.overtimePay,
+          hours(labour.totals.pendingOvertimeMinutes),
           labour.totals.cost,
         ],
       ]);

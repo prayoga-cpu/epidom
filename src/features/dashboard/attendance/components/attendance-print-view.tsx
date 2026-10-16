@@ -180,6 +180,15 @@ export function AttendancePrintView({
                   </td>
                   <td className="py-1.5 pl-2">
                     {row.overtimeMinutes > 0 ? duration(row.overtimeMinutes) : "—"}
+                    {row.overtime.status === "approved"
+                      ? ` (${t("pages.overtimeStatusApproved")})`
+                      : row.overtime.status === "partial"
+                        ? ` (${t("pages.overtimeStatusPartial")})`
+                        : row.overtime.status === "rejected"
+                        ? ` (${t("pages.overtimeStatusRejected")})`
+                        : row.overtime.status === "pending"
+                          ? ` (${t("pages.overtimeStatusWaiting")})`
+                          : ""}
                   </td>
                 </tr>
               );
