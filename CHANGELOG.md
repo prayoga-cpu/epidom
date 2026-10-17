@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.21.0] - 2026-10-17 · ux
+
+The cookie banner now appears only where the law asks for it.
+
+- **Only in Europe.** Visitors in the European Union, the European Economic Area, the United Kingdom and Switzerland still see the cookie banner and choose first. Everywhere else there is no banner: analytics and advertising measurement are on from the first visit. The country comes from the visitor's internet connection; when it can't be told, the banner is shown.
+- **Still your choice, everywhere.** "Manage cookies" at the bottom of the website and of the presentation pages turns analytics and advertising measurement off at any time, in every country.
+- **Policies updated.** The cookie policy, the privacy policy and the GDPR page explain where the banner is shown, and the cookie policy lists the new epidom_consent_mode cookie.
+- **Meta Pixel report.** The admin report counts visitors whose cookies were on by default separately from those who answered the banner.
+
 ## [3.20.0] - 2026-10-17 · infra
 
 The cookie bar now appears on the sales pages, sign-up and login, and advertising measurement covers the sales pages, with a report in the admin panel.

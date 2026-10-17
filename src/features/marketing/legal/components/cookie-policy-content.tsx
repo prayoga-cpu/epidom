@@ -26,7 +26,7 @@ export function CookiePolicyContent() {
       id: "c3",
       title: t("cookiePolicy.s3.title"),
       body: t("cookiePolicy.s3.body"),
-      items: items("cookiePolicy.s3", 3),
+      items: items("cookiePolicy.s3", 4),
     },
     {
       id: "c4",

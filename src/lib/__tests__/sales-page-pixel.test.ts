@@ -62,6 +62,7 @@ beforeEach(() => {
     '<a class="btn" href="/register" data-cta="hero"><b>Commencer gratuitement →</b></a>' +
     "<footer>© Epidom</footer>";
   document.cookie = "_fbp=; Max-Age=0; Path=/";
+  document.cookie = "epidom_consent_mode=; Max-Age=0; Path=/";
   document.documentElement.setAttribute("lang", "fr");
   window.history.replaceState(null, "", "/sales-page-2?fbclid=AbC123&utm_source=meta&utm_campaign=launch");
   delete (window as unknown as { fbq?: unknown }).fbq;
@@ -254,6 +255,73 @@ describe("public/sales-pages/pixel.js", () => {
     expect(logged).toEqual([]);
     // The answer is still saved, as on the site.
     expect(localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).not.toBeNull();
+  });
+
+  describe("by the visitor's country (epidom_consent_mode, set by the proxy)", () => {
+    const setMode = (mode: string) => (document.cookie = `epidom_consent_mode=${mode}; Path=/`);
+
+    it("where no consent is needed: no bar, an automatic accept, the pixel loads at once", () => {
+      setMode("opt-out");
+      runPixel();
+
+      expect(bar()).toBeNull();
+      expect(JSON.parse(localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)!)).toMatchObject({
+        analytics: true,
+        marketing: true,
+        language: "fr",
+        version: "1.0.0",
+        auto: true,
+      });
+      // An automatic record isn't a language choice: the legacy keys stay untouched.
+      expect(localStorage.getItem("locale")).toBeNull();
+      expect(injected(FBEVENTS)).toBe(true);
+      expect(fbqCalls().map((c) => c[1])).toEqual([META_PIXEL_ID, "PageView", "ViewContent"]);
+      expect(logged.map((e) => `${e.kind}:${e.name}`)).toEqual([
+        "CONSENT:AUTO",
+        "PIXEL:PageView",
+        "PIXEL:ViewContent",
+      ]);
+    });
+
+    it("where consent is needed: an automatic accept is dropped and the bar asks", () => {
+      setMode("opt-out");
+      runPixel();
+      for (const [target, type, fn] of listeners.splice(0)) target.removeEventListener(type, fn);
+      vi.restoreAllMocks(); // runPixel spies on addEventListener again
+      delete (window as unknown as { fbq?: unknown }).fbq;
+      document.head.innerHTML = "";
+      document.querySelector("[data-epidom-cookie-settings]")?.remove();
+
+      setMode("opt-in");
+      runPixel();
+
+      expect(localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)).toBeNull();
+      expect(bar()).not.toBeNull();
+      expect(injected(FBEVENTS)).toBe(false);
+    });
+
+    it("never overrides a choice the visitor made, wherever they are", () => {
+      saveChoice(false, false);
+      setMode("opt-out");
+      runPixel();
+      expect(injected(FBEVENTS)).toBe(false);
+      expect(JSON.parse(localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)!).auto).toBeUndefined();
+    });
+
+    it("an automatic accept can be turned off from Manage cookies", () => {
+      setMode("opt-out");
+      runPixel();
+      (document.querySelector("footer [data-epidom-cookie-settings] button") as HTMLButtonElement).click();
+      const root = bar()!.shadowRoot!;
+      expect(root.querySelector('[data-category="marketing"]')!.getAttribute("aria-checked")).toBe("true");
+      (root.querySelector('[data-category="marketing"]') as HTMLButtonElement).click();
+      barButton("save").click();
+
+      const saved = JSON.parse(localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY)!);
+      expect(saved).toMatchObject({ marketing: false, analytics: true });
+      expect(saved.auto).toBeUndefined();
+      expect(fbqCalls().at(-1)).toEqual(["consent", "revoke"]);
+    });
   });
 
   describe("withdrawing from the sales page", () => {

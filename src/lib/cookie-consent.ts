@@ -19,6 +19,12 @@ export interface CookiePreferences {
   marketing: boolean;
   language: Locale; // User's preferred language
   timestamp: number;
+  /**
+   * True when nobody chose: saved automatically because the visitor's country
+   * needs no consent (src/lib/consent-region.ts). Any choice the visitor makes
+   * replaces it with a record without this flag.
+   */
+  auto?: boolean;
 }
 
 const COOKIE_CONSENT_KEY = "cookie-consent-preferences";
@@ -60,6 +66,7 @@ export function getCookiePreferences(): CookiePreferences | null {
       marketing: preferences.marketing ?? false,
       language: language,
       timestamp: preferences.timestamp ?? Date.now(),
+      ...(preferences.auto === true ? { auto: true } : {}),
     };
   } catch (error) {
     return null;
@@ -104,6 +111,8 @@ export function setCookiePreferences(preferences: Partial<CookiePreferences>): v
       language: language,
       timestamp: Date.now(),
       version: COOKIE_CONSENT_VERSION,
+      // A language change keeps an automatic record automatic; a choice ends it.
+      ...(current?.auto && !carriesChoice ? { auto: true } : {}),
     };
 
     localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(updated));

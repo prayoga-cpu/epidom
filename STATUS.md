@@ -155,7 +155,16 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Outside the SEO phases
 
-### Meta Pixel ready for ads — 3.20.0 (2026-10-17, not pushed)
+### Cookie banner by country — 3.21.0 (2026-10-17, not pushed)
+
+- [x] The proxy sets `epidom_consent_mode` (`opt-in` / `opt-out`) on every page response from Vercel's `x-vercel-ip-country` (`src/lib/consent-region.ts`, `applyConsentModeCookie`, only when it changes). Opt-in = EU 27 + EU outermost regions (GF GP MQ RE YT MF) + EEA (IS LI NO) + UK, Crown dependencies, Gibraltar + CH; no/unknown country = opt-in.
+- [x] `CONSENT_BOOT_SCRIPT` (root layout `<head>`, before the pixel stub/bridges): opt-out + no record → automatic record (`auto: true`, analytics + marketing on, language = what `getLanguagePreference` would have returned, so the app's language doesn't change); opt-in + automatic record → removed (bar shows). Never on `/@…` storefronts or `/r/…` receipts (merchants' customers). A visitor's own choice is never touched; a language change keeps `auto`, any choice drops it.
+- [x] `public/sales-pages/pixel.js`: same rules from the same cookie. "Manage cookies" still turns everything off in every country.
+- [x] `/admin/pixel`: AUTO counted as "On by default (no consent needed)" (`CONSENT_CHOICES` gains `AUTO`, logged once by `MetaPixelConsentBridge` / pixel.js).
+- [x] Cookie policy (s2, s3 + `epidom_consent_mode`, s5, s6), privacy s3.item6 and GDPR item3 rewritten in en/fr/id; privacy + GDPR dates → 17 Oct 2026.
+- [ ] **Legal check (operator):** if the company running Epidom is established in France, GDPR applies to its processing of every visitor's data, wherever they are, and Indonesia's PDP Law (UU 27/2022) also covers Indonesian visitors. Confirm with whoever handles legal that "on by default outside Europe" is acceptable; adding a country back to the banner is one line in `CONSENT_REQUIRED_COUNTRIES`.
+
+### Meta Pixel ready for ads — 3.20.0 (2026-10-17, pushed 619b7fb5)
 
 - [x] Audit first (same day): pixel `1821676715464709` loaded only inside the Next.js app and only after marketing consent, but the cookie bar lived only in the marketing layout, and the 12 sales-page files (`public/sales-pages/`, the ad landing pages) had no pixel and no bar at all (checked on the live site: no stub on any `/sales-page-N`). So a visitor from an ad → sales page → `/register` could never consent and their CompleteRegistration never reached Meta.
 - [x] `public/sales-pages/pixel.js` on every sales page (French originals + regenerated EN/ID copies): the cookie bar in the page's language (shadow DOM, the site's `cookie.*` strings), saving the site's own record (`cookie-consent-preferences` v1.0.0) so one answer covers both; with marketing consent PageView + ViewContent + custom `SignUpClick` per `[data-cta]`; with analytics consent GA4. Forwards `fbclid` + `utm_*` to `/register`. Disabled off `epidom.fr`/localhost (same rule as `TRACKING_ENABLED`).

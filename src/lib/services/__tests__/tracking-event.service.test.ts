@@ -167,20 +167,24 @@ describe("summarizePixelEvents", () => {
         { name: "CUSTOM", source: "site", marketing: true, count: 1 },
         { name: "ACCEPT_ALL", source: "sales_page", marketing: true, count: 2 },
         { name: "CUSTOM", source: "sales_page", marketing: false, count: 2 },
+        { name: "AUTO", source: "sales_page", marketing: true, count: 4 },
       ],
     });
 
-    expect(consent.answers).toBe(14);
-    expect(consent.marketingAllowed).toBe(9);
+    expect(consent.answers).toBe(18);
+    expect(consent.marketingAllowed).toBe(13);
+    expect(consent.auto).toBe(4);
     expect(consent.bySource.site).toEqual({
       answers: 10,
       acceptAll: 6,
       rejectAll: 3,
       custom: 1,
+      auto: 0,
       marketingAllowed: 7,
       marketingRate: 0.7,
     });
-    expect(consent.bySource.sales_page.marketingRate).toBe(0.5);
+    expect(consent.bySource.sales_page).toMatchObject({ answers: 8, auto: 4, marketingAllowed: 6 });
+    expect(consent.bySource.sales_page.marketingRate).toBe(0.75);
   });
 
   it("orders days newest first and has no rate without accounts", () => {

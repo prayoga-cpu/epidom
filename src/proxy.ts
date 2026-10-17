@@ -13,6 +13,7 @@ import {
 } from "./lib/i18n-routing";
 import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE, isResumableAppPath } from "./lib/last-visited";
 import { isSalesPagePath } from "./lib/sales-pages";
+import { applyConsentModeCookie } from "./lib/consent-region";
 import { landingLocaleFor } from "./features/marketing/landing/registry";
 import type { Locale } from "./components/lang/i18n-provider";
 
@@ -222,6 +223,19 @@ function preferredLocaleForUnprefixedVisit(req: NextRequest): Locale {
  * Protected routes are configured below in the matcher array.
  */
 export default async function proxy(req: NextRequest) {
+  const response = await routeRequest(req);
+  // Every page response says whether the visitor's country needs the cookie
+  // bar (src/lib/consent-region.ts), so the page knows before it loads. Not on
+  // a redirect: some are permanent and cacheable, and must carry no cookie;
+  // the page they lead to sets it.
+  const isRedirect = response.status >= 300 && response.status < 400;
+  if (!req.nextUrl.pathname.startsWith("/api/") && !isRedirect) {
+    applyConsentModeCookie(req, response);
+  }
+  return response;
+}
+
+async function routeRequest(req: NextRequest): Promise<NextResponse> {
   const path = req.nextUrl.pathname;
 
   // Generate unique request ID for logging and tracing

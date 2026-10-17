@@ -8,8 +8,12 @@
  * (src/features/marketing/shared/components/cookie-consent-bar.tsx) don't reach
  * them. This does the same, with the same rules:
  *
- * - Nothing is sent to Meta or Google before consent. fbevents.js and gtag.js
+ * - Where consent is needed (EU, EEA, UK, Switzerland, or an unknown country:
+ *   the epidom_consent_mode cookie the proxy sets, src/lib/consent-region.ts),
+ *   nothing is sent to Meta or Google before consent: fbevents.js and gtag.js
  *   are only requested once the visitor allows marketing / analytics cookies.
+ *   Elsewhere both are on by default (an automatic record, `auto: true`), no
+ *   bar is shown, and "Manage cookies" turns them off.
  * - The answer is saved in the record the site reads (localStorage
  *   "cookie-consent-preferences", version 1.0.0), so a visitor who answers here
  *   isn't asked again on /register, and the reverse.
@@ -44,6 +48,10 @@
   var GA_ID = "G-S7DYSLM84X";
   var CONSENT_KEY = "cookie-consent-preferences";
   var CONSENT_VERSION = "1.0.0";
+  // Set by the proxy from the visitor's country (CONSENT_MODE_COOKIE in
+  // src/lib/consent-region.ts): "opt-out" = no consent needed there, so the
+  // cookies are on by default and no bar is shown. Anything else: ask first.
+  var MODE_COOKIE = "epidom_consent_mode";
   var ENDPOINT = "/api/public/tracking-events";
 
   var lang = (document.documentElement.getAttribute("lang") || "fr").slice(0, 2).toLowerCase();
@@ -315,29 +323,41 @@
       if (!raw) return null;
       var saved = JSON.parse(raw);
       if (!saved || typeof saved !== "object" || saved.version !== CONSENT_VERSION) return null;
-      return { analytics: saved.analytics === true, marketing: saved.marketing === true };
+      return { analytics: saved.analytics === true, marketing: saved.marketing === true, auto: saved.auto === true };
     } catch (e) {
       return null;
     }
   }
 
-  function saveChoice(analytics, marketing) {
+  /** `auto`: saved without asking, because the visitor's country needs no consent. */
+  function saveChoice(analytics, marketing, auto) {
     try {
-      window.localStorage.setItem(
-        CONSENT_KEY,
-        JSON.stringify({
-          essential: true,
-          analytics: analytics,
-          marketing: marketing,
-          language: locale,
-          timestamp: Date.now(),
-          version: CONSENT_VERSION,
-        })
-      );
-      // What the site's setCookiePreferences() writes alongside the record.
+      var record = {
+        essential: true,
+        analytics: analytics,
+        marketing: marketing,
+        language: locale,
+        timestamp: Date.now(),
+        version: CONSENT_VERSION,
+      };
+      if (auto) record.auto = true;
+      window.localStorage.setItem(CONSENT_KEY, JSON.stringify(record));
+      if (auto) return;
+      // What the site's setCookiePreferences() writes alongside a choice.
       window.localStorage.setItem("locale", locale);
       window.localStorage.setItem("lang", locale);
     } catch (e) {}
+  }
+
+  function forgetChoice() {
+    try {
+      window.localStorage.removeItem(CONSENT_KEY);
+    } catch (e) {}
+  }
+
+  function consentMode() {
+    var match = document.cookie.match(new RegExp("(?:^|; )" + MODE_COOKIE + "=([^;]+)"));
+    return match && match[1] === "opt-out" ? "opt-out" : "opt-in";
   }
 
   // ── The bar ───────────────────────────────────────────────────────────────
@@ -529,7 +549,18 @@
   }
 
   addManageButton();
+  var mode = consentMode();
   var saved = readChoice();
+  // An automatic "accept" is only valid where no consent is needed: a visitor
+  // now browsing from the EU is asked.
+  if (saved && saved.auto && mode !== "opt-out") {
+    forgetChoice();
+    saved = null;
+  }
   if (saved) apply(saved);
-  else openBar(false, null);
+  else if (mode === "opt-out") {
+    saveChoice(true, true, true);
+    log({ kind: "CONSENT", name: "AUTO", analytics: true, marketing: true });
+    apply({ analytics: true, marketing: true });
+  } else openBar(false, null);
 })();

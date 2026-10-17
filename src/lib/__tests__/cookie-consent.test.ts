@@ -212,3 +212,45 @@ describe("records written before this change keep working", () => {
     expect(getCookiePreferences()?.language).toBe("id");
   });
 });
+
+describe("an automatic record (country needs no consent, src/lib/consent-region.ts)", () => {
+  const saveAuto = () =>
+    localStorage.setItem(
+      "cookie-consent-preferences",
+      JSON.stringify({
+        essential: true,
+        analytics: true,
+        marketing: true,
+        language: "id",
+        timestamp: 1,
+        version: "1.0.0",
+        auto: true,
+      })
+    );
+
+  beforeEach(() => localStorage.clear());
+
+  it("counts as consent, and says it was automatic", () => {
+    saveAuto();
+    expect(hasConsentChoice()).toBe(true);
+    expect(hasMarketingConsent()).toBe(true);
+    expect(getCookiePreferences()?.auto).toBe(true);
+  });
+
+  it("stays automatic when only the language changes", () => {
+    saveAuto();
+    setLanguagePreference("en");
+    expect(getCookiePreferences()).toMatchObject({ language: "en", marketing: true, auto: true });
+  });
+
+  it("stops being automatic once the visitor chooses", () => {
+    saveAuto();
+    rejectAllCookies("id");
+    expect(getCookiePreferences()?.auto).toBeUndefined();
+    expect(hasMarketingConsent()).toBe(false);
+
+    saveAuto();
+    acceptAllCookies("id");
+    expect(getCookiePreferences()?.auto).toBeUndefined();
+  });
+});

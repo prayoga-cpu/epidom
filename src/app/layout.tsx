@@ -16,6 +16,7 @@ import { ChunkErrorReloader } from "@/components/providers/chunk-error-reloader"
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ZOOM_BOOT_SCRIPT } from "@/lib/app-zoom";
+import { CONSENT_BOOT_SCRIPT } from "@/lib/consent-region";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
 import { Metadata, Viewport } from "next";
@@ -89,6 +90,10 @@ export default function RootLayout({
             or 150% preference doesn't render at 100% and snap on hydration.
             See src/lib/app-zoom.ts. */}
         <script dangerouslySetInnerHTML={{ __html: ZOOM_BOOT_SCRIPT }} />
+        {/* Outside the EU/EEA/UK/Switzerland, saves an automatic "accept" before
+            anything reads the consent, so no cookie bar is shown there. See
+            src/lib/consent-region.ts. */}
+        <script dangerouslySetInnerHTML={{ __html: CONSENT_BOOT_SCRIPT }} />
         {TRACKING_ENABLED && <MetaPixelScript />}
         {TRACKING_ENABLED && <MetaPixelConsentBridge />}
       </head>

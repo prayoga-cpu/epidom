@@ -8097,11 +8097,11 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     },
     s2: {
       title: "Votre choix",
-      body: "Lors de votre première visite, un bandeau vous permet d'accepter tous les cookies, de refuser tous les cookies non essentiels ou de les personnaliser par catégorie. Les cookies essentiels sont toujours actifs, car le site ne peut pas fonctionner sans eux.",
-      item1: "Les outils d'analyse et de marketing ne commencent à mesurer qu'après votre acceptation de leur catégorie. Leurs appels de mesure, qui déclenchent la collecte de données et le dépôt des cookies propres au fournisseur, ne sont pas effectués avant.",
-      item2: "Tant que vous n'avez pas accepté une catégorie, son outil n'est pas chargé : rien n'est demandé à Google avant que vous acceptiez les cookies analytiques, ni à Meta avant que vous acceptiez les cookies marketing. Leurs scripts ne sont téléchargés qu'après votre acceptation.",
-      item3: "Votre choix est enregistré dans le stockage local de votre navigateur, dans une entrée nommée cookie-consent-preferences. Ce n'est pas un cookie.",
-      item4: "Vous pouvez modifier ou retirer votre choix à tout moment avec le bouton « Gérer les cookies » situé en pied de page du site Epidom. Il rouvre le bandeau avec votre choix actuel. Lorsque vous retirez votre consentement, la mesure s'arrête immédiatement et nous supprimons les cookies que Google Analytics et le Meta Pixel ont déposés sur ce site, comme _ga et _fbp. Les cookies que Google ou Meta conservent sur leurs propres domaines relèvent de leurs propres politiques.",
+      body: "Dans l'Union européenne, l'Espace économique européen, au Royaume-Uni et en Suisse, un bandeau s'affiche lors de votre première visite et vous permet d'accepter tous les cookies, de refuser tous les cookies non essentiels ou de les personnaliser par catégorie. Ailleurs, aucun bandeau ne s'affiche : les cookies analytiques et marketing sont actifs dès votre première visite, et vous pouvez les désactiver à tout moment (voir ci-dessous). Nous distinguons les deux cas grâce au pays de votre connexion internet ; lorsqu'il ne peut pas être déterminé, le bandeau s'affiche. Les cookies essentiels sont toujours actifs, car le site ne peut pas fonctionner sans eux.",
+      item1: "Là où le bandeau s'affiche, les outils d'analyse et de marketing ne commencent à mesurer qu'après votre acceptation de leur catégorie. Leurs appels de mesure, qui déclenchent la collecte de données et le dépôt des cookies propres au fournisseur, ne sont pas effectués avant.",
+      item2: "Là où le bandeau s'affiche, l'outil d'une catégorie n'est pas chargé tant que vous ne l'avez pas acceptée : rien n'est demandé à Google avant que vous acceptiez les cookies analytiques, ni à Meta avant que vous acceptiez les cookies marketing. Leurs scripts ne sont téléchargés qu'après votre acceptation.",
+      item3: "Votre choix est enregistré dans le stockage local de votre navigateur, dans une entrée nommée cookie-consent-preferences. Ce n'est pas un cookie. Là où aucun bandeau ne s'affiche, cette même entrée indique que les deux catégories sont actives par défaut.",
+      item4: "Vous pouvez modifier ou retirer votre choix à tout moment, où que vous soyez, avec le bouton « Gérer les cookies » situé en pied de page du site Epidom et de nos pages de présentation. Il rouvre le bandeau avec votre choix actuel. Lorsque vous retirez votre consentement, la mesure s'arrête immédiatement et nous supprimons les cookies que Google Analytics et le Meta Pixel ont déposés sur ce site, comme _ga et _fbp. Les cookies que Google ou Meta conservent sur leurs propres domaines relèvent de leurs propres politiques.",
     },
     s3: {
       title: "Cookies essentiels",
@@ -8109,6 +8109,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       item1: "better-auth.session_token (affiché sous le nom __Secure-better-auth.session_token sur le site en production) : vous maintient connecté à votre compte Epidom. Il est conservé jusqu'à 7 jours.",
       item2: "epidom-staff-session : maintient un membre du personnel connecté sur une caisse partagée après la saisie de son code PIN. Il expire à minuit, heure locale de l'établissement.",
       item3: "Cookie de sécurité de connexion : cookie temporaire déposé lorsque vous vous connectez avec Google, qui protège la connexion contre la falsification.",
+      item4: "epidom_consent_mode : indique si le bandeau doit s'afficher là où vous naviguez (opt-in) ou non (opt-out), d'après le pays de votre connexion internet. Il ne contient aucun identifiant et est conservé 7 jours.",
     },
     s4: {
       title: "Cookies fonctionnels",
@@ -8119,15 +8120,15 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       item4: "epidom_sales_page : déposé lorsque vous ouvrez l'une de nos pages de présentation (/sales-page-1, /sales-page-2, /sales-page-3 ou /sales-page-4, dans n'importe quelle langue). Il contient uniquement le nom de cette page et sa langue, sans aucun identifiant, pour que nous sachions de quelle page vous venez si vous créez un compte. Il est conservé 30 jours.",
     },
     s5: {
-      title: "Mesure d'audience (avec votre consentement)",
-      body: "Ces outils nous aident à comprendre comment le site web et l'application sont utilisés. Ils ne fonctionnent qu'après votre acceptation de la catégorie analytique.",
+      title: "Mesure d'audience (avec votre consentement lorsqu'il est requis)",
+      body: "Ces outils nous aident à comprendre comment le site web et l'application sont utilisés. Là où le bandeau s'affiche, ils ne fonctionnent qu'après votre acceptation de la catégorie analytique ; ailleurs, ils fonctionnent par défaut jusqu'à ce que vous les désactiviez.",
       item1: "Google Analytics 4 (Google) : mesure les visites, les pages vues et les clics sur les boutons importants. Google peut déposer ses propres cookies.",
       item2: "Google Analytics 4 fonctionne aussi dans l'application, après votre connexion, et pas seulement sur les pages publiques. Il y reçoit l'adresse de chaque page que vous ouvrez, qui contient l'identifiant interne de votre établissement, ainsi que des événements liés à certaines actions, comme la fin d'une étape de prise en main ou la création d'un produit, d'une matière première, d'un fournisseur, d'une recette ou d'un lot de production. Pour une vente réalisée en caisse, il reçoit en plus un événement de commande : le numéro de commande, le total, la devise, ainsi que le nom, le prix et la quantité de chaque article vendu.",
-      item3: "Vercel Analytics (Vercel) : mesure les pages vues et les visiteurs. Il n'est chargé qu'après votre acceptation de la catégorie analytique.",
+      item3: "Vercel Analytics (Vercel) : mesure les pages vues et les visiteurs. Là où le bandeau s'affiche, il n'est chargé qu'après votre acceptation de la catégorie analytique.",
     },
     s6: {
-      title: "Marketing (avec votre consentement)",
-      body: "Cet outil mesure les résultats de la publicité. Il ne fonctionne qu'après votre acceptation de la catégorie marketing.",
+      title: "Marketing (avec votre consentement lorsqu'il est requis)",
+      body: "Cet outil mesure les résultats de la publicité. Là où le bandeau s'affiche, il ne fonctionne qu'après votre acceptation de la catégorie marketing ; ailleurs, il fonctionne par défaut jusqu'à ce que vous le désactiviez.",
       item1: "Meta Pixel (Meta) : permet à Meta de mesurer des actions réalisées sur notre site, comme les inscriptions, pour la publicité sur les plateformes de Meta, et peut servir à constituer des audiences pour ces publicités.",
     },
     s7: {
@@ -8144,7 +8145,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
   },
   privacy: {
     title: "Politique de confidentialité",
-    lastUpdatedDate: "20 septembre 2026",
+    lastUpdatedDate: "17 octobre 2026",
     intro: "Cette politique explique quelles données personnelles Epidom traite, pourquoi, qui les reçoit, combien de temps nous les conservons et comment vous pouvez exercer vos droits. Nous décrivons uniquement ce que le produit fait réellement aujourd'hui.",
     footer: "Cette politique peut évoluer. Nous informerons les utilisateurs de tout changement important par e-mail ou via le service.",
     s1: {
@@ -8175,7 +8176,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       item3: "envoyer des e-mails de service, comme la vérification du compte, la réinitialisation du mot de passe et les reçus ;",
       item4: "assurer le support et traiter les retours ;",
       item5: "prévenir la fraude et les abus, et conserver une trace des actions effectuées dans l'application ;",
-      item6: "mesurer et améliorer le site, l'application et notre publicité, uniquement avec votre consentement.",
+      item6: "mesurer et améliorer le site, l'application et notre publicité : avec votre consentement dans l'Union européenne, l'EEE, au Royaume-Uni et en Suisse, et ailleurs par défaut, ce que vous pouvez désactiver avec « Gérer les cookies ».",
     },
     s4: {
       title: "Qui les reçoit",
@@ -8289,7 +8290,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
   },
   gdpr: {
     title: "RGPD",
-    lastUpdatedDate: "20 septembre 2026",
+    lastUpdatedDate: "17 octobre 2026",
     intro: "Cette page résume les bases légales sur lesquelles nous nous appuyons, vos droits au titre du RGPD, les fournisseurs concernés et la manière de nous joindre. La Politique de confidentialité en donne le détail complet.",
     footer: "Cette page est un résumé et ne remplace pas la Politique de confidentialité.",
     s1: {
@@ -8297,7 +8298,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       body: "Nous nous appuyons sur les bases légales suivantes :",
       item1: "Contrat : nous traitons les données de compte et d'établissement pour fournir le service auquel vous avez souscrit.",
       item2: "Intérêts légitimes : assurer la sécurité du service et prévenir la fraude et les abus, y compris en conservant une trace des actions effectuées dans l'application.",
-      item3: "Consentement : la mesure d'audience et la mesure publicitaire sur notre site web et notre application. Vous pouvez les accepter ou les refuser dans le bandeau de cookies.",
+      item3: "Consentement : la mesure d'audience et la mesure publicitaire sur notre site web et notre application, pour les visiteurs de l'Union européenne, de l'EEE, du Royaume-Uni et de Suisse. Vous pouvez les accepter ou les refuser dans le bandeau de cookies.",
     },
     s2: {
       title: "Vos droits",

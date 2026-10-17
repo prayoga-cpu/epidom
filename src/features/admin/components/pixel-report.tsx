@@ -108,11 +108,12 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 function ConsentRows({ summary }: { summary: ConsentSourceSummary }) {
   return (
     <div className="divide-border divide-y">
-      <Stat label="Answers" value={summary.answers} />
+      <Stat label="New visitors" value={summary.answers} />
+      <Stat label="On by default (no consent needed)" value={share(summary.auto, summary.answers)} />
       <Stat label="Accept all" value={share(summary.acceptAll, summary.answers)} />
       <Stat label="Reject all" value={share(summary.rejectAll, summary.answers)} />
       <Stat label="Customised" value={share(summary.custom, summary.answers)} />
-      <Stat label="Allowed the pixel" value={share(summary.marketingAllowed, summary.answers)} />
+      <Stat label="Pixel allowed" value={share(summary.marketingAllowed, summary.answers)} />
     </div>
   );
 }
@@ -241,7 +242,7 @@ export function PixelReportView({ report, pixelId }: { report: PixelReport; pixe
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Cookie bar · site</CardTitle>
+              <CardTitle className="text-base">Cookies · site</CardTitle>
             </CardHeader>
             <CardContent>
               <ConsentRows summary={consent.bySource.site} />
@@ -250,13 +251,13 @@ export function PixelReportView({ report, pixelId }: { report: PixelReport; pixe
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Cookie bar · sales pages</CardTitle>
+              <CardTitle className="text-base">Cookies · sales pages</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <ConsentRows summary={consent.bySource.sales_page} />
               <p className="text-muted-foreground text-xs">
                 {report.salesPageViews} sales page views in this range (all visitors, counted
-                without cookies); answers ÷ views is roughly how many visitors answer the bar.
+                without cookies); new visitors ÷ views is roughly how many visitors were counted.
               </p>
             </CardContent>
           </Card>
@@ -368,6 +369,12 @@ export function PixelReportView({ report, pixelId }: { report: PixelReport; pixe
             <strong>Values</strong> are the plan&apos;s first charge in the currency the page
             quoted (a month, or the whole year for a yearly plan); for a trial, what the first
             charge after the trial will be.
+          </p>
+          <p>
+            <strong>Cookies:</strong> visitors in the EU, EEA, UK and Switzerland see the cookie
+            bar and are counted when they answer it. Everywhere else the cookies are on by default
+            (counted once per browser as &quot;on by default&quot;) and &quot;Manage cookies&quot;
+            turns them off.
           </p>
           <p>
             Nothing here identifies a visitor: no account, IP or cookie is stored with an event.

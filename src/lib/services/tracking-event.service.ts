@@ -68,7 +68,9 @@ export interface ConsentSourceSummary {
   acceptAll: number;
   rejectAll: number;
   custom: number;
-  /** Answers that allowed marketing cookies (Accept all, or Customize with marketing on). */
+  /** No bar: on by default because the visitor's country needs no consent. */
+  auto: number;
+  /** Answers that allowed marketing cookies (Accept all, Customize with marketing on, or automatic). */
   marketingAllowed: number;
   /** marketingAllowed / answers, null with no answers. */
   marketingRate: number | null;
@@ -138,6 +140,7 @@ function summarizeConsent(groups: ConsentGroup[]): ConsentSourceSummary {
     acceptAll: count((g) => g.name === "ACCEPT_ALL"),
     rejectAll: count((g) => g.name === "REJECT_ALL"),
     custom: count((g) => g.name === "CUSTOM"),
+    auto: count((g) => g.name === "AUTO"),
     marketingAllowed,
     marketingRate: ratio(marketingAllowed, answers),
   };

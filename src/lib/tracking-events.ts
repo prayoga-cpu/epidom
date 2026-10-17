@@ -32,8 +32,11 @@ export const PIXEL_EVENTS = [
 
 export type PixelEventName = (typeof PIXEL_EVENTS)[number];
 
-/** The three ways to answer the cookie bar. */
-export const CONSENT_CHOICES = ["ACCEPT_ALL", "REJECT_ALL", "CUSTOM"] as const;
+/**
+ * The three ways to answer the cookie bar, and AUTO: no bar, because the
+ * visitor's country needs no consent (src/lib/consent-region.ts).
+ */
+export const CONSENT_CHOICES = ["ACCEPT_ALL", "REJECT_ALL", "CUSTOM", "AUTO"] as const;
 
 export type ConsentChoice = (typeof CONSENT_CHOICES)[number];
 
