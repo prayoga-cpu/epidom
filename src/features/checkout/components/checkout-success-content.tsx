@@ -10,6 +10,24 @@ import { supplierOrderKeys } from "@/features/dashboard/shared/hooks/use-supplie
 import { useSession } from "@/lib/auth-client";
 import { trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 import { safeInternalPath } from "@/lib/safe-redirect";
+import { planChargeAmount } from "@/lib/constants/plan-pricing";
+
+/**
+ * True the first time a Checkout session is seen in this tab, false after:
+ * a reload of this page, or Back to it, must not count the conversion again.
+ * Without a session id (an older link) there is nothing to remember it by.
+ */
+function firstVisitOf(sessionId: string | null): boolean {
+  if (!sessionId) return true;
+  const key = `epidom:checkout-tracked:${sessionId}`;
+  try {
+    if (window.sessionStorage.getItem(key) === "1") return false;
+    window.sessionStorage.setItem(key, "1");
+  } catch {
+    // Storage blocked: count it, as before.
+  }
+  return true;
+}
 
 export function CheckoutSuccessContent() {
   const { t } = useI18n();
@@ -22,6 +40,10 @@ export function CheckoutSuccessContent() {
   const planName = searchParams.get("plan");
   const sessionId = searchParams.get("session_id");
   const isTrial = searchParams.get("trial") === "true";
+  // Set by /api/subscriptions/checkout: the conversion's value is the plan's
+  // first charge in the currency the page quoted.
+  const yearly = searchParams.get("billing") === "yearly";
+  const currency = searchParams.get("currency");
   // Set by /api/subscriptions/checkout when the setup wizard opened Checkout:
   // the new store's dashboard, instead of the profile page.
   const next = safeInternalPath(searchParams.get("next"));
@@ -30,11 +52,17 @@ export function CheckoutSuccessContent() {
   // Invalidate subscription-gated caches when subscription changes (after upgrade)
   useEffect(() => {
     // Guard against firing twice on remount/back-navigation to this page.
-    if (!trackedRef.current) {
+    if (!trackedRef.current && firstVisitOf(sessionId)) {
       trackedRef.current = true;
+      const charge = planChargeAmount(planName, currency, yearly);
+      // The Checkout session id, as Meta's eventID: one checkout, one event,
+      // also if a server-side copy is ever sent.
+      const metaOptions = sessionId ? { eventId: sessionId } : undefined;
       trackConversion("subscription_started", {
         event_label: planName ?? "unknown",
         plan: planName,
+        // A trial's value rides on trial_started only, so GA doesn't count it twice.
+        ...(isTrial ? {} : charge),
       });
 
       if (isTrial) {
@@ -45,12 +73,22 @@ export function CheckoutSuccessContent() {
         trackConversion("trial_started", {
           event_label: planName ?? "unknown",
           plan: planName,
+          ...charge,
         });
-        trackMetaPixelEvent("StartTrial", { content_name: planName ?? undefined });
+        // value = what the first charge after the trial will be.
+        trackMetaPixelEvent(
+          "StartTrial",
+          { content_name: planName ?? undefined, ...charge },
+          metaOptions
+        );
       } else {
         // Standard Meta event for a real (non-trial) paid subscription —
         // lets Meta optimize/retarget against actual subscribers.
-        trackMetaPixelEvent("Subscribe", { content_name: planName ?? undefined });
+        trackMetaPixelEvent(
+          "Subscribe",
+          { content_name: planName ?? undefined, ...charge },
+          metaOptions
+        );
       }
     }
 

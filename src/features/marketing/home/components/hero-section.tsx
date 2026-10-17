@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { INTL_LOCALES, useI18n } from "@/components/lang/i18n-provider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { trackEvent } from "@/lib/analytics";
+import { trackEvent, trackMetaPixelEvent } from "@/lib/analytics";
 import { WHATSAPP_NUMBERS, whatsappHref } from "@/lib/constants/contact";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { cn } from "@/lib/utils";
@@ -165,7 +165,10 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
                     href={whatsappHref(line.number)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => trackEvent("hero_support_click", { market: line.market })}
+                    onClick={() => {
+                      trackEvent("hero_support_click", { market: line.market });
+                      trackMetaPixelEvent("Contact", { content_name: "hero_support" });
+                    }}
                     className="text-epi-cream-50 hover:text-epi-gold-300 focus-visible:outline-epi-gold-300 flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 text-[15px] hover:bg-white/[0.06] focus-visible:outline-2"
                   >
                     {line.label}

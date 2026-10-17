@@ -916,6 +916,8 @@ describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, (
       expect(analytics.trackMetaPixelEvent).toHaveBeenCalledWith("InitiateCheckout", {
         content_name: "POS",
         content_category: "trial",
+        value: 13.99,
+        currency: "EUR",
       });
     });
 

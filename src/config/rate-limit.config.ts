@@ -342,6 +342,13 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 60 events per minute per IP
   },
 
+  "/api/public/tracking-events": {
+    // Generous: Indonesian mobile carriers put many visitors behind one IP, and a
+    // dropped copy would make /admin/pixel undercount during a campaign.
+    limit: 240,
+    window: 60, // 240 events per minute per IP (pixel events + cookie-bar answers)
+  },
+
   // Feedback submission - generous limit, feedback is welcome; only blocks runaway bots
   "/api/feedback": {
     limit: 30,

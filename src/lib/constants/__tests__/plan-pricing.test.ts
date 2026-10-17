@@ -7,6 +7,7 @@ import {
   PLAN_PRICE_IDR,
   PLAN_PRICING,
   formatPlanPrice,
+  planChargeAmount,
 } from "../plan-pricing";
 
 const LOCALES = { en, fr, id } as const;
@@ -62,4 +63,20 @@ describe("locale price strings match plan-pricing", () => {
       expect(page.t3price_yr).toBe(formatPlanPrice("OPERATIONS", currency, "yearly"));
     });
   }
+});
+
+describe("planChargeAmount", () => {
+  it("is one month, or the whole year for the yearly plan", () => {
+    expect(planChargeAmount("POS", "EUR", false)).toEqual({ value: 13.99, currency: "EUR" });
+    expect(planChargeAmount("POS", "EUR", true)).toEqual({ value: 137.88, currency: "EUR" });
+    expect(planChargeAmount("OPERATIONS", "IDR", false)).toEqual({ value: 459_000, currency: "IDR" });
+  });
+
+  it("is null without a catalog price", () => {
+    expect(planChargeAmount("FREE", "EUR", false)).toBeNull();
+    expect(planChargeAmount("ENTERPRISE", "USD", false)).toBeNull();
+    expect(planChargeAmount("POS", "GBP", false)).toBeNull();
+    expect(planChargeAmount("POS", null, false)).toBeNull();
+    expect(planChargeAmount(null, "EUR", false)).toBeNull();
+  });
 });

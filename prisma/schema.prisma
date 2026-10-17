@@ -2385,6 +2385,42 @@ model SalesPageEvent {
   @@map("sales_page_events")
 }
 
+enum TrackingEventKind {
+  PIXEL // a Meta Pixel event the browser sent (PageView, CompleteRegistration…)
+  CONSENT // an answer to the cookie bar
+}
+
+/// A first-party copy of what the site sends to the Meta Pixel, plus the cookie
+/// bar's answers, for /admin/pixel (src/lib/services/tracking-event.service.ts).
+/// Anonymous: no user id, no IP, no cookie value. PIXEL rows only exist for
+/// visitors who allowed marketing cookies, the same gate as the pixel itself.
+model TrackingEvent {
+  id        String            @id @default(cuid())
+  kind      TrackingEventKind
+  /// PIXEL: Meta's event name ("PageView", "CompleteRegistration"…).
+  /// CONSENT: "ACCEPT_ALL", "REJECT_ALL" or "CUSTOM".
+  name      String
+  /// The page's path without its query string, ids collapsed ("/store/:id/pos").
+  path      String
+  /// "site" (the Next.js app) or "sales_page" (public/sales-pages/pixel.js).
+  source    String
+  /// The page's language (fr, en, id) when it has one.
+  locale    String?
+  /// CONSENT only: what the visitor allowed.
+  marketing Boolean?
+  analytics Boolean?
+  /// PIXEL only: the event's content_name (plan, sales page, button…).
+  content   String?
+  /// PIXEL only: the event's value and currency (InitiateCheckout, StartTrial, Subscribe).
+  value     Decimal?          @db.Decimal(14, 2)
+  currency  String?
+  createdAt DateTime          @default(now())
+
+  @@index([kind, createdAt])
+  @@index([createdAt])
+  @@map("tracking_events")
+}
+
 model MenuCategory {
   id           String @id @default(cuid())
   storefrontId String

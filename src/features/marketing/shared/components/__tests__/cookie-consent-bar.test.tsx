@@ -26,6 +26,13 @@ vi.mock("@/components/lang/i18n-provider", () => ({
   }),
 }));
 
+// The anonymous answer log behind /admin/pixel: recorded, never sent.
+const sent = vi.hoisted(() => ({ events: [] as unknown[] }));
+vi.mock("@/lib/tracking-events", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/tracking-events")>()),
+  sendTrackingEvent: (event: unknown) => sent.events.push(event),
+}));
+
 import { CookieConsentBar } from "../cookie-consent-bar";
 import { SiteFooter } from "../site-footer";
 import {
@@ -63,6 +70,7 @@ function captureUpdates() {
 beforeEach(() => {
   h.locale = "en";
   window.localStorage.clear();
+  sent.events = [];
 });
 
 describe("first visit", () => {
@@ -366,5 +374,55 @@ describe("locale copy", () => {
     const fr = lookup(DICTS.fr, "cookiePolicy.s2") as Record<string, string>;
     expect(fr.item2).not.toMatch(/ [:;?!]/);
     expect(fr.item4).not.toMatch(/ [:;?!]/);
+  });
+});
+
+describe("every answer is logged for /admin/pixel, anonymously", () => {
+  beforeEach(() => {
+    window.history.replaceState(null, "", "/register?lang=en");
+    document.documentElement.setAttribute("lang", "en");
+  });
+
+  it("Accept", () => {
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: text("en", "cookie.accept") }));
+    expect(sent.events).toEqual([
+      {
+        kind: "CONSENT",
+        name: "ACCEPT_ALL",
+        analytics: true,
+        marketing: true,
+        path: "/register",
+        source: "site",
+        locale: "en",
+      },
+    ]);
+  });
+
+  it("Reject", () => {
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: text("en", "cookie.reject") }));
+    expect(sent.events).toEqual([
+      expect.objectContaining({ name: "REJECT_ALL", analytics: false, marketing: false }),
+    ]);
+  });
+
+  it("Save from the settings, with what the switches allowed", () => {
+    setCookiePreferences({ analytics: true, marketing: true });
+    renderPage();
+    openFromFooter();
+    fireEvent.click(sw("marketing"));
+    fireEvent.click(screen.getByRole("button", { name: text("en", "cookie.save") }));
+    expect(sent.events).toEqual([
+      expect.objectContaining({ name: "CUSTOM", analytics: true, marketing: false }),
+    ]);
+  });
+
+  it("closing a reopened bar unchanged is not an answer", () => {
+    setCookiePreferences({ analytics: true, marketing: true });
+    renderPage();
+    openFromFooter();
+    fireEvent.click(screen.getByRole("button", { name: text("en", "cookie.close") }));
+    expect(sent.events).toEqual([]);
   });
 });

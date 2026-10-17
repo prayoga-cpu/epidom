@@ -19,6 +19,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { Container } from "./container";
+import { sendTrackingEvent, sitePageContext, type ConsentChoice } from "@/lib/tracking-events";
 import {
   COOKIE_CONSENT_OPEN_EVENT,
   hasConsentChoice,
@@ -131,9 +132,15 @@ export function CookieConsentBar() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isVisible, hasSavedChoice]);
 
+  // Each answer also goes to the anonymous log behind /admin/pixel, so the
+  // share of visitors the pixel can count is visible there.
+  const logAnswer = (name: ConsentChoice, analytics: boolean, marketing: boolean) =>
+    sendTrackingEvent({ kind: "CONSENT", name, analytics, marketing, ...sitePageContext() });
+
   const handleAccept = () => {
     // Save current language preference when accepting
     acceptAllCookies(locale);
+    logAnswer("ACCEPT_ALL", true, true);
     hide();
     // No reload needed: the consent bridges load the vendors reactively on the
     // "cookie-consent-updated" event this dispatches.
@@ -142,6 +149,7 @@ export function CookieConsentBar() {
   const handleReject = () => {
     // Save current language preference when rejecting
     rejectAllCookies(locale);
+    logAnswer("REJECT_ALL", false, false);
     hide();
     // No reload needed: the bridges switch tracking off and clear its cookies.
   };
@@ -153,6 +161,7 @@ export function CookieConsentBar() {
         ...preferences,
         language: locale,
       });
+      logAnswer("CUSTOM", preferences.analytics, preferences.marketing);
       hide();
       // No reload needed: enabling and withdrawing both take effect immediately.
     }

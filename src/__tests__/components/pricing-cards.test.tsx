@@ -566,12 +566,35 @@ describe("PricingCards trial gating by current plan", () => {
           expect.objectContaining({ plan: "POS", trial: false })
         );
       });
+      // Valued at the first charge in the currency the page quotes (fr → EUR, monthly).
       expect(analytics.trackMetaPixelEvent).toHaveBeenCalledWith("InitiateCheckout", {
         content_name: "POS",
         content_category: "paid",
+        value: 13.99,
+        currency: "EUR",
       });
     }
   );
+
+  it("a subscriber sent to Stripe's billing portal records no checkout", async () => {
+    analytics.trackMetaPixelEvent.mockClear();
+    analytics.trackConversion.mockClear();
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: { url: "https://billing.stripe.com/p/session", portal: true },
+        }),
+    });
+    const { container } = render(<PricingCards yearly={false} currentPlan="POS" />);
+    fireEvent.click(ctaOf(container, "OPERATIONS"));
+    fireEvent.click(screen.getByText("Confirm"));
+    await waitFor(() => expect(window.location.href).toBe("https://billing.stripe.com/p/session"));
+    expect(analytics.trackMetaPixelEvent).not.toHaveBeenCalled();
+    expect(analytics.trackConversion).not.toHaveBeenCalledWith("begin_checkout", expect.anything());
+  });
 
   it("on POS the card is the current plan, with no trial and no trial bar", () => {
     const { container } = render(<PricingCards yearly={false} currentPlan="POS" />);

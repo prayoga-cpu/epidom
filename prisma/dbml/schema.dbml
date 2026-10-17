@@ -1308,6 +1308,27 @@ Same privacy model as StorefrontEvent: visitorHash is hashVisitor()\'s
 daily-rotating fingerprint, never a raw IP.'
 }
 
+Table tracking_events {
+  id String [pk]
+  kind TrackingEventKind [not null]
+  name String [not null, note: 'PIXEL: Meta\'s event name ("PageView", "CompleteRegistration"…).
+CONSENT: "ACCEPT_ALL", "REJECT_ALL" or "CUSTOM".']
+  path String [not null, note: 'The page\'s path without its query string, ids collapsed ("/store/:id/pos").']
+  source String [not null, note: '"site" (the Next.js app) or "sales_page" (public/sales-pages/pixel.js).']
+  locale String [note: 'The page\'s language (fr, en, id) when it has one.']
+  marketing Boolean [note: 'CONSENT only: what the visitor allowed.']
+  analytics Boolean
+  content String [note: 'PIXEL only: the event\'s content_name (plan, sales page, button…).']
+  value Decimal [note: 'PIXEL only: the event\'s value and currency (InitiateCheckout, StartTrial, Subscribe).']
+  currency String
+  createdAt DateTime [default: `now()`, not null]
+
+  Note: 'A first-party copy of what the site sends to the Meta Pixel, plus the cookie
+bar\'s answers, for /admin/pixel (src/lib/services/tracking-event.service.ts).
+Anonymous: no user id, no IP, no cookie value. PIXEL rows only exist for
+visitors who allowed marketing cookies, the same gate as the pixel itself.'
+}
+
 Table menu_categories {
   id String [pk]
   storefrontId String [not null]
@@ -1824,6 +1845,11 @@ Enum SalesPageEventType {
   SCROLL_50
   SCROLL_90
   SIGNUP
+}
+
+Enum TrackingEventKind {
+  PIXEL
+  CONSENT
 }
 
 Enum BackupRunStatus {

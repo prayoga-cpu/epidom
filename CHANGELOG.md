@@ -9,6 +9,16 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.20.0] - 2026-10-17 · infra
+
+The cookie bar now appears on the sales pages, sign-up and login, and advertising measurement covers the sales pages, with a report in the admin panel.
+
+- **Meta Pixel on the sales pages.** /sales-page-1 to /sales-page-4, in French, English and Indonesian, are the ads' landing pages, but they had no pixel. They now have one. Once a visitor allows marketing cookies, Meta receives the page view, the sales page viewed and every click on a sign-up button. The ad's click id and campaign tags are carried on to the sign-up page, so a sign-up made there still counts for the ad.
+- **The cookie bar on the sales pages, sign-up and login.** These pages had no cookie bar, so a visitor arriving there from an ad could never allow the pixel, and their sign-up never reached Meta. The bar now appears on them, in the page's language, with the same choices as the rest of the site. An answer given on one page is remembered on the others. A "Manage cookies" button at the bottom of each sales page reopens the choice, so it can be changed or withdrawn there too.
+- **Trials and subscriptions have a value.** "Checkout started", "Trial started" and "Subscribed" now tell Meta the plan's price and currency, so Ads Manager can show what the ads bring in. A trial counts the first charge after the trial. Reloading the confirmation page no longer counts a subscription twice, and changing plan from the pricing page while already subscribed (which opens Stripe's billing page) is no longer counted as a checkout.
+- **WhatsApp contacts reach Meta.** Tapping WhatsApp on the contact page, the home page, the pricing page's Enterprise plan or the Billing page now counts as a contact for Meta.
+- **Meta Pixel report in the admin panel.** A new page lists every event the site sent to Meta over the last 24 hours, 7, 30 or 90 days: totals with their values, which pages sent them, a day-by-day table, how visitors answer the cookie bar on the site and on the sales pages, and how many new accounts Meta can see. Nothing in it identifies a visitor.
+
 ## [3.19.0] - 2026-10-17 · infra
 
 A fourth sales page, in French, English and Indonesian, compared with the other three in the admin panel.

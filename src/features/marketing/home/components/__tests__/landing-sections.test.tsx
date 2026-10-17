@@ -8,7 +8,7 @@ import { id } from "@/locales/id";
 
 const mockLocale = vi.hoisted(() => ({ value: "fr" as "en" | "fr" | "id" }));
 const session = vi.hoisted(() => ({ user: null as null | { id: string } }));
-const analytics = vi.hoisted(() => ({ trackEvent: vi.fn() }));
+const analytics = vi.hoisted(() => ({ trackEvent: vi.fn(), trackMetaPixelEvent: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
@@ -682,6 +682,15 @@ describe("FinalCtaSection", () => {
       /^https:\/\/wa\.me\/33/
     );
     expect(container.querySelector("input")).toBeNull();
+  });
+
+  it("a WhatsApp tap is a Contact for Meta", () => {
+    analytics.trackMetaPixelEvent.mockClear();
+    render(<FinalCtaSection />);
+    fireEvent.click(screen.getByRole("link", { name: "Parler sur WhatsApp" }));
+    expect(analytics.trackMetaPixelEvent).toHaveBeenCalledWith("Contact", {
+      content_name: "final_whatsapp",
+    });
   });
 });
 

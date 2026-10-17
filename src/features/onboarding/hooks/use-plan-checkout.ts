@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
-import type { PriceCurrency } from "@/lib/constants/plan-pricing";
+import { planChargeAmount, type PriceCurrency } from "@/lib/constants/plan-pricing";
 import { trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 import type { PlanCheckout } from "../lib/plan-intent";
 
@@ -56,6 +56,11 @@ export function usePlanCheckout({ checkout, currency, next }: UsePlanCheckoutOpt
       const data = await res.json().catch(() => null);
       const url: unknown = data?.data?.url;
       if (!res.ok || typeof url !== "string") throw new Error("checkout");
+      // An account that already pays goes to Stripe's billing portal: not a checkout.
+      if (data?.data?.portal) {
+        window.location.assign(url);
+        return;
+      }
 
       trackConversion("begin_checkout", {
         event_label: checkout.plan,
@@ -67,6 +72,7 @@ export function usePlanCheckout({ checkout, currency, next }: UsePlanCheckoutOpt
       trackMetaPixelEvent("InitiateCheckout", {
         content_name: checkout.plan,
         content_category: checkout.trial ? "trial" : "paid",
+        ...planChargeAmount(checkout.plan, currency, checkout.yearly),
       });
       window.location.assign(url);
     } catch {

@@ -73,12 +73,14 @@ describe("isSalesPagePath", () => {
 });
 
 describe("the sales page files", () => {
-  it.each(EVERY_COPY)("%s (%s) exists in its language and loads the tracker and switcher", (page, locale) => {
+  it.each(EVERY_COPY)("%s (%s) exists in its language and loads the pixel, tracker and switcher", (page, locale) => {
     const file = fileFor(page, locale);
     expect(existsSync(file)).toBe(true);
     const html = readFileSync(file, "utf8");
 
     expect(html).toContain(`<html lang="${locale}">`);
+    // The Meta Pixel and the cookie bar: these pages are the ads' landing pages.
+    expect(html).toContain(`<script src="/sales-pages/pixel.js" data-page="${page}" defer></script>`);
     expect(html).toContain(
       `<script src="/sales-pages/tracker.js" data-page="${page}" defer></script>`
     );

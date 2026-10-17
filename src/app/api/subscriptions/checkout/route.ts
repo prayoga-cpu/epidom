@@ -44,20 +44,25 @@ export const POST = withApiHandler(
     // distinct "trial started" conversion (GA4 trial_started, Meta
     // StartTrial) instead of treating every checkout as an immediate paid
     // subscription — only relevant on the default URL; a caller-supplied
-    // successUrl is used verbatim. `next` is where both default pages lead on
-    // to; the cancel page also gets the plan, so "Try again" reopens it.
+    // successUrl is used verbatim. `billing` and `currency` give that
+    // conversion its value (planChargeAmount); Stripe fills in
+    // {CHECKOUT_SESSION_ID}, which the page uses so a reload doesn't count the
+    // conversion twice. `next` is where both default pages lead on to; the
+    // cancel page also gets the plan, so "Try again" reopens it.
     const nextQuery = next ? `&next=${encodeURIComponent(next)}` : "";
+    const billing = yearly ? "yearly" : "monthly";
+    const currencyQuery = currency ? `&currency=${currency}` : "";
     const finalSuccessUrl = successUrl
       ? successUrl.startsWith("http")
         ? successUrl
         : `${origin}${successUrl}`
-      : `${origin}/checkout/success?plan=${plan}&trial=${applyTrial}${nextQuery}`;
+      : `${origin}/checkout/success?plan=${plan}&trial=${applyTrial}&billing=${billing}${currencyQuery}&session_id={CHECKOUT_SESSION_ID}${nextQuery}`;
 
     const finalCancelUrl = cancelUrl
       ? cancelUrl.startsWith("http")
         ? cancelUrl
         : `${origin}${cancelUrl}`
-      : `${origin}/checkout/failed?reason=canceled&plan=${plan}&billing=${yearly ? "yearly" : "monthly"}${nextQuery}`;
+      : `${origin}/checkout/failed?reason=canceled&plan=${plan}&billing=${billing}${nextQuery}`;
 
     if (
       subscription &&
@@ -74,6 +79,8 @@ export const POST = withApiHandler(
         createSuccessResponse({
           sessionId: portalSession.id,
           url: portalSession.url,
+          // Not a checkout: callers must not record a "checkout started" for it.
+          portal: true,
           message: "Redirecting to portal for plan change",
         }),
         { status: 201 }

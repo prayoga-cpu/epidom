@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { trackEvent, trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 import { getLocalizedPath } from "@/lib/i18n-routing";
-import { LOCALE_PRICE_CURRENCY } from "@/lib/constants/plan-pricing";
+import { LOCALE_PRICE_CURRENCY, planChargeAmount } from "@/lib/constants/plan-pricing";
 import { parsePlanIntent, registerHrefFor } from "@/features/onboarding/lib/plan-intent";
 import { BoldText } from "./bold-text";
 
@@ -196,6 +196,7 @@ export function PricingCards({
       const waOptions = getWhatsAppOptions(locale);
       if (waOptions.length === 1) {
         trackConversion("contact_whatsapp", { event_label: "pricing_enterprise" });
+        trackMetaPixelEvent("Contact", { content_name: "pricing_enterprise" });
         window.open(whatsappHref(waOptions[0].number), "_blank");
       } else {
         // Worldwide (en): more than one real number to choose from — send
@@ -252,7 +253,12 @@ export function PricingCards({
       if (res.ok) {
         if (isPaid) {
           const result = await res.json();
-          if (result?.success && result?.data?.url) {
+          if (result?.success && result?.data?.url && result.data.portal) {
+            // Already paying: the plan change happens in Stripe's billing
+            // portal, which is not a checkout, so nothing is recorded.
+            window.location.href = result.data.url;
+            setConfirming(null);
+          } else if (result?.success && result?.data?.url) {
             trackConversion("begin_checkout", {
               event_label: confirming.plan,
               plan: confirming.plan,
@@ -266,6 +272,9 @@ export function PricingCards({
             trackMetaPixelEvent("InitiateCheckout", {
               content_name: confirming.plan,
               content_category: dialogTrial ? "trial" : "paid",
+              // The first charge in the currency this page quoted, so Meta can
+              // report and optimise on value.
+              ...planChargeAmount(confirming.plan, LOCALE_PRICE_CURRENCY[locale], yearly),
             });
             window.location.href = result.data.url;
             setConfirming(null);

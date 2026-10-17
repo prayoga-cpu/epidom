@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PLAN_PRICING, type PriceCurrency } from "@/lib/constants/plan-pricing";
+import { PLAN_PRICING, planChargeAmount, type PriceCurrency } from "@/lib/constants/plan-pricing";
 import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 import { formatCurrency } from "@/lib/utils/formatting";
 import { getApiErrorMessage } from "@/lib/utils/api-error";
@@ -110,6 +110,7 @@ export function PlanCards({
 
   function contactSales(number: string) {
     trackConversion("contact_whatsapp", { event_label: "billing_enterprise" });
+    trackMetaPixelEvent("Contact", { content_name: "billing_enterprise" });
     window.open(
       whatsappHref(number, t("billing.planCards.enterpriseMessage")),
       "_blank",
@@ -169,6 +170,7 @@ export function PlanCards({
         trackMetaPixelEvent("InitiateCheckout", {
           content_name: pending.plan,
           content_category: pending.kind === "trial" ? "trial" : "paid",
+          ...planChargeAmount(pending.plan, currency, yearly),
         });
       }
       window.location.href = data.data.url;

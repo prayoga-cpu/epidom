@@ -32,6 +32,7 @@ const h = vi.hoisted(() => {
     dictionaries: {} as Record<string, unknown>,
     missing: new Set<string>(),
     trackConversion: vi.fn(),
+    trackMetaPixelEvent: vi.fn(),
   };
 });
 
@@ -49,7 +50,10 @@ vi.mock("@/components/lang/i18n-provider", () => ({
   }),
 }));
 
-vi.mock("@/lib/analytics", () => ({ trackConversion: h.trackConversion }));
+vi.mock("@/lib/analytics", () => ({
+  trackConversion: h.trackConversion,
+  trackMetaPixelEvent: h.trackMetaPixelEvent,
+}));
 
 import { ContactPageClient } from "../components/contact-page-client";
 
@@ -187,6 +191,7 @@ describe("ContactPageClient: WhatsApp is the primary action", () => {
 describe("ContactPageClient: analytics", () => {
   beforeEach(() => {
     h.trackConversion.mockClear();
+    h.trackMetaPixelEvent.mockClear();
   });
 
   it("fires contact_whatsapp with the contact_page label when the primary button is clicked", () => {
@@ -197,6 +202,9 @@ describe("ContactPageClient: analytics", () => {
     expect(h.trackConversion).toHaveBeenCalledWith("contact_whatsapp", {
       event_label: "contact_page",
     });
+    // And Meta's standard Contact event, which ads can optimise on.
+    expect(h.trackMetaPixelEvent).toHaveBeenCalledTimes(1);
+    expect(h.trackMetaPixelEvent).toHaveBeenCalledWith("Contact", { content_name: "contact_page" });
   });
 
   it("counts the second en button as the same conversion", () => {
@@ -228,6 +236,7 @@ describe("ContactPageClient: analytics", () => {
     fireEvent.click(container.querySelector<HTMLAnchorElement>('a[href="/docs"]')!);
 
     expect(h.trackConversion).not.toHaveBeenCalled();
+    expect(h.trackMetaPixelEvent).not.toHaveBeenCalled();
   });
 });
 

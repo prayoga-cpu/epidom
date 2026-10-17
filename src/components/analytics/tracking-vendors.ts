@@ -13,6 +13,7 @@
  */
 
 import { hasAnalyticsConsent, hasMarketingConsent } from "@/lib/cookie-consent";
+import { sendTrackingEvent, sitePageContext } from "@/lib/tracking-events";
 
 // Not secrets: both IDs are visible in every page's network requests. Hardcoded
 // fallbacks keep tracking working when the env var is missing on the host (.env
@@ -160,6 +161,9 @@ export function enableMetaPixel(): void {
     fbq("init", META_PIXEL_ID);
     fbq("track", "PageView");
     metaInitialised = true;
+    // The first-party copy for /admin/pixel. Only this first PageView: the ones
+    // fbevents.js sends by itself on client-side navigation don't pass here.
+    sendTrackingEvent({ kind: "PIXEL", name: "PageView", ...sitePageContext() });
   }
   injectScriptOnce(FBEVENTS_SCRIPT_ID, FBEVENTS_SCRIPT_SRC);
 }

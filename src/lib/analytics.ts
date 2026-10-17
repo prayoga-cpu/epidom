@@ -10,6 +10,7 @@
  */
 
 import { hasAnalyticsConsent, hasMarketingConsent } from "./cookie-consent";
+import { sendTrackingEvent, sitePageContext, type PixelEventName } from "./tracking-events";
 
 declare global {
   interface Window {
@@ -81,15 +82,39 @@ export function trackConversion(
  * pixel code in meta-pixel-script.tsx uses). Use Meta's standard event names
  * (e.g. "CompleteRegistration", "Purchase", "Lead") when one fits, so Meta
  * can optimize campaigns against it natively instead of a custom event.
+ *
+ * Every event sent is also copied to the first-party log behind /admin/pixel
+ * (src/lib/tracking-events.ts). `eventId` is passed to Meta as eventID, so a
+ * server-side copy of the same event (Conversions API) can be deduplicated.
  */
-export function trackMetaPixelEvent(eventName: string, params?: Record<string, any>): void {
+export function trackMetaPixelEvent(
+  eventName: PixelEventName,
+  params?: Record<string, any>,
+  options?: { eventId?: string }
+): void {
   if (!hasMarketingConsent()) {
     return;
   }
 
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
-    window.fbq("track", eventName, params);
+  // No fbq: the pixel isn't mounted here (a preview deployment), so nothing
+  // reaches Meta and nothing is logged either.
+  if (typeof window === "undefined" || typeof window.fbq !== "function") {
+    return;
   }
+
+  if (options?.eventId) window.fbq("track", eventName, params, { eventID: options.eventId });
+  else window.fbq("track", eventName, params);
+
+  const value = typeof params?.value === "number" ? params.value : undefined;
+  const currency = typeof params?.currency === "string" ? params.currency : undefined;
+  const content = typeof params?.content_name === "string" ? params.content_name : undefined;
+  sendTrackingEvent({
+    kind: "PIXEL",
+    name: eventName,
+    ...sitePageContext(),
+    ...(content ? { content: content.slice(0, 100) } : {}),
+    ...(value !== undefined && currency ? { value, currency } : {}),
+  });
 }
 
 /**

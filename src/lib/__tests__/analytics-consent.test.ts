@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Real stubs (the ones the pages ship inline), so "queued" means what it means in production.
 vi.mock("next/script", () => ({ default: () => null }));
@@ -102,7 +102,77 @@ describe("events still fire once consent exists", () => {
 
   it("marketing consent: trackMetaPixelEvent reaches fbq", () => {
     setCookiePreferences({ analytics: false, marketing: true });
-    trackMetaPixelEvent("Purchase", { value: 3 });
-    expect(metaCalls()).toEqual([["track", "Purchase", { value: 3 }]]);
+    trackMetaPixelEvent("Subscribe", { value: 3 });
+    expect(metaCalls()).toEqual([["track", "Subscribe", { value: 3 }]]);
+  });
+
+  it("passes an event id on to Meta as eventID", () => {
+    setCookiePreferences({ analytics: false, marketing: true });
+    trackMetaPixelEvent("StartTrial", { content_name: "POS" }, { eventId: "cs_test_1" });
+    expect(metaCalls()).toEqual([
+      ["track", "StartTrial", { content_name: "POS" }, { eventID: "cs_test_1" }],
+    ]);
+  });
+});
+
+describe("the first-party copy behind /admin/pixel", () => {
+  const beacons = () =>
+    (navigator.sendBeacon as unknown as ReturnType<typeof vi.fn>).mock.calls.map((call) => {
+      const [url, blob] = call as [string, { parts: string[] }];
+      return { url, body: JSON.parse(blob.parts.join("")) };
+    });
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      "Blob",
+      class {
+        constructor(public parts: string[]) {}
+      }
+    );
+    Object.defineProperty(navigator, "sendBeacon", { configurable: true, value: vi.fn(() => true) });
+    document.documentElement.setAttribute("lang", "id");
+    window.history.replaceState(null, "", "/id/pricing?plan=POS");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("copies each Meta event sent, with its page, language, plan and value", () => {
+    setCookiePreferences({ analytics: false, marketing: true });
+    trackMetaPixelEvent("InitiateCheckout", {
+      content_name: "POS",
+      content_category: "trial",
+      value: 229000,
+      currency: "IDR",
+    });
+
+    expect(beacons()).toEqual([
+      {
+        url: "/api/public/tracking-events",
+        body: {
+          kind: "PIXEL",
+          name: "InitiateCheckout",
+          path: "/id/pricing",
+          source: "site",
+          locale: "id",
+          content: "POS",
+          value: 229000,
+          currency: "IDR",
+        },
+      },
+    ]);
+  });
+
+  it("copies nothing that wasn't sent: no consent, no copy", () => {
+    trackMetaPixelEvent("CompleteRegistration");
+    expect(beacons()).toEqual([]);
+  });
+
+  it("copies nothing where the pixel isn't mounted (a preview deployment)", () => {
+    setCookiePreferences({ analytics: false, marketing: true });
+    delete win().fbq;
+    trackMetaPixelEvent("CompleteRegistration");
+    expect(beacons()).toEqual([]);
   });
 });

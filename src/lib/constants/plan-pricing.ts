@@ -79,3 +79,20 @@ export function formatPlanPrice(
             .replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
   }
 }
+
+/**
+ * The first charge of a plan, for analytics only (the value of Meta's
+ * InitiateCheckout, StartTrial and Subscribe): one month, or the whole year for
+ * the yearly plan. Null when the plan or currency has no catalog price (FREE, a
+ * custom price, a currency the page didn't quote).
+ */
+export function planChargeAmount(
+  plan: string | null | undefined,
+  currency: string | null | undefined,
+  yearly: boolean
+): { value: number; currency: PriceCurrency } | null {
+  if (plan !== "POS" && plan !== "OPERATIONS") return null;
+  if (currency !== "IDR" && currency !== "EUR" && currency !== "USD") return null;
+  const perMonth = PLAN_PRICING[plan][currency][yearly ? "yearly" : "monthly"];
+  return { value: Math.round(perMonth * (yearly ? 12 : 1) * 100) / 100, currency };
+}

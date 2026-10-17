@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
-import { trackEvent } from "@/lib/analytics";
+import { trackEvent, trackMetaPixelEvent } from "@/lib/analytics";
 import { usePosTrialHref } from "../lib/use-pos-trial-href";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON, TEXT_LINK } from "./landing-ui";
 
@@ -46,7 +46,10 @@ export function FinalCtaSection() {
                 href={whatsappHref(whatsapp.number)}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => trackEvent("cta_click", { event_label: "final_whatsapp" })}
+                onClick={() => {
+                  trackEvent("cta_click", { event_label: "final_whatsapp" });
+                  trackMetaPixelEvent("Contact", { content_name: "final_whatsapp" });
+                }}
                 className={SECONDARY_BUTTON}
               >
                 {t("redesign.landing.finalCta.whatsapp")}

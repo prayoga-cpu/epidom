@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { trackConversion } from "@/lib/analytics";
+import { trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 import {
   SUPPORT_EMAIL_DISPLAY,
   SUPPORT_MAILTO,
@@ -26,6 +26,7 @@ import { WhatsAppIcon } from "@/features/marketing/shared/components/contact-ico
 /** Every WhatsApp link on this page counts as the same conversion. */
 function trackWhatsAppClick() {
   trackConversion("contact_whatsapp", { event_label: "contact_page" });
+  trackMetaPixelEvent("Contact", { content_name: "contact_page" });
 }
 
 type Channel = {

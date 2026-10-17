@@ -65,7 +65,7 @@ await prisma.order.findMany({ where: { status: "PENDING" } });
 
 There is no automated test that scans queries for a missing `storeId`; isolation is enforced by the store-scoping guards in `src/lib/auth/` (tests in `src/lib/auth/__tests__/`) and the ownership checks in `src/lib/utils/store-verification.ts`. Every route and service must call them and put `storeId` in the `where`.
 
-The exceptions are models not owned by a single store: the account and identity tables (`User`, `Session`, `Account`, `Verification`), the tenant roots and billing (`Business`, `BusinessFinanceSettings`, `Subscription`), global lookup/operational tables (`ExchangeRate`, `Release`, `BackupRun`, `RestoreRun`, `ActionAnnotation`, `SalesPageEvent`), plus child rows that inherit their scope through a parent (`OrderItem`, `MenuItem`, `MenuCategory`, `StockMovement` …). The list grows with the schema, so check `prisma/schema.prisma` for a model without a `storeId` before assuming it is scoped.
+The exceptions are models not owned by a single store: the account and identity tables (`User`, `Session`, `Account`, `Verification`), the tenant roots and billing (`Business`, `BusinessFinanceSettings`, `Subscription`), global lookup/operational tables (`ExchangeRate`, `Release`, `BackupRun`, `RestoreRun`, `ActionAnnotation`, `SalesPageEvent`, `TrackingEvent`), plus child rows that inherit their scope through a parent (`OrderItem`, `MenuItem`, `MenuCategory`, `StockMovement` …). The list grows with the schema, so check `prisma/schema.prisma` for a model without a `storeId` before assuming it is scoped.
 
 ---
 

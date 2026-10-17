@@ -68,7 +68,7 @@ describe("POST /api/subscriptions/checkout", () => {
     expect(mockCreateCheckoutSession).toHaveBeenCalledWith(
       "user-1",
       "POS",
-      "https://app.test/checkout/success?plan=POS&trial=true",
+      "https://app.test/checkout/success?plan=POS&trial=true&billing=monthly&currency=EUR&session_id={CHECKOUT_SESSION_ID}",
       "https://app.test/checkout/failed?reason=canceled&plan=POS&billing=monthly",
       true,
       false,
@@ -99,10 +99,27 @@ describe("POST /api/subscriptions/checkout", () => {
 
     const [, , successUrl, cancelUrl] = mockCreateCheckoutSession.mock.calls[0];
     const next = encodeURIComponent("/store/s1/dashboard?tour=1");
-    expect(successUrl).toBe(`https://app.test/checkout/success?plan=POS&trial=true&next=${next}`);
+    expect(successUrl).toBe(
+      `https://app.test/checkout/success?plan=POS&trial=true&billing=yearly&session_id={CHECKOUT_SESSION_ID}&next=${next}`
+    );
     expect(cancelUrl).toBe(
       `https://app.test/checkout/failed?reason=canceled&plan=POS&billing=yearly&next=${next}`
     );
+  });
+
+  it("tells the caller when it sends a paying account to the billing portal instead", async () => {
+    mockFindByUserId.mockResolvedValue({
+      plan: "POS",
+      status: "ACTIVE",
+      stripeCustomerId: "cus_paid",
+      stripeSubscriptionId: "sub_1",
+    });
+    mockCreatePortalSession.mockResolvedValue({ id: "bps_1", url: "https://billing.stripe.test/p" });
+
+    const res = await POST(makeReq({ plan: "OPERATIONS" }), {} as any);
+
+    expect(mockCreateCheckoutSession).not.toHaveBeenCalled();
+    expect((await res.json()).data).toMatchObject({ url: "https://billing.stripe.test/p", portal: true });
   });
 
   it("no trial for an account that had a Stripe subscription before", async () => {

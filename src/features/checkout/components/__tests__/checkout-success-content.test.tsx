@@ -18,6 +18,10 @@ vi.mock("@/lib/analytics", () => ({
 }));
 
 import { CheckoutSuccessContent } from "../checkout-success-content";
+import { trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
+
+const meta = trackMetaPixelEvent as unknown as ReturnType<typeof vi.fn>;
+const ga = trackConversion as unknown as ReturnType<typeof vi.fn>;
 
 function renderPage(query: string) {
   h.search = new URLSearchParams(query);
@@ -30,6 +34,9 @@ function renderPage(query: string) {
 
 beforeEach(() => {
   h.push.mockClear();
+  meta.mockClear();
+  ga.mockClear();
+  window.sessionStorage.clear();
 });
 
 describe("CheckoutSuccessContent", () => {
@@ -54,6 +61,48 @@ describe("CheckoutSuccessContent", () => {
     renderPage("plan=POS&trial=true&next=%2Fstore%2Fs1%2Fdashboard%3Ftour%3D1");
     fireEvent.click(screen.getByRole("button", { name: "checkout.success.continueToStore" }));
     expect(h.push).toHaveBeenCalledWith("/store/s1/dashboard?tour=1");
+  });
+
+  it("a trial reaches Meta as StartTrial with the first charge after it, keyed by the session", () => {
+    renderPage("plan=POS&trial=true&billing=monthly&currency=EUR&session_id=cs_test_1");
+    expect(meta).toHaveBeenCalledTimes(1);
+    expect(meta).toHaveBeenCalledWith(
+      "StartTrial",
+      { content_name: "POS", value: 13.99, currency: "EUR" },
+      { eventId: "cs_test_1" }
+    );
+  });
+
+  it("a trial's value is on GA's trial_started only, not counted twice", () => {
+    renderPage("plan=POS&trial=true&billing=monthly&currency=EUR&session_id=cs_test_ga");
+    expect(ga).toHaveBeenCalledWith("subscription_started", { event_label: "POS", plan: "POS" });
+    expect(ga).toHaveBeenCalledWith("trial_started", {
+      event_label: "POS",
+      plan: "POS",
+      value: 13.99,
+      currency: "EUR",
+    });
+  });
+
+  it("a yearly plan's value is the whole year", () => {
+    renderPage("plan=OPERATIONS&trial=false&billing=yearly&currency=IDR&session_id=cs_test_2");
+    expect(meta).toHaveBeenCalledWith(
+      "Subscribe",
+      { content_name: "OPERATIONS", value: 379_000 * 12, currency: "IDR" },
+      { eventId: "cs_test_2" }
+    );
+  });
+
+  it("a reload of the same checkout doesn't count it twice", () => {
+    const query = "plan=POS&trial=true&billing=monthly&currency=USD&session_id=cs_test_3";
+    renderPage(query).unmount();
+    renderPage(query);
+    expect(meta).toHaveBeenCalledTimes(1);
+  });
+
+  it("an older link without currency still counts, without a value", () => {
+    renderPage("plan=POS&trial=false");
+    expect(meta).toHaveBeenCalledWith("Subscribe", { content_name: "POS" }, undefined);
   });
 
   it("otherwise, and for a `next` to another site, goes to the profile", () => {
