@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.21.1] - 2026-10-17 · fix
+
+Names with underscores show correctly in the changelog.
+
+- **Changelog.** Names such as epidom_consent_mode and epidom_sales_page were shown with part of the name in italics and the underscores missing. They now appear as written, on this page and in the app's "What's new".
+- **Meta Pixel report.** Page views and automatic consents recorded on the sign-up and login pages now carry the visitor's language, like the rest.
+
 ## [3.21.0] - 2026-10-17 · ux
 
 The cookie banner now appears only where the law asks for it.

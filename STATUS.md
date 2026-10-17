@@ -155,7 +155,12 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Outside the SEO phases
 
-### Cookie banner by country — 3.21.0 (2026-10-17, not pushed)
+### Changelog underscores + report language — 3.21.1 (2026-10-17, not pushed)
+
+- [x] Found by the production verification of 3.21.0: the changelog's inline-Markdown parser (`src/components/shared/rich-text.tsx`, used only by the three changelog views) read `_…_` inside a word as emphasis, so epidom_consent_mode / epidom_sales_page rendered as "epidom*consent*mode". `_` emphasis now needs word edges on both sides (CommonMark), checked in code (no regex lookbehind: Safari < 16.4 can't parse it).
+- [x] `currentTrackingLocale()` falls back to `?lang=` then `getLanguagePreference()` when `<html lang>` isn't set yet (app routes set it in an effect after the bridge's first PageView / AUTO beacon), so those rows carry a locale.
+
+### Cookie banner by country — 3.21.0 (2026-10-17, pushed baf52255, verified live)
 
 - [x] The proxy sets `epidom_consent_mode` (`opt-in` / `opt-out`) on every page response from Vercel's `x-vercel-ip-country` (`src/lib/consent-region.ts`, `applyConsentModeCookie`, only when it changes). Opt-in = EU 27 + EU outermost regions (GF GP MQ RE YT MF) + EEA (IS LI NO) + UK, Crown dependencies, Gibraltar + CH; no/unknown country = opt-in.
 - [x] `CONSENT_BOOT_SCRIPT` (root layout `<head>`, before the pixel stub/bridges): opt-out + no record → automatic record (`auto: true`, analytics + marketing on, language = what `getLanguagePreference` would have returned, so the app's language doesn't change); opt-in + automatic record → removed (bar shows). Never on `/@…` storefronts or `/r/…` receipts (merchants' customers). A visitor's own choice is never touched; a language change keeps `auto`, any choice drops it.

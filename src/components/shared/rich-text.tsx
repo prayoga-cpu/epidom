@@ -14,7 +14,8 @@ import type { ReactNode } from "react";
  *   `code`            — matched FIRST so `**` inside a command is left alone
  *   [label](href)     — http/https/relative only; javascript: is dropped
  *   **bold**
- *   *em* / _em_
+ *   *em* / _em_   — `_` only at a word's edges, as in CommonMark, so a name
+ *                    like epidom_consent_mode stays as written
  *
  * Anything unmatched renders as literal text, so a stray asterisk degrades to
  * an asterisk rather than eating the rest of the line.
@@ -27,12 +28,41 @@ type Segment =
   | { kind: "em"; text: string }
   | { kind: "link"; text: string; href: string };
 
-const RULES: { kind: Segment["kind"]; re: RegExp }[] = [
+/** A letter or digit in any script. */
+const WORD_CHAR = /[\p{L}\p{N}]/u;
+const isWordChar = (ch: string | undefined) => ch !== undefined && WORD_CHAR.test(ch);
+
+type Rule = {
+  kind: Segment["kind"];
+  re: RegExp;
+  /** Extra condition a match must meet; the next occurrence is tried when it fails. */
+  valid?: (text: string, match: RegExpExecArray) => boolean;
+};
+
+const RULES: Rule[] = [
   { kind: "code", re: /`([^`]+)`/ },
   { kind: "link", re: /\[([^\]]+)\]\(([^)\s]+)\)/ },
   { kind: "bold", re: /\*\*([^*]+)\*\*/ },
-  { kind: "em", re: /(?:\*([^*\n]+)\*|_([^_\n]+)_)/ },
+  { kind: "em", re: /\*([^*\n]+)\*/ },
+  // Not inside a word: snake_case names are left alone. Checked in code, not
+  // with a lookbehind, which older iPad Safari (before 16.4) can't parse.
+  {
+    kind: "em",
+    re: /_([^_\n]+)_/,
+    valid: (text, m) => !isWordChar(text[m.index - 1]) && !isWordChar(text[m.index + m[0].length]),
+  },
 ];
+
+/** The first match of `rule` in `text` that meets its condition, if any. */
+function firstMatch(rule: Rule, text: string): RegExpExecArray | null {
+  if (!rule.valid) return rule.re.exec(text);
+  const re = new RegExp(rule.re.source, rule.re.flags.includes("g") ? rule.re.flags : rule.re.flags + "g");
+  for (let m = re.exec(text); m; m = re.exec(text)) {
+    if (rule.valid(text, m)) return m;
+    re.lastIndex = m.index + 1;
+  }
+  return null;
+}
 
 /** Block anything that is not http(s) or a same-origin path. */
 function safeHref(href: string): string | null {
@@ -50,7 +80,9 @@ export function parseInlineMarkdown(input: string): Segment[] {
     let best: { index: number; length: number; segment: Segment } | null = null;
 
     for (const rule of RULES) {
-      const match = rule.re.exec(rest);
+      // Matched against the whole remaining line, so a rule's condition can
+      // look at the character just before the match.
+      const match = firstMatch(rule, rest);
       if (!match) continue;
       // Earliest match wins; ties break by RULES order, which is why `code`
       // is listed first.

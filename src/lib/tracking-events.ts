@@ -17,6 +17,8 @@
  * checks the pixel ID and the endpoint).
  */
 
+import { getLanguagePreference } from "./cookie-consent";
+
 /** The Meta events the site sends, in funnel order (the admin page lists them so). */
 export const PIXEL_EVENTS = [
   "PageView",
@@ -91,13 +93,29 @@ export function normalizeTrackedPath(raw: string): string {
   return path.slice(0, 200);
 }
 
-/** The page's language from <html lang>, when it is one of the site's. */
+const asTrackingLocale = (value: string | null | undefined): TrackingLocale | undefined => {
+  const lang = (value || "").slice(0, 2).toLowerCase();
+  return (TRACKING_LOCALES as readonly string[]).includes(lang) ? (lang as TrackingLocale) : undefined;
+};
+
+/**
+ * The language the visitor is reading the page in. Marketing pages set
+ * <html lang> while the HTML parses; app pages (sign-up, login) only set it in
+ * an effect that runs after the first PageView is sent, so they fall back to
+ * what that effect will pick: ?lang= (applied by the auth pages), then the
+ * saved language preference.
+ */
 export function currentTrackingLocale(): TrackingLocale | undefined {
   if (typeof document === "undefined") return undefined;
-  const lang = (document.documentElement.getAttribute("lang") || "").slice(0, 2).toLowerCase();
-  return (TRACKING_LOCALES as readonly string[]).includes(lang)
-    ? (lang as TrackingLocale)
-    : undefined;
+  const fromHtml = asTrackingLocale(document.documentElement.getAttribute("lang"));
+  if (fromHtml) return fromHtml;
+  try {
+    const fromQuery = asTrackingLocale(new URLSearchParams(window.location.search).get("lang"));
+    if (fromQuery) return fromQuery;
+  } catch {
+    // No usable location: fall through.
+  }
+  return asTrackingLocale(getLanguagePreference());
 }
 
 /**

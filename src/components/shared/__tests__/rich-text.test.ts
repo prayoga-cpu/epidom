@@ -101,3 +101,40 @@ describe("parseInlineMarkdown", () => {
     expect(parseInlineMarkdown("")).toEqual([]);
   });
 });
+
+describe("underscores inside a word are not emphasis (CommonMark)", () => {
+  it("leaves snake_case names as written", () => {
+    expect(parseInlineMarkdown("the new epidom_consent_mode cookie")).toEqual([
+      { kind: "text", text: "the new epidom_consent_mode cookie" },
+    ]);
+    expect(parseInlineMarkdown("the epidom_sales_page cookie now holds")).toEqual([
+      { kind: "text", text: "the epidom_sales_page cookie now holds" },
+    ]);
+  });
+
+  it("still emphasises _words_ at word edges, next to a snake_case name", () => {
+    expect(parseInlineMarkdown("snake_case_name and _really_ fine")).toEqual([
+      { kind: "text", text: "snake_case_name and " },
+      { kind: "em", text: "really" },
+      { kind: "text", text: " fine" },
+    ]);
+  });
+
+  it("needs a word edge after the closing underscore too", () => {
+    expect(parseInlineMarkdown("_a_b")).toEqual([{ kind: "text", text: "_a_b" }]);
+  });
+
+  it("works for letters beyond ASCII", () => {
+    expect(parseInlineMarkdown("café_crème_brûlée")).toEqual([{ kind: "text", text: "café_crème_brûlée" }]);
+  });
+
+  it("keeps *em*, **bold** and `code` as before", () => {
+    expect(parseInlineMarkdown("**Lead.** the `epidom_consent_mode` cookie, *new*")).toEqual([
+      { kind: "bold", text: "Lead." },
+      { kind: "text", text: " the " },
+      { kind: "code", text: "epidom_consent_mode" },
+      { kind: "text", text: " cookie, " },
+      { kind: "em", text: "new" },
+    ]);
+  });
+});

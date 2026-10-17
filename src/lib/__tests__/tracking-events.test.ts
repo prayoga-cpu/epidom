@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
   TRACKING_EVENTS_ENDPOINT,
   normalizeTrackedPath,
@@ -66,11 +66,42 @@ describe("sendTrackingEvent", () => {
 });
 
 describe("sitePageContext", () => {
+  afterEach(() => {
+    localStorage.clear();
+    document.documentElement.removeAttribute("lang");
+    vi.restoreAllMocks();
+  });
+
   it("is the current page, cleaned, with the page's language", () => {
     document.documentElement.setAttribute("lang", "fr");
     window.history.replaceState(null, "", "/store/clx9a8b7c6d5e4f3g2h1i0j9k8/billing?x=1");
     expect(sitePageContext()).toEqual({ path: "/store/:id/billing", source: "site", locale: "fr" });
+  });
+
+  describe("before an app page has set <html lang> (its first PageView, an automatic consent)", () => {
+    beforeEach(() => document.documentElement.removeAttribute("lang"));
+
+    it("takes ?lang=, which the auth pages apply", () => {
+      window.history.replaceState(null, "", "/register?lang=id&utm_source=meta");
+      expect(sitePageContext().locale).toBe("id");
+    });
+
+    it("then the saved language preference", () => {
+      window.history.replaceState(null, "", "/register");
+      localStorage.setItem("locale", "fr");
+      expect(sitePageContext().locale).toBe("fr");
+    });
+
+    it("then the browser's language, as the app does", () => {
+      window.history.replaceState(null, "", "/login");
+      vi.spyOn(navigator, "language", "get").mockReturnValue("id-ID");
+      expect(sitePageContext().locale).toBe("id");
+    });
+  });
+
+  it("an unknown <html lang> also falls back instead of dropping the language", () => {
     document.documentElement.setAttribute("lang", "de");
-    expect(sitePageContext().locale).toBeUndefined();
+    window.history.replaceState(null, "", "/register?lang=en");
+    expect(sitePageContext().locale).toBe("en");
   });
 });
