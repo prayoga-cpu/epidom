@@ -174,6 +174,34 @@ describe("translateSalesPage", () => {
     expect(out.html).toContain('el.textContent = "Save " + n + " hours";');
   });
 
+  it("translates the unit a counter script writes after its number (data-suffix), not its symbols", () => {
+    const src = [
+      '<html lang="fr"><body>',
+      '<div class="number" data-target="100" data-suffix=" heures">0 heure</div>',
+      '<div class="number" data-target="50" data-suffix="%">0%</div>',
+      "</body></html>",
+    ].join("");
+    expect(listTranslatablePieces(src).map((p) => `${p.kind} ${p.text}`)).toEqual([
+      "attr:data-suffix heures",
+      "text 0 heure",
+    ]);
+
+    const out = translateSalesPage(src, {
+      locale: "en",
+      pairs: [
+        ["heures", "hours"],
+        ["0 heure", "0 hours"],
+      ],
+      keep: [],
+    });
+    expect(out.problems).toEqual([]);
+    expect(out.html).toContain('data-suffix=" hours">0 hours</div>');
+    expect(out.html).toContain('data-suffix="%">0%</div>');
+    expect(translateSalesPage(src, { locale: "en", pairs: [["0 heure", "0 hours"]], keep: [] }).problems).toEqual([
+      'untranslated attr: "heures"',
+    ]);
+  });
+
   it("accepts pieces deliberately kept as they are", () => {
     expect(translateSalesPage(PAGE, { ...EN, keep: [] }).problems).toContain('untranslated attr: "Epidom"');
   });

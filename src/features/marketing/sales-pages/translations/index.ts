@@ -5,6 +5,8 @@ import salesPage2En from "./sales-page-2.en";
 import salesPage2Id from "./sales-page-2.id";
 import salesPage3En from "./sales-page-3.en";
 import salesPage3Id from "./sales-page-3.id";
+import salesPage4En from "./sales-page-4.en";
+import salesPage4Id from "./sales-page-4.id";
 
 /**
  * Translation table per sales page and language. The French page is the
@@ -16,4 +18,5 @@ export const SALES_PAGE_TRANSLATIONS: Record<string, Record<TranslatedLocale, Sa
   "sales-page-1": { en: salesPage1En, id: salesPage1Id },
   "sales-page-2": { en: salesPage2En, id: salesPage2Id },
   "sales-page-3": { en: salesPage3En, id: salesPage3Id },
+  "sales-page-4": { en: salesPage4En, id: salesPage4Id },
 };

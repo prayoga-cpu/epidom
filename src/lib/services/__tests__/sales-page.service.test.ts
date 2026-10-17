@@ -112,8 +112,14 @@ describe("summarizeSalesPages", () => {
     ]);
 
     // Every page is listed, in order, even with no traffic.
-    expect(pages.map((p) => p.page)).toEqual(["sales-page-1", "sales-page-2", "sales-page-3"]);
+    expect(pages.map((p) => p.page)).toEqual([
+      "sales-page-1",
+      "sales-page-2",
+      "sales-page-3",
+      "sales-page-4",
+    ]);
     expect(pages[2]).toMatchObject({ visitors: 0, clickRate: null, signupRate: null });
+    expect(pages[3]).toMatchObject({ visitors: 0, clickRate: null, signupRate: null });
   });
 
   it("names the leader by signup rate", () => {

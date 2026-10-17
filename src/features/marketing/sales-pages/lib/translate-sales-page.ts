@@ -4,8 +4,9 @@
  * (../translations/). Only text can change: the page is split into markup,
  * which is copied byte for byte (every tag, class, style rule and line of
  * script), and translatable pieces: text nodes, the attributes a person reads
- * (aria-label, alt, title, placeholder) and the strings inside inline scripts.
- * So a translation can never move the design.
+ * (aria-label, alt, title, placeholder, and data-suffix: the unit a page's
+ * script writes after a number, " heures" on sales-page-4's counters) and the
+ * strings inside inline scripts. So a translation can never move the design.
  *
  * Run `tsx scripts/build-sales-pages.ts` after editing a French page or a
  * table; the test in ../__tests__ fails when a copy is out of date.
@@ -36,7 +37,7 @@ export type Segment =
   | { kind: "literal"; quote: string; value: string }
   | { kind: "lang"; value: string };
 
-const TRANSLATABLE_ATTRS = new Set(["aria-label", "alt", "title", "placeholder"]);
+const TRANSLATABLE_ATTRS = new Set(["aria-label", "alt", "title", "placeholder", "data-suffix"]);
 
 /** Any letter in any script: a piece without one (prices, symbols, numbers) is not prose. */
 const HAS_LETTER = /\p{L}/u;

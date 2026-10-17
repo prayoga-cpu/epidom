@@ -9,6 +9,14 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.19.0] - 2026-10-17 · infra
+
+A fourth sales page, in French, English and Indonesian, compared with the other three in the admin panel.
+
+- **Sales page 4.** /sales-page-4, /en/sales-page-4 and /id/sales-page-4 present Epidom on a single screen: a headline, a space for the video, the "Commencer gratuitement" button and three figures that count up when you reach them. It has the same language switcher as the other sales pages, and its button opens sign-up in the language you were reading.
+- **In the Sales Pages report.** Page 4's visitors, reading, button clicks and sign-ups are counted like the other three's. The report in the admin panel now shows the four pages side by side on a wide screen, two by two on a tablet.
+- **Cookie policy.** The description of the epidom_sales_page cookie now includes /sales-page-4.
+
 ## [3.18.0] - 2026-10-16 · feat
 
 Overtime can now need approval before it's paid, and Finance's labour cost matches the salary report.

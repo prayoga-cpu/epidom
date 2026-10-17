@@ -53,7 +53,8 @@ describe("salesPageFromCookieHeader", () => {
 
   it("only accepts the listed pages", () => {
     expect(isSalesPage("sales-page-2")).toBe(true);
-    expect(isSalesPage("sales-page-4")).toBe(false);
+    expect(isSalesPage("sales-page-4")).toBe(true);
+    expect(isSalesPage("sales-page-5")).toBe(false);
     expect(isSalesPage(2)).toBe(false);
   });
 });

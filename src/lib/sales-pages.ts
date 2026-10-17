@@ -1,5 +1,5 @@
 /**
- * The /sales-page-N landing pages: three versions of the same pitch, compared
+ * The /sales-page-N landing pages: four versions of the same pitch, compared
  * to see which one turns visitors into signups. Each is in French (the
  * original), English and Indonesian.
  *
@@ -23,7 +23,7 @@
  * and switcher <script>s, the hreflang links and data-cta on its buttons), add
  * its name here, add its two translation tables and run the build script.
  */
-export const SALES_PAGES = ["sales-page-1", "sales-page-2", "sales-page-3"] as const;
+export const SALES_PAGES = ["sales-page-1", "sales-page-2", "sales-page-3", "sales-page-4"] as const;
 
 export type SalesPage = (typeof SALES_PAGES)[number];
 

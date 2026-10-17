@@ -127,7 +127,7 @@ const nextConfig: NextConfig = {
       ],
     },
     // The /sales-page-N pages are ad landing pages and A/B variants of the home
-    // page's pitch: three near-duplicates of it per language. They are kept out
+    // page's pitch: four near-duplicates of it per language. They are kept out
     // of search results so they don't compete with the home page; paid traffic
     // doesn't need them indexed. Header rules match the URL as requested, so the
     // slug forms and the raw files under /sales-pages/ each need their own rule.

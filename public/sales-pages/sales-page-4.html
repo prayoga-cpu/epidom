@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Epidom | Centralisez votre coffee shop</title>
+<style>
+:root {
+  --bg: #101c3d;
+  --bg-deep: #091329;
+  --blue: #17264d;
+  --gold: #d7b54b;
+  --gold-light: #f0d477;
+  --white: #fffdf4;
+  --muted: #c4cadd;
+  --border: rgba(215,181,75,.22);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--white);
+  font-family: Inter, Arial, sans-serif;
+  background:
+    radial-gradient(ellipse at 50% -10%, #35415b 0%, transparent 48%),
+    radial-gradient(ellipse at 50% 45%, #1a2a54 0%, transparent 65%),
+    linear-gradient(145deg, #17264e 0%, var(--bg) 58%, var(--bg-deep) 100%);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 95%);
+}
+main {
+  width: 100%;
+  max-width: 1180px;
+  margin: auto;
+  padding: 48px 26px 38px;
+  position: relative;
+  text-align: center;
+}
+h1 {
+  max-width: 960px;
+  margin: 0 auto 34px;
+  font-size: clamp(30px, 4.4vw, 52px);
+  line-height: 1.16;
+  letter-spacing: -1.5px;
+  font-weight: 900;
+}
+.gold { color: var(--gold-light); }
+.highlight {
+  display: inline-block;
+  color: #101a32;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  padding: 0 .15em .035em;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+.video {
+  width: min(100%, 920px);
+  height: clamp(230px, 42vw, 480px);
+  margin: 44px auto 42px;
+  border: 1px solid rgba(215,181,75,.2);
+  border-radius: 21px;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(47,65,111,.30), transparent 65%),
+    linear-gradient(145deg, rgba(20,35,74,.85), rgba(7,15,34,.96));
+  box-shadow: 0 22px 65px rgba(0,0,0,.2);
+  position: relative;
+}
+.corner {
+  width: 32px;
+  height: 32px;
+  position: absolute;
+  border-color: rgba(240,212,119,.7);
+  border-style: solid;
+}
+.tl { top: 32px; left: 32px; border-width: 2px 0 0 2px; }
+.tr { top: 32px; right: 32px; border-width: 2px 2px 0 0; }
+.bl { bottom: 32px; left: 32px; border-width: 0 0 2px 2px; }
+.br { bottom: 32px; right: 32px; border-width: 0 2px 2px 0; }
+.cta {
+  display: inline-block;
+  padding: 18px 38px;
+  color: #111b34;
+  background: linear-gradient(135deg, var(--gold-light), #c49a28);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 13px;
+  font-size: 17px;
+  font-weight: 850;
+  text-decoration: none;
+  box-shadow: 0 9px 35px rgba(215,181,75,.23);
+  transition: transform .2s, box-shadow .2s;
+}
+.cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 13px 40px rgba(215,181,75,.34);
+}
+.free {
+  color: #e2d7b0;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 17px;
+  margin-top: 55px;
+  text-align: left;
+}
+.card {
+  min-width: 0;
+  padding: 25px 21px 23px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(30,44,79,.82), rgba(11,21,44,.91));
+  box-shadow: 0 12px 35px rgba(0,0,0,.10);
+}
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #aa852d, var(--gold-light), #aa852d);
+}
+.number {
+  font-size: clamp(30px, 3.8vw, 43px);
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -1.2px;
+  color: var(--gold-light);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.label {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 800;
+  color: var(--white);
+}
+.desc {
+  margin-top: 9px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 44px;
+  padding: 32px 20px 12px;
+  border-top: 1px solid rgba(215, 181, 75, 0.15);
+  text-align: center;
+}
+
+.footer-logo {
+  width: 180px;
+  max-width: 70%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.footer-text {
+  margin: 0;
+  color: #c4cadd;
+  font-size: 13px;
+  line-height: 1.6;
+  letter-spacing: 0.3px;
+}
+
+@media (max-width: 600px) {
+  footer {
+    margin-top: 32px;
+    padding-top: 26px;
+  }
+
+  .footer-logo {
+    width: 150px;
+  }
+
+  .footer-text {
+    font-size: 12px;
+  }
+}
+@media (max-width: 680px) {
+  main { padding: 60px 17px 28px; }
+  h1 { font-size: clamp(27px, 7vw, 38px); letter-spacing: -.7px; }
+  .video { height: 230px; margin: 30px auto; border-radius: 16px; }
+  .corner { width: 22px; height: 22px; }
+  .tl { top: 20px; left: 20px; }
+  .tr { top: 20px; right: 20px; }
+  .bl { bottom: 20px; left: 20px; }
+  .br { bottom: 20px; right: 20px; }
+  .cta { width: 100%; padding: 18px 12px; font-size: 15px; }
+  .stats { grid-template-columns: 1fr; gap: 13px; margin-top: 38px; }
+  .card { padding: 22px 20px; }
+  .number { font-size: 38px; }
+  footer { margin-top: 32px; }
+  .logo { width: min(100%, 240px); }
+}
+</style>
+<link rel="alternate" hreflang="fr" href="https://epidom.fr/sales-page-4">
+<link rel="alternate" hreflang="en" href="https://epidom.fr/en/sales-page-4">
+<link rel="alternate" hreflang="id" href="https://epidom.fr/id/sales-page-4">
+<link rel="alternate" hreflang="x-default" href="https://epidom.fr/sales-page-4">
+</head>
+<body>
+<main>
+  <h1>
+    Découvrez l’outil le plus <span class="highlight">simple</span><br>
+    pour <span class="highlight">centraliser</span> votre coffee shop !
+  </h1>
+
+  <!-- Espace réservé à la future VSL -->
+  <div class="video" aria-label="Emplacement réservé à la vidéo Epidom">
+    <span class="corner tl"></span>
+    <span class="corner tr"></span>
+    <span class="corner bl"></span>
+    <span class="corner br"></span>
+  </div>
+
+  <a class="cta" href="/register" data-cta="hero">
+    Commencer gratuitement →
+  </a>
+  <div class="free">Gratuit à vie. Sans carte bancaire.</div>
+
+  <section class="stats" id="statistiques">
+    <article class="card">
+      <div class="number" data-target="500" data-suffix="+">0+</div>
+      <div class="label">Utilisateurs</div>
+      <div class="desc">
+        Font confiance à Epidom pour leur coffee shop et restaurant dans 27 pays.
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="number" data-target="100" data-suffix=" heures">0 heure</div>
+      <div class="label">Économisées chaque mois</div>
+      <div class="desc">
+        Grâce à Epidom et à une gestion quotidienne plus simple.
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="number" data-target="50" data-suffix="%">0%</div>
+      <div class="label">De chiffre d’affaires en plus</div>
+      <div class="desc">
+        En optimisant la gestion de votre coffee shop.
+      </div>
+    </article>
+  </section>
+
+  <footer>
+    <img
+      class="footer-logo" src="/sales-pages/epidom-logo.png" alt="Epidom">
+
+    <p class="footer-text">
+      EPIDOM · LA GESTION DE VOTRE COFFEE SHOP, SIMPLIFIÉE
+    </p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  const counters = document.querySelectorAll('.number');
+  const duration = 2200;
+  let started = false;
+
+  function animate() {
+    if (started) return;
+    started = true;
+    const start = performance.now();
+
+    function update(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      counters.forEach(counter => {
+        const target = Number(counter.dataset.target);
+        const value = Math.round(target * eased);
+        counter.textContent =
+          value.toLocaleString('fr-FR') + counter.dataset.suffix;
+      });
+
+      if (progress < 1) requestAnimationFrame(update);
+    }
+
+    requestAnimationFrame(update);
+  }
+
+  const stats = document.getElementById('statistiques');
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        animate();
+        observer.disconnect();
+      }
+    }, { threshold: 0.15 });
+    observer.observe(stats);
+  } else {
+    animate();
+  }
+})();
+</script>
+<script src="/sales-pages/tracker.js" data-page="sales-page-4" defer></script>
+<script src="/sales-pages/lang-switch.js" defer></script>
+</body>
+</html>

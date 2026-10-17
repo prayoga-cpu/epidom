@@ -222,7 +222,7 @@ export function SalesPageReportView({ report }: { report: SalesPageReport }) {
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {report.pages.map((row) => (
             <PageCard
               key={row.page}
