@@ -33,7 +33,7 @@ describe("PUT /api/partner/me/bank-details", () => {
   });
 
   it("saves the signed-in partner's own details", async () => {
-    getAdminAccess.mockResolvedValue({ partnerId: "p_aaron", viewablePartnerIds: ["p_aaron"] });
+    getAdminAccess.mockResolvedValue({ partnerId: "p_aaron" });
     const res = await PUT(req(body));
     expect(res.status).toBe(200);
     expect(setPartnerBankDetails).toHaveBeenCalledWith(
@@ -42,14 +42,14 @@ describe("PUT /api/partner/me/bank-details", () => {
     );
   });
 
-  it("a read-only viewer (no partner of their own) can't set anyone's details", async () => {
-    getAdminAccess.mockResolvedValue({ partnerId: null, viewablePartnerIds: ["p_aaron"] });
+  it("an account that isn't a partner can't set anyone's details", async () => {
+    getAdminAccess.mockResolvedValue({ partnerId: null });
     expect((await PUT(req(body))).status).toBe(403);
     expect(setPartnerBankDetails).not.toHaveBeenCalled();
   });
 
   it("not while a cashier's PIN persona is active, and not invalid input", async () => {
-    getAdminAccess.mockResolvedValue({ partnerId: "p_aaron", viewablePartnerIds: ["p_aaron"] });
+    getAdminAccess.mockResolvedValue({ partnerId: "p_aaron" });
     getActiveStaffSession.mockResolvedValueOnce({ role: "CASHIER" });
     expect((await PUT(req(body))).status).toBe(403);
     expect((await PUT(req({ ...body, accountNumber: "!" }))).status).toBe(400);

@@ -20,6 +20,8 @@ import type { getMyPartnerDashboard } from "@/lib/services/partner.service";
 import type { SalesPageRow } from "@/lib/services/sales-page.service";
 import type { PartnerBankDetailsView } from "@/lib/services/partner.service";
 import { BankDetailsCard } from "./bank-details-card";
+import { CustomRangePicker } from "@/components/reports/custom-range-picker";
+import { PARTNER_PAGE_PATH } from "@/config/admin-sections.config";
 import {
   CurrencyTotalsList,
   money,
@@ -189,26 +191,17 @@ function SalesPageCard({
 
 export function MyReferrals({
   dashboard,
-  readOnly = false,
-  partnerId,
-  choices = [],
   backHref = "/stores",
   bankDetails = null,
 }: {
   dashboard: Dashboard;
-  /** A viewer's look at someone else's page: nothing can be changed, nothing is earned. */
-  readOnly?: boolean;
-  /** The partner shown, kept in the range links when the account can see several. */
-  partnerId?: string;
-  choices?: { id: string; displayName: string }[];
   /** "Back to stores" when the account has a business; none for a partner-only account. */
   backHref?: string | null;
-  /** Where they're paid: only on their own page (null for a read-only viewer). */
+  /** Where they're paid. */
   bankDetails?: PartnerBankDetailsView | null;
 }) {
   const { t, locale } = useI18n();
-  const pageHref = (range: string) =>
-    `/admin/my-referrals?range=${range}${choices.length > 1 && partnerId ? `&partner=${partnerId}` : ""}`;
+  const pageHref = (range: string) => `${PARTNER_PAGE_PATH}?range=${range}`;
   const tag = LOCALE_TAGS[locale] ?? "en-GB";
   const origin = useOrigin();
   const p = dashboard.partner;
@@ -264,7 +257,7 @@ export function MyReferrals({
           </div>
           <div className="min-w-0">
             <h1 className="text-foreground text-lg font-bold">
-              {readOnly ? p.displayName : t("partnerPortal.title")}
+              {t("partnerPortal.title")}
             </h1>
             <p className="text-muted-foreground text-xs">{t("partnerPortal.subtitle")}</p>
           </div>
@@ -281,31 +274,6 @@ export function MyReferrals({
             {t("partnerPortal.signOut")}
           </Button>
         </div>
-
-        {choices.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground text-xs">{t("partnerPortal.pageOf")}</span>
-            {choices.map((c) => (
-              <Link
-                key={c.id}
-                href={`/admin/my-referrals?partner=${c.id}&range=${dashboard.range}`}
-                className={`inline-flex min-h-10 items-center rounded-md border px-3 text-xs font-semibold ${
-                  c.id === partnerId
-                    ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {c.displayName}
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {readOnly && (
-          <p className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm text-sky-300">
-            {t("partnerPortal.viewOnly").split("{name}").join(p.displayName)}
-          </p>
-        )}
 
         {p.status !== "ACTIVE" && (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
@@ -360,7 +328,7 @@ export function MyReferrals({
           </Card>
         </div>
 
-        {!readOnly && bankDetails && <BankDetailsCard initial={bankDetails} locale={tag} />}
+        {bankDetails && <BankDetailsCard initial={bankDetails} locale={tag} />}
 
         {p.referralCode && (
           <Card>
@@ -374,7 +342,7 @@ export function MyReferrals({
                   {t("partnerPortal.landingLabel")}
                 </span>
                 <Select value={landing} onValueChange={(v) => changeLanding(v as ReferralLanding)}>
-                  <SelectTrigger className="min-h-10 w-48" disabled={saving || readOnly}>
+                  <SelectTrigger className="min-h-10 w-48" disabled={saving}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -431,6 +399,11 @@ export function MyReferrals({
                     {t(`partnerPortal.range.${range}`)}
                   </Link>
                 ))}
+                <CustomRangePicker
+                  value={dashboard.custom}
+                  label={t("partnerPortal.range.custom")}
+                  path={PARTNER_PAGE_PATH}
+                />
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

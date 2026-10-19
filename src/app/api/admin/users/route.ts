@@ -39,7 +39,6 @@ export async function GET() {
       isAdmin: true,
       adminSections: true,
       partner: { select: { id: true, referralCode: true, status: true } },
-      partnerViews: { select: { partner: { select: { id: true, displayName: true } } } },
       createdAt: true,
       timezone: true,
       timezoneUpdatedAt: true,

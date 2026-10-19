@@ -13,7 +13,6 @@ vi.mock("@/lib/prisma", () => {
     },
     user: { findUnique: vi.fn() },
     verification: { create: vi.fn(), deleteMany: vi.fn(), findFirst: vi.fn() },
-    partnerViewer: { upsert: vi.fn(), deleteMany: vi.fn() },
     partnerSalesPage: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -40,7 +39,6 @@ vi.mock("@/lib/services/email.service", () => ({
 
 import {
   acceptPartnerInvite,
-  addPartnerViewer,
   createPartner,
   getReferralBanner,
   lookupPartnerInvite,
@@ -295,37 +293,6 @@ describe("getReferralBanner", () => {
     });
     expect(await getReferralBanner("BOB")).toBeNull();
     expect(await getReferralBanner("<x>")).toBeNull();
-  });
-});
-
-describe("partner page viewers", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("adds an existing account as a read-only viewer, once", async () => {
-    mockPrisma.partner.findUnique.mockResolvedValue({ userId: "aaron_user" });
-    mockPrisma.user.findUnique.mockResolvedValue({ id: "evan_user" });
-    await addPartnerViewer("aaron", " ECAO.inquiries@gmail.com ", "admin");
-    expect(mockPrisma.user.findUnique.mock.calls[0][0].where).toEqual({
-      email: "ecao.inquiries@gmail.com",
-    });
-    expect(mockPrisma.partnerViewer.upsert).toHaveBeenCalledWith({
-      where: { partnerId_userId: { partnerId: "aaron", userId: "evan_user" } },
-      create: { partnerId: "aaron", userId: "evan_user", createdById: "admin" },
-      update: {},
-    });
-  });
-
-  it("refuses an unknown email and the partner's own account", async () => {
-    mockPrisma.partner.findUnique.mockResolvedValue({ userId: "aaron_user" });
-    mockPrisma.user.findUnique.mockResolvedValueOnce(null);
-    await expect(addPartnerViewer("aaron", "nobody@x.com", "admin")).rejects.toThrow(
-      /sign up first/
-    );
-    mockPrisma.user.findUnique.mockResolvedValueOnce({ id: "aaron_user" });
-    await expect(addPartnerViewer("aaron", "aaron@x.com", "admin")).rejects.toThrow(/own account/);
-    expect(mockPrisma.partnerViewer.upsert).not.toHaveBeenCalled();
   });
 });
 

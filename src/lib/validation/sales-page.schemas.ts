@@ -29,6 +29,11 @@ export const salesPageReportRangeSchema = z.enum(SALES_PAGE_REPORT_RANGES).catch
 
 export type SalesPageReportRange = (typeof SALES_PAGE_REPORT_RANGES)[number];
 
+/** The report's `range` query param: a preset, or "custom" with from/to days (src/lib/report-range.ts). */
+export const salesPageReportRangeParamSchema = z
+  .enum([...SALES_PAGE_REPORT_RANGES, "custom"])
+  .catch("30");
+
 /** The report's language filter: one language, or all of them together. */
 export const SALES_PAGE_REPORT_LANGS = ["all", ...SALES_PAGE_LOCALES] as const;
 

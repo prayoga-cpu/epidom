@@ -235,97 +235,6 @@ function SalesPagesCard({ detail }: { detail: Detail }) {
   );
 }
 
-/** Accounts that see this partner's page read-only (they earn nothing). */
-function ViewersCard({ detail }: { detail: Detail }) {
-  const queryClient = useQueryClient();
-  const p = detail.partner;
-  const [email, setEmail] = useState("");
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-partner", p.id] });
-  const add = useMutation({
-    mutationFn: () =>
-      apiJson(`/api/admin/partners/${p.id}/viewers`, {
-        method: "POST",
-        body: JSON.stringify({ email: email.trim() }),
-      }),
-    onSuccess: () => {
-      refresh();
-      setEmail("");
-      toast.success("They can now see this partner's page");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-  const remove = useMutation({
-    mutationFn: (userId: string) =>
-      apiJson(`/api/admin/partners/${p.id}/viewers/${userId}`, { method: "DELETE" }),
-    onSuccess: () => {
-      refresh();
-      toast.success("Access removed");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Can view this partner&apos;s page</CardTitle>
-        <p className="text-muted-foreground text-xs">
-          Someone working with {p.displayName} can see exactly their page (Partner dashboard in
-          their account menu), read-only. They change nothing and earn nothing: the commission stays{" "}
-          {p.displayName}&apos;s.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {p.viewers.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Only {p.displayName}.</p>
-        ) : (
-          <div className="divide-border divide-y">
-            {p.viewers.map((v) => (
-              <div
-                key={v.userId}
-                className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="text-foreground truncate">{v.name || v.email}</p>
-                  <p className="text-muted-foreground truncate text-xs">{v.email}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="min-h-10 text-red-400"
-                  disabled={remove.isPending}
-                  onClick={() => remove.mutate(v.userId)}
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-        <form
-          className="flex flex-wrap items-center gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (email.trim()) add.mutate();
-          }}
-        >
-          <Input
-            type="email"
-            placeholder="Their Epidom account email"
-            autoComplete="off"
-            className="h-10 min-w-0 flex-1 basis-56"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Button type="submit" className="min-h-10" disabled={!email.trim() || add.isPending}>
-            {add.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Add viewer
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
 /** Where to transfer: the partner enters it on their page. Full admins see it to pay. */
 function BankDetailsAdminCard({ detail, canPay }: { detail: Detail; canPay: boolean }) {
   const p = detail.partner;
@@ -713,9 +622,8 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <SalesPagesCard detail={data} />
-          <ViewersCard detail={data} />
           <BankDetailsAdminCard detail={data} canPay={canPay} />
         </div>
 

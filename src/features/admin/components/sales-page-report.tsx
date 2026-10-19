@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ExternalLink, Info, Megaphone, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,8 @@ import type {
   SalesPageReportLang,
   SalesPageReportRange,
 } from "@/lib/validation/sales-page.schemas";
+import { customRangeQuery, type CustomDays } from "@/lib/report-range";
+import { CustomRangePicker } from "@/components/reports/custom-range-picker";
 
 const RANGES: { value: SalesPageReportRange; label: string }[] = [
   { value: "7", label: "7 days" },
@@ -30,17 +33,24 @@ const LANGS: { value: SalesPageReportLang; label: string }[] = [
   { value: "id", label: "ID" },
 ];
 
-const reportHref = (range: SalesPageReportRange, lang: SalesPageReportLang) =>
-  `/admin/sales-pages?range=${range}&lang=${lang}`;
+const reportHref = (
+  range: SalesPageReportRange | "custom",
+  lang: SalesPageReportLang,
+  custom: CustomDays | null = null
+) =>
+  range === "custom" && custom
+    ? `/admin/sales-pages?${customRangeQuery(custom)}&lang=${lang}`
+    : `/admin/sales-pages?range=${range}&lang=${lang}`;
 
 /**
  * The page in the report's language, so "open" shows what the figures are
- * about. French opens the file itself: /sales-page-N would send an admin whose
- * browser or saved language isn't French to /en or /id (the proxy's language
- * redirect), and the file path never goes through the proxy.
+ * about. French asks for French (?lang=fr): plain /sales-page-N would send an
+ * admin whose browser or saved language isn't French to /en or /id (the
+ * proxy's language redirect). The page drops the parameter from the address
+ * bar once open.
  */
 const pageHref = (page: string, lang: SalesPageReportLang) =>
-  lang === "en" || lang === "id" ? `/${lang}/${page}` : `/sales-pages/${page}.html`;
+  lang === "en" || lang === "id" ? `/${lang}/${page}` : `/${page}?lang=fr`;
 
 /** What the link says: the public URL, not the file. */
 const pageUrlLabel = (page: string, lang: SalesPageReportLang) =>
@@ -50,10 +60,13 @@ function FilterTabs<T extends string>({
   options,
   active,
   href,
+  trailing,
 }: {
   options: { value: T; label: string }[];
-  active: T;
+  active: T | "custom";
   href: (value: T) => string;
+  /** Shown after the tabs, inside the group (the custom range picker). */
+  trailing?: ReactNode;
 }) {
   return (
     <div className="border-border bg-muted/40 flex items-center overflow-x-auto rounded-lg border p-0.5">
@@ -70,6 +83,7 @@ function FilterTabs<T extends string>({
           {o.label}
         </Link>
       ))}
+      {trailing}
     </div>
   );
 }
@@ -339,12 +353,20 @@ export function SalesPageReportView({ report }: { report: SalesPageReport }) {
               <FilterTabs
                 options={LANGS}
                 active={report.lang}
-                href={(lang) => reportHref(report.range, lang)}
+                href={(lang) => reportHref(report.range, lang, report.custom)}
               />
               <FilterTabs
                 options={RANGES}
                 active={report.range}
                 href={(range) => reportHref(range, report.lang)}
+                trailing={
+                  <CustomRangePicker
+                    value={report.custom}
+                    label="Custom"
+                    path="/admin/sales-pages"
+                    keep={{ lang: report.lang }}
+                  />
+                }
               />
               <Button variant="outline" size="sm" asChild>
                 <Link href="/admin">← Back</Link>

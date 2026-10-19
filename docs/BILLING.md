@@ -247,7 +247,7 @@ Stripe), `src/lib/partners/commission-math.ts` (pure arithmetic), `src/lib/servi
   `checkout.session.completed` puts it on the subscription after the trial's $0 invoice exists, so the
   first paid invoice gets it. Never on custom-price checkouts, capped at 50%.
 - **Invitations**: a partner can be created for an email with no account (`Partner.inviteEmail`, `userId` null); the token is a `Verification` row (`partner-invite:<token>`, 14 days, `src/lib/partner-invite.ts`), emailed via Resend; `/partner-invite` (public) has them sign up or sign in with that address and links them (`POST /api/partner-invite/accept`), then opens their page. Commission credited before they join still counts.
-- **Viewers** (`PartnerViewer`): an admin can let another account see a partner's page read-only (`/admin/my-referrals?partner=…`); they earn nothing and can't change the link's landing.
+- **Following a partner without being one**: give that account the Referrals admin page (Access dialog). The read-only partner-page viewer (`PartnerViewer`) was removed in 3.27.0; its table is unused and dropped in a later release.
 - **Self-referral**: a sign-up from the partner's own mailbox (Gmail dots/+tags ignored) isn't credited;
   one from an IP the partner signed in from is credited and flagged in the admin page.
 

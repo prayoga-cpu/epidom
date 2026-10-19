@@ -72,18 +72,6 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
     targetType: "Partner",
   },
   "POST /api/partner-invite/accept": { code: "partner.invite.accept", severity: C, targetType: "Partner" },
-  "POST /api/admin/partners/*/viewers": {
-    code: "admin.partner.viewer_add",
-    severity: C,
-    targetIdIndex: 0,
-    targetType: "Partner",
-  },
-  "DELETE /api/admin/partners/*/viewers/*": {
-    code: "admin.partner.viewer_remove",
-    severity: C,
-    targetIdIndex: 0,
-    targetType: "Partner",
-  },
   "POST /api/admin/partners/commissions/*/void": {
     code: "admin.partner.commission_void",
     severity: C,

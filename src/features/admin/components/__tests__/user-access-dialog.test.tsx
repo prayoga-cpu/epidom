@@ -52,7 +52,6 @@ const evan: AccessUser = {
   isAdmin: false,
   adminSections: [],
   partner: null,
-  partnerViews: [],
 };
 
 describe("Access dialog", () => {

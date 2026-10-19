@@ -31,6 +31,15 @@ interface DateRangeFieldProps {
   minDays?: number;
   className?: string;
   align?: "start" | "center" | "end";
+  /** What the button says before any day is picked (default "Pick a date range"). */
+  placeholder?: string;
+  /**
+   * Each opening picks a new range from two taps (first day, then last day; the
+   * same day twice for one day), then closes and calls `onChange` once. For
+   * pages that reload on a change (the admin reports). Off: every tap that
+   * leaves both ends set calls `onChange`, stretching the range shown.
+   */
+  commitOnSecondTap?: boolean;
 }
 
 /**
@@ -48,13 +57,18 @@ export function DateRangeField({
   minDays,
   className,
   align = "start",
+  placeholder,
+  commitOnSecondTap = false,
 }: DateRangeFieldProps) {
   const { t, dateLocale } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<DateRange | undefined>(undefined);
+  // commitOnSecondTap: the first day tapped since opening, waiting for the second.
+  const [anchor, setAnchor] = React.useState<Date | null>(null);
 
   React.useEffect(() => {
     if (!open) return;
+    setAnchor(null);
     setDraft(from ? { from: parseLocalISO(from), to: to ? parseLocalISO(to) : undefined } : undefined);
   }, [open, from, to]);
 
@@ -64,19 +78,32 @@ export function DateRangeField({
     if (activePreset !== "custom") {
       return t(`common.datePicker.presets.${activePreset}`);
     }
-    if (!from) return t("common.datePicker.pickDateRange");
+    if (!from) return placeholder ?? t("common.datePicker.pickDateRange");
     const fromDate = parseLocalISO(from);
     const opts = { locale: dateLocale };
     if (!to || to === from) return format(fromDate, "d MMM yyyy", opts);
     return `${format(fromDate, "d MMM yyyy", opts)} - ${format(parseLocalISO(to), "d MMM yyyy", opts)}`;
-  }, [activePreset, from, to, t, dateLocale]);
+  }, [activePreset, from, to, t, dateLocale, placeholder]);
 
   const applyPreset = (preset: DateRangePreset) => {
     const range = resolveDateRangePreset(preset);
     onChange(range.from, range.to);
   };
 
-  const handleSelect = (range: DateRange | undefined) => {
+  const handleSelect = (range: DateRange | undefined, tapped: Date) => {
+    if (commitOnSecondTap) {
+      if (!anchor) {
+        setAnchor(tapped);
+        setDraft({ from: tapped, to: undefined });
+        return;
+      }
+      const [first, last] = anchor <= tapped ? [anchor, tapped] : [tapped, anchor];
+      setAnchor(null);
+      setDraft({ from: first, to: last });
+      setOpen(false);
+      onChange(toLocalISO(first), toLocalISO(last));
+      return;
+    }
     setDraft(range);
     if (range?.from && range?.to) {
       onChange(toLocalISO(range.from), toLocalISO(range.to));

@@ -11,6 +11,7 @@ import {
   type SignupPlanStatus,
 } from "@/lib/services/sales-page.service";
 import type { SalesPageReportRange } from "@/lib/validation/sales-page.schemas";
+import type { CustomDays } from "@/lib/report-range";
 import { PARTNER_PAGE_PATH } from "@/config/admin-sections.config";
 import { backfillCustomerCommissions } from "@/lib/services/partner-commission.service";
 import { sendPartnerAccessEmail, sendPartnerInviteEmail } from "@/lib/services/email.service";
@@ -849,10 +850,6 @@ export async function getPartnerDetail(
     include: {
       user: { select: { id: true, email: true, name: true } },
       salesPages: { orderBy: { page: "asc" } },
-      viewers: {
-        orderBy: { createdAt: "asc" },
-        include: { user: { select: { id: true, email: true, name: true } } },
-      },
     },
   });
   if (!partner) notFound();
@@ -881,12 +878,6 @@ export async function getPartnerDetail(
       })),
       bankDetailsSet: Boolean(partner.bankDetails),
       bankDetails: includeBankDetails ? bankDetailsView(partner) : null,
-      viewers: partner.viewers.map((v) => ({
-        userId: v.user.id,
-        email: v.user.email,
-        name: v.user.name,
-        addedAt: v.createdAt.toISOString(),
-      })),
       createdAt: partner.createdAt.toISOString(),
     },
     customers,
@@ -971,64 +962,6 @@ export async function voidCommission(commissionId: string, reason: string, actor
   });
 }
 
-/**
- * Let an account see this partner's page read-only (someone working with the
- * partner). It sees what the partner sees and earns nothing.
- */
-export async function addPartnerViewer(partnerId: string, email: string, actorId: string) {
-  const partner = await prisma.partner.findUnique({
-    where: { id: partnerId },
-    select: { userId: true },
-  });
-  if (!partner) notFound();
-  refuseOwnDeal(partner.userId, actorId);
-  const user = await prisma.user.findUnique({
-    where: { email: email.trim().toLowerCase() },
-    select: { id: true },
-  });
-  if (!user) {
-    throw new AppError(
-      "No Epidom account uses that email. Ask them to sign up first.",
-      ApiErrorCode.USER_NOT_FOUND,
-      404
-    );
-  }
-  if (user.id === partner.userId) {
-    throw new AppError(
-      "That's the partner's own account: they already see this page",
-      ApiErrorCode.CONFLICT,
-      409
-    );
-  }
-  return prisma.partnerViewer.upsert({
-    where: { partnerId_userId: { partnerId, userId: user.id } },
-    create: { partnerId, userId: user.id, createdById: actorId },
-    update: {},
-  });
-}
-
-export async function removePartnerViewer(partnerId: string, userId: string, actorId: string) {
-  const partner = await prisma.partner.findUnique({
-    where: { id: partnerId },
-    select: { userId: true },
-  });
-  if (!partner) notFound();
-  refuseOwnDeal(partner.userId, actorId);
-  await prisma.partnerViewer.deleteMany({ where: { partnerId, userId } });
-}
-
-/** Display names of the partner pages an account may open, for the page switcher. */
-export async function partnerPageChoices(
-  ids: string[]
-): Promise<{ id: string; displayName: string }[]> {
-  if (ids.length === 0) return [];
-  const rows = await prisma.partner.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, displayName: true },
-  });
-  return ids.flatMap((id) => rows.filter((r) => r.id === id));
-}
-
 // --------------------------------------------------------- bank details
 
 const BANK_DETAILS_PURPOSE = "partner-bank-details:v1";
@@ -1079,7 +1012,7 @@ export async function setPartnerBankDetails(
   return bankDetailsView(partner);
 }
 
-/** The partner's own bank details, for their page (never a viewer's). */
+/** The partner's own bank details, for their page. */
 export async function getOwnBankDetails(partnerId: string): Promise<PartnerBankDetailsView> {
   const partner = await prisma.partner.findUnique({
     where: { id: partnerId },
@@ -1098,7 +1031,8 @@ export async function getOwnBankDetails(partnerId: string): Promise<PartnerBankD
  */
 export async function getMyPartnerDashboard(
   partnerId: string,
-  range: SalesPageReportRange = "all",
+  /** A preset, or days picked on the calendar. */
+  range: SalesPageReportRange | CustomDays = "all",
   now: Date = new Date()
 ) {
   const partner = await prisma.partner.findUnique({
@@ -1123,7 +1057,8 @@ export async function getMyPartnerDashboard(
       commissionMonths: partner.commissionMonths,
       customerDiscountPercent: partner.customerDiscountPercent.toString(),
     },
-    range,
+    range: typeof range === "object" ? ("custom" as const) : range,
+    custom: typeof range === "object" ? range : null,
     salesPages: partner.salesPages.map((s) => ({
       page: s.page,
       creditFrom: s.creditFrom.toISOString(),

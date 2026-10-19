@@ -1,3 +1,4 @@
+import { customDayBounds, type CustomDays } from "@/lib/report-range";
 import { prisma } from "@/lib/prisma";
 import {
   SALES_PAGES,
@@ -81,10 +82,14 @@ export interface SalesPageRow {
 }
 
 export interface SalesPageReport {
-  range: SalesPageReportRange;
+  range: SalesPageReportRange | "custom";
+  /** The days picked, when `range` is "custom". */
+  custom: CustomDays | null;
   /** The language the figures are limited to, or "all". */
   lang: SalesPageReportLang;
   since: string | null;
+  /** End of the range (excluded); null when it runs to now. */
+  until: string | null;
   pages: SalesPageRow[];
   /** Best signup rate, or best click rate while there are no signups yet. */
   leader: { page: SalesPage; metric: "signupRate" | "clickRate" } | null;
@@ -270,15 +275,22 @@ const RANGE_DAYS: Record<SalesPageReportRange, number | null> = {
  * visitor-day, so the payload grows with visitors, not with clicks.
  */
 export async function getSalesPageReport(
-  range: SalesPageReportRange,
+  /** A preset, or days picked on the calendar. */
+  range: SalesPageReportRange | CustomDays,
   lang: SalesPageReportLang = "all",
   now: Date = new Date(),
   /** Only these pages (a partner's own report); every page when left out. */
   onlyPages?: readonly string[]
 ): Promise<SalesPageReport> {
-  const days = RANGE_DAYS[range];
-  const since = days === null ? null : new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-  const createdAt = since ? { gte: since } : undefined;
+  const custom = typeof range === "object" ? range : null;
+  const bounds = custom ? customDayBounds(custom) : null;
+  const days = custom ? null : RANGE_DAYS[range as SalesPageReportRange];
+  const since = bounds
+    ? bounds.gte
+    : days === null
+      ? null
+      : new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const createdAt = bounds ?? (since ? { gte: since } : undefined);
   const locale = lang === "all" ? undefined : lang;
   const page = onlyPages ? { in: [...onlyPages] } : undefined;
 
@@ -367,9 +379,11 @@ export async function getSalesPageReport(
   const pages = onlyPages ? summary.pages.filter((p) => onlyPages.includes(p.page)) : summary.pages;
 
   return {
-    range,
+    range: custom ? "custom" : (range as SalesPageReportRange),
+    custom,
     lang,
     since: since?.toISOString() ?? null,
+    until: bounds?.lt.toISOString() ?? null,
     pages,
     leader: onlyPages ? null : summary.leader,
     tracked: {

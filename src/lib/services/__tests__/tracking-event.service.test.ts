@@ -2,12 +2,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { trackingEvent: { create: vi.fn() } },
+  prisma: {
+    trackingEvent: { create: vi.fn(), groupBy: vi.fn(), findFirst: vi.fn() },
+    user: { count: vi.fn() },
+    salesPageEvent: { count: vi.fn() },
+    $queryRaw: vi.fn(),
+  },
 }));
 
 import { prisma } from "@/lib/prisma";
 import {
   MAX_REPORT_PAGES,
+  getPixelReport,
   recordTrackingEvent,
   summarizePixelEvents,
 } from "../tracking-event.service";
@@ -201,5 +207,51 @@ describe("summarizePixelEvents", () => {
       { day: "2026-10-15", counts: { PageView: 4 } },
     ]);
     expect(report.coverage.rate).toBeNull();
+  });
+});
+
+describe("getPixelReport: date range", () => {
+  const p = prisma as unknown as {
+    trackingEvent: { groupBy: ReturnType<typeof vi.fn>; findFirst: ReturnType<typeof vi.fn> };
+    user: { count: ReturnType<typeof vi.fn> };
+    salesPageEvent: { count: ReturnType<typeof vi.fn> };
+    $queryRaw: ReturnType<typeof vi.fn>;
+  };
+  beforeEach(() => {
+    p.trackingEvent.groupBy.mockReset().mockResolvedValue([]);
+    p.trackingEvent.findFirst.mockReset().mockResolvedValue(null);
+    p.user.count.mockReset().mockResolvedValue(0);
+    p.salesPageEvent.count.mockReset().mockResolvedValue(0);
+    p.$queryRaw.mockReset().mockResolvedValue([]);
+  });
+
+  it("limits every count and the day-by-day query to the picked days (UTC, both included)", async () => {
+    const report = await getPixelReport({ from: "2026-10-01", to: "2026-10-03" });
+
+    const bounds = {
+      gte: new Date("2026-10-01T00:00:00.000Z"),
+      lt: new Date("2026-10-04T00:00:00.000Z"),
+    };
+    for (const call of p.trackingEvent.groupBy.mock.calls) {
+      expect(call[0].where.createdAt).toEqual(bounds);
+    }
+    expect(p.user.count.mock.calls[0][0].where.createdAt).toEqual(bounds);
+    expect(p.salesPageEvent.count.mock.calls[0][0].where.createdAt).toEqual(bounds);
+    // The tagged template's values: the since and until bounds.
+    expect(p.$queryRaw.mock.calls[0].slice(1)).toEqual([bounds.gte, bounds.lt]);
+    expect(report).toMatchObject({
+      range: "custom",
+      custom: { from: "2026-10-01", to: "2026-10-03" },
+      since: "2026-10-01T00:00:00.000Z",
+      until: "2026-10-04T00:00:00.000Z",
+    });
+  });
+
+  it("a preset counts back from now", async () => {
+    const now = new Date("2026-10-19T12:00:00Z");
+    const report = await getPixelReport("7", now);
+
+    expect(p.user.count.mock.calls[0][0].where.createdAt.gte).toEqual(new Date("2026-10-12T12:00:00Z"));
+    expect(report).toMatchObject({ range: "7", custom: null, until: null });
   });
 });

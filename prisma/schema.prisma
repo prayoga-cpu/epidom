@@ -2523,9 +2523,11 @@ model Partner {
   @@map("partners")
 }
 
-/// An account allowed to see a partner's page read-only (someone working with
-/// the partner). It sees exactly what the partner sees, changes nothing and
-/// earns nothing: commission stays the partner's.
+/// UNUSED since 3.27.0: was an account allowed to see a partner's page
+/// read-only. The feature was removed (admins follow partners on the Referrals
+/// page); no code reads or writes this table. It stays one release so the
+/// deployment still serving during a rollout keeps its schema, then a later
+/// migration drops it (STATUS.md).
 model PartnerViewer {
   partnerId   String
   userId      String

@@ -82,10 +82,6 @@ export const updateMyPartnerSchema = z.object({
   referralLanding: z.enum(["REGISTER", "HOME"]),
 });
 
-export const addPartnerViewerSchema = z.object({
-  email: z.string().trim().toLowerCase().email(),
-});
-
 /** Where a partner is paid (they enter it on their page). Messages are i18n keys. */
 export const partnerBankDetailsSchema = z.object({
   accountHolder: z.string().trim().min(2, "partnerPortal.bankErrHolder").max(100),

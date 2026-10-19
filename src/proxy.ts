@@ -4,6 +4,7 @@ import { setRequestId } from "./lib/request-context";
 import { sessionCookieNames } from "./lib/auth/cookies";
 import {
   DEFAULT_LOCALE,
+  LOCALES,
   LOCALE_HEADER,
   LOCALE_PREF_COOKIE,
   stripLocalePrefix,
@@ -451,10 +452,15 @@ async function routeRequest(req: NextRequest): Promise<NextResponse> {
   // sees the page.
   if (isSalesPagePath(basePath)) {
     if (locale === DEFAULT_LOCALE) {
-      const preferred = preferredLocaleForUnprefixedVisit(req);
+      // ?lang= names the language outright (the admin report's "open" links,
+      // the old file URLs' redirect). Nothing is stored: a one-off look, like
+      // a sign-up button's ?lang=. The page drops it from the address bar.
+      const asked = req.nextUrl.searchParams.get("lang");
+      const preferred = LOCALES.find((l) => l === asked) ?? preferredLocaleForUnprefixedVisit(req);
       if (preferred !== DEFAULT_LOCALE) {
         const redirectUrl = req.nextUrl.clone();
         redirectUrl.pathname = getLocalizedPath(basePath, preferred);
+        redirectUrl.searchParams.delete("lang");
         return markRedirectUncacheable(NextResponse.redirect(redirectUrl));
       }
     }

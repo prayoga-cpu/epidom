@@ -11,13 +11,8 @@ export interface AdminAccess extends AdminAccessSummary {
   user: { id: string; email: string; name: string };
   /** Null when the account has no admin page at all (it may still be a partner). */
   grantSource: AdminGrantSource | null;
-  /** The account's own Partner row id, if it is a partner (the one that earns). */
+  /** The account's Partner row id, if it is a partner: the only partner page it may open. */
   partnerId: string | null;
-  /**
-   * Partner pages this account may open: its own first, then the ones it was
-   * added to as a read-only viewer (PartnerViewer).
-   */
-  viewablePartnerIds: string[];
 }
 
 /**
@@ -41,7 +36,6 @@ export const getAdminAccess = cache(async function getAdminAccess(): Promise<Adm
       adminSections: true,
       deactivatedAt: true,
       partner: { select: { id: true } },
-      partnerViews: { select: { partnerId: true }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!user || user.deactivatedAt) return null;
@@ -57,24 +51,16 @@ export function resolveAdminAccess(user: {
   isAdmin: boolean;
   adminSections: string[];
   partner: { id: string } | null;
-  partnerViews?: { partnerId: string }[];
 }): AdminAccess {
   const hardcoded = isAdminEmail(user.email);
   const full = user.isAdmin || hardcoded;
   const sections = full ? [] : grantedSections(user.adminSections);
-  const viewablePartnerIds = [
-    ...new Set([
-      ...(user.partner ? [user.partner.id] : []),
-      ...(user.partnerViews ?? []).map((v) => v.partnerId),
-    ]),
-  ];
   return {
     user: { id: user.id, email: user.email, name: user.name },
     full,
     sections,
-    partner: viewablePartnerIds.length > 0,
+    partner: Boolean(user.partner),
     partnerId: user.partner?.id ?? null,
-    viewablePartnerIds,
     grantSource: user.isAdmin
       ? "DB_FLAG"
       : hardcoded

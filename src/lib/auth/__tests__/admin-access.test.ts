@@ -51,23 +51,6 @@ describe("resolveAdminAccess", () => {
   });
 });
 
-describe("partner page viewers", () => {
-  it("a viewer opens the partner page of the partners it views, owning none of them", () => {
-    const a = resolveAdminAccess(row({ partnerViews: [{ partnerId: "aaron" }] }));
-    expect(a).toMatchObject({ partner: true, partnerId: null, viewablePartnerIds: ["aaron"] });
-    expect(canOpenSection(a, "my-referrals")).toBe(true);
-    expect(canOpenSection(a, "sales-pages")).toBe(false);
-  });
-
-  it("a partner who also views another sees their own page first", () => {
-    const a = resolveAdminAccess(
-      row({ partner: { id: "bob" }, partnerViews: [{ partnerId: "aaron" }, { partnerId: "bob" }] })
-    );
-    expect(a.viewablePartnerIds).toEqual(["bob", "aaron"]);
-    expect(a.partnerId).toBe("bob");
-  });
-});
-
 describe("canOpenSection", () => {
   const scoped = resolveAdminAccess(row({ adminSections: ["sales-pages", "partners"] }));
   const full = resolveAdminAccess(row({ isAdmin: true }));

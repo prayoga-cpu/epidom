@@ -39,7 +39,6 @@ export const GET = withApiHandler(
           isAdmin: true,
           adminSections: true,
           partner: { select: { id: true } },
-          partnerViews: { select: { partnerId: true } },
         },
       }),
     ]);

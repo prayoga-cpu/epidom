@@ -97,6 +97,24 @@ const nextConfig: NextConfig = {
     },
   ],
 
+  // The files' own addresses (/sales-pages/sales-page-N[.en|.id].html) go to
+  // the page's public URL, so a shared or old link never shows ".html".
+  // Redirects only see the address the browser asked for, never a rewrite's
+  // destination, so the rewrites above still reach the files. French asks
+  // for French (?lang=fr): plain /sales-page-N picks the visitor's language.
+  redirects: async () => [
+    {
+      source: "/sales-pages/:page(sales-page-\\d+).:locale(en|id).html",
+      destination: "/:locale/:page",
+      permanent: false,
+    },
+    {
+      source: "/sales-pages/:page(sales-page-\\d+).html",
+      destination: "/:page?lang=fr",
+      permanent: false,
+    },
+  ],
+
   // Security Headers for production
   headers: async () => [
     {

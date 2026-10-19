@@ -10,6 +10,8 @@ import {
   type PixelReport,
 } from "@/lib/services/tracking-event.service";
 import type { PixelReportRange } from "@/lib/validation/tracking-event.schemas";
+import type { CustomDays } from "@/lib/report-range";
+import { CustomRangePicker } from "@/components/reports/custom-range-picker";
 import type { PixelEventName } from "@/lib/tracking-events";
 
 const RANGES: { value: PixelReportRange; label: string }[] = [
@@ -76,7 +78,13 @@ function formatDateTime(iso: string): string {
   });
 }
 
-function RangeTabs({ active }: { active: PixelReportRange }) {
+function RangeTabs({
+  active,
+  custom,
+}: {
+  active: PixelReportRange | "custom";
+  custom: CustomDays | null;
+}) {
   return (
     <div className="border-border bg-muted/40 flex items-center overflow-x-auto rounded-lg border p-0.5">
       {RANGES.map((r) => (
@@ -92,6 +100,7 @@ function RangeTabs({ active }: { active: PixelReportRange }) {
           {r.label}
         </Link>
       ))}
+      <CustomRangePicker value={custom} label="Custom" path="/admin/pixel" />
     </div>
   );
 }
@@ -164,7 +173,7 @@ export function PixelReportView({ report, pixelId }: { report: PixelReport; pixe
               </p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              <RangeTabs active={report.range} />
+              <RangeTabs active={report.range} custom={report.custom} />
               <Button variant="outline" size="sm" asChild>
                 <Link href="/admin">← Back</Link>
               </Button>

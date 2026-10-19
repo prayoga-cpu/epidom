@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { customDayBounds, type CustomDays } from "@/lib/report-range";
 import {
   PIXEL_EVENTS,
   TRACKING_SOURCES,
@@ -77,8 +78,12 @@ export interface ConsentSourceSummary {
 }
 
 export interface PixelReport {
-  range: PixelReportRange;
+  range: PixelReportRange | "custom";
+  /** The days picked, when `range` is "custom". */
+  custom: CustomDays | null;
   since: string;
+  /** End of the range (excluded); null when it runs to now. */
+  until: string | null;
   totals: PixelEventTotal[];
   consent: ConsentSourceSummary & { bySource: Record<TrackingSource, ConsentSourceSummary> };
   /** CompleteRegistration sent vs accounts created over the same range. */
@@ -221,11 +226,19 @@ const RANGE_HOURS: Record<PixelReportRange, number> = {
 
 /** The report on /admin/pixel. Grouped in the database, so the payload grows with pages and days, not events. */
 export async function getPixelReport(
-  range: PixelReportRange,
+  /** A preset, or days picked on the calendar. */
+  range: PixelReportRange | CustomDays,
   now: Date = new Date()
 ): Promise<PixelReport> {
-  const since = new Date(now.getTime() - RANGE_HOURS[range] * 60 * 60 * 1000);
-  const createdAt = { gte: since };
+  const custom = typeof range === "object" ? range : null;
+  const bounds = custom ? customDayBounds(custom) : null;
+  const since =
+    bounds?.gte ??
+    new Date(now.getTime() - RANGE_HOURS[range as PixelReportRange] * 60 * 60 * 1000);
+  // A preset runs to now; nothing is ever stamped in the future, so "far
+  // ahead" keeps one query shape for both.
+  const until = bounds?.lt ?? new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const createdAt = { gte: since, lt: until };
 
   const [pixel, values, consent, days, accountsCreated, salesPageViews, last] = await Promise.all([
     prisma.trackingEvent.groupBy({
@@ -247,7 +260,7 @@ export async function getPixelReport(
     prisma.$queryRaw<{ day: string; name: string; count: bigint }[]>`
       SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS day, "name", COUNT(*) AS count
       FROM "tracking_events"
-      WHERE "kind" = 'PIXEL' AND "createdAt" >= ${since}
+      WHERE "kind" = 'PIXEL' AND "createdAt" >= ${since} AND "createdAt" < ${until}
       GROUP BY 1, 2`,
     prisma.user.count({ where: { createdAt } }),
     prisma.salesPageEvent.count({ where: { type: "VIEW", createdAt } }),
@@ -259,8 +272,10 @@ export async function getPixelReport(
   ]);
 
   return {
-    range,
+    range: custom ? "custom" : (range as PixelReportRange),
+    custom,
     since: since.toISOString(),
+    until: bounds?.lt.toISOString() ?? null,
     salesPageViews,
     lastPixelEventAt: last?.createdAt.toISOString() ?? null,
     ...summarizePixelEvents({

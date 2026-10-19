@@ -6,7 +6,7 @@ import { setPartnerBankDetails } from "@/lib/services/partner.service";
 
 /**
  * PUT /api/partner/me/bank-details: a partner saves where Epidom transfers
- * their commission. Their own partner only (a read-only viewer has none),
+ * their commission. Their own partner only (an account that is not a partner has none),
  * never while a staff PIN persona is active. Stored encrypted.
  */
 export async function PUT(request: Request) {

@@ -53,3 +53,6 @@ export const PIXEL_REPORT_RANGES = ["1", "7", "30", "90"] as const;
 export type PixelReportRange = (typeof PIXEL_REPORT_RANGES)[number];
 
 export const pixelReportRangeSchema = z.enum(PIXEL_REPORT_RANGES).catch("7");
+
+/** The report's `range` query param: a preset, or "custom" with from/to days (src/lib/report-range.ts). */
+export const pixelReportRangeParamSchema = z.enum([...PIXEL_REPORT_RANGES, "custom"]).catch("7");

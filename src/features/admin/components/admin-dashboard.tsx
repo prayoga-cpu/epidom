@@ -56,8 +56,6 @@ interface UserRow {
   /** Admin pages given without full admin (User.adminSections). */
   adminSections: string[];
   partner: { id: string; referralCode: string | null; status: string } | null;
-  /** Partner pages this account sees read-only. */
-  partnerViews?: { partner: { id: string; displayName: string } }[];
   createdAt: string;
   timezone?: string;
   timezoneUpdatedAt?: string | null;
@@ -646,14 +644,6 @@ export function AdminDashboard() {
                             Partner{user.partner.referralCode ? ` · ${user.partner.referralCode}` : ""}
                           </span>
                         )}
-                        {(user.partnerViews ?? []).map((v) => (
-                          <span
-                            key={v.partner.id}
-                            className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-sky-400 uppercase"
-                          >
-                            Views {v.partner.displayName}
-                          </span>
-                        ))}
                         {isSelf && (
                           <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-blue-400 uppercase">
                             You
@@ -793,14 +783,6 @@ export function AdminDashboard() {
                                     Partner{user.partner.referralCode ? ` · ${user.partner.referralCode}` : ""}
                                   </span>
                                 )}
-                                {(user.partnerViews ?? []).map((v) => (
-                                  <span
-                                    key={v.partner.id}
-                                    className="inline-flex items-center rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-sky-400 uppercase"
-                                  >
-                                    Views {v.partner.displayName}
-                                  </span>
-                                ))}
                                 {isSelf && (
                                   <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-blue-400 uppercase">
                                     You

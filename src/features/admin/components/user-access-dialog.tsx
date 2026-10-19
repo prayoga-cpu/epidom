@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Eye, Handshake, Loader2, ShieldCheck, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ExternalLink, Handshake, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,15 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { GRANTABLE_ADMIN_SECTIONS } from "@/config/admin-sections.config";
-import type { PartnerListRow } from "@/lib/services/partner.service";
 import { apiJson } from "@/features/admin/partners/lib/partner-form";
 import { PARTNERS_QUERY_KEY } from "@/features/admin/partners/components/partners-admin";
 import { ADMIN_SECTION_ICONS } from "./admin-section-icons";
@@ -36,7 +28,6 @@ export interface AccessUser {
   isAdmin: boolean;
   adminSections: string[];
   partner: { id: string; referralCode: string | null; status: string } | null;
-  partnerViews?: { partner: { id: string; displayName: string } }[];
 }
 
 const sameSet = (a: string[], b: string[]) =>
@@ -44,9 +35,9 @@ const sameSet = (a: string[], b: string[]) =>
 
 /**
  * One place for everything a user may open in the admin panel: full admin,
- * some admin pages, being a referral partner (their own page), or seeing a
- * partner's page read-only. Ticking "Referral partner" opens the partner form
- * after saving (`onMakePartner`).
+ * some admin pages, or being a referral partner (their own page). Ticking
+ * "Referral partner" opens the partner form after saving (`onMakePartner`).
+ * Following partners without being one is the Referrals page.
  */
 export function UserAccessDialog({
   user,
@@ -63,8 +54,6 @@ export function UserAccessDialog({
   const [full, setFull] = useState(false);
   const [sections, setSections] = useState<string[]>([]);
   const [makePartner, setMakePartner] = useState(false);
-  const [views, setViews] = useState<{ id: string; displayName: string }[]>([]);
-  const [addView, setAddView] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -72,22 +61,7 @@ export function UserAccessDialog({
     setFull(user.isAdmin);
     setSections(user.adminSections ?? []);
     setMakePartner(false);
-    setViews((user.partnerViews ?? []).map((v) => v.partner));
-    setAddView("");
   }, [user]);
-
-  const { data: partnersData } = useQuery<{ partners: PartnerListRow[] }>({
-    queryKey: PARTNERS_QUERY_KEY,
-    queryFn: () => apiJson("/api/admin/partners"),
-    enabled: Boolean(user),
-  });
-  const viewable = useMemo(
-    () =>
-      (partnersData?.partners ?? []).filter(
-        (p) => p.id !== user?.partner?.id && !views.some((v) => v.id === p.id)
-      ),
-    [partnersData, user, views]
-  );
 
   if (!user) return null;
   const locked = isSelf;
@@ -103,16 +77,6 @@ export function UserAccessDialog({
       }
       if (!locked && !sameSet(sections, user.adminSections ?? [])) {
         await patch({ action: "set-admin-sections", userId: user.id, sections });
-      }
-      const before = (user.partnerViews ?? []).map((v) => v.partner.id);
-      for (const v of views.filter((v) => !before.includes(v.id))) {
-        await apiJson(`/api/admin/partners/${v.id}/viewers`, {
-          method: "POST",
-          body: JSON.stringify({ email: user.email }),
-        });
-      }
-      for (const id of before.filter((id) => !views.some((v) => v.id === id))) {
-        await apiJson(`/api/admin/partners/${id}/viewers/${user.id}`, { method: "DELETE" });
       }
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: PARTNERS_QUERY_KEY });
@@ -231,56 +195,6 @@ export function UserAccessDialog({
                   </span>
                 </span>
               </label>
-            )}
-          </div>
-
-          {/* Views of a partner's page */}
-          <div>
-            <p className="text-foreground mb-1 flex items-center gap-1.5 text-sm font-medium">
-              <Eye className="h-3.5 w-3.5 text-sky-500" />
-              Sees a partner&apos;s page (read-only)
-            </p>
-            <p className="text-muted-foreground mb-2 text-xs">
-              Exactly what that partner sees. They change nothing and earn nothing.
-            </p>
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {views.map((v) => (
-                <span
-                  key={v.id}
-                  className="inline-flex items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 py-0.5 pr-0.5 pl-2.5 text-xs text-sky-500"
-                >
-                  {v.displayName}
-                  <button
-                    type="button"
-                    aria-label={`Stop seeing ${v.displayName}'s page`}
-                    className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-sky-500/15"
-                    onClick={() => setViews((list) => list.filter((x) => x.id !== v.id))}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            {viewable.length > 0 && (
-              <Select
-                value={addView}
-                onValueChange={(id) => {
-                  const p = viewable.find((x) => x.id === id);
-                  if (p) setViews((list) => [...list, { id: p.id, displayName: p.displayName }]);
-                  setAddView("");
-                }}
-              >
-                <SelectTrigger className="min-h-10 w-full">
-                  <SelectValue placeholder="Add a partner's page…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {viewable.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             )}
           </div>
         </div>

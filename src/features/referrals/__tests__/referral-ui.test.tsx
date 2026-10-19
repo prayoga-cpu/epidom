@@ -8,6 +8,7 @@ vi.mock("@/components/lang/i18n-provider", async () => {
   return { useI18n: () => ({ locale: state.locale, t: makeT(state.locale, true) }) };
 });
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 import { ReferralBanner } from "../components/referral-banner";
 import { MyReferrals } from "../portal/my-referrals";
@@ -92,7 +93,8 @@ const dashboard = {
     commissionMonths: 3,
     customerDiscountPercent: "10",
   },
-  range: "30" as const,
+  range: "30" as "30" | "custom",
+  custom: null as { from: string; to: string } | null,
   salesPages: [
     {
       page: "sales-page-2",
@@ -186,26 +188,23 @@ describe("MyReferrals", () => {
     expect(container.querySelector('a[href="/admin/my-referrals?range=7"]')).not.toBeNull();
   });
 
-  it.each(LOCALES)("%s: a viewer sees the partner's page read-only", (locale) => {
+  it.each(LOCALES)("%s: the range tabs end with a custom range on the calendar", (locale) => {
     state.locale = locale;
-    const { container } = render(
+    const preset = render(<MyReferrals dashboard={dashboard} />);
+    const label = { en: "Custom", fr: "Personnalisée", id: "Kustom" }[locale];
+    expect(preset.container.textContent).toContain(label);
+    preset.unmount();
+
+    const custom = render(
       <MyReferrals
-        dashboard={dashboard}
-        readOnly
-        partnerId="aaron"
-        choices={[
-          { id: "aaron", displayName: "Aaron" },
-          { id: "bob", displayName: "Bob" },
-        ]}
+        dashboard={{ ...dashboard, range: "custom", custom: { from: "2026-10-01", to: "2026-10-15" } }}
       />
     );
-    const text = container.textContent ?? "";
-    expect(text).not.toContain("MISSING");
-    expect(text).toMatch(/Aaron/);
-    expect(container.querySelector('[role="combobox"]')?.hasAttribute("disabled")).toBe(true);
-    // The range links keep the partner being viewed.
-    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toContain("/admin/my-referrals?range=7&partner=aaron");
+    expect(custom.container.textContent).toMatch(/1 \S+ 2026 - 15 \S+ 2026/);
+    // No preset tab is lit while a custom range is shown.
+    expect(custom.container.querySelector('a[href="/admin/my-referrals?range=30"]')?.className).not.toContain(
+      "bg-amber-500/20"
+    );
   });
 
   it.each(LOCALES)("%s: asks the partner for their bank details, shows them masked once saved", (locale) => {
@@ -229,18 +228,6 @@ describe("MyReferrals", () => {
     );
     expect(saved.container.textContent).toContain("•••• 0189");
     expect(saved.container.textContent).not.toContain("FR76 3000");
-  });
-
-  it("a read-only viewer never gets the bank details card", () => {
-    state.locale = "en";
-    const { container } = render(
-      <MyReferrals
-        dashboard={dashboard}
-        readOnly
-        bankDetails={{ details: { accountHolder: "A", bankName: "B", accountNumber: "123456", swift: "" }, updatedAt: null, unreadable: false }}
-      />
-    );
-    expect(container.textContent).not.toContain("Payout details");
   });
 
   it("builds the referral link and one tagged link per channel", () => {

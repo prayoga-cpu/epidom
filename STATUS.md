@@ -155,6 +155,14 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Outside the SEO phases
 
+### Custom date ranges, clean sales-page URLs, video fill, viewer removed — 3.27.0 (2026-10-19)
+
+- [x] Custom date range ("Custom", the app's calendar `DateRangeField`) after the range tabs on /admin/sales-pages, /admin/pixel and the partner page: `range=custom&from=YYYY-MM-DD&to=YYYY-MM-DD`, whole UTC days, both included (`src/lib/report-range.ts`, `src/components/reports/custom-range-picker.tsx`). Those three are the only range toggles in admin.
+- [x] Sales pages never show ".html": the report's "open" links are `/sales-page-N?lang=fr` / `/en|id/sales-page-N`; the proxy honours `?lang=` on an unprefixed sales page (nothing stored) and `lang-switch.js` drops it from the address bar; `/sales-pages/sales-page-N[.en|.id].html` redirect (307) to the public URL (next.config `redirects`).
+- [x] Sales-page video fills its box (`object-fit: cover` in vsl.js; full screen shows the whole picture).
+- [x] Removed the read-only partner-page viewer (Access dialog section, partner admin card, `/api/admin/partners/[id]/viewers*`, `?partner=` switcher). Admins follow partners on Referrals. Accounts that were viewers (Evan?) lose the partner page: tick "Referrals" in their Access dialog if they should keep following Aaron.
+- [ ] **Later release:** drop the unused `partner_viewers` table (`PartnerViewer` model + `User.partnerViews` / `Partner.viewers` relations). Kept one release so the deployment serving during the rollout keeps its schema.
+
 ### Partner bank details — 3.26.0 (2026-10-19)
 
 - [x] Partners enter where they're paid on their page (holder, bank, IBAN/account number, BIC/SWIFT), encrypted at rest (`src/lib/crypto/field-encryption.ts`, key from BETTER_AUTH_SECRET, migration `20261022090000_partner_bank_details`); full admins see them with copy buttons and in Record payout; scoped admins see only "provided"; viewers never.
@@ -184,12 +192,12 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 - [x] Referrals (`/admin/partners`, label "Referrals"): `Partner`, `PartnerSalesPage` (one owner per page, credit-from date + backfill), deal copied onto `SignupAttribution` at sign-up (referral link vs sales page = last opened), self-referral refused (normalized email) or flagged (same IP as a partner session). "Make referral partner…" in the users list Manage menu, with sales pages in the same step.
 - [x] Discount: one-time coupon per % (`epidom-ref-once-10`), on the Checkout Session without a trial; with the POS trial, put on the subscription by `checkout.session.completed` (after the $0 invoice). Referral links only, capped at 50%.
 - [x] Commission ledger from `invoice.payment_succeeded` (re-reads the invoice; window from the first paid invoice's period; yearly 3/12), refunds from `refund.created` / `refund.updated`, 30-day hold computed on read, payouts per currency (full admin), void. Math in `src/lib/partners/commission-math.ts`.
-- [x] Partner page viewers (`PartnerViewer`): "Can view this partner's page" on the partner's admin page; the viewer opens Partner dashboard, read-only (landing switch disabled), commission stays the partner's. For Evan Cao (ecao.inquiries@gmail.com) on Aaron's page.
+- [x] Partner page viewers (`PartnerViewer`): "Can view this partner's page" on the partner's admin page; the viewer opens Partner dashboard, read-only (landing switch disabled), commission stays the partner's. For Evan Cao (ecao.inquiries@gmail.com) on Aaron's page. **Removed in 3.27.0.**
 - [x] Partner page `/admin/my-referrals` (fr/en/id): sales-page report of their own pages (same figures as the admin report, range tabs) + commission details + customers (no emails) + payouts; referral link with per-channel links for link partners. Banner "Bob's referral: 10% off" on /register and the home page.
 - [x] ~~Stripe refund events~~: decided not needed (3.26.0 section): refunds are voided by hand.
 - [x] Dev branch migrated (up to date on 2026-10-19).
 - [ ] **Set up Aaron (operator, after the deploy):** Admin → users list → Aaron's Manage menu → Make referral partner…: no referral code, 30% for 3 months, tick his sales page, "count sign-ups from" 2026-10-20. He then sees only Partner dashboard. (Which page is his wasn't specified.)
-- [ ] **Then Evan:** Admin → Referrals → Aaron → "Can view this partner's page" → ecao.inquiries@gmail.com (needs an Epidom account with that email first).
+- [x] ~~Then Evan: add him as a viewer of Aaron's page~~: viewers removed in 3.27.0; give Evan the Referrals page in his Access dialog instead, if wanted.
 - [ ] Not built: a "10% off" note on the plan cards (Stripe Checkout shows the discount itself); a partner can't see visits to their referral link (only sign-ups).
 - [x] Verified on the Stripe sandbox with test clocks (real API, in-memory DB): POS trial → the $0 trial invoice has no discount, the first paid invoice after 14 days is EUR 12.59 (10% off 13.99), window starts at the trial's end, commission 3.77, month 2 full price → 4.19, a replayed webhook adds nothing; no trial → first invoice 12.59, commission linked to its payment intent. Not run in a browser Checkout (same coupon mechanism).
 - [ ] **Privacy (operator):** partners see their customers' business name and plan; the privacy policy doesn't say so yet.

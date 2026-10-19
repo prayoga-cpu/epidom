@@ -26,6 +26,16 @@
   var PREF_COOKIE = "epidom_locale_pref"; // LOCALE_PREF_COOKIE in src/lib/i18n-routing.ts
   var CONSENT_KEY = "cookie-consent-preferences"; // COOKIE_CONSENT_KEY in src/lib/cookie-consent.ts
 
+  // ?lang= asked the proxy for this language (the admin report's links, the
+  // old /sales-pages/….html addresses); the address bar keeps the clean URL.
+  try {
+    var here = new URL(window.location.href);
+    if (here.searchParams.has("lang")) {
+      here.searchParams.delete("lang");
+      window.history.replaceState(window.history.state, "", here.pathname + here.search + here.hash);
+    }
+  } catch (e) {}
+
   var lang = (document.documentElement.getAttribute("lang") || "fr").slice(0, 2).toLowerCase();
   var current = OPTIONS.filter(function (o) { return o.value === lang; })[0] || OPTIONS[0];
   var match = /(sales-page-\d+)/.exec(window.location.pathname);

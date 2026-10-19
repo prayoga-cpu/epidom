@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.27.0] - 2026-10-19 · ux
+
+Pick any dates on the admin reports, cleaner sales-page links, and the video fills its frame.
+
+- **Custom date range.** The Sales Pages report, the Meta Pixel report and the partner page now end their range tabs with Custom: pick a first and last day on the calendar and the figures cover exactly those days. The range stays in the page address, so it can be bookmarked or shared, and switching language on the Sales Pages report keeps it.
+- **Sales-page links without ".html".** "Open" on the Sales Pages report now opens the page at its public address (epidom.fr/sales-page-4, /en/sales-page-4, /id/sales-page-4), and the French link opens French whatever your browser's language. Old links to the page files (/sales-pages/sales-page-4.html) now lead to the same public addresses.
+- **The video fills its frame.** On every sales page, the playing video now covers the whole box, edge to edge, like its thumbnail, with no black bars. Full screen still shows the whole picture.
+- **No more read-only partner pages.** The option to let someone see a partner's page read-only is gone from the Access dialog and the partner's admin page. Admins given the Referrals page follow every partner from there.
+
 ## [3.26.0] - 2026-10-19 · feat
 
 Partners enter their bank details for their payouts.

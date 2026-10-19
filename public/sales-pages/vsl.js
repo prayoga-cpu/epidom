@@ -12,7 +12,8 @@
  * The box shows the video's thumbnail (vsl-thumbnail.webp, JPEG fallback,
  * preloaded by each page's <head>) as its cover, the caption as a pill at the
  * bottom; a tap anywhere on it plays, and the thumbnail stays as the poster
- * while the video loads.
+ * while the video loads. The video covers the whole box (object-fit: cover),
+ * like the thumbnail does, whatever the box's shape on each page.
  */
 (function () {
   var SRC = "/api/public/sales-pages/video";
@@ -35,7 +36,11 @@
     "color:#fff;font-size:12px;line-height:1.3}" +
     ".video.epi-vsl-on{transform:none!important;cursor:auto}" +
     ".video.epi-vsl-on>*:not(.epi-vsl){visibility:hidden}" +
-    ".epi-vsl{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;background:#000;object-fit:contain;z-index:5}" +
+    // Fills the box edge to edge (no black bars when the box isn't the video's shape);
+    // full screen shows the whole picture again.
+    ".epi-vsl{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;background:#000;object-fit:cover;z-index:5}" +
+    ".epi-vsl:fullscreen{object-fit:contain}" +
+    ".epi-vsl:-webkit-full-screen{object-fit:contain}" +
     ".epi-vsl-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;" +
     "border:0;border-radius:50%;padding:0;cursor:pointer;touch-action:manipulation;" +
     "background:linear-gradient(135deg,var(--gold-light,#f3d27a),var(--gold,#d7b54b));" +

@@ -27,24 +27,18 @@ export async function requireAdminSection(key: AdminSectionKey): Promise<AdminAc
 }
 
 /**
- * Gate for a partner page: the account's own (it is a partner) or one it may
- * view read-only (PartnerViewer). `requested` picks among them (?partner=);
- * otherwise its own, else the first it views. No staff persona may be active.
+ * Gate for the partner page: the account's own, and only when it is a
+ * partner. Admins follow every partner on the Referrals page instead. No
+ * staff persona may be active.
  */
-export async function requirePartnerPage(
-  requested?: string | null
-): Promise<{ access: AdminAccess; partnerId: string; readOnly: boolean }> {
+export async function requirePartnerPage(): Promise<{ access: AdminAccess; partnerId: string }> {
   const access = await requireAdminSection("my-referrals");
   // A cashier who took over the owner's iPad with a PIN must not see the
   // owner's partner earnings.
   const persona = await getActiveStaffSession();
   if (persona && persona.role !== "OWNER") redirect("/stores");
-  const partnerId =
-    requested && access.viewablePartnerIds.includes(requested)
-      ? requested
-      : access.viewablePartnerIds[0];
-  if (!partnerId) redirect("/stores");
-  return { access, partnerId, readOnly: partnerId !== access.partnerId };
+  if (!access.partnerId) redirect("/stores");
+  return { access, partnerId: access.partnerId };
 }
 
 /** The first page in the admin nav this account may open, or null. */

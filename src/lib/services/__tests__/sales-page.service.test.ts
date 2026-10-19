@@ -219,6 +219,30 @@ describe("getSalesPageReport", () => {
     expect(groupBy.mock.calls[0][0].where.locale).toBeUndefined();
     expect(report.since).toBeNull();
   });
+
+  it("limits every query to the picked days, both included (UTC)", async () => {
+    const report = await getSalesPageReport({ from: "2026-10-01", to: "2026-10-15" }, "all");
+
+    const bounds = {
+      gte: new Date("2026-10-01T00:00:00.000Z"),
+      lt: new Date("2026-10-16T00:00:00.000Z"),
+    };
+    expect(groupBy.mock.calls[0][0].where.createdAt).toEqual(bounds);
+    expect(findMany.mock.calls[0][0].where.createdAt).toEqual(bounds);
+    expect(attributionFindMany.mock.calls[0][0].where.createdAt).toEqual(bounds);
+    expect(attributionCount.mock.calls[0][0].where.createdAt).toEqual(bounds);
+    expect(report).toMatchObject({
+      range: "custom",
+      custom: { from: "2026-10-01", to: "2026-10-15" },
+      since: "2026-10-01T00:00:00.000Z",
+      until: "2026-10-16T00:00:00.000Z",
+    });
+  });
+
+  it("a preset runs to now: no end bound", async () => {
+    const report = await getSalesPageReport("30", "all");
+    expect(report).toMatchObject({ range: "30", custom: null, until: null });
+  });
 });
 
 describe("signupPlanStatus", () => {

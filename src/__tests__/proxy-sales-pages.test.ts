@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
 import proxy, { config } from "@/proxy";
 import nextConfig from "../../next.config";
+import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
 import { sessionCookieNames } from "@/lib/auth/cookies";
 import { LOCALE_PREF_COOKIE } from "@/lib/i18n-routing";
 import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE } from "@/lib/last-visited";
@@ -95,6 +96,29 @@ describe("proxy: /sales-page-N", () => {
     expect(isRedirect(res.status)).toBe(false);
   });
 
+  it("opens French when the link asks for it (?lang=fr), whatever the browser or switcher says", async () => {
+    const res = await proxy(
+      request("/sales-page-4?lang=fr", { language: "en-US", cookies: { [LOCALE_PREF_COOKIE]: "id" } })
+    );
+
+    expect(isRedirect(res.status)).toBe(false);
+  });
+
+  it("sends ?lang=en to the English page, dropping lang and keeping the ad's tags", async () => {
+    const res = await proxy(request("/sales-page-4?lang=en&utm_source=meta", { language: "fr-FR" }));
+
+    expect(isRedirect(res.status)).toBe(true);
+    const location = new URL(res.headers.get("location") as string);
+    expect(location.pathname).toBe("/en/sales-page-4");
+    expect(location.search).toBe("?utm_source=meta");
+  });
+
+  it("ignores a ?lang= that isn't a language", async () => {
+    const res = await proxy(request("/sales-page-4?lang=de", { language: "id-ID" }));
+
+    expect(new URL(res.headers.get("location") as string).pathname).toBe("/id/sales-page-4");
+  });
+
   it("never redirects a crawler", async () => {
     const res = await proxy(
       request("/sales-page-3", { language: "en-US", userAgent: "Mozilla/5.0 (compatible; Googlebot/2.1)" })
@@ -168,5 +192,38 @@ describe("next.config headers: sales pages stay out of search results", () => {
     for (const rule of siteWideNoindex) {
       expect(rule.has).toEqual([{ type: "host", value: "dev\\.epidom\\.fr" }]);
     }
+  });
+});
+
+describe("next.config redirects: page file to public URL", () => {
+  async function redirectFor(path: string): Promise<string | null> {
+    for (const r of await nextConfig.redirects!()) {
+      const params = getPathMatch(r.source)(path);
+      if (!params) continue;
+      return r.destination.replace(/:(\w+)/g, (_, name: string) => String(params[name]));
+    }
+    return null;
+  }
+
+  it.each([
+    ["/sales-pages/sales-page-4.html", "/sales-page-4?lang=fr"],
+    ["/sales-pages/sales-page-1.en.html", "/en/sales-page-1"],
+    ["/sales-pages/sales-page-3.id.html", "/id/sales-page-3"],
+  ])("sends %s to %s", async (path, destination) => {
+    expect(await redirectFor(path)).toBe(destination);
+  });
+
+  it.each([
+    "/sales-page-4",
+    "/en/sales-page-4",
+    "/sales-pages/vsl.js",
+    "/sales-pages/vsl-thumbnail.jpg",
+    "/sales-pages/sales-page-4.de.html",
+  ])("leaves %s alone (the rewrites and the page's own files)", async (path) => {
+    expect(await redirectFor(path)).toBeNull();
+  });
+
+  it("is temporary, so no browser keeps it forever", async () => {
+    for (const r of await nextConfig.redirects!()) expect(r.permanent).toBe(false);
   });
 });
