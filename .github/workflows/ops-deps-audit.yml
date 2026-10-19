@@ -41,7 +41,7 @@ jobs:
 
       - name: Open GitHub issue if HIGH/CRITICAL found
         if: steps.audit.outputs.high != '0' || steps.audit.outputs.critical != '0'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const high = ${{ steps.audit.outputs.high }};
