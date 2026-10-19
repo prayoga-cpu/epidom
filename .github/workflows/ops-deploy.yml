@@ -1,0 +1,31 @@
+name: Ops — Trigger Production Deploy
+
+# Fires the Vercel deploy hook to kick off a production deployment on demand.
+# Use when the automatic deploy is stuck or you need an immediate rollout.
+# Requires the CF_DEPLOY_HOOK secret to be set in GitHub → Settings → Secrets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you triggering a manual deploy?"
+        required: true
+        type: string
+
+concurrency:
+  group: ops-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Trigger Vercel deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Fire deploy hook
+        run: |
+          echo "Reason: ${{ github.event.inputs.reason }}"
+          echo "Triggered by: ${{ github.actor }}"
+          curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.CF_DEPLOY_HOOK }}" | grep -q "^2" \
+            && echo "Deploy hook fired successfully." \
+            || { echo "Deploy hook returned a non-2xx status."; exit 1; }

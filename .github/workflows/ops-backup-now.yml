@@ -1,0 +1,37 @@
+name: Ops — Trigger Immediate DB Backup
+
+# Fires the Inngest backup/database event to take an on-demand backup.
+# The backup lands in the R2 bucket under backups/YYYY-MM-DD-HH-MM-SS.dump.
+# See docs/BACKUP_RESTORE.md for how to list and restore backups.
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: "Why are you taking a manual backup? (e.g. pre-migration)"
+        required: false
+        type: string
+        default: "Manual operator backup"
+
+jobs:
+  backup:
+    name: Fire backup event
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Send Inngest event
+        run: |
+          echo "Note: ${{ github.event.inputs.note }}"
+          echo "Triggered by: ${{ github.actor }}"
+          curl -sf \
+            -X POST "https://epidom.fr/api/inngest" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "backup/database",
+              "data": {
+                "triggeredBy": "${{ github.actor }}",
+                "note": "${{ github.event.inputs.note }}"
+              }
+            }' \
+            && echo "Backup event sent." \
+            || { echo "Failed to send backup event."; exit 1; }

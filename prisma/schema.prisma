@@ -88,6 +88,10 @@ model Session {
   updatedAt DateTime
   ipAddress String?
   userAgent String?
+  // City and country derived from Vercel geo headers on login — replaces the
+  // old ipapi.co third-party lookup. Null for sessions created before the
+  // migration or outside Vercel (local dev with no geo headers).
+  location  String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

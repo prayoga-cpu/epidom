@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isOwnUploadUrl } from "@/lib/utils/own-upload";
 
 /**
  * Staff roster/scheduling validation schemas. See docs/roadmap.md, "Proposed
@@ -102,19 +103,7 @@ const realDateKey = z
  */
 export const scheduleImageSchema = z
   .object({
-    imageUrl: z
-      .string()
-      .max(2048)
-      .refine((value) => {
-        try {
-          const url = new URL(value);
-          return (
-            url.protocol === "https:" && url.hostname.endsWith(".public.blob.vercel-storage.com")
-          );
-        } catch {
-          return false;
-        }
-      }, "Invalid image URL"),
+    imageUrl: z.string().max(2048).refine(isOwnUploadUrl, "Invalid image URL"),
     startDate: realDateKey,
     endDate: realDateKey,
     note: z.string().trim().max(200).optional(),

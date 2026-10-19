@@ -3,23 +3,13 @@ import { z } from "zod";
 import { generateVisionStructuredResponse } from "@/lib/ai/openai-client";
 import { createSuccessResponse } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
+import { isOwnUploadUrl } from "@/lib/utils/own-upload";
 
 const analyzeProfileSchema = z.object({
   imageUrl: z
     .string()
     .url()
-    .refine((value) => {
-      // Only accept URLs produced by our own upload endpoint (Vercel Blob).
-      // Zod still runs refinements when .url() fails, so new URL() must not throw.
-      try {
-        const url = new URL(value);
-        return (
-          url.protocol === "https:" && url.hostname.endsWith(".public.blob.vercel-storage.com")
-        );
-      } catch {
-        return false;
-      }
-    }, "Invalid image URL"),
+    .refine(isOwnUploadUrl, "Invalid image URL"),
 });
 
 const profileExtractionSchema = z.object({

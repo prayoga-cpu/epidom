@@ -1,5 +1,21 @@
 # STATUS.md
 
+## 3.28.0 — Infra consolidation (shipped 2026-10-19)
+
+✅ Fonnte removed (wa.me flow kept) · ✅ `@ai-sdk/google` removed · ✅ SheetJS CDN tarball · ✅ Session location from Vercel geo headers (migration `20261019145420_add_session_location`) · ✅ CloudflareR2Adapter + storage factory wired · ✅ `isOwnUploadUrl` centralised across 7 callers · ✅ Blob→R2 migration script · ✅ `docs/OPERATIONS.md` secrets inventory · ✅ 6 ops GitHub Actions workflows · ✅ AGENTS.md Operations section
+
+### Operator to-do (3.28.0)
+
+- [ ] Add `R2_MEDIA_BUCKET` (value: `epidom-media`) and `R2_MEDIA_PUBLIC_URL` (value: `https://media.epidom.fr`) to Vercel production env vars.
+- [ ] Create the `epidom-media` Cloudflare R2 bucket and point `media.epidom.fr` at it.
+- [ ] Set `STORAGE_PROVIDER=cloudflare-r2` in Vercel env to switch new uploads to R2.
+- [ ] Run `npx tsx scripts/migrate-blob-to-r2.ts` (dry-run first, then `--apply`) to migrate existing Blob URLs.
+- [ ] Add `CF_DEPLOY_HOOK` GitHub Actions secret (Vercel deploy hook URL for production).
+- [ ] Add `DEV_DATABASE_URL` and `DEV_DIRECT_URL` GitHub Actions secrets for `ops-restore-to-dev.yml`.
+- [ ] Rotate last-rotated dates in `docs/OPERATIONS.md` when secrets are first added.
+
+---
+
 ## Current focus: SEO and website rework — Phases 0–3 shipped (3.12.1–3.17.2); open: Phase 4 (operator), field Web Vitals decision
 
 _(AI agents: this file tracks the SEO/website phases below. Tick a box the moment an item is done and add the version it shipped in; don't re-describe finished work in prose. Anything that needs the operator goes in "Operator to-do". The previous STATUS.md (v3 dashboard revamp, releases 3.3.0–3.12.0, and their open operator to-dos) is archived unchanged at `docs/status-archive/2026-10-14-v3-revamp-and-releases.md`; its open items are listed at the bottom so they stay visible.)_

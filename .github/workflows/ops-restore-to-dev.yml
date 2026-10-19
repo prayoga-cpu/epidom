@@ -1,0 +1,65 @@
+name: Ops — Restore Backup to Dev Branch
+
+# Downloads a named backup from R2 and restores it onto the Neon development
+# branch. Useful for reproducing a production data bug without touching prod.
+# See docs/BACKUP_RESTORE.md for the full restore runbook.
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_key:
+        description: "R2 object key, e.g. backups/2026-10-19-02-00-00.dump"
+        required: true
+        type: string
+
+jobs:
+  restore:
+    name: Restore to dev
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install
+
+      - name: Download backup from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: |
+          aws s3 cp \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            "s3://${R2_BUCKET_NAME}/${{ github.event.inputs.backup_key }}" \
+            backup.dump
+
+      - name: Restore to dev branch
+        env:
+          DEV_DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+        run: |
+          echo "Restoring ${{ github.event.inputs.backup_key }} to dev branch..."
+          pg_restore --no-owner --no-acl -d "$DEV_DATABASE_URL" backup.dump
+          echo "Restore complete."
+
+      - name: Apply pending migrations on dev
+        env:
+          DIRECT_URL: ${{ secrets.DEV_DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+        run: node node_modules/prisma/build/index.js migrate deploy

@@ -1,7 +1,6 @@
 /**
- * Shared WhatsApp phone/link helpers — used by both the server-side Fonnte
- * sender (notifications/providers/fonnte.ts) and the client-side "open
- * wa.me with a prefilled message" flow (no Fonnte account required).
+ * WhatsApp link helpers for the client-side "open wa.me with a prefilled
+ * message" flow — no API account required.
  */
 
 /**

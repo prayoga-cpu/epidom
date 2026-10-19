@@ -3488,7 +3488,7 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
       autoSendWhatsapp: "Kirim struk WhatsApp otomatis",
       autoSendWhatsappDesc:
         "Begitu pesanan lunas dan nomor WhatsApp pelanggan tersedia, tautan struk dikirim otomatis.",
-      autoSendWhatsappUnavailable: "Perlu WhatsApp (Fonnte) dikonfigurasi oleh operator.",
+      autoSendWhatsappUnavailable: "Pengiriman WhatsApp langsung belum tersedia. Gunakan tombol 'Buka di WhatsApp' sebagai gantinya.",
       preview: "Pratinjau",
       brandingNote:
         "Nama toko, alamat, email, telepon, Instagram & TikTok mengikuti data Toko/Storefront kamu.",
@@ -8565,14 +8565,6 @@ lifetime: "Akses seumur hidup",
       osm: {
         name: "OpenStreetMap (Nominatim)",
         purpose: "mengubah koordinat GPS yang dicatat saat absen masuk dan pulang menjadi label alamat berupa teks. Koordinat dikirim untuk ini.",
-      },
-      ipapi: {
-        name: "ipapi.co",
-        purpose: "memperkirakan kota dan negara sebuah sesi masuk, untuk daftar sesi di akun Anda. Alamat IP sesi dikirim untuk ini.",
-      },
-      fonnte: {
-        name: "Fonnte",
-        purpose: "mengirim pesan WhatsApp seperti struk dan pesanan pemasok, jika pengiriman WhatsApp otomatis diaktifkan. Nomor telepon dan pesannya dikirim.",
       },
       webpush: {
         name: "Layanan push browser",

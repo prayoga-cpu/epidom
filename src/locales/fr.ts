@@ -4030,7 +4030,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       autoSendWhatsapp: "Envoyer le reçu automatiquement par WhatsApp",
       autoSendWhatsappDesc:
         "Dès qu'une commande est payée et que le numéro WhatsApp du client est connu, le lien du reçu lui est envoyé automatiquement.",
-      autoSendWhatsappUnavailable: "Nécessite que WhatsApp (Fonnte) soit configuré par l'opérateur.",
+      autoSendWhatsappUnavailable: "L'envoi WhatsApp direct n'est pas disponible pour l'instant. Utilisez le bouton « Ouvrir dans WhatsApp » à la place.",
       preview: "Aperçu",
       brandingNote:
         "Le nom du magasin, l'adresse, l'e-mail, le téléphone, Instagram et TikTok reprennent les données de votre Magasin/Vitrine.",
@@ -8232,14 +8232,6 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       osm: {
         name: "OpenStreetMap (Nominatim)",
         purpose: "convertit les coordonnées GPS enregistrées lors du pointage d'arrivée et de départ en une adresse sous forme de texte. Les coordonnées lui sont envoyées à cet effet.",
-      },
-      ipapi: {
-        name: "ipapi.co",
-        purpose: "estime la ville et le pays d'une session de connexion, pour la liste des sessions de votre compte. L'adresse IP de la session lui est envoyée à cet effet.",
-      },
-      fonnte: {
-        name: "Fonnte",
-        purpose: "envoie des messages WhatsApp, comme les reçus et les commandes fournisseurs, lorsque l'envoi automatique par WhatsApp est activé. Le numéro de téléphone et le message lui sont transmis.",
       },
       webpush: {
         name: "Services de notifications push des navigateurs",

@@ -52,6 +52,7 @@ import type {
 } from "@/lib/validation/onboarding.schemas";
 import { posTrialApplies } from "@/lib/plans/pos-trial";
 import { getStorageAdapter } from "@/lib/storage";
+import { isOwnUpload } from "@/lib/utils/own-upload";
 import { getFinanceSettings } from "./finance-settings.service";
 import { storefrontService } from "./storefront.service";
 import { subscriptionService } from "./subscription.service";
@@ -158,20 +159,6 @@ export function uiLocaleFromRequest(request: Request): Locale | null {
     }
   }
   return null;
-}
-
-/** A file the caller uploaded through /api/upload (stored under users/<userId>/). */
-function isOwnUpload(url: string, userId: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return (
-      parsed.protocol === "https:" &&
-      parsed.hostname.endsWith(".public.blob.vercel-storage.com") &&
-      parsed.pathname.startsWith(`/users/${userId}/`)
-    );
-  } catch {
-    return false;
-  }
 }
 
 /**

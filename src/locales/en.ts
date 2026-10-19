@@ -3457,7 +3457,7 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
       autoSendWhatsapp: "Auto-send WhatsApp receipt",
       autoSendWhatsappDesc:
         "As soon as an order is paid and the customer's WhatsApp number is on file, the receipt link is sent automatically.",
-      autoSendWhatsappUnavailable: "Requires WhatsApp (Fonnte) to be configured by the operator.",
+      autoSendWhatsappUnavailable: "WhatsApp direct-send is not currently available. Use the 'Open in WhatsApp' button instead.",
       preview: "Preview",
       brandingNote:
         "Store name, address, email, phone, Instagram & TikTok follow your Store/Storefront data.",
@@ -8521,14 +8521,6 @@ lifetime: "Lifetime access",
       osm: {
         name: "OpenStreetMap (Nominatim)",
         purpose: "turns the GPS coordinates recorded at attendance clock-in and clock-out into a text address label. The coordinates are sent for this.",
-      },
-      ipapi: {
-        name: "ipapi.co",
-        purpose: "estimates the city and country of a sign-in session, for the session list in your account. The session's IP address is sent for this.",
-      },
-      fonnte: {
-        name: "Fonnte",
-        purpose: "sends WhatsApp messages such as receipts and supplier orders, where automatic WhatsApp sending is enabled. The phone number and the message are sent.",
       },
       webpush: {
         name: "Browser push services",

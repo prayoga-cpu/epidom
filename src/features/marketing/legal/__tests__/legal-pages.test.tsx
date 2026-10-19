@@ -251,9 +251,7 @@ describe("GDPR and privacy claims", () => {
         "meta",
         "openai",
         "osm",
-        "ipapi",
         "webpush",
-        "fonnte",
         "cloudflare",
       ])
     );

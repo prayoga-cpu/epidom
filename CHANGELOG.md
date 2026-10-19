@@ -9,6 +9,21 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.28.0] - 2026-10-19 · infra
+
+Dependency consolidation and one-door ops: fewer third-party accounts, GitHub as the single operational control point.
+
+- **Removed Fonnte.** WhatsApp API sending via Fonnte has been removed. Customer receipts use the "Open in WhatsApp" (wa.me) link instead. Merchant alerts continue via MagicBell.
+- **Removed `@ai-sdk/google`.** The Google Gemini SDK was unused after the AI profile analyser was moved to OpenAI Vision.
+- **SheetJS from CDN tarball.** Replaced the unmaintained npm `xlsx@0.18.5` with the SheetJS LLC CDN tarball (`xlsx@0.20.3`).
+- **Session location from Vercel headers.** Replaced the ipapi.co third-party lookup (one outbound HTTP call per page load) with `x-vercel-ip-city` / `x-vercel-ip-country` headers stored at session creation. `schema.prisma`: added `Session.location String?`. Migration: `20261019145420_add_session_location`.
+- **Cloudflare R2 storage adapter.** `CloudflareR2Adapter` now implements `StorageAdapter`; set `STORAGE_PROVIDER=cloudflare-r2` plus `R2_MEDIA_BUCKET` + `R2_MEDIA_PUBLIC_URL` to switch uploads to R2. `next.config.ts` adds `media.epidom.fr` to `images.remotePatterns`.
+- **`isOwnUploadUrl` helper.** Centralises "is this URL from our upload infrastructure?" — accepts both Vercel Blob and R2 media hosts. Seven Blob-host checks across schemas, services, and utilities now use it.
+- **Blob→R2 migration script.** `scripts/migrate-blob-to-r2.ts` rewrites the 7 image-URL columns from Vercel Blob to R2. Dry-run by default; `--apply` writes. CSV rollback map generated.
+- **`docs/OPERATIONS.md`.** Complete secrets inventory (every secret, where it lives, who rotates it) and ops runbooks for deploy, backup, restore, env audit, and dependency audit.
+- **6 GitHub Actions ops workflows.** `ops-deploy`, `ops-migrate-status`, `ops-backup-now`, `ops-restore-to-dev`, `ops-env-audit`, `ops-deps-audit` — all `workflow_dispatch`, production environment gate.
+- **AGENTS.md Operations section.** Maps every production task to its workflow.
+
 ## [3.27.0] - 2026-10-19 · ux
 
 Pick any dates on the admin reports, cleaner sales-page links, and the video fills its frame.

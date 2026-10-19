@@ -79,7 +79,38 @@ export const auth = betterAuth({
     },
   },
   plugins: [],
+  session: {
+    additionalFields: {
+      location: {
+        type: "string",
+        required: false,
+        defaultValue: null,
+        input: false,
+      },
+    },
+  },
   databaseHooks: {
+    session: {
+      create: {
+        async before(session, context) {
+          const headers = context?.headers ?? context?.request?.headers;
+          if (!headers) return { data: session };
+          const rawCity = headers.get("x-vercel-ip-city");
+          const rawCountry = headers.get("x-vercel-ip-country");
+          if (!rawCity && !rawCountry) return { data: session };
+          try {
+            const city = rawCity ? decodeURIComponent(rawCity) : null;
+            const country = rawCountry
+              ? new Intl.DisplayNames(["en"], { type: "region" }).of(rawCountry) ?? rawCountry
+              : null;
+            const location = [city, country].filter(Boolean).join(", ") || null;
+            return { data: { ...session, location } };
+          } catch {
+            return { data: session };
+          }
+        },
+      },
+    },
     user: {
       create: {
         async after(user, context) {

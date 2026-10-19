@@ -1,0 +1,46 @@
+name: Ops — Environment Variables Audit
+
+# Lists all key names set in Vercel production and flags any keys that are in
+# .env.example but missing from Vercel. Helps catch drift after a new secret
+# is added to code but not yet added to Vercel.
+# Requires: VERCEL_API_TOKEN and VERCEL_TEAM_ID GitHub secrets.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  audit:
+    name: Audit env vars
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch Vercel env keys
+        env:
+          VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+        run: |
+          # List all env var keys from the production environment
+          curl -sf \
+            -H "Authorization: Bearer $VERCEL_API_TOKEN" \
+            "https://api.vercel.com/v9/projects/epidom/env?teamId=$VERCEL_TEAM_ID&target=production" \
+            | jq -r '.envs[].key' | sort > vercel-keys.txt
+          echo "Vercel production keys:"
+          cat vercel-keys.txt
+
+      - name: Extract expected keys from .env.example
+        run: |
+          grep -v '^#' .env.example | grep -v '^$' | cut -d= -f1 | sort > example-keys.txt
+          echo "Expected keys from .env.example:"
+          cat example-keys.txt
+
+      - name: Report missing keys
+        run: |
+          MISSING=$(comm -23 example-keys.txt vercel-keys.txt)
+          if [ -n "$MISSING" ]; then
+            echo "::warning::Keys in .env.example but NOT in Vercel production:"
+            echo "$MISSING"
+          else
+            echo "All .env.example keys are set in Vercel production."
+          fi

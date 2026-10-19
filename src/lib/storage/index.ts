@@ -10,6 +10,7 @@
 
 import type { StorageAdapter } from "./storage-adapter.interface";
 import { VercelBlobAdapter } from "./vercel-blob-adapter";
+import { CloudflareR2Adapter } from "./cloudflare-r2-adapter";
 
 /**
  * Supported storage providers
@@ -29,11 +30,8 @@ export function getStorageAdapter(): StorageAdapter {
     case "vercel-blob":
       return new VercelBlobAdapter();
 
-    // Future providers can be added here:
-    // case 'cloudflare-r2':
-    //   return new CloudflareR2Adapter();
-    // case 'uploadthing':
-    //   return new UploadThingAdapter();
+    case "cloudflare-r2":
+      return new CloudflareR2Adapter();
 
     default:
       return new VercelBlobAdapter();

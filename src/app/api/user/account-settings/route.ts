@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
-import { parseUserAgent, geolocateIp } from "@/lib/utils/user-agent";
+import { parseUserAgent } from "@/lib/utils/user-agent";
 import { userService } from "@/lib/services";
 import { sendAccountDeactivatedEmail } from "@/lib/services/email.service";
 
@@ -37,7 +37,7 @@ export const GET = withApiHandler(
       }),
       prisma.session.findMany({
         where: { userId },
-        select: { id: true, ipAddress: true, userAgent: true, createdAt: true, updatedAt: true },
+        select: { id: true, ipAddress: true, userAgent: true, location: true, createdAt: true, updatedAt: true },
         orderBy: { updatedAt: "desc" },
       }),
     ]);
@@ -55,18 +55,12 @@ export const GET = withApiHandler(
 
     const hasPasswordAccount = accounts.some((a) => a.providerId === "credential");
 
-    // Cap how many sessions get a live geolocation lookup — most users have
-    // a handful of devices; this keeps the page from stalling behind dozens
-    // of third-party calls if a stale session table ever grows large.
-    const sessionsToLocate = sessions.slice(0, 10);
-    const locations = await Promise.all(sessionsToLocate.map((s) => geolocateIp(s.ipAddress)));
-
-    const deviceSessions = sessionsToLocate.map((s, i) => ({
+    const deviceSessions = sessions.map((s) => ({
       id: s.id,
       isCurrent: s.id === session.session.id,
       ...parseUserAgent(s.userAgent),
       ipAddress: s.ipAddress,
-      location: locations[i],
+      location: s.location ?? "Unknown location",
       lastActive: s.updatedAt,
       createdAt: s.createdAt,
     }));

@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { getContrastingInk, getPremiumTheme } from "@/lib/utils/color";
 import type { StoreOverview } from "@/types/api/store-overview";
 import type { Store } from "../hooks/use-stores";
+import { isOwnUploadUrl } from "@/lib/utils/own-upload";
 
 /** Storefront.themeColor's own schema default — what a store with no storefront row gets. */
 export const DEFAULT_STORE_THEME_COLOR = "#FF6B35";
@@ -53,7 +54,7 @@ export function resolveStoreCardBranding(
   };
 }
 
-/** Vercel Blob images go through next/image's optimiser; anything else is served as-is. */
+/** Our-hosted images go through next/image's optimiser; anything else is served as-is. */
 export function isBlobHostedImage(url: string): boolean {
-  return url.includes("blob.vercel-storage.com");
+  return isOwnUploadUrl(url);
 }

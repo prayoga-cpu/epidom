@@ -199,7 +199,23 @@ These five bug classes have each caused real, shipped breakage on iPad Safari. C
 
 ---
 
-## 9. Where to find more
+## 9. Operations
+
+All production operations have a GitHub Actions `workflow_dispatch` workflow. Run them from **Actions → [name] → Run workflow** — never run commands directly against production unless GitHub is unreachable. Full secrets inventory and runbooks are in `docs/OPERATIONS.md`.
+
+| Task | Workflow | Notes |
+|------|----------|-------|
+| Trigger a production deploy | `ops-deploy.yml` | Requires `CF_DEPLOY_HOOK` secret |
+| Check pending DB migrations | `ops-migrate-status.yml` | Shows unapplied `prisma/migrations/` files |
+| Take an immediate DB backup | `ops-backup-now.yml` | Fires the Inngest `backup/database` event |
+| Restore a backup to dev branch | `ops-restore-to-dev.yml` | Requires `backup_key` input, e.g. `backups/2026-10-19.dump` |
+| Audit Vercel env vars vs .env.example | `ops-env-audit.yml` | Flags missing keys |
+| Audit npm deps for vulnerabilities | `ops-deps-audit.yml` | Opens a GitHub issue on HIGH/CRITICAL |
+| Nightly Neon dev branch reset | `reset-dev-db.yml` | Scheduled; can also be run manually |
+
+---
+
+## 10. Where to find more
 
 | You need to understand...                       | Read                    |
 | ----------------------------------------------- | ----------------------- |
@@ -210,5 +226,6 @@ These five bug classes have each caused real, shipped breakage on iPad Safari. C
 | Pricing tiers, Stripe products                  | `/docs/BILLING.md`      |
 | Env variables and required services             | `/docs/ENVIRONMENT.md`  |
 | Schema, models, migrations                      | `/docs/DATABASE.md`     |
+| Production secrets, ops runbooks                | `/docs/OPERATIONS.md`   |
 
 If a doc and this file disagree, this file wins. Flag the inconsistency to the operator.

@@ -9,10 +9,9 @@
  * `privacy.processors` in all three locales.
  *
  * A provider is listed because the code sends it data. Several are switched on
- * per environment or per store (Pusher, MagicBell, Fonnte, the Stripe/Xendit
- * flows, AI features, the Cloudflare R2 backups once the R2_* variables are
- * set), so which ones are live in production is an operator check, see
- * STATUS.md.
+ * per environment or per store (Pusher, MagicBell, the Stripe/Xendit flows,
+ * AI features, the Cloudflare R2 backups once the R2_* variables are set),
+ * so which ones are live in production is an operator check, see STATUS.md.
  */
 export const PROVIDERS = [
   { id: "vercel", href: "https://vercel.com/legal/privacy-notice" },
@@ -30,8 +29,6 @@ export const PROVIDERS = [
   { id: "magicbell", href: "https://www.magicbell.com/privacy-policy" },
   { id: "webpush" },
   { id: "osm", href: "https://osmfoundation.org/wiki/Privacy_Policy" },
-  { id: "ipapi", href: "https://ipapi.co/privacy/" },
-  { id: "fonnte" },
 ] as const satisfies ReadonlyArray<{ id: string; href?: string }>;
 
 export type ProviderId = (typeof PROVIDERS)[number]["id"];

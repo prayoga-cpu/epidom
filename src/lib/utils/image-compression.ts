@@ -19,6 +19,7 @@ import {
   IMAGE_MAX_DIMENSION_PX,
   IMAGE_RAW_UPLOAD_MAX_MB,
 } from "@/lib/constants/image";
+import { isOwnUploadUrl } from "@/lib/utils/own-upload";
 
 /**
  * Configuration options for image compression
@@ -150,8 +151,7 @@ export function revokeImagePreview(url: string): void {
  * @throws Error if deletion fails
  */
 export async function deleteBlobImage(url: string): Promise<void> {
-  // Only delete if it's a blob storage URL
-  if (!url || !url.includes("blob.vercel-storage.com")) {
+  if (!url || !isOwnUploadUrl(url)) {
     return;
   }
 

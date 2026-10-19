@@ -13,11 +13,17 @@ const nextConfig: NextConfig = {
     // Performance optimizations
     unoptimized: false,
     loader: "default",
-    // Allow images from Vercel Blob Storage
+    // Allow images from Vercel Blob Storage and Cloudflare R2 media bucket
     remotePatterns: [
       {
         protocol: "https",
         hostname: "**.public.blob.vercel-storage.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "media.epidom.fr",
         port: "",
         pathname: "/**",
       },

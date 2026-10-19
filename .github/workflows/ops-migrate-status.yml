@@ -1,0 +1,34 @@
+name: Ops — Check Pending Migrations
+
+# Reports which Prisma migrations are applied on the production database
+# vs. the migration files in prisma/migrations/.
+# A non-empty "pending" list means the last deploy did not run migrate deploy.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    name: Prisma migrate status
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run migrate status
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node node_modules/prisma/build/index.js migrate status

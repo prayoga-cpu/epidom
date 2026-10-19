@@ -9,6 +9,7 @@ import {
 } from "@/lib/validation/business.schemas";
 import { BusinessDto, BusinessWithStoresDto, StoreDto } from "@/types/dto";
 import { getStorageAdapter } from "@/lib/storage";
+import { isOwnUploadUrl } from "@/lib/utils/own-upload";
 import { prisma } from "@/lib/prisma";
 import { subscriptionRepository } from "@/lib/repositories/subscription.repository";
 import { SubscriptionStatus } from "@prisma/client";
@@ -430,8 +431,8 @@ export class BusinessService {
       return store;
     });
 
-    // Delete image from Blob storage if exists (outside transaction)
-    if (store.image && store.image.includes("blob.vercel-storage.com")) {
+    // Delete image from storage if it came from our upload infrastructure
+    if (store.image && isOwnUploadUrl(store.image)) {
       try {
         const storage = getStorageAdapter();
         await storage.delete(store.image);
