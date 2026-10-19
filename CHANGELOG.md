@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.22.0] - 2026-10-19 · feat
+
+Every new account now records where it came from: the sales page or referral link, and the ad that brought it.
+
+- **Where each sign-up came from.** When someone creates an account (email or Google), Epidom records the last sales page or partner referral link they opened in the 30 days before, the campaign tags of the ad or link that brought them (utm_source, utm_medium, utm_campaign, utm_content, utm_term), whether it was an ad click on Meta, Google or TikTok, the page they landed on and the site they came from. The account stays credited to that page or link.
+- **Tracked sign-ups in the Sales Pages report.** The admin report now lists each tracked sign-up with where it came from, its ad and campaign tags, the plan it's on now (free, checkout not finished, trial, paying, payment failed or canceled) and whether it has created a store, plus a summary by campaign with sign-ups, trials and paying accounts.
+- **Sales-page visits last the full 30 days on iPhone.** Safari kept the sales-page cookie for only 7 days, or 24 hours after an ad click, so a sign-up made later wasn't credited to the page. It's now also set by the server, which keeps it for 30 days.
+- **Policies updated.** The cookie policy lists the new epidom_source and epidom_touch cookies, and the privacy policy says what is recorded about how you found us, in French, English and Indonesian.
+
 ## [3.21.1] - 2026-10-17 · fix
 
 Names with underscores show correctly in the changelog.

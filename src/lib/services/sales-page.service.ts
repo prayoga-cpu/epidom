@@ -88,6 +88,96 @@ export interface SalesPageReport {
   pages: SalesPageRow[];
   /** Best signup rate, or best click rate while there are no signups yet. */
   leader: { page: SalesPage; metric: "signupRate" | "clickRate" } | null;
+  /** Sign-ups with a known source or ad tags (SignupAttribution), newest first. */
+  tracked: TrackedSignups;
+}
+
+/** Where a sign-up's account stands now, from its Subscription row. */
+export type SignupPlanStatus =
+  | "FREE"
+  | "CHECKOUT" // started a paid checkout, hasn't paid
+  | "TRIAL"
+  | "ACTIVE"
+  | "PAST_DUE"
+  | "CANCELED"
+  | "GRANTED"; // a paid plan given without a Stripe subscription (admin)
+
+export interface TrackedSignupRow {
+  createdAt: string;
+  source: "REFERRAL_LINK" | "SALES_PAGE" | null;
+  refCode: string | null;
+  salesPage: string | null;
+  salesPageLocale: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  adClick: string | null;
+  plan: string;
+  status: SignupPlanStatus;
+  hasStore: boolean;
+}
+
+export interface TrackedCampaignRow {
+  utmSource: string | null;
+  utmCampaign: string | null;
+  signups: number;
+  trials: number;
+  /** ACTIVE on a paid plan through Stripe. */
+  paying: number;
+}
+
+export interface TrackedSignups {
+  /** Every account created in the range (direct ones included), since tracking started. */
+  totalSignups: number;
+  rows: TrackedSignupRow[];
+  /** The list stops at this many rows; the counts above it don't. */
+  limit: number;
+  campaigns: TrackedCampaignRow[];
+}
+
+/** Pure: where an account stands, from its subscription (null = never had one). */
+export function signupPlanStatus(
+  subscription: {
+    plan: string;
+    status: string;
+    trialEndsAt: Date | null;
+    stripeSubscriptionId: string | null;
+  } | null,
+  now: Date = new Date()
+): SignupPlanStatus {
+  if (!subscription || subscription.plan === "FREE") return "FREE";
+  switch (subscription.status) {
+    case "INCOMPLETE":
+      return "CHECKOUT";
+    case "PAST_DUE":
+      return "PAST_DUE";
+    case "CANCELED":
+      return "CANCELED";
+    default:
+      if (!subscription.stripeSubscriptionId) return "GRANTED";
+      return subscription.trialEndsAt && subscription.trialEndsAt > now ? "TRIAL" : "ACTIVE";
+  }
+}
+
+/** Pure: sign-ups grouped by ad source and campaign, most sign-ups first. */
+export function summarizeCampaigns(rows: TrackedSignupRow[]): TrackedCampaignRow[] {
+  const byKey = new Map<string, TrackedCampaignRow>();
+  for (const row of rows) {
+    const key = JSON.stringify([row.utmSource, row.utmCampaign]);
+    const entry = byKey.get(key) ?? {
+      utmSource: row.utmSource,
+      utmCampaign: row.utmCampaign,
+      signups: 0,
+      trials: 0,
+      paying: 0,
+    };
+    entry.signups += 1;
+    if (row.status === "TRIAL") entry.trials += 1;
+    if (row.status === "ACTIVE") entry.paying += 1;
+    byKey.set(key, entry);
+  }
+  return [...byKey.values()].sort((a, b) => b.signups - a.signups || b.paying - a.paying);
 }
 
 /** One row of the groupBy in getSalesPageReport. */
@@ -164,6 +254,9 @@ export function summarizeSalesPages(
   return { pages, leader: best("signupRate") ?? best("clickRate") };
 }
 
+/** Rows listed under "Tracked sign-ups"; the campaign summary covers the same rows. */
+const TRACKED_SIGNUP_LIMIT = 500;
+
 const RANGE_DAYS: Record<SalesPageReportRange, number | null> = {
   "7": 7,
   "30": 30,
@@ -186,7 +279,7 @@ export async function getSalesPageReport(
   const createdAt = since ? { gte: since } : undefined;
   const locale = lang === "all" ? undefined : lang;
 
-  const [grouped, signupRows] = await Promise.all([
+  const [grouped, signupRows, attributionRows, totalSignups] = await Promise.all([
     prisma.salesPageEvent.groupBy({
       by: ["page", "type", "cta", "visitorHash"],
       where: { type: { not: "SIGNUP" }, createdAt, locale },
@@ -199,6 +292,41 @@ export async function getSalesPageReport(
         user: { select: { business: { select: { _count: { select: { stores: true } } } } } },
       },
     }),
+    prisma.signupAttribution.findMany({
+      where: {
+        createdAt,
+        ...(locale ? { salesPageLocale: locale } : {}),
+        OR: [
+          { source: { not: null } },
+          { utmSource: { not: null } },
+          { utmCampaign: { not: null } },
+          { adClick: { not: null } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      take: TRACKED_SIGNUP_LIMIT,
+      select: {
+        createdAt: true,
+        source: true,
+        refCode: true,
+        salesPage: true,
+        salesPageLocale: true,
+        utmSource: true,
+        utmMedium: true,
+        utmCampaign: true,
+        utmContent: true,
+        adClick: true,
+        user: {
+          select: {
+            subscription: {
+              select: { plan: true, status: true, trialEndsAt: true, stripeSubscriptionId: true },
+            },
+            business: { select: { _count: { select: { stores: true } } } },
+          },
+        },
+      },
+    }),
+    prisma.signupAttribution.count({ where: { createdAt } }),
   ]);
 
   const groups: SalesPageEventGroup[] = grouped.map((g) => ({
@@ -213,5 +341,32 @@ export async function getSalesPageReport(
     hasStore: (s.user?.business?._count.stores ?? 0) > 0,
   }));
 
-  return { range, lang, since: since?.toISOString() ?? null, ...summarizeSalesPages(groups, signups) };
+  const rows: TrackedSignupRow[] = attributionRows.map((a) => ({
+    createdAt: a.createdAt.toISOString(),
+    source: a.source,
+    refCode: a.refCode,
+    salesPage: a.salesPage,
+    salesPageLocale: a.salesPageLocale,
+    utmSource: a.utmSource,
+    utmMedium: a.utmMedium,
+    utmCampaign: a.utmCampaign,
+    utmContent: a.utmContent,
+    adClick: a.adClick,
+    plan: a.user.subscription?.plan ?? "FREE",
+    status: signupPlanStatus(a.user.subscription, now),
+    hasStore: (a.user.business?._count.stores ?? 0) > 0,
+  }));
+
+  return {
+    range,
+    lang,
+    since: since?.toISOString() ?? null,
+    ...summarizeSalesPages(groups, signups),
+    tracked: {
+      totalSignups,
+      rows,
+      limit: TRACKED_SIGNUP_LIMIT,
+      campaigns: summarizeCampaigns(rows),
+    },
+  };
 }

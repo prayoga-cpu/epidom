@@ -3,7 +3,14 @@ import { ExternalLink, Info, Megaphone, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { SalesPageReport, SalesPageRow } from "@/lib/services/sales-page.service";
+import type {
+  SalesPageReport,
+  SalesPageRow,
+  SignupPlanStatus,
+  TrackedSignupRow,
+  TrackedSignups,
+} from "@/lib/services/sales-page.service";
+import { PLAN_LABELS, type PlanTier } from "@/lib/plans/entitlements";
 import type {
   SalesPageReportLang,
   SalesPageReportRange,
@@ -167,6 +174,144 @@ function PageCard({
   );
 }
 
+const STATUS_LABELS: Record<SignupPlanStatus, { label: string; className: string }> = {
+  FREE: { label: "Free", className: "text-muted-foreground" },
+  CHECKOUT: { label: "Checkout not finished", className: "text-amber-400" },
+  TRIAL: { label: "Trial", className: "text-blue-400" },
+  ACTIVE: { label: "Paying", className: "text-emerald-400" },
+  PAST_DUE: { label: "Payment failed", className: "text-red-400" },
+  CANCELED: { label: "Canceled", className: "text-muted-foreground" },
+  GRANTED: { label: "Granted by admin", className: "text-muted-foreground" },
+};
+
+const AD_LABELS: Record<string, string> = { meta: "Meta ad", google: "Google ad", tiktok: "TikTok ad" };
+
+const signupDate = (iso: string) =>
+  new Date(iso).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+
+function cameFrom(row: TrackedSignupRow): string {
+  if (row.source === "REFERRAL_LINK") return `Referral link · ${row.refCode ?? "?"}`;
+  if (row.source === "SALES_PAGE" && row.salesPage) {
+    return `${pageLabel(row.salesPage)} · ${(row.salesPageLocale ?? "fr").toUpperCase()}`;
+  }
+  return "No page or link";
+}
+
+const tags = (...values: (string | null)[]) => values.filter(Boolean).join(" / ") || "—";
+
+function TrackedSignupsSection({ tracked }: { tracked: TrackedSignups }) {
+  const paying = tracked.rows.filter((r) => r.status === "ACTIVE").length;
+  const trials = tracked.rows.filter((r) => r.status === "TRIAL").length;
+  const fromAds = tracked.rows.filter((r) => r.adClick || r.utmSource).length;
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Tracked sign-ups</CardTitle>
+        <p className="text-muted-foreground text-xs">
+          Where each new account came from (sales page or referral link, plus the ad&apos;s
+          campaign tags) and the plan it is on now. {tracked.rows.length} tracked of{" "}
+          {tracked.totalSignups} sign-up{tracked.totalSignups === 1 ? "" : "s"} in this range ·{" "}
+          {fromAds} with ad tags · {trials} on trial · {paying} paying.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {tracked.rows.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No tracked sign-ups in this range yet.</p>
+        ) : (
+          <>
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">
+                By campaign
+              </p>
+              <div className="-mx-4 overflow-x-auto sm:mx-0">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead>
+                    <tr className="text-muted-foreground border-border border-b text-left text-xs">
+                      <th className="px-4 py-2 font-medium sm:px-2">utm_source</th>
+                      <th className="px-2 py-2 font-medium">utm_campaign</th>
+                      <th className="px-2 py-2 text-right font-medium">Sign-ups</th>
+                      <th className="px-2 py-2 text-right font-medium">Trials</th>
+                      <th className="px-4 py-2 text-right font-medium sm:px-2">Paying</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-border divide-y">
+                    {tracked.campaigns.map((c) => (
+                      <tr key={`${c.utmSource}|${c.utmCampaign}`}>
+                        <td className="px-4 py-2 sm:px-2">{c.utmSource ?? "No tags"}</td>
+                        <td className="px-2 py-2">{c.utmCampaign ?? "—"}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{c.signups}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{c.trials}</td>
+                        <td className="px-4 py-2 text-right font-semibold tabular-nums sm:px-2">
+                          {c.paying}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">
+                Each sign-up
+              </p>
+              <div className="-mx-4 overflow-x-auto sm:mx-0">
+                <table className="w-full min-w-[860px] text-sm">
+                  <thead>
+                    <tr className="text-muted-foreground border-border border-b text-left text-xs">
+                      <th className="px-4 py-2 font-medium sm:px-2">Date (UTC)</th>
+                      <th className="px-2 py-2 font-medium">Came from</th>
+                      <th className="px-2 py-2 font-medium">Ad</th>
+                      <th className="px-2 py-2 font-medium">Source / medium</th>
+                      <th className="px-2 py-2 font-medium">Campaign / content</th>
+                      <th className="px-2 py-2 font-medium">Plan</th>
+                      <th className="px-4 py-2 font-medium sm:px-2">Store</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-border divide-y">
+                    {tracked.rows.map((row, i) => {
+                      const status = STATUS_LABELS[row.status];
+                      return (
+                        <tr key={`${row.createdAt}-${i}`}>
+                          <td className="px-4 py-2 whitespace-nowrap tabular-nums sm:px-2">
+                            {signupDate(row.createdAt)}
+                          </td>
+                          <td className="px-2 py-2 whitespace-nowrap">{cameFrom(row)}</td>
+                          <td className="px-2 py-2 whitespace-nowrap">
+                            {row.adClick ? (AD_LABELS[row.adClick] ?? row.adClick) : "—"}
+                          </td>
+                          <td className="px-2 py-2">{tags(row.utmSource, row.utmMedium)}</td>
+                          <td className="px-2 py-2">{tags(row.utmCampaign, row.utmContent)}</td>
+                          <td className="px-2 py-2 whitespace-nowrap">
+                            {PLAN_LABELS[row.plan as PlanTier] ?? row.plan}{" "}
+                            <span className={`text-xs ${status.className}`}>· {status.label}</span>
+                          </td>
+                          <td className="px-4 py-2 sm:px-2">{row.hasStore ? "Yes" : "No"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {tracked.rows.length >= tracked.limit && (
+                <p className="text-muted-foreground mt-2 text-xs">
+                  Showing the latest {tracked.limit}. Pick a shorter range to see the rest.
+                </p>
+              )}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SalesPageReportView({ report }: { report: SalesPageReport }) {
   const tooEarly = report.pages.some((p) => p.visitors < EARLY_VISITORS);
   const leadingLabel = (page: string) => {
@@ -233,6 +378,8 @@ export function SalesPageReportView({ report }: { report: SalesPageReport }) {
           ))}
         </div>
 
+        <TrackedSignupsSection tracked={report.tracked} />
+
         <div className="text-muted-foreground space-y-1.5 text-xs">
           <p>
             <strong>Visitors</strong> are counted once per day per device, without cookies (an
@@ -242,6 +389,13 @@ export function SalesPageReportView({ report }: { report: SalesPageReport }) {
           <p>
             <strong>Signups</strong> are accounts created (email or Google) by a browser whose last
             opened sales page, within 30 days, was this one. Signup rate = signups ÷ visitors.
+          </p>
+          <p>
+            <strong>Tracked sign-ups</strong> start on 19 October 2026. &ldquo;Came from&rdquo; is
+            the last sales page or referral link the browser opened in the 30 days before signing
+            up; the account stays credited to it. Ad and campaign tags are those of the last visit
+            that had utm_* tags or an ad click id. A language filter keeps only sales-page sign-ups
+            in that language.
           </p>
           <p>
             Rates use the same date range for both sides, so a signup near the start of a range can

@@ -8421,7 +8421,7 @@ lifetime: "Akses seumur hidup",
   },
   cookiePolicy: {
     title: "Kebijakan Cookie",
-    lastUpdatedDate: "17 Oktober 2026",
+    lastUpdatedDate: "19 Oktober 2026",
     intro: "Halaman ini menjelaskan apa saja yang disimpan Epidom di browser Anda, alat pihak ketiga apa yang dapat berjalan di situs, dan bagaimana Anda tetap memegang kendali. Berlaku untuk situs web dan aplikasi Epidom.",
     footer: "Kebijakan ini berubah ketika alat yang digunakan di situs berubah. Tanggal di bagian atas menunjukkan pembaruan terakhir.",
     s1: {
@@ -8451,6 +8451,7 @@ lifetime: "Akses seumur hidup",
       item2: "epidom:lastVisitedUrl, epidom:lastVisitedBackOffice, epidom:lastVisitedPos dan epidom:rememberLastVisited: dipasang hanya saat Anda masuk, agar aplikasi dapat membawa Anda kembali ke layar terakhir yang digunakan. Disimpan hingga 400 hari dan dihapus saat Anda berganti akun.",
       item3: "Penyimpanan lokal: cookie-consent-preferences (pilihan cookie dan bahasa Anda), locale dan lang (bahasa Anda) serta preferensi tampilan seperti zoom layar. Data ini tetap berada di perangkat Anda.",
       item4: "epidom_sales_page: dipasang saat Anda membuka salah satu halaman presentasi kami (/sales-page-1, /sales-page-2, /sales-page-3 atau /sales-page-4, dalam bahasa apa pun). Isinya hanya nama halaman tersebut dan bahasanya, tanpa pengenal apa pun, agar kami tahu dari halaman mana Anda datang jika Anda membuat akun. Disimpan selama 30 hari.",
+      item5: "epidom_source dan epidom_touch: dipasang saat Anda membuka salah satu halaman presentasi kami atau tautan referal milik mitra, atau datang lewat tautan yang memuat tag kampanye (utm_source dan sejenisnya). epidom_source berisi nama halaman tersebut atau kode referalnya. epidom_touch berisi tag kampanye, apakah kunjungan berasal dari klik iklan (tanpa ID klik tersebut), halaman tempat Anda tiba, dan situs asal Anda. Jika Anda membuat akun, kami menyimpannya bersama akun Anda, agar kami tahu halaman, mitra, atau kampanye mana yang membawa Anda dan dapat memberi imbalan kepada mitra yang merekomendasikan pelanggan. Cookie ini tidak dibagikan ke platform iklan dan disimpan selama 30 hari.",
     },
     s5: {
       title: "Analitik (dengan persetujuan Anda jika diwajibkan)",
@@ -8478,7 +8479,7 @@ lifetime: "Akses seumur hidup",
   },
   privacy: {
     title: "Kebijakan Privasi",
-    lastUpdatedDate: "17 Oktober 2026",
+    lastUpdatedDate: "19 Oktober 2026",
     intro: "Kebijakan ini menjelaskan data pribadi apa yang diproses Epidom, untuk apa, siapa yang menerimanya, berapa lama kami menyimpannya, dan bagaimana Anda dapat menggunakan hak Anda. Kami hanya menjelaskan apa yang benar-benar dilakukan produk ini saat ini.",
     footer: "Kebijakan ini dapat berubah. Kami akan memberi tahu pengguna tentang perubahan material melalui email atau melalui layanan.",
     s1: {
@@ -8500,6 +8501,7 @@ lifetime: "Akses seumur hidup",
       item9: "Hitungan kunjungan halaman toko: halaman toko publik menghitung kunjungan dengan kode anonim yang berubah setiap hari dan diturunkan dari alamat IP dan browser pengunjung. Alamat IP itu sendiri tidak disimpan.",
       item10: "Notifikasi push: jika Anda mengaktifkannya, langganan push browser Anda (alamat yang diterbitkan vendor browser Anda) dan detail browser, agar notifikasi sampai ke perangkat itu.",
       item11: "Analitik situs web dan aplikasi, serta pengukuran iklan: hanya jika Anda menerimanya di banner cookie. Jika Anda menerima analitik, Google Analytics menerima alamat setiap halaman yang Anda buka, termasuk di dalam aplikasi setelah masuk, serta event untuk beberapa tindakan. Untuk penjualan yang diselesaikan di kasir, ini mencakup nomor pesanan, total, serta nama, harga, dan jumlah setiap item yang terjual. Detail lebih lanjut:",
+      item12: "Cara Anda menemukan kami: saat Anda membuat akun, kami mencatat halaman presentasi atau tautan referal mitra yang Anda buka, tag kampanye dari tautan yang Anda ikuti (misalnya utm_source=facebook), dan apakah itu klik iklan. Jika Anda mengizinkan cookie pemasaran, kami juga mencatat ID klik Meta (cookie _fbc). Kami menggunakannya untuk mengukur iklan kami dan untuk memberi imbalan kepada mitra yang merekomendasikan pelanggan.",
     },
     s3: {
       title: "Untuk apa kami menggunakannya",

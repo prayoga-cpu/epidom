@@ -23,7 +23,7 @@ export function PrivacyContent() {
     return "href" in p ? { text, link: { href: p.href, label: t("legal.providerPolicy") } } : text;
   });
 
-  const s2 = plain("privacy.s2", 11);
+  const s2 = plain("privacy.s2", 12);
   // Item 11 points at the Cookie Policy.
   s2[10] = { text: t("privacy.s2.item11"), link: link("/cookie-policy", t("footer.linkCookies")) };
 

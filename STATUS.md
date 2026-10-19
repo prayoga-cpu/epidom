@@ -155,7 +155,20 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Outside the SEO phases
 
-### Changelog underscores + report language — 3.21.1 (2026-10-17, not pushed)
+### Partners, referrals and commissions — Release A: sign-up tracking — 3.22.0 (2026-10-19)
+
+Plan: partners (Aaron = owner of a sales page, referral-link partners with a 10% first-invoice discount), 30% for the customer's first 3 months, manual payouts, per-page admin access. Release A ships the tracking before the sales-page ads start (2026-10-20); Release B (3.23.0) adds partners, admin access per page, the discount, commissions and the partner page.
+
+- [x] Proxy cookies (`src/lib/attribution/cookies.ts`, called next to `applyConsentModeCookie`; page responses only, never redirects/API/bots; `.epidom.fr` on apex+www via `sharedCookieDomainForHost`): `epidom_source` = last referral link (`?ref=` only on `/`, `/register`, `/pricing`, any language) or sales page; `epidom_touch` = last utm_* tags + ad-click flag (fbclid/gclid/ttclid — the flag only, never the id) + landing path + outside referrer host; `epidom_sales_page` now also set server-side (Safari ITP caps the tracker.js copy at 7 days / 24 h after an ad click). `ref` added to the proxy's intent params.
+- [x] `SignupAttribution` table (migration `20261019090000_signup_attributions`), one row per browser sign-up, written once by `recordSignupAttribution` from the Better Auth create hook (email POST and Google callback both carry the cookies); `fbc` from Meta's `_fbc` only (marketing consent).
+- [x] `/admin/sales-pages`: "Tracked sign-ups" — by campaign (sign-ups, trials, paying) and each sign-up (came from, ad, utm, plan + status, store). No emails.
+- [x] Cookie policy s4.item5 + privacy s2.item12 in en/fr/id, dates → 19 Oct 2026.
+- [x] Tests: `attribution-cookies.test.ts`, `proxy-attribution-cookies.test.ts`, sales-page service (plan status, campaign summary, tracked rows).
+- [ ] Dev branch: run `prisma migrate deploy` (operator; the build applies it to prod).
+- [ ] Use `https://epidom.fr/sales-page-N?utm_source=…&utm_campaign=…&utm_content=…` in every ad so each ad shows up in the campaign summary (Meta adds fbclid itself; `{{campaign.name}}`/`{{ad.name}}` URL parameters work for utm_campaign/utm_content).
+- [ ] **Legal check (operator):** are `epidom_source`/`epidom_touch` (tied to the account at sign-up) "functional" under the French rules? Listed as functional in the cookie policy, like `epidom_sales_page`.
+
+### Changelog underscores + report language — 3.21.1 (2026-10-17, pushed f9c92750)
 
 - [x] Found by the production verification of 3.21.0: the changelog's inline-Markdown parser (`src/components/shared/rich-text.tsx`, used only by the three changelog views) read `_…_` inside a word as emphasis, so epidom_consent_mode / epidom_sales_page rendered as "epidom*consent*mode". `_` emphasis now needs word edges on both sides (CommonMark), checked in code (no regex lookbehind: Safari < 16.4 can't parse it).
 - [x] `currentTrackingLocale()` falls back to `?lang=` then `getLanguagePreference()` when `<html lang>` isn't set yet (app routes set it in an effect after the bridge's first PageView / AUTO beacon), so those rows carry a locale.

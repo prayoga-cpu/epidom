@@ -8377,7 +8377,7 @@ lifetime: "Lifetime access",
   },
   cookiePolicy: {
     title: "Cookie Policy",
-    lastUpdatedDate: "October 17, 2026",
+    lastUpdatedDate: "October 19, 2026",
     intro: "This page explains what Epidom stores in your browser, which third-party tools can run on the site, and how you stay in control. It applies to the Epidom website and app.",
     footer: "This policy changes when the tools used on the site change. The date at the top shows the last update.",
     s1: {
@@ -8407,6 +8407,7 @@ lifetime: "Lifetime access",
       item2: "epidom:lastVisitedUrl, epidom:lastVisitedBackOffice, epidom:lastVisitedPos and epidom:rememberLastVisited: set only when you are signed in, so the app can bring you back to the last screen you used. They are kept for up to 400 days and cleared when you switch account.",
       item3: "Local storage: cookie-consent-preferences (your cookie choice and language), locale and lang (your language) and interface preferences such as the display zoom. These stay on your device.",
       item4: "epidom_sales_page: set when you open one of our presentation pages (/sales-page-1, /sales-page-2, /sales-page-3 or /sales-page-4, in any language). It holds only the name of that page and its language, no identifier, so that if you create an account we know which page you came from. It is kept for 30 days.",
+      item5: "epidom_source and epidom_touch: set when you open one of our presentation pages or a partner's referral link, or arrive through a link with campaign tags (utm_source and similar). epidom_source holds the name of that page or the referral code. epidom_touch holds the campaign tags, whether the visit came from an ad click (not the click's identifier), the page you landed on and the website you came from. If you create an account, we record them with it, so we know which page, partner or campaign brought you and can credit partners who refer customers. They are not shared with advertising platforms and are kept for 30 days.",
     },
     s5: {
       title: "Analytics (with your consent where it is required)",
@@ -8434,7 +8435,7 @@ lifetime: "Lifetime access",
   },
   privacy: {
     title: "Privacy Policy",
-    lastUpdatedDate: "October 17, 2026",
+    lastUpdatedDate: "October 19, 2026",
     intro: "This policy explains which personal data Epidom handles, why, who receives it, how long we keep it and how you can use your rights. We only describe what the product actually does today.",
     footer: "This policy may change. We will tell users about material changes by email or through the service.",
     s1: {
@@ -8456,6 +8457,7 @@ lifetime: "Lifetime access",
       item9: "Storefront visit counts: public storefronts count visits with an anonymous code that changes every day and is derived from the visitor's IP address and browser. The IP address itself is not stored.",
       item10: "Push notifications: if you turn them on, your browser's push subscription (an address issued by your browser vendor) and browser details, so that notifications reach that device.",
       item11: "Website and app analytics, and advertising measurement: only if you accept them in the cookie banner. With analytics accepted, Google Analytics receives the address of each page you open, including inside the signed-in app, and events for some actions. For a sale completed at the till, this includes the order number, the total and the name, price and quantity of each item sold. More details:",
+      item12: "How you found us: when you create an account, we record which of our presentation pages or partner referral links you came from, the campaign tags of the link you followed (such as utm_source=facebook) and whether it was an ad click. If you allowed marketing cookies, we also record Meta's click identifier (the _fbc cookie). We use this to measure our advertising and to credit partners who refer customers.",
     },
     s3: {
       title: "Why we use it",

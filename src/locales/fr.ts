@@ -8088,7 +8088,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
   },
   cookiePolicy: {
     title: "Politique des cookies",
-    lastUpdatedDate: "17 octobre 2026",
+    lastUpdatedDate: "19 octobre 2026",
     intro: "Cette page explique ce qu'Epidom enregistre dans votre navigateur, quels outils tiers peuvent fonctionner sur le site et comment vous gardez la main. Elle s'applique au site web et à l'application Epidom.",
     footer: "Cette politique évolue lorsque les outils utilisés sur le site changent. La date en haut de page indique la dernière mise à jour.",
     s1: {
@@ -8118,6 +8118,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       item2: "epidom:lastVisitedUrl, epidom:lastVisitedBackOffice, epidom:lastVisitedPos et epidom:rememberLastVisited : déposés uniquement lorsque vous êtes connecté, pour que l'application vous ramène à la dernière page utilisée. Ils sont conservés jusqu'à 400 jours et supprimés lorsque vous changez de compte.",
       item3: "Stockage local : cookie-consent-preferences (votre choix de cookies et votre langue), locale et lang (votre langue) et des préférences d'interface comme le zoom d'affichage. Ces données restent sur votre appareil.",
       item4: "epidom_sales_page : déposé lorsque vous ouvrez l'une de nos pages de présentation (/sales-page-1, /sales-page-2, /sales-page-3 ou /sales-page-4, dans n'importe quelle langue). Il contient uniquement le nom de cette page et sa langue, sans aucun identifiant, pour que nous sachions de quelle page vous venez si vous créez un compte. Il est conservé 30 jours.",
+      item5: "epidom_source et epidom_touch : déposés lorsque vous ouvrez l'une de nos pages de présentation ou le lien de parrainage d'un partenaire, ou lorsque vous arrivez par un lien portant des balises de campagne (utm_source et similaires). epidom_source contient le nom de cette page ou le code de parrainage. epidom_touch contient les balises de campagne, l'indication que la visite vient d'un clic sur une publicité (sans l'identifiant de ce clic), la page d'arrivée et le site d'où vous venez. Si vous créez un compte, nous les enregistrons avec celui-ci, pour savoir quelle page, quel partenaire ou quelle campagne vous a amené et pour rémunérer les partenaires qui nous recommandent des clients. Ils ne sont pas transmis aux plateformes publicitaires et sont conservés 30 jours.",
     },
     s5: {
       title: "Mesure d'audience (avec votre consentement lorsqu'il est requis)",
@@ -8145,7 +8146,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
   },
   privacy: {
     title: "Politique de confidentialité",
-    lastUpdatedDate: "17 octobre 2026",
+    lastUpdatedDate: "19 octobre 2026",
     intro: "Cette politique explique quelles données personnelles Epidom traite, pourquoi, qui les reçoit, combien de temps nous les conservons et comment vous pouvez exercer vos droits. Nous décrivons uniquement ce que le produit fait réellement aujourd'hui.",
     footer: "Cette politique peut évoluer. Nous informerons les utilisateurs de tout changement important par e-mail ou via le service.",
     s1: {
@@ -8167,6 +8168,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       item9: "Comptage des visites des vitrines : les vitrines publiques comptent les visites à l'aide d'un code anonyme qui change chaque jour et qui est dérivé de l'adresse IP et du navigateur du visiteur. L'adresse IP elle-même n'est pas conservée.",
       item10: "Notifications push : si vous les activez, l'abonnement push de votre navigateur (une adresse délivrée par l'éditeur de votre navigateur) et les informations de navigateur, afin que les notifications parviennent à cet appareil.",
       item11: "Mesure d'audience du site et de l'application, et mesure publicitaire : uniquement si vous les acceptez dans le bandeau de cookies. Si vous acceptez la mesure d'audience, Google Analytics reçoit l'adresse de chaque page que vous ouvrez, y compris à l'intérieur de l'application après connexion, ainsi que des événements liés à certaines actions. Pour une vente réalisée en caisse, cela comprend le numéro de commande, le total, ainsi que le nom, le prix et la quantité de chaque article vendu. Plus de détails :",
+      item12: "Comment vous nous avez connus : lorsque vous créez un compte, nous enregistrons la page de présentation ou le lien de parrainage d'un partenaire par lequel vous êtes arrivé, les balises de campagne du lien suivi (par exemple utm_source=facebook) et s'il s'agissait d'un clic sur une publicité. Si vous avez accepté les cookies marketing, nous enregistrons aussi l'identifiant de clic de Meta (le cookie _fbc). Nous nous en servons pour mesurer nos publicités et pour rémunérer les partenaires qui nous recommandent des clients.",
     },
     s3: {
       title: "Pourquoi nous les utilisons",

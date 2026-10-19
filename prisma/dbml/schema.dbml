@@ -32,6 +32,7 @@ Table user {
   subscription subscriptions
   staffMember staff_members
   salesPageEvents sales_page_events [not null]
+  signupAttribution signup_attributions
 }
 
 Table session {
@@ -1308,6 +1309,34 @@ Same privacy model as StorefrontEvent: visitorHash is hashVisitor()\'s
 daily-rotating fingerprint, never a raw IP.'
 }
 
+Table signup_attributions {
+  id String [pk]
+  userId String [unique, not null]
+  source SignupSource [note: 'The last referral link or sales page the browser opened before signing up.']
+  sourceAt DateTime [note: 'When that link or page was opened.']
+  refCode String [note: 'REFERRAL_LINK: the ?ref= code, upper case, as it was in the link.']
+  salesPage String [note: 'SALES_PAGE: "sales-page-2" and the copy\'s language ("fr", "en", "id").']
+  salesPageLocale String
+  utmSource String [note: 'Campaign tags of the last tagged visit (any page, not only the source).']
+  utmMedium String
+  utmCampaign String
+  utmContent String
+  utmTerm String
+  adClick String [note: '"meta", "google" or "tiktok" when that visit came from an ad click.']
+  fbc String [note: 'Meta\'s _fbc cookie, only present when the visitor allowed marketing cookies.']
+  landingPath String [note: 'Path the tagged visit landed on (no query) and the site it came from.']
+  referrerHost String
+  touchedAt DateTime
+  createdAt DateTime [default: `now()`, not null]
+  user user [not null]
+
+  Note: 'Where an account came from, recorded once by the Better Auth create hook
+(src/lib/services/signup-attribution.service.ts) from the first-party
+cookies the proxy sets (src/lib/attribution/cookies.ts). Written once and
+never changed: the source it names is the one the account is credited to.
+Every new account gets a row; one with nothing set came in directly.'
+}
+
 Table tracking_events {
   id String [pk]
   kind TrackingEventKind [not null]
@@ -1847,6 +1876,11 @@ Enum SalesPageEventType {
   SIGNUP
 }
 
+Enum SignupSource {
+  REFERRAL_LINK
+  SALES_PAGE
+}
+
 Enum TrackingEventKind {
   PIXEL
   CONSENT
@@ -2103,6 +2137,8 @@ Ref: storefronts.storeId - stores.id [delete: Cascade]
 Ref: storefront_events.storefrontId > storefronts.id [delete: Cascade]
 
 Ref: sales_page_events.userId > user.id [delete: Set Null]
+
+Ref: signup_attributions.userId - user.id [delete: Cascade]
 
 Ref: menu_categories.storefrontId > storefronts.id [delete: Cascade]
 

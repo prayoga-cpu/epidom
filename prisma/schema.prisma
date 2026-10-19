@@ -64,6 +64,8 @@ model User {
   staffMember               StaffMember?
   // SIGNUP rows crediting this account to the /sales-page-N it came from.
   salesPageEvents           SalesPageEvent[]
+  // Where this account came from (referral link, sales page, ad tags), recorded once at sign-up.
+  signupAttribution         SignupAttribution?
 
   @@map("user")
 }
@@ -2383,6 +2385,52 @@ model SalesPageEvent {
   @@index([createdAt])
   @@index([userId])
   @@map("sales_page_events")
+}
+
+enum SignupSource {
+  REFERRAL_LINK // signed up after opening a partner's ?ref= link
+  SALES_PAGE // signed up after opening a /sales-page-N page
+}
+
+/// Where an account came from, recorded once by the Better Auth create hook
+/// (src/lib/services/signup-attribution.service.ts) from the first-party
+/// cookies the proxy sets (src/lib/attribution/cookies.ts). Written once and
+/// never changed: the source it names is the one the account is credited to.
+/// Every new account gets a row; one with nothing set came in directly.
+model SignupAttribution {
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  /// The last referral link or sales page the browser opened before signing up.
+  source          SignupSource?
+  /// When that link or page was opened.
+  sourceAt        DateTime?
+  /// REFERRAL_LINK: the ?ref= code, upper case, as it was in the link.
+  refCode         String?
+  /// SALES_PAGE: "sales-page-2" and the copy's language ("fr", "en", "id").
+  salesPage       String?
+  salesPageLocale String?
+  /// Campaign tags of the last tagged visit (any page, not only the source).
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmContent      String?
+  utmTerm         String?
+  /// "meta", "google" or "tiktok" when that visit came from an ad click.
+  adClick         String?
+  /// Meta's _fbc cookie, only present when the visitor allowed marketing cookies.
+  fbc             String?
+  /// Path the tagged visit landed on (no query) and the site it came from.
+  landingPath     String?
+  referrerHost    String?
+  touchedAt       DateTime?
+  createdAt       DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([salesPage, createdAt])
+  @@index([source, createdAt])
+  @@index([createdAt])
+  @@map("signup_attributions")
 }
 
 enum TrackingEventKind {

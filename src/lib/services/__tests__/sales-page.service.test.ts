@@ -1,20 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { salesPageEvent: { create: vi.fn(), groupBy: vi.fn(), findMany: vi.fn() } },
+  prisma: {
+    salesPageEvent: { create: vi.fn(), groupBy: vi.fn(), findMany: vi.fn() },
+    signupAttribution: { findMany: vi.fn(), count: vi.fn() },
+  },
 }));
 
 import { prisma } from "@/lib/prisma";
 import {
   getSalesPageReport,
   recordSalesPageSignup,
+  signupPlanStatus,
+  summarizeCampaigns,
   summarizeSalesPages,
   type SalesPageEventGroup,
+  type TrackedSignupRow,
 } from "../sales-page.service";
 
 const create = prisma.salesPageEvent.create as unknown as ReturnType<typeof vi.fn>;
 const groupBy = prisma.salesPageEvent.groupBy as unknown as ReturnType<typeof vi.fn>;
 const findMany = prisma.salesPageEvent.findMany as unknown as ReturnType<typeof vi.fn>;
+const attributionFindMany = prisma.signupAttribution.findMany as unknown as ReturnType<
+  typeof vi.fn
+>;
+const attributionCount = prisma.signupAttribution.count as unknown as ReturnType<typeof vi.fn>;
 
 const g = (
   page: string,
@@ -160,6 +170,10 @@ describe("getSalesPageReport", () => {
   beforeEach(() => {
     groupBy.mockReset();
     findMany.mockReset();
+    attributionFindMany.mockReset();
+    attributionFindMany.mockResolvedValue([]);
+    attributionCount.mockReset();
+    attributionCount.mockResolvedValue(0);
     groupBy.mockResolvedValue([
       {
         page: "sales-page-1",
@@ -204,5 +218,130 @@ describe("getSalesPageReport", () => {
     expect(groupBy.mock.calls[0][0].where.createdAt).toBeUndefined();
     expect(groupBy.mock.calls[0][0].where.locale).toBeUndefined();
     expect(report.since).toBeNull();
+  });
+});
+
+describe("signupPlanStatus", () => {
+  const now = new Date("2026-10-20T00:00:00Z");
+  const sub = (over: Partial<Parameters<typeof signupPlanStatus>[0] & object> = {}) => ({
+    plan: "POS",
+    status: "ACTIVE",
+    trialEndsAt: null as Date | null,
+    stripeSubscriptionId: "sub_1" as string | null,
+    ...over,
+  });
+
+  it("reads each subscription state", () => {
+    expect(signupPlanStatus(null, now)).toBe("FREE");
+    expect(signupPlanStatus(sub({ plan: "FREE" }), now)).toBe("FREE");
+    expect(signupPlanStatus(sub({ status: "INCOMPLETE" }), now)).toBe("CHECKOUT");
+    expect(signupPlanStatus(sub({ trialEndsAt: new Date("2026-10-30T00:00:00Z") }), now)).toBe(
+      "TRIAL"
+    );
+    expect(signupPlanStatus(sub({ trialEndsAt: new Date("2026-10-01T00:00:00Z") }), now)).toBe(
+      "ACTIVE"
+    );
+    expect(signupPlanStatus(sub(), now)).toBe("ACTIVE");
+    expect(signupPlanStatus(sub({ status: "PAST_DUE" }), now)).toBe("PAST_DUE");
+    expect(signupPlanStatus(sub({ status: "CANCELED" }), now)).toBe("CANCELED");
+    // An admin-granted plan has no Stripe subscription: not a paying customer.
+    expect(signupPlanStatus(sub({ stripeSubscriptionId: null }), now)).toBe("GRANTED");
+  });
+});
+
+describe("summarizeCampaigns", () => {
+  const row = (over: Partial<TrackedSignupRow>): TrackedSignupRow => ({
+    createdAt: "2026-10-20T10:00:00.000Z",
+    source: "SALES_PAGE",
+    refCode: null,
+    salesPage: "sales-page-2",
+    salesPageLocale: "fr",
+    utmSource: null,
+    utmMedium: null,
+    utmCampaign: null,
+    utmContent: null,
+    adClick: null,
+    plan: "FREE",
+    status: "FREE",
+    hasStore: false,
+    ...over,
+  });
+
+  it("groups by source and campaign, counting trials and paying accounts", () => {
+    const rows = [
+      row({ utmSource: "facebook", utmCampaign: "oct", status: "ACTIVE", plan: "POS" }),
+      row({ utmSource: "facebook", utmCampaign: "oct", status: "TRIAL", plan: "POS" }),
+      row({ utmSource: "facebook", utmCampaign: "oct" }),
+      row({ utmSource: "instagram", utmCampaign: "oct" }),
+      row({}),
+    ];
+    expect(summarizeCampaigns(rows)).toEqual([
+      { utmSource: "facebook", utmCampaign: "oct", signups: 3, trials: 1, paying: 1 },
+      { utmSource: "instagram", utmCampaign: "oct", signups: 1, trials: 0, paying: 0 },
+      { utmSource: null, utmCampaign: null, signups: 1, trials: 0, paying: 0 },
+    ]);
+  });
+});
+
+describe("getSalesPageReport: tracked sign-ups", () => {
+  beforeEach(() => {
+    groupBy.mockReset();
+    groupBy.mockResolvedValue([]);
+    findMany.mockReset();
+    findMany.mockResolvedValue([]);
+    attributionFindMany.mockReset();
+    attributionCount.mockReset();
+    attributionCount.mockResolvedValue(7);
+    attributionFindMany.mockResolvedValue([
+      {
+        createdAt: new Date("2026-10-20T09:00:00Z"),
+        source: "SALES_PAGE",
+        refCode: null,
+        salesPage: "sales-page-2",
+        salesPageLocale: "en",
+        utmSource: "facebook",
+        utmMedium: "paid",
+        utmCampaign: "oct-launch",
+        utmContent: "video-a",
+        adClick: "meta",
+        user: {
+          subscription: {
+            plan: "POS",
+            status: "ACTIVE",
+            trialEndsAt: new Date("2026-11-01T00:00:00Z"),
+            stripeSubscriptionId: "sub_1",
+          },
+          business: { _count: { stores: 1 } },
+        },
+      },
+    ]);
+  });
+
+  it("lists sign-ups with a source or ad tags, with the plan they are on now", async () => {
+    const now = new Date("2026-10-21T00:00:00Z");
+    const report = await getSalesPageReport("30", "en", now);
+
+    const where = attributionFindMany.mock.calls[0][0].where;
+    expect(where.salesPageLocale).toBe("en");
+    expect(where.createdAt).toEqual({ gte: new Date("2026-09-21T00:00:00Z") });
+    expect(where.OR).toHaveLength(4);
+    expect(attributionCount.mock.calls[0][0].where).toEqual({
+      createdAt: { gte: new Date("2026-09-21T00:00:00Z") },
+    });
+
+    expect(report.tracked.totalSignups).toBe(7);
+    expect(report.tracked.rows).toEqual([
+      expect.objectContaining({
+        salesPage: "sales-page-2",
+        utmCampaign: "oct-launch",
+        adClick: "meta",
+        plan: "POS",
+        status: "TRIAL",
+        hasStore: true,
+      }),
+    ]);
+    expect(report.tracked.campaigns).toEqual([
+      { utmSource: "facebook", utmCampaign: "oct-launch", signups: 1, trials: 1, paying: 0 },
+    ]);
   });
 });

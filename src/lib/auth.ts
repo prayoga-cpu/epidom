@@ -7,6 +7,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/services/email.service";
 import { isAdminEmail } from "@/lib/admin";
 import { recordSalesPageSignup } from "@/lib/services/sales-page.service";
+import { recordSignupAttribution } from "@/lib/services/signup-attribution.service";
 import {
   previewAuthCookiePrefix,
   resolveCrossSubDomainCookies,
@@ -91,12 +92,15 @@ export const auth = betterAuth({
               .catch((err) => console.error("[auth] failed to set isAdmin on master email:", err));
           }
           // Credit the signup to the /sales-page-N this browser came from, if
-          // any. The email signup POST and Google's OAuth callback both carry
-          // the page's cookie; a server-side create has no request, so no-op.
-          await recordSalesPageSignup(
-            user.id,
-            context?.headers?.get("cookie") ?? context?.request?.headers.get("cookie")
-          );
+          // any, and record where it came from (referral link, sales page, ad
+          // tags). The email signup POST and Google's OAuth callback both carry
+          // the cookies; a server-side create has no request, so no-op.
+          const cookieHeader =
+            context?.headers?.get("cookie") ?? context?.request?.headers.get("cookie");
+          await recordSalesPageSignup(user.id, cookieHeader);
+          if (context?.headers || context?.request) {
+            await recordSignupAttribution(user.id, cookieHeader);
+          }
         },
       },
     },

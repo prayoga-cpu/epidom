@@ -14,6 +14,7 @@ import {
 import { LAST_VISITED_COOKIE, REMEMBER_PREF_COOKIE, isResumableAppPath } from "./lib/last-visited";
 import { isSalesPagePath } from "./lib/sales-pages";
 import { applyConsentModeCookie } from "./lib/consent-region";
+import { applyAttributionCookies } from "./lib/attribution/cookies";
 import { landingLocaleFor } from "./features/marketing/landing/registry";
 import type { Locale } from "./components/lang/i18n-provider";
 
@@ -139,7 +140,9 @@ const RESUME_EXEMPT_PATHS = new Set(["/pricing", "/checkout"]);
  * on purpose. Belt-and-braces alongside RESUME_EXEMPT_PATHS: a future upgrade
  * destination that isn't `/pricing` still won't become a redirect trap.
  */
-const INTENT_QUERY_PARAMS = ["upgrade", "trial", "required", "callbackUrl", "checkout"];
+// `ref` too: a signed-in partner opening their own referral link to check it
+// sees the page, instead of being resumed into the app.
+const INTENT_QUERY_PARAMS = ["upgrade", "trial", "required", "callbackUrl", "checkout", "ref"];
 
 /**
  * Whether the resume-redirect should stand down for this request. Deliberate
@@ -231,6 +234,9 @@ export default async function proxy(req: NextRequest) {
   const isRedirect = response.status >= 300 && response.status < 400;
   if (!req.nextUrl.pathname.startsWith("/api/") && !isRedirect) {
     applyConsentModeCookie(req, response);
+    // Where a sign-up comes from: the last referral link or sales page, and
+    // the last ad's campaign tags (src/lib/attribution/cookies.ts).
+    applyAttributionCookies(req, response, stripLocalePrefix(req.nextUrl.pathname));
   }
   return response;
 }

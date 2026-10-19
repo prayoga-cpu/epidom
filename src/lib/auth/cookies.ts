@@ -66,13 +66,25 @@ export function resolveCrossSubDomainCookies(
 ): { enabled: boolean; domain: string } | undefined {
   if (nodeEnv !== "production") return undefined;
   try {
-    const host = new URL(appUrl || "").hostname;
-    if (!host || host === "localhost" || host.endsWith(".vercel.app")) return undefined;
-    const parts = host.split(".");
-    const root = parts.length >= 2 ? parts.slice(-2).join(".") : host;
-    if (host !== root && host !== `www.${root}`) return undefined;
-    return { enabled: true, domain: `.${root}` };
+    const domain = sharedCookieDomainForHost(new URL(appUrl || "").hostname);
+    return domain ? { enabled: true, domain } : undefined;
   } catch {
     return undefined;
   }
+}
+
+/**
+ * The `Domain` a cookie written for this host should carry so the apex and its
+ * www alias share it (".epidom.fr"), or `undefined` for a host-only cookie:
+ * localhost, an IP, `*.vercel.app`, and any other subdomain such as a preview.
+ * Same rule as public/sales-pages/tracker.js, so a cookie set on www is still
+ * read on an apex OAuth callback.
+ */
+export function sharedCookieDomainForHost(host: string | undefined): string | undefined {
+  if (!host || host === "localhost" || host.endsWith(".vercel.app")) return undefined;
+  if (/^[\d.:]+$/.test(host) || host.includes(":")) return undefined;
+  const parts = host.split(".");
+  const root = parts.length >= 2 ? parts.slice(-2).join(".") : host;
+  if (host !== root && host !== `www.${root}`) return undefined;
+  return `.${root}`;
 }

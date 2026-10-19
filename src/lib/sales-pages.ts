@@ -35,7 +35,9 @@ export type SalesPageLocale = (typeof SALES_PAGE_LOCALES)[number];
 /**
  * Holds the last sales page this browser opened and its language
  * ("sales-page-2.en"), no identifier. Set by public/sales-pages/tracker.js
- * (keep the name in step with it) and listed in the cookie policy
+ * (keep the name in step with it), also by the proxy on the page's own request
+ * (src/lib/attribution/cookies.ts; Safari caps a script-written cookie at 7
+ * days), and listed in the cookie policy
  * (cookiePolicy.s4 in the locales). Before the pages had languages it held the
  * page alone, which means French.
  */
