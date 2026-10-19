@@ -231,7 +231,7 @@
       .then(function () {
         setState({ submitted: true });
         form.innerHTML = "<div id=\"epi-lc-thanks\">" + t.thanks + "</div>";
-        setTimeout(closeModal, 3000);
+        setTimeout(function () { window.location.href = "/register"; }, 2000);
       })
       .catch(function () {
         btn.disabled = false;
