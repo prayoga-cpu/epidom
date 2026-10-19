@@ -345,3 +345,27 @@ describe("getSalesPageReport: tracked sign-ups", () => {
     ]);
   });
 });
+
+describe("getSalesPageReport: one partner's pages", () => {
+  beforeEach(() => {
+    groupBy.mockReset();
+    groupBy.mockResolvedValue([]);
+    findMany.mockReset();
+    findMany.mockResolvedValue([]);
+    attributionFindMany.mockReset();
+    attributionFindMany.mockResolvedValue([]);
+    attributionCount.mockReset();
+    attributionCount.mockResolvedValue(0);
+  });
+
+  it("limits every query and the cards to those pages, and calls no leader", async () => {
+    const report = await getSalesPageReport("all", "all", new Date(), ["sales-page-2"]);
+
+    expect(groupBy.mock.calls[0][0].where.page).toEqual({ in: ["sales-page-2"] });
+    expect(findMany.mock.calls[0][0].where.page).toEqual({ in: ["sales-page-2"] });
+    expect(attributionFindMany.mock.calls[0][0].where.salesPage).toEqual({ in: ["sales-page-2"] });
+    expect(attributionCount.mock.calls[0][0].where.salesPage).toEqual({ in: ["sales-page-2"] });
+    expect(report.pages.map((p) => p.page)).toEqual(["sales-page-2"]);
+    expect(report.leader).toBeNull();
+  });
+});

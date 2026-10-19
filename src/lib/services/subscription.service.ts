@@ -19,6 +19,7 @@ import {
 import Stripe from "stripe";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { getCheckoutReferralDiscount } from "@/lib/services/referral-discount.service";
 import { ApiErrorCode } from "@/types/api/responses";
 import { planHasFeature, PLAN_LABELS, type PlanTier } from "@/lib/plans/entitlements";
 import { POS_TRIAL_DAYS } from "@/lib/plans/pos-trial";
@@ -201,6 +202,24 @@ export class SubscriptionService {
         plan: plan,
       },
     };
+
+    // A partner's referral link: % off the first paid invoice. Without a trial
+    // it goes on the session; with one, the webhook puts it on the
+    // subscription after Checkout, so the trial's $0 invoice can't use it up.
+    const referral = await getCheckoutReferralDiscount(userId, subscription).catch((error) => {
+      logger.warn("Referral discount left out of checkout", {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    });
+    if (referral) {
+      if (trial) {
+        params.metadata = { ...params.metadata, referralCoupon: referral.couponId };
+      } else {
+        params.discounts = [{ coupon: referral.couponId }];
+      }
+    }
 
     let session: Stripe.Checkout.Session;
     if (!currency) {

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { isAdminEmail, isAdminUser } from "@/lib/admin";
+import { isAdminEmail } from "@/lib/admin";
+import { getAdminAccess, type AdminGrantSource } from "@/lib/auth/admin-access";
+import {
+  canOpenSection,
+  type AdminSectionKey,
+  type GrantableAdminSectionKey,
+} from "@/config/admin-sections.config";
 
 /**
  * Admin gate for API routes.
@@ -19,7 +23,7 @@ import { isAdminEmail, isAdminUser } from "@/lib/admin";
  */
 
 /** How the acting account satisfied the admin check. */
-export type AdminGrantSource = "DB_FLAG" | "HARDCODED_EMAIL";
+export type { AdminGrantSource };
 
 export interface ActingAdmin {
   id: string;
@@ -28,35 +32,47 @@ export interface ActingAdmin {
   /**
    * DB_FLAG when `User.isAdmin` is true. HARDCODED_EMAIL when the flag is
    * false and the address is in HARDCODED_ADMIN_EMAILS — i.e. the case that
-   * leaves no database trace of its own.
+   * leaves no database trace of its own. SECTION_GRANT for an account given
+   * some admin pages only (User.adminSections).
    */
   grantSource: AdminGrantSource;
+  /** A full admin (DB flag or hardcoded email): every page and action. */
+  full: boolean;
+  /** The pages a SECTION_GRANT admin was given (empty for a full admin). */
+  sections: GrantableAdminSectionKey[];
+}
+
+export interface AdminGateOptions {
+  /**
+   * The admin page this route belongs to. A full admin always passes; an
+   * account given that page (User.adminSections) passes too. Left out, only a
+   * full admin passes: a route nobody mapped stays locked.
+   */
+  section?: AdminSectionKey;
 }
 
 /**
- * Resolve the acting admin, or null when the caller is not one.
+ * Resolve the acting admin, or null when the caller may not use this route.
  *
  * Prefer {@link requireAdminApi} in route handlers; this variant is for
  * callers that need to branch on the result rather than return a response.
  */
-export async function getActingAdmin(): Promise<ActingAdmin | null> {
-  const session = await getSession();
-  if (!session?.user?.id) return null;
+export async function getActingAdmin(options: AdminGateOptions = {}): Promise<ActingAdmin | null> {
+  const access = await getAdminAccess();
+  if (!access?.grantSource) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, email: true, name: true, isAdmin: true },
-  });
-
-  if (!user || !isAdminUser(user.email, user.isAdmin)) return null;
+  const allowed = options.section
+    ? canOpenSection(access, options.section)
+    : access.full;
+  if (!allowed) return null;
 
   return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    // The DB flag wins when both are true: it is the durable grant, and the
-    // hardcoded list is the fallback that leaves no record.
-    grantSource: user.isAdmin ? "DB_FLAG" : "HARDCODED_EMAIL",
+    id: access.user.id,
+    email: access.user.email,
+    name: access.user.name,
+    grantSource: access.grantSource,
+    full: access.full,
+    sections: access.sections,
   };
 }
 
@@ -75,8 +91,10 @@ export async function getActingAdmin(): Promise<ActingAdmin | null> {
  * The 403 body is `{ error: "Forbidden" }`, byte-identical to what the seven
  * hand-rolled copies returned, so no admin client code needs changing.
  */
-export async function requireAdminApi(): Promise<ActingAdmin | NextResponse> {
-  const admin = await getActingAdmin();
+export async function requireAdminApi(
+  options: AdminGateOptions = {}
+): Promise<ActingAdmin | NextResponse> {
+  const admin = await getActingAdmin(options);
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

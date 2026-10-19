@@ -755,6 +755,15 @@ function TimelineView({
                         hardcoded
                       </Badge>
                     )}
+                    {r.actorGrant === "SECTION_GRANT" && (
+                      <Badge
+                        variant="outline"
+                        className="ml-1.5 border-sky-500/40 text-[10px] text-sky-400"
+                        title="Admin for some admin pages only (Admin access in the users table)"
+                      >
+                        page access
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <span className="text-foreground">{r.detail?.targetLabel ?? r.actionCode}</span>

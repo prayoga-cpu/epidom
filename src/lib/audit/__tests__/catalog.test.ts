@@ -47,6 +47,12 @@ const SAMPLES: Record<string, unknown> = {
     before: { amount: "1234567.123456", currency: "IDR", interval: "YEARLY", plan: "ENTERPRISE" },
   },
   "admin.user.set_admin": { userId: "u1", userEmail: "a@b.com", before: false, after: true },
+  "admin.user.set_admin_sections": {
+    userId: "u1",
+    userEmail: "a@b.com",
+    before: [],
+    after: ["sales-pages", "partners"],
+  },
   "admin.user.reset_password": {
     userId: "u1",
     userEmail: "a@b.com",

@@ -18,7 +18,7 @@ import { useCurrentStore } from "./hooks/use-current-store";
 import { useAccountSwitcher } from "./hooks/use-account-switcher";
 import { useProfile } from "@/features/dashboard/profile/hooks/use-profile";
 import { isAdminEmail } from "@/lib/admin";
-import { Shield, TrendingUp, ShieldCheck, LogOut, RefreshCw, Store } from "lucide-react";
+import { Shield, TrendingUp, ShieldCheck, LogOut, RefreshCw, Store, Handshake } from "lucide-react";
 import { AccountAccessDialog } from "./account-access-dialog";
 import { ZoomControl } from "./zoom-control";
 
@@ -30,6 +30,11 @@ export function NavUser() {
   // Defer profile loading - only fetch when dropdown is opened (lazy loading)
   // This prevents blocking initial render
   const { data: profile } = useProfile();
+  const adminAccess = profile?.adminAccess;
+  const isFullAdmin = isAdminEmail(user?.email) || adminAccess?.full === true;
+  const hasAdminPages = isFullAdmin || (adminAccess?.sections.length ?? 0) > 0;
+  const canSeeRevenue = isFullAdmin || (adminAccess?.sections ?? []).includes("revenue");
+  const isPartner = adminAccess?.partner === true;
 
   const {
     posSession,
@@ -134,23 +139,36 @@ export function NavUser() {
             {t("nav.logoutOwnerAccount")}
           </DropdownMenuItem>
 
-          {!actingAsStaff && (isAdminEmail(user?.email) || (profile as any)?.isAdmin) && (
+          {!actingAsStaff && (hasAdminPages || isPartner) && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => router.push("/admin")}
-                className="text-red-400 focus:bg-red-500/10 focus:text-red-400"
-              >
-                <Shield className="mr-2 h-3.5 w-3.5" />
-                Admin Panel
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/admin/revenue")}
-                className="text-emerald-400 focus:bg-emerald-500/10 focus:text-emerald-400"
-              >
-                <TrendingUp className="mr-2 h-3.5 w-3.5" />
-                Revenue Report
-              </DropdownMenuItem>
+              {hasAdminPages && (
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin")}
+                  className="text-red-400 focus:bg-red-500/10 focus:text-red-400"
+                >
+                  <Shield className="mr-2 h-3.5 w-3.5" />
+                  Admin Panel
+                </DropdownMenuItem>
+              )}
+              {canSeeRevenue && (
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin/revenue")}
+                  className="text-emerald-400 focus:bg-emerald-500/10 focus:text-emerald-400"
+                >
+                  <TrendingUp className="mr-2 h-3.5 w-3.5" />
+                  Revenue Report
+                </DropdownMenuItem>
+              )}
+              {isPartner && (
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin/my-referrals")}
+                  className="text-amber-400 focus:bg-amber-500/10 focus:text-amber-400"
+                >
+                  <Handshake className="mr-2 h-3.5 w-3.5" />
+                  {t("partnerPortal.menuItem")}
+                </DropdownMenuItem>
+              )}
             </>
           )}
         </DropdownMenuContent>

@@ -48,6 +48,12 @@ vi.mock("@/lib/stripe", () => ({
   },
 }));
 
+// A partner's referral discount (tested on its own); none unless a test asks.
+vi.mock("@/lib/services/referral-discount.service", () => ({
+  getCheckoutReferralDiscount: vi.fn().mockResolvedValue(null),
+}));
+import { getCheckoutReferralDiscount } from "@/lib/services/referral-discount.service";
+
 // Mock subscription data
 const mockSubscription = {
   id: "sub-1",
@@ -759,6 +765,60 @@ describe("SubscriptionService", () => {
         unknown
       >;
       expect(params).not.toHaveProperty("payment_method_types");
+    });
+
+    it("a referral-link customer's checkout carries the one-time coupon", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
+      vi.mocked(getCheckoutReferralDiscount).mockResolvedValueOnce({
+        couponId: "epidom-ref-once-10",
+        percent: 10,
+      });
+
+      await service.createCheckoutSession("user-1", "OPERATIONS", "https://a/s", "https://a/c", false);
+
+      const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(params.discounts).toEqual([{ coupon: "epidom-ref-once-10" }]);
+      expect(params.metadata).toEqual({ userId: "user-1", plan: "OPERATIONS" });
+    });
+
+    it("with the trial, the coupon waits in the metadata for the webhook", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
+      vi.mocked(getCheckoutReferralDiscount).mockResolvedValueOnce({
+        couponId: "epidom-ref-once-10",
+        percent: 10,
+      });
+
+      await service.createCheckoutSession("user-1", "POS", "https://a/s", "https://a/c", true);
+
+      const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(params).not.toHaveProperty("discounts");
+      expect(params.metadata).toEqual({
+        userId: "user-1",
+        plan: "POS",
+        referralCoupon: "epidom-ref-once-10",
+      });
+    });
+
+    it("a failed referral lookup never blocks the checkout", async () => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
+      vi.mocked(getCheckoutReferralDiscount).mockRejectedValueOnce(new Error("Stripe down"));
+
+      await service.createCheckoutSession("user-1", "POS", "https://a/s", "https://a/c", false);
+
+      const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(params).not.toHaveProperty("discounts");
     });
 
     it("adds the 14-day trial when asked", async () => {

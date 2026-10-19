@@ -26,4 +26,6 @@ export interface ProfileData {
     currentPeriodEnd: Date | null;
     cancelAtPeriodEnd: boolean;
   } | null;
+  /** Which admin pages the menus may link to (GET /api/user/profile). */
+  adminAccess?: { full: boolean; sections: string[]; partner: boolean };
 }

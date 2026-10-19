@@ -14,7 +14,7 @@ export const GET = withAdminApiHandler(async () => {
   const feedback = await feedbackService.getAllFeedback();
 
   return NextResponse.json({ feedback });
-});
+}, { section: "feedback" });
 
 /**
  * PATCH /api/admin/feedback
@@ -71,4 +71,4 @@ export const PATCH = withAdminApiHandler(async (req) => {
   });
 
   return NextResponse.json({ feedback });
-});
+}, { section: "feedback" });

@@ -173,7 +173,7 @@ async function getNeonUsage(): Promise<{ data: NeonUsage | null; error?: string 
 }
 
 export async function GET() {
-  if (!(await getActingAdmin())) {
+  if (!(await getActingAdmin({ section: "capacity" }))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

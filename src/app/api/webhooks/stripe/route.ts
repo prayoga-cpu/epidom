@@ -22,6 +22,11 @@ import {
   getInvoiceSubscriptionId,
 } from "@/types/stripe";
 import Stripe from "stripe";
+import { logger } from "@/lib/logger";
+import {
+  recordInvoiceCommission,
+  recordRefund,
+} from "@/lib/services/partner-commission.service";
 
 /**
  * Maps raw Stripe metadata plan names (including legacy ones) to the current SubscriptionPlan enum.
@@ -147,6 +152,13 @@ export async function POST(request: NextRequest) {
         break;
       case "invoice.payment_succeeded":
         await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        // After the status recovery: a failure here makes Stripe retry the
+        // event, and both steps are safe to repeat.
+        await recordInvoiceCommission((event.data.object as Stripe.Invoice).id!);
+        break;
+      case "refund.created":
+      case "refund.updated":
+        await recordRefund((event.data.object as Stripe.Refund).id);
         break;
       case "invoice.payment_failed":
         await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
@@ -238,6 +250,32 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   }
 
   subscriptionService.invalidateUserCache(userId);
+
+  await applyDeferredReferralCoupon(session, stripeSubscription);
+}
+
+/**
+ * A trial checkout leaves a partner's referral coupon in the session metadata
+ * (src/lib/services/referral-discount.service.ts): put it on the subscription
+ * now that the trial's $0 invoice exists, so the first paid invoice gets it.
+ * A failure is logged, not thrown: the subscription itself is already stored.
+ */
+async function applyDeferredReferralCoupon(
+  session: Stripe.Checkout.Session,
+  subscription: Stripe.Subscription
+) {
+  const coupon = session.metadata?.referralCoupon;
+  if (!coupon || subscription.status !== "trialing") return;
+  if ((subscription.discounts ?? []).length > 0) return;
+  try {
+    await stripe.subscriptions.update(subscription.id, { discounts: [{ coupon }] });
+  } catch (error) {
+    logger.error("Could not add the referral coupon to a trial subscription", {
+      subscriptionId: subscription.id,
+      coupon,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 async function handleSubscriptionCreated(createdSubscription: Stripe.Subscription) {

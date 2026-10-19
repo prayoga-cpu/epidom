@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { SeededI18nProvider } from "@/components/lang/seeded-i18n-provider";
 import { CookieConsentBar } from "@/features/marketing/shared/components/cookie-consent-bar";
+import { ReferralBanner } from "@/features/referrals/components/referral-banner";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { LoadingPage } from "@/features/loading/loading-page";
 import {
@@ -97,6 +98,8 @@ export default async function LandingLayout({
             <main>{children}</main>
             <SiteFooter />
             <CookieConsentBar />
+            {/* "Bob's referral: 10% off" for a visitor who came through a partner's link. */}
+            <ReferralBanner />
           </SeededI18nProvider>
         </Suspense>
       </ErrorBoundary>

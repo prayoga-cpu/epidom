@@ -19,6 +19,7 @@ Table user {
   stripeConnectAccountId String
   stripeConnectOnboarded Boolean [not null, default: false]
   isAdmin Boolean [not null, default: false]
+  adminSections String[] [not null]
   hasOnboarded Boolean [not null, default: false]
   guideState Json
   deactivatedAt DateTime
@@ -33,6 +34,9 @@ Table user {
   staffMember staff_members
   salesPageEvents sales_page_events [not null]
   signupAttribution signup_attributions
+  partner partners
+  partnerViews partner_viewers [not null]
+  partnerCommissions partner_commissions [not null]
 }
 
 Table session {
@@ -1327,14 +1331,136 @@ Table signup_attributions {
   landingPath String [note: 'Path the tagged visit landed on (no query) and the site it came from.']
   referrerHost String
   touchedAt DateTime
+  partnerId String [note: 'The partner this account is credited to (the source\'s partner, if it
+had an active one at sign-up), and their deal as it was then: later
+edits to the partner\'s deal don\'t change it.']
+  commissionRate Decimal
+  commissionMonths Int
+  discountPercent Decimal [note: 'REFERRAL_LINK only: % off the first invoice the banner promised.']
+  discountRedeemedAt DateTime [note: 'When an invoice carrying that discount was paid.']
+  selfReferralFlag Boolean [not null, default: false, note: 'The sign-up\'s IP matched one of the partner\'s own sessions: review it.']
+  firstPaidAt DateTime [note: 'The account\'s first paid invoice (amount > 0), for every account.']
+  firstPaidPlan SubscriptionPlan
+  firstPaidInterval BillingInterval
+  firstPaidCurrency String
+  commissionWindowStart DateTime [note: 'The months that earn commission: from the first paid invoice\'s period
+start, commissionMonths calendar months long.']
+  commissionWindowEnd DateTime
   createdAt DateTime [default: `now()`, not null]
   user user [not null]
+  partner partners
+  commissions partner_commissions [not null]
 
   Note: 'Where an account came from, recorded once by the Better Auth create hook
 (src/lib/services/signup-attribution.service.ts) from the first-party
 cookies the proxy sets (src/lib/attribution/cookies.ts). Written once and
 never changed: the source it names is the one the account is credited to.
 Every new account gets a row; one with nothing set came in directly.'
+}
+
+Table partners {
+  id String [pk]
+  userId String [unique, note: 'Their Epidom account (they open /admin/my-referrals). SetNull keeps the
+ledger when the account is deleted.']
+  displayName String [not null, note: 'Shown on the referral banner ("Bob\'s referral").']
+  status PartnerStatus [not null, default: 'ACTIVE']
+  referralCode String [unique, note: 'Upper case, unique; null for a partner without a link (a sales-page owner).']
+  referralLanding ReferralLanding [not null, default: 'REGISTER']
+  commissionRate Decimal [not null, default: 30, note: '% of what each customer pays during the window.']
+  commissionMonths Int [not null, default: 3]
+  customerDiscountPercent Decimal [not null, default: 10, note: '% off a referral-link customer\'s first invoice (0 = none). Never on sales pages.']
+  notes String
+  createdById String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  user user
+  salesPages partner_sales_pages [not null]
+  attributions signup_attributions [not null]
+  commissions partner_commissions [not null]
+  payouts partner_payouts [not null]
+  viewers partner_viewers [not null]
+
+  Note: 'A partner deal: someone paid a share of what the customers they bring pay
+(src/lib/services/partner.service.ts). A partner brings customers through a
+referral link (referralCode) and/or by owning sales pages (PartnerSalesPage).'
+}
+
+Table partner_viewers {
+  partnerId String [not null]
+  userId String [not null]
+  createdById String
+  createdAt DateTime [default: `now()`, not null]
+  partner partners [not null]
+  user user [not null]
+
+  indexes {
+    (partnerId, userId) [pk]
+  }
+
+  Note: 'An account allowed to see a partner\'s page read-only (someone working with
+the partner). It sees exactly what the partner sees, changes nothing and
+earns nothing: commission stays the partner\'s.'
+}
+
+Table partner_sales_pages {
+  page String [pk, note: '"sales-page-2": all of its languages.']
+  partnerId String [not null]
+  assignedAt DateTime [default: `now()`, not null]
+  creditFrom DateTime [default: `now()`, not null, note: 'Sign-ups from this date on are credited (can be before assignedAt).']
+  partner partners [not null]
+
+  Note: 'A sales page owned by a partner: every sign-up credited to the page earns
+them commission. One owner per page (the page is the key).'
+}
+
+Table partner_commissions {
+  id String [pk]
+  partnerId String [not null]
+  attributionId String
+  customerUserId String [note: 'The paying customer. SetNull keeps the row when the account is deleted.']
+  kind PartnerCommissionKind [not null]
+  sourceKey String [unique, not null, note: '"inv:<invoice id>" or "refund:<refund id>": a replayed webhook can\'t add a row twice.']
+  stripeInvoiceId String
+  stripePaymentIntentId String
+  stripeRefundId String
+  plan SubscriptionPlan
+  billingInterval BillingInterval
+  currency String [not null, note: 'Lower-case ISO code, as Stripe gives it ("eur", "idr").']
+  invoiceAmount Decimal [not null, note: 'What the customer paid on the invoice (or what was refunded, negative).']
+  commissionableAmount Decimal [not null, note: 'The part of it inside the commission window.']
+  rate Decimal [not null]
+  amount Decimal [not null, note: 'The commission (negative for an adjustment).']
+  status PartnerCommissionStatus [not null, default: 'PENDING']
+  earnedAt DateTime [not null]
+  payableAt DateTime [not null, note: 'earnedAt + 30 days: ready to pay from then (refund safety).']
+  payoutId String
+  reversesId String [note: 'REFUND_ADJUSTMENT: the INVOICE row it reverses.']
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  partner partners [not null]
+  attribution signup_attributions
+  customer user
+  payout partner_payouts
+
+  Note: 'The partner commission ledger: one row per paid invoice of a credited
+customer, plus refund adjustments. Amounts in the invoice\'s currency
+(major units); currencies are never summed together.'
+}
+
+Table partner_payouts {
+  id String [pk]
+  partnerId String [not null]
+  currency String [not null]
+  amount Decimal [not null]
+  reference String [note: 'The bank transfer\'s reference. No bank details are stored.']
+  paidAt DateTime [not null]
+  createdById String
+  note String
+  createdAt DateTime [default: `now()`, not null]
+  partner partners [not null]
+  commissions partner_commissions [not null]
+
+  Note: 'A payout made to a partner outside Epidom (bank transfer), in one currency.'
 }
 
 Table tracking_events {
@@ -1881,6 +2007,29 @@ Enum SignupSource {
   SALES_PAGE
 }
 
+Enum PartnerStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+Enum ReferralLanding {
+  REGISTER
+  HOME
+}
+
+Enum PartnerCommissionKind {
+  INVOICE
+  REFUND_ADJUSTMENT
+  MANUAL_ADJUSTMENT
+}
+
+Enum PartnerCommissionStatus {
+  PENDING
+  PAID
+  VOID
+}
+
 Enum TrackingEventKind {
   PIXEL
   CONSENT
@@ -1903,6 +2052,7 @@ Enum AuditActorKind {
 Enum AuditGrantSource {
   DB_FLAG
   HARDCODED_EMAIL
+  SECTION_GRANT
 }
 
 Enum ActivityOutcome {
@@ -2139,6 +2289,26 @@ Ref: storefront_events.storefrontId > storefronts.id [delete: Cascade]
 Ref: sales_page_events.userId > user.id [delete: Set Null]
 
 Ref: signup_attributions.userId - user.id [delete: Cascade]
+
+Ref: signup_attributions.partnerId > partners.id [delete: Set Null]
+
+Ref: partners.userId - user.id [delete: Set Null]
+
+Ref: partner_viewers.partnerId > partners.id [delete: Cascade]
+
+Ref: partner_viewers.userId > user.id [delete: Cascade]
+
+Ref: partner_sales_pages.partnerId > partners.id [delete: Cascade]
+
+Ref: partner_commissions.partnerId > partners.id [delete: Cascade]
+
+Ref: partner_commissions.attributionId > signup_attributions.id [delete: Set Null]
+
+Ref: partner_commissions.customerUserId > user.id [delete: Set Null]
+
+Ref: partner_commissions.payoutId > partner_payouts.id [delete: Set Null]
+
+Ref: partner_payouts.partnerId > partners.id [delete: Cascade]
 
 Ref: menu_categories.storefrontId > storefronts.id [delete: Cascade]
 

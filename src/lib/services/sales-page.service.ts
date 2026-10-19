@@ -272,21 +272,24 @@ const RANGE_DAYS: Record<SalesPageReportRange, number | null> = {
 export async function getSalesPageReport(
   range: SalesPageReportRange,
   lang: SalesPageReportLang = "all",
-  now: Date = new Date()
+  now: Date = new Date(),
+  /** Only these pages (a partner's own report); every page when left out. */
+  onlyPages?: readonly string[]
 ): Promise<SalesPageReport> {
   const days = RANGE_DAYS[range];
   const since = days === null ? null : new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   const createdAt = since ? { gte: since } : undefined;
   const locale = lang === "all" ? undefined : lang;
+  const page = onlyPages ? { in: [...onlyPages] } : undefined;
 
   const [grouped, signupRows, attributionRows, totalSignups] = await Promise.all([
     prisma.salesPageEvent.groupBy({
       by: ["page", "type", "cta", "visitorHash"],
-      where: { type: { not: "SIGNUP" }, createdAt, locale },
+      where: { type: { not: "SIGNUP" }, createdAt, locale, page },
       _count: { _all: true },
     }),
     prisma.salesPageEvent.findMany({
-      where: { type: "SIGNUP", createdAt, locale },
+      where: { type: "SIGNUP", createdAt, locale, page },
       select: {
         page: true,
         user: { select: { business: { select: { _count: { select: { stores: true } } } } } },
@@ -296,6 +299,7 @@ export async function getSalesPageReport(
       where: {
         createdAt,
         ...(locale ? { salesPageLocale: locale } : {}),
+        ...(page ? { salesPage: page } : {}),
         OR: [
           { source: { not: null } },
           { utmSource: { not: null } },
@@ -326,7 +330,9 @@ export async function getSalesPageReport(
         },
       },
     }),
-    prisma.signupAttribution.count({ where: { createdAt } }),
+    prisma.signupAttribution.count({
+      where: { createdAt, ...(page ? { salesPage: page } : {}) },
+    }),
   ]);
 
   const groups: SalesPageEventGroup[] = grouped.map((g) => ({
@@ -357,11 +363,15 @@ export async function getSalesPageReport(
     hasStore: (a.user.business?._count.stores ?? 0) > 0,
   }));
 
+  const summary = summarizeSalesPages(groups, signups);
+  const pages = onlyPages ? summary.pages.filter((p) => onlyPages.includes(p.page)) : summary.pages;
+
   return {
     range,
     lang,
     since: since?.toISOString() ?? null,
-    ...summarizeSalesPages(groups, signups),
+    pages,
+    leader: onlyPages ? null : summary.leader,
     tracked: {
       totalSignups,
       rows,

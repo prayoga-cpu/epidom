@@ -10,7 +10,7 @@ const translation: SalesPageTranslation = {
     ["pour", "untuk"],
     ["centraliser", "menyatukan"],
     ["votre coffee shop !", "semua urusan coffee shop Anda!"],
-    ["Emplacement réservé à la vidéo Epidom", "Tempat untuk video Epidom"],
+    ["Vidéo de présentation d’Epidom", "Video presentasi Epidom"],
     ["Commencer gratuitement →", "Mulai gratis →"],
     ["Gratuit à vie. Sans carte bancaire.", "Gratis selamanya. Tanpa kartu kredit."],
     ["Utilisateurs", "Pengguna"],

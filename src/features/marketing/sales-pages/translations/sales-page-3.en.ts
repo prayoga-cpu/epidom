@@ -11,7 +11,7 @@ const translation: SalesPageTranslation = {
     ["que vous perdez à jongler entre", "you lose juggling"],
     ["vos outils.", "all your tools."],
     ["Lire la vidéo", "Play video"],
-    ["X minutes pour découvrir Epidom", "Meet Epidom in X minutes"],
+    ["5 minutes pour découvrir Epidom", "Meet Epidom in 5 minutes"],
     ["Commencer gratuitement →", "Start free →"],
     ["Gratuit à vie. Sans carte bancaire", "Free forever. No credit card needed"],
     ["Vous connaissez sûrement la scène…", "You know this scene all too well…"],

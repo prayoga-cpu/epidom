@@ -13,7 +13,7 @@ const translation: SalesPageTranslation = {
     ["CENTRALISEZ", "SATUKAN"],
     ["ce dont vous avez besoin sans jongler entre plusieurs outils.", "semua yang Anda butuhkan tanpa harus bolak-balik di antara banyak aplikasi."],
     ["Lire la vidéo", "Putar video"],
-    ["[X minutes pour comprendre comment Epidom fonctionne]", "[X menit untuk memahami cara kerja Epidom]"],
+    ["5 minutes pour comprendre comment Epidom fonctionne", "5 menit untuk memahami cara kerja Epidom"],
     ["Nouvelle commande", "Pesanan baru"],
     ["Table 4 · 2 cappuccinos", "Meja 4 · 2 cappuccino"],
     ["Paiement reçu", "Pembayaran masuk"],

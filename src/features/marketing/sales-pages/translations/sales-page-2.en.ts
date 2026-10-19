@@ -12,7 +12,7 @@ const translation: SalesPageTranslation = {
     ["entre", "a bunch of"],
     ["plusieurs outils.", "different tools."],
     ["Lire la vidéo", "Play video"],
-    ["[X minutes pour découvrir Epidom]", "[Meet Epidom in X minutes]"],
+    ["5 minutes pour découvrir Epidom", "Meet Epidom in 5 minutes"],
     ["Commencer gratuitement →", "Start free →"],
     ["Gratuit à vie. Sans carte bancaire", "Free forever. No credit card needed"],
     ["Laissez-moi deviner…", "Let me guess…"],

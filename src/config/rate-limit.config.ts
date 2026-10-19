@@ -342,6 +342,13 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 60 events per minute per IP
   },
 
+  // Referral banner lookup (unauthenticated): one per page load of /register
+  // or the home page opened from a referral link.
+  "/api/public/referrals/[code]": {
+    limit: 60,
+    window: 60,
+  },
+
   "/api/public/tracking-events": {
     // Generous: Indonesian mobile carriers put many visitors behind one IP, and a
     // dropped copy would make /admin/pixel undercount during a campaign.

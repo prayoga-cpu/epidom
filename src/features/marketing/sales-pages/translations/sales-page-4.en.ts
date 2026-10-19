@@ -10,7 +10,7 @@ const translation: SalesPageTranslation = {
     ["pour", "tool to"],
     ["centraliser", "centralize"],
     ["votre coffee shop !", "everything in your coffee shop!"],
-    ["Emplacement réservé à la vidéo Epidom", "Space reserved for the Epidom video"],
+    ["Vidéo de présentation d’Epidom", "Epidom presentation video"],
     ["Commencer gratuitement →", "Start free →"],
     ["Gratuit à vie. Sans carte bancaire.", "Free forever. No credit card needed."],
     ["Utilisateurs", "Users"],

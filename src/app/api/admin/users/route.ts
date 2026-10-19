@@ -10,6 +10,15 @@ import { withAdminApiHandler } from "@/lib/admin-api-handler";
 import { recordAction, beginAction, completeAction, failAction } from "@/lib/audit/record";
 import { captureEntitySnapshot } from "@/lib/audit/snapshot";
 import { notifyCriticalAction, notifyAccountAction } from "@/lib/audit/notify";
+import { isAdminEmail } from "@/lib/admin";
+import { GRANTABLE_ADMIN_SECTION_KEYS } from "@/config/admin-sections.config";
+
+const grantableSectionSchema = z.enum(
+  GRANTABLE_ADMIN_SECTION_KEYS as [
+    (typeof GRANTABLE_ADMIN_SECTION_KEYS)[number],
+    ...(typeof GRANTABLE_ADMIN_SECTION_KEYS)[number][],
+  ]
+);
 
 /**
  * GET /api/admin/users
@@ -28,6 +37,9 @@ export async function GET() {
       name: true,
       email: true,
       isAdmin: true,
+      adminSections: true,
+      partner: { select: { id: true, referralCode: true, status: true } },
+      partnerViews: { select: { partner: { select: { id: true, displayName: true } } } },
       createdAt: true,
       timezone: true,
       timezoneUpdatedAt: true,
@@ -117,6 +129,11 @@ const updateSchema = z.discriminatedUnion("action", [
     isAdmin: z.boolean(),
   }),
   z.object({
+    action: z.literal("set-admin-sections"),
+    userId: z.string(),
+    sections: z.array(grantableSectionSchema).max(20),
+  }),
+  z.object({
     action: z.literal("reset-password"),
     userId: z.string(),
     newPassword: z.string().min(8).max(128),
@@ -171,6 +188,7 @@ export const PATCH = withAdminApiHandler(async (req, { admin }) => {
 
   if (
     (input.action === "set-admin" ||
+      input.action === "set-admin-sections" ||
       input.action === "delete-user" ||
       input.action === "reset-account") &&
     input.userId === admin.id
@@ -190,11 +208,31 @@ export const PATCH = withAdminApiHandler(async (req, { admin }) => {
       emailVerified: true,
       deactivatedAt: true,
       purgeAt: true,
+      adminSections: true,
     },
   });
 
   if (!target) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Signing in as, wiping or deleting another admin's account is reserved to
+  // the hardcoded admins: otherwise any admin granted from the panel could set
+  // a founder's password and take the account over.
+  const targetIsAdmin = target.isAdmin || isAdminEmail(target.email);
+  if (
+    targetIsAdmin &&
+    admin.grantSource !== "HARDCODED_EMAIL" &&
+    !isAdminEmail(admin.email) &&
+    (input.action === "reset-password" ||
+      input.action === "temp-password" ||
+      input.action === "delete-user" ||
+      input.action === "reset-account")
+  ) {
+    return NextResponse.json(
+      { error: "Only a hardcoded admin can change another admin's sign-in or delete their account" },
+      { status: 403 }
+    );
   }
 
   const who = { userId: target.id, userEmail: target.email, userName: target.name };
@@ -383,6 +421,23 @@ export const PATCH = withAdminApiHandler(async (req, { admin }) => {
       actionType: "admin.user.set_admin",
       targetId: input.userId,
       payload: { ...who, before: target.isAdmin, after: input.isAdmin },
+    });
+
+    return NextResponse.json({ user });
+  }
+
+  if (input.action === "set-admin-sections") {
+    const after = [...new Set(input.sections)];
+    const user = await prisma.user.update({
+      where: { id: input.userId },
+      data: { adminSections: after },
+      select: { id: true, email: true, adminSections: true },
+    });
+
+    await recordAction({
+      actionType: "admin.user.set_admin_sections",
+      targetId: input.userId,
+      payload: { ...who, before: target.adminSections ?? [], after },
     });
 
     return NextResponse.json({ user });

@@ -155,7 +155,10 @@ follow redirects), snapshot payloads, API version `2026-08-26.dahlia`. Subscribe
 - `customer.subscription.updated` — sync plan, status, period and scheduled cancellation
 - `customer.subscription.deleted` — downgrade to FREE, keep data
 - `invoice.payment_failed` — set status to `PAST_DUE`
-- `invoice.payment_succeeded` — back to `ACTIVE` after a recovered payment
+- `invoice.payment_succeeded` — back to `ACTIVE` after a recovered payment; records the account's
+  first paid invoice and the partner commission (3.23.0, see "Partners & commissions")
+- `refund.created`, `refund.updated` — take a refunded payment's share back from the partner
+  commission it earned (3.23.0). **Add both to the live and sandbox endpoints.**
 
 Webhook handler: `src/app/api/webhooks/stripe/route.ts`. All event handlers are idempotent.
 
@@ -204,6 +207,41 @@ While `customPricePendingAt` is set:
 Clearing (`clearCustomPrice`) nulls every custom-price field. A still-pending quote is withdrawn and `status` returns to `customPricePrevStatus` (their old Stripe subscription stays canceled — that can't be undone, so re-quote or let them subscribe again). For an account already paying a custom price on POS/OPERATIONS, the subscription item is restored to that plan's catalog `MONTHLY` price (always monthly — the original interval isn't tracked once overridden).
 
 ---
+
+### Partners & commissions (3.23.0)
+
+Partners are paid a share of what the customers they bring pay. Code: `src/lib/services/partner.service.ts`
+(deals, sign-up credit, payouts), `src/lib/services/partner-commission.service.ts` (ledger from
+Stripe), `src/lib/partners/commission-math.ts` (pure arithmetic), `src/lib/services/referral-discount.service.ts`.
+
+- **Where a customer came from** is decided once, at sign-up (`SignupAttribution`, written by the Better
+  Auth create hook from the proxy's first-party cookies, `src/lib/attribution/cookies.ts`): the last
+  referral link (`?ref=CODE` on `/`, `/register` or `/pricing`) or sales page opened in the 30 days
+  before. That source's ACTIVE partner is credited, and the partner's deal is copied onto the row, so
+  later edits only change new sign-ups.
+- **Sales-page owners** (`PartnerSalesPage`, one owner per page, all languages) are credited from the
+  page's "credit from" date; assigning a page credits earlier matching sign-ups and pulls their paid
+  invoices in. No customer discount on sales pages.
+- **Commission window**: `commissionMonths` calendar months from the period start of the account's
+  first paid invoice (`amount_paid > 0`; a trial's $0 invoice doesn't count). Each invoice counts for the
+  share of its line periods inside the window, after discounts, minus inclusive tax, times
+  `amount_paid / total`, then × `commissionRate`. Monthly: invoices 1–3 in full, the 4th nothing.
+  Yearly: 3/12 of the yearly invoice. Rounded down, in the invoice's currency; never summed across
+  currencies.
+- **Ledger** (`PartnerCommission`): one row per paid invoice (`sourceKey` `inv:<id>`, replays are
+  no-ops), on hold 30 days (`payableAt`), then "ready to pay" (computed on read: no cron, Inngest isn't
+  running in prod). A refund adds a negative `REFUND_ADJUSTMENT` (`refund:<id>`), netted with the
+  original while it's on hold, or taken off the next payout once paid; a failed/cancelled refund voids it.
+- **Payouts** are manual bank transfers: a full admin records one per currency in the partner's admin
+  page; the amount is the server's sum of ready rows. No bank details are stored.
+- **Customer discount** (referral links only, default 10%, first invoice only): a one-time Stripe coupon
+  per percentage (`epidom-ref-once-10`), created on first use. Without a trial it is on the Checkout
+  Session (`discounts`); with the POS trial it waits in the session metadata (`referralCoupon`) and
+  `checkout.session.completed` puts it on the subscription after the trial's $0 invoice exists, so the
+  first paid invoice gets it. Never on custom-price checkouts, capped at 50%.
+- **Viewers** (`PartnerViewer`): an admin can let another account see a partner's page read-only (`/admin/my-referrals?partner=…`); they earn nothing and can't change the link's landing.
+- **Self-referral**: a sign-up from the partner's own mailbox (Gmail dots/+tags ignored) isn't credited;
+  one from an IP the partner signed in from is credited and flagged in the admin page.
 
 ## Xendit setup (customer payments)
 

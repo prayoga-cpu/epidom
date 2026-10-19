@@ -21,7 +21,7 @@ export const maxDuration = 300;
 const HISTORY_LIMIT = 20;
 
 export async function GET() {
-  if (!(await getActingAdmin())) {
+  if (!(await getActingAdmin({ section: "capacity" }))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -81,4 +81,4 @@ export const POST = withAdminApiHandler(async () => {
   after(() => executeBackupRun(run.id, folder));
 
   return NextResponse.json({ data: { runId: run.id, folder } }, { status: 202 });
-});
+}, { section: "capacity" });

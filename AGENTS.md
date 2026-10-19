@@ -56,7 +56,7 @@ If a task is not aligned with Phase 5, ask the operator before proceeding.
 - **Notifications**: Fonnte for WhatsApp v1, migrating to WhatsApp Business API later
 - **Background jobs**: Inngest (introduced in Phase 2)
 - **Email**: Resend
-- **Storage**: Vercel Blob for uploads (`src/lib/storage/`). Cloudflare R2 is used only for the nightly database backup (`src/lib/backup/`, `R2_*` vars)
+- **Storage**: Vercel Blob for uploads (`src/lib/storage/`). Cloudflare R2 holds the nightly database backup (`src/lib/backup/`, `R2_*` vars) and the sales-page video (`src/lib/storage/sales-video.ts`, served by short-lived signed links: the bucket must stay private, it holds the backups)
 
 ---
 

@@ -44,7 +44,7 @@ const GROWTH_TABLES = [
 ];
 
 export async function GET() {
-  if (!(await getActingAdmin())) {
+  if (!(await getActingAdmin({ section: "capacity" }))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

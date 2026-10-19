@@ -5,6 +5,8 @@ import { updateProfileSchema } from "@/lib/validation/auth.schemas";
 import { createSuccessResponse } from "@/types/api";
 import { getLinkedStaffForUser } from "@/lib/auth/staff-link";
 import { toPublicBusiness } from "@/lib/auth/owner-pin";
+import { prisma } from "@/lib/prisma";
+import { resolveAdminAccess } from "@/lib/auth/admin-access";
 
 /**
  * GET /api/user/profile
@@ -25,10 +27,24 @@ import { toPublicBusiness } from "@/lib/auth/owner-pin";
  */
 export const GET = withApiHandler(
   async (request, { userId }) => {
-    const [profile, link] = await Promise.all([
+    const [profile, link, accessRow] = await Promise.all([
       userService.getProfile(userId),
       getLinkedStaffForUser(userId),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          isAdmin: true,
+          adminSections: true,
+          partner: { select: { id: true } },
+          partnerViews: { select: { partnerId: true } },
+        },
+      }),
     ]);
+    // Which admin pages the menus may link to (the pages check again themselves).
+    const access = accessRow ? resolveAdminAccess(accessRow) : null;
 
     // The repository returns the full rows, but UserProfileDto doesn't declare
     // these two, so they are read and re-set explicitly rather than relied on
@@ -51,6 +67,11 @@ export const GET = withApiHandler(
             }
           : null,
         staffLink: link ? { storeId: link.storeId, storeName: link.store.name } : null,
+        adminAccess: {
+          full: access?.full ?? false,
+          sections: access?.sections ?? [],
+          partner: access?.partner ?? false,
+        },
       })
     );
   },

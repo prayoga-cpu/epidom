@@ -9,6 +9,28 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.24.0] - 2026-10-19 · feat
+
+The presentation video plays on all four sales pages.
+
+- **One video, four pages, three languages.** The video boxes on /sales-page-1 to /sales-page-4, in French, English and Indonesian, now play Epidom's 5-minute presentation video. Nothing is downloaded until the visitor taps play, so the pages load as fast as before; the video then plays inside the box with the usual controls. Page 4, which had an empty frame, now has the same gold play button.
+- **Captions.** The placeholder captions ("X minutes to…") now say 5 minutes.
+- **Served privately.** The video stays in Epidom's private storage: each visitor gets a link that works for a few hours and only for this video.
+
+## [3.23.0] - 2026-10-19 · feat
+
+Partners: referral links that give customers a discount, sales pages owned by a partner, commission tracked and paid out from the admin panel, and admin access page by page.
+
+- **Referrals in the admin panel.** A new Referrals page turns an Epidom account into a referral partner: their referral code, their commission (30% by default) on what each customer pays during their first months (3 by default), and the discount their link gives (10% off the first payment by default). A deal can be edited, paused or ended; changes count for new sign-ups only, and customers keep what they signed up with.
+- **From the users list.** A master admin can make any user a referral partner from their Manage menu ("Make referral partner…"), choosing in the same step the sales pages they own, or open the partner's page if they already are one.
+- **Sales pages owned by a partner.** A sales page, in all its languages, can be given to a partner from a "credit from" date. Every sign-up from it counts for them, including earlier ones from that date, with the payments they already made.
+- **Referral links with a discount.** epidom.fr/register?ref=CODE, or the home page if the partner prefers. Visitors see "Bob's referral: 10% off your first payment" and the discount is taken off their first payment at checkout; with the POS free trial, off the first payment after it.
+- **Commission, refunds and payouts.** Each payment a credited customer makes during their window earns the partner their share: a monthly plan for its first 3 months, a yearly plan for 3/12 of the year, a free trial nothing. Each commission waits 30 days before it can be paid, and a refund takes its share back. A full admin records each bank transfer to a partner, currency by currency.
+- **A page for each partner, and nothing else.** A partner opens only their own page, "Partner dashboard" in their account menu, in French, English or Indonesian. A sales-page owner sees the report of their own pages (visitors, page views, how far visitors read, button clicks, sign-ups, sign-up and click rates, over 7, 30 or 90 days or all time) and the commission details: each payment, the part that counts, the commission and when it can be paid. A referral partner sees their link with copy and WhatsApp sharing and a link per channel. Both see their customers (business name, plan, ad, what each earned: never emails), their commission totals and their payouts.
+- **Someone else can follow a partner's page.** On a partner's admin page, "Can view this partner's page" lets another account see exactly that partner's page, read-only: the same report, customers and commission details. They change nothing and earn nothing; the commission stays the partner's.
+- **Admin access page by page.** An account can be given only some admin pages (Sales Pages, Partners, Meta Pixel, Feedback and others) from the users list. The users list and the activity log stay with full admins. All admin pages now share one menu at the top that lists only the pages you can open.
+- **Safer admin accounts.** An admin added from the panel can no longer reset the password of, open a temporary access to, wipe or delete the account of one of the founding admins.
+
 ## [3.22.0] - 2026-10-19 · feat
 
 Every new account now records where it came from: the sales page or referral link, and the ad that brought it.

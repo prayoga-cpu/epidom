@@ -9,6 +9,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { LoadingPage } from "@/features/loading/loading-page";
 import { CookieConsentBar } from "@/features/marketing/shared/components/cookie-consent-bar";
+import { ReferralBanner } from "@/features/referrals/components/referral-banner";
 
 export const metadata: Metadata = {
   title: "Epidom — Log In",
@@ -31,6 +32,8 @@ export default function LoginLayout({
                   bar they could never allow the pixel, and their sign-up would never
                   reach Meta. Shown once per browser, like on the marketing site. */}
               <CookieConsentBar />
+              {/* "Bob's referral: 10% off" for a visitor who came through a partner's link. */}
+              <ReferralBanner />
             </I18nProvider>
           </SessionProvider>
         </Suspense>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { isAdminUser } from "@/lib/admin";
+import { getActingAdmin } from "@/lib/auth/require-admin-api";
+import { stripeAmountToMajor } from "@/lib/money/stripe-amount";
 import { stripe } from "@/lib/stripe";
 import type Stripe from "stripe";
 
@@ -27,25 +27,6 @@ const MAX_SUBSCRIPTIONS = 5000;
 const MAX_INVOICES = 10000;
 const MAX_PAYMENT_LOG = 500;
 
-/** Stripe zero-decimal currencies — their amounts are already in the major unit. */
-const ZERO_DECIMAL = new Set([
-  "bif",
-  "clp",
-  "djf",
-  "gnf",
-  "jpy",
-  "kmf",
-  "krw",
-  "mga",
-  "pyg",
-  "rwf",
-  "ugx",
-  "vnd",
-  "vuv",
-  "xaf",
-  "xof",
-  "xpf",
-]);
 
 /** Approximate EUR→X rates used if the live FX API is unavailable. */
 const FALLBACK_EUR_RATES: Record<string, number> = {
@@ -105,7 +86,7 @@ function monthlyFromUnit(
 
 /** Convert a Stripe raw amount to the major unit of its currency. */
 function toMajor(raw: number, currency: string): number {
-  return ZERO_DECIMAL.has(currency) ? raw : raw / 100;
+  return stripeAmountToMajor(raw, currency);
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -158,12 +139,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { email: true, isAdmin: true },
-    });
-
-    if (!user || !isAdminUser(user.email, user.isAdmin)) {
+    if (!(await getActingAdmin({ section: "revenue" }))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

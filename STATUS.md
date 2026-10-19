@@ -155,7 +155,29 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Outside the SEO phases
 
-### Partners, referrals and commissions — Release A: sign-up tracking — 3.22.0 (2026-10-19)
+### Sales-page video — 3.24.0 (2026-10-19)
+
+- [x] `videos/VSL.mp4` (R2 bucket `epidom`, 96.85 MB, 5 min 27 s, fast-start) on all 4 sales pages × 3 languages: `public/sales-pages/vsl.js` (loads nothing until play is tapped; page 4 gets an injected gold play button), `GET /api/public/sales-pages/video` → 302 to a 6-hour signed GET link for that one key (`src/lib/storage/sales-video.ts`, `@aws-sdk/s3-request-presigner`). The bucket is NOT public: it also holds the DB backups. Captions "[X minutes…]" → 5 minutes (French + translation tables, EN/ID regenerated).
+- [x] Checked locally: a signed link to the object answers 206 with `video/mp4` and range support.
+- [ ] Prod uses the Vercel `R2_*` credentials: verify after deploy that they can read bucket `epidom` (else set `R2_MEDIA_BUCKET` / give the token read access). Video plays aren't counted in the sales-page report yet.
+
+### Partners, referrals and commissions — Release B: partners, commission, admin access — 3.23.0 (2026-10-19)
+
+- [x] Admin access per page: `src/config/admin-sections.config.ts` (one registry for nav, guards, grant dialog), `User.adminSections`, `getAdminAccess()` / `requireAdminSection()` / `getActingAdmin({ section })` / `withAdminApiHandler(h, { section })` (no section = full admin only). Users list + activity log stay full-admin. Shared `admin/layout.tsx` nav (hidden for partner-only accounts). "Admin pages…" in the users list (audited `admin.user.set_admin_sections`, reversible), `SECTION_GRANT` grant source. Fixed: a DB-flag admin could reset/temp-password/delete/wipe a hardcoded admin.
+- [x] Referrals (`/admin/partners`, label "Referrals"): `Partner`, `PartnerSalesPage` (one owner per page, credit-from date + backfill), deal copied onto `SignupAttribution` at sign-up (referral link vs sales page = last opened), self-referral refused (normalized email) or flagged (same IP as a partner session). "Make referral partner…" in the users list Manage menu, with sales pages in the same step.
+- [x] Discount: one-time coupon per % (`epidom-ref-once-10`), on the Checkout Session without a trial; with the POS trial, put on the subscription by `checkout.session.completed` (after the $0 invoice). Referral links only, capped at 50%.
+- [x] Commission ledger from `invoice.payment_succeeded` (re-reads the invoice; window from the first paid invoice's period; yearly 3/12), refunds from `refund.created` / `refund.updated`, 30-day hold computed on read, payouts per currency (full admin), void. Math in `src/lib/partners/commission-math.ts`.
+- [x] Partner page viewers (`PartnerViewer`): "Can view this partner's page" on the partner's admin page; the viewer opens Partner dashboard, read-only (landing switch disabled), commission stays the partner's. For Evan Cao (ecao.inquiries@gmail.com) on Aaron's page.
+- [x] Partner page `/admin/my-referrals` (fr/en/id): sales-page report of their own pages (same figures as the admin report, range tabs) + commission details + customers (no emails) + payouts; referral link with per-channel links for link partners. Banner "Bob's referral: 10% off" on /register and the home page.
+- [ ] **Stripe webhook events (operator):** add `refund.created` and `refund.updated` to the live endpoint (and the sandbox one). Without them a refund doesn't take its commission back (an admin can still void it by hand).
+- [ ] **Dev branch:** run `prisma migrate deploy` (migrations `20261019090000_signup_attributions`, `20261020090000_partners`); the build applies them to prod.
+- [ ] **Set up Aaron (operator, after the deploy):** Admin → users list → Aaron's Manage menu → Make referral partner…: no referral code, 30% for 3 months, tick his sales page, "count sign-ups from" 2026-10-20. He then sees only Partner dashboard. (Which page is his wasn't specified.)
+- [ ] **Then Evan:** Admin → Referrals → Aaron → "Can view this partner's page" → ecao.inquiries@gmail.com (needs an Epidom account with that email first).
+- [ ] Not built: a "10% off" note on the plan cards (Stripe Checkout shows the discount itself); a partner can't see visits to their referral link (only sign-ups).
+- [x] Verified on the Stripe sandbox with test clocks (real API, in-memory DB): POS trial → the $0 trial invoice has no discount, the first paid invoice after 14 days is EUR 12.59 (10% off 13.99), window starts at the trial's end, commission 3.77, month 2 full price → 4.19, a replayed webhook adds nothing; no trial → first invoice 12.59, commission linked to its payment intent. Not run in a browser Checkout (same coupon mechanism).
+- [ ] **Privacy (operator):** partners see their customers' business name and plan; the privacy policy doesn't say so yet.
+
+### Partners, referrals and commissions — Release A: sign-up tracking — 3.22.0 (2026-10-19, pushed 0a1b902c, verified live on epidom.fr + www, CI green)
 
 Plan: partners (Aaron = owner of a sales page, referral-link partners with a 10% first-invoice discount), 30% for the customer's first 3 months, manual payouts, per-page admin access. Release A ships the tracking before the sales-page ads start (2026-10-20); Release B (3.23.0) adds partners, admin access per page, the discount, commissions and the partner page.
 

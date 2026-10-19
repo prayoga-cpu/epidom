@@ -13,7 +13,11 @@
  */
 
 import { NextResponse } from "next/server";
-import { getActingAdmin, type ActingAdmin } from "@/lib/auth/require-admin-api";
+import {
+  getActingAdmin,
+  type ActingAdmin,
+  type AdminGateOptions,
+} from "@/lib/auth/require-admin-api";
 import { handleApiError } from "@/lib/utils/api-error-handler";
 import { buildRequestMeta } from "@/lib/audit/request-meta";
 import { runWithAuditScope, type AuditActor, type AuditScope } from "@/lib/audit/actor-scope";
@@ -45,7 +49,7 @@ export function adminActor(admin: ActingAdmin): AuditActor {
  * getting a 403 is a stronger signal than most successful actions, and it is
  * invisible today.
  */
-export const withAdminApiHandler = (handler: AdminApiHandler) => {
+export const withAdminApiHandler = (handler: AdminApiHandler, options: AdminGateOptions = {}) => {
   return async (request: Request, context?: { params?: Promise<any> }) => {
     const resolvedParams = context?.params ? await context.params : {};
     const meta = buildRequestMeta(request);
@@ -56,7 +60,7 @@ export const withAdminApiHandler = (handler: AdminApiHandler) => {
     const auditable =
       isMutatingMethod(meta.method) && resolveRouteAction(meta.method, meta.route) !== null;
 
-    const admin = await getActingAdmin();
+    const admin = await getActingAdmin(options);
 
     if (!admin) {
       if (auditable) {

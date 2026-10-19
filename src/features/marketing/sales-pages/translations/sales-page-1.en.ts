@@ -13,7 +13,7 @@ const translation: SalesPageTranslation = {
     ["CENTRALISEZ", "CENTRALIZE"],
     ["ce dont vous avez besoin sans jongler entre plusieurs outils.", "everything you need without juggling multiple tools."],
     ["Lire la vidéo", "Play video"],
-    ["[X minutes pour comprendre comment Epidom fonctionne]", "[See how Epidom works in X minutes]"],
+    ["5 minutes pour comprendre comment Epidom fonctionne", "See how Epidom works in 5 minutes"],
     ["Nouvelle commande", "New order"],
     ["Paiement reçu", "Payment received"],
     ["+ 12,50 €", "+ $12.50"],

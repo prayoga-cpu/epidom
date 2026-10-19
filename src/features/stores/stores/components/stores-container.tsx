@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
+import { hasAnyAdminAccess, type AdminAccessSummary } from "@/config/admin-sections.config";
 import { isUnauthorizedError } from "@/lib/api/unauthorized";
 import { minPlanForStores, upgradeHrefFor, type PlanTier } from "@/lib/plans/entitlements";
 import {
@@ -40,6 +41,8 @@ type GateState =
       businessCountry: string | null;
       businessTimezone: string | null;
       hasBusiness: boolean;
+      /** Admin pages / partner page the account may open (null when unknown). */
+      adminAccess: AdminAccessSummary | null;
     };
 
 export function StoresContainer() {
@@ -75,9 +78,8 @@ export function StoresContainer() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  // Email check only (no DB isAdmin flag) — same simplification the old
-  // top-nav Admin badge used; this card replaces that badge.
-  const isAdmin = mounted && isAdminEmail(session?.user?.email);
+  // The hardcoded emails know right away; everyone else (DB-flag admins,
+  // accounts given some admin pages, partners) once the profile is in.
 
   async function handleActivateFree() {
     setIsActivating(true);
@@ -101,6 +103,13 @@ export function StoresContainer() {
    * page render as before (fail open).
    */
   const [gate, setGate] = useState<GateState>({ status: "pending" });
+  const gateAccess = gate.status === "stay" ? gate.adminAccess : null;
+  const adminCardAccess: AdminAccessSummary = {
+    full: isAdminEmail(session?.user?.email) || gateAccess?.full === true,
+    sections: gateAccess?.sections ?? [],
+    partner: gateAccess?.partner === true,
+  };
+  const isAdmin = mounted && hasAnyAdminAccess(adminCardAccess);
   useEffect(() => {
     let cancelled = false;
     const stay = (profile?: GatekeeperProfile | null) => {
@@ -110,6 +119,8 @@ export function StoresContainer() {
         businessCountry: profile?.business?.country ?? null,
         businessTimezone: profile?.business?.timezone ?? null,
         hasBusiness: !!profile?.business,
+        adminAccess:
+          (profile as { adminAccess?: AdminAccessSummary } | null | undefined)?.adminAccess ?? null,
       });
     };
 
@@ -371,7 +382,7 @@ export function StoresContainer() {
                       />
                     );
                   })}
-              {!isLoadingSubscription && isAdmin && <AdminCard />}
+              {!isLoadingSubscription && isAdmin && <AdminCard access={adminCardAccess} />}
             </div>
           )}
         </div>

@@ -293,6 +293,49 @@ export const ACTION_CATALOG = {
     },
   }),
 
+  "admin.user.set_admin_sections": defineAction({
+    category: "admin",
+    severity: "CRITICAL",
+    reversibility: "REVERSIBLE",
+    targetType: "User",
+    payload: z.object({
+      ...userTarget,
+      before: z.array(z.string()),
+      after: z.array(z.string()),
+    }),
+    label: (p) =>
+      p.after.length
+        ? `Gave ${p.userEmail} admin pages: ${p.after.join(", ")}`
+        : `Removed ${p.userEmail}'s admin pages`,
+    subjects: (p) => [p.userId],
+    roundTrip: (p) => {
+      if (!Array.isArray(p.before)) throw new Error("set_admin_sections round-trip failed");
+    },
+    precheck: async ({ payload, db }) => {
+      const user = await db.user.findUnique({
+        where: { id: payload.userId },
+        select: { adminSections: true },
+      });
+      if (!user) return { code: "TARGET_MISSING", message: "That user no longer exists." };
+      const same =
+        user.adminSections.length === payload.after.length &&
+        payload.after.every((k: string) => user.adminSections.includes(k));
+      if (!same) {
+        return {
+          code: "SUPERSEDED",
+          message: "Their admin pages have changed since this action. Reverting would undo the newer change.",
+        };
+      }
+      return null;
+    },
+    reverse: async ({ payload, tx }) => {
+      await tx.user.update({
+        where: { id: payload.userId },
+        data: { adminSections: payload.before },
+      });
+    },
+  }),
+
   // Credential overwrites. The previous password hash is deliberately never
   // captured — storing it would put a reversible credential in a table designed
   // to outlive the account. So "revert" means: undo the side effects that were

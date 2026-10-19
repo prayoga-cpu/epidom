@@ -8,6 +8,7 @@ const mockSession = { user: { id: "admin-id", email: "prayogadevelopment@gmail.c
 vi.mock("@/lib/auth", () => ({ getSession: vi.fn() }));
 vi.mock("@/lib/admin", () => ({
   isAdminUser: vi.fn((email: string) => email === "prayogadevelopment@gmail.com"),
+  isAdminEmail: vi.fn((email: string) => email === "prayogadevelopment@gmail.com"),
 }));
 vi.mock("better-auth/crypto", () => ({ hashPassword: vi.fn().mockResolvedValue("hashed-pw") }));
 
@@ -202,6 +203,72 @@ describe("PATCH /api/admin/users", () => {
       const body = await res.json();
       expect(body.error).toMatch(/own account/i);
     });
+  });
+
+  describe("set-admin-sections", () => {
+    it("gives an account some admin pages, deduplicated, and records the change", async () => {
+      mockPrisma.user.update.mockResolvedValue({ id: "u1", email: "aaron@x.com", adminSections: [] });
+      const res = await PATCH(
+        makeReq({
+          action: "set-admin-sections",
+          userId: "u1",
+          sections: ["sales-pages", "partners", "sales-pages"],
+        })
+      );
+      expect(res.status).toBe(200);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "u1" },
+          data: { adminSections: ["sales-pages", "partners"] },
+        })
+      );
+      expect(mockRecord.recordAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actionType: "admin.user.set_admin_sections",
+          payload: expect.objectContaining({ before: [], after: ["sales-pages", "partners"] }),
+        })
+      );
+    });
+
+    it("refuses pages that can't be granted (users, activity)", async () => {
+      for (const key of ["users", "activity", "my-referrals"]) {
+        const res = await PATCH(makeReq({ action: "set-admin-sections", userId: "u1", sections: [key] }));
+        expect(res.status).toBe(400);
+      }
+    });
+
+    it("blocks changing your own pages", async () => {
+      const res = await PATCH(
+        makeReq({ action: "set-admin-sections", userId: "admin-id", sections: ["pixel"] })
+      );
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("another admin's account", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      vi.mocked(getSession).mockResolvedValue({ user: { id: "admin-id", email: "granted@x.com" } } as any);
+      mockPrisma.user.findUnique.mockImplementation(({ where }: { where: { id: string } }) =>
+        Promise.resolve(
+          where.id === "admin-id"
+            ? { id: "admin-id", name: "Granted", email: "granted@x.com", isAdmin: true, adminSections: [], deactivatedAt: null }
+            : { id: "founder", name: "Founder", email: "prayogadevelopment@gmail.com", isAdmin: false, emailVerified: true, deactivatedAt: null, purgeAt: null }
+        )
+      );
+    });
+
+    it.each(["reset-password", "temp-password", "delete-user", "reset-account"])(
+      "an admin granted from the panel can't %s a hardcoded admin",
+      async (action) => {
+        const res = await PATCH(
+          makeReq({ action, userId: "founder", ...(action === "reset-password" ? { newPassword: "Takeover123!" } : {}) })
+        );
+        expect(res.status).toBe(403);
+        expect(mockPrisma.account.update).not.toHaveBeenCalled();
+        expect(mockPrisma.user.delete).not.toHaveBeenCalled();
+      }
+    );
   });
 
   describe("reset-password", () => {

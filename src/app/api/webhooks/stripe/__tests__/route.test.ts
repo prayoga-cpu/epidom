@@ -5,6 +5,10 @@ import { subscriptionRepository } from "@/lib/repositories";
 import { subscriptionService } from "@/lib/services";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 import { NextRequest } from "next/server";
+import {
+  recordInvoiceCommission,
+  recordRefund,
+} from "@/lib/services/partner-commission.service";
 
 // Mock dependencies
 vi.mock("@/lib/stripe", () => ({
@@ -15,8 +19,16 @@ vi.mock("@/lib/stripe", () => ({
     subscriptions: {
       retrieve: vi.fn(),
       cancel: vi.fn(),
+      update: vi.fn(),
     },
   },
+}));
+
+// Partner commissions are tested on their own (partner-commission.service.test.ts);
+// here only that the webhook hands them the right events.
+vi.mock("@/lib/services/partner-commission.service", () => ({
+  recordInvoiceCommission: vi.fn().mockResolvedValue({ status: "no-attribution" }),
+  recordRefund: vi.fn().mockResolvedValue("no-commission"),
 }));
 
 vi.mock("@/lib/repositories", () => ({
@@ -685,6 +697,100 @@ describe("Stripe Webhook Handler", () => {
 
       expect(subscriptionRepository.findByStripeSubscriptionId).not.toHaveBeenCalled();
       expect(subscriptionRepository.updateByStripeSubscriptionId).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("partner commissions and referral coupons", () => {
+    it("records the commission of every paid invoice, after the status recovery", async () => {
+      const mockEvent = {
+        type: "invoice.payment_succeeded",
+        data: { object: { id: "in_77", parent: null } },
+      };
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+
+      const res = await POST(createRequest(mockEvent));
+
+      expect(res.status).toBe(200);
+      expect(recordInvoiceCommission).toHaveBeenCalledWith("in_77");
+    });
+
+    it("lets Stripe retry when recording the commission fails", async () => {
+      const mockEvent = {
+        type: "invoice.payment_succeeded",
+        data: { object: { id: "in_78", parent: null } },
+      };
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (recordInvoiceCommission as any).mockRejectedValueOnce(new Error("Stripe down"));
+
+      const res = await POST(createRequest(mockEvent));
+
+      expect(res.status).toBeGreaterThanOrEqual(500);
+    });
+
+    it.each(["refund.created", "refund.updated"])("hands %s to the refund adjustment", async (type) => {
+      const mockEvent = { type, data: { object: { id: "re_1" } } };
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+
+      const res = await POST(createRequest(mockEvent));
+
+      expect(res.status).toBe(200);
+      expect(recordRefund).toHaveBeenCalledWith("re_1");
+    });
+
+    const trialCheckout = (metadata: Record<string, string>, status = "trialing", discounts: unknown[] = []) => {
+      const mockEvent = {
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            mode: "subscription",
+            subscription: "sub_trial",
+            customer: "cus_123",
+            metadata: { userId: "user-123", plan: "POS", ...metadata },
+          },
+        },
+      };
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (stripe.subscriptions.retrieve as any).mockResolvedValue({
+        id: "sub_trial",
+        status,
+        discounts,
+        current_period_start: 1700000000,
+        current_period_end: 1701209600,
+        trial_end: 1701209600,
+        items: { data: [{ price: { id: "price_pos" } }] },
+      });
+      (subscriptionRepository.findByUserId as any).mockResolvedValue(null);
+      return mockEvent;
+    };
+
+    it("puts a trial checkout's referral coupon on the subscription, after its $0 invoice", async () => {
+      const event = trialCheckout({ referralCoupon: "epidom-ref-once-10" });
+
+      const res = await POST(createRequest(event));
+
+      expect(res.status).toBe(200);
+      expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_trial", {
+        discounts: [{ coupon: "epidom-ref-once-10" }],
+      });
+    });
+
+    it("leaves the subscription alone without a coupon, when not trialing, or when it already has one", async () => {
+      await POST(createRequest(trialCheckout({})));
+      await POST(createRequest(trialCheckout({ referralCoupon: "epidom-ref-once-10" }, "active")));
+      await POST(
+        createRequest(trialCheckout({ referralCoupon: "epidom-ref-once-10" }, "trialing", ["di_1"]))
+      );
+      expect(stripe.subscriptions.update).not.toHaveBeenCalled();
+    });
+
+    it("still answers 200 when adding the coupon fails: the subscription is stored", async () => {
+      const event = trialCheckout({ referralCoupon: "epidom-ref-once-10" });
+      (stripe.subscriptions.update as any).mockRejectedValueOnce(new Error("No such coupon"));
+
+      const res = await POST(createRequest(event));
+
+      expect(res.status).toBe(200);
+      expect(subscriptionRepository.create).toHaveBeenCalled();
     });
   });
 });

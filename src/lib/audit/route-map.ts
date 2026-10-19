@@ -50,6 +50,39 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
     targetType: "CustomDevelopmentRequest",
   },
   "POST /api/admin/backups": { code: "admin.backup.run", severity: N },
+  // Partner deals and their payouts (src/lib/services/partner.service.ts).
+  "POST /api/admin/partners": { code: "admin.partner.create", severity: C, targetType: "Partner" },
+  "PATCH /api/admin/partners/*": { code: "admin.partner.update", severity: C, targetType: "Partner", targetIdIndex: 0 },
+  "PUT /api/admin/partners/*/sales-pages": {
+    code: "admin.partner.sales_pages",
+    severity: C,
+    targetIdIndex: 0,
+    targetType: "Partner",
+  },
+  "POST /api/admin/partners/*/payouts": {
+    code: "admin.partner.payout",
+    severity: C,
+    targetIdIndex: 0,
+    targetType: "Partner",
+  },
+  "POST /api/admin/partners/*/viewers": {
+    code: "admin.partner.viewer_add",
+    severity: C,
+    targetIdIndex: 0,
+    targetType: "Partner",
+  },
+  "DELETE /api/admin/partners/*/viewers/*": {
+    code: "admin.partner.viewer_remove",
+    severity: C,
+    targetIdIndex: 0,
+    targetType: "Partner",
+  },
+  "POST /api/admin/partners/commissions/*/void": {
+    code: "admin.partner.commission_void",
+    severity: C,
+    targetIdIndex: 0,
+    targetType: "PartnerCommission",
+  },
   // The log logs itself. A reversal is a privileged write like any other, and
   // an audit trail that cannot show who reverted what is missing the one
   // action most worth reviewing.

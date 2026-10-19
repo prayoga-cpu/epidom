@@ -14,7 +14,7 @@ export const GET = withAdminApiHandler(async () => {
   const requests = await customDevelopmentService.getAllRequests();
 
   return NextResponse.json({ requests });
-});
+}, { section: "custom-development" });
 
 /**
  * PATCH /api/admin/custom-development
@@ -61,4 +61,4 @@ export const PATCH = withAdminApiHandler(async (req) => {
   });
 
   return NextResponse.json({ request: request_ });
-});
+}, { section: "custom-development" });

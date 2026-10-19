@@ -11,7 +11,7 @@ const translation: SalesPageTranslation = {
     ["que vous perdez à jongler entre", "yang terbuang karena bolak-balik di antara"],
     ["vos outils.", "semua aplikasi Anda."],
     ["Lire la vidéo", "Putar video"],
-    ["X minutes pour découvrir Epidom", "X menit untuk mengenal Epidom"],
+    ["5 minutes pour découvrir Epidom", "5 menit untuk mengenal Epidom"],
     ["Commencer gratuitement →", "Mulai gratis →"],
     ["Gratuit à vie. Sans carte bancaire", "Gratis selamanya. Tanpa kartu kredit"],
     ["Vous connaissez sûrement la scène…", "Anda pasti kenal situasi ini…"],

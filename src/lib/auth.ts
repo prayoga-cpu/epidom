@@ -7,7 +7,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/services/email.service";
 import { isAdminEmail } from "@/lib/admin";
 import { recordSalesPageSignup } from "@/lib/services/sales-page.service";
-import { recordSignupAttribution } from "@/lib/services/signup-attribution.service";
+import { recordSignupAttribution, requestIp } from "@/lib/services/signup-attribution.service";
 import {
   previewAuthCookiePrefix,
   resolveCrossSubDomainCookies,
@@ -98,8 +98,13 @@ export const auth = betterAuth({
           const cookieHeader =
             context?.headers?.get("cookie") ?? context?.request?.headers.get("cookie");
           await recordSalesPageSignup(user.id, cookieHeader);
-          if (context?.headers || context?.request) {
-            await recordSignupAttribution(user.id, cookieHeader);
+          const requestHeaders = context?.headers ?? context?.request?.headers;
+          if (requestHeaders) {
+            await recordSignupAttribution(
+              { id: user.id, email: user.email },
+              cookieHeader,
+              requestIp(requestHeaders)
+            );
           }
         },
       },
