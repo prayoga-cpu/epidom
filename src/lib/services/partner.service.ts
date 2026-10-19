@@ -27,6 +27,11 @@ import {
   decimalStringToStripeAmount,
   stripeAmountToDecimalString,
 } from "@/lib/money/stripe-amount";
+import { decryptField, encryptField } from "@/lib/crypto/field-encryption";
+import {
+  partnerBankDetailsSchema,
+  type PartnerBankDetails,
+} from "@/lib/validation/partner.schemas";
 import type {
   CreatePartnerInput,
   RecordPayoutInput,
@@ -214,6 +219,8 @@ export interface PartnerListRow {
   status: PartnerStatus;
   /** Invited by email, not joined yet. */
   inviteEmail: string | null;
+  /** The partner has entered where to be paid. */
+  bankDetailsSet: boolean;
   referralCode: string | null;
   referralLanding: "REGISTER" | "HOME";
   commissionRate: string;
@@ -255,6 +262,7 @@ export async function listPartners(now: Date = new Date()): Promise<PartnerListR
     displayName: p.displayName,
     status: p.status,
     inviteEmail: p.inviteEmail,
+    bankDetailsSet: Boolean(p.bankDetails),
     referralCode: p.referralCode,
     referralLanding: p.referralLanding,
     commissionRate: p.commissionRate.toString(),
@@ -830,7 +838,12 @@ async function payoutsOf(partnerId: string): Promise<PayoutRow[]> {
   }));
 }
 
-export async function getPartnerDetail(id: string, now: Date = new Date()) {
+export async function getPartnerDetail(
+  id: string,
+  now: Date = new Date(),
+  /** Bank details are for full admins (they record payouts), never a scoped admin. */
+  { includeBankDetails = false }: { includeBankDetails?: boolean } = {}
+) {
   const partner = await prisma.partner.findUnique({
     where: { id },
     include: {
@@ -866,6 +879,8 @@ export async function getPartnerDetail(id: string, now: Date = new Date()) {
         creditFrom: s.creditFrom.toISOString(),
         assignedAt: s.assignedAt.toISOString(),
       })),
+      bankDetailsSet: Boolean(partner.bankDetails),
+      bankDetails: includeBankDetails ? bankDetailsView(partner) : null,
       viewers: partner.viewers.map((v) => ({
         userId: v.user.id,
         email: v.user.email,
@@ -1012,6 +1027,66 @@ export async function partnerPageChoices(
     select: { id: true, displayName: true },
   });
   return ids.flatMap((id) => rows.filter((r) => r.id === id));
+}
+
+// --------------------------------------------------------- bank details
+
+const BANK_DETAILS_PURPOSE = "partner-bank-details:v1";
+
+export interface PartnerBankDetailsView {
+  /** Null when none were entered, or they can't be read here (`unreadable`). */
+  details: PartnerBankDetails | null;
+  updatedAt: string | null;
+  /** Stored, but encrypted with another key (another environment, a rotated secret). */
+  unreadable: boolean;
+}
+
+/** Decrypt a partner's stored bank details for the partner themselves or a full admin. */
+export function bankDetailsView(partner: {
+  bankDetails: string | null;
+  bankDetailsUpdatedAt: Date | null;
+}): PartnerBankDetailsView {
+  const plain = decryptField(partner.bankDetails, BANK_DETAILS_PURPOSE);
+  let details: PartnerBankDetails | null = null;
+  if (plain) {
+    try {
+      const parsed = partnerBankDetailsSchema.safeParse(JSON.parse(plain));
+      details = parsed.success ? parsed.data : null;
+    } catch {
+      details = null;
+    }
+  }
+  return {
+    details,
+    updatedAt: partner.bankDetailsUpdatedAt?.toISOString() ?? null,
+    unreadable: Boolean(partner.bankDetails) && !details,
+  };
+}
+
+/** A partner saves where they want to be paid (their own page only). Stored encrypted. */
+export async function setPartnerBankDetails(
+  partnerId: string,
+  details: PartnerBankDetails
+): Promise<PartnerBankDetailsView> {
+  const partner = await prisma.partner.update({
+    where: { id: partnerId },
+    data: {
+      bankDetails: encryptField(JSON.stringify(details), BANK_DETAILS_PURPOSE),
+      bankDetailsUpdatedAt: new Date(),
+    },
+    select: { bankDetails: true, bankDetailsUpdatedAt: true },
+  });
+  return bankDetailsView(partner);
+}
+
+/** The partner's own bank details, for their page (never a viewer's). */
+export async function getOwnBankDetails(partnerId: string): Promise<PartnerBankDetailsView> {
+  const partner = await prisma.partner.findUnique({
+    where: { id: partnerId },
+    select: { bankDetails: true, bankDetailsUpdatedAt: true },
+  });
+  if (!partner) notFound();
+  return bankDetailsView(partner);
 }
 
 // ----------------------------------------------------------- partner page

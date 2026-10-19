@@ -5,7 +5,10 @@ import { getPartnerDetail, updatePartner } from "@/lib/services/partner.service"
 
 /** GET /api/admin/partners/[id]: the partner, their customers, ledger and payouts. */
 export const GET = withAdminApiHandler(
-  async (_req, { params }) => NextResponse.json(await getPartnerDetail(params.id)),
+  async (_req, { params, admin }) =>
+    NextResponse.json(
+      await getPartnerDetail(params.id, new Date(), { includeBankDetails: admin.full })
+    ),
   { section: "partners" }
 );
 

@@ -157,8 +157,10 @@ follow redirects), snapshot payloads, API version `2026-08-26.dahlia`. Subscribe
 - `invoice.payment_failed` — set status to `PAST_DUE`
 - `invoice.payment_succeeded` — back to `ACTIVE` after a recovered payment; records the account's
   first paid invoice and the partner commission (3.23.0, see "Partners & commissions")
-- `refund.created`, `refund.updated` — take a refunded payment's share back from the partner
-  commission it earned (3.23.0). **Add both to the live and sandbox endpoints.**
+- `refund.created`, `refund.updated` — handled (3.23.0) but deliberately NOT subscribed (operator
+  decision 2026-10-19): every payment stays on Epidom's Stripe account and partners are paid by
+  manual transfer, so a refunded customer's commission is voided by hand (Void on the partner's
+  ledger) during the 30-day hold. Subscribing both events would make it automatic.
 
 Webhook handler: `src/app/api/webhooks/stripe/route.ts`. All event handlers are idempotent.
 
@@ -233,7 +235,12 @@ Stripe), `src/lib/partners/commission-math.ts` (pure arithmetic), `src/lib/servi
   running in prod). A refund adds a negative `REFUND_ADJUSTMENT` (`refund:<id>`), netted with the
   original while it's on hold, or taken off the next payout once paid; a failed/cancelled refund voids it.
 - **Payouts** are manual bank transfers: a full admin records one per currency in the partner's admin
-  page; the amount is the server's sum of ready rows. No bank details are stored.
+  page; the amount is the server's sum of ready rows.
+- **Bank details** (3.26.0): the partner enters them on their page (`PUT /api/partner/me/bank-details`,
+  own partner only); stored in `Partner.bankDetails` encrypted with AES-256-GCM, key derived from
+  `BETTER_AUTH_SECRET` (`src/lib/crypto/field-encryption.ts`; rotating that secret makes them
+  unreadable, and a copied database can't read them in another environment). Shown to the partner
+  and to full admins only (`getPartnerDetail(..., { includeBankDetails: admin.full })`).
 - **Customer discount** (referral links only, default 10%, first invoice only): a one-time Stripe coupon
   per percentage (`epidom-ref-once-10`), created on first use. Without a trial it is on the Checkout
   Session (`discounts`); with the POS trial it waits in the session metadata (`referralCoupon`) and

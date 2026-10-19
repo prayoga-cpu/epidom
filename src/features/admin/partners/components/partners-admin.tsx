@@ -372,6 +372,11 @@ export function PartnersAdmin() {
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div className="flex flex-wrap gap-1.5 text-xs">
+                      {!p.bankDetailsSet && p.user && (
+                        <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-500">
+                          No bank details
+                        </span>
+                      )}
                       {p.referralCode && (
                         <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-300">
                           ?ref={p.referralCode}

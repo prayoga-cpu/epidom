@@ -155,13 +155,21 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Outside the SEO phases
 
+### Partner bank details — 3.26.0 (2026-10-19)
+
+- [x] Partners enter where they're paid on their page (holder, bank, IBAN/account number, BIC/SWIFT), encrypted at rest (`src/lib/crypto/field-encryption.ts`, key from BETTER_AUTH_SECRET, migration `20261022090000_partner_bank_details`); full admins see them with copy buttons and in Record payout; scoped admins see only "provided"; viewers never.
+- [x] Decision (operator, 2026-10-19): no Stripe refund events. Payments stay on Epidom's Stripe; a refunded customer's commission is voided by hand during the 30-day hold.
+- [x] The partner page's "Back to stores" is hidden for partners without a business (meant for 3.25.0, the page change hadn't landed).
+- [x] Dev branch: `migrate status` = up to date (2026-10-19, checked from here; endpoint confirmed as the development branch via the Neon API).
+- [ ] Privacy (operator): the privacy policy doesn't mention partners' bank details or that partners see their customers' business names.
+
 ### Access in one place, partner invitations, video thumbnail — 3.25.0 (2026-10-19)
 
 - [x] `public/vsl-thumbnail.png` (994 KB) → `public/sales-pages/vsl-thumbnail.webp` (64 KB) + `.jpg` (92 KB); the video box's cover on all 12 sales pages (vsl.js; `<link rel=preload>` in each head; tap anywhere plays; poster while loading).
 - [x] Users list: one "Access…" (`src/features/admin/components/user-access-dialog.tsx`): full admin, admin pages, referral partner (opens the partner form next), partner-page views. Yellow "Admin" label for non-master admins; Partner label green.
 - [x] New referral partner: user picker (`GET /api/admin/partners/candidates`, section partners) or invite by email (Resend; `Partner.inviteEmail`, migration `20261021090000_partner_invites`; `/partner-invite` public page → sign up/in with `?next=` → auto-accept → `/admin/my-referrals`; resend from the partner page). "Link opens" includes the sales pages; code auto-fills from the name.
 - [x] Partner-only accounts: /stores sends them to their partner page (gatekeeper `partner-page`); partner page has Sign out, and no "back to stores" without a business.
-- [ ] Dev branch: `prisma migrate deploy` (now three new migrations).
+- [x] Dev branch: up to date (2026-10-19).
 - [ ] Not seen in a real browser while signed in (admin dialogs covered by render tests; the session-minting route is classifier-blocked).
 
 ### Sales-page video — 3.24.0 (2026-10-19)
@@ -178,8 +186,8 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 - [x] Commission ledger from `invoice.payment_succeeded` (re-reads the invoice; window from the first paid invoice's period; yearly 3/12), refunds from `refund.created` / `refund.updated`, 30-day hold computed on read, payouts per currency (full admin), void. Math in `src/lib/partners/commission-math.ts`.
 - [x] Partner page viewers (`PartnerViewer`): "Can view this partner's page" on the partner's admin page; the viewer opens Partner dashboard, read-only (landing switch disabled), commission stays the partner's. For Evan Cao (ecao.inquiries@gmail.com) on Aaron's page.
 - [x] Partner page `/admin/my-referrals` (fr/en/id): sales-page report of their own pages (same figures as the admin report, range tabs) + commission details + customers (no emails) + payouts; referral link with per-channel links for link partners. Banner "Bob's referral: 10% off" on /register and the home page.
-- [ ] **Stripe webhook events (operator):** add `refund.created` and `refund.updated` to the live endpoint (and the sandbox one). Without them a refund doesn't take its commission back (an admin can still void it by hand).
-- [ ] **Dev branch:** run `prisma migrate deploy` (migrations `20261019090000_signup_attributions`, `20261020090000_partners`); the build applies them to prod.
+- [x] ~~Stripe refund events~~: decided not needed (3.26.0 section): refunds are voided by hand.
+- [x] Dev branch migrated (up to date on 2026-10-19).
 - [ ] **Set up Aaron (operator, after the deploy):** Admin → users list → Aaron's Manage menu → Make referral partner…: no referral code, 30% for 3 months, tick his sales page, "count sign-ups from" 2026-10-20. He then sees only Partner dashboard. (Which page is his wasn't specified.)
 - [ ] **Then Evan:** Admin → Referrals → Aaron → "Can view this partner's page" → ecao.inquiries@gmail.com (needs an Epidom account with that email first).
 - [ ] Not built: a "10% off" note on the plan cards (Stripe Checkout shows the discount itself); a partner can't see visits to their referral link (only sign-ups).

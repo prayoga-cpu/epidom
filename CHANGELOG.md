@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.26.0] - 2026-10-19 · feat
+
+Partners enter their bank details for their payouts.
+
+- **Payout details on the partner page.** Each partner adds the account Epidom pays their commission into (account holder, bank, IBAN or account number, BIC/SWIFT) on their own page, in French, English or Indonesian. Until they do, the page asks for it. Once saved, the account number shows masked, with an Edit button.
+- **Private.** The details are stored encrypted. Only the partner and full admins see them; an admin given only the Referrals page sees whether they were provided, and someone viewing a partner's page read-only doesn't see them at all.
+- **Paying is quicker.** On a partner's admin page, full admins see the details with copy buttons, and Record payout shows who to transfer to. Partners without details are marked "No bank details" in the Referrals list.
+- **Partner page without a store.** A partner who has no store of their own no longer sees a "Back to stores" button that only led back to their page.
+
 ## [3.25.0] - 2026-10-19 · feat
 
 Access is set in one place, referral partners can be invited by email, and the sales-page video has its thumbnail.

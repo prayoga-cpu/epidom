@@ -2493,6 +2493,11 @@ model Partner {
   /// accept /partner-invite; the token lives in Verification, see
   /// src/lib/partner-invite.ts).
   inviteEmail             String?
+  /// Where Epidom transfers their commission, entered by the partner on their
+  /// page. Encrypted (src/lib/crypto/field-encryption.ts, AES-256-GCM): only
+  /// the partner and full admins ever see it decrypted.
+  bankDetails             String?
+  bankDetailsUpdatedAt    DateTime?
   status                  PartnerStatus   @default(ACTIVE)
   /// Upper case, unique; null for a partner without a link (a sales-page owner).
   referralCode            String?         @unique

@@ -18,6 +18,8 @@ import {
 import { PLAN_LABELS, type PlanTier } from "@/lib/plans/entitlements";
 import type { getMyPartnerDashboard } from "@/lib/services/partner.service";
 import type { SalesPageRow } from "@/lib/services/sales-page.service";
+import type { PartnerBankDetailsView } from "@/lib/services/partner.service";
+import { BankDetailsCard } from "./bank-details-card";
 import {
   CurrencyTotalsList,
   money,
@@ -191,6 +193,7 @@ export function MyReferrals({
   partnerId,
   choices = [],
   backHref = "/stores",
+  bankDetails = null,
 }: {
   dashboard: Dashboard;
   /** A viewer's look at someone else's page: nothing can be changed, nothing is earned. */
@@ -200,6 +203,8 @@ export function MyReferrals({
   choices?: { id: string; displayName: string }[];
   /** "Back to stores" when the account has a business; none for a partner-only account. */
   backHref?: string | null;
+  /** Where they're paid: only on their own page (null for a read-only viewer). */
+  bankDetails?: PartnerBankDetailsView | null;
 }) {
   const { t, locale } = useI18n();
   const pageHref = (range: string) =>
@@ -354,6 +359,8 @@ export function MyReferrals({
             </CardContent>
           </Card>
         </div>
+
+        {!readOnly && bankDetails && <BankDetailsCard initial={bankDetails} locale={tag} />}
 
         {p.referralCode && (
           <Card>

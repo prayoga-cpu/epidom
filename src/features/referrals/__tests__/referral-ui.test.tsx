@@ -208,6 +208,41 @@ describe("MyReferrals", () => {
     expect(hrefs).toContain("/admin/my-referrals?range=7&partner=aaron");
   });
 
+  it.each(LOCALES)("%s: asks the partner for their bank details, shows them masked once saved", (locale) => {
+    state.locale = locale;
+    const empty = render(
+      <MyReferrals dashboard={dashboard} bankDetails={{ details: null, updatedAt: null, unreadable: false }} />
+    );
+    expect(empty.container.textContent).not.toContain("MISSING");
+    expect(empty.container.querySelector("#bank-accountNumber")).not.toBeNull();
+    empty.unmount();
+
+    const saved = render(
+      <MyReferrals
+        dashboard={dashboard}
+        bankDetails={{
+          details: { accountHolder: "Aaron Vichard", bankName: "BNP", accountNumber: "FR76 3000 6000 0112 3456 7890 189", swift: "" },
+          updatedAt: "2026-10-20T10:00:00.000Z",
+          unreadable: false,
+        }}
+      />
+    );
+    expect(saved.container.textContent).toContain("•••• 0189");
+    expect(saved.container.textContent).not.toContain("FR76 3000");
+  });
+
+  it("a read-only viewer never gets the bank details card", () => {
+    state.locale = "en";
+    const { container } = render(
+      <MyReferrals
+        dashboard={dashboard}
+        readOnly
+        bankDetails={{ details: { accountHolder: "A", bankName: "B", accountNumber: "123456", swift: "" }, updatedAt: null, unreadable: false }}
+      />
+    );
+    expect(container.textContent).not.toContain("Payout details");
+  });
+
   it("builds the referral link and one tagged link per channel", () => {
     state.locale = "en";
     const { container } = render(<MyReferrals dashboard={dashboard} />);

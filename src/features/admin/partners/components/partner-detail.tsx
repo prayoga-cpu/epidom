@@ -326,6 +326,69 @@ function ViewersCard({ detail }: { detail: Detail }) {
   );
 }
 
+/** Where to transfer: the partner enters it on their page. Full admins see it to pay. */
+function BankDetailsAdminCard({ detail, canPay }: { detail: Detail; canPay: boolean }) {
+  const p = detail.partner;
+  const view = p.bankDetails;
+  const d = view?.details ?? null;
+  const copy = (value: string) =>
+    navigator.clipboard.writeText(value).then(() => toast.success("Copied"));
+  return (
+    <Card className={!p.bankDetailsSet ? "border-amber-500/40" : undefined}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Payout details</CardTitle>
+        <p className="text-muted-foreground text-xs">
+          Entered by the partner on their page, stored encrypted.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {!p.bankDetailsSet ? (
+          <p className="text-amber-500">
+            Not provided yet: {p.displayName} adds them on their partner page.
+          </p>
+        ) : !canPay ? (
+          <p className="text-muted-foreground">Provided. Only a full admin sees them.</p>
+        ) : !d ? (
+          <p className="text-amber-500">
+            Saved, but they can&apos;t be read here (encrypted in another environment). Ask the
+            partner to enter them again if this is production.
+          </p>
+        ) : (
+          <>
+            {(
+              [
+                ["Account holder", d.accountHolder],
+                ["Bank", d.bankName],
+                ["IBAN / account number", d.accountNumber],
+                ...(d.swift ? [["BIC / SWIFT", d.swift]] : []),
+              ] as [string, string][]
+            ).map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-muted-foreground text-xs">{label}</p>
+                  <p className="text-foreground break-all tabular-nums">{value}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-10 shrink-0"
+                  aria-label={`Copy ${label}`}
+                  onClick={() => copy(value)}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+            {view?.updatedAt && (
+              <p className="text-muted-foreground text-xs">Updated {shortDate(view.updatedAt)}</p>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function PayoutDialog({
   detail,
   open,
@@ -418,6 +481,20 @@ function PayoutDialog({
             {amount && (
               <p className="text-foreground text-sm">
                 Amount: <strong>{money(amount, currency)}</strong>
+              </p>
+            )}
+            {detail.partner.bankDetails?.details ? (
+              <p className="text-muted-foreground text-sm">
+                Transfer to <strong>{detail.partner.bankDetails.details.accountHolder}</strong>,{" "}
+                {detail.partner.bankDetails.details.bankName},{" "}
+                <span className="tabular-nums">{detail.partner.bankDetails.details.accountNumber}</span>
+                {detail.partner.bankDetails.details.swift
+                  ? ` (${detail.partner.bankDetails.details.swift})`
+                  : ""}
+              </p>
+            ) : (
+              <p className="text-sm text-amber-500">
+                {detail.partner.displayName} hasn&apos;t entered their bank details yet.
               </p>
             )}
           </div>
@@ -636,9 +713,10 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <SalesPagesCard detail={data} />
           <ViewersCard detail={data} />
+          <BankDetailsAdminCard detail={data} canPay={canPay} />
         </div>
 
         <Card>
