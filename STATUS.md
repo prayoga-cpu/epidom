@@ -155,6 +155,15 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Outside the SEO phases
 
+### Access in one place, partner invitations, video thumbnail — 3.25.0 (2026-10-19)
+
+- [x] `public/vsl-thumbnail.png` (994 KB) → `public/sales-pages/vsl-thumbnail.webp` (64 KB) + `.jpg` (92 KB); the video box's cover on all 12 sales pages (vsl.js; `<link rel=preload>` in each head; tap anywhere plays; poster while loading).
+- [x] Users list: one "Access…" (`src/features/admin/components/user-access-dialog.tsx`): full admin, admin pages, referral partner (opens the partner form next), partner-page views. Yellow "Admin" label for non-master admins; Partner label green.
+- [x] New referral partner: user picker (`GET /api/admin/partners/candidates`, section partners) or invite by email (Resend; `Partner.inviteEmail`, migration `20261021090000_partner_invites`; `/partner-invite` public page → sign up/in with `?next=` → auto-accept → `/admin/my-referrals`; resend from the partner page). "Link opens" includes the sales pages; code auto-fills from the name.
+- [x] Partner-only accounts: /stores sends them to their partner page (gatekeeper `partner-page`); partner page has Sign out, and no "back to stores" without a business.
+- [ ] Dev branch: `prisma migrate deploy` (now three new migrations).
+- [ ] Not seen in a real browser while signed in (admin dialogs covered by render tests; the session-minting route is classifier-blocked).
+
 ### Sales-page video — 3.24.0 (2026-10-19)
 
 - [x] `videos/VSL.mp4` (R2 bucket `epidom`, 96.85 MB, 5 min 27 s, fast-start) on all 4 sales pages × 3 languages: `public/sales-pages/vsl.js` (loads nothing until play is tapped; page 4 gets an injected gold play button), `GET /api/public/sales-pages/video` → 302 to a 6-hour signed GET link for that one key (`src/lib/storage/sales-video.ts`, `@aws-sdk/s3-request-presigner`). The bucket is NOT public: it also holds the DB backups. Captions "[X minutes…]" → 5 minutes (French + translation tables, EN/ID regenerated).

@@ -1285,3 +1285,98 @@ export async function sendAccountChangedEmail(payload: {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
+
+/**
+ * Invite someone with no Epidom account to become a referral partner
+ * (src/lib/partner-invite.ts). The link opens /partner-invite, which has them
+ * sign up (or sign in) with this address, then lands them on their partner page.
+ */
+export async function sendPartnerInviteEmail(
+  toEmail: string,
+  displayName: string,
+  dealSummary: string,
+  inviteUrl: string
+): Promise<SendEmailResult> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🤝 [DEV] Partner Invite Email");
+    console.log("To:", toEmail);
+    console.log("Invite URL:", inviteUrl);
+    console.log("");
+  }
+  if (!process.env.RESEND_API_KEY) return { success: true, messageId: "dev-mode" };
+
+  const name = escapeHtml(displayName);
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: toEmail,
+      subject: `You're invited to be an ${APP_NAME} referral partner`,
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #444;">Hi ${name},</h2>
+  <p>${APP_NAME} has set you up as a <strong>referral partner</strong>: ${escapeHtml(dealSummary)}</p>
+  <p>Create your free ${APP_NAME} account with this email address (${escapeHtml(toEmail)}) to open your partner page: your link, the people who sign up through it and what you earn.</p>
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${inviteUrl}" style="display: inline-block; background: #444; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold;">Open my partner page</a>
+  </div>
+  <p style="color: #888; font-size: 13px;">This link expires in 14 days. If you weren't expecting this, you can ignore this email.</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+</body>
+</html>
+      `.trim(),
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+/** Tell an existing account it is now a referral partner, with a link to its partner page. */
+export async function sendPartnerAccessEmail(
+  toEmail: string,
+  displayName: string,
+  dealSummary: string,
+  pageUrl: string
+): Promise<SendEmailResult> {
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🤝 [DEV] Partner Access Email");
+    console.log("To:", toEmail);
+    console.log("Page URL:", pageUrl);
+    console.log("");
+  }
+  if (!process.env.RESEND_API_KEY) return { success: true, messageId: "dev-mode" };
+
+  const name = escapeHtml(displayName);
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: toEmail,
+      subject: `Your ${APP_NAME} partner page is ready`,
+      html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+  <h2 style="color: #444;">Hi ${name},</h2>
+  <p>You're now an ${APP_NAME} <strong>referral partner</strong>: ${escapeHtml(dealSummary)}</p>
+  <p>Your partner page shows your link, the people who sign up through it and what you earn. You'll also find it as "Partner dashboard" in your account menu.</p>
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${pageUrl}" style="display: inline-block; background: #444; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold;">Open my partner page</a>
+  </div>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="color: #999; font-size: 12px; text-align: center;">&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+</body>
+</html>
+      `.trim(),
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}

@@ -22,10 +22,29 @@ export const partnerDealSchema = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
 });
 
-export const createPartnerSchema = partnerDealSchema.extend({
-  email: z.string().trim().toLowerCase().email(),
-});
+export const createPartnerSchema = partnerDealSchema
+  .extend({
+    /** An existing account picked from the users list… */
+    userId: z.string().min(1).optional(),
+    /** …or an email to invite (linked straight away when it already has an account). */
+    inviteEmail: z.string().trim().toLowerCase().email().optional(),
+    /** The link is a sales page they own, counted from `creditFrom`. */
+    salesPage: z
+      .object({
+        page: z.enum(SALES_PAGES as unknown as [string, ...string[]]),
+        creditFrom: z.coerce.date(),
+      })
+      .nullable()
+      .optional(),
+  })
+  .refine((v) => Boolean(v.userId) !== Boolean(v.inviteEmail), {
+    message: "Pick a user, or enter an email to invite",
+  });
 export type CreatePartnerInput = z.infer<typeof createPartnerSchema>;
+
+export const partnerInviteTokenSchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/),
+});
 
 export const updatePartnerSchema = partnerDealSchema.partial().extend({
   status: z.enum(["ACTIVE", "PAUSED", "ENDED"]).optional(),

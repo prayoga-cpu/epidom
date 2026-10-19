@@ -1363,6 +1363,9 @@ Table partners {
   userId String [unique, note: 'Their Epidom account (they open /admin/my-referrals). SetNull keeps the
 ledger when the account is deleted.']
   displayName String [not null, note: 'Shown on the referral banner ("Bob\'s referral").']
+  inviteEmail String [note: 'Invited by email, no account linked yet (userId is null until they
+accept /partner-invite; the token lives in Verification, see
+src/lib/partner-invite.ts).']
   status PartnerStatus [not null, default: 'ACTIVE']
   referralCode String [unique, note: 'Upper case, unique; null for a partner without a link (a sales-page owner).']
   referralLanding ReferralLanding [not null, default: 'REGISTER']

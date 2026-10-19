@@ -9,6 +9,17 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.25.0] - 2026-10-19 · feat
+
+Access is set in one place, referral partners can be invited by email, and the sales-page video has its thumbnail.
+
+- **Video thumbnail.** The video box on all four sales pages, in every language, now shows the video's thumbnail with the play button over it. Tapping anywhere on it plays the video. The image is light (64 KB) and loads with the page.
+- **One "Access…" button per user.** In the users list, the Manage menu now has a single Access… entry instead of three. It sets full admin, the admin pages someone may open, whether they're a referral partner (ticking it opens the partner form for that user next) and which partners' pages they can see read-only.
+- **"Admin" label.** Users with admin access who aren't one of the founding admins now carry a yellow Admin label (full admins and those given some admin pages alike). Founders keep the red Master label; the Partner label is now green.
+- **Pick the partner, or invite them.** The New referral partner form no longer asks you to type an email: pick the person from the users list, or invite them by email. An invited person receives an email, creates their Epidom account (or signs in) with that address, and lands straight on their partner page. A pending invitation shows on the partner's admin page, with a Resend invitation button.
+- **Sales pages in "Link opens".** Where the partner's link goes is now one choice: the sign-up page, the home page, or a sales page they own (counted from a date you pick; no code and no customer discount for a sales page). The referral code now fills itself from the partner's name until you type your own, replacing the "Suggest a code" button.
+- **Partners land on their page.** A partner without a store of their own goes to their partner page after signing in, rather than the store setup. Their page has a Sign out button.
+
 ## [3.24.0] - 2026-10-19 · feat
 
 The presentation video plays on all four sales pages.

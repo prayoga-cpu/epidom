@@ -11,7 +11,18 @@ import {
   type SignupPlanStatus,
 } from "@/lib/services/sales-page.service";
 import type { SalesPageReportRange } from "@/lib/validation/sales-page.schemas";
+import { PARTNER_PAGE_PATH } from "@/config/admin-sections.config";
 import { backfillCustomerCommissions } from "@/lib/services/partner-commission.service";
+import { sendPartnerAccessEmail, sendPartnerInviteEmail } from "@/lib/services/email.service";
+import {
+  PARTNER_INVITE_PREFIX,
+  PARTNER_INVITE_TTL_MS,
+  buildPartnerInviteUrl,
+  generatePartnerInviteToken,
+  parsePartnerInviteValue,
+  partnerInviteIdentifier,
+  type PartnerInviteValue,
+} from "@/lib/partner-invite";
 import {
   decimalStringToStripeAmount,
   stripeAmountToDecimalString,
@@ -201,6 +212,8 @@ export interface PartnerListRow {
   id: string;
   displayName: string;
   status: PartnerStatus;
+  /** Invited by email, not joined yet. */
+  inviteEmail: string | null;
   referralCode: string | null;
   referralLanding: "REGISTER" | "HOME";
   commissionRate: string;
@@ -241,6 +254,7 @@ export async function listPartners(now: Date = new Date()): Promise<PartnerListR
     id: p.id,
     displayName: p.displayName,
     status: p.status,
+    inviteEmail: p.inviteEmail,
     referralCode: p.referralCode,
     referralLanding: p.referralLanding,
     commissionRate: p.commissionRate.toString(),
@@ -305,29 +319,120 @@ async function backfill(userIds: string[]): Promise<void> {
   }
 }
 
-export async function createPartner(input: CreatePartnerInput, actorId: string) {
-  const user = await prisma.user.findUnique({
-    where: { email: input.email },
-    select: { id: true, partner: { select: { id: true } } },
-  });
-  if (!user) {
-    throw new AppError(
-      "No Epidom account uses that email. Ask them to sign up first.",
-      ApiErrorCode.USER_NOT_FOUND,
-      404
+/** "30% of what each customer you bring pays during their first 3 months…": for the emails. */
+function dealSummary(p: {
+  commissionRate: Prisma.Decimal | number;
+  commissionMonths: number;
+  referralCode: string | null;
+  customerDiscountPercent: Prisma.Decimal | number;
+  salesPage?: string | null;
+}): string {
+  const parts = [
+    `${Number(p.commissionRate)}% of what each customer you bring pays during their first ${p.commissionMonths} month${p.commissionMonths === 1 ? "" : "s"}`,
+  ];
+  if (p.salesPage) parts.push(`every sign-up from ${p.salesPage.replace("sales-page-", "sales page ")} counts for you`);
+  if (p.referralCode) {
+    parts.push(
+      Number(p.customerDiscountPercent) > 0
+        ? `your referral link gives them ${Number(p.customerDiscountPercent)}% off their first payment`
+        : "with your own referral link"
     );
   }
-  if (user.partner) {
-    throw new AppError("That account is already a partner", ApiErrorCode.CONFLICT, 409);
+  return `${parts.join("; ")}.`;
+}
+
+const appUrl = () => (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+
+/** Replace a partner's pending invitation with a fresh one and email it. Throws when the email can't be sent. */
+async function issuePartnerInvite(partner: {
+  id: string;
+  displayName: string;
+  inviteEmail: string;
+  summary: string;
+}): Promise<void> {
+  await prisma.verification.deleteMany({
+    where: { identifier: { startsWith: PARTNER_INVITE_PREFIX }, value: { contains: `"partnerId":"${partner.id}"` } },
+  });
+  const token = generatePartnerInviteToken();
+  const now = new Date();
+  const value: PartnerInviteValue = { partnerId: partner.id, email: partner.inviteEmail };
+  await prisma.verification.create({
+    data: {
+      identifier: partnerInviteIdentifier(token),
+      value: JSON.stringify(value),
+      expiresAt: new Date(now.getTime() + PARTNER_INVITE_TTL_MS),
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  const sent = await sendPartnerInviteEmail(
+    partner.inviteEmail,
+    partner.displayName,
+    partner.summary,
+    buildPartnerInviteUrl(appUrl(), token)
+  );
+  if (!sent.success) {
+    await prisma.verification.deleteMany({ where: { identifier: partnerInviteIdentifier(token) } });
+    throw new AppError(
+      "We couldn't send the invitation email. Please try again.",
+      ApiErrorCode.INTERNAL_ERROR,
+      502
+    );
   }
-  if (user.id === actorId) {
+}
+
+/**
+ * Make someone a referral partner: an existing account (picked from the users
+ * list, or an invited email that already has an account), or an email with no
+ * account yet, which gets an invitation (sign up, then land on the partner
+ * page). A sales page chosen as the link is owned from `creditFrom`.
+ */
+export async function createPartner(
+  input: CreatePartnerInput,
+  actorId: string
+): Promise<{ partner: { id: string }; invited: boolean }> {
+  const inviteEmail = input.inviteEmail?.trim().toLowerCase() ?? null;
+  const user = input.userId
+    ? await prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { id: true, email: true, partner: { select: { id: true } } },
+      })
+    : inviteEmail
+      ? await prisma.user.findUnique({
+          where: { email: inviteEmail },
+          select: { id: true, email: true, partner: { select: { id: true } } },
+        })
+      : null;
+  if (input.userId && !user) throw new AppError("User not found", ApiErrorCode.USER_NOT_FOUND, 404);
+  if (user?.partner) throw new AppError("That account is already a partner", ApiErrorCode.CONFLICT, 409);
+  if (user?.id === actorId) {
     throw new AppError("You can't make yourself a partner", ApiErrorCode.FORBIDDEN, 403);
   }
+  if (!user && inviteEmail) {
+    const pending = await prisma.partner.findFirst({ where: { inviteEmail, userId: null }, select: { id: true } });
+    if (pending) {
+      throw new AppError("That email already has a pending partner invitation", ApiErrorCode.CONFLICT, 409);
+    }
+  }
   await assertCodeFree(input.referralCode);
+  if (input.salesPage) {
+    const owner = await prisma.partnerSalesPage.findUnique({
+      where: { page: input.salesPage.page },
+      select: { partner: { select: { displayName: true } } },
+    });
+    if (owner) {
+      throw new AppError(
+        `${input.salesPage.page} already belongs to ${owner.partner.displayName}`,
+        ApiErrorCode.CONFLICT,
+        409
+      );
+    }
+  }
 
   const partner = await prisma.partner.create({
     data: {
-      userId: user.id,
+      userId: user?.id ?? null,
+      inviteEmail: user ? null : inviteEmail,
       displayName: input.displayName,
       referralCode: input.referralCode,
       referralLanding: input.referralLanding,
@@ -338,8 +443,148 @@ export async function createPartner(input: CreatePartnerInput, actorId: string) 
       createdById: actorId,
     },
   });
+  const summary = dealSummary({ ...partner, salesPage: input.salesPage?.page ?? null });
+
+  if (!user && inviteEmail) {
+    try {
+      await issuePartnerInvite({ id: partner.id, displayName: partner.displayName, inviteEmail, summary });
+    } catch (err) {
+      // Nobody can accept an invitation they never received: don't keep the partner.
+      try {
+        await prisma.partner.delete({ where: { id: partner.id } });
+      } catch {
+        // Already gone: nothing to undo.
+      }
+      throw err;
+    }
+  }
+
+  if (input.salesPage) {
+    await setPartnerSalesPages(partner.id, { pages: [input.salesPage] }, actorId);
+  }
   await backfill(await creditEarlierCodeSignups(partner));
-  return partner;
+
+  if (user) {
+    // Best effort: the partner exists either way, and the page is in their menu.
+    try {
+      await sendPartnerAccessEmail(user.email, partner.displayName, summary, `${appUrl()}${PARTNER_PAGE_PATH}`);
+    } catch {
+      // ignore
+    }
+  }
+  return { partner: { id: partner.id }, invited: !user };
+}
+
+/** Send a pending invitation again (a new link; the old one stops working). */
+export async function resendPartnerInvite(partnerId: string, actorId: string): Promise<void> {
+  const partner = await prisma.partner.findUnique({
+    where: { id: partnerId },
+    include: { salesPages: { select: { page: true }, take: 1 } },
+  });
+  if (!partner) notFound();
+  refuseOwnDeal(partner.userId, actorId);
+  if (partner.userId || !partner.inviteEmail) {
+    throw new AppError("This partner has already joined", ApiErrorCode.CONFLICT, 409);
+  }
+  await issuePartnerInvite({
+    id: partner.id,
+    displayName: partner.displayName,
+    inviteEmail: partner.inviteEmail,
+    summary: dealSummary({ ...partner, salesPage: partner.salesPages[0]?.page ?? null }),
+  });
+}
+
+const INVALID_INVITE = "This invitation link is invalid or has already been used.";
+
+async function loadPartnerInvite(token: string) {
+  const row = await prisma.verification.findFirst({ where: { identifier: partnerInviteIdentifier(token) } });
+  const value = row ? parsePartnerInviteValue(row.value) : null;
+  if (!row || !value) throw new AppError(INVALID_INVITE, ApiErrorCode.NOT_FOUND, 404);
+  if (row.expiresAt <= new Date()) {
+    await prisma.verification.deleteMany({ where: { id: row.id } });
+    throw new AppError(
+      "This invitation has expired. Ask Epidom to send a new one.",
+      ApiErrorCode.TOKEN_EXPIRED,
+      410
+    );
+  }
+  const partner = await prisma.partner.findUnique({
+    where: { id: value.partnerId },
+    include: { salesPages: { select: { page: true } } },
+  });
+  if (!partner || partner.userId) throw new AppError(INVALID_INVITE, ApiErrorCode.NOT_FOUND, 404);
+  return { row, value, partner };
+}
+
+/** Public: what the invitation page shows before anyone is signed in (the token is the credential). */
+export async function lookupPartnerInvite(token: string) {
+  const { value, partner } = await loadPartnerInvite(token);
+  return {
+    displayName: partner.displayName,
+    email: value.email,
+    commissionRate: Number(partner.commissionRate),
+    commissionMonths: partner.commissionMonths,
+    hasReferralLink: Boolean(partner.referralCode),
+    customerDiscountPercent: Number(partner.customerDiscountPercent),
+    salesPages: partner.salesPages.map((s) => s.page),
+  };
+}
+
+/**
+ * Link the invited partner to the signed-in account: it must be the invited
+ * address, verified, and not already a partner. Single use.
+ */
+export async function acceptPartnerInvite(
+  token: string,
+  user: { id: string; email: string; emailVerified: boolean }
+): Promise<{ partnerId: string }> {
+  const { row, value, partner } = await loadPartnerInvite(token);
+  if (user.email.trim().toLowerCase() !== value.email.trim().toLowerCase()) {
+    throw new AppError(
+      `This invitation is for ${value.email}. Sign in with that address to accept it.`,
+      ApiErrorCode.FORBIDDEN,
+      403
+    );
+  }
+  if (!user.emailVerified) {
+    throw new AppError("Verify your email address first.", ApiErrorCode.FORBIDDEN, 403);
+  }
+  const already = await prisma.partner.findUnique({ where: { userId: user.id }, select: { id: true } });
+  if (already) throw new AppError("This account is already a partner", ApiErrorCode.CONFLICT, 409);
+
+  await prisma.$transaction(async (tx) => {
+    const consumed = await tx.verification.deleteMany({ where: { id: row.id } });
+    if (consumed.count !== 1) throw new AppError(INVALID_INVITE, ApiErrorCode.NOT_FOUND, 404);
+    const linked = await tx.partner.updateMany({
+      where: { id: partner.id, userId: null },
+      data: { userId: user.id, inviteEmail: null },
+    });
+    if (linked.count !== 1) throw new AppError(INVALID_INVITE, ApiErrorCode.NOT_FOUND, 404);
+  });
+  return { partnerId: partner.id };
+}
+
+/** Accounts the "New referral partner" picker can offer: name or email match, not already partners. */
+export async function searchPartnerCandidates(query: string) {
+  const q = query.trim();
+  const rows = await prisma.user.findMany({
+    where: {
+      deactivatedAt: null,
+      partner: null,
+      ...(q
+        ? {
+            OR: [
+              { email: { contains: q, mode: "insensitive" as const } },
+              { name: { contains: q, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: { id: true, name: true, email: true, business: { select: { name: true } } },
+  });
+  return rows.map((u) => ({ id: u.id, name: u.name, email: u.email, business: u.business?.name ?? null }));
 }
 
 export async function updatePartner(id: string, input: UpdatePartnerInput, actorId: string) {
@@ -608,6 +853,7 @@ export async function getPartnerDetail(id: string, now: Date = new Date()) {
       id: partner.id,
       displayName: partner.displayName,
       status: partner.status,
+      inviteEmail: partner.inviteEmail,
       referralCode: partner.referralCode,
       referralLanding: partner.referralLanding,
       commissionRate: partner.commissionRate.toString(),

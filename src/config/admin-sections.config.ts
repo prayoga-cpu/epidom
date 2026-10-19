@@ -12,6 +12,9 @@
  * dialog, so a new admin page is one entry here plus its guard.
  */
 
+/** Where a partner lands: their own page (also the my-referrals section's href). */
+export const PARTNER_PAGE_PATH = "/admin/my-referrals";
+
 export const ADMIN_SECTION_KEYS = [
   "users",
   "activity",

@@ -8,9 +8,16 @@
  * controls, from /api/public/sales-pages/video (a redirect to a short-lived
  * signed link to videos/VSL.mp4 in Cloudflare R2; src/lib/storage/sales-video.ts).
  * The same video on all four pages and all three languages.
+ *
+ * The box shows the video's thumbnail (vsl-thumbnail.webp, JPEG fallback,
+ * preloaded by each page's <head>) as its cover, the caption as a pill at the
+ * bottom; a tap anywhere on it plays, and the thumbnail stays as the poster
+ * while the video loads.
  */
 (function () {
   var SRC = "/api/public/sales-pages/video";
+  var COVER_WEBP = "/sales-pages/vsl-thumbnail.webp";
+  var COVER_JPG = "/sales-pages/vsl-thumbnail.jpg";
   var box = document.querySelector(".video");
   if (!box) return;
   var lang = (document.documentElement.getAttribute("lang") || "fr").slice(0, 2).toLowerCase();
@@ -19,6 +26,13 @@
   var style = document.createElement("style");
   style.textContent =
     ".video{position:relative}" +
+    ".video.epi-vsl-cover{background:#070b15 url(" + COVER_JPG + ") center/cover no-repeat!important;" +
+    "background-image:image-set(url(" + COVER_WEBP + ') type("image/webp"),url(' + COVER_JPG + ') type("image/jpeg"))!important;' +
+    "cursor:pointer}" +
+    // Bottom-left: the empty corner of the thumbnail, clear of the cup and the button.
+    ".video.epi-vsl-cover>p{position:absolute;left:12px;bottom:12px;transform:none;z-index:2;text-align:left;" +
+    "max-width:calc(100% - 24px);margin:0;padding:6px 12px;border-radius:999px;background:rgba(7,11,21,.72);" +
+    "color:#fff;font-size:12px;line-height:1.3}" +
     ".video.epi-vsl-on{transform:none!important;cursor:auto}" +
     ".video.epi-vsl-on>*:not(.epi-vsl){visibility:hidden}" +
     ".epi-vsl{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;background:#000;object-fit:contain;z-index:5}" +
@@ -30,6 +44,8 @@
     "border-style:solid;border-width:13px 0 13px 21px;border-color:transparent transparent transparent #101a32}" +
     ".epi-vsl-play:focus-visible{outline:3px solid #fff;outline-offset:4px}";
   document.head.appendChild(style);
+
+  box.classList.add("epi-vsl-cover");
 
   var play = box.querySelector(".play");
   if (!play) {
@@ -48,6 +64,7 @@
     video.playsInline = true;
     video.setAttribute("playsinline", "");
     video.preload = "auto";
+    video.poster = COVER_JPG;
     video.src = SRC;
     box.classList.add("epi-vsl-on");
     box.appendChild(video);
@@ -57,5 +74,6 @@
       if (started && started.catch) started.catch(function () {});
     } catch (e) {}
   }
-  play.addEventListener("click", start);
+  // The button, or anywhere on the cover (once playing, clicks are the video's own).
+  box.addEventListener("click", start);
 })();

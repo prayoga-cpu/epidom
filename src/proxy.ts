@@ -418,6 +418,8 @@ async function routeRequest(req: NextRequest): Promise<NextResponse> {
     // Emailed staff sign-in invite — same reasoning as above: the invitee has
     // no session yet, and the page/API routes verify the token themselves.
     "/staff-invite",
+    // Emailed referral-partner invitation: same again (sign up, then accept).
+    "/partner-invite",
   ];
 
   // Check if current path is a public route — matched against basePath so

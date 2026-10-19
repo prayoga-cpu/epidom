@@ -13,6 +13,9 @@
  *   owners, so the two guards can't loop. `hasOnboarded` missing (an older
  *   response) never counts as unfinished.
  *
+ * - `partner-page`: a referral partner (or partner-page viewer) with no
+ *   business at all goes to their partner page (/admin/my-referrals).
+ *
  * A linked staff login is never sent to onboarding: staff have no business by
  * design, and the wizard is the owner's merchant setup, not theirs. That
  * includes an owner who is also linked as staff at another business, even one
@@ -30,9 +33,10 @@ export interface GatekeeperProfile {
     timezone?: string | null;
   } | null;
   staffLink?: { storeId: string; storeName: string } | null;
+  adminAccess?: { partner?: boolean } | null;
 }
 
-export type GatekeeperVerdict = "stay" | "no-store" | "wizard-unfinished";
+export type GatekeeperVerdict = "stay" | "no-store" | "wizard-unfinished" | "partner-page";
 
 export function gatekeeperVerdict(
   profile: GatekeeperProfile | null | undefined
@@ -40,6 +44,9 @@ export function gatekeeperVerdict(
   if (!profile || profile.staffLink) return "stay";
   const business = profile.business;
   const hasStore = (business?.stores?.length ?? 0) > 0;
+  // A referral partner with no store of their own (an invited partner, a
+  // viewer) came for their partner page, not the merchant setup wizard.
+  if (!business && profile.adminAccess?.partner) return "partner-page";
   if (!business || !hasStore) return "no-store";
   if (profile.hasOnboarded === false && business.onboardingStep != null) {
     return "wizard-unfinished";

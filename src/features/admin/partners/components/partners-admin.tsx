@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Handshake, Loader2, Plus } from "lucide-react";
+import { Handshake, Loader2, Mail, Plus, Search, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,92 +26,192 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { SALES_PAGES } from "@/lib/sales-pages";
 import type { PartnerListRow } from "@/lib/services/partner.service";
 import {
   DEFAULT_DEAL,
   apiJson,
   createPartnerFormSchema,
-  suggestReferralCode,
-  toDealPayload,
+  todayIso,
+  toCreatePayload,
   type CreatePartnerFormValues,
 } from "../lib/partner-form";
-import { PartnerDealFields } from "./partner-deal-fields";
+import { PartnerDealFields, type SalesPageOption } from "./partner-deal-fields";
 import { CurrencyTotalsList, StatusBadge } from "./partner-bits";
 
 export const PARTNERS_QUERY_KEY = ["admin-partners"] as const;
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+interface Candidate {
+  id: string;
+  name: string | null;
+  email: string;
+  business: string | null;
+}
+
+/** The first name, for the banner ("Bob's referral"). */
+const firstName = (name: string | null | undefined) => (name ?? "").trim().split(/\s+/)[0] ?? "";
+
+/** Search the accounts that can become partners (not partners already). */
+function UserPicker({
+  selected,
+  onSelect,
+}: {
+  selected: Candidate | null;
+  onSelect: (user: Candidate | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(query.trim()), 250);
+    return () => clearTimeout(id);
+  }, [query]);
+  const { data, isFetching } = useQuery<{ users: Candidate[] }>({
+    queryKey: ["admin-partner-candidates", debounced],
+    queryFn: () => apiJson(`/api/admin/partners/candidates?q=${encodeURIComponent(debounced)}`),
+    enabled: !selected,
+  });
+
+  if (selected) {
+    return (
+      <div className="border-border flex items-center gap-3 rounded-lg border p-3">
+        <UserRound className="text-muted-foreground h-4 w-4 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-foreground truncate text-sm font-medium">{selected.name || selected.email}</p>
+          <p className="text-muted-foreground truncate text-xs">
+            {selected.email}
+            {selected.business ? ` · ${selected.business}` : ""}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="min-h-10"
+          aria-label="Choose someone else"
+          onClick={() => onSelect(null)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
+  const users = data?.users ?? [];
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Input
+          className="min-h-10 pl-9"
+          placeholder="Search users by name or email"
+          autoComplete="off"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+      <div className="border-border max-h-56 overflow-y-auto rounded-lg border">
+        {isFetching && users.length === 0 ? (
+          <p className="text-muted-foreground p-3 text-sm">Searching…</p>
+        ) : users.length === 0 ? (
+          <p className="text-muted-foreground p-3 text-sm">
+            No user found. Invite them by email instead.
+          </p>
+        ) : (
+          users.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              onClick={() => onSelect(u)}
+              className="hover:bg-muted/60 flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left"
+            >
+              <UserRound className="text-muted-foreground h-4 w-4 shrink-0" />
+              <span className="min-w-0">
+                <span className="text-foreground block truncate text-sm">{u.name || u.email}</span>
+                <span className="text-muted-foreground block truncate text-xs">
+                  {u.email}
+                  {u.business ? ` · ${u.business}` : ""}
+                </span>
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 /**
- * Make an Epidom account a referral partner: their deal and, in the same
- * step, the sales pages they own. Opened from this page or from a user's
- * menu in the users list (with their email filled in).
+ * Make someone a referral partner: an account picked from the users list, or
+ * an email invited to sign up (an email that already has an account is linked
+ * straight away). Their link is a referral link (sign-up or home page) or a
+ * sales page they own. Opened from the Referrals page, or from a user's Access
+ * dialog in the users list (that user picked already).
  */
 export function NewPartnerDialog({
   open,
   onOpenChange,
-  initialEmail = "",
-  initialName = "",
+  initialUser = null,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  initialEmail?: string;
-  initialName?: string;
+  initialUser?: Candidate | null;
 }) {
   const queryClient = useQueryClient();
+  const [picked, setPicked] = useState<Candidate | null>(initialUser);
   const form = useForm<CreatePartnerFormValues>({
     resolver: zodResolver(createPartnerFormSchema),
-    defaultValues: { ...DEFAULT_DEAL, email: initialEmail, displayName: initialName },
+    defaultValues: { ...DEFAULT_DEAL, who: "user", userId: "", inviteEmail: "" },
   });
-  const [ownedPages, setOwnedPages] = useState<string[]>([]);
-  const [creditFrom, setCreditFrom] = useState(todayIso());
+  const who = form.watch("who");
+
   useEffect(() => {
     if (!open) return;
+    setPicked(initialUser);
     form.reset({
       ...DEFAULT_DEAL,
-      email: initialEmail,
-      displayName: initialName,
-      // No code unless the admin adds one: a sales-page owner has no link.
-      referralCode: "",
+      creditFrom: todayIso(),
+      who: "user",
+      userId: initialUser?.id ?? "",
+      inviteEmail: "",
+      displayName: firstName(initialUser?.name),
     });
-    setOwnedPages([]);
-    setCreditFrom(todayIso());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialEmail, initialName]);
+  }, [open, initialUser?.id]);
+
+  const { data: partnersData } = useQuery<{ partners: PartnerListRow[] }>({
+    queryKey: PARTNERS_QUERY_KEY,
+    queryFn: () => apiJson("/api/admin/partners"),
+    enabled: open,
+  });
+  const salesPageOptions: SalesPageOption[] = useMemo(
+    () =>
+      SALES_PAGES.map((page) => ({
+        page,
+        ownedBy:
+          partnersData?.partners.find((p) => p.salesPages.some((s) => s.page === page))?.displayName ??
+          null,
+      })),
+    [partnersData]
+  );
 
   const create = useMutation({
-    mutationFn: async (values: CreatePartnerFormValues) => {
-      const { partner } = await apiJson<{ partner: { id: string } }>("/api/admin/partners", {
+    mutationFn: (values: CreatePartnerFormValues) =>
+      apiJson<{ partner: { id: string }; invited: boolean }>("/api/admin/partners", {
         method: "POST",
-        body: JSON.stringify({
-          ...toDealPayload(values),
-          email: values.email.trim().toLowerCase(),
-        }),
-      });
-      if (ownedPages.length > 0) {
-        await apiJson(`/api/admin/partners/${partner.id}/sales-pages`, {
-          method: "PUT",
-          body: JSON.stringify({
-            pages: ownedPages.map((page) => ({ page, creditFrom: `${creditFrom}T00:00:00Z` })),
-          }),
-        });
-      }
-      return partner;
-    },
-    onSuccess: () => {
+        body: JSON.stringify(toCreatePayload(values)),
+      }),
+    onSuccess: (res, values) => {
       queryClient.invalidateQueries({ queryKey: PARTNERS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      toast.success("Referral partner created");
+      toast.success(
+        res.invited
+          ? `Invitation sent to ${values.inviteEmail.trim()}`
+          : "Referral partner created: they can open their partner page now"
+      );
       onOpenChange(false);
     },
-    onError: (e: Error) => {
-      // The partner may exist with its pages not saved: the list shows what was kept.
-      queryClient.invalidateQueries({ queryKey: PARTNERS_QUERY_KEY });
-      toast.error(e.message);
-    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   return (
@@ -120,9 +220,8 @@ export function NewPartnerDialog({
         <DialogHeader className="shrink-0">
           <DialogTitle>New referral partner</DialogTitle>
           <DialogDescription>
-            The partner needs an Epidom account. They get their own page (Partner dashboard in their
-            account menu) with their link, the report of their sales pages and their commission, and
-            nothing else of the admin panel.
+            They get their own page (Partner dashboard in their account menu) with their link, the
+            report of their sales page and their commission, and nothing else of the admin panel.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -131,84 +230,74 @@ export function NewPartnerDialog({
             className="flex min-h-0 flex-1 flex-col"
           >
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-0.5 pb-1">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Their Epidom account email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        autoComplete="off"
-                        placeholder="bob@example.com"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <PartnerDealFields form={form} />
-              <div className="space-y-2 rounded-lg border border-sky-500/20 p-3">
-                <p className="text-foreground text-sm font-medium">Sales pages they own</p>
-                <p className="text-muted-foreground text-xs">
-                  Every sign-up from these pages (all languages) counts for them. Leave empty for a
-                  referral link only. A page already owned by someone else is refused.
-                </p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                  {SALES_PAGES.map((page) => (
-                    <label
-                      key={page}
-                      className="flex min-h-10 cursor-pointer items-center gap-2 text-sm"
+              {!initialUser && (
+                <div className="border-border bg-muted/40 grid grid-cols-2 gap-1 rounded-lg border p-1">
+                  {(
+                    [
+                      ["user", "From the users list", UserRound],
+                      ["invite", "Invite by email", Mail],
+                    ] as const
+                  ).map(([value, label, Icon]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => form.setValue("who", value, { shouldValidate: false })}
+                      className={cn(
+                        "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md text-xs font-semibold",
+                        who === value
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
                     >
-                      <Checkbox
-                        checked={ownedPages.includes(page)}
-                        onCheckedChange={(v) =>
-                          setOwnedPages((list) =>
-                            v === true
-                              ? [...new Set([...list, page])]
-                              : list.filter((p) => p !== page)
-                          )
-                        }
-                      />
-                      {page.replace("sales-page-", "Sales page ")}
-                    </label>
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </button>
                   ))}
                 </div>
-                {ownedPages.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Label
-                      htmlFor="new-partner-credit-from"
-                      className="text-muted-foreground text-xs"
-                    >
-                      Count sign-ups from
-                    </Label>
-                    <Input
-                      id="new-partner-credit-from"
-                      type="date"
-                      className="h-10 w-40"
-                      value={creditFrom}
-                      onChange={(e) => setCreditFrom(e.target.value || todayIso())}
-                    />
-                  </div>
-                )}
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="min-h-10"
-                onClick={() => {
-                  const name = form.getValues("displayName");
-                  if (name)
-                    form.setValue("referralCode", suggestReferralCode(name), {
-                      shouldValidate: true,
-                    });
-                }}
-              >
-                Suggest a code from the name
-              </Button>
+              )}
+
+              {who === "user" ? (
+                <FormField
+                  control={form.control}
+                  name="userId"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Who</FormLabel>
+                      <UserPicker
+                        selected={picked}
+                        onSelect={(u) => {
+                          setPicked(u);
+                          form.setValue("userId", u?.id ?? "", { shouldValidate: Boolean(u) });
+                          if (u && !form.getValues("displayName")) {
+                            form.setValue("displayName", firstName(u.name));
+                          }
+                        }}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="inviteEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Their email</FormLabel>
+                      <FormControl>
+                        <Input type="email" autoComplete="off" placeholder="bob@example.com" {...field} />
+                      </FormControl>
+                      <p className="text-muted-foreground text-xs">
+                        They get an email to create their Epidom account (or sign in, if this
+                        address already has one) and land on their partner page.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <PartnerDealFields form={form} salesPageOptions={salesPageOptions} autoCode />
             </div>
             <DialogFooter className="shrink-0 pt-3">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -216,7 +305,7 @@ export function NewPartnerDialog({
               </Button>
               <Button type="submit" disabled={create.isPending}>
                 {create.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create referral partner
+                {who === "invite" ? "Send invitation" : "Create referral partner"}
               </Button>
             </DialogFooter>
           </form>
@@ -274,7 +363,8 @@ export function PartnersAdmin() {
                       <div className="min-w-0">
                         <CardTitle className="truncate text-base">{p.displayName}</CardTitle>
                         <p className="text-muted-foreground truncate text-xs">
-                          {p.user?.email ?? "Account deleted"}
+                          {p.user?.email ??
+                            (p.inviteEmail ? `Invited: ${p.inviteEmail} (not joined yet)` : "Account deleted")}
                         </p>
                       </div>
                       <StatusBadge status={p.status} />

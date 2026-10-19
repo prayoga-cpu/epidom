@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Copy, Handshake, Loader2, Share2 } from "lucide-react";
+import { ArrowLeft, Copy, Handshake, Loader2, LogOut, Share2 } from "lucide-react";
+import { signOut } from "@/lib/auth-client";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
@@ -189,6 +190,7 @@ export function MyReferrals({
   readOnly = false,
   partnerId,
   choices = [],
+  backHref = "/stores",
 }: {
   dashboard: Dashboard;
   /** A viewer's look at someone else's page: nothing can be changed, nothing is earned. */
@@ -196,6 +198,8 @@ export function MyReferrals({
   /** The partner shown, kept in the range links when the account can see several. */
   partnerId?: string;
   choices?: { id: string; displayName: string }[];
+  /** "Back to stores" when the account has a business; none for a partner-only account. */
+  backHref?: string | null;
 }) {
   const { t, locale } = useI18n();
   const pageHref = (range: string) =>
@@ -242,12 +246,14 @@ export function MyReferrals({
     <div className="bg-background min-h-[calc(100vh/var(--app-zoom,1))]">
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="ghost" size="sm" asChild className="min-h-10">
-            <Link href="/stores">
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              {t("partnerPortal.back")}
-            </Link>
-          </Button>
+          {backHref && (
+            <Button variant="ghost" size="sm" asChild className="min-h-10">
+              <Link href={backHref}>
+                <ArrowLeft className="mr-1 h-4 w-4" />
+                {t("partnerPortal.back")}
+              </Link>
+            </Button>
+          )}
           <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/15">
             <Handshake className="h-5 w-5 text-amber-400" />
           </div>
@@ -257,6 +263,18 @@ export function MyReferrals({
             </h1>
             <p className="text-muted-foreground text-xs">{t("partnerPortal.subtitle")}</p>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground ml-auto min-h-10"
+            onClick={async () => {
+              await signOut();
+              window.location.href = "/login";
+            }}
+          >
+            <LogOut className="mr-1.5 h-4 w-4" />
+            {t("partnerPortal.signOut")}
+          </Button>
         </div>
 
         {choices.length > 1 && (

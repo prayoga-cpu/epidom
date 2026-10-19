@@ -10,6 +10,16 @@ import {
 const staffLink = { storeId: "s2", storeName: "Staffed Cafe" };
 
 describe("gatekeeperVerdict", () => {
+  it("a referral partner with no business goes to their partner page, not the wizard", () => {
+    expect(gatekeeperVerdict({ business: null, staffLink: null, adminAccess: { partner: true } })).toBe(
+      "partner-page"
+    );
+    // A partner who owns a business is an owner first.
+    expect(
+      gatekeeperVerdict({ business: { stores: [] }, staffLink: null, adminAccess: { partner: true } })
+    ).toBe("no-store");
+  });
+
   it("an owner with no business, or a business without a store, goes to onboarding", () => {
     expect(gatekeeperVerdict({ business: null, staffLink: null })).toBe("no-store");
     expect(gatekeeperVerdict({ business: { stores: [] }, staffLink: null })).toBe("no-store");

@@ -26,6 +26,7 @@ describe("sales-page video (vsl.js)", () => {
 
     const video = box.querySelector("video")!;
     expect(video.getAttribute("src")).toBe("/api/public/sales-pages/video");
+    expect(video.getAttribute("poster")).toBe("/sales-pages/vsl-thumbnail.jpg");
     expect(video.controls).toBe(true);
     expect(video.hasAttribute("playsinline")).toBe(true);
     expect(box.classList.contains("epi-vsl-on")).toBe(true);
@@ -34,6 +35,17 @@ describe("sales-page video (vsl.js)", () => {
     // A second tap doesn't add a second player.
     (box.querySelector(".play") as HTMLButtonElement).click();
     expect(box.querySelectorAll("video")).toHaveLength(1);
+  });
+
+  it("shows the thumbnail as the box's cover, and a tap anywhere on it plays", () => {
+    document.body.innerHTML =
+      '<div class="video"><button class="play" type="button" aria-label="Lire la vidéo"></button><p>5 minutes</p></div>';
+    run();
+    const box = document.querySelector(".video") as HTMLElement;
+    expect(box.classList.contains("epi-vsl-cover")).toBe(true);
+    expect(document.head.textContent).toContain("/sales-pages/vsl-thumbnail.webp");
+    box.click();
+    expect(box.querySelector("video")).not.toBeNull();
   });
 
   it.each([
@@ -66,8 +78,20 @@ describe("sales-page video (vsl.js)", () => {
           '<script src="/sales-pages/vsl.js" defer></script>'
         );
         expect(html, `sales-page-${n}${suffix}`).toContain('class="video"');
+        expect(html, `sales-page-${n}${suffix}`).toContain(
+          '<link rel="preload" as="image" href="/sales-pages/vsl-thumbnail.webp"'
+        );
         expect(html, `sales-page-${n}${suffix}`).not.toMatch(/\[X min|X minutes|X menit/);
       }
     }
+  });
+});
+
+describe("sales-page video thumbnail files", () => {
+  it("ship next to the pages, light enough for an ad landing page", () => {
+    const { statSync } = require("fs") as typeof import("fs");
+    const dir = join(process.cwd(), "public", "sales-pages");
+    expect(statSync(join(dir, "vsl-thumbnail.webp")).size).toBeLessThan(150 * 1024);
+    expect(statSync(join(dir, "vsl-thumbnail.jpg")).size).toBeLessThan(200 * 1024);
   });
 });

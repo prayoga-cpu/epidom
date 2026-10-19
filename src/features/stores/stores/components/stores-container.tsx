@@ -16,7 +16,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { isAdminEmail } from "@/lib/admin";
-import { hasAnyAdminAccess, type AdminAccessSummary } from "@/config/admin-sections.config";
+import {
+  PARTNER_PAGE_PATH,
+  hasAnyAdminAccess,
+  type AdminAccessSummary,
+} from "@/config/admin-sections.config";
 import { isUnauthorizedError } from "@/lib/api/unauthorized";
 import { minPlanForStores, upgradeHrefFor, type PlanTier } from "@/lib/plans/entitlements";
 import {
@@ -133,6 +137,11 @@ export function StoresContainer() {
         // effect) must not record a redirect the live run would then skip.
         if (cancelled) return;
         const verdict = gatekeeperVerdict(profile);
+        if (verdict === "partner-page") {
+          setGate({ status: "redirecting" });
+          window.location.href = PARTNER_PAGE_PATH;
+          return;
+        }
         if (verdict === "stay") {
           clearWizardRedirect();
           return stay(profile);

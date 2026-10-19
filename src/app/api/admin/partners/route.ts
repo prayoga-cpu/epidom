@@ -9,7 +9,7 @@ export const GET = withAdminApiHandler(
   { section: "partners" }
 );
 
-/** POST /api/admin/partners: make an existing account a partner. */
+/** POST /api/admin/partners: make an account a partner, or invite an email to become one. */
 export const POST = withAdminApiHandler(
   async (req, { admin }) => {
     const body = await req.json().catch(() => null);
@@ -20,8 +20,8 @@ export const POST = withAdminApiHandler(
         { status: 400 }
       );
     }
-    const partner = await createPartner(parsed.data, admin.id);
-    return NextResponse.json({ partner: { id: partner.id } }, { status: 201 });
+    const { partner, invited } = await createPartner(parsed.data, admin.id);
+    return NextResponse.json({ partner, invited }, { status: 201 });
   },
   { section: "partners" }
 );

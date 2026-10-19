@@ -349,6 +349,16 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60,
   },
 
+  // Partner invitation page (token-holder lookup, then the signed-in accept).
+  "/api/partner-invite/lookup": {
+    limit: 20,
+    window: 60,
+  },
+  "/api/partner-invite/accept": {
+    limit: 10,
+    window: 60,
+  },
+
   "/api/public/tracking-events": {
     // Generous: Indonesian mobile carriers put many visitors behind one IP, and a
     // dropped copy would make /admin/pixel undercount during a campaign.

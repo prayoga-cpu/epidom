@@ -37,6 +37,7 @@ import {
   partnerDealFormSchema,
   toDealPayload,
   type PartnerDealFormValues,
+  todayIso,
 } from "../lib/partner-form";
 import { PartnerDealFields } from "./partner-deal-fields";
 import { CurrencyTotalsList, StatusBadge, money, shortDate } from "./partner-bits";
@@ -79,6 +80,7 @@ function EditDealDialog({
       displayName: p.displayName,
       referralCode: p.referralCode ?? "",
       referralLanding: p.referralLanding,
+      creditFrom: todayIso(),
       commissionRate: String(Number(p.commissionRate)),
       commissionMonths: String(p.commissionMonths),
       customerDiscountPercent: String(Number(p.customerDiscountPercent)),
@@ -458,6 +460,12 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const resend = useMutation({
+    mutationFn: () => apiJson(`/api/admin/partners/${partnerId}/invite`, { method: "POST" }),
+    onSuccess: () => toast.success("Invitation sent again (the previous link no longer works)"),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const voidRow = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       apiJson(`/api/admin/partners/commissions/${id}/void`, {
@@ -496,10 +504,23 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
               {p.displayName} <StatusBadge status={p.status} />
             </h1>
             <p className="text-muted-foreground truncate text-xs">
-              {p.user?.email ?? "Account deleted"}
+              {p.user?.email ??
+                (p.inviteEmail ? `Invited: ${p.inviteEmail} (not joined yet)` : "Account deleted")}
             </p>
           </div>
           <div className="ml-auto flex flex-wrap gap-2">
+            {!p.user && p.inviteEmail && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-h-10"
+                disabled={resend.isPending}
+                onClick={() => resend.mutate()}
+              >
+                {resend.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                Resend invitation
+              </Button>
+            )}
             {p.status !== "ACTIVE" && (
               <Button
                 variant="outline"
