@@ -19,9 +19,9 @@ One-stop reference for production operations. Every manual action that affects l
 | `R2_ACCOUNT_ID` | Production + Preview | Cloudflare R2 (backups + media) | Cloudflare dashboard | — |
 | `R2_ACCESS_KEY_ID` | Production + Preview | Cloudflare R2 | Cloudflare R2 → Manage API tokens | — |
 | `R2_SECRET_ACCESS_KEY` | Production + Preview | Cloudflare R2 | Cloudflare R2 → Manage API tokens | — |
-| `R2_BUCKET_NAME` | Production + Preview | DB backup bucket (`epidom`) | Config-only; rename requires script update | — |
-| `R2_MEDIA_BUCKET` | Production + Preview | Media upload bucket (`epidom-media`) | Config-only | — |
-| `R2_MEDIA_PUBLIC_URL` | Production + Preview | Public URL base for R2 media (`https://media.epidom.fr`) | Config-only; requires next.config.ts update | — |
+| `R2_BUCKET_NAME` | Production + Preview | Primary bucket (`epidom`) — holds backups AND media uploads | Config-only; rename requires script update | — |
+| `R2_MEDIA_BUCKET` | Production + Preview | Optional; overrides `R2_BUCKET_NAME` for uploads. Omit to share the same bucket. | Config-only | — |
+| `R2_MEDIA_PUBLIC_URL` | Production + Preview | Public URL base served by the Cloudflare Worker (`https://media.epidom.fr`) | Config-only; requires next.config.ts update | — |
 | `VERCEL_API_TOKEN` | Production | Vercel admin capacity dashboard | Vercel dashboard → Account Settings → Tokens | — |
 | `VERCEL_TEAM_ID` | Production | Vercel admin capacity dashboard | Read-only; changes when team is renamed | — |
 | `NEON_API_KEY` | Production | Neon admin capacity dashboard | Neon dashboard → Account → API Keys | — |
@@ -116,14 +116,36 @@ See `project_inngest_local_events.md` memory for the full history.
 
 ---
 
-## Cloudflare R2 buckets
+## Cloudflare R2 bucket
 
-| Bucket | Env var | Purpose | Access |
-|--------|---------|---------|--------|
-| `epidom` | `R2_BUCKET_NAME` | Nightly DB backups | Private (signed URLs only) |
-| `epidom-media` | `R2_MEDIA_BUCKET` | User uploads (images, videos) | Public via `media.epidom.fr` |
+A single private `epidom` bucket holds everything. Objects are separated by prefix:
 
-The sales video (`videos/VSL.mp4`) lives in the `epidom` backup bucket and is served via a short-lived signed URL. See `src/lib/storage/sales-video.ts`.
+| Prefix | Purpose | Served via |
+|--------|---------|-----------|
+| `backups/` | Nightly DB dumps | Presigned URL (time-limited, server-side) |
+| `videos/` | Sales-page video (VSL.mp4) | Presigned URL — see `src/lib/storage/sales-video.ts` |
+| `media/uploads/` | User-uploaded images (logos, avatars, etc.) | Cloudflare Worker proxy → `media.epidom.fr` |
+
+**The bucket stays private.** `media.epidom.fr` is a Cloudflare Worker that reads from the `epidom` bucket and serves only the `media/` prefix publicly, blocking access to `backups/` and `videos/`. Set the Worker up once via the Cloudflare dashboard (Workers → Create → R2 binding → bucket `epidom`).
+
+Worker script (paste into the Cloudflare editor):
+```js
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const key = "media" + url.pathname; // media/uploads/… or media/…
+    const obj = await env.EPIDOM_BUCKET.get(key);
+    if (!obj) return new Response("Not found", { status: 404 });
+    return new Response(obj.body, {
+      headers: {
+        "Content-Type": obj.httpMetadata?.contentType || "application/octet-stream",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    });
+  },
+};
+```
+Bind the R2 bucket as `EPIDOM_BUCKET` in the Worker settings, then set the custom domain `media.epidom.fr`.
 
 To migrate existing Vercel Blob uploads to R2:
 

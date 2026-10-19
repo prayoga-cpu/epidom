@@ -1,13 +1,22 @@
 # STATUS.md
 
+## 3.29.0 — Sales page lead capture (shipped 2026-10-20)
+
+✅ `SalesLead` DB model · ✅ `/api/public/sales-pages/leads` route · ✅ `lead-capture.js` (VSL 4-min timer + exit intent) · ✅ All 12 sales-page HTML files updated · ✅ Resend newsletter integration (graceful degradation)
+
+### Operator to-do (3.29.0)
+
+- [ ] **Resend newsletter audience (operator):** create an audience in Resend → copy its ID → set `RESEND_NEWSLETTER_AUDIENCE_ID` in Vercel env vars. Leads will then be auto-added as contacts. Until this is set, leads are saved to `sales_leads` only (no newsletter sync, no breakage).
+- [ ] Dev branch: run `prisma migrate deploy` (the `20261019211747_add_sales_leads` migration).
+
 ## 3.28.0 — Infra consolidation (shipped 2026-10-19)
 
 ✅ Fonnte removed (wa.me flow kept) · ✅ `@ai-sdk/google` removed · ✅ SheetJS CDN tarball · ✅ Session location from Vercel geo headers (migration `20261019145420_add_session_location`) · ✅ CloudflareR2Adapter + storage factory wired · ✅ `isOwnUploadUrl` centralised across 7 callers · ✅ Blob→R2 migration script · ✅ `docs/OPERATIONS.md` secrets inventory · ✅ 6 ops GitHub Actions workflows · ✅ AGENTS.md Operations section
 
 ### Operator to-do (3.28.0)
 
-- [ ] Add `R2_MEDIA_BUCKET` (value: `epidom-media`) and `R2_MEDIA_PUBLIC_URL` (value: `https://media.epidom.fr`) to Vercel production env vars.
-- [ ] Create the `epidom-media` Cloudflare R2 bucket and point `media.epidom.fr` at it.
+- [ ] **Cloudflare Worker for media.epidom.fr** — create a Worker in the Cloudflare dashboard, bind it to the `epidom` R2 bucket as `EPIDOM_BUCKET`, paste the script from `docs/OPERATIONS.md`, and set the custom domain `media.epidom.fr`. This is the public URL for user-uploaded images.
+- [ ] Add `R2_MEDIA_PUBLIC_URL=https://media.epidom.fr` to Vercel env vars (no separate bucket needed — `R2_MEDIA_BUCKET` can be omitted; uploads use the existing `epidom` bucket under the `media/` prefix).
 - [ ] Set `STORAGE_PROVIDER=cloudflare-r2` in Vercel env to switch new uploads to R2.
 - [ ] Run `npx tsx scripts/migrate-blob-to-r2.ts` (dry-run first, then `--apply`) to migrate existing Blob URLs.
 - [ ] Add `CF_DEPLOY_HOOK` GitHub Actions secret (Vercel deploy hook URL for production).

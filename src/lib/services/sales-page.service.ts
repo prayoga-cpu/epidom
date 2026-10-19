@@ -8,6 +8,7 @@ import {
 } from "@/lib/sales-pages";
 import type {
   RecordSalesPageEventInput,
+  SalesLeadInput,
   SalesPageReportLang,
   SalesPageReportRange,
 } from "@/lib/validation/sales-page.schemas";
@@ -393,4 +394,43 @@ export async function getSalesPageReport(
       campaigns: summarizeCampaigns(rows),
     },
   };
+}
+
+/** Store a lead capture submission from the VSL timer or exit-intent popup. */
+export async function saveSalesLead(input: SalesLeadInput): Promise<void> {
+  await prisma.salesLead.create({
+    data: {
+      page: input.page,
+      locale: input.locale,
+      source: input.source,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      phone: input.phone,
+      email: input.email,
+    },
+  });
+
+  // Optionally add to Resend audience for newsletter — degrades gracefully when
+  // RESEND_NEWSLETTER_AUDIENCE_ID is not set (documented in STATUS.md).
+  const audienceId = process.env.RESEND_NEWSLETTER_AUDIENCE_ID;
+  const apiKey = process.env.RESEND_API_KEY;
+  if (audienceId && apiKey) {
+    try {
+      await fetch(`https://api.resend.com/audiences/${audienceId}/contacts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: input.email,
+          first_name: input.firstName,
+          last_name: input.lastName,
+          unsubscribed: false,
+        }),
+      });
+    } catch {
+      // Non-fatal: lead is already saved to DB.
+    }
+  }
 }

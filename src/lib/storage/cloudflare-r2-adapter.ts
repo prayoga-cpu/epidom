@@ -7,8 +7,13 @@
  * - R2_ACCOUNT_ID: Cloudflare account ID
  * - R2_ACCESS_KEY_ID: R2 API token access key
  * - R2_SECRET_ACCESS_KEY: R2 API token secret
- * - R2_MEDIA_BUCKET: Bucket name for media uploads (distinct from the backup bucket)
- * - R2_MEDIA_PUBLIC_URL: Public base URL for the media bucket (e.g. https://media.epidom.fr)
+ * - R2_MEDIA_PUBLIC_URL: Public base URL served via a Cloudflare Worker or custom domain
+ *                        (e.g. https://media.epidom.fr). The Worker proxies requests to
+ *                        the R2 bucket so the bucket itself stays private.
+ *
+ * Optional (falls back to R2_BUCKET_NAME when not set):
+ * - R2_MEDIA_BUCKET: Bucket for media uploads. Omit to share the main "epidom" backup
+ *                    bucket — uploads land under the "media/" prefix in that bucket.
  */
 
 import {
@@ -25,7 +30,10 @@ export class CloudflareR2Adapter implements StorageAdapter {
   private publicUrl: string | undefined;
 
   constructor() {
-    this.bucket = process.env.R2_MEDIA_BUCKET;
+    // Fall back to the main bucket (R2_BUCKET_NAME = "epidom") when a dedicated
+    // media bucket isn't configured. Uploads land under the "media/" prefix so
+    // they never collide with the "backups/" prefix used by the nightly backup job.
+    this.bucket = process.env.R2_MEDIA_BUCKET || process.env.R2_BUCKET_NAME;
     this.publicUrl = process.env.R2_MEDIA_PUBLIC_URL?.replace(/\/$/, "");
 
     if (this.isConfigured()) {
@@ -46,7 +54,7 @@ export class CloudflareR2Adapter implements StorageAdapter {
       process.env.R2_ACCESS_KEY_ID &&
       process.env.R2_SECRET_ACCESS_KEY &&
       this.bucket &&
-      this.publicUrl
+      this.publicUrl  // R2_MEDIA_PUBLIC_URL is still required — it's the Worker/custom-domain base URL
     );
   }
 
@@ -60,7 +68,9 @@ export class CloudflareR2Adapter implements StorageAdapter {
     const timestamp = Date.now();
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const filename = `${timestamp}-${sanitizedName}`;
-    const key = options?.path ? `${options.path}/${filename}` : `uploads/${filename}`;
+    // Default prefix "media/" keeps user uploads separate from "backups/" when
+    // sharing the same "epidom" bucket.
+    const key = options?.path ? `${options.path}/${filename}` : `media/uploads/${filename}`;
 
     const arrayBuffer = await file.arrayBuffer();
 

@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.29.0] - 2026-10-20 · feat
+
+Lead capture on sales pages: VSL 4-minute timer + exit-intent popup.
+
+- **Lead capture form** — after 4 cumulative minutes of VSL playback, a modal appears asking for First Name, Last Name, Phone, and Email. A second trigger fires on desktop when the cursor leaves toward the address bar (exit intent) and on mobile on a rapid upward scroll near the top.
+- **`SalesLead` model** — leads are stored in a new `sales_leads` DB table (page, locale, source, name, phone, email).
+- **Newsletter integration** — when `RESEND_NEWSLETTER_AUDIENCE_ID` is set, each submission is also added to the Resend audience as a contact.
+- **All 4 sales pages** (FR/EN/ID — 12 files) now load `/sales-pages/lead-capture.js`. A localStorage flag prevents re-showing after submission or 3 dismissals.
+
 ## [3.28.0] - 2026-10-19 · infra
 
 Dependency consolidation and one-door ops: fewer third-party accounts, GitHub as the single operational control point.

@@ -3043,3 +3043,26 @@ model RestoreRun {
   @@index([status, plannedAt])
   @@map("restore_runs")
 }
+
+/// A visitor who submitted the lead-capture form on a sales page — triggered
+/// either by the VSL 4-minute timer or an exit-intent popup.
+/// Privacy: phone/email stored as-is (user provided them). Never linked to a
+/// User row; if the visitor later signs up, attribution stays in SignupAttribution.
+model SalesLead {
+  id        String   @id @default(cuid())
+  /// "sales-page-1" … "sales-page-4"
+  page      String
+  /// "fr" | "en" | "id"
+  locale    String   @default("fr")
+  /// How the form was triggered.
+  source    String   /// "vsl_timer" | "exit_intent"
+  firstName String
+  lastName  String
+  phone     String
+  email     String
+  createdAt DateTime @default(now())
+
+  @@index([page, createdAt])
+  @@index([email])
+  @@map("sales_leads")
+}

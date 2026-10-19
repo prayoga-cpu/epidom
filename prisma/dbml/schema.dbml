@@ -47,6 +47,7 @@ Table session {
   updatedAt DateTime [not null]
   ipAddress String
   userAgent String
+  location String
   userId String [not null]
   user user [not null]
 }
@@ -1404,9 +1405,11 @@ Table partner_viewers {
     (partnerId, userId) [pk]
   }
 
-  Note: 'An account allowed to see a partner\'s page read-only (someone working with
-the partner). It sees exactly what the partner sees, changes nothing and
-earns nothing: commission stays the partner\'s.'
+  Note: 'UNUSED since 3.27.0: was an account allowed to see a partner\'s page
+read-only. The feature was removed (admins follow partners on the Referrals
+page); no code reads or writes this table. It stays one release so the
+deployment still serving during a rollout keeps its schema, then a later
+migration drops it (STATUS.md).'
 }
 
 Table partner_sales_pages {
@@ -1695,6 +1698,24 @@ invisible tenant rather than a live broken one.']
   Note: 'One row per restore attempt, including refused and dry-run plans. The plan
 is stored so Apply can verify it is acting on the same preview an operator
 approved, and so a refusal is itself part of the record.'
+}
+
+Table sales_leads {
+  id String [pk]
+  page String [not null, note: '"sales-page-1" … "sales-page-4"']
+  locale String [not null, default: 'fr', note: '"fr" | "en" | "id"']
+  source String [not null, note: 'How the form was triggered.
+"vsl_timer" | "exit_intent"']
+  firstName String [not null]
+  lastName String [not null]
+  phone String [not null]
+  email String [not null]
+  createdAt DateTime [default: `now()`, not null]
+
+  Note: 'A visitor who submitted the lead-capture form on a sales page — triggered
+either by the VSL 4-minute timer or an exit-intent popup.
+Privacy: phone/email stored as-is (user provided them). Never linked to a
+User row; if the visitor later signs up, attribution stays in SignupAttribution.'
 }
 
 Enum OrderReceiptSendStatus {
