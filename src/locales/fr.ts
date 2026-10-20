@@ -5346,6 +5346,12 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     infrastructuredBy: "Infrastructure par",
     languages: "Langues",
     meetUs: "Nous rencontrer",
+    newsletterHeading: "Restez informé·e",
+    newsletterSubtitle: "Conseils & actualités pour votre coffee shop. Zéro spam.",
+    newsletterPlaceholder: "votre@email.fr",
+    newsletterSubmit: "S'abonner",
+    newsletterThanks: "Vous êtes abonné·e ! 🎉",
+    newsletterError: "Une erreur s'est produite. Veuillez réessayer.",
   },
   cookie: {
     title: "Nous utilisons des cookies",

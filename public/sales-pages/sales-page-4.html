@@ -215,6 +215,18 @@ footer {
   footer { margin-top: 32px; }
   .logo { width: min(100%, 240px); }
 }
+.nl-sec{padding:60px 0 80px;background:linear-gradient(180deg,#06091a,#0b101c);text-align:center}
+.nl-h{font-size:clamp(22px,4vw,32px);font-weight:800;color:#f5f2e8;margin:0 0 12px;letter-spacing:-.02em}
+.nl-sub{font-size:16px;color:#a3abc2;margin:0 0 28px;line-height:1.55}
+.nl-form{display:flex;gap:10px;max-width:440px;margin:0 auto 20px;flex-wrap:wrap;justify-content:center}
+.nl-input{flex:1 1 220px;background:#111829;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 18px;font:500 16px 'Poppins',system-ui,sans-serif;color:#f5f2e8;outline:none;-webkit-appearance:none;transition:border-color .15s}
+.nl-input:focus{border-color:rgba(226,183,63,.6)}
+.nl-input::placeholder{color:#4a526a}
+.nl-btn{padding:14px 28px;background:linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c);color:#151004;font:700 16px 'Poppins',system-ui,sans-serif;border:none;border-radius:12px;cursor:pointer;white-space:nowrap;touch-action:manipulation}
+.nl-btn:hover{filter:brightness(1.06)}
+.nl-msg{font-size:14px;margin:0 0 12px;min-height:20px}
+.nl-popup{display:inline-block;margin-top:16px;font-size:14px;color:rgba(226,183,63,.8);background:none;border:none;cursor:pointer;text-decoration:underline;touch-action:manipulation}
+.nl-popup:hover{color:#f4dc90}
 </style>
 <link rel="alternate" hreflang="fr" href="https://epidom.fr/sales-page-4">
 <link rel="alternate" hreflang="en" href="https://epidom.fr/en/sales-page-4">
@@ -325,5 +337,18 @@ footer {
 <script src="/sales-pages/lang-switch.js" defer></script>
 <script src="/sales-pages/vsl.js" defer></script>
 <script src="/sales-pages/lead-capture.js" data-page="sales-page-4" defer></script>
+<section class="nl-sec">
+<div class="w c">
+<h2 class="nl-h">Restez informé·e</h2>
+<p class="nl-sub">Recevez nos conseils gratuits pour développer votre coffee shop.</p>
+<form class="nl-form" id="nl-form-4" novalidate>
+<input type="email" name="email" placeholder="votre@email.fr" required autocomplete="email" class="nl-input">
+<button type="submit" class="nl-btn">S'abonner</button>
+</form>
+<p class="nl-msg" id="nl-msg-4" hidden></p>
+<button type="button" class="nl-popup" onclick="window.epiLcOpen&amp;&amp;window.epiLcOpen('sales_page_cta')">Demander une démo personnalisée →</button>
+</div>
+</section>
+<script>(function(){var form=document.getElementById('nl-form-4');var msg=document.getElementById('nl-msg-4');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-4',locale:'fr'})}).then(function(){form.style.display='none';msg.textContent='Merci ! Vous êtes abonné·e.';msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
 </body>
 </html>

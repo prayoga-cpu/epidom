@@ -3066,3 +3066,20 @@ model SalesLead {
   @@index([email])
   @@map("sales_leads")
 }
+
+/// An email-only newsletter subscription — collected from the marketing site
+/// footer, the sales-page footer form, or any other lightweight subscribe surface.
+/// The full-form lead capture (name + phone + email) goes to SalesLead.
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  /// Where the subscription came from: "footer", "sales_page_footer"
+  source    String
+  /// The sales page slug when source = "sales_page_footer", null otherwise.
+  page      String?
+  locale    String   @default("fr")
+  createdAt DateTime @default(now())
+
+  @@index([source, createdAt])
+  @@map("newsletter_subscribers")
+}

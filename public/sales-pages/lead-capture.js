@@ -323,4 +323,17 @@
     document.addEventListener("mouseleave", onMouseLeave);
     window.addEventListener("scroll", onMobileScroll, { passive: true });
   }
+
+  // Exposed so the sales-page footer CTA button can force-open the popup even
+  // after the visitor dismissed it (they clicked, so it's an explicit action).
+  window.epiLcOpen = function (source) {
+    if (overlay) return;
+    injectStyles();
+    overlay = buildForm(source || "exit_intent");
+    document.body.appendChild(overlay);
+    var first = overlay.querySelector("input");
+    if (first) setTimeout(function () { first.focus(); }, 50);
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+  };
 })();

@@ -4827,6 +4827,12 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
     infrastructuredBy: "Infrastructured by",
     languages: "Languages",
     meetUs: "Meet us",
+    newsletterHeading: "Stay in the loop",
+    newsletterSubtitle: "Tips & updates for your coffee shop. No spam.",
+    newsletterPlaceholder: "your@email.com",
+    newsletterSubmit: "Subscribe",
+    newsletterThanks: "You're subscribed! 🎉",
+    newsletterError: "Something went wrong. Please try again.",
   },
   cookie: {
     title: "We use cookies",

@@ -1718,6 +1718,19 @@ Privacy: phone/email stored as-is (user provided them). Never linked to a
 User row; if the visitor later signs up, attribution stays in SignupAttribution.'
 }
 
+Table newsletter_subscribers {
+  id String [pk]
+  email String [unique, not null]
+  source String [not null, note: 'Where the subscription came from: "footer", "sales_page_footer"']
+  page String [note: 'The sales page slug when source = "sales_page_footer", null otherwise.']
+  locale String [not null, default: 'fr']
+  createdAt DateTime [default: `now()`, not null]
+
+  Note: 'An email-only newsletter subscription — collected from the marketing site
+footer, the sales-page footer form, or any other lightweight subscribe surface.
+The full-form lead capture (name + phone + email) goes to SalesLead.'
+}
+
 Enum OrderReceiptSendStatus {
   SENT
   FAILED

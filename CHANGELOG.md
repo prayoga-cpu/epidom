@@ -9,6 +9,14 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.30.0] - 2026-10-20 · feat
+
+- Newsletter system: email-only subscribe form in site footer and at the end of all 4 sales pages (FR/EN/ID).
+- Sales page footer: "Request a personalized demo" button re-opens the lead capture popup even after dismissal.
+- Admin `/admin/leads`: table view of all sales leads and newsletter subscribers (grantable section).
+- Admin `/admin/newsletter`: compose and send Resend broadcast to the newsletter audience (grantable section).
+- Newsletter + Leads sections added to admin access registry; Aaron can be granted access via Admin → Users.
+
 ## [3.29.0] - 2026-10-20 · feat
 
 Lead capture on sales pages: VSL 4-minute timer + exit-intent popup.

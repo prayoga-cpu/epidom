@@ -4853,6 +4853,12 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
     infrastructuredBy: "Infrastruktur oleh",
     languages: "Bahasa",
     meetUs: "Temui kami",
+    newsletterHeading: "Tetap terupdate",
+    newsletterSubtitle: "Tips & update untuk coffee shop Anda. Tanpa spam.",
+    newsletterPlaceholder: "email@anda.com",
+    newsletterSubmit: "Berlangganan",
+    newsletterThanks: "Anda telah berlangganan! 🎉",
+    newsletterError: "Terjadi kesalahan. Silakan coba lagi.",
   },
   cookie: {
     title: "Kami menggunakan cookie",

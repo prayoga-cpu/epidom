@@ -26,6 +26,8 @@ export const ADMIN_SECTION_KEYS = [
   "feedback",
   "custom-development",
   "my-referrals",
+  "newsletter",
+  "leads",
 ] as const;
 
 export type AdminSectionKey = (typeof ADMIN_SECTION_KEYS)[number];
@@ -48,7 +50,9 @@ export interface AdminSection {
     | "Handshake"
     | "Bug"
     | "Wrench"
-    | "Link";
+    | "Link"
+    | "Mail"
+    | "Database";
   access: AdminSectionAccess;
   /** Shown in the grant dialog when what the page exposes deserves a second thought. */
   grantWarning?: string;
@@ -107,6 +111,8 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     icon: "Link",
     access: "partner",
   },
+  { key: "newsletter", href: "/admin/newsletter", label: "Newsletter", icon: "Mail", access: "grantable" },
+  { key: "leads", href: "/admin/leads", label: "Leads", icon: "Database", access: "grantable" },
 ];
 
 export const GRANTABLE_ADMIN_SECTIONS = ADMIN_SECTIONS.filter((s) => s.access === "grantable");
@@ -118,7 +124,9 @@ export type GrantableAdminSectionKey =
   | "pixel"
   | "partners"
   | "feedback"
-  | "custom-development";
+  | "custom-development"
+  | "newsletter"
+  | "leads";
 
 export const GRANTABLE_ADMIN_SECTION_KEYS = GRANTABLE_ADMIN_SECTIONS.map(
   (s) => s.key

@@ -19,6 +19,7 @@ import { APP_VERSION } from "@/lib/version";
 import { MailIcon, WhatsAppIcon } from "./contact-icons";
 import { Container } from "./container";
 import { EpidomLogo, EpidomWordmark } from "./epidom-logo";
+import { NewsletterSignup } from "./newsletter-signup";
 
 // Instagram only — no other social accounts are actively maintained.
 const SOCIAL = [
@@ -75,6 +76,10 @@ export const SiteFooter = memo(function SiteFooter() {
           pointerEvents: "none",
         }}
       />
+
+      <div className="relative z-10">
+        <NewsletterSignup />
+      </div>
 
       <Container maxWidth="7xl" className="relative z-10 px-4 sm:px-6 lg:px-8">
         {/* Top grid */}
