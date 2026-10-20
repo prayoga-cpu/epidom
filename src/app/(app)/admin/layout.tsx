@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <>
       {showNav && (
         <AdminNav
-          sections={sections.map(({ key, href, label, icon }) => ({ key, href, label, icon }))}
+          sections={sections.map(({ key, href, label, icon, group }) => ({ key, href, label, icon, group }))}
         />
       )}
       {children}

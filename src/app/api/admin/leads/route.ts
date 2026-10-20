@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
-import { requireAdminApi } from "@/lib/auth/require-admin-api";
+import { getAdminAccess } from "@/lib/auth/admin-access";
+import { canOpenSection } from "@/config/admin-sections.config";
 import { prisma } from "@/lib/prisma";
 
 const PAGE_SIZE = 50;
 
 export async function GET(request: Request) {
   try {
-    const admin = await requireAdminApi({ section: "leads" });
-    if (admin instanceof NextResponse) return admin;
+    const access = await getAdminAccess();
+    const allowed =
+      access &&
+      (canOpenSection(access, "sales-pages") || canOpenSection(access, "newsletter"));
+    if (!allowed) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const { searchParams } = new URL(request.url);
     const cursor = searchParams.get("cursor");

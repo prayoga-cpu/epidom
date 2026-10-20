@@ -1,7 +1,6 @@
 import {
   Activity,
   Bug,
-  Database,
   Gauge,
   Handshake,
   Link,
@@ -28,5 +27,4 @@ export const ADMIN_SECTION_ICONS: Record<AdminSection["icon"], LucideIcon> = {
   Wrench,
   Link,
   Mail,
-  Database,
 };

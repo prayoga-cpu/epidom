@@ -8,6 +8,8 @@ const broadcastSchema = z.object({
   subject: z.string().min(1).max(200),
   html: z.string().min(1),
   from: z.string().email().optional(),
+  /** When present, send individually to these addresses instead of using a Resend broadcast. */
+  recipients: z.array(z.string().email()).max(500).optional(),
 });
 
 export async function POST(request: Request) {
@@ -24,7 +26,34 @@ export async function POST(request: Request) {
       );
     }
 
-    const { id } = await createBroadcast(parsed.data);
+    const { subject, html, from, recipients } = parsed.data;
+
+    if (recipients && recipients.length > 0) {
+      const fromAddr = from ?? process.env.EMAIL_FROM ?? "Epidom <hello@epidom.fr>";
+      const results = await Promise.allSettled(
+        recipients.map((to) =>
+          fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ from: fromAddr, to, subject, html }),
+          }).then(async (r) => {
+            if (!r.ok) throw new Error(await r.text());
+            return r.json();
+          })
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        console.error("[NEWSLETTER_INDIVIDUAL_SEND_ERRORS]", failed);
+      }
+      const sent = results.filter((r) => r.status === "fulfilled").length;
+      return NextResponse.json(createSuccessResponse({ sent, failed: failed.length }));
+    }
+
+    const { id } = await createBroadcast({ subject, html, from });
     await sendBroadcast(id);
 
     return NextResponse.json(createSuccessResponse({ id }));

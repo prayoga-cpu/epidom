@@ -18,6 +18,7 @@ import type {
 } from "@/lib/validation/sales-page.schemas";
 import { customRangeQuery, type CustomDays } from "@/lib/report-range";
 import { CustomRangePicker } from "@/components/reports/custom-range-picker";
+import { LeadsSection, type SalesLead, type NewsletterSub } from "./leads-section";
 
 const RANGES: { value: SalesPageReportRange; label: string }[] = [
   { value: "7", label: "7 days" },
@@ -326,7 +327,15 @@ function TrackedSignupsSection({ tracked }: { tracked: TrackedSignups }) {
   );
 }
 
-export function SalesPageReportView({ report }: { report: SalesPageReport }) {
+export function SalesPageReportView({
+  report,
+  salesLeads,
+  subscribers,
+}: {
+  report: SalesPageReport;
+  salesLeads?: SalesLead[];
+  subscribers?: NewsletterSub[];
+}) {
   const tooEarly = report.pages.some((p) => p.visitors < EARLY_VISITORS);
   const leadingLabel = (page: string) => {
     if (report.leader?.page !== page) return null;
@@ -401,6 +410,10 @@ export function SalesPageReportView({ report }: { report: SalesPageReport }) {
         </div>
 
         <TrackedSignupsSection tracked={report.tracked} />
+
+        {(salesLeads || subscribers) && (
+          <LeadsSection salesLeads={salesLeads ?? []} subscribers={subscribers ?? []} />
+        )}
 
         <div className="text-muted-foreground space-y-1.5 text-xs">
           <p>

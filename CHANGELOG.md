@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.31.0] - 2026-10-20 · ux
+
+- Admin nav grouped into Finance / Marketing / Community dropdowns; standalone pages (Users, Activity) remain as plain links.
+- Sales Pages admin: lead submissions (popup leads + newsletter subscribers) now shown below the A/B report — no separate Leads page needed.
+- Newsletter admin: HTML preview toggle; recipient selection (Resend audience, popup leads, newsletter subscribers with individual select/deselect); individual Resend `/emails` sends when a custom list is chosen.
+- Removed `/admin/leads` page (leads now accessible under Sales Pages and Newsletter).
+
 ## [3.30.0] - 2026-10-20 · feat
 
 - Newsletter system: email-only subscribe form in site footer and at the end of all 4 sales pages (FR/EN/ID).

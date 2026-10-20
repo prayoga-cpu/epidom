@@ -27,13 +27,15 @@ export const ADMIN_SECTION_KEYS = [
   "custom-development",
   "my-referrals",
   "newsletter",
-  "leads",
 ] as const;
 
 export type AdminSectionKey = (typeof ADMIN_SECTION_KEYS)[number];
 
 /** Who may open a section. */
 export type AdminSectionAccess = "full" | "grantable" | "partner";
+
+/** Nav grouping for dropdown menus. */
+export type AdminSectionGroup = "finance" | "marketing" | "community";
 
 export interface AdminSection {
   key: AdminSectionKey;
@@ -51,12 +53,18 @@ export interface AdminSection {
     | "Bug"
     | "Wrench"
     | "Link"
-    | "Mail"
-    | "Database";
+    | "Mail";
   access: AdminSectionAccess;
+  group?: AdminSectionGroup;
   /** Shown in the grant dialog when what the page exposes deserves a second thought. */
   grantWarning?: string;
 }
+
+export const ADMIN_NAV_GROUPS: { key: AdminSectionGroup; label: string }[] = [
+  { key: "finance", label: "Finance" },
+  { key: "marketing", label: "Marketing" },
+  { key: "community", label: "Community" },
+];
 
 export const ADMIN_SECTIONS: readonly AdminSection[] = [
   // Plans, deletes, passwords and admin grants: never grantable.
@@ -69,6 +77,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     label: "Revenue",
     icon: "TrendingUp",
     access: "grantable",
+    group: "finance",
     grantWarning: "Shows every customer's payments and the revenue split.",
   },
   {
@@ -77,6 +86,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     label: "Capacity & Usage",
     icon: "Gauge",
     access: "grantable",
+    group: "finance",
     grantWarning: "Includes running a full database backup.",
   },
   {
@@ -85,24 +95,49 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     label: "Sales Pages",
     icon: "Megaphone",
     access: "grantable",
+    group: "marketing",
   },
-  { key: "pixel", href: "/admin/pixel", label: "Meta Pixel", icon: "Radar", access: "grantable" },
+  {
+    key: "pixel",
+    href: "/admin/pixel",
+    label: "Meta Pixel",
+    icon: "Radar",
+    access: "grantable",
+    group: "marketing",
+  },
+  {
+    key: "newsletter",
+    href: "/admin/newsletter",
+    label: "Newsletter",
+    icon: "Mail",
+    access: "grantable",
+    group: "marketing",
+  },
   {
     key: "partners",
     href: "/admin/partners",
     label: "Referrals",
     icon: "Handshake",
     access: "grantable",
+    group: "community",
     grantWarning:
       "Can create referral partners and change their deals. Payouts still need a full admin.",
   },
-  { key: "feedback", href: "/admin/feedback", label: "Feedback", icon: "Bug", access: "grantable" },
+  {
+    key: "feedback",
+    href: "/admin/feedback",
+    label: "Feedback",
+    icon: "Bug",
+    access: "grantable",
+    group: "community",
+  },
   {
     key: "custom-development",
     href: "/admin/custom-development",
     label: "Custom Development",
     icon: "Wrench",
     access: "grantable",
+    group: "community",
   },
   {
     key: "my-referrals",
@@ -111,8 +146,6 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     icon: "Link",
     access: "partner",
   },
-  { key: "newsletter", href: "/admin/newsletter", label: "Newsletter", icon: "Mail", access: "grantable" },
-  { key: "leads", href: "/admin/leads", label: "Leads", icon: "Database", access: "grantable" },
 ];
 
 export const GRANTABLE_ADMIN_SECTIONS = ADMIN_SECTIONS.filter((s) => s.access === "grantable");
@@ -125,8 +158,7 @@ export type GrantableAdminSectionKey =
   | "partners"
   | "feedback"
   | "custom-development"
-  | "newsletter"
-  | "leads";
+  | "newsletter";
 
 export const GRANTABLE_ADMIN_SECTION_KEYS = GRANTABLE_ADMIN_SECTIONS.map(
   (s) => s.key
@@ -168,4 +200,11 @@ export function visibleSections(access: AdminAccessSummary): AdminSection[] {
 /** Whether the account may open any admin page at all. */
 export function hasAnyAdminAccess(access: AdminAccessSummary): boolean {
   return visibleSections(access).length > 0;
+}
+
+export function sectionsForGroup(
+  sections: Pick<AdminSection, "key" | "group">[],
+  group: AdminSectionGroup
+): Pick<AdminSection, "key" | "group">[] {
+  return sections.filter((s) => s.group === group);
 }
