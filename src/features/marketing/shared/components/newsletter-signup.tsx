@@ -29,10 +29,7 @@ export function NewsletterSignup() {
     <div
       style={{
         width: "100%",
-        borderTop: "1px solid rgba(255,255,255,0.07)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-        padding: "40px 0",
-        marginBottom: 0,
+        padding: "64px 0 56px",
       }}
     >
       <div

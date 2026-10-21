@@ -55,7 +55,7 @@ export const SiteFooter = memo(function SiteFooter() {
       role="contentinfo"
       style={{
         borderTop: "1px solid rgba(255,255,255,0.07)",
-        padding: "80px 0 40px",
+        padding: "0 0 40px",
         background: "linear-gradient(180deg, var(--epi-navy-900) 0%, var(--epi-navy-950) 100%)",
         position: "relative",
         overflow: "hidden",
@@ -86,7 +86,9 @@ export const SiteFooter = memo(function SiteFooter() {
         <div
           className="grid grid-cols-2 gap-8 pb-16 sm:grid-cols-3 lg:grid-cols-[1.4fr_repeat(5,1fr)]"
           style={{
+            borderTop: "1px solid rgba(255,255,255,0.07)",
             borderBottom: "1px solid rgba(255,255,255,0.07)",
+            paddingTop: 56,
           }}
         >
           {/* Brand */}
