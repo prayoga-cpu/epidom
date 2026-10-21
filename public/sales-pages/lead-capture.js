@@ -41,6 +41,7 @@
       skip: "Non merci",
       vslTitle: "Vous semblez intéressé·e",
       vslSubtitle: "Laissez-nous vos coordonnées et recevez une démo personnalisée.",
+      getStarted: "Commencer maintenant →",
     },
     en: {
       title: "Before you go…",
@@ -56,6 +57,7 @@
       skip: "No thanks",
       vslTitle: "You seem interested",
       vslSubtitle: "Leave your details and get a personalized demo.",
+      getStarted: "Get started now →",
     },
     id: {
       title: "Sebelum pergi…",
@@ -71,6 +73,7 @@
       skip: "Tidak, terima kasih",
       vslTitle: "Anda tampaknya tertarik",
       vslSubtitle: "Tinggalkan detail Anda dan dapatkan demo yang dipersonalisasi.",
+      getStarted: "Mulai sekarang →",
     },
   };
   var t = T[locale] || T.fr;
@@ -132,7 +135,20 @@
       "#epi-lc-skip{display:block;text-align:center;margin-top:14px;font-size:14px;color:#4a526a;",
         "cursor:pointer;text-decoration:underline;background:none;border:none;width:100%;touch-action:manipulation}",
       "#epi-lc-skip:hover{color:#a3abc2}",
-      "#epi-lc-thanks{text-align:center;padding:24px 0 8px;color:#5bb37c;font-weight:700;font-size:19px}",
+      "#epi-lc-thanks{text-align:center;padding:24px 0 16px;color:#5bb37c;font-weight:700;font-size:19px}",
+      ".epi-lc-success-actions{display:flex;flex-direction:column;gap:12px;margin-top:4px}",
+      ".epi-lc-btn-primary{display:block;width:100%;padding:17px 24px;",
+        "background:linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c);",
+        "color:#151004;font:700 16px 'Poppins',system-ui,sans-serif;border:none;border-radius:14px;",
+        "cursor:pointer;touch-action:manipulation;",
+        "box-shadow:0 0 0 1px rgba(255,255,255,.2) inset,0 8px 28px rgba(226,183,63,.3);",
+        "transition:transform .15s,box-shadow .15s}",
+      ".epi-lc-btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(255,255,255,.3) inset,0 14px 36px rgba(226,183,63,.45)}",
+      ".epi-lc-btn-ghost{display:block;width:100%;padding:14px 24px;background:transparent;",
+        "border:1px solid rgba(255,255,255,.15);border-radius:14px;color:#a3abc2;",
+        "font:600 15px 'Poppins',system-ui,sans-serif;cursor:pointer;touch-action:manipulation;",
+        "transition:border-color .15s,color .15s}",
+      ".epi-lc-btn-ghost:hover{border-color:rgba(255,255,255,.35);color:#f5f2e8}",
       "@media(max-width:560px){",
         "#epi-lc-box{padding:36px 24px 28px}",
         ".epi-lc-row{grid-template-columns:1fr}",
@@ -232,8 +248,16 @@
     })
       .then(function () {
         setState({ submitted: true });
-        form.innerHTML = "<div id=\"epi-lc-thanks\">" + t.thanks + "</div>";
-        setTimeout(function () { window.location.href = "/register"; }, 2000);
+        form.innerHTML =
+          "<div id=\"epi-lc-thanks\">" + t.thanks + "</div>" +
+          "<div class=\"epi-lc-success-actions\">" +
+            "<button type=\"button\" class=\"epi-lc-btn-primary\" id=\"epi-lc-cta\">" + t.getStarted + "</button>" +
+            "<button type=\"button\" class=\"epi-lc-btn-ghost\" id=\"epi-lc-close-success\">" + t.close + "</button>" +
+          "</div>";
+        var ctaBtn = form.querySelector("#epi-lc-cta");
+        var closeBtn = form.querySelector("#epi-lc-close-success");
+        if (ctaBtn) ctaBtn.addEventListener("click", function () { window.location.href = "/register"; });
+        if (closeBtn) closeBtn.addEventListener("click", function () { closeModal(); });
       })
       .catch(function () {
         btn.disabled = false;
