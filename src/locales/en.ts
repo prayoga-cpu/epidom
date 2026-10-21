@@ -954,6 +954,10 @@ export const en = {
     cameraInsecureContext:
       "Camera needs a secure (HTTPS) connection. Use the button below instead.",
     cameraUnavailable: "Camera unavailable. Use the button below to upload a photo.",
+    cameraPolicyBlocked:
+      "This page isn't allowed to use the camera. Use the button below to take or upload a photo.",
+    cameraBusy: "The camera is being used by another app or tab. Close it, then tap Try again.",
+    cameraWaiting: "Waiting for camera access… Allow it in your browser's prompt.",
     cameraGuideTitle: "How to allow camera access:",
     cameraGuideBrowser: "Click the camera icon in the address bar → Allow",
     cameraGuideMac: "Mac: System Settings → Privacy & Security → Camera → enable your browser",

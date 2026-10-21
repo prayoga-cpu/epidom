@@ -968,6 +968,10 @@ export const id = {
     cameraInsecureContext:
       "Kamera memerlukan koneksi aman (HTTPS). Gunakan tombol di bawah sebagai gantinya.",
     cameraUnavailable: "Kamera tidak tersedia. Gunakan tombol di bawah untuk mengunggah foto.",
+    cameraPolicyBlocked:
+      "Halaman ini tidak diizinkan memakai kamera. Gunakan tombol di bawah untuk mengambil atau mengunggah foto.",
+    cameraBusy: "Kamera sedang dipakai aplikasi atau tab lain. Tutup dulu, lalu ketuk Coba lagi.",
+    cameraWaiting: "Menunggu akses kamera… Izinkan di pop-up browser Anda.",
     cameraGuideTitle: "Cara mengizinkan kamera:",
     cameraGuideBrowser: "Klik ikon kamera di address bar → Izinkan",
     cameraGuideMac: "Mac: System Settings → Privacy & Security → Camera → aktifkan browser Anda",

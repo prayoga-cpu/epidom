@@ -957,6 +957,11 @@ export const fr = {
     cameraInsecureContext:
       "La caméra nécessite une connexion sécurisée (HTTPS). Utilisez plutôt le bouton ci-dessous.",
     cameraUnavailable: "Caméra indisponible. Utilisez le bouton ci-dessous pour envoyer une photo.",
+    cameraPolicyBlocked:
+      "Cette page n'est pas autorisée à utiliser la caméra. Utilisez le bouton ci-dessous pour prendre ou envoyer une photo.",
+    cameraBusy:
+      "La caméra est utilisée par une autre application ou un autre onglet. Fermez-la, puis touchez Réessayer.",
+    cameraWaiting: "En attente de l'accès à la caméra… Autorisez-le dans la fenêtre du navigateur.",
     cameraGuideTitle: "Comment autoriser la caméra :",
     cameraGuideBrowser: "Cliquez sur l'icône caméra dans la barre d'adresse → Autoriser",
     cameraGuideMac: "Mac : Réglages Système → Confidentialité → Caméra → activer votre navigateur",

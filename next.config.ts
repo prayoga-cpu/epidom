@@ -133,10 +133,12 @@ const nextConfig: NextConfig = {
         { key: "X-Content-Type-Options", value: "nosniff" },
         // Control referrer information
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        // Restrict browser features
+        // Restrict browser features. Camera (attendance selfie) and geolocation
+        // (clock-in location) must stay (self): "()" disables them for our own
+        // pages too, so getUserMedia fails instantly and no prompt ever shows.
         {
           key: "Permissions-Policy",
-          value: "camera=(), microphone=(), geolocation=()",
+          value: "camera=(self), microphone=(), geolocation=(self)",
         },
         // XSS Protection (legacy browsers)
         { key: "X-XSS-Protection", value: "1; mode=block" },

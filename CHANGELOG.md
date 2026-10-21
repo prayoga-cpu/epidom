@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.34.1] - 2026-10-21 · fix
+
+- Clock In / Out selfie: the camera works again in Chrome, Arc, Edge, Android Chrome and the desktop app. A site-wide security header was switching the camera off on every Epidom page, so the browser never asked for permission and "Try again" could not help. Clock-in location was blocked by the same header and now works too.
+- Selfie camera: "Try again" asks the browser for the camera right away, every time you tap it, and the camera starts by itself once you allow it in the browser's site settings.
+- Selfie camera: shows "Waiting for camera access…" while the browser's permission prompt is open, and tries every camera on the device when the default one is busy.
+- Selfie camera: clearer messages when another app is using the camera or the page isn't allowed to use it, with the photo upload always available as a backup.
+
 ## [3.34.0] - 2026-10-21 · ux
 
 - POS Order Queue: fullscreen toggle now visible on all screen sizes (was hidden below 640 px), making it easy to enter distraction-free mode on any device.

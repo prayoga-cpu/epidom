@@ -4,27 +4,104 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, RotateCcw, Check, Upload, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { cn } from "@/lib/utils";
 
 interface SelfieCaptureProps {
   onConfirm: (file: File) => void;
   disabled?: boolean;
 }
 
-type CameraFailure = "denied" | "not-found" | "insecure" | "unsupported" | "other";
+type CameraFailure =
+  | "denied"
+  | "policy"
+  | "busy"
+  | "not-found"
+  | "insecure"
+  | "unsupported"
+  | "other";
+
+const errorName = (error: unknown) =>
+  typeof error === "object" && error !== null && "name" in error ? String(error.name) : "";
+
+const isPermissionError = (error: unknown) => {
+  const name = errorName(error);
+  return name === "NotAllowedError" || name === "SecurityError";
+};
+
+const isBusyError = (error: unknown) => {
+  const name = errorName(error);
+  return name === "NotReadableError" || name === "TrackStartError" || name === "AbortError";
+};
 
 /**
- * Front-camera selfie capture for attendance clock-in/out — must work the
- * same on a desktop webcam as it does on a mobile front camera, since owners
- * check the dashboard (and can clock staff in/out) from either. Built as a
- * small, self-contained component with a graceful fallback: if the camera
- * stream can't be opened (permission denied, unsupported browser, PWA
- * quirks, no camera hardware), a plain `<input type="file" capture="user">`
- * still opens the native camera on mobile — and a normal file picker on
- * desktop — with no custom video pipeline required. A distinct failure
- * reason drives the message so "you blocked the camera" and "this device
- * has no camera" don't look like the same dead end, and a Retry button lets
- * someone who just granted the permission (via the browser's own UI) try
- * again without closing the whole dialog.
+ * A `Permissions-Policy: camera=()` header (or an iframe without
+ * `allow="camera"`) switches the camera off for the whole page: getUserMedia
+ * rejects instantly and the browser never shows its prompt, however often we ask.
+ */
+function cameraBlockedByPolicy(): boolean {
+  const doc = document as Document & {
+    permissionsPolicy?: { allowsFeature(feature: string): boolean };
+    featurePolicy?: { allowsFeature(feature: string): boolean };
+  };
+  const policy = doc.permissionsPolicy ?? doc.featurePolicy;
+  try {
+    return policy ? !policy.allowsFeature("camera") : false;
+  } catch {
+    return false;
+  }
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Front camera first, then any camera, then every camera by id — a virtual
+ * camera or a docked webcam can be the busy default while another one works.
+ * A permission refusal ends the chain at once: re-asking in a loop only earns
+ * Chromium's "dismissed too often" auto-block.
+ */
+async function openCameraStream(): Promise<MediaStream> {
+  const media = navigator.mediaDevices;
+  type Attempt = { ok: true; stream: MediaStream } | { ok: false; error: unknown };
+  const attempt = async (constraints: MediaStreamConstraints): Promise<Attempt> => {
+    try {
+      return { ok: true, stream: await media.getUserMedia(constraints) };
+    } catch (error) {
+      if (isPermissionError(error)) throw error;
+      return { ok: false, error };
+    }
+  };
+
+  let result = await attempt({ video: { facingMode: { ideal: "user" } }, audio: false });
+  if (result.ok) return result.stream;
+  result = await attempt({ video: true, audio: false });
+  if (result.ok) return result.stream;
+  let lastError = result.error;
+
+  const devices = await media.enumerateDevices().catch(() => [] as MediaDeviceInfo[]);
+  for (const device of devices) {
+    // deviceId is "" until the site has been granted the camera once.
+    if (device.kind !== "videoinput" || !device.deviceId) continue;
+    result = await attempt({ video: { deviceId: { exact: device.deviceId } }, audio: false });
+    if (result.ok) return result.stream;
+    lastError = result.error;
+  }
+
+  // Windows and macOS hand the camera back a moment after another app or tab lets go.
+  if (isBusyError(lastError)) {
+    await wait(800);
+    result = await attempt({ video: true, audio: false });
+    if (result.ok) return result.stream;
+    lastError = result.error;
+  }
+  throw lastError;
+}
+
+/**
+ * Front-camera selfie capture for attendance clock-in/out, on desktop webcams
+ * and phone front cameras alike. Every failure has its own message, "Try
+ * again" re-asks for the camera inside the click itself, a permission granted
+ * later in the browser's settings restarts the camera on its own, and a plain
+ * `<input type="file">` (native camera on mobile) is always the last resort.
  */
 export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
   const { t } = useI18n();
@@ -32,139 +109,122 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attemptRef = useRef(0);
+  const permissionRef = useRef<PermissionStatus | null>(null);
 
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraFailure, setCameraFailure] = useState<CameraFailure | null>(null);
-  // true when the browser site-permission is "granted" but getUserMedia still
-  // failed — this means the OS (macOS / Windows) is blocking the browser app
-  // itself, so the guide should skip the browser step and go straight to OS settings.
+  // The site permission says "granted" yet the camera still refused: the OS
+  // (macOS / Windows privacy settings) is blocking the browser itself.
   const [osBlocked, setOsBlocked] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
-  const [retryToken, setRetryToken] = useState(0);
-  // Visual feedback while getUserMedia is in-flight so "Try again" doesn't
-  // look frozen when the browser rejects permission instantly.
-  const [cameraAttempting, setCameraAttempting] = useState(false);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
+  const stopPermissionWatch = useCallback(() => {
+    if (permissionRef.current) permissionRef.current.onchange = null;
+    permissionRef.current = null;
+  }, []);
 
-    async function startCamera() {
-      setCameraAttempting(true);
-      // Browsers only expose getUserMedia on HTTPS (or localhost) — over
-      // plain HTTP on a LAN IP (common when testing a desktop against a
-      // phone on the same network) `mediaDevices` is undefined entirely,
-      // which would otherwise show the same generic message as a denied
-      // permission.
-      const isSecureContext =
-        typeof window === "undefined" ||
-        window.isSecureContext ||
-        ["localhost", "127.0.0.1"].includes(window.location.hostname);
-      if (!isSecureContext) {
-        if (!cancelled) { setCameraFailure("insecure"); setCameraAttempting(false); }
-        return;
-      }
-      if (!("mediaDevices" in navigator) || !navigator.mediaDevices?.getUserMedia) {
-        if (!cancelled) { setCameraFailure("unsupported"); setCameraAttempting(false); }
-        return;
-      }
-      const tryStream = async (constraints: MediaStreamConstraints) => {
-        const s = await navigator.mediaDevices.getUserMedia(constraints);
-        if (cancelled) {
-          s.getTracks().forEach((t) => t.stop());
-          throw new DOMException("cancelled", "AbortError");
-        }
-        return s;
-      };
-
-      try {
-        let stream: MediaStream;
-        try {
-          // Ideal facingMode — desktop webcams that don't report a facingMode
-          // still match (ideal ≠ required), so no OverconstrainedError.
-          stream = await tryStream({ video: { facingMode: { ideal: "user" } }, audio: false });
-        } catch (innerErr) {
-          if (cancelled) return;
-          const n = innerErr instanceof Error ? innerErr.name : "";
-          // OverconstrainedError: facingMode unsupported on this device → retry
-          // with bare video:true (common on desktop webcams and some Linux setups).
-          if (n === "OverconstrainedError" || n === "ConstraintNotSatisfiedError") {
-            stream = await tryStream({ video: true, audio: false });
-          } else {
-            throw innerErr;
-          }
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {
-            // Autoplay blocked — the video will start on user interaction;
-            // still mark the camera as ready so the capture button enables.
-          });
-        }
-        if (!cancelled) setCameraAttempting(false);
-        setCameraReady(true);
-      } catch (error) {
-        if (cancelled) return;
-        const name = error instanceof Error ? error.name : "";
-        setCameraAttempting(false);
-        if (name === "AbortError") return;
-        if (name === "NotAllowedError" || name === "SecurityError") {
-          // Check if the browser site-permission is already "granted" — if so
-          // the OS (macOS/Windows) is the one blocking, not the browser page.
-          try {
-            const perm = await navigator.permissions.query({ name: "camera" as PermissionName });
-            permStatus = perm;
-            if (perm.state === "granted") setOsBlocked(true);
-
-            // Watch for the user granting permission from browser settings so
-            // we can automatically retry without them clicking Try Again.
-            perm.onchange = () => {
-              if (perm.state === "granted") {
-                perm.onchange = null;
-                permStatus = null;
-                setCameraFailure(null);
-                setCameraReady(false);
-                setOsBlocked(false);
-                setRetryToken((n) => n + 1);
-              }
-            };
-          } catch {
-            // permissions API unsupported — leave osBlocked false
-          }
-          setCameraFailure("denied");
-        } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-          setCameraFailure("not-found");
-        } else {
-          setCameraFailure("other");
-        }
-      }
-    }
-
-    let permStatus: PermissionStatus | null = null;
-
-    if (!previewUrl) startCamera();
-
-    return () => {
-      cancelled = true;
-      if (permStatus) { permStatus.onchange = null; permStatus = null; }
-      stopStream();
+  const startCamera = useCallback(async () => {
+    const attempt = ++attemptRef.current;
+    const stale = () => attempt !== attemptRef.current;
+    const fail = (failure: CameraFailure) => {
+      if (!stale()) setCameraFailure(failure);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewUrl, retryToken]);
 
-  const handleRetryCamera = () => {
-    setCameraAttempting(true);
+    stopStream();
+    stopPermissionWatch();
     setCameraFailure(null);
     setCameraReady(false);
     setOsBlocked(false);
-    setRetryToken((n) => n + 1);
-  };
+
+    const isSecureContext =
+      window.isSecureContext || ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    if (!isSecureContext) return fail("insecure");
+    if (!navigator.mediaDevices?.getUserMedia) return fail("unsupported");
+    if (cameraBlockedByPolicy()) return fail("policy");
+
+    try {
+      const stream = await openCameraStream();
+      if (stale()) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        // Autoplay can be refused; the stream still plays once the user taps.
+        await video.play().catch(() => {});
+      }
+      if (stale()) return;
+      stream.getVideoTracks()[0]?.addEventListener("ended", () => {
+        if (stale() || streamRef.current !== stream) return;
+        streamRef.current = null;
+        setCameraReady(false);
+        setCameraFailure("busy");
+      });
+      setCameraReady(true);
+    } catch (error) {
+      if (stale()) return;
+      if (isPermissionError(error)) {
+        try {
+          const permission = await navigator.permissions.query({
+            name: "camera" as PermissionName,
+          });
+          if (stale()) return;
+          setOsBlocked(permission.state === "granted");
+          permissionRef.current = permission;
+          // Fires when the user flips the site setting to Allow (or back to
+          // Ask): restart without waiting for them to find "Try again".
+          permission.onchange = () => {
+            if (permission.state !== "denied") void startCamera();
+          };
+        } catch {
+          // Firefox has no "camera" permission name; the guide still applies.
+        }
+        return fail("denied");
+      }
+      const name = errorName(error);
+      if (name === "NotFoundError" || name === "DevicesNotFoundError" || name === "OverconstrainedError") {
+        return fail("not-found");
+      }
+      if (isBusyError(error)) return fail("busy");
+      return fail("other");
+    }
+  }, [stopStream, stopPermissionWatch]);
+
+  useEffect(() => {
+    if (previewUrl) return;
+    void startCamera();
+    return () => {
+      attemptRef.current++;
+      stopPermissionWatch();
+      stopStream();
+    };
+  }, [previewUrl, startCamera, stopPermissionWatch, stopStream]);
+
+  // A camera freed by another app, or allowed in the OS settings, is noticed
+  // when the user comes back to this window. Never on a plain refusal: an
+  // unprompted re-ask on every focus would get the site auto-blocked.
+  const retryOnReturn = cameraFailure === "busy" || (cameraFailure === "denied" && osBlocked);
+  useEffect(() => {
+    if (!retryOnReturn || previewUrl) return;
+    const onReturn = () => {
+      if (document.visibilityState === "visible") void startCamera();
+    };
+    window.addEventListener("focus", onReturn);
+    document.addEventListener("visibilitychange", onReturn);
+    return () => {
+      window.removeEventListener("focus", onReturn);
+      document.removeEventListener("visibilitychange", onReturn);
+    };
+  }, [retryOnReturn, previewUrl, startCamera]);
 
   const handleCapture = () => {
     const video = videoRef.current;
@@ -191,8 +251,6 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setPreviewBlob(null);
-    setCameraReady(false);
-    setCameraFailure(null);
   };
 
   const handleConfirm = () => {
@@ -203,6 +261,7 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    stopStream();
     setPreviewBlob(file);
     setPreviewUrl(URL.createObjectURL(file));
     e.target.value = "";
@@ -212,6 +271,10 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
     switch (cameraFailure) {
       case "denied":
         return t("clockInOut.cameraPermissionDenied");
+      case "policy":
+        return t("clockInOut.cameraPolicyBlocked");
+      case "busy":
+        return t("clockInOut.cameraBusy");
       case "not-found":
         return t("clockInOut.cameraNotFound");
       case "insecure":
@@ -234,16 +297,26 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
   const isMac = !isIOS && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform ?? "");
   const isWindows = typeof navigator !== "undefined" && /Win/i.test(navigator.platform ?? "");
 
-  const canRetryCamera = cameraFailure !== null && cameraFailure !== "insecure" && cameraFailure !== "unsupported";
+  const canRetryCamera =
+    cameraFailure !== null && !["insecure", "unsupported", "policy"].includes(cameraFailure);
+  const waitingForCamera = !previewUrl && !cameraFailure && !cameraReady;
 
   return (
     <div className="flex min-h-0 flex-col items-center gap-3">
       <div className="bg-muted relative aspect-square w-full max-w-[280px] overflow-hidden rounded-xl">
+        {/* Always mounted, so a stream that arrives after a retry has somewhere to play. */}
+        <video
+          ref={videoRef}
+          className={cn("h-full w-full object-cover", (previewUrl || cameraFailure) && "hidden")}
+          playsInline
+          muted
+          autoPlay
+        />
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+          <img src={previewUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : cameraFailure ? (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
             <Camera className="text-muted-foreground/50 h-8 w-8" />
             <p className="text-muted-foreground text-xs">{failureMessage}</p>
             {cameraFailure === "denied" && (
@@ -275,21 +348,22 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
                 variant="ghost"
                 size="sm"
                 className="h-8 gap-1.5 text-xs"
-                onClick={handleRetryCamera}
-                disabled={disabled || cameraAttempting}
+                // Called inside the click, like a "Test my cam" button: the
+                // browser ties the new prompt to this tap.
+                onClick={() => void startCamera()}
+                disabled={disabled}
               >
-                {cameraAttempting ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
+                <RefreshCw className="h-3.5 w-3.5" />
                 {t("clockInOut.retryCamera")}
               </Button>
             )}
           </div>
-        ) : (
-          <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
-        )}
+        ) : waitingForCamera ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center">
+            <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+            <p className="text-muted-foreground text-xs">{t("clockInOut.cameraWaiting")}</p>
+          </div>
+        ) : null}
       </div>
       <canvas ref={canvasRef} className="hidden" />
       {/* `capture` is set dynamically at click-time: "user" on mobile so
