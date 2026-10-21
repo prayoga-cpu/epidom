@@ -65,28 +65,45 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
         setCameraFailure("unsupported");
         return;
       }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          // Non-exact "ideal" constraint — a desktop webcam that doesn't
-          // report a "user" facingMode still matches instead of throwing
-          // OverconstrainedError, so this same call works on phones and
-          // laptops alike.
-          video: { facingMode: "user" },
-          audio: false,
-        });
+      const tryStream = async (constraints: MediaStreamConstraints) => {
+        const s = await navigator.mediaDevices.getUserMedia(constraints);
         if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
+          s.getTracks().forEach((t) => t.stop());
+          throw new DOMException("cancelled", "AbortError");
+        }
+        return s;
+      };
+
+      try {
+        let stream: MediaStream;
+        try {
+          // Ideal facingMode — desktop webcams that don't report a facingMode
+          // still match (ideal ≠ required), so no OverconstrainedError.
+          stream = await tryStream({ video: { facingMode: { ideal: "user" } }, audio: false });
+        } catch (innerErr) {
+          if (cancelled) return;
+          const n = innerErr instanceof Error ? innerErr.name : "";
+          // OverconstrainedError: facingMode unsupported on this device → retry
+          // with bare video:true (common on desktop webcams and some Linux setups).
+          if (n === "OverconstrainedError" || n === "ConstraintNotSatisfiedError") {
+            stream = await tryStream({ video: true, audio: false });
+          } else {
+            throw innerErr;
+          }
         }
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          await videoRef.current.play().catch(() => {
+            // Autoplay blocked — the video will start on user interaction;
+            // still mark the camera as ready so the capture button enables.
+          });
         }
         setCameraReady(true);
       } catch (error) {
         if (cancelled) return;
         const name = error instanceof Error ? error.name : "";
+        if (name === "AbortError") return;
         if (name === "NotAllowedError" || name === "SecurityError") {
           setCameraFailure("denied");
         } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
@@ -170,7 +187,7 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
   // have changed something (granted the permission, plugged in a webcam) —
   // not when the browser itself doesn't support it or the page isn't served
   // over HTTPS, where retrying would just fail the same way immediately.
-  const canRetryCamera = cameraFailure === "denied" || cameraFailure === "not-found";
+  const canRetryCamera = cameraFailure !== null && cameraFailure !== "insecure" && cameraFailure !== "unsupported";
 
   return (
     <div className="flex min-h-0 flex-col items-center gap-3">
@@ -201,11 +218,12 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
         )}
       </div>
       <canvas ref={canvasRef} className="hidden" />
+      {/* No `capture` attribute: on desktop it can block the file picker;
+          mobile browsers already open the camera via `accept="image/*"`. */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="user"
         className="hidden"
         onChange={handleFileInput}
       />

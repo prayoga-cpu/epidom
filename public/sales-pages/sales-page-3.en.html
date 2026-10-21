@@ -121,7 +121,7 @@ color:var(--navy-900);border-radius:24px;padding:32px 28px;display:flex;flex-dir
 .ok li{padding:15px 20px 15px 60px;position:relative;background:var(--n7);border:1px solid var(--ln);border-radius:14px;color:var(--c);font-weight:500}
 .ok li::before{content:"✓";position:absolute;left:18px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(79,158,106,.18);color:#6fc58b;font-size:14px}
 .note{font-size:14px;color:rgba(251,249,228,.5);margin:14px 0 0}
-footer{padding:28px 20px;text-align:center;font-size:13px;color:rgba(251,249,228,.4);background:#040a13}
+footer{padding:28px 20px;text-align:center;font-size:13px;color:rgba(251,249,228,.4);background:#0b101c}
 @media(max-width:620px){.diag em{transform:rotate(90deg)}.tools span{transform:none}.mods div{transform:none!important}.video i{display:none}}
 .dbr{display:none}
 @media(min-width:900px){.dbr{display:inline}.h2wide{width:min(1240px,calc(100vw - 40px));position:relative;left:50%;transform:translateX(-50%)}}
@@ -281,7 +281,6 @@ h2{font-size:clamp(28px,7.6vw,40px);margin-bottom:22px}
 <div class="cta" style="margin-top:20px"><a class="btn" href="/register" data-cta="final"><b>Start free →</b><small>Free forever. No credit card needed</small></a></div>
 </div></section>
 
-<footer>© Epidom</footer>
 <script>
 (function(){
 const DAYS = 26, ORDER_GAIN = 0.5, ADMIN_GAIN = 0.75;
@@ -340,5 +339,6 @@ compute();
 </div>
 </section>
 <script>(function(){var form=document.getElementById('nl-form-3');var msg=document.getElementById('nl-msg-3');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-3',locale:'en'})}).then(function(){form.style.display='none';msg.textContent="Thanks! You're subscribed.";msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
+<footer><p style="margin:0">© Epidom</p></footer>
 </body>
 </html>

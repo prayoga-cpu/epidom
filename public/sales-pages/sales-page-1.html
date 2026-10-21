@@ -127,7 +127,7 @@ h1 .lst{display:block;margin-top:20px;font-size:clamp(16px,2.5vw,23px);font-weig
 .plan p{font-size:15px;margin:0;color:var(--mt)}
 @media(max-width:560px){.plan.free{transform:none}}
 
-footer{padding:30px 20px;text-align:center;font-size:13px;color:var(--mt);border-top:1px solid var(--ln)}
+footer{padding:30px 20px;text-align:center;font-size:13px;color:var(--mt);border-top:1px solid var(--ln);background:#0b101c}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .nl-sec{padding:60px 0 80px;background:linear-gradient(180deg,#06091a,#0b101c);text-align:center}
 .nl-h{font-size:clamp(22px,4vw,32px);font-weight:800;color:#f5f2e8;margin:0 0 12px;letter-spacing:-.02em}
@@ -303,7 +303,6 @@ footer{padding:30px 20px;text-align:center;font-size:13px;color:var(--mt);border
 <p><a class="btn" href="/register" data-cta="final">Commencer gratuitement →</a></p>
 </div></section>
 
-<footer>© Epidom</footer>
 <script src="/sales-pages/pixel.js" data-page="sales-page-1" defer></script>
 <script src="/sales-pages/tracker.js" data-page="sales-page-1" defer></script>
 <script src="/sales-pages/lang-switch.js" defer></script>
@@ -322,5 +321,6 @@ footer{padding:30px 20px;text-align:center;font-size:13px;color:var(--mt);border
 </div>
 </section>
 <script>(function(){var form=document.getElementById('nl-form-1');var msg=document.getElementById('nl-msg-1');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-1',locale:'fr'})}).then(function(){form.style.display='none';msg.textContent='Merci ! Vous êtes abonné·e.';msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
+<footer><p style="margin:0">© Epidom</p></footer>
 </body>
 </html>

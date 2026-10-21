@@ -163,10 +163,10 @@ footer {
   align-items: center;
   justify-content: center;
   gap: 18px;
-  margin-top: 44px;
   padding: 32px 20px 12px;
   border-top: 1px solid rgba(215, 181, 75, 0.15);
   text-align: center;
+  background: #0b101c;
 }
 
 .footer-logo {
@@ -280,14 +280,6 @@ footer {
     </article>
   </section>
 
-  <footer>
-    <img
-      class="footer-logo" src="/sales-pages/epidom-logo.png" alt="Epidom">
-
-    <p class="footer-text">
-      EPIDOM · LA GESTION DE VOTRE COFFEE SHOP, SIMPLIFIÉE
-    </p>
-  </footer>
 </main>
 
 <script>
@@ -350,5 +342,9 @@ footer {
 </div>
 </section>
 <script>(function(){var form=document.getElementById('nl-form-4');var msg=document.getElementById('nl-msg-4');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-4',locale:'fr'})}).then(function(){form.style.display='none';msg.textContent='Merci ! Vous êtes abonné·e.';msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
+<footer>
+  <img class="footer-logo" src="/sales-pages/epidom-logo.png" alt="Epidom">
+  <p class="footer-text">EPIDOM · LA GESTION DE VOTRE COFFEE SHOP, SIMPLIFIÉE</p>
+</footer>
 </body>
 </html>
