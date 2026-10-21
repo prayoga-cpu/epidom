@@ -251,6 +251,6 @@ footer{padding:28px 20px;text-align:center;font-size:13px;color:var(--n2);backgr
 </div>
 </section>
 <script>(function(){var form=document.getElementById('nl-form-2');var msg=document.getElementById('nl-msg-2');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-2',locale:'fr'})}).then(function(){form.style.display='none';msg.textContent='Merci ! Vous êtes abonné·e.';msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
-<footer><p style="margin:0">© Epidom</p></footer>
+<footer><p style="margin:0;text-align:center">© Epidom</p></footer>
 </body>
 </html>

@@ -35,6 +35,10 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
 
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraFailure, setCameraFailure] = useState<CameraFailure | null>(null);
+  // true when the browser site-permission is "granted" but getUserMedia still
+  // failed — this means the OS (macOS / Windows) is blocking the browser app
+  // itself, so the guide should skip the browser step and go straight to OS settings.
+  const [osBlocked, setOsBlocked] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [retryToken, setRetryToken] = useState(0);
@@ -105,6 +109,14 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
         const name = error instanceof Error ? error.name : "";
         if (name === "AbortError") return;
         if (name === "NotAllowedError" || name === "SecurityError") {
+          // Check if the browser site-permission is already "granted" — if so
+          // the OS (macOS/Windows) is the one blocking, not the browser page.
+          try {
+            const perm = await navigator.permissions.query({ name: "camera" as PermissionName });
+            if (perm.state === "granted") setOsBlocked(true);
+          } catch {
+            // permissions API unsupported — leave osBlocked false
+          }
           setCameraFailure("denied");
         } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
           setCameraFailure("not-found");
@@ -126,6 +138,7 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
   const handleRetryCamera = () => {
     setCameraFailure(null);
     setCameraReady(false);
+    setOsBlocked(false);
     setRetryToken((n) => n + 1);
   };
 
@@ -205,8 +218,10 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
                   {t("clockInOut.cameraGuideTitle")}
                 </p>
                 <ol className="text-muted-foreground/80 list-decimal space-y-1 pl-3.5 text-[10px] leading-tight">
-                  <li>{t("clockInOut.cameraGuideBrowser")}</li>
-                  <li>
+                  {/* Step 1: unlock the browser site permission — skip when the
+                      browser already reports "granted" (OS is blocking instead) */}
+                  {!osBlocked && <li>{t("clockInOut.cameraGuideBrowser")}</li>}
+                  <li className={osBlocked ? "font-semibold text-amber-400/80" : ""}>
                     {isMac
                       ? t("clockInOut.cameraGuideMac")
                       : isWindows

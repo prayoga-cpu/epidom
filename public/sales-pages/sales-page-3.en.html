@@ -339,6 +339,6 @@ compute();
 </div>
 </section>
 <script>(function(){var form=document.getElementById('nl-form-3');var msg=document.getElementById('nl-msg-3');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-3',locale:'fr'})}).then(function(){form.style.display='none';msg.textContent='Thank you! You are now subscribed.';msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
-<footer><p style="margin:0">© Epidom</p></footer>
+<footer><p style="margin:0;text-align:center">© Epidom</p></footer>
 </body>
 </html>
