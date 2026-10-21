@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, RotateCcw, Check, Upload, RefreshCw } from "lucide-react";
+import { Camera, RotateCcw, Check, Upload, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 
@@ -42,6 +42,9 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [retryToken, setRetryToken] = useState(0);
+  // Visual feedback while getUserMedia is in-flight so "Try again" doesn't
+  // look frozen when the browser rejects permission instantly.
+  const [cameraAttempting, setCameraAttempting] = useState(false);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -52,6 +55,7 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
     let cancelled = false;
 
     async function startCamera() {
+      setCameraAttempting(true);
       // Browsers only expose getUserMedia on HTTPS (or localhost) — over
       // plain HTTP on a LAN IP (common when testing a desktop against a
       // phone on the same network) `mediaDevices` is undefined entirely,
@@ -62,11 +66,11 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
         window.isSecureContext ||
         ["localhost", "127.0.0.1"].includes(window.location.hostname);
       if (!isSecureContext) {
-        setCameraFailure("insecure");
+        if (!cancelled) { setCameraFailure("insecure"); setCameraAttempting(false); }
         return;
       }
       if (!("mediaDevices" in navigator) || !navigator.mediaDevices?.getUserMedia) {
-        setCameraFailure("unsupported");
+        if (!cancelled) { setCameraFailure("unsupported"); setCameraAttempting(false); }
         return;
       }
       const tryStream = async (constraints: MediaStreamConstraints) => {
@@ -103,17 +107,33 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
             // still mark the camera as ready so the capture button enables.
           });
         }
+        if (!cancelled) setCameraAttempting(false);
         setCameraReady(true);
       } catch (error) {
         if (cancelled) return;
         const name = error instanceof Error ? error.name : "";
+        setCameraAttempting(false);
         if (name === "AbortError") return;
         if (name === "NotAllowedError" || name === "SecurityError") {
           // Check if the browser site-permission is already "granted" — if so
           // the OS (macOS/Windows) is the one blocking, not the browser page.
           try {
             const perm = await navigator.permissions.query({ name: "camera" as PermissionName });
+            permStatus = perm;
             if (perm.state === "granted") setOsBlocked(true);
+
+            // Watch for the user granting permission from browser settings so
+            // we can automatically retry without them clicking Try Again.
+            perm.onchange = () => {
+              if (perm.state === "granted") {
+                perm.onchange = null;
+                permStatus = null;
+                setCameraFailure(null);
+                setCameraReady(false);
+                setOsBlocked(false);
+                setRetryToken((n) => n + 1);
+              }
+            };
           } catch {
             // permissions API unsupported — leave osBlocked false
           }
@@ -126,16 +146,20 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
       }
     }
 
+    let permStatus: PermissionStatus | null = null;
+
     if (!previewUrl) startCamera();
 
     return () => {
       cancelled = true;
+      if (permStatus) { permStatus.onchange = null; permStatus = null; }
       stopStream();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewUrl, retryToken]);
 
   const handleRetryCamera = () => {
+    setCameraAttempting(true);
     setCameraFailure(null);
     setCameraReady(false);
     setOsBlocked(false);
@@ -252,9 +276,13 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
                 size="sm"
                 className="h-8 gap-1.5 text-xs"
                 onClick={handleRetryCamera}
-                disabled={disabled}
+                disabled={disabled || cameraAttempting}
               >
-                <RefreshCw className="h-3.5 w-3.5" />
+                {cameraAttempting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
                 {t("clockInOut.retryCamera")}
               </Button>
             )}
