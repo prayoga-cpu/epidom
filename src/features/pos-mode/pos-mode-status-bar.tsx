@@ -122,7 +122,7 @@ export function PosModeStatusBar({
             carries the same per-device push + sound settings as the Back Office. */}
         {/* Fullscreen is for the till tablet; on a phone the bar has no room
             for it and the browser rarely allows it anyway. */}
-        <div className="hidden shrink-0 items-center sm:flex">
+        <div className="flex shrink-0 items-center">
           <PosModeFullscreenToggle />
         </div>
         <div className="flex shrink-0 items-center">

@@ -120,7 +120,7 @@ export function PosOrdersTabs({ storeId, canManageSettings }: PosOrdersTabsProps
       {/* Laid out like the Kitchen & Bar page's header: tabs on the left, the
           toggle pushed to the right. px-6 = the p-6 the queue/history content
           below uses, so both line up with the search box beneath them. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-6 py-2">
         <div className="flex flex-wrap items-center gap-2">
           <PosOrderSourceTabs
             counts={queue.sourceCounts}

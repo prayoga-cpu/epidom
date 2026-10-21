@@ -20,5 +20,7 @@ export function useMinWidth(minPx: number): boolean {
   );
 }
 
+/** Tailwind's `md` breakpoint. */
+export const MD_MIN_WIDTH_PX = 768;
 /** Tailwind's `lg` breakpoint. */
 export const LG_MIN_WIDTH_PX = 1024;

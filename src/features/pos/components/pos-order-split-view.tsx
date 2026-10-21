@@ -46,7 +46,7 @@ export function PosOrderSplitView({
   const selected = orders.find((o) => o.id === selectedId) ?? null;
 
   return (
-    <div className="grid items-start gap-3 lg:grid-cols-[9rem_minmax(0,1fr)_19rem] xl:grid-cols-[11rem_minmax(0,1fr)_22rem]">
+    <div className="grid items-start gap-3 md:grid-cols-[8rem_minmax(0,1fr)] lg:grid-cols-[9rem_minmax(0,1fr)_19rem] xl:grid-cols-[11rem_minmax(0,1fr)_22rem]">
       <PosOrderStatusRail
         counts={statusCounts}
         value={statusFilter}

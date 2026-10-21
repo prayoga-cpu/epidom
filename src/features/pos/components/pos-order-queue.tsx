@@ -265,7 +265,7 @@ export function PosOrderQueue({ storeId, queue }: PosOrderQueueProps) {
   );
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-6">
+    <div className="flex flex-1 flex-col gap-3 p-4 lg:gap-4 lg:p-6">
       <PosOrderQueueToolbar
         statusCounts={statusCounts}
         statusFilter={statusFilter}

@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.34.0] - 2026-10-21 · ux
+
+- POS Order Queue: fullscreen toggle now visible on all screen sizes (was hidden below 640 px), making it easy to enter distraction-free mode on any device.
+- POS Order Queue: source-tabs row (POS / Online / Log) is more compact on tablet, reducing wasted vertical chrome.
+- POS Order Queue: split view (status rail + list) now activates at the `md` breakpoint (768 px) instead of `lg` (1024 px) — portrait tablets get the two-column layout with a left status rail rather than a horizontal chip row.
+- POS Order Queue: queue-number column hidden on phones (< 640 px) where it is redundant, giving the remaining columns more breathing room.
+- POS Order Queue: inner content padding reduced on tablet (`p-4` at md, `p-6` at lg+) so more orders fit without scrolling.
+- POS Mode shell: bottom tab bar hides in landscape + md orientation; a slim 48 px icon-only side rail appears on the left instead, reclaiming ~56 px of vertical space on landscape tablets.
+
 ## [3.33.0] - 2026-10-21 · feat
 
 - Smart import: AI now detects "Build Your Own" (BYO) menu structures from CSV/spreadsheet uploads — group headers (BASE, ADD, SAUCE, etc.) and option/price rows are parsed and saved directly as `MenuItem.modifiers`, creating a "Build Your Own" category automatically.

@@ -10,6 +10,14 @@ import { useKdsSettings } from "@/features/pos/hooks/use-kds-settings";
 
 interface PosModeTabBarProps {
   storeId: string;
+  /**
+   * "bottom" (default): the familiar 56px strip at the bottom of the screen.
+   *   Hidden in landscape+md so it doesn't eat vertical space.
+   * "side": a slim 48px-wide icon rail on the left, visible ONLY in
+   *   landscape+md. Rendered by PosModeShell beside the main content area so
+   *   the layout is flex-row instead of the default flex-col.
+   */
+  variant?: "bottom" | "side";
 }
 
 /** The POS System screen: these four routes, switched by this bar. */
@@ -64,14 +72,43 @@ export function usePosTabs(storeId: string): PosTab[] {
  * Operational page (Shift, My Schedule, Clock In / Out), which the drawer
  * links to instead.
  */
-export function PosModeTabBar({ storeId }: PosModeTabBarProps) {
+export function PosModeTabBar({ storeId, variant = "bottom" }: PosModeTabBarProps) {
   const { t } = useI18n();
   const pathname = usePathname();
   const visibleTabs = usePosTabs(storeId);
 
+  if (variant === "side") {
+    return (
+      <nav
+        className="bg-background hidden w-12 shrink-0 flex-col items-stretch border-r md:landscape:flex"
+        aria-label={t("nav.posSystem")}
+      >
+        {visibleTabs.map((tab) => {
+          const fullHref = `/store/${storeId}${tab.href}`;
+          const active = pathname === fullHref;
+          const Icon = tab.icon;
+          return (
+            <Link
+              key={tab.href}
+              href={fullHref}
+              className={cn(
+                "flex h-12 shrink-0 items-center justify-center transition active:scale-[0.97]",
+                active ? "text-primary" : "text-muted-foreground"
+              )}
+              aria-current={active ? "page" : undefined}
+              title={t(tab.labelKey)}
+            >
+              <Icon className="size-5" aria-hidden />
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
+
   return (
     <nav
-      className="bg-background flex h-14 shrink-0 items-stretch border-t pb-[env(safe-area-inset-bottom)]"
+      className="bg-background flex h-14 shrink-0 items-stretch border-t pb-[env(safe-area-inset-bottom)] md:landscape:hidden"
       aria-label={t("nav.posSystem")}
     >
       {visibleTabs.map((tab) => {

@@ -46,7 +46,7 @@ export function PosOrderListTable({ orders, selectedId, onSelect }: PosOrderList
           <TableRow className="hover:bg-transparent">
             <TableHead className={head}>{t("pos.queue.colOrder")}</TableHead>
             <TableHead className={head}>{t("pos.queue.colTime")}</TableHead>
-            <TableHead className={cn(head, "text-center")}>{t("pos.queue.colQueue")}</TableHead>
+            <TableHead className={cn(head, "hidden text-center sm:table-cell")}>{t("pos.queue.colQueue")}</TableHead>
             <TableHead className={head}>{t("pos.queue.colCustomer")}</TableHead>
             <TableHead className={head}>{t("pos.queue.colTable")}</TableHead>
             <TableHead className={cn(head, "text-right")}>{t("pos.queue.colTotal")}</TableHead>
@@ -96,7 +96,7 @@ export function PosOrderListTable({ orders, selectedId, onSelect }: PosOrderList
                 >
                   {format(new Date(order.createdAt), "dd/MM HH:mm")}
                 </TableCell>
-                <TableCell className={cn(cell, "text-center text-sm font-bold tabular-nums")}>
+                <TableCell className={cn(cell, "hidden text-center text-sm font-bold tabular-nums sm:table-cell")}>
                   {formatQueueNumber(order.queueNumber)}
                 </TableCell>
                 <TableCell className={cn(cell, "max-w-[7rem] truncate")} title={order.customerName}>

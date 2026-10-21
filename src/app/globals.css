@@ -835,6 +835,10 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
    address bar are drawn) or a phone held sideways. Used by the home hero to
    keep the whole card in the first screen. */
 @custom-variant short (@media (max-height: 800px));
+/* Landscape orientation: a phone or tablet turned sideways. Used by the POS
+   tab bar to swap from a bottom strip to a slim left rail, reclaiming ~56px
+   of vertical space on landscape tablets without touching portrait layout. */
+@custom-variant landscape (@media (orientation: landscape));
 
 @theme inline {
   --color-brand-primary: #444444;

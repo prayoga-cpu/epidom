@@ -23,14 +23,14 @@ export function PosOrderStatusRail({ counts, value, onChange }: PosOrderStatusRa
   const { t } = useI18n();
 
   const base =
-    "flex h-11 shrink-0 touch-manipulation items-center gap-2 rounded-lg border px-3 text-left text-xs font-medium transition-colors lg:w-full";
+    "flex h-11 shrink-0 touch-manipulation items-center gap-2 rounded-lg border px-3 text-left text-xs font-medium transition-colors md:w-full";
   const idle = "border-border bg-card text-foreground hover:border-foreground/20";
   const on = "border-primary bg-primary/10 text-foreground";
 
   return (
     <nav
       aria-label={t("pos.queue.statusRailLabel")}
-      className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0"
+      className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0"
     >
       <button
         type="button"

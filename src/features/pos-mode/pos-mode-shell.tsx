@@ -51,11 +51,16 @@ export function PosModeShell({ storeId, children, linkedStaff = false }: PosMode
           />
           <PosModeUpgradeBanner />
 
-          <main id="main-content" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {children}
-          </main>
+          {/* flex-row so the landscape side rail sits left of the content area */}
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {!onOperational && <PosModeTabBar storeId={storeId} variant="side" />}
+            <main id="main-content" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {children}
+            </main>
+          </div>
 
-          {!onOperational && <PosModeTabBar storeId={storeId} />}
+          {/* Portrait bottom bar — hidden in landscape+md where the side rail takes over */}
+          {!onOperational && <PosModeTabBar storeId={storeId} variant="bottom" />}
         </div>
       </PosModeToolbarSlotContext.Provider>
 
