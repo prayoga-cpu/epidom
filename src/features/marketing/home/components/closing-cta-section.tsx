@@ -107,7 +107,8 @@ export function ClosingCtaSection() {
                 />
                 <button
                   type="submit"
-                  className="bg-epi-gold-500 text-epi-navy-900 h-12 w-full cursor-pointer rounded-full px-4 [font-family:var(--epi-font-body)] text-sm font-medium tracking-[0.06em] whitespace-nowrap uppercase transition-all hover:-translate-y-px sm:h-auto sm:w-auto sm:px-6 sm:py-3"
+                  className="h-12 w-full cursor-pointer rounded-full px-4 [font-family:var(--epi-font-body)] text-sm font-bold tracking-[0.06em] whitespace-nowrap uppercase transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px] sm:h-auto sm:w-auto sm:px-6 sm:py-3"
+                  style={{ background: "linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c)", color: "#151004", boxShadow: "0 0 0 1px rgba(255,255,255,.22) inset" }}
                 >
                   {t("redesign.cta.button")}
                 </button>

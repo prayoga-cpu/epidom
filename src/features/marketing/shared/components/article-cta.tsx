@@ -63,7 +63,8 @@ export function ArticleCta({
         <a
           href={href}
           onClick={handleClick}
-          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-[var(--epi-gold-500)] px-7 text-sm font-bold tracking-[0.06em] whitespace-nowrap text-[var(--epi-navy-900)] no-underline shadow-[0_12px_32px_-10px_rgba(217,174,59,0.65)] transition-transform hover:-translate-y-px"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full px-7 text-sm font-bold tracking-[0.06em] whitespace-nowrap no-underline transition-[transform,box-shadow] duration-150 hover:-translate-y-[3px]"
+          style={{ background: "linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c)", color: "#151004", boxShadow: "0 0 0 1px rgba(255,255,255,.28) inset,0 8px 28px rgba(217,174,59,.35),0 3px 0 rgba(139,90,10,.85)" }}
         >
           {button}
         </a>
@@ -100,13 +101,14 @@ export function ArticleCta({
           display: "inline-flex",
           padding: "16px 36px",
           borderRadius: 999,
-          background: "var(--epi-gold-500)",
-          color: "var(--epi-navy-900)",
+          background: "linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c)",
+          color: "#151004",
           fontSize: 15,
           fontWeight: 700,
           letterSpacing: "0.06em",
           textDecoration: "none",
-          boxShadow: "0 12px 32px -10px rgba(217,174,59,0.65)",
+          boxShadow: "0 0 0 1px rgba(255,255,255,.28) inset,0 8px 28px rgba(217,174,59,.35),0 3px 0 rgba(139,90,10,.85)",
+          transition: "transform .15s,box-shadow .15s",
         }}
       >
         {button}

@@ -14,6 +14,15 @@ import { getNavigationByVariant, type NavItem } from "@/config/navigation.config
 import { trackEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 
+const GOLD_BUTTON_STYLE: React.CSSProperties = {
+  background: "linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c)",
+  color: "#151004",
+  fontFamily: "var(--epi-font-body)",
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+  boxShadow: "0 0 0 1px rgba(255,255,255,.22) inset",
+};
+
 interface SiteHeaderProps {
   showNav?: boolean;
   variant?: "landing" | "authenticated";
@@ -123,13 +132,8 @@ export const SiteHeader = memo(function SiteHeader({
       return (
         <button
           onClick={handleLogout}
-          className="cursor-pointer rounded-full px-5 py-2 text-sm font-medium tracking-widest uppercase transition-all"
-          style={{
-            background: "var(--epi-gold-500)",
-            color: "var(--epi-navy-900)",
-            fontFamily: "var(--epi-font-body)",
-            letterSpacing: "0.06em",
-          }}
+          className="cursor-pointer rounded-full px-5 py-2 text-sm font-bold transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px]"
+          style={GOLD_BUTTON_STYLE}
         >
           {t("common.actions.logout")}
         </button>
@@ -139,14 +143,8 @@ export const SiteHeader = memo(function SiteHeader({
       return (
         <button
           onClick={handleGoToStores}
-          className="cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-all hover:-translate-y-px"
-          style={{
-            background: "var(--epi-gold-500)",
-            color: "var(--epi-navy-900)",
-            fontFamily: "var(--epi-font-body)",
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
+          className="cursor-pointer rounded-full px-5 py-2 text-sm font-bold transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px]"
+          style={GOLD_BUTTON_STYLE}
         >
           {t("common.nav.stores")} →
         </button>
@@ -155,15 +153,8 @@ export const SiteHeader = memo(function SiteHeader({
     return (
       <button
         onClick={handleStartFree}
-        className="cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-all hover:-translate-y-px active:translate-y-0"
-        style={{
-          background: "var(--epi-gold-500)",
-          color: "var(--epi-navy-900)",
-          fontFamily: "var(--epi-font-body)",
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          boxShadow: "0 8px 24px -10px rgba(217,174,59,0.6)",
-        }}
+        className="cursor-pointer rounded-full px-5 py-2 text-sm font-bold transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px] active:translate-y-0"
+        style={GOLD_BUTTON_STYLE}
       >
         {t("nav.startTrial")} →
       </button>
@@ -289,8 +280,8 @@ export const SiteHeader = memo(function SiteHeader({
                     {showLogout && session?.user ? (
                       <button
                         onClick={handleLogout}
-                        className="w-full cursor-pointer rounded-full py-3 text-sm font-medium tracking-widest uppercase"
-                        style={{ background: "var(--epi-gold-500)", color: "var(--epi-navy-900)" }}
+                        className="w-full cursor-pointer rounded-full py-3 text-sm font-bold tracking-[0.06em] uppercase transition-transform hover:-translate-y-[2px]"
+                        style={GOLD_BUTTON_STYLE}
                       >
                         {t("common.actions.logout")}
                       </button>
@@ -298,11 +289,8 @@ export const SiteHeader = memo(function SiteHeader({
                       <SheetClose asChild>
                         <button
                           onClick={handleGoToStores}
-                          className="w-full cursor-pointer rounded-full py-3 text-sm font-medium tracking-widest uppercase"
-                          style={{
-                            background: "var(--epi-gold-500)",
-                            color: "var(--epi-navy-900)",
-                          }}
+                          className="w-full cursor-pointer rounded-full py-3 text-sm font-bold tracking-[0.06em] uppercase transition-transform hover:-translate-y-[2px]"
+                          style={GOLD_BUTTON_STYLE}
                         >
                           {t("common.nav.stores")}
                         </button>
@@ -311,11 +299,8 @@ export const SiteHeader = memo(function SiteHeader({
                       <SheetClose asChild>
                         <button
                           onClick={handleStartFree}
-                          className="w-full cursor-pointer rounded-full py-3 text-sm font-medium tracking-widest uppercase"
-                          style={{
-                            background: "var(--epi-gold-500)",
-                            color: "var(--epi-navy-900)",
-                          }}
+                          className="w-full cursor-pointer rounded-full py-3 text-sm font-bold tracking-[0.06em] uppercase transition-transform hover:-translate-y-[2px]"
+                          style={GOLD_BUTTON_STYLE}
                         >
                           {t("nav.startTrial")} →
                         </button>

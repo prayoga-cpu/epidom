@@ -527,11 +527,14 @@ export function PricingCards({
                     width: "100%",
                     padding: "14px 0",
                     borderRadius: 999,
-                    background: highlight ? "var(--epi-gold-500)" : "transparent",
-                    color: highlight ? "var(--epi-navy-900)" : "var(--epi-cream-50)",
+                    background: highlight
+                      ? "linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c)"
+                      : "transparent",
+                    color: highlight ? "#151004" : "var(--epi-cream-50)",
                     border: `1px solid ${highlight ? "transparent" : "rgba(255,255,255,0.18)"}`,
+                    boxShadow: highlight ? "0 0 0 1px rgba(255,255,255,.22) inset" : undefined,
                     fontSize: 14,
-                    fontWeight: trialOffer ? 700 : 500,
+                    fontWeight: 700,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
                     fontFamily: "var(--epi-font-body)",
