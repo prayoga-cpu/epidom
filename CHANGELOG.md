@@ -15,6 +15,7 @@ Bump the version in `package.json` and `src/lib/version.ts` with every release.
 - Selfie camera: "Try again" asks the browser for the camera right away, every time you tap it, and the camera starts by itself once you allow it in the browser's site settings.
 - Selfie camera: shows "Waiting for camera access…" while the browser's permission prompt is open, and tries every camera on the device when the default one is busy.
 - Selfie camera: clearer messages when another app is using the camera or the page isn't allowed to use it, with the photo upload always available as a backup.
+- Sales page 2: everything below the phone mock-up, including the newsletter and footer, now gets its styling on desktop too. A CSS block that was never closed had limited those styles to phones.
 
 ## [3.34.0] - 2026-10-21 · ux
 
