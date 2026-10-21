@@ -37,7 +37,7 @@ export function NewsletterSignup() {
           maxWidth: 560,
           margin: "0 auto",
           textAlign: "center",
-          padding: "0 16px",
+          padding: "0 24px",
         }}
       >
         <h3
@@ -69,13 +69,10 @@ export function NewsletterSignup() {
         ) : (
           <form
             onSubmit={handleSubmit}
+            className="flex flex-col gap-2 sm:flex-row sm:gap-2"
             style={{
-              display: "flex",
-              gap: 8,
               maxWidth: 420,
               margin: "0 auto",
-              flexWrap: "wrap",
-              justifyContent: "center",
             }}
           >
             <input
@@ -85,8 +82,8 @@ export function NewsletterSignup() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t("footer.newsletterPlaceholder")}
               disabled={status === "sending"}
+              className="w-full sm:flex-1"
               style={{
-                flex: "1 1 200px",
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 10,
@@ -106,6 +103,7 @@ export function NewsletterSignup() {
             <button
               type="submit"
               disabled={status === "sending"}
+              className="w-full sm:w-auto whitespace-nowrap"
               style={{
                 padding: "11px 22px",
                 background: "linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c)",
@@ -115,7 +113,6 @@ export function NewsletterSignup() {
                 border: "none",
                 borderRadius: 10,
                 cursor: "pointer",
-                whiteSpace: "nowrap",
                 opacity: status === "sending" ? 0.7 : 1,
               }}
             >

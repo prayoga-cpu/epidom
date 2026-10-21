@@ -7,7 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/components/lang/i18n-provider";
-import type { MergedOptionGroup } from "@/lib/utils/menu-item-options";
+import { isBYOItem, type MergedOptionGroup } from "@/lib/utils/menu-item-options";
 
 export interface SelectedOptionValue {
   groupName: string;
@@ -22,6 +22,7 @@ interface MenuItemOptionsDialogProps {
   onOpenChange: (open: boolean) => void;
   itemName: string;
   groups: MergedOptionGroup[];
+  basePrice?: number;
   initialSelected?: SelectedOptionValue[];
   initialNotes?: string;
   formatPrice: (amount: number) => string;
@@ -39,6 +40,7 @@ export function MenuItemOptionsDialog({
   onOpenChange,
   itemName,
   groups,
+  basePrice = 0,
   initialSelected,
   initialNotes,
   formatPrice,
@@ -48,6 +50,12 @@ export function MenuItemOptionsDialog({
   const [selected, setSelected] = useState<Record<string, SelectedOptionValue[]>>({});
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const isBYO = isBYOItem(groups);
+  const addonsTotal = Object.values(selected)
+    .flat()
+    .reduce((sum, o) => sum + o.priceAdjustment, 0);
+  const runningTotal = basePrice + addonsTotal;
 
   useEffect(() => {
     if (!open) return;
@@ -100,6 +108,14 @@ export function MenuItemOptionsDialog({
         maxWidth="md"
         footer={
           <>
+            {isBYO && (
+              <div className="text-muted-foreground mr-auto flex items-baseline gap-1 text-xs">
+                <span>{t("pos.options.total")}</span>
+                <span className="text-foreground text-sm font-semibold tabular-nums">
+                  {formatPrice(runningTotal)}
+                </span>
+              </div>
+            )}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("common.actions.cancel")}
             </Button>
@@ -110,6 +126,11 @@ export function MenuItemOptionsDialog({
         }
       >
         <div className="space-y-5 py-2">
+          {isBYO && (
+            <p className="text-muted-foreground text-sm">
+              {t("pos.options.byoHint")}
+            </p>
+          )}
           {groups.map((group) => (
             <div key={group.name} className="space-y-2">
               <div className="flex items-center justify-between">

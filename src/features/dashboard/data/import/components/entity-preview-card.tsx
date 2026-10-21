@@ -75,6 +75,12 @@ const ENTITY_FIELDS: Record<
     { key: "country", labelKey: "pages.smartImportCountry", type: "text" },
     { key: "notes", labelKey: "common.notes", type: "textarea" },
   ],
+  menu_item: [
+    { key: "menuItemName", labelKey: "common.name", type: "text" },
+    { key: "groupName", labelKey: "common.category", type: "text" },
+    { key: "optionName", labelKey: "pages.smartImportOptionName", type: "text" },
+    { key: "priceAdd", labelKey: "pages.smartImportRetailPrice", type: "number" },
+  ],
 };
 
 // Display labels for entity types
@@ -83,6 +89,7 @@ const ENTITY_LABEL_KEYS: Record<EntityType, string> = {
   product: "common.product",
   recipe: "common.recipe",
   supplier: "pages.entityPreviewSupplierLabel",
+  menu_item: "common.menuItem",
 };
 
 export function EntityPreviewCard({

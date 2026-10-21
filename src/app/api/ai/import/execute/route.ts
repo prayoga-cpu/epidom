@@ -23,10 +23,10 @@ export const dynamic = "force-dynamic";
 const ExecuteRequestSchema = z.object({
   sessionId: z.string().cuid(),
   storeId: z.string().cuid(),
-  entityType: z.enum(["material", "product", "supplier", "recipe"]),
+  entityType: z.enum(["material", "product", "supplier", "recipe", "menu_item"]),
   // The type picked (or detected) in the dialog. Separate from `entityType`,
   // which older clients fill with a placeholder when nothing was chosen.
-  fallbackEntityType: z.enum(["material", "product", "supplier", "recipe"]).optional(),
+  fallbackEntityType: z.enum(["material", "product", "supplier", "recipe", "menu_item"]).optional(),
   data: z.array(z.record(z.unknown())),
   decisions: z
     .array(

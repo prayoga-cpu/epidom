@@ -976,11 +976,13 @@ const multiEntityImportSchema = z.object({
   storeId: z.string().min(1, "Store ID is required"),
   data: z.array(z.record(z.any())).min(1, "At least one record is required"),
   /** What the import dialog says these rows are; decides a row nothing else identifies. */
-  fallbackEntityType: z.enum(["supplier", "material", "recipe", "product"]).optional(),
+  fallbackEntityType: z
+    .enum(["supplier", "material", "recipe", "product", "menu_item"])
+    .optional(),
 });
 
 // Extended result type for multi-entity import
-type ImportEntity = "supplier" | "material" | "recipe" | "product";
+type ImportEntity = "supplier" | "material" | "recipe" | "product" | "menu_item";
 
 /** One row the import could not write, with the reason. */
 interface ImportFailure {
@@ -1001,6 +1003,7 @@ interface MultiEntityImportResult {
     materials: { attempted: number; succeeded: number };
     recipes: { attempted: number; succeeded: number };
     products: { attempted: number; succeeded: number };
+    menu_items: { attempted: number; succeeded: number };
     totalSucceeded: number;
   };
   /** Why rows were not imported (capped). Absent when every row went in. */
@@ -1032,7 +1035,13 @@ function detectEntityType(
   if (category.includes("recipe") || category === "recipes") return "recipe";
   if (category.includes("product") || category === "products") return "product";
 
+  // 1b. Explicit menu_item category hint
+  if (category.includes("menu_item") || category.includes("build your own") || category.includes("byo"))
+    return "menu_item";
+
   // 2. Fallback: Check in order of specificity (most specific first)
+  // A row with groupName + optionName + priceAdd (and no costPrice) = BYO menu option
+  if (hasValue("groupName") && hasValue("optionName") && !hasValue("costPrice")) return "menu_item";
   if (ENTITY_UNIQUE_FIELDS.recipe.some(hasValue)) return "recipe";
   if (ENTITY_UNIQUE_FIELDS.material.some(hasValue)) return "material";
   if (ENTITY_UNIQUE_FIELDS.product.some(hasValue)) return "product";
@@ -1047,12 +1056,133 @@ function detectEntityType(
 }
 
 /**
+ * Import BYO menu rows as a single MenuItem with modifier groups.
+ *
+ * Each row represents one option within a modifier group:
+ *   { menuItemName, groupName, optionName, priceAdd, isRequired?, maxSelections? }
+ *
+ * Rows are grouped by menuItemName → grouped by groupName → options[].
+ * One MenuItem is created (or found by name) per unique menuItemName.
+ */
+async function importMenuItems(
+  rows: Record<string, any>[],
+  storeId: string
+): Promise<ImportResult> {
+  let count = 0;
+  const errors: Array<{ index: number; message: string }> = [];
+
+  // Find the storefront for this store
+  const storefront = await prisma.storefront.findFirst({ where: { storeId } });
+  if (!storefront) {
+    return { success: false, count: 0, error: "No storefront found for this store." };
+  }
+
+  // Group rows by menuItemName (fall back to "Build Your Own")
+  const byItem: Record<string, typeof rows> = {};
+  for (const row of rows) {
+    const itemName = String(row.menuItemName || row.name || "Build Your Own").trim();
+    (byItem[itemName] ??= []).push(row);
+  }
+
+  for (const [itemName, itemRows] of Object.entries(byItem)) {
+    try {
+      // Build modifiers JSON from the option rows
+      const groupMap: Record<
+        string,
+        { isRequired: boolean; maxSelections: number; options: Array<{ name: string; priceAdd: number }> }
+      > = {};
+
+      for (const row of itemRows) {
+        const groupName = String(row.groupName || "Options").trim();
+        const optionName = String(row.optionName || row.option || "").trim();
+        if (!optionName) continue;
+        const priceAdd = parseImportedMoney(String(row.priceAdd ?? row.price ?? 0));
+        if (!groupMap[groupName]) {
+          // Groups named BASE/MAIN/required or numbered "1 …" default to required
+          const nameUpper = groupName.toUpperCase();
+          const looksRequired =
+            nameUpper.startsWith("BASE") ||
+            nameUpper.startsWith("MAIN") ||
+            nameUpper.startsWith("1 ") ||
+            row.isRequired === true ||
+            row.isRequired === "true" ||
+            row.isRequired === 1;
+          groupMap[groupName] = {
+            isRequired: !!looksRequired,
+            maxSelections: Number(row.maxSelections) || 1,
+            options: [],
+          };
+        }
+        groupMap[groupName].options.push({ name: optionName, priceAdd: Number(priceAdd) });
+      }
+
+      // For non-required groups, default maxSelections to the option count if not set
+      for (const [, group] of Object.entries(groupMap)) {
+        if (!group.isRequired && group.maxSelections === 1 && group.options.length > 1) {
+          group.maxSelections = group.options.length;
+        }
+      }
+
+      const modifiers = Object.entries(groupMap).map(([name, g]) => ({
+        name,
+        isRequired: g.isRequired,
+        maxSelections: g.maxSelections,
+        options: g.options,
+      }));
+
+      // Find or create the "Build Your Own" category
+      let category = await prisma.menuCategory.findFirst({
+        where: { storefrontId: storefront.id, name: "Build Your Own" },
+      });
+      if (!category) {
+        category = await prisma.menuCategory.create({
+          data: { storefrontId: storefront.id, name: "Build Your Own", displayOrder: 0 },
+        });
+      }
+
+      // Upsert the MenuItem (match by name within this storefront)
+      const existing = await prisma.menuItem.findFirst({
+        where: { storefrontId: storefront.id, name: itemName },
+      });
+      if (existing) {
+        await prisma.menuItem.update({
+          where: { id: existing.id },
+          data: { modifiers: modifiers as unknown as object, categoryId: category.id },
+        });
+      } else {
+        await storefrontService.createMenuItem(storefront.id, {
+          name: itemName,
+          price: 0,
+          categoryId: category.id,
+          department: "KITCHEN",
+          displayOrder: 0,
+          isAvailable: true,
+          showOnCashier: true,
+          isFeatured: false,
+          modifiers,
+        });
+      }
+      count++;
+    } catch (err) {
+      errors.push({ index: 0, message: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  const total = Object.keys(byItem).length;
+  return {
+    success: errors.length < total,
+    count,
+    details: { attempted: total, succeeded: count, failed: errors.length, errors },
+  };
+}
+
+/**
  * Smart All-in-One Multi-Entity Import
  *
  * This function:
  * 1. Analyzes each row to detect its entity type
  * 2. Groups rows by entity type
- * 3. Imports in dependency order: Supplier → Material → Recipe → Product
+ * 3. Imports in dependency order: Supplier → Material → Recipe → Product → MenuItem
  * 4. Returns a detailed breakdown of results
  */
 export async function bulkImportMultiEntity(
@@ -1063,6 +1193,7 @@ export async function bulkImportMultiEntity(
     materials: { attempted: 0, succeeded: 0 },
     recipes: { attempted: 0, succeeded: 0 },
     products: { attempted: 0, succeeded: 0 },
+    menu_items: { attempted: 0, succeeded: 0 },
     totalSucceeded: 0,
   };
 
@@ -1111,11 +1242,13 @@ export async function bulkImportMultiEntity(
       material: Record<string, any>[];
       recipe: Record<string, any>[];
       product: Record<string, any>[];
+      menu_item: Record<string, any>[];
     } = {
       supplier: [],
       material: [],
       recipe: [],
       product: [],
+      menu_item: [],
     };
 
     const now = new Date();
@@ -1171,7 +1304,7 @@ export async function bulkImportMultiEntity(
       collectFailures("recipe", result);
     }
 
-    // 5d. Products last (may reference recipes)
+    // 5d. Products (may reference recipes)
     if (grouped.product.length > 0) {
       summary.products.attempted = grouped.product.length;
       const result = await importProducts(grouped.product, storeId);
@@ -1179,12 +1312,21 @@ export async function bulkImportMultiEntity(
       collectFailures("product", result);
     }
 
+    // 5e. Menu items (BYO modifier groups → MenuItem.modifiers)
+    if (grouped.menu_item.length > 0) {
+      summary.menu_items.attempted = grouped.menu_item.length;
+      const result = await importMenuItems(grouped.menu_item, storeId);
+      summary.menu_items.succeeded = result.count || 0;
+      collectFailures("menu_item", result);
+    }
+
     // 6. Calculate totals
     summary.totalSucceeded =
       summary.suppliers.succeeded +
       summary.materials.succeeded +
       summary.recipes.succeeded +
-      summary.products.succeeded;
+      summary.products.succeeded +
+      summary.menu_items.succeeded;
 
     // 7. Revalidate cache
     revalidatePath(`/store/${storeId}/data`);
@@ -1193,7 +1335,8 @@ export async function bulkImportMultiEntity(
       summary.suppliers.attempted +
       summary.materials.attempted +
       summary.recipes.attempted +
-      summary.products.attempted;
+      summary.products.attempted +
+      summary.menu_items.attempted;
     const reported = failures.slice(0, MAX_REPORTED_FAILURES);
 
     // Nothing went in at all: that is a failed import, not a successful one

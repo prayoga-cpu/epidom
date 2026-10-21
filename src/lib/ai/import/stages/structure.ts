@@ -34,15 +34,16 @@ Your task: Identify where the real data starts, and which entity type the file h
 ${dataPreview}
 
 Determine:
-1. Structure type (STANDARD_CSV, TRANSPOSED, MIXED, HIERARCHICAL, PIVOTED)
+1. Structure type (STANDARD_CSV, TRANSPOSED, MIXED, HIERARCHICAL, PIVOTED, BUILD_YOUR_OWN)
+   - BUILD_YOUR_OWN: a menu where rows represent modifier options grouped under section headers (BASE/ADD/SAUCE, Protein/Fresh/Boosts, etc.) — 3-col layout (group, item, price) or section-header rows
 2. Primary language
-3. Does it contain multiple entity types? (suppliers, materials, products, recipes mixed together)
-4. primaryEntityType: the SINGLE best-fit entity type for the whole file — "supplier", "material", "product", or "recipe". Read the column headers in their own language (e.g. French "Rendement"/"Ingrédient" => recipe, "Prix de vente" => product). Always pick the closest match even if unsure.
+3. Does it contain multiple entity types? (suppliers, materials, products, recipes, menu_items mixed together)
+4. primaryEntityType: the SINGLE best-fit entity type for the whole file — "supplier", "material", "product", "recipe", or "menu_item". Read the column headers in their own language (e.g. French "Rendement"/"Ingrédient" => recipe, "Prix de vente" => product, repeated group headers with option+price => menu_item). Always pick the closest match even if unsure.
 5. How many junk rows at the top?
 6. Which line is the header row? (0-indexed)
 7. Which line does actual data start? (0-indexed)
 8. How many junk rows at the bottom? (summary/total rows)
-9. If hierarchical, identify sections
+9. If hierarchical or BUILD_YOUR_OWN, identify sections/groups
 
 Provide clear reasoning for your decisions.`;
 
@@ -126,6 +127,7 @@ This is critical for correct import routing.`;
 ${dataRows.map((row, idx) => `Row ${idx}: ${row}`).join("\n")}
 
 For each row, determine if it's:
+- MENU_ITEM (has repeating group/section header + option name + price delta — no costPrice/unitCost)
 - SUPPLIER (has contact/location fields)
 - MATERIAL (has unitCost, no sellingPrice)
 - PRODUCT (has costPrice AND sellingPrice)

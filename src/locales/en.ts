@@ -6048,6 +6048,8 @@ lifetime: "Lifetime access",
       dialogDesc: "Choose options for this item",
       addToCart: "Add to cart",
       notesPlaceholder: "e.g. no ice, extra napkins...",
+      total: "Total",
+      byoHint: "Pick your base, add-ons, and sauce below.",
     },
     checkout: {
       title: "Confirm Payment",

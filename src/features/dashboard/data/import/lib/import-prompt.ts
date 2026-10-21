@@ -35,6 +35,7 @@ export const IMPORT_PROMPT_COLUMNS: Record<EntityType, readonly string[]> = {
     "ingredient_unit",
     "instructions",
   ],
+  menu_item: ["menuItemName", "groupName", "optionName", "priceAdd", "isRequired", "maxSelections"],
 };
 
 /** The file name the prompt asks the assistant to use. */
@@ -43,6 +44,7 @@ export const IMPORT_PROMPT_FILE: Record<EntityType, string> = {
   material: "epidom-materials.csv",
   supplier: "epidom-suppliers.csv",
   recipe: "epidom-recipes.csv",
+  menu_item: "epidom-menu-items.csv",
 };
 
 /** Rules every record type shares, then the ones specific to each. */
@@ -52,14 +54,11 @@ const TYPE_RULES: Record<EntityType, readonly string[]> = {
   material: ["unit", "unitCost", "stock", "supplier"],
   supplier: ["contact", "notes"],
   recipe: ["rows", "yield", "ingredients", "instructions"],
+  menu_item: [],
 };
 
-export const IMPORT_PROMPT_TYPES: readonly EntityType[] = [
-  "product",
-  "material",
-  "recipe",
-  "supplier",
-];
+export const IMPORT_PROMPT_TYPES = ["product", "material", "recipe", "supplier"] as const;
+export type ImportPromptType = (typeof IMPORT_PROMPT_TYPES)[number];
 
 /**
  * Build the prompt in the viewer's language. The header line stays in English

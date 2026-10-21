@@ -56,7 +56,7 @@ export function DataQuickStart({
     sanitize
   );
   const [entityType, setEntityType] = useState<EntityType>(
-    defaultEntityType && IMPORT_PROMPT_TYPES.includes(defaultEntityType)
+    defaultEntityType && (IMPORT_PROMPT_TYPES as readonly string[]).includes(defaultEntityType)
       ? defaultEntityType
       : "product"
   );

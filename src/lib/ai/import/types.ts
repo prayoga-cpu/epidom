@@ -11,7 +11,7 @@ import { z } from "zod";
 // ENTITY TYPES
 // =============================================================================
 
-export const EntityType = z.enum(["material", "product", "supplier", "recipe"]);
+export const EntityType = z.enum(["material", "product", "supplier", "recipe", "menu_item"]);
 export type EntityType = z.infer<typeof EntityType>;
 
 // =============================================================================
@@ -67,6 +67,7 @@ export const StructureType = z.enum([
   "MIXED",
   "HIERARCHICAL",
   "PIVOTED",
+  "BUILD_YOUR_OWN",
 ]);
 export type StructureType = z.infer<typeof StructureType>;
 
@@ -316,6 +317,9 @@ export const ImportExecutionResultSchema = z.object({
     products: z.object({ attempted: z.number(), succeeded: z.number() }),
     suppliers: z.object({ attempted: z.number(), succeeded: z.number() }),
     recipes: z.object({ attempted: z.number(), succeeded: z.number() }),
+    menu_items: z
+      .object({ attempted: z.number(), succeeded: z.number() })
+      .default({ attempted: 0, succeeded: 0 }),
     totalSucceeded: z.number(),
     autoCreated: z
       .object({

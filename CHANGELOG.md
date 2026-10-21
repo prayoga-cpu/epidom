@@ -9,6 +9,12 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.33.0] - 2026-10-21 · feat
+
+- Smart import: AI now detects "Build Your Own" (BYO) menu structures from CSV/spreadsheet uploads — group headers (BASE, ADD, SAUCE, etc.) and option/price rows are parsed and saved directly as `MenuItem.modifiers`, creating a "Build Your Own" category automatically.
+- POS & storefront: BYO items show a running total in the options dialog footer, updating as the customer picks base + add-ons + sauce; a hint line explains the three-step flow.
+- Newsletter signup: mobile layout fixed everywhere — form now stacks vertically on small screens with full-width input and button, no more horizontal overflow or edge clipping.
+
 ## [3.32.0] - 2026-10-21 · feat
 
 - Newsletter admin: "Sync users to Resend" button — iterates all app User records and adds them to the Resend newsletter audience in batches of 10 concurrent requests (`POST /api/admin/newsletter/sync-users`).

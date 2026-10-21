@@ -22,6 +22,7 @@ export const IMPORT_TYPE_LABEL: Record<EntityType, string> = {
   material: "pages.smartImportTabMaterials",
   recipe: "pages.smartImportTabRecipes",
   supplier: "pages.smartImportTabSuppliers",
+  menu_item: "common.menuItem",
 };
 
 interface ImportPromptHelperProps {

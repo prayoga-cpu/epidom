@@ -2210,6 +2210,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       dialogDesc: "Choisissez les options pour cet article",
       addToCart: "Ajouter au panier",
       notesPlaceholder: "ex : sans glace, serviettes en plus...",
+      total: "Total",
+      byoHint: "Choisissez votre base, vos accompagnements et votre sauce ci-dessous.",
     },
     checkout: {
       orderType: "Type de Commande",

@@ -6076,6 +6076,8 @@ lifetime: "Akses seumur hidup",
       dialogDesc: "Pilih opsi untuk item ini",
       addToCart: "Tambah ke keranjang",
       notesPlaceholder: "contoh: tanpa es, tambah tisu...",
+      total: "Total",
+      byoHint: "Pilih dasar, tambahan, dan saus Anda di bawah.",
     },
     checkout: {
       title: "Konfirmasi Pembayaran",

@@ -110,6 +110,16 @@ export function serializeProductOptionGroups(
   }));
 }
 
+/**
+ * A "Build Your Own" item has 3+ modifier groups or any required group with
+ * more than 4 options — enough complexity to warrant the running-total UX.
+ */
+export function isBYOItem(groups: MergedOptionGroup[]): boolean {
+  return (
+    groups.length >= 3 || groups.some((g) => g.isRequired && g.options.length > 4)
+  );
+}
+
 export function getMergedOptionGroups(
   menuItem: MenuItemLike | null | undefined,
   product?: ProductLike | null

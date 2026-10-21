@@ -112,6 +112,12 @@ const ENTITY_COLUMNS: Record<
     { key: "country", labelKey: "pages.smartImportCountry", width: "120px" },
     { key: "notes", labelKey: "common.notes", width: "200px" },
   ],
+  menu_item: [
+    { key: "menuItemName", labelKey: "common.name", width: "200px" },
+    { key: "groupName", labelKey: "common.category", width: "150px" },
+    { key: "optionName", labelKey: "pages.smartImportOptionName", width: "200px" },
+    { key: "priceAdd", labelKey: "pages.smartImportRetailPrice", width: "100px" },
+  ],
 };
 
 function classifyEntityType(row: Record<string, string>): EntityType {
@@ -350,6 +356,7 @@ export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewSt
       product: [],
       recipe: [],
       supplier: [],
+      menu_item: [],
     };
     entities.forEach((e) => g[e.entityType].push(e));
     return g;
@@ -361,6 +368,7 @@ export function PreviewStep({ analysis, data, onDataChange, metrics }: PreviewSt
       product: { total: 0, selected: 0 },
       recipe: { total: 0, selected: 0 },
       supplier: { total: 0, selected: 0 },
+      menu_item: { total: 0, selected: 0 },
     };
     entities.forEach((e) => {
       c[e.entityType].total++;

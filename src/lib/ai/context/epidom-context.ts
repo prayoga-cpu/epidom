@@ -213,10 +213,11 @@ Remove: "PT", "CV", "Inc", "Ltd", "Corp", "LLC"
 ## ENTITY DETECTION PRIORITY
 
 When a row could be multiple entity types, use this priority:
-1. RECIPE (if has yield/ingredient fields)
-2. MATERIAL (if has unitCost but NOT sellingPrice)
-3. PRODUCT (if has both costPrice AND sellingPrice)
-4. SUPPLIER (if only has contact/location fields)
+1. MENU_ITEM (if has group/section headers + option names + prices but no costPrice/unitCost)
+2. RECIPE (if has yield/ingredient fields)
+3. MATERIAL (if has unitCost but NOT sellingPrice)
+4. PRODUCT (if has both costPrice AND sellingPrice)
+5. SUPPLIER (if only has contact/location fields)
 
 ---
 
@@ -295,6 +296,21 @@ For combined ingredient format (all ingredients in one cell):
 `,
   };
 
+  definitions["menu_item"] = `
+Target Fields for MENU_ITEM (Build Your Own):
+- menuItemName: The name of the overall item (e.g., "Build Your Own Bowl") — one per file
+- groupName: The modifier group name (e.g., "BASE", "ADD — Protein", "SAUCE")
+- optionName: The individual option within the group (e.g., "Quinoa", "Chicken 100g")
+- priceAdd: The price delta for this option (number >= 0, in the store's display currency)
+- isRequired: Whether this group requires at least one selection (default true for BASE/main groups)
+- maxSelections: Maximum options allowed in this group (default 1 for required groups, count of options for optional groups)
+
+Layout patterns:
+1. THREE-COLUMN (group, option, price): most common — each row is one option
+2. SECTION-HEADER (group name row, then option+price rows): group is a bold/all-caps row
+3. SIDE-BY-SIDE (groups in columns): each column is a group, rows are options
+`;
+
   return definitions[entityType] || "";
 }
 
@@ -304,7 +320,16 @@ For combined ingredient format (all ingredients in one cell):
 export const ENTITY_DETECTION_HINTS = `
 ## How to Detect Entity Type from Data
 
-### RECIPE indicators (highest priority):
+### MENU_ITEM / BUILD-YOUR-OWN indicators (highest priority when present):
+- Has repeating group/section headers that are NOT ingredient names (e.g., "BASE", "ADD", "SAUCE", "PROTEIN", "FRESH", "TOPPINGS")
+- Has option names WITH individual prices but NO costPrice or unitCost column
+- Layout is often 3-column: group | item/option | price
+- May have numbered steps: "1 BASE", "2 ADD", "3 SAUCE"
+- Checkboxes, bullet points, or section dividers in the data
+- Price column contains only small positive numbers (add-ons, not base product prices)
+- Key signal: the same "group" value repeats across many rows
+
+### RECIPE indicators:
 - Has columns matching: yieldQuantity, yieldUnit, productionTimeMinutes, instructions
 - Has ingredient-related columns: ingredient_name, ingredient_qty, ingredient_unit
 - Multiple rows with same name but different ingredient values

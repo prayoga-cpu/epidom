@@ -138,7 +138,7 @@ export function useAnalyzeImport() {
     mutationFn: async (params: {
       storeId: string;
       file: File; // Changed from csvContent: string
-      entityType?: "material" | "product" | "supplier" | "recipe";
+      entityType?: "material" | "product" | "supplier" | "recipe" | "menu_item";
     }): Promise<AnalyzeResponse> => {
       // Create FormData to send file as binary attachment
       const formData = new FormData();
@@ -178,9 +178,9 @@ export function useExecuteImport() {
     mutationFn: async (params: {
       sessionId: string;
       storeId: string;
-      entityType: "material" | "product" | "supplier" | "recipe";
+      entityType: "material" | "product" | "supplier" | "recipe" | "menu_item";
       /** The type picked or detected in the dialog; omitted when it is unknown. */
-      fallbackEntityType?: "material" | "product" | "supplier" | "recipe";
+      fallbackEntityType?: "material" | "product" | "supplier" | "recipe" | "menu_item";
       data: Array<Record<string, unknown>>;
       decisions?: Array<{
         rowIndex: number;
@@ -234,7 +234,7 @@ export function useSaveFeedback() {
     mutationFn: async (params: {
       sessionId: string;
       storeId: string;
-      entityType: "material" | "product" | "supplier" | "recipe";
+      entityType: "material" | "product" | "supplier" | "recipe" | "menu_item";
       feedback: Array<{
         type:
           | "FIELD_MAPPING"
