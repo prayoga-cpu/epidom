@@ -972,6 +972,8 @@ export const id = {
     cameraGuideBrowser: "Klik ikon kamera di address bar → Izinkan",
     cameraGuideMac: "Mac: System Settings → Privacy & Security → Camera → aktifkan browser Anda",
     cameraGuideWindows: "Windows: Settings → Privacy → Camera → aktifkan untuk browser Anda",
+    cameraGuideAndroid: "Android: ketuk ikon gembok di address bar → Izin → Kamera → Izinkan",
+    cameraGuideIOS: "iPhone/iPad: Pengaturan → [browser Anda] → Kamera → Izinkan",
     retryCamera: "Coba lagi",
     retake: "Ambil Ulang",
     confirmPhoto: "Gunakan Foto Ini",

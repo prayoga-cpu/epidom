@@ -958,6 +958,8 @@ export const en = {
     cameraGuideBrowser: "Click the camera icon in the address bar → Allow",
     cameraGuideMac: "Mac: System Settings → Privacy & Security → Camera → enable your browser",
     cameraGuideWindows: "Windows: Settings → Privacy → Camera → turn on for your browser",
+    cameraGuideAndroid: "Android: tap the lock icon in the address bar → Permissions → Camera → Allow",
+    cameraGuideIOS: "iPhone/iPad: Settings → [your browser] → Camera → Allow",
     retryCamera: "Try again",
     retake: "Retake",
     confirmPhoto: "Use This Photo",

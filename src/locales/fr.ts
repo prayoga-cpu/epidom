@@ -961,6 +961,8 @@ export const fr = {
     cameraGuideBrowser: "Cliquez sur l'icône caméra dans la barre d'adresse → Autoriser",
     cameraGuideMac: "Mac : Réglages Système → Confidentialité → Caméra → activer votre navigateur",
     cameraGuideWindows: "Windows : Paramètres → Confidentialité → Caméra → activer pour votre navigateur",
+    cameraGuideAndroid: "Android : appuyez sur l'icône cadenas dans la barre d'adresse → Autorisations → Caméra → Autoriser",
+    cameraGuideIOS: "iPhone/iPad : Réglages → [votre navigateur] → Caméra → Autoriser",
     retryCamera: "Réessayer",
     retake: "Reprendre",
     confirmPhoto: "Utiliser cette photo",

@@ -197,8 +197,18 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
     }
   })();
 
-  const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
-  const isWindows = typeof navigator !== "undefined" && /Win/i.test(navigator.platform);
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isAndroid = /Android/i.test(ua);
+  // iPads on iOS 13+ report as "MacIntel" in navigator.platform but have touchend
+  const isIOS =
+    /iPhone|iPad|iPod/i.test(ua) ||
+    (typeof navigator !== "undefined" &&
+      /Mac/i.test(navigator.platform ?? "") &&
+      typeof document !== "undefined" &&
+      "ontouchend" in document);
+  const isMobile = isAndroid || isIOS;
+  const isMac = !isIOS && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform ?? "");
+  const isWindows = typeof navigator !== "undefined" && /Win/i.test(navigator.platform ?? "");
 
   const canRetryCamera = cameraFailure !== null && cameraFailure !== "insecure" && cameraFailure !== "unsupported";
 
@@ -222,11 +232,15 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
                       browser already reports "granted" (OS is blocking instead) */}
                   {!osBlocked && <li>{t("clockInOut.cameraGuideBrowser")}</li>}
                   <li className={osBlocked ? "font-semibold text-amber-400/80" : ""}>
-                    {isMac
-                      ? t("clockInOut.cameraGuideMac")
-                      : isWindows
-                        ? t("clockInOut.cameraGuideWindows")
-                        : `${t("clockInOut.cameraGuideMac")} / ${t("clockInOut.cameraGuideWindows")}`}
+                    {isAndroid
+                      ? t("clockInOut.cameraGuideAndroid")
+                      : isIOS
+                        ? t("clockInOut.cameraGuideIOS")
+                        : isMac
+                          ? t("clockInOut.cameraGuideMac")
+                          : isWindows
+                            ? t("clockInOut.cameraGuideWindows")
+                            : `${t("clockInOut.cameraGuideMac")} / ${t("clockInOut.cameraGuideWindows")}`}
                   </li>
                 </ol>
               </div>
@@ -250,8 +264,10 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
         )}
       </div>
       <canvas ref={canvasRef} className="hidden" />
-      {/* No `capture` attribute: on desktop it can block the file picker;
-          mobile browsers already open the camera via `accept="image/*"`. */}
+      {/* `capture` is set dynamically at click-time: "user" on mobile so
+          pressing the fallback button opens the native camera directly
+          (bypassing any browser site-level block); removed on desktop so the
+          normal file picker opens instead. */}
       <input
         ref={fileInputRef}
         type="file"
@@ -281,7 +297,19 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
         <Button
           type="button"
           className="h-11 w-full"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            const input = fileInputRef.current;
+            if (!input) return;
+            // On Android/iOS, `capture="user"` opens the native camera directly,
+            // bypassing any browser site-level permission block entirely.
+            // On desktop, omit it so the normal file picker opens instead.
+            if (isMobile) {
+              input.setAttribute("capture", "user");
+            } else {
+              input.removeAttribute("capture");
+            }
+            input.click();
+          }}
           disabled={disabled}
         >
           <Upload className="mr-2 h-4 w-4" />
