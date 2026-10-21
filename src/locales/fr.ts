@@ -951,13 +951,16 @@ export const fr = {
     dialogTitle: "Pointage",
     selectStaff: "Sélectionnez votre nom",
     enterPin: "Saisissez votre PIN",
-    cameraPermissionDenied:
-      "Caméra indisponible. Utilisez le bouton ci-dessous pour prendre une photo.",
+    cameraPermissionDenied: "Accès à la caméra bloqué.",
     cameraNotFound:
-      "Aucune caméra détectée sur cet appareil. Utilisez le bouton ci-dessous pour prendre une photo.",
+      "Aucune caméra détectée sur cet appareil. Utilisez le bouton ci-dessous pour envoyer une photo.",
     cameraInsecureContext:
       "La caméra nécessite une connexion sécurisée (HTTPS). Utilisez plutôt le bouton ci-dessous.",
-    cameraUnavailable: "Caméra indisponible. Utilisez le bouton ci-dessous pour prendre une photo.",
+    cameraUnavailable: "Caméra indisponible. Utilisez le bouton ci-dessous pour envoyer une photo.",
+    cameraGuideTitle: "Comment autoriser la caméra :",
+    cameraGuideBrowser: "Cliquez sur l'icône caméra dans la barre d'adresse → Autoriser",
+    cameraGuideMac: "Mac : Réglages Système → Confidentialité → Caméra → activer votre navigateur",
+    cameraGuideWindows: "Windows : Paramètres → Confidentialité → Caméra → activer pour votre navigateur",
     retryCamera: "Réessayer",
     retake: "Reprendre",
     confirmPhoto: "Utiliser cette photo",

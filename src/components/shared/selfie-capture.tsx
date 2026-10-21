@@ -183,10 +183,10 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
         return t("clockInOut.cameraUnavailable");
     }
   })();
-  // Re-requesting getUserMedia only makes sense once the user could plausibly
-  // have changed something (granted the permission, plugged in a webcam) —
-  // not when the browser itself doesn't support it or the page isn't served
-  // over HTTPS, where retrying would just fail the same way immediately.
+
+  const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
+  const isWindows = typeof navigator !== "undefined" && /Win/i.test(navigator.platform);
+
   const canRetryCamera = cameraFailure !== null && cameraFailure !== "insecure" && cameraFailure !== "unsupported";
 
   return (
@@ -199,6 +199,23 @@ export function SelfieCapture({ onConfirm, disabled }: SelfieCaptureProps) {
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center">
             <Camera className="text-muted-foreground/50 h-8 w-8" />
             <p className="text-muted-foreground text-xs">{failureMessage}</p>
+            {cameraFailure === "denied" && (
+              <div className="mt-1 w-full rounded-lg bg-black/20 p-2.5 text-left">
+                <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold uppercase tracking-wide">
+                  {t("clockInOut.cameraGuideTitle")}
+                </p>
+                <ol className="text-muted-foreground/80 list-decimal space-y-1 pl-3.5 text-[10px] leading-tight">
+                  <li>{t("clockInOut.cameraGuideBrowser")}</li>
+                  <li>
+                    {isMac
+                      ? t("clockInOut.cameraGuideMac")
+                      : isWindows
+                        ? t("clockInOut.cameraGuideWindows")
+                        : `${t("clockInOut.cameraGuideMac")} / ${t("clockInOut.cameraGuideWindows")}`}
+                  </li>
+                </ol>
+              </div>
+            )}
             {canRetryCamera && (
               <Button
                 type="button"
