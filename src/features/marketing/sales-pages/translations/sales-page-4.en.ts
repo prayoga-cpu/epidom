@@ -27,6 +27,12 @@ const translation: SalesPageTranslation = {
     ["En optimisant la gestion de votre coffee shop.", "By running your coffee shop more efficiently."],
     ["EPIDOM · LA GESTION DE VOTRE COFFEE SHOP, SIMPLIFIÉE", "EPIDOM · COFFEE SHOP MANAGEMENT, SIMPLIFIED"],
     ["fr-FR", "en-US"],
+    ["Restez informé·e", "Stay in the loop"],
+    ["Recevez nos conseils gratuits pour développer votre coffee shop.", "Get free tips to grow your coffee shop."],
+    ["votre@email.fr", "your@email.com"],
+    ["S'abonner", "Subscribe"],
+    ["Demander une démo personnalisée →", "Request a personalized demo →"],
+    ["Merci ! Vous êtes abonné·e.", "Thank you! You are now subscribed."],
   ],
   keep: ["Epidom"],
 };

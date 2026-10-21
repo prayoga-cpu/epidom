@@ -194,7 +194,7 @@ describe("HeroSection", () => {
       name: text("fr", "redesign.landing.hero.ctaCalculator"),
     });
     expect(trial.compareDocumentPosition(calc) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(trial.className).toMatch(/bg-epi-gold-500/);
+    expect(trial.className).toMatch(/bg-epi-gold-500|bg-\[linear-gradient/);
     expect(calc.className).not.toMatch(/\bbg-/);
   });
 

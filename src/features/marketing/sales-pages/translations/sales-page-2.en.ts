@@ -78,6 +78,12 @@ const translation: SalesPageTranslation = {
     ["Votre coffee shop mérite mieux qu’un PDF perdu dans un lien Instagram.", "Your coffee shop deserves better than a PDF buried behind an Instagram link."],
     ["Et vous méritez mieux que de passer votre journée à répondre aux mêmes messages.", "And you deserve better than spending your day answering the same messages."],
     ["Découvrez Epidom.", "Meet Epidom."],
+    ["Restez informé·e", "Stay in the loop"],
+    ["Recevez nos conseils gratuits pour développer votre coffee shop.", "Get free tips to grow your coffee shop."],
+    ["votre@email.fr", "your@email.com"],
+    ["S'abonner", "Subscribe"],
+    ["Demander une démo personnalisée →", "Request a personalized demo →"],
+    ["Merci ! Vous êtes abonné·e.", "Thank you! You are now subscribed."],
   ],
   keep: ["Instagram", "Menu", "Flat white ×2", "Croissant ×1", "Flat white", "Cappuccino", "© Epidom"],
 };

@@ -86,6 +86,12 @@ const translation: SalesPageTranslation = {
     ["Ajustez les curseurs pour voir votre gain.", "Move the sliders to see how much time you get back."],
     ["soit plus d'une journée entière libérée chaque semaine.", "that’s more than a full day freed up every week."],
     ["soit environ ${fmt(perWeek)} h de libres chaque semaine.", "that’s about ${fmt(perWeek)} hours freed up every week."],
+    ["Restez informé·e", "Stay in the loop"],
+    ["Recevez nos conseils gratuits pour développer votre coffee shop.", "Get free tips to grow your coffee shop."],
+    ["votre@email.fr", "your@email.com"],
+    ["S'abonner", "Subscribe"],
+    ["Demander une démo personnalisée →", "Request a personalized demo →"],
+    ["Merci ! Vous êtes abonné·e.", "Thank you! You are now subscribed."],
   ],
   keep: ["Epidom", "Instagram", "EPIDOM", "min", "© Epidom"],
 };

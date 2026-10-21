@@ -331,8 +331,8 @@ footer {
 <script src="/sales-pages/lead-capture.js" data-page="sales-page-4" defer></script>
 <section class="nl-sec">
 <div class="w c">
-<h2 class="nl-h">Tetap terupdate</h2>
-<p class="nl-sub">Dapatkan tips gratis kami untuk mengembangkan coffee shop Anda.</p>
+<h2 class="nl-h">Tetap terhubung</h2>
+<p class="nl-sub">Dapatkan tips gratis untuk mengembangkan coffee shop Anda.</p>
 <form class="nl-form" id="nl-form-4" novalidate>
 <input type="email" name="email" placeholder="email@anda.com" required autocomplete="email" class="nl-input">
 <button type="submit" class="nl-btn">Berlangganan</button>
@@ -341,7 +341,7 @@ footer {
 <button type="button" class="nl-popup" onclick="window.epiLcOpen&amp;&amp;window.epiLcOpen('sales_page_cta')">Minta demo personal →</button>
 </div>
 </section>
-<script>(function(){var form=document.getElementById('nl-form-4');var msg=document.getElementById('nl-msg-4');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-4',locale:'id'})}).then(function(){form.style.display='none';msg.textContent='Terima kasih! Anda telah berlangganan.';msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
+<script>(function(){var form=document.getElementById('nl-form-4');var msg=document.getElementById('nl-msg-4');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-4',locale:'fr'})}).then(function(){form.style.display='none';msg.textContent='Terima kasih! Anda sekarang berlangganan.';msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
 <footer>
   <img class="footer-logo" src="/sales-pages/epidom-logo.png" alt="Epidom">
   <p class="footer-text">EPIDOM · PENGELOLAAN COFFEE SHOP ANDA, JADI LEBIH MUDAH</p>

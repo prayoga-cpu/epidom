@@ -27,6 +27,12 @@ const translation: SalesPageTranslation = {
     ["En optimisant la gestion de votre coffee shop.", "Dengan pengelolaan coffee shop yang lebih optimal."],
     ["EPIDOM · LA GESTION DE VOTRE COFFEE SHOP, SIMPLIFIÉE", "EPIDOM · PENGELOLAAN COFFEE SHOP ANDA, JADI LEBIH MUDAH"],
     ["fr-FR", "id-ID"],
+    ["Restez informé·e", "Tetap terhubung"],
+    ["Recevez nos conseils gratuits pour développer votre coffee shop.", "Dapatkan tips gratis untuk mengembangkan coffee shop Anda."],
+    ["votre@email.fr", "email@anda.com"],
+    ["S'abonner", "Berlangganan"],
+    ["Demander une démo personnalisée →", "Minta demo personal →"],
+    ["Merci ! Vous êtes abonné·e.", "Terima kasih! Anda sekarang berlangganan."],
   ],
   keep: ["Epidom"],
 };

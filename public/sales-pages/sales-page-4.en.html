@@ -341,7 +341,7 @@ footer {
 <button type="button" class="nl-popup" onclick="window.epiLcOpen&amp;&amp;window.epiLcOpen('sales_page_cta')">Request a personalized demo →</button>
 </div>
 </section>
-<script>(function(){var form=document.getElementById('nl-form-4');var msg=document.getElementById('nl-msg-4');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-4',locale:'en'})}).then(function(){form.style.display='none';msg.textContent="Thanks! You're subscribed.";msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
+<script>(function(){var form=document.getElementById('nl-form-4');var msg=document.getElementById('nl-msg-4');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-4',locale:'fr'})}).then(function(){form.style.display='none';msg.textContent='Thank you! You are now subscribed.';msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
 <footer>
   <img class="footer-logo" src="/sales-pages/epidom-logo.png" alt="Epidom">
   <p class="footer-text">EPIDOM · COFFEE SHOP MANAGEMENT, SIMPLIFIED</p>
