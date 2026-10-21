@@ -134,7 +134,7 @@ describe("PosModeStatusBar — printers", () => {
 });
 
 describe("PosModeStatusBar — fullscreen", () => {
-  it("puts the fullscreen toggle just left of the bell, hidden on phones", () => {
+  it("puts the fullscreen toggle just left of the bell, on every screen size", () => {
     Object.defineProperty(document.documentElement, "requestFullscreen", {
       value: vi.fn(),
       configurable: true,
@@ -144,8 +144,9 @@ describe("PosModeStatusBar — fullscreen", () => {
       const toggle = screen.getByRole("button", { name: "cashierCheckout.topBar.fullscreen" });
       const bell = screen.getByRole("button", { name: "bell:pos" });
       expect(toggle.parentElement!.nextElementSibling).toBe(bell.parentElement);
-      expect(toggle.parentElement!.className).toContain("hidden");
-      expect(toggle.parentElement!.className).toContain("sm:flex");
+      // Phones and tablets get it too: one tap into distraction-free fullscreen.
+      expect(toggle.parentElement!.className.split(/\s+/)).not.toContain("hidden");
+      expect(toggle.parentElement!.className).toContain("flex");
     } finally {
       delete (document.documentElement as unknown as Record<string, unknown>).requestFullscreen;
     }

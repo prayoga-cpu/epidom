@@ -78,19 +78,22 @@ function LegacyBlogCta({ locale }: { locale: Locale }) {
         {copy.title}
       </h2>
       <p style={{ fontSize: 16, color: "rgba(251,249,228,0.55)", marginBottom: 32 }}>{copy.body}</p>
+      {/* The site-wide gold button (45ace6a9), not the old flat gold. */}
       <a
         href="/register"
         style={{
           display: "inline-flex",
           padding: "16px 36px",
           borderRadius: 999,
-          background: "var(--epi-gold-500)",
-          color: "var(--epi-navy-900)",
+          background: "linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c)",
+          color: "#151004",
           fontSize: 15,
           fontWeight: 700,
           letterSpacing: "0.06em",
           textDecoration: "none",
-          boxShadow: "0 12px 32px -10px rgba(217,174,59,0.65)",
+          boxShadow:
+            "0 0 0 1px rgba(255,255,255,.28) inset,0 8px 28px rgba(217,174,59,.35),0 3px 0 rgba(139,90,10,.85)",
+          transition: "transform .15s,box-shadow .15s",
         }}
       >
         {copy.button}
