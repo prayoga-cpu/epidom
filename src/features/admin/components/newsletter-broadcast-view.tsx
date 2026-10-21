@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,18 +9,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle, AlertCircle, Eye, EyeOff, Users, Mail } from "lucide-react";
+import {
+  CheckCircle,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Users,
+  Mail,
+  RefreshCw,
+  Send,
+  History,
+  Database,
+} from "lucide-react";
 
-type Lead = {
+type Lead = { id: string; email: string; firstName: string; lastName: string };
+type Subscriber = { id: string; email: string };
+type SendRecord = {
   id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-};
-
-type Subscriber = {
-  id: string;
-  email: string;
+  type: string;
+  subject: string;
+  recipients: number;
+  resendId: string | null;
+  sentBy: string;
+  createdAt: string;
 };
 
 export function NewsletterBroadcastView() {
@@ -36,12 +47,39 @@ export function NewsletterBroadcastView() {
   const [useLeads, setUseLeads] = useState(false);
   const [useSubscribers, setUseSubscribers] = useState(false);
 
-  // Loaded contacts for individual selection
+  // Contacts for individual selection
   const [leads, setLeads] = useState<Lead[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [selectedSubs, setSelectedSubs] = useState<Set<string>>(new Set());
+
+  // Sync users to Resend
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ total: number; synced: number; failed: number } | null>(null);
+  const [syncError, setSyncError] = useState("");
+
+  // Test send
+  const [testEmail, setTestEmail] = useState("");
+  const [testStatus, setTestStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [testError, setTestError] = useState("");
+
+  // History
+  const [history, setHistory] = useState<SendRecord[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const loadHistory = useCallback(() => {
+    setLoadingHistory(true);
+    fetch("/api/admin/newsletter/history")
+      .then((r) => r.json())
+      .then((json) => setHistory(json.data?.sends ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingHistory(false));
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
   useEffect(() => {
     if (!useLeads && !useSubscribers) return;
@@ -87,6 +125,54 @@ export function NewsletterBroadcastView() {
   const isCustom = useLeads || useSubscribers;
   const recipientCount = isCustom ? customEmails().length : null;
 
+  async function handleSyncUsers() {
+    setSyncing(true);
+    setSyncResult(null);
+    setSyncError("");
+    try {
+      const res = await fetch("/api/admin/newsletter/sync-users", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) {
+        setSyncError(json.error?.message ?? "Sync failed");
+      } else {
+        setSyncResult(json.data);
+      }
+    } catch (err) {
+      setSyncError(String(err));
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleTestSend(e: React.FormEvent) {
+    e.preventDefault();
+    if (!subject.trim() || !html.trim() || !testEmail.trim()) return;
+    setTestStatus("sending");
+    setTestError("");
+    try {
+      const res = await fetch("/api/admin/newsletter/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: `[TEST] ${subject.trim()}`,
+          html: html.trim(),
+          recipients: [testEmail.trim()],
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setTestError(json.error?.message ?? "Test send failed");
+        setTestStatus("error");
+        return;
+      }
+      setTestStatus("sent");
+      loadHistory();
+    } catch (err) {
+      setTestError(String(err));
+      setTestStatus("error");
+    }
+  }
+
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!subject.trim() || !html.trim()) return;
@@ -120,37 +206,11 @@ export function NewsletterBroadcastView() {
       }
       setBroadcastId(json.data?.id ?? "");
       setStatus("sent");
+      loadHistory();
     } catch (err) {
       setErrorMsg(String(err));
       setStatus("error");
     }
-  }
-
-  if (status === "sent") {
-    return (
-      <div className="space-y-4 p-6">
-        <div>
-          <h1 className="text-2xl font-bold">Newsletter Broadcast</h1>
-        </div>
-        <Alert className="border-green-500/30 bg-green-500/10">
-          <CheckCircle className="size-4 text-green-500" />
-          <AlertDescription className="text-green-600">
-            Broadcast sent successfully!{broadcastId && ` (ID: ${broadcastId})`}
-          </AlertDescription>
-        </Alert>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setStatus("idle");
-            setSubject("");
-            setHtml("");
-            setBroadcastId("");
-          }}
-        >
-          Send another
-        </Button>
-      </div>
-    );
   }
 
   return (
@@ -161,6 +221,43 @@ export function NewsletterBroadcastView() {
           Compose and send an email to your subscribers.
         </p>
       </div>
+
+      {/* Sync users to Resend */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Database className="size-4" />
+            Sync users to Resend audience
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-muted-foreground text-sm">
+            Push all registered user emails from the app database into your Resend newsletter
+            audience so they can receive broadcasts.
+          </p>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSyncUsers}
+              disabled={syncing}
+              className="gap-2"
+            >
+              <RefreshCw className={`size-3.5 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "Syncing…" : "Sync now"}
+            </Button>
+            {syncResult && (
+              <span className="text-sm text-green-600">
+                Done — {syncResult.synced} synced
+                {syncResult.failed > 0 && `, ${syncResult.failed} failed`}
+                {" "}(of {syncResult.total} total)
+              </span>
+            )}
+            {syncError && <span className="text-sm text-red-600">{syncError}</span>}
+          </div>
+        </CardContent>
+      </Card>
 
       <form onSubmit={handleSend} className="space-y-6">
         {/* Compose */}
@@ -225,10 +322,57 @@ export function NewsletterBroadcastView() {
           </CardContent>
         </Card>
 
+        {/* Test send */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Send className="size-4" />
+              Test send
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-3 text-sm">
+              Send the current subject + HTML to a single address before broadcasting.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="max-w-72"
+                disabled={testStatus === "sending"}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleTestSend}
+                disabled={
+                  testStatus === "sending" ||
+                  !subject.trim() ||
+                  !html.trim() ||
+                  !testEmail.trim()
+                }
+              >
+                {testStatus === "sending" ? "Sending…" : "Send test"}
+              </Button>
+            </div>
+            {testStatus === "sent" && (
+              <p className="mt-2 text-sm text-green-600">
+                Test email sent to {testEmail}.
+              </p>
+            )}
+            {testStatus === "error" && (
+              <p className="mt-2 text-sm text-red-600">{testError}</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Recipients */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Users className="size-4" />
               Recipients
             </CardTitle>
@@ -292,7 +436,6 @@ export function NewsletterBroadcastView() {
               </label>
             </div>
 
-            {/* Individual selectors */}
             {loadingContacts && (
               <p className="text-muted-foreground text-xs">Loading contacts…</p>
             )}
@@ -386,6 +529,15 @@ export function NewsletterBroadcastView() {
           </CardContent>
         </Card>
 
+        {status === "sent" && (
+          <Alert className="border-green-500/30 bg-green-500/10">
+            <CheckCircle className="size-4 text-green-500" />
+            <AlertDescription className="text-green-600">
+              Broadcast sent successfully!{broadcastId && ` (ID: ${broadcastId})`}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {status === "error" && (
           <Alert variant="destructive">
             <AlertCircle className="size-4" />
@@ -393,23 +545,101 @@ export function NewsletterBroadcastView() {
           </Alert>
         )}
 
-        <Button
-          type="submit"
-          disabled={
-            status === "sending" ||
-            !subject.trim() ||
-            !html.trim() ||
-            (!useAudience && !isCustom)
-          }
-          className="w-full sm:w-auto"
-        >
-          {status === "sending"
-            ? "Sending…"
-            : isCustom && recipientCount !== null
-            ? `Send to ${recipientCount} recipient${recipientCount !== 1 ? "s" : ""}`
-            : "Send broadcast"}
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            type="submit"
+            disabled={
+              status === "sending" ||
+              !subject.trim() ||
+              !html.trim() ||
+              (!useAudience && !isCustom)
+            }
+          >
+            {status === "sending"
+              ? "Sending…"
+              : isCustom && recipientCount !== null
+              ? `Send to ${recipientCount} recipient${recipientCount !== 1 ? "s" : ""}`
+              : "Send broadcast"}
+          </Button>
+          {status === "sent" && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStatus("idle");
+                setSubject("");
+                setHtml("");
+                setBroadcastId("");
+              }}
+            >
+              Send another
+            </Button>
+          )}
+        </div>
       </form>
+
+      {/* Send history */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <History className="size-4" />
+              Send history
+            </CardTitle>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={loadHistory}
+              disabled={loadingHistory}
+              className="h-7 gap-1.5 text-xs"
+            >
+              <RefreshCw className={`size-3.5 ${loadingHistory ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingHistory ? (
+            <p className="text-muted-foreground text-sm">Loading…</p>
+          ) : history.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No sends yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-border border-b text-left">
+                    <th className="text-muted-foreground pb-2 pr-4 font-medium">Subject</th>
+                    <th className="text-muted-foreground pb-2 pr-4 font-medium">Type</th>
+                    <th className="text-muted-foreground pb-2 pr-4 font-medium">Recipients</th>
+                    <th className="text-muted-foreground pb-2 pr-4 font-medium">Sent by</th>
+                    <th className="text-muted-foreground pb-2 font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((row) => (
+                    <tr key={row.id} className="border-border border-b last:border-0">
+                      <td className="py-2 pr-4 font-medium">{row.subject}</td>
+                      <td className="py-2 pr-4">
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {row.type}
+                        </Badge>
+                      </td>
+                      <td className="py-2 pr-4">
+                        {row.recipients === -1 ? "Audience" : row.recipients}
+                      </td>
+                      <td className="text-muted-foreground py-2 pr-4 text-xs">{row.sentBy}</td>
+                      <td className="text-muted-foreground py-2 text-xs">
+                        {new Date(row.createdAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

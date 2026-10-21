@@ -3083,3 +3083,23 @@ model NewsletterSubscriber {
   @@index([source, createdAt])
   @@map("newsletter_subscribers")
 }
+
+/// Log of every newsletter send (broadcast, test, or custom list).
+/// Written by the server on every successful send so the admin can track
+/// what went out, to how many people, and who triggered it.
+model NewsletterSend {
+  id         String   @id @default(cuid())
+  /// "broadcast" = Resend Broadcast (full audience), "test" = single address, "custom" = curated list
+  type       String
+  subject    String
+  /// Number of recipients (1 for test, N for broadcast/custom)
+  recipients Int
+  /// Resend broadcast id — present only for type = "broadcast"
+  resendId   String?
+  /// Email of the admin who triggered the send
+  sentBy     String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("newsletter_sends")
+}

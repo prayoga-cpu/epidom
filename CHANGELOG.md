@@ -9,6 +9,12 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.32.0] - 2026-10-21 · feat
+
+- Newsletter admin: "Sync users to Resend" button — iterates all app User records and adds them to the Resend newsletter audience in batches of 10 concurrent requests (`POST /api/admin/newsletter/sync-users`).
+- Newsletter admin: Test send — type an email address and send the current subject + HTML as a test before broadcasting (`[TEST]` prefix on subject).
+- Newsletter admin: Send history table — every broadcast, custom and test send is now logged to `newsletter_sends` DB table and shown in a history table at the bottom of the newsletter page with subject, type, recipient count, sender, and timestamp.
+
 ## [3.31.0] - 2026-10-20 · ux
 
 - Admin nav grouped into Finance / Marketing / Community dropdowns; standalone pages (Users, Activity) remain as plain links.

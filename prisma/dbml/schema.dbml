@@ -1731,6 +1731,20 @@ footer, the sales-page footer form, or any other lightweight subscribe surface.
 The full-form lead capture (name + phone + email) goes to SalesLead.'
 }
 
+Table newsletter_sends {
+  id String [pk]
+  type String [not null, note: '"broadcast" = Resend Broadcast (full audience), "test" = single address, "custom" = curated list']
+  subject String [not null]
+  recipients Int [not null, note: 'Number of recipients (1 for test, N for broadcast/custom)']
+  resendId String [note: 'Resend broadcast id — present only for type = "broadcast"']
+  sentBy String [not null, note: 'Email of the admin who triggered the send']
+  createdAt DateTime [default: `now()`, not null]
+
+  Note: 'Log of every newsletter send (broadcast, test, or custom list).
+Written by the server on every successful send so the admin can track
+what went out, to how many people, and who triggered it.'
+}
+
 Enum OrderReceiptSendStatus {
   SENT
   FAILED

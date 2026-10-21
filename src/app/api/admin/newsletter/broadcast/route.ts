@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { requireAdminApi } from "@/lib/auth/require-admin-api";
 import { createBroadcast, sendBroadcast } from "@/lib/services/newsletter.service";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const broadcastSchema = z.object({
@@ -50,11 +51,31 @@ export async function POST(request: Request) {
         console.error("[NEWSLETTER_INDIVIDUAL_SEND_ERRORS]", failed);
       }
       const sent = results.filter((r) => r.status === "fulfilled").length;
+
+      await prisma.newsletterSend.create({
+        data: {
+          type: "custom",
+          subject,
+          recipients: sent,
+          sentBy: admin.email ?? admin.id,
+        },
+      }).catch(() => {});
+
       return NextResponse.json(createSuccessResponse({ sent, failed: failed.length }));
     }
 
     const { id } = await createBroadcast({ subject, html, from });
     await sendBroadcast(id);
+
+    await prisma.newsletterSend.create({
+      data: {
+        type: "broadcast",
+        subject,
+        recipients: -1, // audience size unknown at send time
+        resendId: id,
+        sentBy: admin.email ?? admin.id,
+      },
+    }).catch(() => {});
 
     return NextResponse.json(createSuccessResponse({ id }));
   } catch (error) {
