@@ -11,7 +11,7 @@ import type { BadgePlan } from "../data/problems";
  */
 
 export const PRIMARY_BUTTON =
-  "inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-transparent bg-epi-gold-500 px-7 py-3 text-center text-sm font-medium tracking-[0.06em] text-epi-navy-900 uppercase shadow-[0_8px_24px_-10px_rgba(217,174,59,0.6)] transition-transform motion-safe:hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-epi-gold-300";
+  "inline-flex min-h-12 items-center justify-center gap-2 rounded-full border-0 bg-[linear-gradient(180deg,#f4dc90,#d7b54b_55%,#a97c1c)] px-7 py-3 text-center text-sm font-bold tracking-[0.06em] text-[#151004] uppercase shadow-[0_0_0_1px_rgba(255,255,255,.28)_inset,0_8px_28px_rgba(217,174,59,.35),0_3px_0_rgba(139,90,10,.85)] transition-[transform,box-shadow] duration-150 hover:-translate-y-[3px] hover:shadow-[0_0_0_1px_rgba(255,255,255,.38)_inset,0_16px_40px_rgba(217,174,59,.5),0_3px_0_rgba(139,90,10,.85)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-epi-gold-300";
 
 export const SECONDARY_BUTTON =
   "inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-transparent px-7 py-3 text-center text-sm font-medium tracking-[0.06em] text-epi-cream-50 uppercase transition-[transform,border-color] hover:border-white/40 motion-safe:hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-epi-gold-300";
