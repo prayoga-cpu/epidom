@@ -46,13 +46,16 @@ interface SendEmailResult {
 export async function sendVerificationEmail(
   email: string,
   name: string | null,
-  verificationUrl: string
+  verificationUrl: string,
+  /** 6-digit code offered next to the link. Null sends the link alone. */
+  code: string | null = null
 ): Promise<SendEmailResult> {
   // In development, always log verification URL for easier testing
   if (process.env.NODE_ENV === "development") {
     console.log("\n📧 [DEV] Verification Email");
     console.log("To:", email);
     console.log("URL:", verificationUrl);
+    if (code) console.log("Code:", code);
     console.log("");
   }
 
@@ -67,8 +70,13 @@ export async function sendVerificationEmail(
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: email,
-      subject: `Verify your email for ${APP_NAME}`,
-      html: generateVerificationEmailHtml(name, verificationUrl),
+      // The code leads the subject so it can be read from the inbox list or
+      // a phone notification, even when the email sits in spam with its
+      // links turned off.
+      subject: code
+        ? `${code} is your ${APP_NAME} verification code`
+        : `Verify your email for ${APP_NAME}`,
+      html: generateVerificationEmailHtml(name, verificationUrl, code),
     });
 
     console.log("[Email] Resend response:", data ? JSON.stringify(data) : "<no-data>");
@@ -134,10 +142,21 @@ export async function sendPasswordResetEmail(
 }
 
 /**
- * Generate HTML for verification email
+ * Generate HTML for verification email. With a code it offers two ways in,
+ * labelled Option 1 (the link) and Option 2 (the code); without one it is the
+ * link alone.
  */
-function generateVerificationEmailHtml(name: string | null, verificationUrl: string): string {
-  const greeting = name ? `Hi ${name},` : "Hi,";
+function generateVerificationEmailHtml(
+  name: string | null,
+  verificationUrl: string,
+  code: string | null = null
+): string {
+  const greeting = greetingFor(name);
+  const href = escapeHtml(verificationUrl);
+  const optionLabel = (text: string) =>
+    code
+      ? `<p style="color: #111111; font-size: 14px; font-weight: 700; margin: 32px 0 0 0; text-transform: uppercase; letter-spacing: 1px; text-align: center;">${text}</p>`
+      : "";
 
   return `
 <!DOCTYPE html>
@@ -158,11 +177,16 @@ function generateVerificationEmailHtml(name: string | null, verificationUrl: str
     <p style="color: #555555; font-size: 16px;">${greeting}</p>
 
     <p style="color: #555555; font-size: 16px;">
-      Thanks for signing up for <strong>${APP_NAME}</strong>. To complete your registration and secure your account, please verify your email address.
+      ${
+        code
+          ? `Thanks for signing up for <strong>${APP_NAME}</strong>. Confirm your email address in one of two ways:`
+          : `Thanks for signing up for <strong>${APP_NAME}</strong>. To complete your registration and secure your account, please verify your email address.`
+      }
     </p>
 
-    <div style="text-align: center; margin: 40px 0;">
-      <a href="${verificationUrl}"
+    ${optionLabel("Option 1: tap the button")}
+    <div style="text-align: center; margin: ${code ? "16px 0 32px 0" : "40px 0"};">
+      <a href="${href}"
          style="background-color: #444444;
                 color: #ffffff;
                 padding: 16px 40px;
@@ -181,9 +205,29 @@ function generateVerificationEmailHtml(name: string | null, verificationUrl: str
       If the button doesn't work, copy and paste this link into your browser:
     </p>
     <p style="color: #444444; font-size: 12px; word-break: break-all; text-align: center; background: #f5f5f5; padding: 10px; border-radius: 4px;">
-      ${verificationUrl}
+      <a href="${href}" style="color: #444444; text-decoration: underline;">${href}</a>
+    </p>
+${
+  code
+    ? `
+    ${optionLabel(`Option 2: enter this code in ${APP_NAME}`)}
+    <div style="text-align: center; margin: 16px 0;">
+      <span style="display: inline-block; background: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px 24px; font-family: 'SFMono-Regular', Menlo, Consolas, 'Courier New', monospace; font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #111111;">${escapeHtml(code)}</span>
+    </div>
+    <p style="color: #888888; font-size: 13px; text-align: center;">
+      Type it on the ${APP_NAME} page that asks you to verify your email, or on the sign-in page. It works even when the button above won't open.
     </p>
 
+    <p style="color: #888888; font-size: 13px; text-align: center;">
+      The link and the code expire in 1 hour. If you asked for more than one email, use the newest one. Expired? Sign in to ${APP_NAME} and tap Resend.
+    </p>
+`
+    : `
+    <p style="color: #888888; font-size: 13px; text-align: center;">
+      This link expires in 1 hour. If it has expired, sign in to ${APP_NAME} and tap Resend to get a new one.
+    </p>
+`
+}
     <hr style="border: none; border-top: 1px solid #eeeeee; margin: 40px 0;">
 
     <p style="color: #999999; font-size: 12px; margin: 0; text-align: center;">
@@ -206,7 +250,8 @@ function generateVerificationEmailHtml(name: string | null, verificationUrl: str
  * Generate HTML for password reset email
  */
 function generatePasswordResetEmailHtml(name: string | null, resetUrl: string): string {
-  const greeting = name ? `Hi ${name},` : "Hi,";
+  const greeting = greetingFor(name);
+  const href = escapeHtml(resetUrl);
 
   return `
 <!DOCTYPE html>
@@ -231,7 +276,7 @@ function generatePasswordResetEmailHtml(name: string | null, resetUrl: string): 
     </p>
 
     <div style="text-align: center; margin: 40px 0;">
-      <a href="${resetUrl}"
+      <a href="${href}"
          style="background-color: #444444;
                 color: #ffffff;
                 padding: 16px 40px;
@@ -250,7 +295,7 @@ function generatePasswordResetEmailHtml(name: string | null, resetUrl: string): 
       If the button doesn't work, copy and paste this link into your browser:
     </p>
     <p style="color: #444444; font-size: 12px; word-break: break-all; text-align: center; background: #f5f5f5; padding: 10px; border-radius: 4px;">
-      ${resetUrl}
+      <a href="${href}" style="color: #444444; text-decoration: underline;">${href}</a>
     </p>
 
     <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin: 35px 0;">
@@ -304,7 +349,7 @@ export async function sendAccountDeactivatedEmail(
     return { success: true, messageId: "dev-mode" };
   }
 
-  const greeting = name ? `Hi ${name},` : "Hi,";
+  const greeting = greetingFor(name);
   const deadlineLabel = reactivationDeadline.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
@@ -417,7 +462,7 @@ export async function sendStaffPinEmail(
 <!DOCTYPE html>
 <html>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-  <h2 style="color: #444;">Welcome to ${storeName}, ${staffName}!</h2>
+  <h2 style="color: #444;">Welcome to ${escapeHtml(storeName)}, ${escapeHtml(staffName)}!</h2>
   <p>You have been added as a staff member on <strong>${APP_NAME}</strong>.</p>
   <p>Your POS login PIN is:</p>
   <div style="text-align: center; margin: 30px 0;">
@@ -458,7 +503,7 @@ export async function sendOwnerPinResetOtpEmail(
     return { success: true, messageId: "dev-mode" };
   }
 
-  const greeting = name ? `Hi ${name},` : "Hi,";
+  const greeting = greetingFor(name);
 
   try {
     const resend = getResendClient()!;
@@ -633,6 +678,17 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/**
+ * "Hi <name>," for the top of an email. The name is whatever the person typed
+ * at signup, and anyone can sign up with someone else's address, so it is
+ * escaped: otherwise a name like `<a href=...>` would put a link of the
+ * signer's choosing into an email we send. Trimmed so "Ana " reads "Hi Ana,".
+ */
+export function greetingFor(name: string | null | undefined): string {
+  const trimmed = name?.trim();
+  return trimmed ? `Hi ${escapeHtml(trimmed)},` : "Hi,";
 }
 
 /**

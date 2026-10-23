@@ -1,5 +1,14 @@
 # STATUS.md
 
+## 3.36.0 — Verification email: link + 6-digit code (shipped 2026-10-24)
+
+- [x] Why: a signup (2026-10-21) could not tap the verify button. Resend showed the email delivered but never clicked; Gmail had filed it as spam, which turns links off. The account got verified by copy-pasting the address.
+- [x] One email, two ways in: the link and a 6-digit code (Better Auth `emailOTP`; the code is made by `createVerificationOTP` inside the link email's hook, so the plugin's own mailer never runs). Hashed, 1 hour, 5 wrong tries, only the newest code works, unverified accounts only. Subject leads with the code.
+- [x] Code form (`VerifyEmailCodeForm`) on /verify-email-sent and in the login page's "Email not verified" box. Success signs in and lands where the link would.
+- [x] Every other emailOTP endpoint answers 404 (`DISABLED_EMAIL_OTP_PATHS` in `src/lib/auth/email-verification-code.ts`); a test reads the plugin's own path list so an upgrade can't open a new one quietly. End-to-end test drives the real `auth.ts` (`src/__tests__/auth/email-verification-code-flow.test.ts`).
+- [x] Emails: the fallback address is a real link (verify + reset); signup names are HTML-escaped (`greetingFor`), so a name can't add its own link to an email we send; the staff PIN email is escaped too.
+- [ ] Operator decision (deliverability): Resend click tracking is ON for prionation.io (every link goes through a shared tracker domain), and the From domain (prionation.io) doesn't match the brand or the link domain (epidom.fr, which has no SPF/DMARC at all). Options: turn click tracking off (prionation.io is shared with the PRIONATION finance and transport apps), or send from epidom.fr (needs a paid Resend plan or a second Resend account, plus DNS records on epidom.fr).
+
 ## 3.35.0 — Build Your Own menu (shipped 2026-10-24)
 
 - [x] `buildYourOwn` switch (default off) on `Product` and `MenuItem` (migration `20261024090000_build_your_own`; items in the importer's "Build Your Own" category are backfilled on). An item is BYO when its own flag or its product's is on (`isBuildYourOwnItem`).

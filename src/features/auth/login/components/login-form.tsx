@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "../../components/google-icon";
+import { VerifyEmailCodeForm } from "../../components/verify-email-code-form";
 import { Input } from "@/components/ui/input";
 import {
   Form,
@@ -285,6 +286,14 @@ export function LoginForm() {
                     : t("auth.verifyEmail.resendButton")}
               </button>
             </div>
+          </div>
+          {/* The code from the verification email (the signup one, or a resend). */}
+          <div className="mt-4 border-t border-yellow-200 pt-4">
+            <VerifyEmailCodeForm
+              email={unverifiedEmail}
+              callbackURL={emailVerificationCallbackURL(nextUrl)}
+              variant="notice"
+            />
           </div>
         </div>
       )}

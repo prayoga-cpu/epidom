@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { emailOTP } from "better-auth/plugins/email-otp";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,12 @@ import {
   resolveCrossSubDomainCookies,
   sessionCookieNames,
 } from "@/lib/auth/cookies";
+import {
+  DISABLED_EMAIL_OTP_PATHS,
+  EMAIL_CODE_ALLOWED_ATTEMPTS,
+  EMAIL_CODE_LENGTH,
+  EMAIL_VERIFICATION_EXPIRES_IN,
+} from "@/lib/auth/email-verification-code";
 
 /**
  * In production, share auth cookies (incl. the OAuth `state` cookie) across the
@@ -64,9 +71,17 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendOnSignUp: true,
+    // Covers the code too: entering it signs the person in, like the link.
     autoSignInAfterVerification: true,
+    expiresIn: EMAIL_VERIFICATION_EXPIRES_IN,
     sendVerificationEmail: async ({ user, url }) => {
-      const result = await sendVerificationEmail(user.email, user.name, url);
+      // One email, two ways in: the link and a 6-digit code (see
+      // src/lib/auth/email-verification-code.ts). Better Auth only sends this
+      // for unverified accounts; the check keeps it that way should a future
+      // flow (changing a verified address) reuse this hook, since the code
+      // signs in whoever owns the address it was made for.
+      const code = user.emailVerified ? null : await createEmailVerificationCode(user.email);
+      const result = await sendVerificationEmail(user.email, user.name, url, code);
       if (!result.success) {
         throw new Error(`Failed to send verification email: ${result.error}`);
       }
@@ -78,7 +93,24 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     },
   },
-  plugins: [],
+  // Only /email-otp/verify-email stays open from the plugin below.
+  disabledPaths: DISABLED_EMAIL_OTP_PATHS,
+  plugins: [
+    emailOTP({
+      otpLength: EMAIL_CODE_LENGTH,
+      expiresIn: EMAIL_VERIFICATION_EXPIRES_IN,
+      allowedAttempts: EMAIL_CODE_ALLOWED_ATTEMPTS,
+      // Only a hash is kept, so a database read does not hand out codes.
+      storeOTP: "hashed",
+      // The code goes out inside the verification email above. Everything
+      // that would call this plugin mailer is in disabledPaths, so reaching
+      // it means a path was re-enabled without a decision: fail loudly
+      // rather than answer "sent" for an email that never went out.
+      sendVerificationOTP: async ({ type }) => {
+        throw new Error(`[auth] email codes of type "${type}" are not sent on their own`);
+      },
+    }),
+  ],
   session: {
     additionalFields: {
       location: {
@@ -142,6 +174,26 @@ export const auth = betterAuth({
     },
   },
 });
+
+/**
+ * Makes and stores the 6-digit code for the verification email. A new code
+ * replaces the previous one. If it cannot be made, the email still goes out
+ * with the link alone instead of blocking signup.
+ *
+ * The explicit return type matters: `auth` is used inside its own config
+ * through this function, and an inferred type would make TypeScript chase
+ * that loop.
+ */
+async function createEmailVerificationCode(email: string): Promise<string | null> {
+  try {
+    return await auth.api.createVerificationOTP({
+      body: { email, type: "email-verification" },
+    });
+  } catch (error) {
+    console.error("[auth] could not create the email verification code, sending the link only:", error);
+    return null;
+  }
+}
 
 /**
  * Verify signed cookie signature

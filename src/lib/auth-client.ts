@@ -1,6 +1,7 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
+import { emailOTPClient } from "better-auth/client/plugins";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 // Create auth client for signIn, signOut, signUp operations
@@ -9,6 +10,9 @@ export const authClient = createAuthClient({
     typeof window !== "undefined"
       ? window.location.origin
       : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  // authClient.emailOtp.verifyEmail: the 6-digit code in the verification
+  // email. The plugin's other calls answer 404 (see src/lib/auth.ts).
+  plugins: [emailOTPClient()],
 });
 
 // Export auth operations

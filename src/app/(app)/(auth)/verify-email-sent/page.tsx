@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { Loader2, Mail, CheckCircle2 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { emailVerificationCallbackURL } from "@/features/auth/register/lib/verification-landing";
+import { VerifyEmailCodeForm } from "@/features/auth/components/verify-email-code-form";
 import {
   readStashedVerifyEmail,
   stashVerifyEmail,
@@ -98,6 +99,9 @@ function VerifyEmailContent() {
           <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700">
             {t("auth.verifyEmail.instructions")}
           </div>
+
+          {/* Option 2 of the email: the 6-digit code, for when the link won't open. */}
+          <VerifyEmailCodeForm email={email} callbackURL={callbackURL} />
 
           {email && (
             <Button

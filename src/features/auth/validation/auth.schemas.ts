@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EMAIL_CODE_LENGTH } from "@/lib/auth/email-verification-code";
 
 /** The `t` from `useI18n()`. A bare function type, so this file needs no React. */
 export type Translate = (key: string) => string;
@@ -75,3 +76,19 @@ export function createRegisterSchema(t: Translate) {
 }
 
 export type RegisterInput = z.infer<ReturnType<typeof createRegisterSchema>>;
+
+/**
+ * The "enter the code from the email" form. The email field is only shown when
+ * the page does not know the address (opened in another tab or on another
+ * device), but it is always sent: the code is checked against it.
+ */
+export function createVerifyEmailCodeSchema(t: Translate) {
+  return z.object({
+    email: emailRule(t),
+    code: z
+      .string()
+      .regex(new RegExp(`^\\d{${EMAIL_CODE_LENGTH}}$`), t("auth.verifyEmail.codeFormat")),
+  });
+}
+
+export type VerifyEmailCodeInput = z.infer<ReturnType<typeof createVerifyEmailCodeSchema>>;

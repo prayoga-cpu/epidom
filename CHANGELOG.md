@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.36.0] - 2026-10-24 · feat
+
+- Sign-up: the verification email now gives two ways to confirm your address. Tap the button, or type the 6-digit code from the email on the "Check your email" page or the sign-in page. The code works even when your email app has turned the button off (Gmail does this in the Spam folder) and when you read the email on another device.
+- The code is also in the email's subject line, so you can read it without opening the email. It lasts 1 hour, and if you ask for a new email, only the newest code works.
+- The "copy and paste this link" address in the verification and password-reset emails is now a link you can tap.
+- Names in our emails are shown exactly as typed, as plain text.
+
 ## [3.35.1] - 2026-10-24 · ux
 
 - Homepage, in French: the headline now leads with the benefit, « Le moyen le plus simple de gérer votre coffee shop », with « Caisse en temps réel avec une marge transparente » under it. English and Indonesian are unchanged.
