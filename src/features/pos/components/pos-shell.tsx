@@ -316,6 +316,8 @@ export function PosShell({ store, menuSetupHref = null }: PosShellProps) {
             onOpenChange={(open) => !open && setConfiguringItem(null)}
             itemName={configuringItem.name}
             groups={getMergedOptionGroups(configuringItem, configuringItem.product)}
+            basePrice={configuringItem.price}
+            buildYourOwn={!!configuringItem.buildYourOwn}
             formatPrice={formatPrice}
             onConfirm={({ selectedOptions, notes }) => {
               addItem(

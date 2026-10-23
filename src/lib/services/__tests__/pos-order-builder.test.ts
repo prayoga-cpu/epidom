@@ -77,7 +77,21 @@ describe("validateAndBuildOrderItems", () => {
 
   it("passes notes and selectedOptions through onto the built order item", async () => {
     prismaMock.menuItem.findMany.mockResolvedValue([
-      { id: "menu-1", name: "Coffee", price: 20000 },
+      {
+        id: "menu-1",
+        name: "Coffee",
+        price: 20000,
+        product: {
+          optionGroups: [
+            {
+              name: "Size",
+              isRequired: false,
+              maxSelections: 1,
+              options: [{ name: "Large", priceAdjustment: 5000, materialId: "mat-1", materialQty: 5 }],
+            },
+          ],
+        },
+      },
     ]);
 
     const selectedOptions = [
@@ -97,6 +111,68 @@ describe("validateAndBuildOrderItems", () => {
 
     expect(orderItems[0].notes).toBe("no ice");
     expect(orderItems[0].selectedOptions).toEqual(selectedOptions);
+  });
+
+  it("reprices a matched option from the menu, ignoring the till's price and stock link", async () => {
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      {
+        id: "menu-1",
+        name: "Bowl",
+        price: 30000,
+        modifiers: null,
+        product: {
+          optionGroups: [
+            {
+              name: "Base",
+              isRequired: true,
+              maxSelections: 1,
+              options: [{ name: "Quinoa", priceAdjustment: 5000, materialId: "mat-q", materialQty: 120 }],
+            },
+          ],
+        },
+      },
+    ]);
+
+    const { orderItems } = await validateAndBuildOrderItems("store-1", [
+      {
+        menuItemId: "menu-1",
+        name: "Bowl",
+        quantity: 1,
+        unitPrice: 30000,
+        selectedOptions: [
+          { groupName: "Base", optionName: "Quinoa", priceAdjustment: -30000, materialId: "mat-other", materialQty: 1 },
+        ],
+      },
+    ] as any);
+
+    expect(orderItems[0].unitPrice).toBe(35000);
+    expect(orderItems[0].selectedOptions).toEqual([
+      { groupName: "Base", optionName: "Quinoa", priceAdjustment: 5000, materialId: "mat-q", materialQty: 120 },
+    ]);
+  });
+
+  it("keeps an option the menu no longer has at the price charged, without a stock link", async () => {
+    // e.g. a held order resumed after the owner renamed a topping.
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      { id: "menu-1", name: "Bowl", price: 30000, modifiers: null, product: { optionGroups: [] } },
+    ]);
+
+    const { orderItems } = await validateAndBuildOrderItems("store-1", [
+      {
+        menuItemId: "menu-1",
+        name: "Bowl",
+        quantity: 1,
+        unitPrice: 30000,
+        selectedOptions: [
+          { groupName: "Toppings", optionName: "Old egg", priceAdjustment: 4000, materialId: "mat-e", materialQty: 1 },
+        ],
+      },
+    ] as any);
+
+    expect(orderItems[0].unitPrice).toBe(34000);
+    expect(orderItems[0].selectedOptions).toEqual([
+      { groupName: "Toppings", optionName: "Old egg", priceAdjustment: 4000 },
+    ]);
   });
 
   it("sums totals across multiple line items", async () => {

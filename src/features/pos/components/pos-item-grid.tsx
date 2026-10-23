@@ -8,7 +8,7 @@ import type { PosViewMode } from "../hooks/use-pos-view-mode";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ChevronRight, Sparkles, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, ChevronRight, Layers, Sparkles, UtensilsCrossed } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -192,6 +192,16 @@ export function PosItemGrid({
       </span>
     ) : null;
 
+  // Build Your Own items open the step-by-step builder; the chip says so
+  // before the tap. In flow like the counted chip, for the same reason.
+  const byoChip = (item: PosMenuItem) =>
+    item.buildYourOwn ? (
+      <span className="bg-primary/10 text-primary inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap">
+        <Layers className="size-3" />
+        {t("pos.menu.buildYourOwn")}
+      </span>
+    ) : null;
+
   const unavailablePill = (
     <span className="bg-destructive text-destructive-foreground rounded-md px-1.5 py-0.5 text-[10px] font-bold">
       {t("pos.menu.unavailable")}
@@ -220,8 +230,9 @@ export function PosItemGrid({
           </div>
           <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
             <h3 className="w-full truncate font-medium">{item.name}</h3>
-            {(countedChip(item) || !item.isAvailable) && (
+            {(countedChip(item) || byoChip(item) || !item.isAvailable) && (
               <div className="flex items-center gap-1.5">
+                {byoChip(item)}
                 {countedChip(item)}
                 {!item.isAvailable && unavailablePill}
               </div>
@@ -250,6 +261,7 @@ export function PosItemGrid({
             <span className="text-primary text-sm font-semibold tabular-nums">
               {formatPrice(item.price)}
             </span>
+            {byoChip(item)}
             {countedChip(item)}
             {!item.isAvailable && unavailablePill}
           </div>
@@ -299,6 +311,7 @@ export function PosItemGrid({
             <span className="text-primary text-sm font-semibold tabular-nums">
               {formatPrice(item.price)}
             </span>
+            {byoChip(item)}
             {countedChip(item)}
           </div>
         </div>

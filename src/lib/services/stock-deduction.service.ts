@@ -84,7 +84,8 @@ type SelectedOption = { materialId?: string; materialQty?: number };
  */
 async function resolveOptionMaterials(
   activeItems: { id: string; quantity: Prisma.Decimal; selectedOptions: Prisma.JsonValue | null }[],
-  orderId: string
+  orderId: string,
+  storeId: string
 ): Promise<{
   optionNeed: MaterialNeed;
   itemOptionCost: Map<string, number>;
@@ -109,8 +110,10 @@ async function resolveOptionMaterials(
 
   const optionMaterials = new Map<string, Material>();
   if (optionNeed.size > 0) {
+    // Store-scoped: a material id saved on an order line must never reach
+    // another store's stock. An unknown id is dropped below, like a deleted one.
     const materials = await prisma.material.findMany({
-      where: { id: { in: Array.from(optionNeed.keys()) } },
+      where: { id: { in: Array.from(optionNeed.keys()) }, storeId },
     });
     for (const material of materials) optionMaterials.set(material.id, material);
   }
@@ -252,7 +255,8 @@ export async function deductStockForOrder(
 
   const { optionNeed, itemOptionCost, optionMaterials } = await resolveOptionMaterials(
     activeItems,
-    orderId
+    orderId,
+    storeId
   );
 
   if (productAgg.size === 0 && optionNeed.size === 0 && itemUnitCost.size === 0) {

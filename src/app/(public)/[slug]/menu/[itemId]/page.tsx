@@ -2,7 +2,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PublicItemDetail } from "@/features/storefront/components/public-item-detail";
-import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
+import { isBuildYourOwnItem, serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
 import { storefrontRobots } from "@/features/storefront/lib/indexing";
 import {
   cleanStorefrontSlug,
@@ -29,9 +29,16 @@ const getStorefrontItem = cache((storefrontId: string, itemId: string) =>
       product: {
         select: {
           productLine: true,
+          buildYourOwn: true,
           optionGroups: {
             orderBy: { displayOrder: "asc" },
-            include: { options: { orderBy: { displayOrder: "asc" } } },
+            // Name and price only: the stock link stays server-side.
+            include: {
+              options: {
+                orderBy: { displayOrder: "asc" },
+                select: { name: true, priceAdjustment: true },
+              },
+            },
           },
         },
       },
@@ -91,6 +98,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
     isFeatured: item.isFeatured,
     modifiers: item.modifiers,
     isCustom: item.product?.productLine === "CUSTOM",
+    buildYourOwn: isBuildYourOwnItem(item, item.product),
     product: item.product
       ? { optionGroups: serializeProductOptionGroups(item.product.optionGroups) }
       : null,

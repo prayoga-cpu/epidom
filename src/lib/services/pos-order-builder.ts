@@ -9,6 +9,7 @@ import {
 import { deductStockForOrder } from "./stock-deduction.service";
 import { productionBatchService } from "./production-batch.service";
 import { resolveInitialOrderItemStatus } from "./order-status.helpers";
+import { getMergedOptionGroups, resolveSelectedOptions } from "@/lib/utils/menu-item-options";
 
 /**
  * The order's status the moment it's placed — CONFIRMED normally (goes to
@@ -155,7 +156,16 @@ export async function validateAndBuildOrderItems(
           }),
         },
         include: {
-          product: { select: { productLine: true } },
+          product: {
+            select: {
+              productLine: true,
+              // Options are repriced from these, like the item itself.
+              optionGroups: {
+                orderBy: { displayOrder: "asc" },
+                include: { options: { orderBy: { displayOrder: "asc" } } },
+              },
+            },
+          },
         },
       })
     : [];
@@ -223,7 +233,18 @@ export async function validateAndBuildOrderItems(
       };
     }
 
-    const unitPrice = Number(menuItem.price) + modifierTotal;
+    // Each option's price and stock link come from the live menu, like the
+    // item's own price. Lenient: a line rung up before the menu changed keeps
+    // the options it was charged for (see resolveSelectedOptions).
+    const selectedOptions = i.selectedOptions
+      ? resolveSelectedOptions(
+          getMergedOptionGroups(menuItem, menuItem.product),
+          i.selectedOptions,
+          "lenient"
+        ).options
+      : undefined;
+    const optionsTotal = (selectedOptions ?? []).reduce((sum, m) => sum + m.priceAdjustment, 0);
+    const unitPrice = Number(menuItem.price) + optionsTotal;
     const total = unitPrice * i.quantity;
     return {
       menuItemId: i.menuItemId,
@@ -233,7 +254,7 @@ export async function validateAndBuildOrderItems(
       unitPrice,
       total,
       notes: i.notes,
-      selectedOptions: i.selectedOptions,
+      selectedOptions,
       isCustom: false,
       department: null,
       initialStatus: resolveInitialOrderItemStatus(menuItem.product?.productLine),

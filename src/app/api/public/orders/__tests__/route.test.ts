@@ -200,3 +200,137 @@ describe("POST /api/public/orders — pay at the cashier (online payment off)", 
     );
   });
 });
+
+describe("POST /api/public/orders — options are priced from the menu", () => {
+  const created: { data?: any } = {};
+  const BOWL_ID = "cm1a2b3c4d5e6f7g8h9i0j1k3";
+
+  // A Build Your Own bowl: a required one-pick Base, then up to two toppings.
+  const bowl = {
+    id: BOWL_ID,
+    name: "Poke Bowl",
+    price: 30000,
+    productId: "cm1a2b3c4d5e6f7g8h9i0j1k4",
+    modifiers: null,
+    product: {
+      productLine: "STANDARD",
+      optionGroups: [
+        {
+          name: "Base",
+          isRequired: true,
+          maxSelections: 1,
+          options: [
+            { name: "Rice", priceAdjustment: 0, materialId: "mat_rice", materialQty: 150 },
+            { name: "Quinoa", priceAdjustment: 5000, materialId: "mat_quinoa", materialQty: 120 },
+          ],
+        },
+        {
+          name: "Toppings",
+          isRequired: false,
+          maxSelections: 2,
+          options: [{ name: "Egg", priceAdjustment: 4000, materialId: "mat_egg", materialQty: 1 }],
+        },
+      ],
+    },
+  };
+
+  const orderWith = (items: unknown[]) =>
+    new Request("http://localhost/api/public/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        storefrontSlug: "cafe",
+        customerName: "Ana",
+        orderType: "TAKEAWAY",
+        paymentMethod: "CASH",
+        items,
+      }),
+    });
+
+  const line = (selectedOptions: unknown[]) => ({
+    menuItemId: BOWL_ID,
+    name: "Poke Bowl",
+    quantity: 1,
+    unitPrice: 30000,
+    selectedOptions,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    flags.online = false;
+    created.data = undefined;
+    (prisma.storefront.findUnique as any).mockResolvedValue(
+      storefront({ stripeConnectAccountId: null, stripeConnectOnboarded: false })
+    );
+    (prisma.menuItem.findMany as any).mockResolvedValue([bowl]);
+    (getFinanceSettings as any).mockResolvedValue({ currency: "IDR" });
+    (allocateQueueNumber as any).mockResolvedValue(3);
+    (prisma.$transaction as any).mockImplementation(async (cb: (tx: unknown) => unknown) =>
+      cb({
+        order: {
+          create: vi.fn(async ({ data }: { data: any }) => {
+            created.data = data;
+            return { id: "ord_2", ...data };
+          }),
+        },
+      })
+    );
+  });
+
+  it("ignores the price and stock link the browser sent", async () => {
+    const res = await POST(
+      orderWith([
+        line([
+          {
+            groupName: "Base",
+            optionName: "Quinoa",
+            priceAdjustment: -30000,
+            materialId: "cm9z9z9z9z9z9z9z9z9z9z9z9",
+            materialQty: 9999,
+          },
+        ]),
+      ])
+    );
+    expect(res.status).toBe(201);
+    const item = created.data.items.create[0];
+    expect(Number(item.unitPrice)).toBe(35000);
+    expect(item.selectedOptions).toEqual([
+      { groupName: "Base", optionName: "Quinoa", priceAdjustment: 5000, materialId: "mat_quinoa", materialQty: 120 },
+    ]);
+  });
+
+  it("accepts the same item twice, built two different ways", async () => {
+    const res = await POST(
+      orderWith([
+        line([{ groupName: "Base", optionName: "Rice", priceAdjustment: 0 }]),
+        line([
+          { groupName: "Base", optionName: "Quinoa", priceAdjustment: 5000 },
+          { groupName: "Toppings", optionName: "Egg", priceAdjustment: 4000 },
+        ]),
+      ])
+    );
+    expect(res.status).toBe(201);
+    expect(created.data.items.create.map((i: any) => Number(i.unitPrice))).toEqual([30000, 39000]);
+  });
+
+  it("refuses an option the item does not have", async () => {
+    const res = await POST(
+      orderWith([
+        line([
+          { groupName: "Base", optionName: "Rice", priceAdjustment: 0 },
+          { groupName: "Toppings", optionName: "Gold leaf", priceAdjustment: 0 },
+        ]),
+      ])
+    );
+    expect(res.status).toBe(422);
+    expect((await res.json()).error.message).toMatch(/Poke Bowl/);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses a bowl with its required base skipped", async () => {
+    const res = await POST(
+      orderWith([line([{ groupName: "Toppings", optionName: "Egg", priceAdjustment: 4000 }])])
+    );
+    expect(res.status).toBe(422);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+});

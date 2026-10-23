@@ -263,6 +263,7 @@ Table products {
   primaryRecipeId String
   costPriceManual Boolean [not null, default: false]
   costPriceOriginal Decimal
+  buildYourOwn Boolean [not null, default: false]
   unit String [not null, default: 'piece']
   productionTime Int
   shelfLife Int
@@ -1519,6 +1520,7 @@ Table menu_items {
   isFeatured Boolean [not null, default: false]
   displayOrder Int [not null, default: 0]
   modifiers Json
+  buildYourOwn Boolean [not null, default: false]
   storefront storefronts [not null]
   category menu_categories
   product products

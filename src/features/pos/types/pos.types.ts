@@ -195,7 +195,11 @@ export interface PosMenuItem {
   countedStock?: number;
   countedUnit?: string;
   modifiers?: unknown;
+  // Build Your Own: the options dialog shows numbered steps. Resolved by the
+  // menu route from the item's own flag or its product's (isBuildYourOwnItem).
+  buildYourOwn?: boolean;
   product?: {
+    buildYourOwn?: boolean;
     optionGroups?: Array<{
       name: string;
       isRequired: boolean;

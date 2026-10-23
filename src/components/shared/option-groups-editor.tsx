@@ -33,6 +33,11 @@ interface OptionGroupsEditorProps {
   onChange: (groups: ProductOptionGroupInput[]) => void;
   /** Show a Material + quantity picker on each option, for stock-accurate variants. */
   allowMaterialLink?: boolean;
+  /**
+   * "steps" presents each group as a numbered Build Your Own step (same data,
+   * different labels); "options" is the plain add-ons editor.
+   */
+  variant?: "options" | "steps";
   className?: string;
 }
 
@@ -47,8 +52,10 @@ export function OptionGroupsEditor({
   value,
   onChange,
   allowMaterialLink = false,
+  variant = "options",
   className,
 }: OptionGroupsEditorProps) {
+  const asSteps = variant === "steps";
   const { t } = useI18n();
   const { currency } = useCurrency();
   const currencySymbol = getCurrencySymbol(currency);
@@ -86,17 +93,39 @@ export function OptionGroupsEditor({
 
   return (
     <div className={className}>
+      {asSteps && value.length === 0 && (
+        <p className="text-muted-foreground rounded-md border border-dashed p-3 text-center text-xs">
+          {t("data.products.byo.noSteps")}
+        </p>
+      )}
       <div className="space-y-3">
         {value.map((group, groupIndex) => (
           <Card key={groupIndex} className="relative overflow-hidden">
             <CardContent className="space-y-3 px-4">
               <div className="flex items-start justify-between gap-2">
-                <Input
-                  placeholder={t("data.products.options.groupNamePlaceholder")}
-                  value={group.name}
-                  onChange={(e) => updateGroup(groupIndex, { name: e.target.value })}
-                  className="max-w-xs"
-                />
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  {asSteps && (
+                    <span
+                      className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                      aria-label={t("data.products.byo.stepLabel").replace(
+                        "{n}",
+                        String(groupIndex + 1)
+                      )}
+                    >
+                      {groupIndex + 1}
+                    </span>
+                  )}
+                  <Input
+                    placeholder={t(
+                      asSteps
+                        ? "data.products.byo.stepNamePlaceholder"
+                        : "data.products.options.groupNamePlaceholder"
+                    )}
+                    value={group.name}
+                    onChange={(e) => updateGroup(groupIndex, { name: e.target.value })}
+                    className="max-w-xs"
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -271,7 +300,7 @@ export function OptionGroupsEditor({
 
       <Button type="button" variant="outline" size="sm" className="mt-3" onClick={addGroup}>
         <Plus className="mr-1 h-4 w-4" />
-        {t("data.products.options.addGroup")}
+        {t(asSteps ? "data.products.byo.addStep" : "data.products.options.addGroup")}
       </Button>
     </div>
   );

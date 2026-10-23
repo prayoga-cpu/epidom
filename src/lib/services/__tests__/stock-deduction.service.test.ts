@@ -213,6 +213,34 @@ describe("deductStockForOrder — option-driven material consumption", () => {
     warnSpy.mockRestore();
   });
 
+  it("only looks up option materials in the order's own store", async () => {
+    // A material id saved on a line must never reach another store's stock:
+    // the lookup is store-scoped, so a foreign id is dropped like a deleted one.
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: "order-1",
+      orderNumber: "POS-1",
+      storeId: "store-1",
+      store: { business: { userId: "user-1" } },
+      items: [
+        {
+          id: "item-1",
+          quantity: 1,
+          product: null,
+          menuItem: null,
+          selectedOptions: [{ materialId: "mat-other-store", materialQty: 5 }],
+        },
+      ],
+    });
+    prismaMock.material.findMany.mockResolvedValue([]);
+
+    await deductStockForOrder("order-1", "store-1");
+
+    expect(prismaMock.material.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["mat-other-store"] }, storeId: "store-1" },
+    });
+    expect(capturedTx.material.update).not.toHaveBeenCalled();
+  });
+
   it("skips a CANCELLED order item's stock deduction even though the order was delivered", async () => {
     prismaMock.order.findUnique.mockResolvedValue({
       id: "order-2",

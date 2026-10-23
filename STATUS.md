@@ -1,5 +1,17 @@
 # STATUS.md
 
+## 3.35.0 — Build Your Own menu (shipped 2026-10-24)
+
+- [x] `buildYourOwn` switch (default off) on `Product` and `MenuItem` (migration `20261024090000_build_your_own`; items in the importer's "Build Your Own" category are backfilled on). An item is BYO when its own flag or its product's is on (`isBuildYourOwnItem`).
+- [x] Data → Products (Add/Edit): switch above the options; on = options edited as numbered steps, each choice can link a raw material + quantity (stock deducted per sale, existing `ProductOption.materialId`). Turning it on moves a counted product to made to order (asks first if stock is counted). Linked materials must belong to the store (checked on save).
+- [x] Storefront → Menu: same switch for hand-made items (price-only choices); linked items point to the product. BYO badge in the item list.
+- [x] Cashier: BYO chip on tiles; options dialog shows numbered steps, pick limits, a running total; a full BYO step refuses extra picks; a skipped required step is highlighted.
+- [x] Storefront (menu drawer + item page): one shared picker (`storefront-option-picker.tsx`) with steps, progress bar, total on the Add button, "From" prices; the `alert()` on a skipped option is gone.
+- [x] Security: public orders rebuild options from the menu (`resolveSelectedOptions`, strict: unknown/over-limit/missing-required → 422); the till reprices matched options (lenient, keeps held/offline lines); stock deduction only looks up materials in the order's store; the public menu no longer exposes option material ids/quantities.
+- [x] Fixed: a public order with the same item on two lines was refused as "unavailable" (id list wasn't deduped).
+- [ ] Not browser-tested yet: try a BYO product end to end (Data → Products, till, storefront, order, then check the material moved in the Movements log).
+- [ ] Dev branch: run `prisma migrate deploy` for `20261024090000_build_your_own` (the operator runs it).
+
 ## 3.29.0 — Sales page lead capture (shipped 2026-10-20)
 
 ✅ `SalesLead` DB model · ✅ `/api/public/sales-pages/leads` route · ✅ `lead-capture.js` (VSL 4-min timer + exit intent) · ✅ All 12 sales-page HTML files updated · ✅ Resend newsletter integration (graceful degradation)

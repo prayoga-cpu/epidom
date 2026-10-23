@@ -469,6 +469,11 @@ model Product {
   // reversible — without it, turning this on would destroy merchant-typed
   // figures with no way back.
   costPriceOriginal Decimal?             @db.Decimal(10, 2)
+  // "Build Your Own": the till and the storefront show this product's option
+  // groups as numbered steps the customer builds the item from. Off by
+  // default. Only changes how the choices are presented; the option groups
+  // (and their material links, which deduct stock) work the same either way.
+  buildYourOwn      Boolean              @default(false)
   unit              String               @default("piece")
   productionTime    Int?
   shelfLife         Int?
@@ -2712,6 +2717,10 @@ model MenuItem {
   isFeatured    Boolean    @default(false)
   displayOrder  Int        @default(0)
   modifiers     Json? // [{name, options: [{name, priceAdd}]}]
+  // "Build Your Own" for an item made by hand in the menu editor (see
+  // Product.buildYourOwn). An item linked to a product is Build Your Own when
+  // either flag is on, since its option groups live on the product.
+  buildYourOwn  Boolean    @default(false)
 
   storefront Storefront    @relation(fields: [storefrontId], references: [id], onDelete: Cascade)
   category   MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)

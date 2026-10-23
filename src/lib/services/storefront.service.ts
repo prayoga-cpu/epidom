@@ -65,9 +65,18 @@ export class StorefrontService {
                 product: {
                   select: {
                     productLine: true,
+                    buildYourOwn: true,
                     optionGroups: {
                       orderBy: { displayOrder: "asc" },
-                      include: { options: { orderBy: { displayOrder: "asc" } } },
+                      // Public page: the name and price a customer picks
+                      // from, never the stock link behind it (the order
+                      // route re-reads that from the menu).
+                      include: {
+                        options: {
+                          orderBy: { displayOrder: "asc" },
+                          select: { name: true, priceAdjustment: true },
+                        },
+                      },
                     },
                   },
                 },
@@ -178,6 +187,8 @@ export class StorefrontService {
           include: {
             items: {
               orderBy: { displayOrder: "asc" },
+              // The menu editor badges a linked item whose product is Build Your Own.
+              include: { product: { select: { buildYourOwn: true } } },
             },
           },
         },
@@ -243,6 +254,8 @@ export class StorefrontService {
             include: {
               items: {
                 orderBy: { displayOrder: "asc" },
+                // The menu editor badges a linked item whose product is Build Your Own.
+                include: { product: { select: { buildYourOwn: true } } },
               },
             },
           },
@@ -498,6 +511,7 @@ export class StorefrontService {
         displayOrder: input.displayOrder ?? nextOrder,
         modifiers:
           input.modifiers === undefined ? undefined : (input.modifiers as Prisma.InputJsonValue),
+        buildYourOwn: input.buildYourOwn ?? false,
       },
     });
   }
@@ -609,6 +623,7 @@ export class StorefrontService {
           input.modifiers !== undefined
             ? (input.modifiers as Prisma.InputJsonValue)
             : (item.modifiers as Prisma.InputJsonValue),
+        buildYourOwn: input.buildYourOwn !== undefined ? input.buildYourOwn : item.buildYourOwn,
       },
     });
   }

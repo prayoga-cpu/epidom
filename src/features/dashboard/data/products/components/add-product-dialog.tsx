@@ -50,7 +50,8 @@ import Link from "next/link";
 import { FORM_DEFAULTS } from "@/lib/config/form-defaults";
 import { DecimalInput } from "@/components/shared/decimal-input";
 import { getCurrencySymbol } from "@/lib/utils/formatting";
-import { OptionGroupsEditor } from "@/components/shared/option-groups-editor";
+import { ProductOptionsSection } from "./product-options-section";
+import { hasBuildStep, hasLinkedMaterial } from "@/lib/utils/menu-item-options";
 import type { ProductOptionGroupInput } from "@/lib/validation/inventory.schemas";
 
 /**
@@ -194,6 +195,16 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
   const [manualCostPrice, setManualCostPrice] = useState(false);
   const costPriceLocked = recipeIds.length > 0 && !manualCostPrice;
   const [optionGroups, setOptionGroups] = useState<ProductOptionGroupInput[]>([]);
+  // Build Your Own (off by default): the option groups become numbered steps.
+  const [buildYourOwn, setBuildYourOwn] = useState(false);
+  // A build-your-own item is cooked to order from its choices; a counted
+  // product with no recipe would go "Oversold" on every sale instead.
+  const handleBuildYourOwnChange = (on: boolean) => {
+    setBuildYourOwn(on);
+    if (on && form.getValues("stockMode") === "BATCH_PRODUCED") {
+      form.setValue("stockMode", "MADE_TO_ORDER", { shouldDirty: true });
+    }
+  };
 
   const { data: unlinkedMenuItems = [] } = useUnlinkedMenuItems(storeId);
 
@@ -289,6 +300,10 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
+      if (buildYourOwn && !hasBuildStep(optionGroups)) {
+        sonnerToast.error(t("data.products.byo.needsStep"));
+        return;
+      }
       // Validate required number fields (convert undefined to defaults and validate)
       const costPrice = data.costPrice ?? 0;
       const retailPrice = data.retailPrice ?? 0;
@@ -361,6 +376,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
         storeId,
         linkedMenuItemId: data.linkedMenuItemId || undefined,
         optionGroups: optionGroups.length > 0 ? optionGroups : undefined,
+        buildYourOwn,
       };
 
       // OPTIMISTIC CLOSING
@@ -381,6 +397,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
           form.reset();
           setManualCostPrice(false);
           setOptionGroups([]);
+          setBuildYourOwn(false);
           return (
             t("data.products.toasts.added.description")?.replace("{name}", data.name) ||
             "Product added successfully"
@@ -409,6 +426,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
       form.reset();
       setManualCostPrice(false);
       setOptionGroups([]);
+      setBuildYourOwn(false);
     }
     if (newOpen) {
       isSubmittingRef.current = false;
@@ -675,14 +693,17 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
 
               {/* Made-to-order with nothing to deduct is legal but almost
                   always a mistake — flag it loudly, never block the save. */}
-              {stockMode === "MADE_TO_ORDER" && !hasPrimaryRecipe && (
-                <Alert className="border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-amber-700 dark:text-amber-400">
-                    {t("data.products.form.noRecipeWarning")}
-                  </AlertDescription>
-                </Alert>
-              )}
+              {stockMode === "MADE_TO_ORDER" &&
+                !hasPrimaryRecipe &&
+                // A build-your-own item's choices carry the stock instead.
+                !(buildYourOwn && hasLinkedMaterial(optionGroups)) && (
+                  <Alert className="border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-amber-700 dark:text-amber-400">
+                      {t("data.products.form.noRecipeWarning")}
+                    </AlertDescription>
+                  </Alert>
+                )}
 
               <FormField
                 control={form.control}
@@ -969,21 +990,19 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
               </div>
             </div>
 
-            {/* Options */}
-            <div className="space-y-1">
-              <h3 className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
-                {t("data.products.sections.options")}
-              </h3>
-              <p className="text-muted-foreground mb-2 text-xs">
-                {t("data.products.options.description")}
-              </p>
-              <OptionGroupsEditor
-                storeId={storeId}
-                value={optionGroups}
-                onChange={setOptionGroups}
-                allowMaterialLink
-              />
-            </div>
+            {/* Options, or Build Your Own steps */}
+            <ProductOptionsSection
+              storeId={storeId}
+              idPrefix="add-product"
+              buildYourOwn={buildYourOwn}
+              onBuildYourOwnChange={handleBuildYourOwnChange}
+              optionGroups={optionGroups}
+              onOptionGroupsChange={setOptionGroups}
+              stockMode={stockMode}
+              onUseMadeToOrder={() =>
+                form.setValue("stockMode", "MADE_TO_ORDER", { shouldDirty: true })
+              }
+            />
           </form>
         </Form>
       </FormDialogLayout>

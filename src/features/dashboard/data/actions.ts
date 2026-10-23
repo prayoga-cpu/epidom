@@ -1147,7 +1147,11 @@ async function importMenuItems(
       if (existing) {
         await prisma.menuItem.update({
           where: { id: existing.id },
-          data: { modifiers: modifiers as unknown as object, categoryId: category.id },
+          data: {
+            modifiers: modifiers as unknown as object,
+            categoryId: category.id,
+            buildYourOwn: true,
+          },
         });
       } else {
         await storefrontService.createMenuItem(storefront.id, {
@@ -1160,6 +1164,8 @@ async function importMenuItems(
           showOnCashier: true,
           isFeatured: false,
           modifiers,
+          // The import's whole point: the groups are the build steps.
+          buildYourOwn: true,
         });
       }
       count++;

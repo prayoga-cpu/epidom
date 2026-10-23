@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -23,6 +23,7 @@ import {
   ShoppingBag,
   Bike,
   ReceiptText,
+  Layers,
 } from "lucide-react";
 import { getPremiumTheme } from "@/lib/utils/color";
 import { formatCurrency } from "@/lib/utils/formatting";
@@ -30,7 +31,16 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { StorefrontControls } from "@/features/storefront/components/storefront-controls";
 import { LazyPhoneInput, preloadPhoneInput } from "@/components/ui/phone-input-lazy";
 import { appendLocalOrder } from "../lib/local-orders";
-import { getMergedOptionGroups } from "@/lib/utils/menu-item-options";
+import {
+  firstMissingRequiredGroup,
+  getMergedOptionGroups,
+  toggleOptionSelection,
+} from "@/lib/utils/menu-item-options";
+import {
+  StorefrontOptionPicker,
+  type StorefrontModifierGroup,
+  type StorefrontModifierOption,
+} from "./storefront-option-picker";
 import {
   usePublicStorefrontMenu,
   type PublicMenuCategory,
@@ -39,19 +49,10 @@ import {
 import { useTrackPageView } from "../hooks/use-track-storefront-event";
 import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 
-interface ModifierOption {
-  name: string;
-  priceAdd: number;
-  materialId?: string;
-  materialQty?: number;
-}
-
-interface ModifierGroup {
-  name: string;
-  isRequired?: boolean;
-  maxSelections?: number;
-  options: ModifierOption[];
-}
+// Name and price only: the server re-reads each option (and its stock
+// link) from the menu when the order is placed.
+type ModifierOption = StorefrontModifierOption;
+type ModifierGroup = StorefrontModifierGroup;
 
 // Reuses the polling hook's shape exactly (rather than a parallel local
 // interface) so the server-rendered initial props and the polled data are
@@ -70,8 +71,6 @@ const getItemModifierGroups = (item: MenuItem): ModifierGroup[] =>
     options: group.options.map((option) => ({
       name: option.name,
       priceAdd: option.priceAdjustment,
-      materialId: option.materialId,
-      materialQty: option.materialQty,
     })),
   }));
 
@@ -277,6 +276,9 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, ModifierOption[]>>({});
   const [itemQuantity, setItemQuantity] = useState(1);
   const [itemNoteText, setItemNoteText] = useState("");
+  // The required step the customer skipped, highlighted and scrolled to.
+  const [missingGroup, setMissingGroup] = useState<string | null>(null);
+  const groupRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // Theme variable
   const safeTheme = getPremiumTheme(storefront.themeColor || "#FF6B35");
@@ -353,6 +355,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
     setActiveItem(item);
     setItemQuantity(1);
     setItemNoteText("");
+    setMissingGroup(null);
 
     // Set default empty arrays for modifier selections
     const initialModifiers: Record<string, ModifierOption[]> = {};
@@ -363,55 +366,38 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
     setSelectedModifiers(initialModifiers);
   };
 
-  // Toggle modifier option selection
-  const handleModifierChange = (
-    groupName: string,
-    option: ModifierOption,
-    group: ModifierGroup
-  ) => {
-    const currentSelected = selectedModifiers[groupName] || [];
-    const isSelected = currentSelected.some((o) => o.name === option.name);
-
-    let newSelected: ModifierOption[];
-
-    if (group.maxSelections === 1) {
-      // Single select (radio button behavior)
-      newSelected = isSelected ? [] : [option];
-    } else {
-      // Multi-select up to maxSelections
-      if (isSelected) {
-        newSelected = currentSelected.filter((o) => o.name !== option.name);
-      } else {
-        const max = group.maxSelections || 999;
-        if (currentSelected.length < max) {
-          newSelected = [...currentSelected, option];
-        } else {
-          // Replace first selection if exceeding max
-          newSelected = [...currentSelected.slice(1), option];
-        }
-      }
-    }
-
-    setSelectedModifiers({
-      ...selectedModifiers,
-      [groupName]: newSelected,
-    });
+  // Toggle modifier option selection (shared rule: toggleOptionSelection)
+  const handleModifierChange = (group: ModifierGroup, option: ModifierOption) => {
+    const newSelected = toggleOptionSelection(
+      selectedModifiers[group.name] || [],
+      option,
+      (a, b) => a.name === b.name,
+      group.maxSelections || 999,
+      { capAtMax: !!activeItem?.buildYourOwn }
+    );
+    setSelectedModifiers({ ...selectedModifiers, [group.name]: newSelected });
+    if (missingGroup === group.name) setMissingGroup(null);
   };
+
+  // What the drawer's button charges: base + chosen add-ons, times quantity.
+  const activeItemTotal = activeItem
+    ? (Number(activeItem.price) +
+        Object.values(selectedModifiers)
+          .flat()
+          .reduce((sum, o) => sum + o.priceAdd, 0)) *
+      itemQuantity
+    : 0;
 
   // Add customized item to cart
   const handleAddToCart = () => {
     if (!activeItem) return;
 
-    // Check if required modifiers are selected
-    const modGroups = getItemModifierGroups(activeItem);
-    for (const group of modGroups) {
-      if (
-        group.isRequired &&
-        (!selectedModifiers[group.name] || selectedModifiers[group.name].length === 0)
-      ) {
-        alert(t("publicOrder.itemDetail.selectOptionAlert") + ' "' + group.name + '"');
-        return;
-      }
+    // A skipped required step is highlighted and scrolled to, not alerted.
+    const missing = firstMissingRequiredGroup(getItemModifierGroups(activeItem), selectedModifiers);
+    if (missing) {
+      setMissingGroup(missing);
+      groupRefs.current[missing]?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
     }
 
     // Format chosen modifiers
@@ -490,8 +476,6 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
           groupName: string;
           optionName: string;
           priceAdjustment: number;
-          materialId?: string;
-          materialQty?: number;
         }> = [];
         i.selectedModifiers.forEach((group) => {
           group.options.forEach((opt) => {
@@ -499,8 +483,6 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
               groupName: group.groupName,
               optionName: opt.name,
               priceAdjustment: opt.priceAdd,
-              materialId: opt.materialId,
-              materialQty: opt.materialQty,
             });
           });
         });
@@ -748,6 +730,12 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                                   </span>
                                 )}
                               </div>
+                              {item.buildYourOwn && (
+                                <span className="mt-1 inline-flex items-center gap-1 rounded bg-[var(--store-theme-light-bg)] px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider text-[var(--store-theme)] uppercase">
+                                  <Layers className="size-2.5" />
+                                  {t("publicOrder.menu.buildYourOwn")}
+                                </span>
+                              )}
                               {item.description && (
                                 <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[8px] leading-snug sm:text-[11px]">
                                   {item.description}
@@ -756,7 +744,12 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                             </div>
                             <div className="mt-2 flex items-center justify-between">
                               <span className="text-foreground text-sm font-extrabold">
-                                {formatPrice(Number(item.price))}
+                                {item.buildYourOwn
+                                  ? t("publicOrder.menu.fromPrice").replace(
+                                      "{price}",
+                                      formatPrice(Number(item.price))
+                                    )
+                                  : formatPrice(Number(item.price))}
                               </span>
                               {item.isAvailable && (
                                 <div className="bg-muted flex size-7 items-center justify-center rounded-full border transition hover:border-[var(--store-theme)] hover:bg-[var(--store-theme-light-bg)]">
@@ -1356,7 +1349,12 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
                 {activeItem.name}
               </h3>
               <p className="mt-1 text-sm font-black text-[var(--store-theme)]">
-                {formatPrice(Number(activeItem.price))}
+                {activeItem.buildYourOwn
+                  ? t("publicOrder.menu.fromPrice").replace(
+                      "{price}",
+                      formatPrice(Number(activeItem.price))
+                    )
+                  : formatPrice(Number(activeItem.price))}
               </p>
               {activeItem.description && (
                 <p className="text-muted-foreground mt-2 text-[11px] leading-relaxed">
@@ -1367,64 +1365,16 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
 
             {/* Modifiers List */}
             <div className="flex-1 space-y-6 overflow-y-auto p-4">
-              {getItemModifierGroups(activeItem).map((group, groupIdx) => (
-                <div key={groupIdx} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-foreground text-sm font-bold">
-                      {group.name}
-                      {group.isRequired && (
-                        <span className="text-destructive ml-1 font-black">*</span>
-                      )}
-                    </h4>
-                    <span className="text-muted-foreground bg-muted rounded px-2 py-0.5 text-[10px] font-bold">
-                      {group.isRequired
-                        ? t("publicOrder.itemDetail.required")
-                        : t("publicOrder.itemDetail.optional")}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-2">
-                    {group.options.map((option, optIdx) => {
-                      const isSelected = (selectedModifiers[group.name] || []).some(
-                        (o) => o.name === option.name
-                      );
-
-                      return (
-                        <div
-                          key={optIdx}
-                          onClick={() => handleModifierChange(group.name, option, group)}
-                          className={`flex cursor-pointer items-center justify-between rounded-xl border p-3 transition ${
-                            isSelected
-                              ? "border-[var(--store-theme)] bg-[var(--store-theme-light-bg)]"
-                              : "border-border hover:border-muted-foreground/30"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {/* Custom Checkbox/Radio styling */}
-                            <div
-                              className={`flex size-5 items-center justify-center rounded-md border transition-colors ${
-                                isSelected
-                                  ? "border-transparent bg-[var(--store-theme)]"
-                                  : "border-muted-foreground/30"
-                              }`}
-                            >
-                              {isSelected && <Check className="size-3.5 stroke-[3px] text-white" />}
-                            </div>
-                            <span className="text-foreground text-xs font-semibold">
-                              {option.name}
-                            </span>
-                          </div>
-                          <span className="text-muted-foreground text-xs font-bold">
-                            {option.priceAdd > 0
-                              ? `+${formatPrice(option.priceAdd)}`
-                              : t("publicOrder.itemDetail.free")}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+              <StorefrontOptionPicker
+                groups={getItemModifierGroups(activeItem)}
+                selected={selectedModifiers}
+                onToggle={handleModifierChange}
+                buildYourOwn={activeItem.buildYourOwn}
+                missingGroup={missingGroup}
+                formatPrice={formatPrice}
+                groupRefs={groupRefs}
+                surface="drawer"
+              />
 
               <div className="space-y-1.5">
                 <label className="text-muted-foreground pl-1 text-[11px] font-extrabold tracking-widest uppercase">
@@ -1467,10 +1417,10 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
 
               <button
                 onClick={handleAddToCart}
-                className="w-full rounded-xl py-3.5 text-center font-bold text-white shadow-md transition-transform active:scale-[0.98]"
-                style={{ backgroundColor: "var(--store-theme)" }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--store-theme)] py-3.5 text-center font-bold text-white shadow-md transition-transform active:scale-[0.98]"
               >
-                {t("publicOrder.itemDetail.addToCart")}
+                <span>{t("publicOrder.itemDetail.addToCart")}</span>
+                <span className="tabular-nums opacity-90">· {formatPrice(activeItemTotal)}</span>
               </button>
             </div>
           </div>

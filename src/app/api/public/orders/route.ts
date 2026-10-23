@@ -8,6 +8,7 @@ import {
   draftShortfallBatchesForConfirmedOrder,
 } from "@/lib/services/pos-order-builder";
 import { resolveInitialOrderItemStatus } from "@/lib/services/order-status.helpers";
+import { getMergedOptionGroups, resolveSelectedOptions } from "@/lib/utils/menu-item-options";
 import { allocateQueueNumber } from "@/lib/services/order-queue-number";
 import { inngest } from "@/lib/inngest/client";
 import { publishStoreEvent } from "@/lib/realtime/publish";
@@ -109,8 +110,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate all menu items belong to this storefront and are available
-    const menuItemIds = input.items.map((i) => i.menuItemId);
+    // Validate all menu items belong to this storefront and are available.
+    // Deduped: one item can sit on several lines (two bowls built
+    // differently), and findMany returns each row once.
+    const menuItemIds = [...new Set(input.items.map((i) => i.menuItemId))];
     const menuItems = await prisma.menuItem.findMany({
       where: {
         id: { in: menuItemIds },
@@ -118,7 +121,17 @@ export async function POST(request: Request) {
         isAvailable: true,
       },
       include: {
-        product: { select: { productLine: true } },
+        product: {
+          select: {
+            productLine: true,
+            // The real option groups, so each line's options are priced (and
+            // linked to stock) from the menu rather than from the request.
+            optionGroups: {
+              orderBy: { displayOrder: "asc" },
+              include: { options: { orderBy: { displayOrder: "asc" } } },
+            },
+          },
+        },
       },
     });
 
@@ -132,12 +145,33 @@ export async function POST(request: Request) {
     // Calculate totals using server-side prices (client prices are advisory only)
     const menuItemMap = new Map(menuItems.map((m) => [m.id, m]));
 
-    const orderItems = input.items.map((i) => {
-      const menuItem = menuItemMap.get(i.menuItemId)!;
-      const modifierTotal = (i.selectedOptions ?? []).reduce(
-        (sum, m) => sum + m.priceAdjustment,
-        0
+    // Options too: rebuilt from the item's real groups. A request could
+    // otherwise send a negative add-on price, or another store's material
+    // id for the stock deduction to decrement.
+    const resolvedOptions = new Map<number, ReturnType<typeof resolveSelectedOptions>>();
+    for (const [index, line] of input.items.entries()) {
+      const menuItem = menuItemMap.get(line.menuItemId)!;
+      const resolved = resolveSelectedOptions(
+        getMergedOptionGroups(menuItem, menuItem.product),
+        line.selectedOptions,
+        "strict"
       );
+      if (resolved.problem) {
+        return NextResponse.json(
+          createErrorResponse(
+            ApiErrorCode.INVALID_INPUT,
+            `The choices for "${menuItem.name}" have changed. Remove it from your cart and add it again.`
+          ),
+          { status: 422 }
+        );
+      }
+      resolvedOptions.set(index, resolved);
+    }
+
+    const orderItems = input.items.map((i, index) => {
+      const menuItem = menuItemMap.get(i.menuItemId)!;
+      const selectedOptions = resolvedOptions.get(index)!.options;
+      const modifierTotal = selectedOptions.reduce((sum, m) => sum + m.priceAdjustment, 0);
       const unitPrice = Number(menuItem.price) + modifierTotal;
       const total = unitPrice * i.quantity;
       return {
@@ -149,7 +183,7 @@ export async function POST(request: Request) {
         unitPrice,
         total,
         notes: i.notes,
-        selectedOptions: i.selectedOptions,
+        selectedOptions,
         initialStatus: resolveInitialOrderItemStatus(menuItem.product?.productLine),
       };
     });

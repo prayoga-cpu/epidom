@@ -143,6 +143,8 @@ export const createMenuItemSchema = z.object({
   isFeatured: z.boolean().default(false),
   displayOrder: z.number().int().optional().default(0),
   modifiers: z.array(modifierSchema).optional(),
+  // Show the modifiers as Build Your Own steps — see MenuItem.buildYourOwn.
+  buildYourOwn: z.boolean().default(false),
 });
 
 export const updateMenuItemSchema = createMenuItemSchema.partial();

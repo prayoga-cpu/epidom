@@ -2218,7 +2218,10 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       addToCart: "Ajouter au panier",
       notesPlaceholder: "ex : sans glace, serviettes en plus...",
       total: "Total",
-      byoHint: "Choisissez votre base, vos accompagnements et votre sauce ci-dessous.",
+      byoHint: "Passez chaque étape. Le total se met à jour à chaque choix.",
+      byoDialogDesc: "Composez-le étape par étape",
+      pickOne: "Choisir 1",
+      pickUpTo: "Jusqu'à {n} · {count} choisi(s)",
     },
     checkout: {
       orderType: "Type de Commande",
@@ -2435,6 +2438,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       noItems: "Aucun article dans cette catégorie",
       unavailable: "Indisponible",
       counted: "{count} comptés",
+      buildYourOwn: "À composer",
       customProducts: "Produits Personnalisés",
       food: "Nourriture",
       drink: "Boissons",
@@ -3389,6 +3393,22 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       },
 
       // Groupes d'options produit (variantes comme Taille ou Niveau de sucre)
+      // Build Your Own (Product/MenuItem.buildYourOwn)
+      byo: {
+        title: "À composer",
+        productDescription: "Le client compose cet article étape par étape. Chaque groupe d'options ci-dessous devient une étape, et chaque choix peut déduire une matière première du stock.",
+        stepsTitle: "Étapes de composition",
+        stepsDescription: "Ajoutez une étape par partie de l'article, par ex. Base, Protéine, Sauce. Reliez un choix à une matière première et indiquez la quantité d'une portion : elle est déduite du stock à chaque vente.",
+        madeToOrderOn: "Préparé à la commande : chaque vente déduit les matières premières reliées aux choix ci-dessous.",
+        madeToOrderHint: "Un article à composer est généralement préparé à la commande : le stock vient des choix, pas d'un total compté.",
+        useMadeToOrder: "Préparer à la commande",
+        linkMaterialHint: "Aucun choix ne déduit encore de stock. Choisissez une matière première sur un choix pour la déduire automatiquement.",
+        noSteps: "Aucune étape pour l'instant. Ajoutez la première, par ex. Base.",
+        stepLabel: "Étape {n}",
+        stepNamePlaceholder: "Nom de l'étape, par ex. Base",
+        addStep: "Ajouter une étape",
+        needsStep: "Ajoutez au moins une étape avec un choix, ou désactivez « À composer ».",
+      },
       options: {
         description:
           "Variantes comme Taille ou Niveau de sucre. Liez une option à une Matière première pour déduire le stock avec précision lorsqu'elle est choisie.",
@@ -7006,6 +7026,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       allCategory: "Tout",
       notFound: "Aucun article de menu trouvé",
       soldOut: "Épuisé",
+      buildYourOwn: "À composer",
+      fromPrice: "Dès {price}",
       featured: "Coup de cœur",
       itemUnit: "article",
       yourOrder: "Votre commande",
@@ -7061,6 +7083,10 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       addToCart: "Ajouter au panier",
       addToCartShort: "Ajouter au panier",
       selectOptionAlert: "Veuillez sélectionner une option pour",
+      byoTitle: "Composez le vôtre",
+      byoProgress: "{done} étape(s) sur {total}",
+      chooseOne: "Choisissez 1",
+      chooseUpTo: "Jusqu'à {n} · {count} choisi(s)",
       noteLabel: "Note",
       notePlaceholder: "ex : sans glace, serviettes en plus...",
     },
@@ -7276,6 +7302,10 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       inheritsProductOptions:
         "Cet article est lié à un produit — ses groupes d'options apparaissent automatiquement en caisse/boutique, en plus des modificateurs ci-dessous.",
       fromProductBadge: "Depuis un produit",
+      byoBadge: "À composer",
+      byoDescription: "Le client compose cet article étape par étape, à la caisse comme sur votre vitrine. Chaque groupe de modificateurs ci-dessous devient une étape.",
+      byoStepsDescription: "Ajoutez une étape par partie de l'article, par ex. Base, Protéine, Sauce, avec un prix par choix. Pour déduire du stock à chaque choix, créez l'article comme produit dans Données → Produits.",
+      byoOnProduct: "« À composer » se règle aussi sur le produit.",
       fromProductTooltip: "Article de menu issu des données produit",
       noStockBadge: "Sans lien de stock",
       noStockTooltip:

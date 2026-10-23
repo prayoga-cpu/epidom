@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.35.0] - 2026-10-24 · feat
+
+- Build Your Own menu items: a new switch, off by default, on products (Data → Products) and on items in Storefront → Menu. When it's on, the item's options become numbered steps, for example Base, Protein, Sauce.
+- Products: each choice in a step can take a raw material from stock (pick the material and how much one serving uses), so every sale deducts exactly what the customer chose. Turning Build Your Own on also sets the product to "made fresh when ordered".
+- Cashier: Build Your Own items have a badge and open a step-by-step picker that shows each step's limit and a running total. A full step won't take another pick, and a skipped required step is highlighted.
+- Storefront: customers build the item themselves, step by step, with a progress bar and the total on the Add button. Build Your Own prices show as "From …".
+- Online orders take every option's price and stock link from your menu, never from the customer's phone.
+- An online order with the same item twice (two bowls built differently, say) is no longer refused as "unavailable".
+
 ## [3.34.1] - 2026-10-21 · fix
 
 - Clock In / Out selfie: the camera works again in Chrome, Arc, Edge, Android Chrome and the desktop app. A site-wide security header was switching the camera off on every Epidom page, so the browser never asked for permission and "Try again" could not help. Clock-in location was blocked by the same header and now works too.

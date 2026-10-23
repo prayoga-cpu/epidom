@@ -103,6 +103,8 @@ const baseProductSchema = z.object({
   shelfLife: z.number().int().positive("Shelf life must be positive").optional(),
   linkedMenuItemId: z.string().optional(),
   optionGroups: z.array(productOptionGroupSchema).optional(),
+  // Show the option groups as Build Your Own steps — see Product.buildYourOwn.
+  buildYourOwn: z.boolean().optional(),
 });
 
 export const createProductSchema = baseProductSchema.refine(

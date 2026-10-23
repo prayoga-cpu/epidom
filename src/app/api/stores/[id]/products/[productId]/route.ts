@@ -75,6 +75,7 @@ export const PATCH = withApiHandler(
       productionTime: validatedData.productionTime,
       shelfLife: validatedData.shelfLife,
       optionGroups: validatedData.optionGroups,
+      buildYourOwn: validatedData.buildYourOwn,
     });
 
     // Serialize Decimal fields to numbers for Client Components

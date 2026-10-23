@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { PublicMenu } from "@/features/storefront/components/public-menu";
-import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
+import { isBuildYourOwnItem, serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
 import { MenuStructuredData } from "@/components/seo/structured-data";
 import { storefrontRobots } from "@/features/storefront/lib/indexing";
 import {
@@ -84,6 +84,7 @@ export default async function MenuPage({ params }: PageProps) {
       isFeatured: item.isFeatured,
       modifiers: item.modifiers,
       isCustom: item.product?.productLine === "CUSTOM",
+      buildYourOwn: isBuildYourOwnItem(item, item.product),
       product: item.product
         ? { optionGroups: serializeProductOptionGroups(item.product.optionGroups) }
         : null,

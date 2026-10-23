@@ -97,6 +97,7 @@ export class ProductService {
     shelfLife?: number;
     linkedMenuItemId?: string;
     optionGroups?: ProductOptionGroupInput[];
+    buildYourOwn?: boolean;
   }): Promise<ProductWithRelations> {
     // Validate SKU uniqueness within store
     const skuExists = await productRepository.existsBySku(data.storeId, data.sku);
@@ -138,6 +139,7 @@ export class ProductService {
         sellingPrice: data.sellingPrice,
         currentStock: data.currentStock ?? 0,
         stockMode: data.stockMode ?? StockMode.BATCH_PRODUCED,
+        buildYourOwn: data.buildYourOwn ?? false,
         unit: data.unit ?? "piece",
         minStock: data.minStock ?? 0,
         maxStock: data.maxStock ?? 1000,
@@ -202,7 +204,11 @@ export class ProductService {
     // Then create option groups if provided
     let result: ProductWithRelations;
     if (data.optionGroups && data.optionGroups.length > 0) {
-      result = await productRepository.updateOptionGroups(product.id, data.optionGroups);
+      result = await productRepository.updateOptionGroups(
+        product.id,
+        data.storeId,
+        data.optionGroups
+      );
     } else if (data.recipeIds && data.recipeIds.length > 0) {
       // Return updated product with recipes
       result = (await productRepository.findById(product.id))!;
@@ -250,6 +256,7 @@ export class ProductService {
       productionTime?: number;
       shelfLife?: number;
       optionGroups?: ProductOptionGroupInput[];
+      buildYourOwn?: boolean;
     }
   ): Promise<ProductWithRelations> {
     // Get current product to check if values are actually changing
@@ -318,6 +325,7 @@ export class ProductService {
         ...(data.currentStock !== undefined && { currentStock: data.currentStock }),
         ...(data.stockMode !== undefined && { stockMode: data.stockMode }),
         ...(data.costPriceManual !== undefined && { costPriceManual: data.costPriceManual }),
+        ...(data.buildYourOwn !== undefined && { buildYourOwn: data.buildYourOwn }),
         ...(data.unit && { unit: data.unit }),
         ...(data.minStock !== undefined && { minStock: data.minStock }),
         ...(data.maxStock !== undefined && { maxStock: data.maxStock }),
@@ -409,7 +417,7 @@ export class ProductService {
     // Update option groups if provided
     let result: ProductWithRelations;
     if (data.optionGroups !== undefined) {
-      result = await productRepository.updateOptionGroups(productId, data.optionGroups);
+      result = await productRepository.updateOptionGroups(productId, storeId, data.optionGroups);
     } else if (data.recipeIds !== undefined) {
       // Return updated product with recipes
       result = (await productRepository.findById(productId))!;

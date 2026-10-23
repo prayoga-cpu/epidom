@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyStoreAccessWithResponse } from "@/lib/utils/store-verification";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { UNCATEGORIZED_CATEGORY } from "@/lib/constants/pos";
+import { isBuildYourOwnItem } from "@/lib/utils/menu-item-options";
 
 /**
  * GET /api/stores/[id]/pos/menu
@@ -65,9 +66,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         category: true,
         department: true,
         modifiers: true,
+        buildYourOwn: true,
         product: {
           select: {
             productLine: true,
+            buildYourOwn: true,
             // Scannable code for the POS search box / barcode scanner. Surfaced
             // as a top-level `barcode` below (a menu item with no Product has
             // none), not left nested under `product`.
@@ -118,6 +121,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             : {};
         return {
           ...i,
+          // One flag for the till: the item's own or its product's.
+          buildYourOwn: isBuildYourOwnItem(i, i.product),
           price: Number(i.price),
           // PosMenuItem.barcode — offline menu mirror persists it automatically.
           barcode: i.product?.barcode ?? null,

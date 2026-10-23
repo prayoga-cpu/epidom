@@ -463,6 +463,8 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
           onOpenChange={(open) => !open && setEditingItem(null)}
           itemName={editingItem.name}
           groups={getMergedOptionGroups(editingMenuItem, editingMenuItem?.product)}
+          basePrice={editingItem.unitPrice}
+          buildYourOwn={!!editingMenuItem?.buildYourOwn}
           initialSelected={editingItem.modifiers}
           initialNotes={editingItem.notes}
           formatPrice={formatPrice}

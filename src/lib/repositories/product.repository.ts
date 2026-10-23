@@ -327,8 +327,23 @@ export class ProductRepository extends BaseRepository {
    */
   async updateOptionGroups(
     productId: string,
+    storeId: string,
     groups: ProductOptionGroupInput[]
   ): Promise<ProductWithRelations> {
+    // A linked material decides whose stock every sale of this option takes,
+    // and the FK is global, so it must be one of this store's materials.
+    const materialIds = [
+      ...new Set(groups.flatMap((g) => g.options.map((o) => o.materialId).filter(Boolean))),
+    ] as string[];
+    if (materialIds.length > 0) {
+      const owned = await this.db.material.count({
+        where: { id: { in: materialIds }, storeId },
+      });
+      if (owned !== materialIds.length) {
+        throw new ValidationError("A linked raw material was not found in this store");
+      }
+    }
+
     // Deleting the group cascades to its options (onDelete: Cascade).
     await this.db.productOptionGroup.deleteMany({
       where: { productId },

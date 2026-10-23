@@ -17,6 +17,7 @@ import {
   Loader2,
   Link2,
   Unlink2,
+  Layers,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +39,10 @@ import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { CategoryDeleteDialog, type CategoryDeleteMode } from "@/components/ui/category-delete-dialog";
 import { OptionGroupsEditor } from "@/components/shared/option-groups-editor";
+import { BuildYourOwnSwitch } from "@/components/shared/build-your-own-switch";
 import {
+  hasBuildStep,
+  isBuildYourOwnItem,
   modifiersJsonToOptionGroups,
   optionGroupsToModifiersJson,
 } from "@/lib/utils/menu-item-options";
@@ -158,6 +162,12 @@ function SortableItemRow({ item, t, formatPrice, onEdit, onDelete }: SortableIte
                   <p>{t("storefront.menu.noStockTooltip")}</p>
                 </TooltipContent>
               </Tooltip>
+            )}
+            {isBuildYourOwnItem(item, item.product) && (
+              <Badge variant="outline" className="border-primary/30 text-primary text-[10px]">
+                <Layers className="mr-1 size-2.5" />
+                {t("storefront.menu.byoBadge")}
+              </Badge>
             )}
           </div>
           {item.description && (
@@ -455,6 +465,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   const [newItemDepartment, setNewItemDepartment] = useState<"KITCHEN" | "BAR">("KITCHEN");
   const [newItemImageUrl, setNewItemImageUrl] = useState<string | undefined>(undefined);
   const [newItemModifiers, setNewItemModifiers] = useState<ProductOptionGroupInput[]>([]);
+  const [newItemBuildYourOwn, setNewItemBuildYourOwn] = useState(false);
   const [isSubmittingItem, setIsSubmittingItem] = useState(false);
 
   // Edit item dialog state
@@ -465,6 +476,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
   const [editItemDepartment, setEditItemDepartment] = useState<"KITCHEN" | "BAR">("KITCHEN");
   const [editItemImageUrl, setEditItemImageUrl] = useState<string | undefined>(undefined);
   const [editItemModifiers, setEditItemModifiers] = useState<ProductOptionGroupInput[]>([]);
+  const [editItemBuildYourOwn, setEditItemBuildYourOwn] = useState(false);
   // The MenuCategory this item currently sits under — holds either an
   // existing category's id, UNCATEGORIZED_VALUE, or freeform text typed into
   // the creatable combobox (a name not matching any existing category id,
@@ -528,12 +540,17 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     setNewItemPrice(undefined);
     setNewItemImageUrl(undefined);
     setNewItemModifiers([]);
+    setNewItemBuildYourOwn(false);
     setNewItemDepartment("KITCHEN");
     setAddItemDialog({ open: true, categoryId });
   };
 
   const handleCreateManualItem = async () => {
     if (!addItemDialog || !newItemName || newItemPrice === undefined) return;
+    if (newItemBuildYourOwn && !hasBuildStep(newItemModifiers)) {
+      toast.error(t("data.products.byo.needsStep"));
+      return;
+    }
     setIsSubmittingItem(true);
     try {
       await storefrontApi.createItem(storeId, {
@@ -545,6 +562,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
         imageUrl: newItemImageUrl || "",
         isAvailable: true,
         modifiers: optionGroupsToModifiersJson(newItemModifiers),
+        buildYourOwn: newItemBuildYourOwn,
       } as any);
       refreshMenu();
       toast.success(`"${newItemName}" added to menu`);
@@ -562,6 +580,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
     setEditItemPrice(Number(item.price));
     setEditItemImageUrl(item.imageUrl || undefined);
     setEditItemModifiers(modifiersJsonToOptionGroups(item.modifiers));
+    setEditItemBuildYourOwn(item.buildYourOwn === true);
     setEditItemDepartment(item.department ?? "KITCHEN");
     const currentCategory = categories.find((c) =>
       c.items?.some((i: any) => i.id === item.id)
@@ -572,6 +591,10 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
   const handleUpdateItem = async () => {
     if (!editItemDialog || !editItemName || editItemPrice === undefined) return;
+    if (!isEditingLinkedItem && editItemBuildYourOwn && !hasBuildStep(editItemModifiers)) {
+      toast.error(t("data.products.byo.needsStep"));
+      return;
+    }
     setIsSubmittingEditItem(true);
     try {
       // A categoryId that isn't UNCATEGORIZED_VALUE and doesn't match any
@@ -602,6 +625,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
         imageUrl: editItemImageUrl || "",
         categoryId,
         modifiers: optionGroupsToModifiersJson(editItemModifiers),
+        buildYourOwn: editItemBuildYourOwn,
       });
       refreshMenu();
       toast.success(t("storefront.menu.itemUpdated"));
@@ -807,13 +831,26 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
             <div className="space-y-2">
               <label className="text-sm leading-none font-medium">
-                {t("storefront.menu.modifiers")}
+                {t(newItemBuildYourOwn ? "data.products.byo.stepsTitle" : "storefront.menu.modifiers")}
               </label>
-              <p className="text-muted-foreground text-xs">{t("storefront.menu.modifiersDesc")}</p>
+              <BuildYourOwnSwitch
+                id="add-menu-item-build-your-own"
+                checked={newItemBuildYourOwn}
+                onCheckedChange={setNewItemBuildYourOwn}
+                description={t("storefront.menu.byoDescription")}
+              />
+              <p className="text-muted-foreground text-xs">
+                {t(
+                  newItemBuildYourOwn
+                    ? "storefront.menu.byoStepsDescription"
+                    : "storefront.menu.modifiersDesc"
+                )}
+              </p>
               <OptionGroupsEditor
                 storeId={storeId}
                 value={newItemModifiers}
                 onChange={setNewItemModifiers}
+                variant={newItemBuildYourOwn ? "steps" : "options"}
               />
             </div>
           </div>
@@ -878,6 +915,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                   {t("storefront.menu.fromProductTooltip")}
                 </p>
                 <p className="text-muted-foreground">{t("storefront.menu.inheritsProductOptions")}</p>
+                <p className="text-muted-foreground">{t("storefront.menu.byoOnProduct")}</p>
                 <Button
                   type="button"
                   variant="outline"
@@ -982,15 +1020,30 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
                 <div className="space-y-2">
                   <label className="text-sm leading-none font-medium">
-                    {t("storefront.menu.modifiers")}
+                    {t(
+                      editItemBuildYourOwn
+                        ? "data.products.byo.stepsTitle"
+                        : "storefront.menu.modifiers"
+                    )}
                   </label>
+                  <BuildYourOwnSwitch
+                    id="edit-menu-item-build-your-own"
+                    checked={editItemBuildYourOwn}
+                    onCheckedChange={setEditItemBuildYourOwn}
+                    description={t("storefront.menu.byoDescription")}
+                  />
                   <p className="text-muted-foreground text-xs">
-                    {t("storefront.menu.modifiersDesc")}
+                    {t(
+                      editItemBuildYourOwn
+                        ? "storefront.menu.byoStepsDescription"
+                        : "storefront.menu.modifiersDesc"
+                    )}
                   </p>
                   <OptionGroupsEditor
                     storeId={storeId}
                     value={editItemModifiers}
                     onChange={setEditItemModifiers}
+                    variant={editItemBuildYourOwn ? "steps" : "options"}
                   />
                 </div>
               </>

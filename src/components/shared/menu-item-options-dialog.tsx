@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { isBYOItem, type MergedOptionGroup } from "@/lib/utils/menu-item-options";
+import { cn } from "@/lib/utils";
+import {
+  firstMissingRequiredGroup,
+  toggleOptionSelection,
+  type MergedOptionGroup,
+} from "@/lib/utils/menu-item-options";
 
 export interface SelectedOptionValue {
   groupName: string;
@@ -23,6 +28,8 @@ interface MenuItemOptionsDialogProps {
   itemName: string;
   groups: MergedOptionGroup[];
   basePrice?: number;
+  /** Build Your Own: the groups are numbered steps (MenuItem/Product.buildYourOwn). */
+  buildYourOwn?: boolean;
   initialSelected?: SelectedOptionValue[];
   initialNotes?: string;
   formatPrice: (amount: number) => string;
@@ -34,6 +41,10 @@ interface MenuItemOptionsDialogProps {
  * POS Cashier and both storefront surfaces so the selection/validation logic
  * (radio for maxSelections===1, checkboxes otherwise, required-group
  * enforcement) lives in exactly one place.
+ *
+ * With `buildYourOwn` the groups read as numbered steps: each shows its pick
+ * limit, ticks off once chosen, and a full step refuses an extra pick rather
+ * than dropping an earlier one.
  */
 export function MenuItemOptionsDialog({
   open,
@@ -41,6 +52,7 @@ export function MenuItemOptionsDialog({
   itemName,
   groups,
   basePrice = 0,
+  buildYourOwn = false,
   initialSelected,
   initialNotes,
   formatPrice,
@@ -49,9 +61,9 @@ export function MenuItemOptionsDialog({
   const { t } = useI18n();
   const [selected, setSelected] = useState<Record<string, SelectedOptionValue[]>>({});
   const [notes, setNotes] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [missingGroup, setMissingGroup] = useState<string | null>(null);
+  const groupRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  const isBYO = isBYOItem(groups);
   const addonsTotal = Object.values(selected)
     .flat()
     .reduce((sum, o) => sum + o.priceAdjustment, 0);
@@ -65,35 +77,28 @@ export function MenuItemOptionsDialog({
     }
     setSelected(initial);
     setNotes(initialNotes ?? "");
-    setError(null);
+    setMissingGroup(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, itemName]);
 
   const toggleOption = (group: MergedOptionGroup, option: MergedOptionGroup["options"][number]) => {
-    const current = selected[group.name] ?? [];
-    const isSelected = current.some((o) => o.optionName === option.name);
-    let next: SelectedOptionValue[];
-
-    if (group.maxSelections === 1) {
-      next = isSelected ? [] : [toSelectedOption(group, option)];
-    } else if (isSelected) {
-      next = current.filter((o) => o.optionName !== option.name);
-    } else if (current.length < group.maxSelections) {
-      next = [...current, toSelectedOption(group, option)];
-    } else {
-      next = [...current.slice(1), toSelectedOption(group, option)];
-    }
-
+    const next = toggleOptionSelection(
+      selected[group.name] ?? [],
+      toSelectedOption(group, option),
+      (a, b) => a.optionName === b.optionName,
+      group.maxSelections,
+      { capAtMax: buildYourOwn }
+    );
     setSelected({ ...selected, [group.name]: next });
-    setError(null);
+    if (missingGroup === group.name) setMissingGroup(null);
   };
 
   const handleConfirm = () => {
-    for (const group of groups) {
-      if (group.isRequired && (selected[group.name]?.length ?? 0) === 0) {
-        setError(`${t("publicOrder.itemDetail.selectOptionAlert")} "${group.name}"`);
-        return;
-      }
+    const missing = firstMissingRequiredGroup(groups, selected);
+    if (missing) {
+      setMissingGroup(missing);
+      groupRefs.current[missing]?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
     }
     const selectedOptions = Object.values(selected).flat();
     onConfirm({ selectedOptions, notes: notes.trim() || "" });
@@ -104,18 +109,16 @@ export function MenuItemOptionsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <FormDialogLayout
         title={itemName}
-        description={t("pos.options.dialogDesc")}
-        maxWidth="md"
+        description={t(buildYourOwn ? "pos.options.byoDialogDesc" : "pos.options.dialogDesc")}
+        maxWidth={buildYourOwn ? "lg" : "md"}
         footer={
           <>
-            {isBYO && (
-              <div className="text-muted-foreground mr-auto flex items-baseline gap-1 text-xs">
-                <span>{t("pos.options.total")}</span>
-                <span className="text-foreground text-sm font-semibold tabular-nums">
-                  {formatPrice(runningTotal)}
-                </span>
-              </div>
-            )}
+            <div className="text-muted-foreground mr-auto flex items-baseline gap-1 text-xs">
+              <span>{t("pos.options.total")}</span>
+              <span className="text-foreground text-sm font-semibold tabular-nums">
+                {formatPrice(runningTotal)}
+              </span>
+            </div>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("common.actions.cancel")}
             </Button>
@@ -126,67 +129,105 @@ export function MenuItemOptionsDialog({
         }
       >
         <div className="space-y-5 py-2">
-          {isBYO && (
-            <p className="text-muted-foreground text-sm">
-              {t("pos.options.byoHint")}
-            </p>
+          {buildYourOwn && (
+            <p className="text-muted-foreground text-sm">{t("pos.options.byoHint")}</p>
           )}
-          {groups.map((group) => (
-            <div key={group.name} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">
-                  {group.name}
-                  {group.isRequired && <span className="text-destructive ml-1">*</span>}
-                </h4>
-                <span className="text-muted-foreground bg-muted rounded px-2 py-0.5 text-[10px] font-medium">
-                  {group.isRequired
-                    ? t("publicOrder.itemDetail.required")
-                    : t("publicOrder.itemDetail.optional")}
-                </span>
-              </div>
-              <div className="grid gap-2">
-                {group.options.map((option) => {
-                  const isSelected = (selected[group.name] ?? []).some(
-                    (o) => o.optionName === option.name
-                  );
-                  return (
-                    <button
-                      type="button"
-                      key={option.name}
-                      onClick={() => toggleOption(group, option)}
-                      className={`flex items-center justify-between rounded-lg border p-3 text-left transition ${
-                        isSelected
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-muted-foreground/30"
-                      }`}
+          {groups.map((group, groupIndex) => {
+            const picks = selected[group.name] ?? [];
+            const max = Math.max(1, group.maxSelections);
+            const isFull = buildYourOwn && max > 1 && picks.length >= max;
+            const isDone = picks.length > 0;
+            const isMissing = missingGroup === group.name;
+            return (
+              <section
+                key={group.name}
+                ref={(el) => {
+                  groupRefs.current[group.name] = el;
+                }}
+                className={cn("space-y-2 rounded-lg", isMissing && "ring-destructive p-2 ring-2")}
+              >
+                <div className="flex items-center gap-2">
+                  {buildYourOwn && (
+                    <span
+                      className={cn(
+                        "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                        isDone
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      )}
                     >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex size-5 items-center justify-center rounded-md border transition-colors ${
-                            isSelected
-                              ? "border-transparent bg-primary"
-                              : "border-muted-foreground/30"
-                          }`}
-                        >
-                          {isSelected && (
-                            <Check className="text-primary-foreground size-3.5 stroke-[3px]" />
-                          )}
+                      {isDone ? <Check className="size-3.5 stroke-[3px]" /> : groupIndex + 1}
+                    </span>
+                  )}
+                  <h4 className="min-w-0 flex-1 text-sm font-semibold">
+                    {group.name}
+                    {group.isRequired && <span className="text-destructive ml-1">*</span>}
+                  </h4>
+                  <span className="text-muted-foreground bg-muted shrink-0 rounded px-2 py-0.5 text-[10px] font-medium">
+                    {group.isRequired
+                      ? t("publicOrder.itemDetail.required")
+                      : t("publicOrder.itemDetail.optional")}
+                  </span>
+                </div>
+                {buildYourOwn && (
+                  <p className="text-muted-foreground text-xs">
+                    {max === 1
+                      ? t("pos.options.pickOne")
+                      : t("pos.options.pickUpTo")
+                          .replace("{n}", String(max))
+                          .replace("{count}", String(picks.length))}
+                  </p>
+                )}
+                <div className={cn("grid gap-2", buildYourOwn && "sm:grid-cols-2")}>
+                  {group.options.map((option) => {
+                    const isSelected = picks.some((o) => o.optionName === option.name);
+                    const isBlocked = isFull && !isSelected;
+                    return (
+                      <button
+                        type="button"
+                        key={option.name}
+                        onClick={() => toggleOption(group, option)}
+                        disabled={isBlocked}
+                        className={cn(
+                          "flex min-h-11 items-center justify-between gap-2 rounded-lg border p-3 text-left transition",
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-muted-foreground/30",
+                          isBlocked && "opacity-50"
+                        )}
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div
+                            className={cn(
+                              "flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors",
+                              isSelected
+                                ? "bg-primary border-transparent"
+                                : "border-muted-foreground/30"
+                            )}
+                          >
+                            {isSelected && (
+                              <Check className="text-primary-foreground size-3.5 stroke-[3px]" />
+                            )}
+                          </div>
+                          <span className="text-sm font-medium">{option.name}</span>
                         </div>
-                        <span className="text-sm font-medium">{option.name}</span>
-                      </div>
-                      <span className="text-muted-foreground text-xs font-semibold">
-                        {option.priceAdjustment !== 0
-                          ? `+${formatPrice(option.priceAdjustment)}`
-                          : t("publicOrder.itemDetail.free")}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-
-          {error && <p className="text-destructive text-sm">{error}</p>}
+                        <span className="text-muted-foreground shrink-0 text-xs font-semibold">
+                          {option.priceAdjustment !== 0
+                            ? `+${formatPrice(option.priceAdjustment)}`
+                            : t("publicOrder.itemDetail.free")}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {isMissing && (
+                  <p className="text-destructive text-xs">
+                    {`${t("publicOrder.itemDetail.selectOptionAlert")} "${group.name}"`}
+                  </p>
+                )}
+              </section>
+            );
+          })}
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium">{t("pos.checkout.notes")}</label>

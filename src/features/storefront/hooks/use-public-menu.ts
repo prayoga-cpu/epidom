@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
+import { isBuildYourOwnItem, serializeProductOptionGroups } from "@/lib/utils/menu-item-options";
 
 export interface PublicMenuItem {
   id: string;
@@ -17,6 +17,8 @@ export interface PublicMenuItem {
   // rendered in its own visually distinct section rather than mixed in with
   // the regular food/drink categories.
   isCustom: boolean;
+  // Build Your Own: the options show as numbered steps (isBuildYourOwnItem).
+  buildYourOwn: boolean;
   product: { optionGroups: ReturnType<typeof serializeProductOptionGroups> } | null;
 }
 
@@ -64,6 +66,7 @@ export function usePublicStorefrontMenu(slug: string, initialCategories?: Public
           isFeatured: item.isFeatured,
           modifiers: item.modifiers,
           isCustom: item.product?.productLine === "CUSTOM",
+          buildYourOwn: isBuildYourOwnItem(item, item.product),
           product: item.product
             ? { optionGroups: serializeProductOptionGroups(item.product?.optionGroups) }
             : null,

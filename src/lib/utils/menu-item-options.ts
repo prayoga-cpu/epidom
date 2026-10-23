@@ -75,6 +75,16 @@ export function modifiersJsonToOptionGroups(modifiers: unknown): ProductOptionGr
   });
 }
 
+/** At least one step with a name and a named choice: what a BYO item needs. */
+export function hasBuildStep(groups: ProductOptionGroupInput[]): boolean {
+  return groups.some((g) => g.name.trim() && g.options.some((o) => o.name.trim()));
+}
+
+/** Whether any choice takes a raw material from stock when it is sold. */
+export function hasLinkedMaterial(groups: ProductOptionGroupInput[]): boolean {
+  return groups.some((g) => g.options.some((o) => o.materialId && o.materialQty));
+}
+
 export function optionGroupsToModifiersJson(groups: ProductOptionGroupInput[]) {
   return groups
     .filter((group) => group.name.trim() && group.options.some((o) => o.name.trim()))
@@ -111,13 +121,138 @@ export function serializeProductOptionGroups(
 }
 
 /**
- * A "Build Your Own" item has 3+ modifier groups or any required group with
- * more than 4 options — enough complexity to warrant the running-total UX.
+ * Whether an item is sold as "Build Your Own": its option groups are shown as
+ * numbered steps. Set by the owner (off by default). A menu item linked to a
+ * product takes its option groups from that product, so either flag counts.
  */
-export function isBYOItem(groups: MergedOptionGroup[]): boolean {
-  return (
-    groups.length >= 3 || groups.some((g) => g.isRequired && g.options.length > 4)
-  );
+export function isBuildYourOwnItem(
+  menuItem: { buildYourOwn?: boolean | null } | null | undefined,
+  product?: { buildYourOwn?: boolean | null } | null
+): boolean {
+  return !!menuItem?.buildYourOwn || !!product?.buildYourOwn;
+}
+
+/**
+ * The selection after tapping `option` in a group. One shared rule for the
+ * till and both storefront pickers:
+ * - pick 1 groups behave like radio buttons (tap again to clear);
+ * - pick N groups toggle the option. When the group is full, a Build Your
+ *   Own step refuses the extra pick (`capAtMax`), so the customer sees the
+ *   limit instead of losing an earlier choice; other groups drop the oldest
+ *   pick, as they always have.
+ */
+export function toggleOptionSelection<T>(
+  current: T[],
+  option: T,
+  isSame: (a: T, b: T) => boolean,
+  maxSelections: number,
+  { capAtMax = false }: { capAtMax?: boolean } = {}
+): T[] {
+  const isSelected = current.some((o) => isSame(o, option));
+  if (maxSelections <= 1) return isSelected ? [] : [option];
+  if (isSelected) return current.filter((o) => !isSame(o, option));
+  if (current.length < maxSelections) return [...current, option];
+  return capAtMax ? current : [...current.slice(1), option];
+}
+
+/** The first required group nothing was picked in, or null. */
+export function firstMissingRequiredGroup(
+  groups: Array<{ name: string; isRequired?: boolean }>,
+  selectedByGroup: Record<string, unknown[] | undefined>
+): string | null {
+  const missing = groups.find((g) => g.isRequired && (selectedByGroup[g.name]?.length ?? 0) === 0);
+  return missing?.name ?? null;
+}
+
+// A type alias, not an interface, so it can be stored as Prisma JSON.
+export type SelectedOptionLike = {
+  groupName: string;
+  optionName: string;
+  priceAdjustment: number;
+  materialId?: string;
+  materialQty?: number;
+};
+
+export type OptionResolutionProblem = "UNKNOWN_OPTION" | "TOO_MANY" | "MISSING_REQUIRED";
+
+/**
+ * Rebuilds a line's selected options from the item's real option groups, so
+ * an order never trusts the price or stock link the browser sent. Each option
+ * is matched by group and option name; its price and material link come from
+ * the menu, never from the request.
+ *
+ * - "strict" (public storefront orders): an option the item does not have, a
+ *   group over its limit, or a required group left empty makes the line
+ *   invalid (`problem`). Nothing is dropped silently.
+ * - "lenient" (the till): a cashier's line is kept even when the menu changed
+ *   after it was rung up (held orders, offline replay). A matched option is
+ *   still repriced from the menu; an option the menu no longer has keeps the
+ *   name and price that were charged but loses any stock link.
+ */
+export function resolveSelectedOptions(
+  groups: MergedOptionGroup[],
+  selected: SelectedOptionLike[] | null | undefined,
+  mode: "strict" | "lenient"
+): { options: SelectedOptionLike[]; problem: OptionResolutionProblem | null } {
+  // Same-named groups (a product group and a menu item's own group can share
+  // a name) are one group to the pickers, which key selections by name.
+  const byName = new Map<string, MergedOptionGroup>();
+  for (const g of groups) {
+    const prev = byName.get(g.name);
+    byName.set(
+      g.name,
+      prev
+        ? {
+            name: g.name,
+            isRequired: prev.isRequired || g.isRequired,
+            maxSelections: Math.max(prev.maxSelections, g.maxSelections),
+            options: [...prev.options, ...g.options],
+          }
+        : g
+    );
+  }
+
+  const options: SelectedOptionLike[] = [];
+  const countByGroup = new Map<string, number>();
+  const seen = new Set<string>();
+
+  for (const sel of selected ?? []) {
+    const key = `${sel.groupName}\u0000${sel.optionName}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const group = byName.get(sel.groupName);
+    const match = group?.options.find((o) => o.name === sel.optionName);
+    if (!group || !match) {
+      if (mode === "strict") return { options: [], problem: "UNKNOWN_OPTION" };
+      options.push({
+        groupName: sel.groupName,
+        optionName: sel.optionName,
+        priceAdjustment: sel.priceAdjustment,
+      });
+      continue;
+    }
+
+    countByGroup.set(group.name, (countByGroup.get(group.name) ?? 0) + 1);
+    options.push({
+      groupName: group.name,
+      optionName: match.name,
+      priceAdjustment: match.priceAdjustment,
+      ...(match.materialId && match.materialQty
+        ? { materialId: match.materialId, materialQty: match.materialQty }
+        : {}),
+    });
+  }
+
+  if (mode === "strict") {
+    for (const group of byName.values()) {
+      const count = countByGroup.get(group.name) ?? 0;
+      if (count > Math.max(1, group.maxSelections)) return { options: [], problem: "TOO_MANY" };
+      if (group.isRequired && count === 0) return { options: [], problem: "MISSING_REQUIRED" };
+    }
+  }
+
+  return { options, problem: null };
 }
 
 export function getMergedOptionGroups(

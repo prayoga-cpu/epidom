@@ -115,6 +115,7 @@ export const POST = withApiHandler(
       shelfLife: validatedData.shelfLife,
       linkedMenuItemId: validatedData.linkedMenuItemId,
       optionGroups: validatedData.optionGroups,
+      buildYourOwn: validatedData.buildYourOwn,
     });
 
     // Serialize Decimal fields to numbers for Client Components
