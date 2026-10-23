@@ -9,6 +9,10 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.35.1] - 2026-10-24 · ux
+
+- Homepage, in French: the headline now leads with the benefit, « Le moyen le plus simple de gérer votre coffee shop », with « Caisse en temps réel avec une marge transparente » under it. English and Indonesian are unchanged.
+
 ## [3.35.0] - 2026-10-24 · feat
 
 - Build Your Own menu items: a new switch, off by default, on products (Data → Products) and on items in Storefront → Menu. When it's on, the item's options become numbered steps, for example Base, Protein, Sauce.

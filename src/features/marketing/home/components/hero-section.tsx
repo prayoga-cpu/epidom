@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
@@ -16,24 +16,34 @@ import { usePosTrialHref } from "../lib/use-pos-trial-href";
 import { PRIMARY_BUTTON, TEXT_LINK } from "./landing-ui";
 
 /**
- * The letter of the headline that is drawn as a lightning bolt: the "i" of
- * "realtime" ("REALT⚡ME POS", "KASIR REALT⚡ME") and the "s" of "temps réel"
- * ("CAISSE EN TEMP⚡ RÉEL"). The group is the text before that letter. No
+ * The letter drawn as a lightning bolt: the "i" of "realtime" ("REALT⚡ME
+ * POS", "KASIR REALT⚡ME") and the "s" of "temps réel" ("CAISSE EN TEMP⚡
+ * RÉEL", in French's tagline). The group is the text before that letter. No
  * lookbehind: older iOS Safari throws on it when the module loads.
  */
 const BOLT_LETTER = /(realt)i(?=me)|(temp)s(?=\s+r[ée]el)/i;
 
+/** Where the bolt goes in a line of text, or -1 when the line has no "realtime". */
+function boltIndex(line: string) {
+  const match = BOLT_LETTER.exec(line);
+  return match ? match.index + (match[1] ?? match[2] ?? "").length : -1;
+}
+
 /**
  * The lightning bolt. Drawn to the display face's cap height (0.7em) and sat
- * on the baseline, so it reads as a letter at any headline size.
+ * on the baseline, so it reads as a letter at any headline size; a lighter
+ * face passes its own cap height.
  */
-function Bolt() {
+function Bolt({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 38 70"
       aria-hidden="true"
       focusable="false"
-      className="text-epi-gold-400 mx-[0.03em] inline-block h-[0.7em] w-[0.38em] fill-current align-baseline"
+      className={cn(
+        "text-epi-gold-400 mx-[0.03em] inline-block h-[0.7em] w-[0.38em] fill-current align-baseline",
+        className
+      )}
     >
       <path d="M14 0H34L24 26H34L10 70L16 36H4Z" />
     </svg>
@@ -41,15 +51,53 @@ function Bolt() {
 }
 
 /**
- * The width of a one-line text in em, for sizing it to a container in CSS
- * (`calc(100cqi / em)`). Estimated from the length for the server render and
- * the first paint, then measured once the line is laid out and again once the
- * web fonts have loaded. offsetWidth and the computed font size are both CSS px
- * before any page zoom (the app's zoom setting), so the ratio holds under it.
+ * A hero line as drawn: "\n" breaks it, and the "realtime" letter is the
+ * bolt. The replaced letter stays in the text, undrawn, and a space sits
+ * before each break, so the element's text is the string exactly once
+ * ("REALTIME", not "REALTME"; "simple de", not "simplede").
+ */
+function DrawnText({ text, boltClassName }: { text: string; boltClassName?: string }) {
+  return text.split("\n").map((line, i) => {
+    const at = boltIndex(line);
+    return (
+      <Fragment key={i}>
+        {i > 0 ? (
+          <>
+            {" "}
+            <br />
+          </>
+        ) : null}
+        {at >= 0 ? (
+          <>
+            {line.slice(0, at)}
+            <Bolt className={boltClassName} />
+            <span className="sr-only">{line[at]}</span>
+            {line.slice(at + 1)}
+          </>
+        ) : (
+          line
+        )}
+      </Fragment>
+    );
+  });
+}
+
+/** The text as read aloud: its lines joined by a space. */
+const plainText = (text: string) => text.replace(/\n/g, " ");
+
+/**
+ * The width of a text in em (its longest line, when "\n" breaks it), for
+ * sizing it to a container in CSS (`calc(100cqi / em)`). Estimated from the
+ * length for the server render and the first paint, then measured once the
+ * line is laid out and again once the web fonts have loaded. offsetWidth and
+ * the computed font size are both CSS px before any page zoom (the app's zoom
+ * setting), so the ratio holds under it.
  */
 function useEmWidth(text: string, emPerChar: number) {
   const ref = useRef<HTMLSpanElement>(null);
-  const [em, setEm] = useState(() => text.length * emPerChar);
+  const [em, setEm] = useState(
+    () => Math.max(...text.split("\n").map((line) => line.length)) * emPerChar
+  );
   useLayoutEffect(() => {
     let live = true;
     const measure = () => {
@@ -104,14 +152,16 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
   const { t, locale } = useI18n();
   const trialHref = usePosTrialHref();
   // One letter of the "realtime" word is drawn as a gold lightning bolt (see
-  // BOLT_LETTER). The drawn copy keeps the replaced letter in its text, undrawn,
-  // so the h1's text is the title exactly once ("REALTIME", not "REALTME", and
-  // not the title twice, as when a second sr-only copy sat beside it). Screen
-  // readers get the plain title from the h1's aria-label, so they never read
-  // the word in pieces around the drawing.
+  // BOLT_LETTER), in the h1 or, in French, in the tagline. The drawn copy keeps
+  // the replaced letter in its text, undrawn, so the h1's text is the title
+  // exactly once ("REALTIME", not "REALTME", and not the title twice, as when a
+  // second sr-only copy sat beside it). Screen readers get the plain title from
+  // the h1's aria-label, so they never read the word in pieces around the
+  // drawing.
   const title = t("redesign.landing.hero.title");
-  const boltMatch = BOLT_LETTER.exec(title);
-  const boltAt = boltMatch ? boltMatch.index + (boltMatch[1] ?? boltMatch[2] ?? "").length : -1;
+  const titleHasBolt = boltIndex(title) >= 0;
+  // French's headline is a sentence on two lines (a "\n" in the string).
+  const titleLines = title.split("\n").length;
   const [titleRef, titleEm] = useEmWidth(title, TITLE_EM_PER_CHAR);
   const tagline = t("redesign.landing.hero.tagline");
   const [taglineRef, taglineEm] = useEmWidth(tagline, TAGLINE_EM_PER_CHAR);
@@ -233,8 +283,9 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
           <div className="[container-type:inline-size] flex flex-1 flex-col items-center justify-center text-center">
             {/* The h1 is only the product ("REALTIME POS"); under it, the promise
                 in the display face's light companion, one colour, on one line
-                exactly as wide as the h1.
-                - The h1 keeps one line: where its usual size would not fit the
+                exactly as wide as the h1. French leads with the benefit instead
+                (a sentence on two lines), and its tagline carries the product.
+                - The h1 keeps its lines: where its usual size would not fit the
                   column (French on a phone), it shrinks to the column's width
                   (100cqi over its width in em, --title-em).
                 - The wrapper takes the h1's width; the tagline's box fills it
@@ -245,21 +296,13 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
             <div className="flex max-w-full flex-col">
               <h1
                 id="hero-title"
-                aria-label={boltAt >= 0 ? title : undefined}
+                aria-label={titleHasBolt ? plainText(title) : undefined}
                 style={{ "--title-em": titleEm } as React.CSSProperties}
                 className="epi-display text-epi-cream-50 sm:short:[--title-size:clamp(44px,min(9.5vw,12svh),144px)] m-0 max-w-[8.2em] text-[length:var(--title-size)] text-balance [--title-size:clamp(52px,min(9.5vw,14svh),144px)] supports-[width:1cqi]:max-w-none supports-[width:1cqi]:text-[length:min(var(--title-size),calc(100cqi/var(--title-em)))] supports-[width:1cqi]:whitespace-nowrap"
               >
-                <span ref={titleRef}>
-                  {boltAt >= 0 ? (
-                    <>
-                      {title.slice(0, boltAt)}
-                      <Bolt />
-                      <span className="sr-only">{title[boltAt]}</span>
-                      {title.slice(boltAt + 1)}
-                    </>
-                  ) : (
-                    title
-                  )}
+                {/* A two-line title is measured as a block, its longest line. */}
+                <span ref={titleRef} className={titleLines > 1 ? "inline-block" : undefined}>
+                  <DrawnText text={title} />
                 </span>
               </h1>
               <div className="[container-type:inline-size] w-0 min-w-full">
@@ -267,7 +310,9 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
                   style={{ "--tagline-em": taglineEm } as React.CSSProperties}
                   className="epi-display-light text-epi-cream-50/85 mt-3 text-[length:clamp(16px,2.4vw,40px)] supports-[width:1cqi]:text-[length:calc(100cqi/var(--tagline-em))] supports-[width:1cqi]:whitespace-nowrap sm:mt-[clamp(0.5rem,1.5svh,1rem)]"
                 >
-                  <span ref={taglineRef}>{tagline}</span>
+                  <span ref={taglineRef}>
+                    <DrawnText text={tagline} />
+                  </span>
                 </p>
               </div>
             </div>

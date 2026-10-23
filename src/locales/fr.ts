@@ -6262,8 +6262,11 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       // French punctuation: a no-break space (U+00A0) sits before : ; ? ! % and €
       // in these strings, so a line never starts with one when the text wraps.
       hero: {
-        title: "Caisse en temps réel",
-        tagline: "avec une marge transparente pour les cafés",
+        // French leads with the benefit; the product (with its lightning
+        // bolt on "temps réel") moves to the line under it. "\n" is where
+        // the headline breaks: it is set on two lines, never one.
+        title: "Le moyen le plus simple\nde gérer votre coffee shop",
+        tagline: "Caisse en temps réel avec une marge transparente",
         sub:
           "Le système de prise de commande de bout en bout pour cafés, restaurants et boulangeries : lien en bio, commandes, stock, équipe et finance dans un seul lien web (epidom.fr).",
         ctaTrial: "Essai POS gratuit 14 jours",

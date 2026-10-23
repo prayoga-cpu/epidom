@@ -145,27 +145,27 @@ describe("HeroSection", () => {
   });
 
   it.each([
-    ["fr", "Caisse en temps réel", "avec une marge transparente pour les cafés"],
+    [
+      "fr",
+      "Le moyen le plus simple de gérer votre coffee shop",
+      "Caisse en temps réel avec une marge transparente",
+    ],
     ["en", "Realtime POS", "with transparent margin for cafés"],
     ["id", "Kasir realtime", "dengan margin transparan untuk kafe"],
-  ] as const)(
-    "%s: one h1, only the product, with the margin promise under it",
-    (loc, headline, tagline) => {
-      mockLocale.value = loc;
-      render(<HeroSection onOpenMigration={() => {}} />);
-      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-      const h1 = screen.getByRole("heading", { level: 1, name: headline });
-      const taglineEl = screen.getByText(
-        (_, el) => el?.tagName === "P" && el.textContent === tagline
-      );
-      expect(h1.compareDocumentPosition(taglineEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    }
-  );
+  ] as const)("%s: one h1, with its tagline under it", (loc, headline, tagline) => {
+    mockLocale.value = loc;
+    render(<HeroSection onOpenMigration={() => {}} />);
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    const h1 = screen.getByRole("heading", { level: 1, name: headline });
+    const taglineEl = screen.getByText(
+      (_, el) => el?.tagName === "P" && el.textContent === tagline
+    );
+    expect(h1.compareDocumentPosition(taglineEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 
   it.each([
     ["en", "Realt", "me POS"],
     ["id", "Kasir realt", "me"],
-    ["fr", "Caisse en temp", " réel"],
   ] as const)(
     "%s: one letter of realtime is a bolt drawing, hidden from screen readers",
     (loc, before, after) => {
@@ -186,6 +186,27 @@ describe("HeroSection", () => {
       expect(h1).toHaveAttribute("aria-label", title);
     }
   );
+
+  it("fr: leads with the benefit on two lines, and the bolt moves to the tagline", () => {
+    mockLocale.value = "fr";
+    render(<HeroSection onOpenMigration={() => {}} />);
+    const h1 = screen.getByRole("heading", { level: 1 });
+    // Two lines, read as one sentence: a space sits before the break.
+    expect(h1.querySelectorAll("br")).toHaveLength(1);
+    expect(h1.textContent).toBe("Le moyen le plus simple de gérer votre coffee shop");
+    expect(h1.querySelector("svg")).toBeNull();
+    expect(h1).not.toHaveAttribute("aria-label");
+
+    const tagline = "Caisse en temps réel avec une marge transparente";
+    const taglineEl = screen.getByText(
+      (_, el) => el?.tagName === "P" && el.textContent === tagline
+    );
+    const bolts = taglineEl.querySelectorAll("svg");
+    expect(bolts).toHaveLength(1);
+    expect(bolts[0]).toHaveAttribute("aria-hidden", "true");
+    // The "s" of "temps" stays in the text, undrawn.
+    expect(bolts[0].parentElement!.querySelector(".sr-only")?.textContent).toBe("s");
+  });
 
   it("puts the gold trial pill first and the calculator (text only) second", () => {
     render(<HeroSection onOpenMigration={() => {}} />);
