@@ -23,6 +23,7 @@ import { LaunchScreen } from "./launch-screen";
 import { StoreStep } from "./store-step";
 import { StorefrontStep } from "./storefront-step";
 import { VerificationNotice } from "./verification-notice";
+import { WelcomeNotice } from "./welcome-notice";
 import { WizardFrame } from "./wizard-frame";
 
 export interface OnboardingContentProps {
@@ -91,7 +92,8 @@ export function OnboardingContent({
   // "Brand-new account" is decided once, from what the server had before
   // this visit saved anything.
   const [isNewAccount] = useState(initialState.business === null);
-  const { verificationError, dismissVerificationError } = useOnboardingLanding({ isNewAccount });
+  const { verificationError, dismissVerificationError, welcome, dismissWelcome } =
+    useOnboardingLanding({ isNewAccount });
 
   useEffect(() => {
     if (!launch) trackStepViewed(step);
@@ -108,8 +110,11 @@ export function OnboardingContent({
     goTo(nextStep);
   };
 
+  // The welcome greets the first step only: once the owner moves, it's done its job.
   const notice = verificationError ? (
     <VerificationNotice onDismiss={dismissVerificationError} />
+  ) : welcome && !hasNavigated && !launch ? (
+    <WelcomeNotice onDismiss={dismissWelcome} />
   ) : null;
 
   if (launch) {

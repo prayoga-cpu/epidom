@@ -26,12 +26,17 @@ export const VERIFICATION_ERROR_PARAM = "error";
  * - `signup=google` on a brand-new account (no business yet) → the `sign_up`
  *   conversion Google signups never fired (once per browser session). An
  *   existing user who pressed Google on the register page isn't counted.
+ *
+ * Either way, a brand-new account that just finished signing up gets
+ * `welcome`: the "Congratulations on choosing Epidom" banner. The params are
+ * stripped right after, so a reload doesn't show it again.
  */
 export function useOnboardingLanding({ isNewAccount }: { isNewAccount: boolean }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const handled = useRef(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [welcome, setWelcome] = useState(false);
 
   useEffect(() => {
     if (handled.current || !searchParams) return;
@@ -40,14 +45,20 @@ export function useOnboardingLanding({ isNewAccount }: { isNewAccount: boolean }
     if (!verified && signup === null) return;
     handled.current = true;
 
+    let signedUp = false;
     if (verified) {
       const error = searchParams.get(VERIFICATION_ERROR_PARAM);
       if (error) setVerificationError(error);
-      else trackEmailVerified();
+      else {
+        trackEmailVerified();
+        signedUp = true;
+      }
     }
     if (signup === SIGNUP_GOOGLE_VALUE && isNewAccount) {
       trackGoogleSignUp();
+      signedUp = true;
     }
+    if (signedUp && isNewAccount) setWelcome(true);
 
     const rest = new URLSearchParams(searchParams.toString());
     rest.delete(VERIFIED_PARAM);
@@ -58,6 +69,7 @@ export function useOnboardingLanding({ isNewAccount }: { isNewAccount: boolean }
   }, [searchParams, router, isNewAccount]);
 
   const dismissVerificationError = useCallback(() => setVerificationError(null), []);
+  const dismissWelcome = useCallback(() => setWelcome(false), []);
 
-  return { verificationError, dismissVerificationError };
+  return { verificationError, dismissVerificationError, welcome, dismissWelcome };
 }

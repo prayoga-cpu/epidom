@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, PartyPopper } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supplierOrderKeys } from "@/features/dashboard/shared/hooks/use-supplier-orders";
 import { useSession } from "@/lib/auth-client";
@@ -153,6 +153,19 @@ export function CheckoutSuccessContent() {
             <p className="text-muted-foreground">
               {t(isTrial ? "checkout.success.trialSubtitle" : "checkout.success.subtitle")}
             </p>
+          </div>
+
+          {/* Congratulations: a trial chose Epidom too. */}
+          <div className="border-epi-gold-500/40 bg-epi-gold-500/10 space-y-2 rounded-2xl border p-5">
+            <PartyPopper
+              className="text-epi-gold-600 dark:text-epi-gold-400 mx-auto size-8"
+              strokeWidth={1.75}
+              aria-hidden="true"
+            />
+            <h2 className="text-foreground text-lg font-semibold">
+              {t("checkout.success.congratsTitle")}
+            </h2>
+            <p className="text-muted-foreground text-sm">{t("checkout.success.congratsBody")}</p>
           </div>
 
           {/* Details */}

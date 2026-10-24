@@ -5173,6 +5173,8 @@ lifetime: "Lifetime access",
     success: {
       title: "Payment Successful!",
       subtitle: "Your subscription is now active",
+      congratsTitle: "Congratulations on choosing Epidom!",
+      congratsBody: "Thank you for trusting us with your business. We're glad to have you with us.",
       plan: "Plan",
       orderId: "Order ID",
       status: "Status",
@@ -5239,6 +5241,8 @@ lifetime: "Lifetime access",
       linkErrorBody:
         "It may have expired or already been used. You can carry on with setup. If your email still isn't verified, sign in again to get a new link.",
       linkErrorAction: "Go to sign in",
+      welcomeTitle: "Congratulations on choosing Epidom!",
+      welcomeBody: "Your account is ready. A few quick steps and your store is online.",
       dismiss: "Dismiss",
     },
     store: {

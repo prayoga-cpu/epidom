@@ -1,5 +1,11 @@
 # STATUS.md
 
+## 3.37.1 — "Congratulations on choosing Epidom" after sign-up and payment (2026-10-24)
+
+- [x] Sign-up: `WelcomeNotice` on the setup wizard for a brand-new account (no business yet) landing from `?verified=1` without `error`, or `?signup=google` (`useOnboardingLanding` → `welcome`). Dismissible; hidden once the owner leaves the first step shown and on the launch screen. The flags are stripped from the URL, so a reload doesn't show it again.
+- [x] Payment: gold congratulations card on `/checkout/success` (paid and trial); the Billing page's `?success=true` alert (custom-price checkout) gets the same title.
+- [ ] Not browser-tested yet (phone + desktop, light + dark).
+
 ## 3.37.0 — Hold / Resume hold with the Active Queue off, POS & Orders access (shipped 2026-10-24)
 
 - [x] Active Queue off → Save Bill becomes Hold: `usePosCart.holdSale` parks the cart on the device (`heldSales[storeId]`, max `MAX_HELD_SALES` = 20), no server call, works offline. The server still refuses `/pos/orders/hold` in this mode (unchanged).

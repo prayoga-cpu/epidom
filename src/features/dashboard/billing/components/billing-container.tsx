@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -236,6 +236,9 @@ export function BillingContainer() {
       {success && (
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertTitle className="line-clamp-none text-green-900">
+            {t("checkout.success.congratsTitle")}
+          </AlertTitle>
           <AlertDescription className="text-green-800">
             {t("billing.subscriptionActivated")?.replace("{plan}", labelForPlan(plan)) ||
               `Subscription activated successfully! Welcome to ${labelForPlan(plan)} plan.`}

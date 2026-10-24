@@ -5695,6 +5695,9 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     success: {
       title: "Paiement Réussi ! 🎉",
       subtitle: "Votre abonnement est maintenant actif",
+      congratsTitle: "Félicitations d'avoir choisi Epidom !",
+      congratsBody:
+        "Merci de nous confier votre établissement. Nous sommes ravis de vous compter parmi nous.",
       plan: "Forfait",
       orderId: "ID de Commande",
       status: "Statut",
@@ -5761,6 +5764,9 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       linkErrorBody:
         "Il a peut-être expiré ou déjà servi. Vous pouvez poursuivre la configuration. Si votre adresse e-mail n'est toujours pas vérifiée, reconnectez-vous pour recevoir un nouveau lien.",
       linkErrorAction: "Aller à la connexion",
+      welcomeTitle: "Félicitations d'avoir choisi Epidom !",
+      welcomeBody:
+        "Votre compte est prêt. Encore quelques étapes et votre établissement est en ligne.",
       dismiss: "Fermer",
     },
     store: {

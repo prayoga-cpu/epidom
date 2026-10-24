@@ -1082,5 +1082,61 @@ describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, (
       await waitFor(() => expect(nav.router.replace).toHaveBeenCalledTimes(2));
       expect(analytics.trackConversion).not.toHaveBeenCalledWith("sign_up", expect.anything());
     });
+
+    it("congratulates a new account on choosing Epidom after email verification", async () => {
+      mockBrowserTimezone("Europe/Paris");
+      nav.searchParams = new URLSearchParams("verified=1");
+      renderWizard(baseState(), "fr");
+      expect(await screen.findByText("Félicitations d'avoir choisi Epidom !")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Fermer" }));
+      expect(screen.queryByText("Félicitations d'avoir choisi Epidom !")).not.toBeInTheDocument();
+    });
+
+    it("congratulates a brand-new Google account, not an existing one", async () => {
+      mockBrowserTimezone("Europe/Paris");
+      nav.searchParams = new URLSearchParams("signup=google");
+      const view = renderWizard(baseState());
+      expect(await screen.findByText("Congratulations on choosing Epidom!")).toBeInTheDocument();
+      view.unmount();
+
+      renderWizard(savedStore());
+      await waitFor(() => expect(nav.router.replace).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText("Congratulations on choosing Epidom!")).not.toBeInTheDocument();
+    });
+
+    it("no congratulations on a bad link or without a landing flag", async () => {
+      mockBrowserTimezone("Europe/Paris");
+      nav.searchParams = new URLSearchParams("verified=1&error=TOKEN_EXPIRED");
+      const view = renderWizard(baseState());
+      expect(await screen.findByText("This verification link didn't work")).toBeInTheDocument();
+      expect(screen.queryByText("Congratulations on choosing Epidom!")).not.toBeInTheDocument();
+      view.unmount();
+
+      nav.searchParams = new URLSearchParams();
+      renderWizard(baseState());
+      expect(screen.queryByText("Congratulations on choosing Epidom!")).not.toBeInTheDocument();
+    });
+
+    it("the congratulations stays on the first step only", async () => {
+      mockBrowserTimezone("Europe/Paris");
+      nav.searchParams = new URLSearchParams("verified=1");
+      routes["POST /api/onboarding/store"] = () => ok(savedStore());
+      renderWizard(baseState());
+      expect(await screen.findByText("Congratulations on choosing Epidom!")).toBeInTheDocument();
+
+      await waitFor(() => expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("France"));
+      fireEvent.change(screen.getByLabelText(/Store name/), {
+        target: { value: "Le Petit Four" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("e.g. Austin"), { target: { value: "Lyon" } });
+      fireEvent.click(screen.getByRole("button", { name: "Bakery" }));
+      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
+
+      expect(
+        await screen.findByRole("heading", { name: "Make your storefront yours" })
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Congratulations on choosing Epidom!")).not.toBeInTheDocument();
+    });
   });
 });

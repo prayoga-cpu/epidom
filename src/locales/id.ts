@@ -5204,6 +5204,9 @@ lifetime: "Akses seumur hidup",
     success: {
       title: "Pembayaran Berhasil!",
       subtitle: "Langganan Anda sekarang aktif",
+      congratsTitle: "Selamat, Anda telah memilih Epidom!",
+      congratsBody:
+        "Terima kasih telah memercayakan bisnis Anda kepada kami. Kami senang Anda bergabung.",
       plan: "Paket",
       orderId: "ID Pesanan",
       status: "Status",
@@ -5270,6 +5273,9 @@ lifetime: "Akses seumur hidup",
       linkErrorBody:
         "Tautannya mungkin sudah kedaluwarsa atau sudah dipakai. Anda tetap bisa melanjutkan penyiapan. Jika email Anda belum terverifikasi, masuk lagi untuk mendapatkan tautan baru.",
       linkErrorAction: "Ke halaman masuk",
+      welcomeTitle: "Selamat, Anda telah memilih Epidom!",
+      welcomeBody:
+        "Akun Anda sudah siap. Beberapa langkah singkat lagi dan toko Anda sudah online.",
       dismiss: "Tutup",
     },
     store: {

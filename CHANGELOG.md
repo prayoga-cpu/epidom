@@ -9,6 +9,11 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.37.1] - 2026-10-24 · ux
+
+- New accounts are greeted with **"Congratulations on choosing Epidom!"** at the top of the first setup step, right after the email is confirmed (link or 6-digit code) or Google creates the account. It can be closed, and it goes away once the first step is saved.
+- After paying for a plan or starting the free trial, the confirmation page now congratulates you on choosing Epidom. Paying a price quoted by our team shows the same congratulations on the Billing page.
+
 ## [3.37.0] - 2026-10-24 · feat
 
 - POS, with the Active Queue switched off: Save Bill becomes **Hold**. It sets the current sale aside on this till and empties the cart for the next customer, with no dialog, and it works offline. The cart's Order Queue button then becomes **Resume hold**: one held sale comes back with a tap, several open a list (newest first, with who it's for and its total). If the cart already has items when you resume, that sale is held in its place, so nothing is lost. A held sale stays on this device only and isn't an order until you charge it.

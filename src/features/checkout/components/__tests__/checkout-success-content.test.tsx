@@ -57,6 +57,20 @@ describe("CheckoutSuccessContent", () => {
     expect(screen.getByText("checkout.success.confirmationEmail")).toBeInTheDocument();
   });
 
+  it("congratulates the user on choosing Epidom, paid or trial", () => {
+    const paid = renderPage("plan=OPERATIONS&trial=false");
+    expect(
+      screen.getByRole("heading", { name: "checkout.success.congratsTitle" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("checkout.success.congratsBody")).toBeInTheDocument();
+    paid.unmount();
+
+    renderPage("plan=POS&trial=true");
+    expect(
+      screen.getByRole("heading", { name: "checkout.success.congratsTitle" })
+    ).toBeInTheDocument();
+  });
+
   it("goes on to the new store when setup opened Checkout", () => {
     renderPage("plan=POS&trial=true&next=%2Fstore%2Fs1%2Fdashboard%3Ftour%3D1");
     fireEvent.click(screen.getByRole("button", { name: "checkout.success.continueToStore" }));
