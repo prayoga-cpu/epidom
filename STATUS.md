@@ -1,5 +1,15 @@
 # STATUS.md
 
+## 3.37.0 — Hold / Resume hold with the Active Queue off, POS & Orders access (shipped 2026-10-24)
+
+- [x] Active Queue off → Save Bill becomes Hold: `usePosCart.holdSale` parks the cart on the device (`heldSales[storeId]`, max `MAX_HELD_SALES` = 20), no server call, works offline. The server still refuses `/pos/orders/hold` in this mode (unchanged).
+- [x] Cart header: "Resume hold" replaces the Order Queue link while the store has held sales on this device (any queue mode); one hold resumes on tap, several open a newest-first list (`PosResumeHoldButton`). Resuming over a non-empty cart holds that cart in its place (`resumeHeldSale` → `swapped`). Without holds the link reads "Order Log" when the queue is off.
+- [x] Orders page, queue off: opens on the Log, POS / Online ordering tabs disabled (saved tab untouched). PosOrderQueue's own "Active Queue is off" placeholder was unreachable after this and was removed with its strings.
+- [x] Staff Page Access: "POS & Orders" row grants `/pos` + `/pos/orders` together (`ACCESS_BUNDLES` in page-access-checklist.tsx). Enforcement is still per page; a row with only one of the two shows half-ticked.
+- [ ] Not browser-tested on iPad yet (Hold → Resume hold, the held list, swap toast).
+- [ ] Open decision: turning the queue off while saved bills (HELD) or unpaid orders are still open hides them from the queue — HELD bills can't be resumed from the Log. Proposed: warn (or block) on switch-off when the queue isn't empty.
+- [ ] Known limit: held sales live in one browser only (another till can't see them; clearing site data loses them).
+
 ## 3.36.0 — Verification email: link + 6-digit code (shipped 2026-10-24)
 
 - [x] Why: a signup (2026-10-21) could not tap the verify button. Resend showed the email delivered but never clicked; Gmail had filed it as spam, which turns links off. The account got verified by copy-pasting the address.

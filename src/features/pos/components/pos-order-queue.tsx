@@ -14,7 +14,7 @@ import { PosOrderQueueToolbar } from "./pos-order-queue-toolbar";
 import { PosOrderSplitView } from "./pos-order-split-view";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SearchX, UtensilsCrossed, Power } from "lucide-react";
+import { SearchX, UtensilsCrossed } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   matchesQueueFilters,
@@ -45,11 +45,12 @@ const QUEUE_FILTER_RESET: Record<QueueFilterKey, Partial<QueueFiltersState>> = {
 
 export function PosOrderQueue({ storeId, queue }: PosOrderQueueProps) {
   const { t } = useI18n();
-  const { data: kdsSettings, isLoading: isLoadingSettings } = useKdsSettings(storeId);
+  // Read only to wait for it: with the Active Queue off, PosOrdersTabs opens
+  // the Log instead, so this panel never shows in that mode.
+  const { isLoading: isLoadingSettings } = useKdsSettings(storeId);
   const { data: customProductsSettings } = useCustomProductsSettings(storeId);
   const queryClient = useQueryClient();
   const updateStatus = useUpdateOrderStatus(storeId, { atTill: true });
-  const activeQueueEnabled = kdsSettings?.kitchenDisplayEnabled ?? true;
 
   const { filters, setFilters, patchFilters, allOrders, scopedOrders, isLoading } = queue;
   const {
@@ -223,21 +224,6 @@ export function PosOrderQueue({ storeId, queue }: PosOrderQueueProps) {
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-64 w-full rounded-xl" />
         ))}
-      </div>
-    );
-  }
-
-  // Active Queue is off — GET /pos/orders always reports empty in this mode
-  // (see the API route), so this isn't the same as the queue merely having
-  // no orders right now; explain why instead of the generic empty state.
-  if (!activeQueueEnabled) {
-    return (
-      <div className="text-muted-foreground flex h-[calc(60dvh/var(--app-zoom,1))] flex-col items-center justify-center gap-3 p-6 text-center">
-        <div className="bg-muted rounded-full p-6">
-          <Power className="h-10 w-10 opacity-40" />
-        </div>
-        <p className="text-foreground text-lg font-medium">{t("pos.queue.activeQueueDisabledTitle")}</p>
-        <p className="max-w-sm text-sm">{t("pos.queue.activeQueueDisabledDesc")}</p>
       </div>
     );
   }

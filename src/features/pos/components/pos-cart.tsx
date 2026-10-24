@@ -3,8 +3,8 @@
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/use-confirm";
-import { Info, Loader2, Menu, ReceiptText, Save, ShoppingBag } from "lucide-react";
-import { usePosCart } from "../hooks/use-pos-cart";
+import { Info, Loader2, Menu, Pause, ReceiptText, Save, ShoppingBag } from "lucide-react";
+import { MAX_HELD_SALES, usePosCart } from "../hooks/use-pos-cart";
 import { useCartRepair } from "../hooks/use-cart-repair";
 import { PosCartItem } from "./pos-cart-item";
 import { PosCartHeader } from "./pos-cart-header";
@@ -89,9 +89,9 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
   const repairCart = useCartRepair(storeId);
   // Saving a bill only makes sense with an Active Queue to park it in — when the
   // store has turned it off, every order settles straight to
-  // DELIVERED/history instead (see resolveSettledOrderStatus), so Save Bill is
-  // disabled rather than left to fail server-side after the cashier fills
-  // out the dialog.
+  // DELIVERED/history instead (see resolveSettledOrderStatus) and the server
+  // refuses a hold. Save Bill then becomes Hold: the sale is set aside on this
+  // till (usePosCart.heldSales) and comes back from the header's Resume hold.
   const { data: kdsSettings } = useKdsSettings(storeId);
   const activeQueueEnabled = kdsSettings?.kitchenDisplayEnabled ?? true;
   const { data: financeSettings } = useFinanceSettings(storeId);
@@ -219,11 +219,16 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
     );
   };
 
-  const handleSaveBillClick = () => {
-    if (!activeQueueEnabled) {
-      toast.error(t("cashierCart.saveBill.unavailable"));
-      return;
+  // Nothing goes to the server, so this works offline too.
+  const handleHoldClick = () => {
+    if (cart.holdSale(storeId)) {
+      toast.success(t("cashierCart.hold.held"));
+    } else if (hasItems) {
+      toast.error(t("cashierCart.hold.full").replace("{max}", String(MAX_HELD_SALES)));
     }
+  };
+
+  const handleSaveBillClick = () => {
     if (!online) {
       toast.error(t("cashierCart.saveBill.offline"));
       return;
@@ -271,7 +276,12 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
     // via flex-1 (grow to fill the flex parent) instead of a percentage
     // avoids that fragile dependency entirely.
     <div className="bg-background flex min-h-0 flex-1 flex-col border-l">
-      <PosCartHeader storeId={storeId} onClear={handleClear} onClose={onClose} />
+      <PosCartHeader
+        storeId={storeId}
+        onClear={handleClear}
+        onClose={onClose}
+        activeQueueEnabled={activeQueueEnabled}
+      />
 
       {cart.resumingOrderId && (
         <div className="flex shrink-0 items-start gap-2 border-b bg-amber-50 px-4 py-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
@@ -327,21 +337,34 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
         {hasItems && <PosCartTotals taxLabel={financeSettings?.taxLabel} />}
 
         <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11 min-w-0 flex-1 touch-manipulation gap-1.5 px-2"
-            onClick={handleSaveBillClick}
-            disabled={!hasItems || holdOrder.isPending}
-            title={activeQueueEnabled ? undefined : t("cashierCart.saveBill.unavailable")}
-          >
-            {holdOrder.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            <span className="truncate">{t("cashierCart.footer.saveBill")}</span>
-          </Button>
+          {activeQueueEnabled ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 min-w-0 flex-1 touch-manipulation gap-1.5 px-2"
+              onClick={handleSaveBillClick}
+              disabled={!hasItems || holdOrder.isPending}
+            >
+              {holdOrder.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              <span className="truncate">{t("cashierCart.footer.saveBill")}</span>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 min-w-0 flex-1 touch-manipulation gap-1.5 px-2"
+              onClick={handleHoldClick}
+              disabled={!hasItems}
+              title={t("cashierCart.hold.hint")}
+            >
+              <Pause className="h-4 w-4" />
+              <span className="truncate">{t("cashierCart.footer.hold")}</span>
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"

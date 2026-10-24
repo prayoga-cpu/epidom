@@ -110,6 +110,25 @@ interface PosCartState {
   /** Carts set aside while the till is open on another store, by store id. */
   parkedCarts: Record<string, ParkedCart>;
   /**
+   * Sales the cashier set aside with Hold, by store id, oldest first. Only
+   * offered while the store's Active Queue is off, when there is no queue to
+   * save a bill to: a hold never reaches the server (no order, no number, no
+   * stock), it lives on this device until it is resumed and charged.
+   */
+  heldSales: Record<string, HeldSale[]>;
+  /**
+   * Set the current sale aside on this device and empty the cart. Returns
+   * false (and changes nothing) when the cart has no lines or `storeId`
+   * already holds MAX_HELD_SALES.
+   */
+  holdSale: (storeId: string) => boolean;
+  /**
+   * Bring a held sale back into the cart. A cart that has lines is held first,
+   * in its place, so nothing is lost. Returns null when there is no such hold,
+   * otherwise whether the current sale was swapped out.
+   */
+  resumeHeldSale: (storeId: string, holdId: string) => { swapped: boolean } | null;
+  /**
    * Tie the cart to `storeId`. Called when the till opens for a store: a cart
    * built in another store is parked under that store (never dropped, never
    * carried across) and this store's own parked cart, if any, comes back.
@@ -273,6 +292,17 @@ const EMPTY_CART = {
 /** One store's cart while the till is open elsewhere: every field clearCart() resets. */
 export type ParkedCart = typeof EMPTY_CART;
 
+/** A sale set aside with Hold (see PosCartState.heldSales). */
+export interface HeldSale {
+  id: string;
+  /** ISO time it was held. */
+  heldAt: string;
+  cart: ParkedCart;
+}
+
+/** Holds kept per store on one device; past this the cashier resumes or clears one first. */
+export const MAX_HELD_SALES = 20;
+
 const CART_KEYS = Object.keys(EMPTY_CART) as Array<keyof ParkedCart>;
 
 function pickCart(state: PosCartState): ParkedCart {
@@ -296,6 +326,7 @@ export const usePosCart = create<PosCartState>()(
         financeSettings: DEFAULT_FINANCE_SETTINGS,
         boundStoreId: null as string | null,
         parkedCarts: {} as Record<string, ParkedCart>,
+        heldSales: {} as Record<string, HeldSale[]>,
 
         bindStore: (storeId: string) => {
           const state: PosCartState = get();
@@ -318,6 +349,41 @@ export const usePosCart = create<PosCartState>()(
           // Totals come back as they were saved; the shell's setFinanceSettings
           // re-prices them against this store's tax and service settings.
           set({ ...EMPTY_CART, ...(restored ?? {}), boundStoreId: storeId, parkedCarts });
+        },
+
+        holdSale: (storeId: string) => {
+          const state: PosCartState = get();
+          const held = state.heldSales[storeId] ?? [];
+          if (state.items.length === 0 || held.length >= MAX_HELD_SALES) return false;
+          const sale: HeldSale = {
+            id: nanoid(),
+            heldAt: new Date().toISOString(),
+            cart: pickCart(state),
+          };
+          set({ ...EMPTY_CART, heldSales: { ...state.heldSales, [storeId]: [...held, sale] } });
+          return true;
+        },
+
+        resumeHeldSale: (storeId: string, holdId: string) => {
+          const state: PosCartState = get();
+          const held = state.heldSales[storeId] ?? [];
+          const sale = held.find((h) => h.id === holdId);
+          if (!sale) return null;
+
+          const rest = held.filter((h) => h.id !== holdId);
+          const swapped = state.items.length > 0;
+          if (swapped) {
+            rest.push({ id: nanoid(), heldAt: new Date().toISOString(), cart: pickCart(state) });
+          }
+
+          // Re-totalled against the store's current tax/service and loyalty
+          // rules, which may have changed while the sale was held.
+          apply({
+            ...EMPTY_CART,
+            ...sale.cart,
+            heldSales: { ...state.heldSales, [storeId]: rest },
+          });
+          return { swapped };
         },
 
         addItem: (menuItemId, name, unitPrice, quantity = 1, modifiers = [], imageUrl, notes) => {

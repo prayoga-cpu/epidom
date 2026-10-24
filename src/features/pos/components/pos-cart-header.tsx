@@ -19,9 +19,10 @@ import {
   type PosOnlinePlatform,
 } from "@/config/aggregator.config";
 import { cn } from "@/lib/utils";
-import { usePosCart } from "../hooks/use-pos-cart";
+import { usePosCart, type HeldSale } from "../hooks/use-pos-cart";
 import { usePosOrdersSnapshot } from "../hooks/use-pos-orders-snapshot";
 import { onlinePlatformLabel } from "../lib/order-channel";
+import { PosResumeHoldButton } from "./pos-resume-hold-button";
 
 interface PosCartHeaderProps {
   storeId: string;
@@ -31,7 +32,12 @@ interface PosCartHeaderProps {
   /** Renders an explicit close (X) — only passed by the mobile Dialog wrapper,
    * which has its own close button disabled in favor of this one. */
   onClose?: () => void;
+  /** The store's Active Queue switch. Off, the orders page is the Log alone,
+   * so its link is labelled that way. Defaults to on, like the setting. */
+  activeQueueEnabled?: boolean;
 }
+
+const NO_HELD_SALES: HeldSale[] = [];
 
 const ORDER_TYPES = [
   { value: "DINE_IN", labelKey: "cashierCart.header.dineIn" },
@@ -45,6 +51,11 @@ const SEGMENT_CLASS =
  * Top of the cart panel: the Order Queue shortcut with its live count, "Clear
  * sale", and the Dine In | Take Away | Others switch.
  *
+ * While this till has sales set aside with Hold (Active Queue off), the
+ * shortcut becomes "Resume hold" instead: a held sale lives only on this
+ * device, and this is the one place it can be brought back from. The orders
+ * page stays one tap away in the POS tab bar.
+ *
  * "Others" is for an order that came in through a delivery platform and is
  * keyed in by hand: it opens the platforms of the store's market (Fees & Taxes
  * → Market) and, once one is picked, reads as that platform ("GoFood"). The
@@ -55,7 +66,12 @@ const SEGMENT_CLASS =
  * checkout inherit it without asking again. Pax and table moved to the
  * customer row's dialog (PosCartCustomer).
  */
-export function PosCartHeader({ storeId, onClear, onClose }: PosCartHeaderProps) {
+export function PosCartHeader({
+  storeId,
+  onClear,
+  onClose,
+  activeQueueEnabled = true,
+}: PosCartHeaderProps) {
   const { t } = useI18n();
   const { data: orders } = usePosOrdersSnapshot(storeId);
   const { data: financeSettings } = useFinanceSettings(storeId);
@@ -64,6 +80,7 @@ export function PosCartHeader({ storeId, onClear, onClose }: PosCartHeaderProps)
   const onlinePlatform = usePosCart((s) => s.onlinePlatform);
   const setOrderType = usePosCart((s) => s.setOrderType);
   const setOnlinePlatform = usePosCart((s) => s.setOnlinePlatform);
+  const heldSales = usePosCart((s) => s.heldSales[storeId]) ?? NO_HELD_SALES;
   const hasSaleState = usePosCart(
     (s) =>
       s.items.length > 0 ||
@@ -90,20 +107,28 @@ export function PosCartHeader({ storeId, onClear, onClose }: PosCartHeaderProps)
   return (
     <div className="shrink-0 space-y-2 border-b p-3">
       <div className="flex items-center justify-between gap-2">
-        <Button asChild variant="outline" className="h-11 min-w-0 touch-manipulation gap-2 px-3">
-          <Link href={`/store/${storeId}/pos/orders`} onClick={onClose}>
-            <ClipboardList className="h-4 w-4" />
-            <span className="truncate">{t("cashierCart.header.orderQueue")}</span>
-            {queueCount > 0 && (
-              <span
-                data-testid="order-queue-count"
-                className="bg-primary text-primary-foreground inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums"
-              >
-                {queueCount}
+        {heldSales.length > 0 ? (
+          <PosResumeHoldButton storeId={storeId} held={heldSales} />
+        ) : (
+          <Button asChild variant="outline" className="h-11 min-w-0 touch-manipulation gap-2 px-3">
+            <Link href={`/store/${storeId}/pos/orders`} onClick={onClose}>
+              <ClipboardList className="h-4 w-4" />
+              <span className="truncate">
+                {activeQueueEnabled
+                  ? t("cashierCart.header.orderQueue")
+                  : t("cashierCart.header.orderLog")}
               </span>
-            )}
-          </Link>
-        </Button>
+              {queueCount > 0 && (
+                <span
+                  data-testid="order-queue-count"
+                  className="bg-primary text-primary-foreground inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums"
+                >
+                  {queueCount}
+                </span>
+              )}
+            </Link>
+          </Button>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           <Button
             variant="ghost"

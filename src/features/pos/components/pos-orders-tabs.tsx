@@ -60,8 +60,8 @@ export function PosOrdersTabs({ storeId, canManageSettings }: PosOrdersTabsProps
 
   // Same store-wide setting as the Kitchen & Bar page's toggle
   // (kitchenDisplayEnabled) — surfaced here as "Active Queue" since flipping
-  // it off also empties the Active tab (see PosOrderQueue) and turns off
-  // Kitchen & Bar, and vice versa. One shared switch, two labels.
+  // it off also empties the queue (GET /pos/orders answers [] then) and turns
+  // off Kitchen & Bar, and vice versa. One shared switch, two labels.
   const { data: kdsSettings } = useKdsSettings(storeId);
   const updateSettings = useUpdateKdsSettings(storeId);
   const activeQueueEnabled = kdsSettings?.kitchenDisplayEnabled ?? true;
@@ -96,9 +96,13 @@ export function PosOrdersTabs({ storeId, canManageSettings }: PosOrdersTabsProps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // POS / Online ordering pick the queue's source; Log opens History.
-  const tabValue = tab === "history" ? LOG_TAB : queue.filters.sourceFilter;
+  // POS / Online ordering pick the queue's source; Log opens History. With the
+  // Active Queue off the page IS the Log: there is no queue to open, so the
+  // two queue tabs are disabled. The saved tab is left alone, so turning the
+  // queue back on returns to whichever tab was open before.
+  const tabValue = !activeQueueEnabled || tab === "history" ? LOG_TAB : queue.filters.sourceFilter;
   const handleTabChange = (value: string) => {
+    if (!activeQueueEnabled) return;
     if (value === LOG_TAB) {
       setTabState({ tab: "history" });
       return;
@@ -126,6 +130,7 @@ export function PosOrdersTabs({ storeId, canManageSettings }: PosOrdersTabsProps
             counts={queue.sourceCounts}
             listClassName={TAB_LIST_CLASS}
             triggerClassName={TAB_TRIGGER_CLASS}
+            disabled={!activeQueueEnabled}
           />
           {/* A second list under the same Tabs root: it drives the same value
               and content panels, but reads as its own control. */}

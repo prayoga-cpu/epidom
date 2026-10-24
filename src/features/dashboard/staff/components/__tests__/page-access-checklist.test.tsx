@@ -18,8 +18,8 @@ describe("PageAccessChecklist", () => {
     const toggle = screen.getByRole("checkbox", { name: "pages.staffCustomAccessToggle" });
     expect(toggle).not.toBeChecked();
     // Summary mode: page names render as plain rows, not as checkboxes.
-    expect(screen.getByText("nav.pos")).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox", { name: "nav.pos" })).toBeNull();
+    expect(screen.getByText("nav.posAndOrders")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "nav.posAndOrders" })).toBeNull();
   });
 
   it("Back Office group shows the empty state for a Cashier (POS-only role)", () => {
@@ -149,7 +149,7 @@ describe("PageAccessChecklist — master (owner) mode", () => {
       expect(box).toBeDisabled();
     }
     // Both shells are listed, not just the one the stored value happened to cover.
-    expect(screen.getByRole("checkbox", { name: "nav.pos" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "nav.posAndOrders" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "nav.finance" })).toBeChecked();
   });
 
@@ -166,5 +166,50 @@ describe("PageAccessChecklist — master (owner) mode", () => {
     );
     expect(screen.queryByText("pages.staffAccessMasterBadge")).toBeNull();
     expect(screen.getByRole("checkbox", { name: "pages.staffCustomAccessToggle" })).toBeEnabled();
+  });
+
+  describe("POS & Orders — the cashier screen and the Order Queue as one row", () => {
+    const openCustom = () =>
+      fireEvent.click(screen.getByRole("checkbox", { name: "pages.staffCustomAccessToggle" }));
+
+    it("lists one row in place of POS Cashier and Order Queue", () => {
+      render(
+        <PageAccessChecklist role="KITCHEN" value={ROLE_DEFAULT_PAGES.KITCHEN} onChange={vi.fn()} />
+      );
+      openCustom();
+      expect(screen.getByRole("checkbox", { name: "nav.posAndOrders" })).not.toBeChecked();
+      expect(screen.queryByRole("checkbox", { name: "nav.pos" })).toBeNull();
+      expect(screen.queryByRole("checkbox", { name: "nav.posOrders" })).toBeNull();
+    });
+
+    it("ticking it grants both pages, unticking removes both", () => {
+      const onChange = vi.fn();
+      const { rerender } = render(
+        <PageAccessChecklist
+          role="KITCHEN"
+          value={ROLE_DEFAULT_PAGES.KITCHEN}
+          onChange={onChange}
+        />
+      );
+      openCustom();
+      fireEvent.click(screen.getByRole("checkbox", { name: "nav.posAndOrders" }));
+      const granted = onChange.mock.calls.at(-1)![0] as string[];
+      expect(granted).toEqual([...ROLE_DEFAULT_PAGES.KITCHEN, "/pos", "/pos/orders"]);
+
+      rerender(<PageAccessChecklist role="KITCHEN" value={granted} onChange={onChange} />);
+      expect(screen.getByRole("checkbox", { name: "nav.posAndOrders" })).toBeChecked();
+      fireEvent.click(screen.getByRole("checkbox", { name: "nav.posAndOrders" }));
+      expect(onChange.mock.calls.at(-1)![0]).toEqual(ROLE_DEFAULT_PAGES.KITCHEN);
+    });
+
+    it("shows a row saved with only one of the two as part-granted, and ticking completes it", () => {
+      const onChange = vi.fn();
+      render(<PageAccessChecklist role="CASHIER" value={["/pos/orders"]} onChange={onChange} />);
+      const row = screen.getByRole("checkbox", { name: "nav.posAndOrders" }) as HTMLInputElement;
+      expect(row.checked).toBe(false);
+      expect(row.indeterminate).toBe(true);
+      fireEvent.click(row);
+      expect(onChange).toHaveBeenCalledWith(["/pos/orders", "/pos"]);
+    });
   });
 });

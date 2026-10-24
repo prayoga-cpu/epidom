@@ -10,6 +10,8 @@ interface PosOrderSourceTabsProps {
   counts: Record<QueueSourceTab, number>;
   listClassName?: string;
   triggerClassName?: string;
+  /** Active Queue off: both tabs stay visible but can't be opened. */
+  disabled?: boolean;
 }
 
 /**
@@ -21,11 +23,15 @@ interface PosOrderSourceTabsProps {
  * separately, so the Online badge turns red while anything is waiting there —
  * that badge is how a cashier on the POS tab (or reading the Log) knows an
  * online order came in.
+ *
+ * With the Active Queue off there is no queue to show: the page is the Log
+ * alone, and the two tabs stay in place, disabled, with the reason as a hint.
  */
 export function PosOrderSourceTabs({
   counts,
   listClassName,
   triggerClassName,
+  disabled = false,
 }: PosOrderSourceTabsProps) {
   const { t } = useI18n();
   const labels: Record<QueueSourceTab, string> = {
@@ -34,11 +40,22 @@ export function PosOrderSourceTabs({
   };
 
   return (
-    <TabsList aria-label={t("pos.queue.sourceTabsLabel")} className={listClassName}>
+    // The hint sits on the list: a disabled button gets no pointer events, so
+    // its own title would never show.
+    <TabsList
+      aria-label={t("pos.queue.sourceTabsLabel")}
+      className={listClassName}
+      title={disabled ? t("pos.queue.sourceTabsOffHint") : undefined}
+    >
       {QUEUE_SOURCE_TABS.map((tab) => {
-        const attention = tab === "ONLINE" && counts[tab] > 0;
+        const attention = !disabled && tab === "ONLINE" && counts[tab] > 0;
         return (
-          <TabsTrigger key={tab} value={tab} className={cn("gap-2", triggerClassName)}>
+          <TabsTrigger
+            key={tab}
+            value={tab}
+            disabled={disabled}
+            className={cn("gap-2", triggerClassName)}
+          >
             <span className="truncate">{labels[tab]}</span>
             <span
               className={cn(

@@ -17,6 +17,14 @@ vi.mock("@/features/dashboard/profile/hooks/use-finance-settings", () => ({
   useFinanceSettings: () => ({ data: finance.market ? { market: finance.market } : undefined }),
 }));
 
+vi.mock("@/components/providers/currency-provider", async () => {
+  const { makeCurrencyMock } = await import("./cart-test-utils");
+  const value = makeCurrencyMock("EUR");
+  return { useCurrency: () => value };
+});
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+import { toast } from "sonner";
 import { PosCartHeader } from "../pos-cart-header";
 import { usePosCart } from "../../hooks/use-pos-cart";
 
@@ -26,6 +34,8 @@ beforeEach(() => {
   stubBrowserApis();
   localStorage.clear();
   cart().clearCart();
+  usePosCart.setState({ heldSales: {} });
+  vi.mocked(toast.success).mockClear();
   queue.orders = [];
   finance.market = "INDONESIA";
 });
@@ -53,6 +63,88 @@ describe("PosCartHeader — Order Queue", () => {
     render(<PosCartHeader storeId="store_1" onClear={vi.fn()} onClose={onClose} />);
     fireEvent.click(screen.getByRole("link", { name: /Order Queue/ }));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe("PosCartHeader — Active Queue off", () => {
+  /** Rings up a sale and holds it, as the footer's Hold does. */
+  const holdSale = (menuItemId: string, name: string, price: number) => {
+    cart().addItem(menuItemId, name, price, 1);
+    expect(cart().holdSale("store_1")).toBe(true);
+  };
+  const resumeButton = () =>
+    screen.getByRole("button", { name: /cashierCart\.header\.resumeHold/ });
+
+  it("labels the orders link 'Order Log' — the page is only the Log then", () => {
+    render(<PosCartHeader storeId="store_1" onClear={vi.fn()} activeQueueEnabled={false} />);
+    const link = screen.getByRole("link", { name: /cashierCart\.header\.orderLog/ });
+    expect(link.getAttribute("href")).toBe("/store/store_1/pos/orders");
+  });
+
+  it("becomes Resume hold while this till holds a sale, and one tap brings it back", () => {
+    holdSale("m1", "Croissant", 3);
+    render(<PosCartHeader storeId="store_1" onClear={vi.fn()} activeQueueEnabled={false} />);
+    expect(screen.queryByRole("link", { name: /Order|cashierCart/ })).toBeNull();
+    expect(screen.getByTestId("held-sales-count").textContent).toBe("1");
+
+    fireEvent.click(resumeButton());
+
+    expect(cart().items.map((i) => i.name)).toEqual(["Croissant"]);
+    // Nothing left held: the plain orders link is back.
+    expect(screen.getByRole("link", { name: /cashierCart\.header\.orderLog/ })).toBeTruthy();
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("with several holds, lists them newest first with their totals", () => {
+    holdSale("m1", "Croissant", 3);
+    holdSale("m2", "Baguette", 2);
+    render(<PosCartHeader storeId="store_1" onClear={vi.fn()} activeQueueEnabled={false} />);
+    expect(screen.getByTestId("held-sales-count").textContent).toBe("2");
+
+    fireEvent.keyDown(resumeButton(), { key: "Enter" });
+    const items = screen.getAllByRole("menuitem");
+    expect(items.map((i) => i.textContent)).toEqual([
+      expect.stringMatching(/^Baguette.*EUR 2\.00$/),
+      expect.stringMatching(/^Croissant.*EUR 3\.00$/),
+    ]);
+
+    fireEvent.click(items[1]);
+    expect(cart().items.map((i) => i.name)).toEqual(["Croissant"]);
+    expect(cart().heldSales.store_1.map((h) => h.cart.items[0].name)).toEqual(["Baguette"]);
+  });
+
+  it("holds the open sale in its place when another one is resumed", () => {
+    holdSale("m1", "Croissant", 3);
+    cart().addItem("m2", "Baguette", 2, 1);
+    render(<PosCartHeader storeId="store_1" onClear={vi.fn()} activeQueueEnabled={false} />);
+
+    fireEvent.click(resumeButton());
+
+    expect(cart().items.map((i) => i.name)).toEqual(["Croissant"]);
+    expect(cart().heldSales.store_1.map((h) => h.cart.items[0].name)).toEqual(["Baguette"]);
+    expect(toast.success).toHaveBeenCalledWith("cashierCart.hold.swapped");
+  });
+
+  it("names a held sale after its customer, else its table", () => {
+    cart().addItem("m1", "Croissant", 3, 1);
+    cart().setCustomer({
+      id: "c1",
+      name: "Budi",
+      phone: null,
+      email: null,
+      points: 0,
+      lifetimeSpend: 0,
+    });
+    cart().holdSale("store_1");
+    cart().addItem("m2", "Baguette", 2, 1);
+    cart().setTableNumber("7");
+    cart().holdSale("store_1");
+    render(<PosCartHeader storeId="store_1" onClear={vi.fn()} activeQueueEnabled={false} />);
+
+    fireEvent.keyDown(resumeButton(), { key: "Enter" });
+    const items = screen.getAllByRole("menuitem");
+    expect(items[0].textContent).toMatch(/^Table 7/);
+    expect(items[1].textContent).toMatch(/^Budi/);
   });
 });
 

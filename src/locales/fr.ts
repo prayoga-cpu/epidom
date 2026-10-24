@@ -920,6 +920,7 @@ export const fr = {
     alerts: "Alertes",
     pos: "Caisse",
     posOrders: "File de Commandes",
+    posAndOrders: "Caisse et commandes",
     posTables: "Tables",
     posKds: "Cuisine & Bar",
     posSystem: "Système de caisse",
@@ -2297,6 +2298,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       sourceTabsLabel: "Source de la commande",
       tabPos: "Caisse",
       tabOnline: "Commande en ligne",
+      sourceTabsOffHint: "File active désactivée : les commandes vont directement au journal",
       statusRailLabel: "Filtrer par statut",
       colOrder: "N° commande",
       colTime: "Heure",
@@ -7367,6 +7369,9 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
   cashierCart: {
     header: {
       orderQueue: "File de commandes",
+      orderLog: "Journal des commandes",
+      resumeHold: "Reprendre la vente",
+      heldOnThisTill: "En attente sur cette caisse",
       clearSale: "Vider la vente",
       clearConfirmTitle: "Vider cette vente ?",
       clearConfirmDesc:
@@ -7562,12 +7567,19 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       saved: "Addition enregistrée",
       failed: "Échec de l'enregistrement de l'addition",
       offline: "Impossible d'enregistrer une addition hors ligne",
-      unavailable: "Enregistrement indisponible — la file active est désactivée",
       dropsPromotions:
         "Les coupons et les points utilisés ne sont pas enregistrés avec l'addition — appliquez-les à nouveau à la reprise.",
     },
+    hold: {
+      held: "Vente mise en attente sur cette caisse. Touchez « Reprendre la vente » pour la récupérer.",
+      full: "Cette caisse a déjà {max} ventes en attente. Reprenez-en ou videz-en une d'abord.",
+      swapped: "La vente en cours a été mise en attente à sa place.",
+      hint: "File active désactivée : mettez cette vente de côté sur cette caisse au lieu d'enregistrer l'addition",
+      heldAt: "En attente depuis {time}",
+    },
     footer: {
       saveBill: "Enregistrer",
+      hold: "Mettre en attente",
       printBill: "Pré-addition",
       charge: "Encaisser",
     },

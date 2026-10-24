@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type InputHTMLAttributes } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -14,6 +14,52 @@ import type { StaffRole } from "@prisma/client";
 // requireOwnerOnly) — granting them here would be a no-op at best, so they
 // never appear as options.
 const OWNER_ONLY_PAGES = new Set(["/profile", "/billing", "/staff"]);
+
+/** One checkbox row. Most grant a single page; a bundle grants several. */
+interface AccessRow {
+  /** React key: the row's first page. */
+  key: string;
+  pages: string[];
+  labelKey: string;
+}
+
+/**
+ * Pages granted together under one row. Taking an order at the till and
+ * following it through the Order Queue are one job, so "POS & Orders" grants
+ * both. Access is still checked per page (requireStaffPageAccess, the staff
+ * policy table), so a row saved before the merge with only one of the two
+ * keeps exactly what it had until the owner ticks the row.
+ */
+const ACCESS_BUNDLES: Record<string, { pages: string[]; labelKey: string }> = {
+  "/pos": { pages: ["/pos", "/pos/orders"], labelKey: "nav.posAndOrders" },
+};
+const BUNDLED_PAGES = new Set(
+  Object.entries(ACCESS_BUNDLES).flatMap(([lead, b]) => b.pages.filter((p) => p !== lead))
+);
+
+function toRows(items: { href: string; labelKey: string }[]): AccessRow[] {
+  return items
+    .filter((item) => !BUNDLED_PAGES.has(item.href))
+    .map((item) => {
+      const bundle = ACCESS_BUNDLES[item.href];
+      return bundle
+        ? { key: item.href, pages: bundle.pages, labelKey: bundle.labelKey }
+        : { key: item.href, pages: [item.href], labelKey: item.labelKey };
+    });
+}
+
+/** A native checkbox showing "some of this row's pages" as indeterminate. */
+function RowCheckbox({
+  checked,
+  indeterminate,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { indeterminate: boolean }) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+  return <input ref={ref} type="checkbox" checked={checked} {...props} />;
+}
 
 // Two top-level systems, matching the POS Mode / Back Office shell split
 // this whole app is built around (docs/dashboard-revamp.md,
@@ -30,13 +76,14 @@ const BACK_OFFICE_SECTIONS = dashboardNavigation
   // reachable through Storefront's tab, not its own rail entry — see that
   // export's doc comment) but it's still a Back Office page an owner can
   // grant/revoke independently of Storefront itself.
-  .concat([{ title: "Other", items: grantableOnlyNavItems }]);
+  .concat([{ title: "Other", items: grantableOnlyNavItems }])
+  .map((section) => ({ title: section.title, rows: toRows(section.items) }));
 
 // posModeNavItems isn't part of dashboardNavigation either (it renders in
 // the (pos-mode) shell's own tab bar — see that export's doc comment), so
 // it needs its own top-level group rather than folding into the Back
 // Office list above.
-const POS_SECTION = { title: null as string | null, items: posModeNavItems };
+const POS_SECTION = { title: null as string | null, rows: toRows(posModeNavItems) };
 
 function sameSet(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
@@ -101,12 +148,16 @@ export function PageAccessChecklist({
     }
   }, [templateKey]);
 
-  const toggle = (href: string, checked: boolean) => {
-    onChange(checked ? [...value, href] : value.filter((p) => p !== href));
+  const toggle = (pages: string[], checked: boolean) => {
+    onChange(
+      checked
+        ? [...value, ...pages.filter((p) => !value.includes(p))]
+        : value.filter((p) => !pages.includes(p))
+    );
   };
 
   const renderEditableGroup = (
-    sections: { title?: string | null; items: typeof posModeNavItems }[],
+    sections: { title?: string | null; rows: AccessRow[] }[],
     locked = false
   ) => (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -117,41 +168,44 @@ export function PageAccessChecklist({
               {section.title}
             </p>
           )}
-          {section.items.map((item) => (
-            <label
-              key={item.href}
-              className={cn(
-                "flex items-center gap-2 text-sm select-none",
-                locked ? "cursor-not-allowed opacity-70" : "cursor-pointer"
-              )}
-            >
-              <input
-                type="checkbox"
-                className="rounded"
-                checked={locked ? true : value.includes(item.href)}
-                disabled={locked}
-                // No handler at all when locked: a disabled input already
-                // swallows real clicks, but a locked (master) checklist
-                // shouldn't be able to emit a change by ANY route.
-                onChange={locked ? undefined : (e) => toggle(item.href, e.target.checked)}
-              />
-              {t(item.labelKey)}
-            </label>
-          ))}
+          {section.rows.map((row) => {
+            const granted = row.pages.filter((p) => value.includes(p)).length;
+            return (
+              <label
+                key={row.key}
+                className={cn(
+                  "flex items-center gap-2 text-sm select-none",
+                  locked ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+                )}
+              >
+                <RowCheckbox
+                  className="rounded"
+                  checked={locked ? true : granted === row.pages.length}
+                  indeterminate={!locked && granted > 0 && granted < row.pages.length}
+                  disabled={locked}
+                  // No handler at all when locked: a disabled input already
+                  // swallows real clicks, but a locked (master) checklist
+                  // shouldn't be able to emit a change by ANY route.
+                  onChange={locked ? undefined : (e) => toggle(row.pages, e.target.checked)}
+                />
+                {t(row.labelKey)}
+              </label>
+            );
+          })}
         </div>
       ))}
     </div>
   );
 
-  const renderSummaryGroup = (items: typeof posModeNavItems) => {
-    const granted = items.filter((item) => templatePages.includes(item.href));
+  const renderSummaryGroup = (rows: AccessRow[]) => {
+    const granted = rows.filter((row) => row.pages.some((p) => templatePages.includes(p)));
     if (granted.length === 0) return null;
     return (
       <div className="space-y-1">
-        {granted.map((item) => (
-          <div key={item.href} className="flex items-center gap-2 text-sm">
+        {granted.map((row) => (
+          <div key={row.key} className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="text-primary h-3.5 w-3.5 shrink-0" />
-            {t(item.labelKey)}
+            {t(row.labelKey)}
           </div>
         ))}
       </div>
@@ -248,7 +302,7 @@ export function PageAccessChecklist({
               <p className="text-primary text-[10px] font-bold tracking-wide uppercase">
                 {t("pages.staffAccessGroupPos")}
               </p>
-              {renderSummaryGroup(POS_SECTION.items) ?? (
+              {renderSummaryGroup(POS_SECTION.rows) ?? (
                 <p className="text-muted-foreground/60 text-xs">{t("pages.staffAccessNone")}</p>
               )}
             </div>
@@ -257,10 +311,10 @@ export function PageAccessChecklist({
                 {t("pages.staffAccessGroupBackOffice")}
               </p>
               {BACK_OFFICE_SECTIONS.some((section) =>
-                section.items.some((item) => templatePages.includes(item.href))
+                section.rows.some((row) => row.pages.some((p) => templatePages.includes(p)))
               ) ? (
                 BACK_OFFICE_SECTIONS.map((section) => (
-                  <div key={section.title}>{renderSummaryGroup(section.items)}</div>
+                  <div key={section.title}>{renderSummaryGroup(section.rows)}</div>
                 ))
               ) : (
                 <p className="text-muted-foreground/60 text-xs">{t("pages.staffAccessNone")}</p>

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 vi.mock("@/components/lang/i18n-provider", () => ({
@@ -6,8 +6,9 @@ vi.mock("@/components/lang/i18n-provider", () => ({
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const settings = vi.hoisted(() => ({ kitchenDisplayEnabled: true }));
 vi.mock("../../hooks/use-kds-settings", () => ({
-  useKdsSettings: () => ({ data: { kitchenDisplayEnabled: true } }),
+  useKdsSettings: () => ({ data: { kitchenDisplayEnabled: settings.kitchenDisplayEnabled } }),
   useUpdateKdsSettings: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 // Each has its own test; this file is only about the header row.
@@ -22,6 +23,11 @@ vi.mock("../../hooks/use-order-queue-state", () => ({
 }));
 
 import { PosOrdersTabs } from "../pos-orders-tabs";
+
+beforeEach(() => {
+  localStorage.clear();
+  settings.kitchenDisplayEnabled = true;
+});
 
 describe("PosOrdersTabs — Active Queue toggle", () => {
   it("sits at the right end of the tabs' row, inset like the p-6 content below it", () => {
@@ -49,5 +55,30 @@ describe("PosOrdersTabs — Active Queue toggle", () => {
     render(<PosOrdersTabs storeId="store-1" canManageSettings={false} />);
     expect(screen.queryByText("pos.queue.activeQueueLabel")).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
+  });
+});
+
+describe("PosOrdersTabs — Active Queue off", () => {
+  it("opens on the Log, with POS and Online ordering disabled", () => {
+    settings.kitchenDisplayEnabled = false;
+    render(<PosOrdersTabs storeId="store-1" canManageSettings />);
+    const log = screen.getByRole("tab", { name: /pos.history.logTab/ });
+    expect(log.getAttribute("aria-selected")).toBe("true");
+    for (const name of [/pos.queue.tabPos/, /pos.queue.tabOnline/]) {
+      const tab = screen.getByRole("tab", { name }) as HTMLButtonElement;
+      expect(tab.disabled).toBe(true);
+      expect(tab.getAttribute("aria-selected")).toBe("false");
+    }
+    // Why they're off, as a hint on their list.
+    expect(
+      screen.getByRole("tablist", { name: "pos.queue.sourceTabsLabel" }).getAttribute("title")
+    ).toBe("pos.queue.sourceTabsOffHint");
+  });
+
+  it("leaves the queue tabs usable while the queue is on", () => {
+    render(<PosOrdersTabs storeId="store-1" canManageSettings />);
+    const pos = screen.getByRole("tab", { name: /pos.queue.tabPos/ }) as HTMLButtonElement;
+    expect(pos.disabled).toBe(false);
+    expect(pos.getAttribute("aria-selected")).toBe("true");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { usePosCart } from "../use-pos-cart";
+import { MAX_HELD_SALES, usePosCart } from "../use-pos-cart";
 import type { CartCustomer } from "../../types/pos.types";
 import type { ResolvedFinanceSettings } from "@/lib/finance/order-charges";
 import type { LoyaltyRules } from "@/lib/finance/discounts";
@@ -34,7 +34,7 @@ const cart = () => usePosCart.getState();
 
 beforeEach(() => {
   localStorage.clear();
-  usePosCart.setState({ boundStoreId: null, parkedCarts: {} });
+  usePosCart.setState({ boundStoreId: null, parkedCarts: {}, heldSales: {} });
   cart().clearCart();
   cart().setFinanceSettings(noCharges);
   cart().setLoyaltyRules(null);
@@ -401,5 +401,85 @@ describe("usePosCart — one cart per store", () => {
     expect(cart().items).toEqual([]);
     expect(cart().boundStoreId).toBe("store-b");
     expect(Object.keys(cart().parkedCarts)).toEqual(["store-a"]);
+  });
+});
+
+describe("usePosCart — Hold and Resume hold (Active Queue off)", () => {
+  it("sets the sale aside for its store and empties the cart", () => {
+    cart().addItem("m1", "Ramen", 50_000, 2);
+    cart().setCustomer(alice);
+    cart().setTable({ id: "t1", label: "T1" });
+
+    expect(cart().holdSale("store-a")).toBe(true);
+
+    expect(cart().items).toEqual([]);
+    expect(cart().customer).toBeNull();
+    expect(cart().tableId).toBeNull();
+    const [held] = cart().heldSales["store-a"];
+    expect(held.cart.items.map((i) => [i.menuItemId, i.quantity])).toEqual([["m1", 2]]);
+    expect(held.cart.customer?.id).toBe("cust_1");
+    expect(held.cart.tableId).toBe("t1");
+    expect(Number.isNaN(Date.parse(held.heldAt))).toBe(false);
+  });
+
+  it("refuses an empty cart, and a store already holding the maximum", () => {
+    expect(cart().holdSale("store-a")).toBe(false);
+    expect(cart().heldSales["store-a"]).toBeUndefined();
+
+    for (let i = 0; i < MAX_HELD_SALES; i++) {
+      cart().addItem(`m${i}`, "Ramen", 10, 1);
+      expect(cart().holdSale("store-a")).toBe(true);
+    }
+    cart().addItem("extra", "Gyoza", 10, 1);
+    expect(cart().holdSale("store-a")).toBe(false);
+    // The sale the cashier was ringing stays put.
+    expect(cart().items).toHaveLength(1);
+    expect(cart().heldSales["store-a"]).toHaveLength(MAX_HELD_SALES);
+  });
+
+  it("brings a held sale back and re-totals it against today's settings", () => {
+    cart().addItem("m1", "Ramen", 100, 1);
+    cart().holdSale("store-a");
+    const id = cart().heldSales["store-a"][0].id;
+
+    // Tax was switched on while the sale was held.
+    cart().setFinanceSettings({
+      ...noCharges,
+      taxEnabled: true,
+      taxRate: 0.1,
+      taxInclusive: false,
+    });
+
+    expect(cart().resumeHeldSale("store-a", id)).toEqual({ swapped: false });
+    expect(cart().items.map((i) => i.menuItemId)).toEqual(["m1"]);
+    expect(cart().tax).toBe(10);
+    expect(cart().total).toBe(110);
+    expect(cart().heldSales["store-a"]).toEqual([]);
+  });
+
+  it("holds the sale in the cart in its place, so switching customers loses nothing", () => {
+    cart().addItem("a", "Ramen", 10, 1);
+    cart().holdSale("store-a");
+    const first = cart().heldSales["store-a"][0].id;
+    cart().addItem("b", "Gyoza", 20, 1);
+
+    expect(cart().resumeHeldSale("store-a", first)).toEqual({ swapped: true });
+
+    expect(cart().items.map((i) => i.menuItemId)).toEqual(["a"]);
+    const held = cart().heldSales["store-a"];
+    expect(held).toHaveLength(1);
+    expect(held[0].cart.items.map((i) => i.menuItemId)).toEqual(["b"]);
+  });
+
+  it("keeps each store's holds apart, and Clear sale never touches them", () => {
+    cart().addItem("a", "Ramen", 10, 1);
+    cart().holdSale("store-a");
+    const id = cart().heldSales["store-a"][0].id;
+
+    expect(cart().resumeHeldSale("store-b", id)).toBeNull();
+
+    cart().addItem("x", "Tea", 5, 1);
+    cart().clearCart();
+    expect(cart().heldSales["store-a"]).toHaveLength(1);
   });
 });

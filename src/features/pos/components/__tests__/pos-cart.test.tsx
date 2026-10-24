@@ -141,6 +141,9 @@ beforeEach(() => {
     processingFeeOverrides: null,
   });
   useLastReceipt.setState({ receipt: null, meta: null });
+  usePosCart.setState({ heldSales: {} });
+  vi.mocked(toast.success).mockClear();
+  vi.mocked(toast.error).mockClear();
   env.online = true;
   env.plan = "OPERATIONS";
   env.kdsEnabled = true;
@@ -648,13 +651,36 @@ describe("PosCart — Save Bill", () => {
     expect(screen.queryByRole("heading", { name: "cashierCart.saveBill.title" })).toBeNull();
   });
 
-  it("with the Active Queue off: explains instead of opening the dialog", () => {
+  it("with the Active Queue off: becomes Hold, which sets the sale aside on this till", () => {
     env.kdsEnabled = false;
     cart().addItem("m1", "Ramen", 10, 1);
     renderCart();
-    fireEvent.click(button("cashierCart.footer.saveBill"));
-    expect(toast.error).toHaveBeenCalledWith("cashierCart.saveBill.unavailable");
+    expect(screen.queryByRole("button", { name: "cashierCart.footer.saveBill" })).toBeNull();
+    fireEvent.click(button("cashierCart.footer.hold"));
+    // No dialog and no server call: the sale is parked on the device.
     expect(screen.queryByRole("heading", { name: "cashierCart.saveBill.title" })).toBeNull();
+    expect(post).not.toHaveBeenCalled();
+    expect(cart().items).toHaveLength(0);
+    expect(cart().heldSales.s1).toHaveLength(1);
+    expect(cart().heldSales.s1[0].cart.items[0].name).toBe("Ramen");
+    expect(toast.success).toHaveBeenCalledWith("cashierCart.hold.held");
+    // The header now offers it back.
+    expect(screen.getByRole("button", { name: /cashierCart\.header\.resumeHold/ })).toBeTruthy();
+  });
+
+  it("Hold works offline — nothing goes to the server", () => {
+    env.kdsEnabled = false;
+    env.online = false;
+    cart().addItem("m1", "Ramen", 10, 1);
+    renderCart();
+    fireEvent.click(button("cashierCart.footer.hold"));
+    expect(cart().heldSales.s1).toHaveLength(1);
+  });
+
+  it("Hold is disabled on an empty cart", () => {
+    env.kdsEnabled = false;
+    renderCart();
+    expect(button("cashierCart.footer.hold").disabled).toBe(true);
   });
 
   it("keeps the cart and shows the server's reason when saving fails", async () => {

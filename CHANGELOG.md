@@ -9,6 +9,12 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.37.0] - 2026-10-24 · feat
+
+- POS, with the Active Queue switched off: Save Bill becomes **Hold**. It sets the current sale aside on this till and empties the cart for the next customer, with no dialog, and it works offline. The cart's Order Queue button then becomes **Resume hold**: one held sale comes back with a tap, several open a list (newest first, with who it's for and its total). If the cart already has items when you resume, that sale is held in its place, so nothing is lost. A held sale stays on this device only and isn't an order until you charge it.
+- Order Queue page, with the Active Queue off: the page opens on the Log, and the POS and Online ordering tabs are greyed out (there's no queue to show). The cart's button reads "Order Log" then.
+- Staff → Page Access: "POS Cashier" and "Order Queue" are now one item, **POS & Orders**, which grants both. A staff member who had only one of the two keeps it, shown as half-ticked, until you tick the item.
+
 ## [3.36.0] - 2026-10-24 · feat
 
 - Sign-up: the verification email now gives two ways to confirm your address. Tap the button, or type the 6-digit code from the email on the "Check your email" page or the sign-in page. The code works even when your email app has turned the button off (Gmail does this in the Spam folder) and when you read the email on another device.
