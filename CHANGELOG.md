@@ -9,6 +9,10 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.37.2] - 2026-10-27 · ux
+
+- The video on our sales pages has a new cover. Its play button now sits over the presenter and the "5 minutes" caption in the bottom-right corner, so neither hides the cover's headline, on phones too.
+
 ## [3.37.1] - 2026-10-24 · ux
 
 - New accounts are greeted with **"Congratulations on choosing Epidom!"** at the top of the first setup step, right after the email is confirmed (link or 6-digit code) or Google creates the account. It can be closed, and it goes away once the first step is saved.

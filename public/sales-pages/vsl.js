@@ -10,8 +10,9 @@
  * The same video on all four pages and all three languages.
  *
  * The box shows the video's thumbnail (vsl-thumbnail.webp, JPEG fallback,
- * preloaded by each page's <head>) as its cover, the caption as a pill at the
- * bottom; a tap anywhere on it plays, and the thumbnail stays as the poster
+ * preloaded by each page's <head>) as its cover, the play button over the
+ * presenter and the caption as a pill at the bottom right, both clear of the
+ * thumbnail's own text; a tap anywhere on it plays, and the thumbnail stays as the poster
  * while the video loads. The video covers the whole box (object-fit: cover),
  * like the thumbnail does, whatever the box's shape on each page.
  */
@@ -27,13 +28,27 @@
   var style = document.createElement("style");
   style.textContent =
     ".video{position:relative}" +
-    ".video.epi-vsl-cover{background:#070b15 url(" + COVER_JPG + ") center/cover no-repeat!important;" +
+    // Anchored left: a box narrower than 16:9 (page 4 on phones) crops the presenter's
+    // side of the thumbnail, never its headline.
+    ".video.epi-vsl-cover{background:#070b15 url(" + COVER_JPG + ") left center/cover no-repeat!important;" +
     "background-image:image-set(url(" + COVER_WEBP + ') type("image/webp"),url(' + COVER_JPG + ') type("image/jpeg"))!important;' +
     "cursor:pointer}" +
-    // Bottom-left: the empty corner of the thumbnail, clear of the cup and the button.
-    ".video.epi-vsl-cover>p{position:absolute;left:12px;bottom:12px;transform:none;z-index:2;text-align:left;" +
+    // The thumbnail has its own headline and tagline; the designs' corner marks would cross them.
+    ".video.epi-vsl-cover>i,.video.epi-vsl-cover>.corner{display:none}" +
+    // The play button sits on the presenter's chest, clear of the headline on the left.
+    ".video.epi-vsl-cover .play,.video.epi-vsl-cover .epi-vsl-play{position:absolute;left:62%;top:64%;margin:0;transform:translate(-50%,-50%)}" +
+    ".video.epi-vsl-cover .play:hover{transform:translate(-50%,-50%) scale(1.06)}" +
+    // Bottom-right, over the presenter's hands: the bottom-left holds the thumbnail's tagline.
+    ".video.epi-vsl-cover>p{position:absolute;right:12px;bottom:12px;left:auto;transform:none;z-index:2;text-align:left;" +
     "max-width:calc(100% - 24px);margin:0;padding:6px 12px;border-radius:999px;background:rgba(7,11,21,.72);" +
     "color:#fff;font-size:12px;line-height:1.3}" +
+    // Phones: a smaller button fits between the chin and the hands, and the caption stays
+    // on one line below the tagline.
+    "@media(max-width:600px){" +
+    ".video.epi-vsl-cover .play,.video.epi-vsl-cover .epi-vsl-play{width:60px;height:60px}" +
+    ".video.epi-vsl-cover .play::after,.video.epi-vsl-cover .epi-vsl-play::after{left:50%;top:50%;transform:translate(-38%,-50%);border-width:11px 0 11px 18px}" +
+    ".video.epi-vsl-cover>p{right:6px;bottom:6px;max-width:calc(100% - 12px);padding:4px 10px;font-size:11px;" +
+    "white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}" +
     ".video.epi-vsl-on{transform:none!important;cursor:auto}" +
     ".video.epi-vsl-on>*:not(.epi-vsl){visibility:hidden}" +
     // Fills the box edge to edge (no black bars when the box isn't the video's shape);

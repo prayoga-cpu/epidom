@@ -94,4 +94,30 @@ describe("sales-page video thumbnail files", () => {
     expect(statSync(join(dir, "vsl-thumbnail.webp")).size).toBeLessThan(150 * 1024);
     expect(statSync(join(dir, "vsl-thumbnail.jpg")).size).toBeLessThan(200 * 1024);
   });
+
+  it("are the same 16:9 picture in both formats (vsl.js places the play button and caption on it)", () => {
+    const dir = join(process.cwd(), "public", "sales-pages");
+    const jpg = jpegSize(readFileSync(join(dir, "vsl-thumbnail.jpg")));
+    const webp = webpSize(readFileSync(join(dir, "vsl-thumbnail.webp")));
+    expect(webp).toEqual(jpg);
+    expect(jpg.width * 9).toBe(jpg.height * 16);
+  });
 });
+
+// Image sizes straight from the file headers (no image library in the test run).
+function jpegSize(buf: Buffer) {
+  for (let i = 2; i < buf.length; i += 2 + buf.readUInt16BE(i + 2)) {
+    const marker = buf[i + 1];
+    // SOF0-SOF15 carry the frame size; C4 (DHT), C8 (JPG) and CC (DAC) share the range.
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+      return { width: buf.readUInt16BE(i + 7), height: buf.readUInt16BE(i + 5) };
+    }
+  }
+  throw new Error("no JPEG frame header");
+}
+
+function webpSize(buf: Buffer) {
+  // Lossy WebP: "RIFF" size "WEBP" "VP8 " ... 14-bit width/height after the start code.
+  if (buf.toString("ascii", 12, 16) !== "VP8 ") throw new Error("not a lossy WebP");
+  return { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff };
+}
