@@ -78,6 +78,43 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
     targetIdIndex: 0,
     targetType: "PartnerCommission",
   },
+  // Newsletter campaigns (src/lib/services/newsletter-campaign.service.ts).
+  "POST /api/admin/newsletter/campaigns": {
+    code: "admin.newsletter.create",
+    severity: I,
+    targetType: "NewsletterCampaign",
+  },
+  "PATCH /api/admin/newsletter/campaigns/*": {
+    code: "admin.newsletter.update",
+    severity: I,
+    targetType: "NewsletterCampaign",
+    targetIdIndex: 0,
+  },
+  "DELETE /api/admin/newsletter/campaigns/*": {
+    code: "admin.newsletter.delete",
+    severity: N,
+    targetType: "NewsletterCampaign",
+    targetIdIndex: 0,
+  },
+  "POST /api/admin/newsletter/campaigns/*/duplicate": {
+    code: "admin.newsletter.duplicate",
+    severity: I,
+    targetType: "NewsletterCampaign",
+    targetIdIndex: 0,
+  },
+  "POST /api/admin/newsletter/campaigns/*/send-now": {
+    code: "admin.newsletter.send_now",
+    severity: N,
+    targetType: "NewsletterCampaign",
+    targetIdIndex: 0,
+  },
+  "POST /api/admin/newsletter/campaigns/*/retry": {
+    code: "admin.newsletter.retry",
+    severity: N,
+    targetType: "NewsletterCampaign",
+    targetIdIndex: 0,
+  },
+  "POST /api/admin/newsletter/test": { code: "admin.newsletter.test_send", severity: I },
   // The log logs itself. A reversal is a privileged write like any other, and
   // an audit trail that cannot show who reverted what is missing the one
   // action most worth reviewing.

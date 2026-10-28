@@ -59,6 +59,14 @@ describe("proxy: the signup pages a visitor reaches before they have a session",
     expect(res.headers.get("location")).toBeNull();
   });
 
+  // A newsletter reader often has no account at all (sign-ups, sales-page leads).
+  it("serves the newsletter unsubscribe page to an anonymous visitor", async () => {
+    const res = await proxy(request("/newsletter/unsubscribe?t=abc.def&l=fr"));
+
+    expect(isRedirect(res.status)).toBe(false);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
   it("still sends an anonymous visitor on a protected page to /login (control)", async () => {
     const res = await proxy(request("/stores"));
 

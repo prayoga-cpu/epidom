@@ -47,4 +47,9 @@ export type CustomDevelopmentSubmittedEventData = {
   storeName: string | null;
 };
 
+/** `newsletter/campaign.send`: send one claimed (SENDING) newsletter campaign. */
+export type NewsletterCampaignSendEventData = {
+  campaignId: string;
+};
+
 export const inngest = new Inngest({ id: "epidom" });

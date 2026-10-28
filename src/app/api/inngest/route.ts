@@ -18,6 +18,10 @@ import {
   sendAccountChangedNotice,
 } from "@/lib/inngest/functions/audit-alerts";
 import { pruneAuditTrail, shredAuditSubject } from "@/lib/inngest/functions/audit-retention";
+import {
+  dispatchDueNewsletters,
+  sendNewsletterCampaign,
+} from "@/lib/inngest/functions/newsletter-dispatch";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -37,5 +41,7 @@ export const { GET, POST, PUT } = serve({
     sendAccountChangedNotice,
     pruneAuditTrail,
     shredAuditSubject,
+    dispatchDueNewsletters,
+    sendNewsletterCampaign,
   ],
 });

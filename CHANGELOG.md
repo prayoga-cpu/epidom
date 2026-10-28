@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.38.0] - 2026-10-28 · feat
+
+- Every Epidom newsletter now ends with an **Unsubscribe** link in the reader's language (French, English or Indonesian), and mail apps such as Gmail show their own one-click Unsubscribe button. One click stops all Epidom newsletters for that address; emails about your account (receipts, security) keep coming. Signing up again from the newsletter form on epidom.fr turns them back on.
+- Admin → Newsletter (internal): newsletters can now be written ahead and scheduled for a chosen day and hour, in Paris, Jakarta or your own time zone, so several weeks or months can be prepared at once. Each one can be edited, moved back to drafts, duplicated, deleted or sent right away until it goes out.
+- Each newsletter picks its audience, in any combination: newsletter sign-ups, sales-page leads, free customers, trial customers and paid customers (or everyone), plus a language filter. Live counts show how many people that is today. Free, trial and paid are worked out again when it sends, and someone in two audiences gets it once.
+- The newsletter editor has bold, headings, lists, links, call-to-action buttons and images, a "Pasted HTML" mode for designed emails, a preview of the exact email, and a test send. The Scheduled tab groups newsletters by week; the Sent tab shows how many were sent and lets a failed send resume without emailing anyone twice.
+
 ## [3.37.2] - 2026-10-27 · ux
 
 - The video on our sales pages has a new cover. Its play button now sits over the presenter and the "5 minutes" caption in the bottom-right corner, so neither hides the cover's headline, on phones too.

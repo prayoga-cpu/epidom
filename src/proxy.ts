@@ -421,6 +421,9 @@ async function routeRequest(req: NextRequest): Promise<NextResponse> {
     "/staff-invite",
     // Emailed referral-partner invitation: same again (sign up, then accept).
     "/partner-invite",
+    // A newsletter's footer link. Readers have no account at all (sign-ups,
+    // leads) or aren't signed in; the signed token in the URL is the only gate.
+    "/newsletter/unsubscribe",
   ];
 
   // Check if current path is a public route — matched against basePath so

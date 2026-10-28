@@ -1733,6 +1733,68 @@ footer, the sales-page footer form, or any other lightweight subscribe surface.
 The full-form lead capture (name + phone + email) goes to SalesLead.'
 }
 
+Table newsletter_campaigns {
+  id String [pk]
+  subject String [not null]
+  previewText String [note: 'Inbox preview line shown after the subject.']
+  contentMode String [not null, default: 'rich', note: '"rich" = written in the editor, "html" = pasted HTML sent as-is.']
+  contentHtml String [not null]
+  audiences NewsletterAudience[] [not null]
+  language String [not null, default: 'all', note: '"all", or one language: "fr" | "en" | "id".']
+  status NewsletterCampaignStatus [not null, default: 'DRAFT']
+  scheduledAt DateTime [note: 'UTC instant it goes out (null on a draft with no date yet).']
+  timezone String [not null, default: 'Europe/Paris', note: 'IANA zone the date and hour were picked in, for display only.']
+  sendStartedAt DateTime
+  sentAt DateTime
+  recipientCount Int [not null, default: 0]
+  sentCount Int [not null, default: 0]
+  failedCount Int [not null, default: 0]
+  lastError String
+  createdBy String [not null, note: 'Emails of the admins who created / last changed it.']
+  updatedBy String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  deliveries newsletter_deliveries [not null]
+
+  Note: 'A newsletter written in the admin panel, sent now or at `scheduledAt` by
+the Inngest dispatcher (src/lib/inngest/functions/newsletter-dispatch.ts).
+Editable while DRAFT or SCHEDULED; the dispatcher claims it SCHEDULED →
+SENDING with a conditional update, so an edit and a send never cross.'
+}
+
+Table newsletter_deliveries {
+  id String [pk]
+  campaignId String [not null]
+  campaign newsletter_campaigns [not null]
+  email String [not null, note: 'Lowercased.']
+  locale String [not null]
+  status NewsletterDeliveryStatus [not null, default: 'PENDING']
+  resendId String
+  error String
+  sentAt DateTime
+  createdAt DateTime [default: `now()`, not null]
+
+  indexes {
+    (campaignId, email) [unique]
+  }
+
+  Note: 'One recipient of one campaign, written when the campaign starts sending.
+Batches only pick PENDING rows, so an Inngest retry or an admin "Retry"
+never emails anyone twice.'
+}
+
+Table newsletter_unsubscribes {
+  id String [pk]
+  email String [unique, not null, note: 'Lowercased.']
+  source String [not null, note: '"link" (the unsubscribe page) | "one_click" (the mail app\'s button)']
+  campaignId String
+  createdAt DateTime [default: `now()`, not null]
+
+  Note: 'An address that asked to stop receiving newsletters, whatever list it came
+from. Every campaign skips it. Subscribing again from a newsletter form
+removes the row.'
+}
+
 Table newsletter_sends {
   id String [pk]
   type String [not null, note: '"broadcast" = Resend Broadcast (full audience), "test" = single address, "custom" = curated list']
@@ -1744,7 +1806,8 @@ Table newsletter_sends {
 
   Note: 'Log of every newsletter send (broadcast, test, or custom list).
 Written by the server on every successful send so the admin can track
-what went out, to how many people, and who triggered it.'
+what went out, to how many people, and who triggered it.
+Read-only since 3.38.0 ("Earlier sends"): campaigns replaced these sends.'
 }
 
 Enum OrderReceiptSendStatus {
@@ -2157,6 +2220,29 @@ Enum RestoreRunStatus {
   REFUSED
 }
 
+Enum NewsletterAudience {
+  SUBSCRIBERS
+  LEADS
+  FREE
+  TRIAL
+  PAID
+}
+
+Enum NewsletterCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+Enum NewsletterDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
 Ref: session.userId > user.id [delete: Cascade]
 
 Ref: account.userId > user.id [delete: Cascade]
@@ -2386,3 +2472,5 @@ Ref: action_logs.snapshotId - entity_snapshots.id [delete: Set Null]
 Ref: action_annotations.actionLogId > action_logs.id [delete: Cascade]
 
 Ref: restore_runs.snapshotId > entity_snapshots.id [delete: Cascade]
+
+Ref: newsletter_deliveries.campaignId > newsletter_campaigns.id [delete: Cascade]

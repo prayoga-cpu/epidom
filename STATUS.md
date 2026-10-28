@@ -1,5 +1,23 @@
 # STATUS.md
 
+## 3.38.0 — Scheduled newsletters with audiences + unsubscribe (2026-10-28, not pushed)
+
+- [x] `NewsletterCampaign` / `NewsletterDelivery` / `NewsletterUnsubscribe` (migration `20261028090000_newsletter_campaigns`, new tables only).
+- [x] Admin → Newsletter: Scheduled (grouped by week) / Drafts / Sent tabs; editor at `/admin/newsletter/new` and `/admin/newsletter/[id]` (Tiptap 3.31.4 + "Pasted HTML" mode, sandboxed preview, test send, day + hour + time zone, edit / move to drafts / duplicate / delete / send now; failed sends resume with Retry).
+- [x] Audiences: sign-ups, sales-page leads, free, trial, paid (any mix), language filter. Worked out when it sends (`newsletter-audience.service.ts`): verified, non-deactivated accounts; staff logins without their own business are left out; one email per address; unsubscribes skipped. Paid = paying, overdue (PAST_DUE) or admin-granted; free = free plan, unpaid checkout or canceled.
+- [x] Sending: Inngest `dispatch-due-newsletters` (every 5 min) claims due campaigns; `send-newsletter-campaign` snapshots recipients, sends batches of 100 via Resend batch (idempotency key, permissive validation), one run per campaign.
+- [x] Unsubscribe link + `List-Unsubscribe` one-click header in every email; public page `/newsletter/unsubscribe` (fr/en/id); signing up again lifts it.
+- [x] Removed the old immediate-send path: `POST /api/admin/newsletter/broadcast`, `POST /api/admin/newsletter/sync-users` (it re-subscribed every user, unverified and deactivated ones included, in the Resend audience) and the old view. Earlier sends still show under Sent → "Earlier sends".
+- [ ] Not browser-tested yet (editor, schedule, test send, unsubscribe page; phone + desktop).
+
+### Operator to-do (3.38.0)
+
+- [ ] **Inngest must be synced in production, or scheduled newsletters never go out.** As of 2026-09-26 no app was registered in Inngest Cloud (all jobs dormant). Sync it (Inngest dashboard → Sync app → `https://epidom.fr/api/inngest`) and check that `dispatch-due-newsletters` appears. Until then, the Newsletter page flags newsletters past their time as **Overdue**, and "Send now" still works.
+- [ ] **Resend quota:** check the Resend plan's daily and monthly limits cover the biggest audience (the editor shows the count). Newsletters share the quota with sign-up and receipt emails. A send that hits the limit stops as Failed and resumes with "Retry the rest".
+- [ ] Optional `NEWSLETTER_FROM` (e.g. `Epidom <news@your-verified-domain>`): sender for newsletters only; falls back to `EMAIL_FROM`. It must be on a domain verified in Resend.
+- [ ] Give Aaron the page: Admin → Users → Aaron → Access → tick **Newsletter**.
+- [ ] Dev branch: run `prisma migrate deploy` for `20261028090000_newsletter_campaigns` (the operator runs it).
+
 ## 3.37.1 — "Congratulations on choosing Epidom" after sign-up and payment (2026-10-24)
 
 - [x] Sign-up: `WelcomeNotice` on the setup wizard for a brand-new account (no business yet) landing from `?verified=1` without `error`, or `?signup=google` (`useOnboardingLanding` → `welcome`). Dismissible; hidden once the owner leaves the first step shown and on the launch screen. The flags are stripped from the URL, so a reload doesn't show it again.

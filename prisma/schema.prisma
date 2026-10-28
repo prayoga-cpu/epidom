@@ -3093,9 +3093,110 @@ model NewsletterSubscriber {
   @@map("newsletter_subscribers")
 }
 
+/// Who a newsletter campaign goes to. Customer groups are worked out when the
+/// campaign starts sending (src/lib/services/newsletter-audience.service.ts),
+/// so a newsletter written weeks ahead reaches whoever is paid/free on the day.
+enum NewsletterAudience {
+  SUBSCRIBERS // NewsletterSubscriber (footer / sales-page footer forms)
+  LEADS // SalesLead (sales-page popup form)
+  FREE // accounts on the free plan, an unpaid checkout, or a canceled plan
+  TRIAL // a paid plan still in its Stripe trial
+  PAID // a paid plan: paying, payment overdue, or granted by an admin
+}
+
+enum NewsletterCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+enum NewsletterDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED // unsubscribed between the audience snapshot and its batch
+}
+
+/// A newsletter written in the admin panel, sent now or at `scheduledAt` by
+/// the Inngest dispatcher (src/lib/inngest/functions/newsletter-dispatch.ts).
+/// Editable while DRAFT or SCHEDULED; the dispatcher claims it SCHEDULED →
+/// SENDING with a conditional update, so an edit and a send never cross.
+model NewsletterCampaign {
+  id             String                   @id @default(cuid())
+  subject        String
+  /// Inbox preview line shown after the subject.
+  previewText    String?
+  /// "rich" = written in the editor, "html" = pasted HTML sent as-is.
+  contentMode    String                   @default("rich")
+  contentHtml    String
+  audiences      NewsletterAudience[]
+  /// "all", or one language: "fr" | "en" | "id".
+  language       String                   @default("all")
+  status         NewsletterCampaignStatus @default(DRAFT)
+  /// UTC instant it goes out (null on a draft with no date yet).
+  scheduledAt    DateTime?
+  /// IANA zone the date and hour were picked in, for display only.
+  timezone       String                   @default("Europe/Paris")
+  sendStartedAt  DateTime?
+  sentAt         DateTime?
+  recipientCount Int                      @default(0)
+  sentCount      Int                      @default(0)
+  failedCount    Int                      @default(0)
+  lastError      String?
+  /// Emails of the admins who created / last changed it.
+  createdBy      String
+  updatedBy      String
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  deliveries NewsletterDelivery[]
+
+  @@index([status, scheduledAt])
+  @@map("newsletter_campaigns")
+}
+
+/// One recipient of one campaign, written when the campaign starts sending.
+/// Batches only pick PENDING rows, so an Inngest retry or an admin "Retry"
+/// never emails anyone twice.
+model NewsletterDelivery {
+  id         String                   @id @default(cuid())
+  campaignId String
+  campaign   NewsletterCampaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  /// Lowercased.
+  email      String
+  locale     String
+  status     NewsletterDeliveryStatus @default(PENDING)
+  resendId   String?
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime                 @default(now())
+
+  @@unique([campaignId, email])
+  @@index([campaignId, status])
+  @@map("newsletter_deliveries")
+}
+
+/// An address that asked to stop receiving newsletters, whatever list it came
+/// from. Every campaign skips it. Subscribing again from a newsletter form
+/// removes the row.
+model NewsletterUnsubscribe {
+  id         String   @id @default(cuid())
+  /// Lowercased.
+  email      String   @unique
+  /// "link" (the unsubscribe page) | "one_click" (the mail app's button)
+  source     String
+  campaignId String?
+  createdAt  DateTime @default(now())
+
+  @@map("newsletter_unsubscribes")
+}
+
 /// Log of every newsletter send (broadcast, test, or custom list).
 /// Written by the server on every successful send so the admin can track
 /// what went out, to how many people, and who triggered it.
+/// Read-only since 3.38.0 ("Earlier sends"): campaigns replaced these sends.
 model NewsletterSend {
   id         String   @id @default(cuid())
   /// "broadcast" = Resend Broadcast (full audience), "test" = single address, "custom" = curated list

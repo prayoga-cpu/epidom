@@ -8570,4 +8570,16 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     withoutDiscount: "{name} vous invite sur Epidom",
     dismiss: "Fermer",
   },
+  newsletterUnsubscribe: {
+    title: "Se désinscrire de la newsletter Epidom",
+    description: "{email} ne recevra plus les newsletters d'Epidom. Les e-mails liés à votre compte (reçus, sécurité) continuent d'arriver.",
+    confirm: "Me désinscrire",
+    working: "Désinscription…",
+    doneTitle: "Vous êtes désinscrit(e)",
+    doneDescription: "{email} ne recevra plus les newsletters d'Epidom. Vous changez d'avis ? Réinscrivez-vous depuis le formulaire en bas de epidom.fr.",
+    invalidTitle: "Ce lien ne fonctionne pas",
+    invalidDescription: "Votre messagerie l'a peut-être coupé. Rouvrez le lien de désinscription depuis la newsletter.",
+    error: "Une erreur s'est produite. Veuillez réessayer.",
+    backHome: "Aller sur epidom.fr",
+  },
 };

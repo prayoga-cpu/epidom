@@ -35,8 +35,9 @@ describe("admin sections", () => {
 
   it("every admin page is in the registry and checks its own section", () => {
     for (const { href, file } of adminPages()) {
-      // A detail page (/admin/partners/[id]) belongs to its parent's section.
-      const sectionHref = href.replace(/\/\[[^/]+\]$/, "");
+      // A detail page (/admin/partners/[id]) or a create page
+      // (/admin/newsletter/new) belongs to its parent's section.
+      const sectionHref = href.replace(/\/(\[[^/]+\]|new)$/, "");
       const section = ADMIN_SECTIONS.find((s) => s.href === sectionHref);
       expect(section, `${href} has no entry in ADMIN_SECTIONS`).toBeDefined();
       const source = readFileSync(file, "utf8");
