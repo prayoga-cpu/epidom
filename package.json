@@ -113,7 +113,7 @@
     "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "^4.0.16",
-    "eslint": "^9.39.1",
+    "eslint": "^10.13.0",
     "jsdom": "^27.3.0",
     "postcss": "^8.5",
     "prettier": "^3.6.2",
