@@ -9,6 +9,10 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.38.1] - 2026-10-28 · fix
+
+- Newsletter unsubscribe links now go straight to www.epidom.fr, so the Unsubscribe button in mail apps such as Gmail works without depending on a redirect.
+
 ## [3.38.0] - 2026-10-28 · feat
 
 - Every Epidom newsletter now ends with an **Unsubscribe** link in the reader's language (French, English or Indonesian), and mail apps such as Gmail show their own one-click Unsubscribe button. One click stops all Epidom newsletters for that address; emails about your account (receipts, security) keep coming. Signing up again from the newsletter form on epidom.fr turns them back on.

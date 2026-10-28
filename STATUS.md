@@ -1,6 +1,10 @@
 # STATUS.md
 
-## 3.38.0 — Scheduled newsletters with audiences + unsubscribe (2026-10-28, not pushed)
+## 3.38.1 — Newsletter unsubscribe links on www (2026-10-28)
+
+- [x] Unsubscribe and one-click links point at `https://www.epidom.fr` when the app URL is the apex, since Vercel 308-redirects `epidom.fr` → `www.epidom.fr` and a mail app's one-click POST isn't guaranteed to follow it (`appUrl()` in `src/lib/newsletter/unsubscribe-token.ts`). Other hosts (dev, local) unchanged.
+
+## 3.38.0 — Scheduled newsletters with audiences + unsubscribe (shipped 2026-10-28, 5c15d424, CI green)
 
 - [x] `NewsletterCampaign` / `NewsletterDelivery` / `NewsletterUnsubscribe` (migration `20261028090000_newsletter_campaigns`, new tables only).
 - [x] Admin → Newsletter: Scheduled (grouped by week) / Drafts / Sent tabs; editor at `/admin/newsletter/new` and `/admin/newsletter/[id]` (Tiptap 3.31.4 + "Pasted HTML" mode, sandboxed preview, test send, day + hour + time zone, edit / move to drafts / duplicate / delete / send now; failed sends resume with Retry).
@@ -8,7 +12,8 @@
 - [x] Sending: Inngest `dispatch-due-newsletters` (every 5 min) claims due campaigns; `send-newsletter-campaign` snapshots recipients, sends batches of 100 via Resend batch (idempotency key, permissive validation), one run per campaign.
 - [x] Unsubscribe link + `List-Unsubscribe` one-click header in every email; public page `/newsletter/unsubscribe` (fr/en/id); signing up again lifts it.
 - [x] Removed the old immediate-send path: `POST /api/admin/newsletter/broadcast`, `POST /api/admin/newsletter/sync-users` (it re-subscribed every user, unverified and deactivated ones included, in the Resend audience) and the old view. Earlier sends still show under Sent → "Earlier sends".
-- [ ] Not browser-tested yet (editor, schedule, test send, unsubscribe page; phone + desktop).
+- [x] Live on epidom.fr: migration applied by the production build, admin list / editor / audience counts served without errors to a signed-in admin, unsubscribe page and endpoint answer correctly.
+- [ ] Not tried end to end yet: a real scheduled send, a test send, and unsubscribing from a received email.
 
 ### Operator to-do (3.38.0)
 
@@ -16,7 +21,7 @@
 - [ ] **Resend quota:** check the Resend plan's daily and monthly limits cover the biggest audience (the editor shows the count). Newsletters share the quota with sign-up and receipt emails. A send that hits the limit stops as Failed and resumes with "Retry the rest".
 - [ ] Optional `NEWSLETTER_FROM` (e.g. `Epidom <news@your-verified-domain>`): sender for newsletters only; falls back to `EMAIL_FROM`. It must be on a domain verified in Resend.
 - [ ] Give Aaron the page: Admin → Users → Aaron → Access → tick **Newsletter**.
-- [ ] Dev branch: run `prisma migrate deploy` for `20261028090000_newsletter_campaigns` (the operator runs it).
+- [x] ~~Dev branch: run `prisma migrate deploy`~~: applied in production by the build; the dev branch gets it at its nightly reset from production.
 
 ## 3.37.1 — "Congratulations on choosing Epidom" after sign-up and payment (2026-10-24)
 

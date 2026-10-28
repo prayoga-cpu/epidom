@@ -20,7 +20,9 @@ afterEach(() => {
 
 describe("unsubscribe tokens", () => {
   it("round-trips the address, lowercased", () => {
-    expect(verifyUnsubscribeToken(createUnsubscribeToken(" Jane@Bakery.com "))).toBe("jane@bakery.com");
+    expect(verifyUnsubscribeToken(createUnsubscribeToken(" Jane@Bakery.com "))).toBe(
+      "jane@bakery.com"
+    );
   });
 
   it("rejects a token whose address was swapped", () => {
@@ -41,12 +43,23 @@ describe("unsubscribe tokens", () => {
     }
   });
 
-  it("builds the page and one-click URLs on the app URL", () => {
+  it("points production links at www, past the apex's redirect", () => {
     expect(unsubscribePageUrl("jane@bakery.com", "fr")).toMatch(
-      /^https:\/\/epidom\.fr\/newsletter\/unsubscribe\?t=[\w-]+\.[\w-]+&l=fr$/
+      /^https:\/\/www\.epidom\.fr\/newsletter\/unsubscribe\?t=[\w-]+\.[\w-]+&l=fr$/
     );
     expect(oneClickUnsubscribeUrl("jane@bakery.com")).toMatch(
-      /^https:\/\/epidom\.fr\/api\/public\/newsletter\/unsubscribe\?t=[\w-]+\.[\w-]+$/
+      /^https:\/\/www\.epidom\.fr\/api\/public\/newsletter\/unsubscribe\?t=[\w-]+\.[\w-]+$/
     );
+  });
+
+  it("keeps any other app URL as it is", () => {
+    for (const base of [
+      "https://dev.epidom.fr",
+      "http://localhost:3000",
+      "https://www.epidom.fr",
+    ]) {
+      process.env.NEXT_PUBLIC_APP_URL = base;
+      expect(oneClickUnsubscribeUrl("jane@bakery.com").startsWith(`${base}/api/`)).toBe(true);
+    }
   });
 });
