@@ -20,6 +20,7 @@ import { createMenuItems, deleteMenuItem, getMenu, updateMenuItem } from "./menu
 import { importCatalog } from "./import";
 import {
   createRosterEntries,
+  decideOvertime,
   getHoursAndOvertime,
   getPayroll,
   getRoster,
@@ -76,6 +77,7 @@ export const MCP_TOOLS: readonly McpTool[] = [
   getPayroll,
   createRosterEntries,
   publishRoster,
+  decideOvertime,
   // Customers
   listCustomers,
   getCustomer,

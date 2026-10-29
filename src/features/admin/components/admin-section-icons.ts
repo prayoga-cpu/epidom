@@ -7,6 +7,7 @@ import {
   Mail,
   Megaphone,
   Radar,
+  Sparkles,
   TrendingUp,
   Users,
   Wrench,
@@ -27,4 +28,5 @@ export const ADMIN_SECTION_ICONS: Record<AdminSection["icon"], LucideIcon> = {
   Wrench,
   Link,
   Mail,
+  Sparkles,
 };

@@ -27,6 +27,7 @@ export const ADMIN_SECTION_KEYS = [
   "custom-development",
   "my-referrals",
   "newsletter",
+  "claude-connector",
 ] as const;
 
 export type AdminSectionKey = (typeof ADMIN_SECTION_KEYS)[number];
@@ -53,7 +54,8 @@ export interface AdminSection {
     | "Bug"
     | "Wrench"
     | "Link"
-    | "Mail";
+    | "Mail"
+    | "Sparkles";
   access: AdminSectionAccess;
   group?: AdminSectionGroup;
   /** Shown in the grant dialog when what the page exposes deserves a second thought. */
@@ -88,6 +90,14 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     access: "grantable",
     group: "finance",
     grantWarning: "Includes running a full database backup.",
+  },
+  {
+    key: "claude-connector",
+    href: "/admin/claude-connector",
+    label: "Claude connector",
+    icon: "Sparkles",
+    access: "grantable",
+    group: "finance",
   },
   {
     key: "sales-pages",
@@ -158,7 +168,8 @@ export type GrantableAdminSectionKey =
   | "partners"
   | "feedback"
   | "custom-development"
-  | "newsletter";
+  | "newsletter"
+  | "claude-connector";
 
 export const GRANTABLE_ADMIN_SECTION_KEYS = GRANTABLE_ADMIN_SECTIONS.map(
   (s) => s.key

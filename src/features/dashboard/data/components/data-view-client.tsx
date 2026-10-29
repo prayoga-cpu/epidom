@@ -29,6 +29,7 @@ import type { Product } from "@/features/dashboard/data/products/hooks/use-produ
 import type { SupplierWithRelations } from "@/lib/repositories/supplier.repository";
 import { useCustomProductsSettings } from "../custom-products/hooks/use-custom-products-settings";
 import { DataQuickStart } from "../import/components/data-quick-start";
+import { useClaudeConnectorAccess } from "@/features/claude-connector/hooks/use-claude-connector-access";
 import type { EntityType } from "@/lib/ai/import/types";
 import { Button } from "@/components/ui/button";
 import { PageIntro } from "@/features/guide/components/page-intro";
@@ -297,6 +298,7 @@ export function DataViewClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: customProductsSettings } = useCustomProductsSettings(storeId);
+  const claudeConnectorEnabled = useClaudeConnectorAccess();
 
   const [tabState, setTabState] = usePersistedState<TabState>(
     `epidom-data-tab-${storeId}`,
@@ -465,6 +467,7 @@ export function DataViewClient({
             storeId={storeId}
             startOpen={listsAreEmpty}
             defaultEntityType={TAB_ENTITY_TYPE[activeTab]}
+            claudeConnectorEnabled={claudeConnectorEnabled}
             className="mb-6"
           />
         </>

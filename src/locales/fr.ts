@@ -6021,6 +6021,9 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       },
     },
     quickStart: {
+      claudeHint:
+        "Epidom est connecté à votre Claude ? Passez les étapes : partagez la photo ou le PDF avec Claude et demandez-lui de l’importer dans Epidom. Il vous montre les lignes avant d’enregistrer quoi que ce soit.",
+      claudeCta: "Connecter Claude",
       title: "Importer depuis une photo ou un PDF",
       subtitle:
         "Pas de tableur ? N'importe quel assistant IA peut transformer une photo de votre carte, un PDF ou une liste de prix en fichier qu'Epidom sait importer.",
@@ -8225,7 +8228,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
   },
   privacy: {
     title: "Politique de confidentialité",
-    lastUpdatedDate: "19 octobre 2026",
+    lastUpdatedDate: "29 octobre 2026",
     intro: "Cette politique explique quelles données personnelles Epidom traite, pourquoi, qui les reçoit, combien de temps nous les conservons et comment vous pouvez exercer vos droits. Nous décrivons uniquement ce que le produit fait réellement aujourd'hui.",
     footer: "Cette politique peut évoluer. Nous informerons les utilisateurs de tout changement important par e-mail ou via le service.",
     s1: {
@@ -8262,6 +8265,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     s4: {
       title: "Qui les reçoit",
       body: "Nous faisons appel aux fournisseurs ci-dessous pour faire fonctionner Epidom. Chacun reçoit les données nécessaires à son rôle et dispose de sa propre politique de confidentialité. Certains n'interviennent que lorsqu'une fonctionnalité est activée pour votre établissement. Nous ne vendons pas de données personnelles.",
+      item1: "Assistants IA que vous connectez : si vous connectez Epidom à votre propre assistant IA (le connecteur Claude, offre Enterprise), les données que vous ou l’assistant demandez lui sont envoyées à votre demande, dans le cadre de votre compte chez son fournisseur (Anthropic pour Claude) et de sa politique de confidentialité. L’assistant n’accède qu’à ce que vos accès Epidom permettent, vous choisissez s’il peut faire des modifications, et vous pouvez révoquer l’accès à tout moment depuis votre profil Epidom. Epidom garde une trace des outils utilisés et de chaque modification, jamais du contenu de vos conversations.",
     },
     processors: {
       vercel: {
@@ -8589,11 +8593,11 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       urlLabel: "URL du connecteur",
       copy: "Copier l’URL du connecteur",
       copyFailed: "Copie impossible. Sélectionnez l’URL et copiez-la à la main.",
-      step1: "Dans Claude, ouvrez Paramètres → Connecteurs et choisissez « Ajouter un connecteur personnalisé ».",
+      step1: "Dans Claude, ouvrez Paramètres → Connecteurs et choisissez « Ajouter un connecteur personnalisé ».",
       step2: "Collez l’URL ci-dessus et ajoutez-la.",
       step3: "Cliquez sur Connecter, identifiez-vous sur Epidom et choisissez ce que Claude peut faire.",
-      claudeCode: "Dans Claude Code :",
-      enabledFor: "Disponible pour : {stores}",
+      claudeCode: "Dans Claude Code :",
+      enabledFor: "Disponible pour : {stores}",
       lockedBody: "Utiliser Epidom depuis Claude fait partie de l’offre Enterprise. Contactez-nous pour l’activer sur vos établissements.",
       talkToUs: "Nous contacter",
       connections: "Applications connectées",
@@ -8602,22 +8606,22 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       readOnly: "Lecture seule",
       readWrite: "Peut modifier",
       revoke: "Révoquer",
-      revokeTitle: "Révoquer cette connexion ?",
+      revokeTitle: "Révoquer cette connexion ?",
       revokeBody: "{app} n’aura plus accès à vos données Epidom, immédiatement. Vous pourrez vous reconnecter depuis Claude à tout moment.",
       revoked: "Connexion révoquée",
       loadFailed: "Impossible de charger vos connexions.",
     },
     consent: {
-      title: "Autoriser {app} à utiliser votre compte Epidom ?",
+      title: "Autoriser {app} à utiliser votre compte Epidom ?",
       signedInAs: "Connecté en tant que {email}",
       redirectsTo: "Vous serez renvoyé vers",
-      canRead: "L’application pourra lire les données de :",
+      canRead: "L’application pourra lire les données de :",
       noStores: "Ce compte n’a pas encore d’établissement.",
       needsEnterprise: "Offre Enterprise requise",
-      noneEnabled: "Aucun de ces établissements n’est encore sur l’offre Enterprise : Claude ne pourra pas les ouvrir tant que ce n’est pas le cas.",
+      noneEnabled: "Aucun de ces établissements n’est encore sur l’offre Enterprise : Claude ne pourra pas les ouvrir tant que ce n’est pas le cas.",
       allowChanges: "Autoriser aussi les modifications",
       allowChangesHint: "Claude pourra alors ajouter des plats, ajuster les stocks, passer des commandes fournisseurs, préparer les plannings, etc. Il vous demande avant chaque modification. Les paiements, remboursements et la caisse restent toujours dans Epidom.",
-      costNote: "L’IA fonctionne avec votre propre abonnement Claude. N’autorisez que des applications de confiance ; vous pouvez révoquer l’accès à tout moment depuis votre profil Epidom.",
+      costNote: "L’IA fonctionne avec votre propre abonnement Claude. N’autorisez que des applications de confiance ; vous pouvez révoquer l’accès à tout moment depuis votre profil Epidom.",
       allow: "Autoriser",
       deny: "Annuler",
       working: "Un instant…",

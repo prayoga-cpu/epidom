@@ -14,7 +14,10 @@ Bump the version in `package.json` and `src/lib/version.ts` with every release.
 - **Use Epidom from your own Claude** (Enterprise plan). Add Epidom as a connector in Claude (claude.ai, the desktop and mobile apps, or Claude Code) and ask in plain words: how last week went compared with the week before, what's low and what to reorder, who works on Saturday, which dishes earn the most. The AI runs on your own Claude plan.
 - When you connect, Epidom asks what Claude may do. Reading is the default. If you also tick **Allow changes**, Claude can add or change menu items, adjust stock and record waste, place and receive supplier orders, import products, materials, suppliers or recipes from a photo or a document you share, plan and publish the roster, record expenses and add customers, asking you before each change. Payments, refunds, the till and clocking in always stay in Epidom.
 - Staff who sign in with their own Epidom account can connect too, and Claude sees only what their access at the store allows.
+- Owners and managers can also approve or turn down waiting overtime from Claude, with the same rules as the Hours tab.
 - Profile → **Claude** shows the connector URL, how to add it, and every connected app, which you can revoke at any time. Changes made from Claude appear in the Activity log.
+- On the Data page, stores with the connector get a shortcut: share a menu photo or a PDF with Claude and ask it to import it, instead of copying a prompt and uploading a file.
+- The Privacy Policy now explains what is shared with an AI assistant you connect yourself.
 
 ## [3.38.1] - 2026-10-28 · fix
 

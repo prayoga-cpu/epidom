@@ -80,7 +80,7 @@ call has no cookies.
 | Import | `import_catalog` (W; preview then commit) | `/data` |
 | Staff | `get_roster` (non-managers: their own published shifts) | `/schedule` or `/pos/schedule` |
 | | `get_hours_and_overtime` | `/schedule`, manager |
-| | `create_roster_entries` (W), `publish_roster` (W) | `/schedule`, manager |
+| | `create_roster_entries` (W), `publish_roster` (W), `decide_overtime` (W) | `/schedule`, manager |
 | | `get_payroll` | owner |
 | Customers | `list_customers` (contacts masked), `get_customer` | `/customers` |
 | | `upsert_customer` (W) | `/customers` |
@@ -118,7 +118,12 @@ connections only). See `src/lib/mcp/prompts.ts`.
   The row never holds arguments or results.
 - **Rate limits:**
   - 120 requests a minute per account (`/api/mcp`);
-  - 30 writes a minute on top of that (`/api/mcp#write`).
+  - 30 writes a minute on top of that (`/api/mcp#write`);
+  - 10 client registrations a minute per IP (Better Auth `rateLimit.customRules`).
+- **Abandoned registrations:** every new registration deletes self-registered clients older than 7 days that never got a consent or a token (`src/lib/mcp/client-cleanup.ts`).
+- **Admin → Claude connector** (`/admin/claude-connector`, grantable) shows calls, errors, accounts, stores and connections over 7, 30 or 90 days, by tool, by day and by store, plus recent errors.
+- **Data page:** for a store whose plan includes the connector, Smart Import’s Quick Start adds a “Do it in Claude” line.
+- **Privacy policy:** section “Who receives it” explains that a connected assistant gets data at the user’s request, under the user’s own provider (Anthropic is not an Epidom processor here).
 
 ## Never exposed (v1)
 
@@ -130,8 +135,7 @@ These are left out on purpose:
 - billing and plan changes;
 - deleting a store or transferring ownership;
 - sending anything to customers or suppliers;
-- storefront publish and order toggles;
-- overtime approval (not built yet; see STATUS.md).
+- storefront publish and order toggles.
 
 ## Testing
 

@@ -18,7 +18,7 @@ Design and tool catalog: `docs/MCP.md`.
   - Its own bearer principal; per-call store access, plan, role and page checks.
   - Audit scope, with an `mcp.<tool>` ActivityEvent for each write.
   - `mcp_tool_call` usage rows; rate limits.
-- [x] 34 tools and 5 prompts.
+- [x] 35 tools (incl. `decide_overtime`) and 5 prompts.
 - [x] Profile → Claude card: URL, steps, connected apps, revoke. API: `/api/user/connected-apps`.
   Strings in fr, id and en.
 - [x] Route logic moved into services that the routes now also call:
@@ -26,11 +26,10 @@ Design and tool catalog: `docs/MCP.md`.
   - the catalog importer, out of the `"use server"` actions file.
 - [x] Migration `20261029090000_claude_connector`: additive only, 5 new tables.
 
-**Not built yet:**
-- [ ] `decide_overtime` tool.
-- [ ] Admin usage page for `mcp_tool_call`.
-- [ ] "Do it in Claude" entry on Smart Import's Quick Start.
-- [ ] Legal/privacy copy (`src/features/marketing/legal/providers.ts`).
+- [x] Admin → Claude connector usage page; "Do it in Claude" line on Smart Import's Quick Start; privacy policy paragraph on connected assistants (fr/id/en).
+- [x] Client registration: 10/min per IP, and abandoned registrations (7 days, never used) pruned on each new one.
+
+**Later (not in this release):**
 - [ ] An MCP App (interactive chart).
 - [ ] Connectors Directory submission.
 

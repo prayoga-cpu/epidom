@@ -5525,6 +5525,9 @@ lifetime: "Akses seumur hidup",
       },
     },
     quickStart: {
+      claudeHint:
+        "Epidom sudah terhubung ke Claude Anda? Lewati langkah-langkah ini: bagikan foto atau PDF ke Claude dan minta Claude mengimpornya ke Epidom. Claude menunjukkan barisnya sebelum menyimpan apa pun.",
+      claudeCta: "Hubungkan Claude",
       title: "Impor dari foto atau PDF",
       subtitle:
         "Tidak punya spreadsheet? Asisten AI mana pun bisa mengubah foto menu, PDF, atau daftar harga menjadi file yang bisa diimpor ke Epidom.",
@@ -8553,7 +8556,7 @@ lifetime: "Akses seumur hidup",
   },
   privacy: {
     title: "Kebijakan Privasi",
-    lastUpdatedDate: "19 Oktober 2026",
+    lastUpdatedDate: "29 Oktober 2026",
     intro: "Kebijakan ini menjelaskan data pribadi apa yang diproses Epidom, untuk apa, siapa yang menerimanya, berapa lama kami menyimpannya, dan bagaimana Anda dapat menggunakan hak Anda. Kami hanya menjelaskan apa yang benar-benar dilakukan produk ini saat ini.",
     footer: "Kebijakan ini dapat berubah. Kami akan memberi tahu pengguna tentang perubahan material melalui email atau melalui layanan.",
     s1: {
@@ -8590,6 +8593,7 @@ lifetime: "Akses seumur hidup",
     s4: {
       title: "Siapa yang menerimanya",
       body: "Kami menggunakan penyedia di bawah ini untuk menjalankan Epidom. Masing-masing menerima data yang diperlukan untuk perannya dan memiliki kebijakan privasinya sendiri. Sebagian hanya terlibat ketika sebuah fitur diaktifkan untuk toko Anda. Kami tidak menjual data pribadi.",
+      item1: "Asisten AI yang Anda hubungkan: jika Anda menghubungkan Epidom ke asisten AI Anda sendiri (konektor Claude, paket Enterprise), data yang Anda atau asisten minta dikirim ke asisten itu atas permintaan Anda, di bawah akun Anda pada penyedianya (Anthropic untuk Claude) dan kebijakan privasinya. Asisten hanya bisa menjangkau apa yang diizinkan oleh akses Epidom Anda, Anda memilih apakah ia boleh membuat perubahan, dan Anda bisa mencabut aksesnya kapan saja dari profil Epidom Anda. Epidom mencatat alat mana yang dipakai dan setiap perubahan yang dibuat, tidak pernah isi percakapan Anda.",
     },
     processors: {
       vercel: {

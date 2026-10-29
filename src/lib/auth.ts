@@ -30,6 +30,7 @@ import {
   mcpResourceUrl,
 } from "@/lib/mcp/config";
 import { admitLocalhostPortForClient } from "@/lib/mcp/loopback-redirect";
+import { pruneAbandonedOauthClients } from "@/lib/mcp/client-cleanup";
 
 /**
  * In production, share auth cookies (incl. the OAuth `state` cookie) across the
@@ -154,12 +155,27 @@ export const auth = betterAuth({
       silenceWarnings: { oauthAuthServerConfig: true },
     }),
   ],
+  // Better Auth's own limiter (on in production; defaults kept for every other
+  // path). Client registration needs no sign-in, so it gets a tighter budget.
+  rateLimit: {
+    customRules: {
+      "/oauth2/register": { window: 60, max: 10 },
+    },
+  },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.path === "/oauth2/authorize") {
         await admitLocalhostPortForClient(
           ctx.query?.client_id as string | undefined,
           ctx.query?.redirect_uri as string | undefined
+        );
+      }
+    }),
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/oauth2/register") {
+        // Never in the way of the registration itself.
+        await pruneAbandonedOauthClients().catch((error) =>
+          console.error("[auth] pruning abandoned OAuth clients failed:", error)
         );
       }
     }),

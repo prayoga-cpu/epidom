@@ -48,7 +48,14 @@ export function PrivacyContent() {
       body: t("privacy.s3.body"),
       items: plain("privacy.s3", 6),
     },
-    { id: "p4", title: t("privacy.s4.title"), body: t("privacy.s4.body"), items: processors },
+    {
+      id: "p4",
+      title: t("privacy.s4.title"),
+      body: t("privacy.s4.body"),
+      // The processors Epidom uses, then the AI assistant a user may connect
+      // themselves (not Epidom's processor: the user's own provider).
+      items: [...processors, { text: t("privacy.s4.item1") }],
+    },
     {
       id: "p5",
       title: t("privacy.s5.title"),

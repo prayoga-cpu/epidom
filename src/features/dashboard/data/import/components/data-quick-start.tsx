@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ChevronDown, FileUp, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, FileUp, MessageSquareText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
@@ -30,6 +31,8 @@ interface DataQuickStartProps {
   startOpen: boolean;
   /** The record type the page is showing, preselected in the prompt. */
   defaultEntityType?: EntityType;
+  /** The store can use Epidom from Claude: offer that instead of the copy-paste steps. */
+  claudeConnectorEnabled?: boolean;
   className?: string;
 }
 
@@ -46,6 +49,7 @@ export function DataQuickStart({
   storeId,
   startOpen,
   defaultEntityType,
+  claudeConnectorEnabled = false,
   className,
 }: DataQuickStartProps) {
   const { t } = useI18n();
@@ -114,6 +118,16 @@ export function DataQuickStart({
           onImport={() => setImportOpen(true)}
           className="mt-4 border-t pt-4"
         />
+      )}
+
+      {open && claudeConnectorEnabled && (
+        <div className="bg-muted/50 mt-4 flex flex-col gap-3 rounded-lg p-3 sm:flex-row sm:items-center">
+          <MessageSquareText className="text-primary size-5 shrink-0" aria-hidden="true" />
+          <p className="min-w-0 flex-1 text-sm">{t("import.quickStart.claudeHint")}</p>
+          <Button asChild variant="outline" className="h-11 shrink-0">
+            <Link href={`/store/${storeId}/profile`}>{t("import.quickStart.claudeCta")}</Link>
+          </Button>
+        </div>
       )}
 
       <SmartImportDialog

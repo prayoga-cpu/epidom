@@ -14,6 +14,12 @@ import {
   publishRoster as publishEntries,
   RosterStaffNotFoundError,
 } from "@/lib/services/roster.service";
+import {
+  decideOvertime as decideOvertimeDays,
+  OVERTIME_SKIP_MESSAGES,
+  OvertimeApprovalOffError,
+  OvertimeRangeError,
+} from "@/lib/attendance/overtime-decision.service";
 import { defineStoreTool } from "../define-tool";
 import { McpToolError } from "../errors";
 import { rangeFromKeys } from "../range";
@@ -294,5 +300,69 @@ export const publishRoster = defineStoreTool({
     rangeFromKeys(input.from, input.to, await storeTimezone(ctx));
     const published = await publishEntries(ctx.storeId, input.from, input.to);
     return { published, days: { first: input.from, last: input.to } };
+  },
+});
+
+export const decideOvertime = defineStoreTool({
+  name: "decide_overtime",
+  title: "Approve or turn down overtime",
+  description:
+    "Approve or turn down the overtime that is waiting for a decision, for one or more staff-days " +
+    "(staffMemberId + date from get_hours_and_overtime). Only stores that require overtime approval. " +
+    "The decision applies to the minutes Epidom computes now; approved minutes are paid in payroll. " +
+    "Nobody decides their own overtime (a manager's goes to the owner), the owner's own hours aren't " +
+    "on payroll, and an unfinished day (still on the clock) can't be decided yet.",
+  input: z.object({
+    ...storeIdInput,
+    decision: z.enum(["APPROVED", "REJECTED"]),
+    days: z
+      .array(z.object({ staffMemberId: z.string(), date: dateKey }))
+      .min(1)
+      .max(100),
+  }),
+  kind: "write",
+  access: { pages: PAGES.roster, managerOnly: true, feature: "staffOperations" },
+  severity: "NOTICE",
+  hints: { destructiveHint: false, idempotentHint: true },
+  handler: async (input, ctx) => {
+    let result;
+    try {
+      result = await decideOvertimeDays(ctx.storeId, input.decision, input.days, async () => ({
+        userId: ctx.principal.userId,
+        staffMemberId: ctx.staffMemberId,
+        name: ctx.actor.displayName ?? "Owner",
+      }));
+    } catch (error) {
+      if (error instanceof OvertimeApprovalOffError) {
+        throw new McpToolError(
+          "APPROVAL_OFF",
+          "This store pays overtime without approval, so there's nothing to decide."
+        );
+      }
+      if (error instanceof OvertimeRangeError) {
+        throw new McpToolError(
+          "INVALID_PERIOD",
+          "Those days span too long a period; decide them in smaller groups."
+        );
+      }
+      throw error;
+    }
+
+    if (result.requested === 1 && result.skipped.length === 1) {
+      throw new McpToolError(
+        result.skipped[0].reason,
+        OVERTIME_SKIP_MESSAGES[result.skipped[0].reason]
+      );
+    }
+    return {
+      decision: input.decision,
+      decidedDays: result.decided,
+      minutes: result.minutes,
+      skipped: result.skipped.map((s) => ({
+        staffMemberId: s.staffMemberId,
+        date: s.date,
+        reason: OVERTIME_SKIP_MESSAGES[s.reason],
+      })),
+    };
   },
 });

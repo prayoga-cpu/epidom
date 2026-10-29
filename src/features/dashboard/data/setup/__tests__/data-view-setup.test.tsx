@@ -42,6 +42,10 @@ vi.mock("../../import/components/data-quick-start", async (importOriginal) => ({
 vi.mock("../../import/smart-import-dialog", () => ({
   SmartImportDialog: () => null,
 }));
+// The quick start's "Do it in Claude" line reads the plan; not what these tests are about.
+vi.mock("@/features/claude-connector/hooks/use-claude-connector-access", () => ({
+  useClaudeConnectorAccess: () => false,
+}));
 vi.mock("@/features/pos/components/pos-menu-notice", () => ({
   PosMenuNotice: () => null,
 }));

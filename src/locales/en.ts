@@ -5487,6 +5487,9 @@ lifetime: "Lifetime access",
       },
     },
     quickStart: {
+      claudeHint:
+        "Connected Epidom to your Claude? Skip the steps: share the photo or PDF with Claude and ask it to import it into Epidom. It shows you the rows before saving anything.",
+      claudeCta: "Connect Claude",
       title: "Import from a photo or a PDF",
       subtitle:
         "No spreadsheet? Any AI assistant can turn a photo of your menu, a PDF or a price list into a file Epidom can import.",
@@ -8507,7 +8510,7 @@ lifetime: "Lifetime access",
   },
   privacy: {
     title: "Privacy Policy",
-    lastUpdatedDate: "October 19, 2026",
+    lastUpdatedDate: "October 29, 2026",
     intro: "This policy explains which personal data Epidom handles, why, who receives it, how long we keep it and how you can use your rights. We only describe what the product actually does today.",
     footer: "This policy may change. We will tell users about material changes by email or through the service.",
     s1: {
@@ -8544,6 +8547,7 @@ lifetime: "Lifetime access",
     s4: {
       title: "Who receives it",
       body: "We use the providers below to run Epidom. Each receives the data needed for its role and has its own privacy policy. Some are only involved when a feature is switched on for your store. We do not sell personal data.",
+      item1: "AI assistants you connect: if you connect Epidom to your own AI assistant (the Claude connector, Enterprise plan), the data you or the assistant ask for is sent to that assistant at your request, under your account with its provider (Anthropic for Claude) and its privacy policy. The assistant only reaches what your Epidom access allows, you choose whether it may make changes, and you can revoke it at any time from your Epidom profile. Epidom keeps a record of which tools were used and of every change made, never the content of your conversations.",
     },
     processors: {
       vercel: {
