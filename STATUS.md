@@ -1,6 +1,6 @@
 # STATUS.md
 
-## 3.39.0 — Claude connector (remote MCP), branch `claude-connector`, NOT pushed (2026-10-29)
+## 3.39.0 — Claude connector (remote MCP), on `dev` → dev.epidom.fr, not on main yet (2026-10-29)
 
 Design and tool catalog: `docs/MCP.md`.
 
@@ -33,18 +33,29 @@ Design and tool catalog: `docs/MCP.md`.
 - [ ] An MCP App (interactive chart).
 - [ ] Connectors Directory submission.
 
-**Not verified:**
-- [ ] The full OAuth round trip and any tool call against a real database (the OAuth tables don't
-  exist on the dev branch until the migration runs).
-- [ ] claude.ai and Claude Code end to end.
-- [ ] Consent screen and Profile card in a browser.
+**Verified live on the dev deployment (2026-10-29, `dpl_5gcjbyUgNbU3MCSTiU22oNjiwqNf`):**
+- [x] The preview build applied migration `20261029090000_claude_connector` to the Neon
+  `development` branch (`ep-restless-wildflower`); production untouched.
+- [x] Discovery metadata on `https://dev.epidom.fr` (resource, issuer, registration, PKCE S256);
+  `/api/mcp` 401 + `resource_metadata`; bogus token 401.
+- [x] Dynamic client registration 200 (public client); authorize → 302 `/oauth/sign-in` with the
+  signed query; signed out → `/login?callbackUrl=…`.
+
+**Not verified yet (needs dev.epidom.fr DNS and a signed-in person):**
+- [ ] Sign-in + consent + token, then tool calls, from claude.ai and Claude Code.
+- [ ] Consent screen, Profile card, Admin usage page, Data page hint in a browser.
 
 ### Operator to-do (3.39.0)
 
-- [ ] Apply the migration to the Neon dev branch (`prisma migrate deploy`), then test with Claude Code
-  locally and claude.ai against a dev.epidom.fr preview (docs/MCP.md → Testing).
-- [ ] Give the pilot stores the Enterprise plan (Admin → Users). Only those stores can be used from
-  Claude.
+- [ ] Cloudflare DNS for dev.epidom.fr: CNAME `dev` → `7698a0d56e00a3d0.vercel-dns-017.com`
+  (DNS only), and TXT `_vercel` → the `vc-domain-verify=dev.epidom.fr,…` value Vercel shows.
+- [ ] Vercel → Settings → Git → Deploy Hooks: create `dev-nightly-redeploy` for branch `dev`, put
+  its URL in the GitHub secret `VERCEL_DEV_DEPLOY_HOOK_URL` (the old hook pointed at the deleted
+  `epidom-revamp`, so every nightly reset since has failed to redeploy). Until then, each nightly
+  reset drops the connector's tables from the dev database and dev.epidom.fr's connector answers
+  503 until something redeploys `dev`.
+- [ ] Give the pilot stores the Enterprise plan (Admin → Users). On production it carries over to
+  dev at the next nightly reset; a grant made on dev only lasts until then.
 - [ ] Before production: confirm a Google sign-in still works on the preview (the callback is pinned,
   but `baseURL` changed), and that `NEXT_PUBLIC_APP_URL` in production is `https://epidom.fr` or
   `https://www.epidom.fr`.
