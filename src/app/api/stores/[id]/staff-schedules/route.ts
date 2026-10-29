@@ -5,7 +5,8 @@ import { staffScheduleSchema } from "@/lib/validation/scheduling.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { getActiveStaffSession } from "@/lib/staff-session";
 import { businessDateKeyToDate } from "@/lib/attendance/business-date";
-import type { Prisma } from "@prisma/client";
+import type { ScheduleStatus } from "@prisma/client";
+import { listRoster } from "@/lib/services/roster.service";
 
 export const dynamic = "force-dynamic";
 
@@ -35,25 +36,11 @@ export const GET = withApiHandler(
     const staffId = isRestricted ? staffSession!.staffMemberId : searchParams.get("staffId");
     const status = isRestricted ? "PUBLISHED" : searchParams.get("status");
 
-    const where: Prisma.StaffScheduleWhereInput = {
-      storeId,
-      ...(staffId && { staffMemberId: staffId }),
-      ...(status && { status: status as Prisma.EnumScheduleStatusFilter["equals"] }),
-      ...((from || to) && {
-        date: {
-          ...(from && { gte: businessDateKeyToDate(from) }),
-          ...(to && { lte: businessDateKeyToDate(to) }),
-        },
-      }),
-    };
-
-    const schedules = await prisma.staffSchedule.findMany({
-      where,
-      include: {
-        staffMember: { select: { id: true, name: true, role: true } },
-        scheduleShift: true,
-      },
-      orderBy: [{ date: "asc" }],
+    const schedules = await listRoster(storeId!, {
+      fromKey: from,
+      toKey: to,
+      staffMemberId: staffId,
+      status: status as ScheduleStatus | null,
     });
 
     return NextResponse.json(createSuccessResponse({ schedules }));

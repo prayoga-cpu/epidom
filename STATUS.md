@@ -1,5 +1,56 @@
 # STATUS.md
 
+## 3.39.0 — Claude connector (remote MCP), branch `claude-connector`, NOT pushed (2026-10-29)
+
+Design and tool catalog: `docs/MCP.md`.
+
+**Built:**
+- [x] OAuth 2.1 provider (`@better-auth/oauth-provider` 1.6.33, better-auth bumped 1.6.11 → 1.6.33):
+  - dynamic client registration and PKCE;
+  - opaque hashed tokens, refresh rotation;
+  - sign-in hop `/oauth/sign-in` and the consent screen `/oauth/consent`;
+  - a localhost-port shim for Claude Code.
+- [x] Auth `baseURL` = `servingAppUrl()` (www in production) so the issuer and every OAuth endpoint
+  are reachable without the apex redirect. Google stays pinned to the apex callback
+  (`redirectURI`), the only one registered on the Google OAuth client (probed 2026-10-29: the www
+  callback is rejected like a bogus URI).
+- [x] `/api/mcp`: Streamable HTTP, stateless.
+  - Its own bearer principal; per-call store access, plan, role and page checks.
+  - Audit scope, with an `mcp.<tool>` ActivityEvent for each write.
+  - `mcp_tool_call` usage rows; rate limits.
+- [x] 34 tools and 5 prompts.
+- [x] Profile → Claude card: URL, steps, connected apps, revoke. API: `/api/user/connected-apps`.
+  Strings in fr, id and en.
+- [x] Route logic moved into services that the routes now also call:
+  - top items, store alerts, stock adjust, supplier orders, roster, expenses;
+  - the catalog importer, out of the `"use server"` actions file.
+- [x] Migration `20261029090000_claude_connector`: additive only, 5 new tables.
+
+**Not built yet:**
+- [ ] `decide_overtime` tool.
+- [ ] Admin usage page for `mcp_tool_call`.
+- [ ] "Do it in Claude" entry on Smart Import's Quick Start.
+- [ ] Legal/privacy copy (`src/features/marketing/legal/providers.ts`).
+- [ ] An MCP App (interactive chart).
+- [ ] Connectors Directory submission.
+
+**Not verified:**
+- [ ] The full OAuth round trip and any tool call against a real database (the OAuth tables don't
+  exist on the dev branch until the migration runs).
+- [ ] claude.ai and Claude Code end to end.
+- [ ] Consent screen and Profile card in a browser.
+
+### Operator to-do (3.39.0)
+
+- [ ] Apply the migration to the Neon dev branch (`prisma migrate deploy`), then test with Claude Code
+  locally and claude.ai against a dev.epidom.fr preview (docs/MCP.md → Testing).
+- [ ] Give the pilot stores the Enterprise plan (Admin → Users). Only those stores can be used from
+  Claude.
+- [ ] Before production: confirm a Google sign-in still works on the preview (the callback is pinned,
+  but `baseURL` changed), and that `NEXT_PUBLIC_APP_URL` in production is `https://epidom.fr` or
+  `https://www.epidom.fr`.
+- [ ] Review the privacy-policy wording for data sent to a user's own Claude.
+
 ## 3.38.1 — Newsletter unsubscribe links on www (2026-10-28)
 
 - [x] Unsubscribe and one-click links point at `https://www.epidom.fr` when the app URL is the apex, since Vercel 308-redirects `epidom.fr` → `www.epidom.fr` and a mail app's one-click POST isn't guaranteed to follow it (`appUrl()` in `src/lib/newsletter/unsubscribe-token.ts`). Other hosts (dev, local) unchanged.

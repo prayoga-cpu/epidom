@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins/email-otp";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
@@ -20,6 +22,14 @@ import {
   EMAIL_CODE_LENGTH,
   EMAIL_VERIFICATION_EXPIRES_IN,
 } from "@/lib/auth/email-verification-code";
+import { configuredAppUrl, servingAppUrl } from "@/lib/app-url";
+import {
+  OAUTH_CONSENT_PAGE,
+  OAUTH_PROVIDER_SCOPES,
+  OAUTH_SIGN_IN_PAGE,
+  mcpResourceUrl,
+} from "@/lib/mcp/config";
+import { admitLocalhostPortForClient } from "@/lib/mcp/loopback-redirect";
 
 /**
  * In production, share auth cookies (incl. the OAuth `state` cookie) across the
@@ -36,7 +46,10 @@ const previewCookiePrefix = previewAuthCookiePrefix(process.env.VERCEL_ENV);
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET,
-  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  // The host that serves without a redirect (www.epidom.fr in production, not
+  // the configured apex): the OAuth provider below advertises its issuer and
+  // endpoints from this, and Claude won't follow the apex → www redirect.
+  baseURL: servingAppUrl(),
   trustedOrigins: [
     "http://localhost:3000",
     "https://epidom.fr",
@@ -91,6 +104,10 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      // Pinned to the configured URL, not baseURL: this is the callback the
+      // Google OAuth client has registered (the www one is not), and the
+      // apex → www hop it takes is covered by the shared cookies above.
+      redirectURI: `${configuredAppUrl()}/api/auth/callback/google`,
     },
   },
   // Only /email-otp/verify-email stays open from the plugin below.
@@ -110,7 +127,43 @@ export const auth = betterAuth({
         throw new Error(`[auth] email codes of type "${type}" are not sent on their own`);
       },
     }),
+    // The Claude connector: Epidom is the OAuth 2.1 authorization server a
+    // user's Claude signs in to before calling /api/mcp (docs/MCP.md).
+    oauthProvider({
+      loginPage: OAUTH_SIGN_IN_PAGE,
+      consentPage: OAUTH_CONSENT_PAGE,
+      scopes: OAUTH_PROVIDER_SCOPES,
+      clientRegistrationDefaultScopes: OAUTH_PROVIDER_SCOPES,
+      validAudiences: [mcpResourceUrl()],
+      // Claude registers itself (RFC 7591) from Anthropic's servers, with no
+      // Epidom session: it is a public client and proves itself with PKCE.
+      allowDynamicClientRegistration: true,
+      allowUnauthenticatedClientRegistration: true,
+      grantTypes: ["authorization_code", "refresh_token"],
+      // Opaque tokens, stored hashed: /api/mcp checks each one against the
+      // database, so revoking a connection takes effect on the next call.
+      disableJwtPlugin: true,
+      accessTokenExpiresIn: 60 * 60,
+      refreshTokenExpiresIn: 60 * 60 * 24 * 30,
+      // Accounts may register clients (MCP Inspector does so with the
+      // browser's cookies), never manage them through the plugin: a
+      // connection is listed and revoked from Profile (/api/user/connected-apps).
+      clientPrivileges: ({ action }) => action === "create",
+      // /.well-known/oauth-authorization-server/api/auth is served by
+      // src/app/.well-known/oauth-authorization-server.
+      silenceWarnings: { oauthAuthServerConfig: true },
+    }),
   ],
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/oauth2/authorize") {
+        await admitLocalhostPortForClient(
+          ctx.query?.client_id as string | undefined,
+          ctx.query?.redirect_uri as string | undefined
+        );
+      }
+    }),
+  },
   session: {
     additionalFields: {
       location: {

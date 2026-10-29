@@ -65,6 +65,10 @@ export const FEATURE_MIN_PLAN = {
   // paying plan: it is how an Enterprise project starts, so gating it behind
   // Enterprise meant only people who already had one could ask for one.
   customDevelopment: "POS",
+  // The Claude connector (/api/mcp): an owner's or staff member's own Claude
+  // reads and changes the store's data through tools (docs/MCP.md). Judged on
+  // the store's plan at every tool call, not when the connection is made.
+  claudeConnector: "ENTERPRISE",
 } satisfies Record<string, PlanTier>;
 
 export type PlanFeature = keyof typeof FEATURE_MIN_PLAN;

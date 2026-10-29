@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { withApiHandler } from "@/lib/api-handler";
 import { staffScheduleBulkSchema } from "@/lib/validation/scheduling.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { requireManagerOrOwnerApi } from "@/lib/auth/require-manager-or-owner";
-import { businessDateKeyToDate } from "@/lib/attendance/business-date";
+import { createRosterEntries, RosterStaffNotFoundError } from "@/lib/services/roster.service";
 
 export const dynamic = "force-dynamic";
 
@@ -32,35 +31,18 @@ export const POST = withApiHandler(
       );
     }
 
-    const staffIds = [...new Set(parsed.data.entries.map((e) => e.staffMemberId))];
-    const staffCount = await prisma.staffMember.count({
-      where: { id: { in: staffIds }, storeId },
-    });
-    if (staffCount !== staffIds.length) {
-      return NextResponse.json(
-        createErrorResponse(ApiErrorCode.NOT_FOUND, "One or more staff members were not found"),
-        { status: 404 }
-      );
+    let schedules;
+    try {
+      // storeId is guaranteed to be defined because requireStoreAuth is true
+      schedules = await createRosterEntries(storeId!, parsed.data.entries);
+    } catch (error) {
+      if (error instanceof RosterStaffNotFoundError) {
+        return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
+          status: 404,
+        });
+      }
+      throw error;
     }
-
-    const schedules = await prisma.$transaction(
-      parsed.data.entries.map((entry) =>
-        prisma.staffSchedule.create({
-          data: {
-            // storeId is guaranteed to be defined because requireStoreAuth is true
-            storeId: storeId!,
-            staffMemberId: entry.staffMemberId,
-            date: businessDateKeyToDate(entry.date),
-            scheduleShiftId: entry.scheduleShiftId ?? null,
-            customStartTime: entry.customStartTime ?? null,
-            customEndTime: entry.customEndTime ?? null,
-            isDayOff: entry.isDayOff ?? false,
-            department: entry.department ?? null,
-            notes: entry.notes || null,
-          },
-        })
-      )
-    );
 
     return NextResponse.json(createSuccessResponse({ schedules, count: schedules.length }), {
       status: 201,

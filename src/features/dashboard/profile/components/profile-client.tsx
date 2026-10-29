@@ -10,6 +10,7 @@ import { ActivityLogCard } from "./activity-log-card";
 import { FeesAndTaxesCard } from "./fees-and-taxes-card";
 import { ReceiptSettingsCard } from "./receipt-settings-card";
 import { StoreOwnershipTransferCard } from "./store-ownership-transfer-card";
+import { ClaudeConnectorCard } from "@/features/claude-connector/components/claude-connector-card";
 import { useProfile } from "../hooks/use-profile";
 import type { ProfileData } from "../types";
 
@@ -113,6 +114,10 @@ export function ProfileClient({
 
       <div className="animate-slide-up-delayed-3">
         <AccountSettingsCard userEmail={profileData.email} />
+      </div>
+
+      <div className="animate-slide-up-delayed-3">
+        <ClaudeConnectorCard />
       </div>
 
       <div className="animate-slide-up-delayed-3">

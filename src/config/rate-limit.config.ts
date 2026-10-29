@@ -310,6 +310,18 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 10 analyses per minute
   },
 
+  // Claude connector, per account: every MCP request (tool list and calls).
+  // A busy conversation makes a few calls per answer; this only stops a loop.
+  "/api/mcp": {
+    limit: 120,
+    window: 60,
+  },
+  // Claude connector writes, counted on top of the line above.
+  "/api/mcp#write": {
+    limit: 30,
+    window: 60,
+  },
+
   // Setup wizard (3.3.0). The state read runs on every wizard load and the
   // link check as the owner types (debounced); the step saves each write
   // several rows, and complete publishes.

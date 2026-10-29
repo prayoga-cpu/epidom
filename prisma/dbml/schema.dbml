@@ -37,6 +37,11 @@ Table user {
   partner partners
   partnerViews partner_viewers [not null]
   partnerCommissions partner_commissions [not null]
+  oauthClients oauth_client [not null]
+  oauthRefreshTokens oauth_refresh_token [not null]
+  oauthAccessTokens oauth_access_token [not null]
+  oauthConsents oauth_consent [not null]
+  mcpToolCalls mcp_tool_call [not null]
 }
 
 Table session {
@@ -50,6 +55,8 @@ Table session {
   location String
   userId String [not null]
   user user [not null]
+  oauthRefreshTokens oauth_refresh_token [not null]
+  oauthAccessTokens oauth_access_token [not null]
 }
 
 Table account {
@@ -76,6 +83,103 @@ Table verification {
   expiresAt DateTime [not null]
   createdAt DateTime
   updatedAt DateTime
+}
+
+Table oauth_client {
+  id String [pk]
+  clientId String [unique, not null]
+  clientSecret String
+  disabled Boolean [default: false]
+  skipConsent Boolean
+  enableEndSession Boolean
+  subjectType String
+  scopes String[] [not null]
+  userId String
+  user user
+  createdAt DateTime
+  updatedAt DateTime
+  name String
+  uri String
+  icon String
+  contacts String[] [not null]
+  tos String
+  policy String
+  softwareId String
+  softwareVersion String
+  softwareStatement String
+  redirectUris String[] [not null]
+  postLogoutRedirectUris String[] [not null]
+  tokenEndpointAuthMethod String
+  grantTypes String[] [not null]
+  responseTypes String[] [not null]
+  public Boolean
+  type String
+  requirePKCE Boolean
+  referenceId String
+  metadata Json
+  refreshTokens oauth_refresh_token [not null]
+  accessTokens oauth_access_token [not null]
+  consents oauth_consent [not null]
+}
+
+Table oauth_refresh_token {
+  id String [pk]
+  token String [unique, not null]
+  clientId String [not null]
+  client oauth_client [not null]
+  sessionId String
+  session session
+  userId String [not null]
+  user user [not null]
+  referenceId String
+  expiresAt DateTime
+  createdAt DateTime
+  revoked DateTime
+  authTime DateTime
+  scopes String[] [not null]
+  accessTokens oauth_access_token [not null]
+}
+
+Table oauth_access_token {
+  id String [pk]
+  token String [unique]
+  clientId String [not null]
+  client oauth_client [not null]
+  sessionId String
+  session session
+  userId String
+  user user
+  referenceId String
+  refreshId String
+  refresh oauth_refresh_token
+  expiresAt DateTime
+  createdAt DateTime
+  scopes String[] [not null]
+}
+
+Table oauth_consent {
+  id String [pk]
+  clientId String [not null]
+  client oauth_client [not null]
+  userId String
+  user user
+  referenceId String
+  scopes String[] [not null]
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table mcp_tool_call {
+  id String [pk]
+  tool String [not null]
+  userId String [not null]
+  user user [not null]
+  storeId String
+  clientId String [not null]
+  ok Boolean [not null]
+  errorCode String
+  durationMs Int [not null]
+  createdAt DateTime [default: `now()`, not null]
 }
 
 Table businesses {
@@ -2246,6 +2350,28 @@ Enum NewsletterDeliveryStatus {
 Ref: session.userId > user.id [delete: Cascade]
 
 Ref: account.userId > user.id [delete: Cascade]
+
+Ref: oauth_client.userId > user.id [delete: Cascade]
+
+Ref: oauth_refresh_token.clientId > oauth_client.clientId [delete: Cascade]
+
+Ref: oauth_refresh_token.sessionId > session.id [delete: Set Null]
+
+Ref: oauth_refresh_token.userId > user.id [delete: Cascade]
+
+Ref: oauth_access_token.clientId > oauth_client.clientId [delete: Cascade]
+
+Ref: oauth_access_token.sessionId > session.id [delete: Set Null]
+
+Ref: oauth_access_token.userId > user.id [delete: Cascade]
+
+Ref: oauth_access_token.refreshId > oauth_refresh_token.id [delete: Cascade]
+
+Ref: oauth_consent.clientId > oauth_client.clientId [delete: Cascade]
+
+Ref: oauth_consent.userId > user.id [delete: Cascade]
+
+Ref: mcp_tool_call.userId > user.id [delete: Cascade]
 
 Ref: businesses.userId - user.id [delete: Cascade]
 

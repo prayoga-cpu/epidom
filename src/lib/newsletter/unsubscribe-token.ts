@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { servingAppUrl } from "@/lib/app-url";
 
 /**
  * The token in a newsletter's unsubscribe link: the address plus an HMAC of
@@ -39,23 +40,15 @@ export function verifyUnsubscribeToken(token: string | null | undefined): string
   return email;
 }
 
-/**
- * Where the links point. In production the apex (epidom.fr) is a Vercel
- * domain redirect (308) to www.epidom.fr, and a mail app's one-click
- * unsubscribe POST isn't guaranteed to follow a redirect, so production
- * links go straight to the host that serves. Other hosts are kept as they are.
- */
-function appUrl(): string {
-  const base = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
-  return base === "https://epidom.fr" ? "https://www.epidom.fr" : base;
-}
+// Links go straight to the host that serves: a mail app's one-click
+// unsubscribe POST isn't guaranteed to follow the apex → www redirect.
 
 /** The page a reader lands on from the footer link (asks before unsubscribing). */
 export function unsubscribePageUrl(email: string, locale: string): string {
-  return `${appUrl()}/newsletter/unsubscribe?t=${createUnsubscribeToken(email)}&l=${locale}`;
+  return `${servingAppUrl()}/newsletter/unsubscribe?t=${createUnsubscribeToken(email)}&l=${locale}`;
 }
 
 /** RFC 8058 one-click target for the List-Unsubscribe header (POST only). */
 export function oneClickUnsubscribeUrl(email: string): string {
-  return `${appUrl()}/api/public/newsletter/unsubscribe?t=${createUnsubscribeToken(email)}`;
+  return `${servingAppUrl()}/api/public/newsletter/unsubscribe?t=${createUnsubscribeToken(email)}`;
 }

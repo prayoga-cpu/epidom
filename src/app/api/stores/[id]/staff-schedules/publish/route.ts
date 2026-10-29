@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { withApiHandler } from "@/lib/api-handler";
 import { publishScheduleSchema } from "@/lib/validation/scheduling.schemas";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { requireManagerOrOwnerApi } from "@/lib/auth/require-manager-or-owner";
-import { businessDateKeyToDate } from "@/lib/attendance/business-date";
+import { publishRoster } from "@/lib/services/roster.service";
 
 export const dynamic = "force-dynamic";
 
@@ -32,17 +31,7 @@ export const POST = withApiHandler(
       );
     }
 
-    const { count } = await prisma.staffSchedule.updateMany({
-      where: {
-        storeId,
-        status: "DRAFT",
-        date: {
-          gte: businessDateKeyToDate(parsed.data.from),
-          lte: businessDateKeyToDate(parsed.data.to),
-        },
-      },
-      data: { status: "PUBLISHED", publishedAt: new Date() },
-    });
+    const count = await publishRoster(storeId!, parsed.data.from, parsed.data.to);
 
     return NextResponse.json(createSuccessResponse({ publishedCount: count }));
   },

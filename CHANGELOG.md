@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.39.0] - 2026-10-29 · feat
+
+- **Use Epidom from your own Claude** (Enterprise plan). Add Epidom as a connector in Claude (claude.ai, the desktop and mobile apps, or Claude Code) and ask in plain words: how last week went compared with the week before, what's low and what to reorder, who works on Saturday, which dishes earn the most. The AI runs on your own Claude plan.
+- When you connect, Epidom asks what Claude may do. Reading is the default. If you also tick **Allow changes**, Claude can add or change menu items, adjust stock and record waste, place and receive supplier orders, import products, materials, suppliers or recipes from a photo or a document you share, plan and publish the roster, record expenses and add customers, asking you before each change. Payments, refunds, the till and clocking in always stay in Epidom.
+- Staff who sign in with their own Epidom account can connect too, and Claude sees only what their access at the store allows.
+- Profile → **Claude** shows the connector URL, how to add it, and every connected app, which you can revoke at any time. Changes made from Claude appear in the Activity log.
+
 ## [3.38.1] - 2026-10-28 · fix
 
 - Newsletter unsubscribe links now go straight to www.epidom.fr, so the Unsubscribe button in mail apps such as Gmail works without depending on a redirect.

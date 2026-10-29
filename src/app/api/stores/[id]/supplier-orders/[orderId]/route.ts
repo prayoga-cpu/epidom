@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/prisma";
 import { subscriptionService } from "@/lib/services";
-import { publishStockChanged } from "@/lib/realtime/publish";
 import { createErrorResponse, createSuccessResponse, ApiErrorCode } from "@/types/api/responses";
 import { updateSupplierOrderSchema } from "@/lib/validation/inventory.schemas";
+import { cancelSupplierOrder, receiveSupplierOrder } from "@/lib/services/supplier-order.service";
 
 /**
  * GET /api/stores/[id]/supplier-orders/[orderId]
@@ -84,89 +84,17 @@ export const PATCH = withApiHandler(
 
     // If changing status to RECEIVED, update material stock
     if (status === "RECEIVED" && existingOrder.status !== "RECEIVED") {
-      // Use transaction to update stock and order status together
-      const receivedAt = new Date();
-
-      const claimed = await prisma.$transaction(async (tx) => {
-        // Claim the transition first, conditionally. Receiving is one tap, so
-        // a double tap (or two devices) sends two requests that both read the
-        // order as not-yet-received above. Only the one whose update matches
-        // goes on to add stock. The other adds nothing.
-        const claim = await tx.supplierOrder.updateMany({
-          where: { id: orderId, storeId, status: { not: "RECEIVED" } },
-          data: {
-            status,
-            expectedDate: expectedDate ? new Date(expectedDate) : undefined,
-            receivedDate: receivedDate ? new Date(receivedDate) : receivedAt,
-            notes: notes !== undefined ? notes : undefined,
-          },
-        });
-        if (claim.count === 0) return false;
-
-        // Update material stock for each item
-        for (const item of existingOrder.items) {
-          // Carry the DLC agreed on the order line onto the material, so
-          // receiving a delivery is the only place the merchant has to type
-          // it. Material.expirationDate holds a single next-expiry date (not
-          // one per lot), so among dates still in the future the soonest wins
-          // — a batch expiring sooner must not be masked by a later one.
-          //
-          // The already-passed case has to be handled separately: nothing
-          // clears this field when stock is consumed, so a material routinely
-          // sits on an expired date from a lot that is long gone. A plain
-          // "soonest wins" would reject every incoming DLC there (any future
-          // date loses to a past one) and pin the material as expired
-          // forever, with the Stock page still listing freshly delivered
-          // goods under its "expired" filter.
-          const currentExpiry = item.material.expirationDate;
-          const shouldTakeExpiry =
-            !!item.expiryDate &&
-            (!currentExpiry || currentExpiry < receivedAt || item.expiryDate < currentExpiry);
-
-          // increment, not "stock read above + quantity": a till sale that
-          // moved this material since that read would otherwise be overwritten.
-          const updated = await tx.material.update({
-            where: { id: item.materialId },
-            data: {
-              currentStock: { increment: item.quantity },
-              ...(shouldTakeExpiry && { expirationDate: item.expiryDate }),
-            },
-            select: { currentStock: true },
-          });
-
-          // Create stock movement record
-          await tx.stockMovement.create({
-            data: {
-              materialId: item.materialId,
-              type: "PURCHASE",
-              quantity: item.quantity,
-              unit: item.unit,
-              balanceAfter: updated.currentStock,
-              notes: `Supplier order ${existingOrder.orderNumber} received`,
-            },
-          });
-        }
-
-        return true;
+      const claimed = await receiveSupplierOrder(storeId!, existingOrder, {
+        expectedDate,
+        receivedDate,
+        notes,
       });
-
       if (!claimed) {
         return NextResponse.json(
           createErrorResponse(ApiErrorCode.CONFLICT, "This order was already received"),
           { status: 409 }
         );
       }
-
-      // Receiving a delivery is the single most common way stock goes UP, and
-      // it moved every material on the order — tell the other open views to
-      // refetch. Published after the transaction resolves, never inside it, so
-      // a rollback can't announce a restock that never happened.
-      // storeId is non-null here: `requireStoreAuth: true` throws before the
-      // handler runs when it can't be resolved (see api-handler.ts), it just
-      // isn't narrowed in the context type.
-      publishStockChanged(storeId!, {
-        materialIds: existingOrder.items.map((item) => item.materialId),
-      });
     } else {
       // Just update the order without stock changes
       await prisma.supplierOrder.update({
@@ -215,29 +143,20 @@ export const DELETE = withApiHandler(
       );
     }
 
-    const order = await prisma.supplierOrder.findFirst({
-      where: { id: orderId, storeId },
-    });
-
-    if (!order) {
+    const outcome = await cancelSupplierOrder(storeId!, orderId);
+    if (outcome === "not_found") {
       return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Order not found"), {
         status: 404,
       });
     }
 
-    // Don't allow deletion of received orders
-    if (order.status === "RECEIVED") {
+    // Don't allow deletion of received orders (cancelled, never deleted)
+    if (outcome === "received") {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.BUSINESS_LOGIC_ERROR, "Cannot delete received orders"),
         { status: 400 }
       );
     }
-
-    // Mark as cancelled instead of deleting
-    await prisma.supplierOrder.update({
-      where: { id: orderId },
-      data: { status: "CANCELLED" },
-    });
 
     return NextResponse.json(createSuccessResponse({ success: true }));
   },

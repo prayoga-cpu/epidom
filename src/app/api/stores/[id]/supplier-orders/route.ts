@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 import { subscriptionService } from "@/lib/services";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { createSupplierOrderSchema } from "@/lib/validation/inventory.schemas";
+import { createSupplierOrder, SupplierOrderError } from "@/lib/services/supplier-order.service";
 
 /**
  * GET /api/stores/[id]/supplier-orders
@@ -78,106 +78,19 @@ export const POST = withApiHandler(
     const body = await request.json();
 
     // Validate request body with Zod
-    const { supplierId, items, expectedDate, notes, tax, shipping } =
-      createSupplierOrderSchema.parse(body);
+    const input = createSupplierOrderSchema.parse(body);
 
-    // Validate supplier existence (Business Logic)
-    const supplier = await prisma.supplier.findFirst({
-      where: {
-        id: supplierId,
-        storeId,
-      },
-    });
-
-    if (!supplier) {
-      return NextResponse.json(
-        createErrorResponse(
-          ApiErrorCode.NOT_FOUND,
-          "Supplier not found or does not belong to this store"
-        ),
-        { status: 404 }
-      );
-    }
-
-    // Calculate totals and prepare items
-    let subtotal = new Prisma.Decimal(0);
-    const orderItems = [];
-
-    for (const item of items) {
-      const material = await prisma.material.findFirst({
-        where: {
-          id: item.materialId,
-          storeId,
-        },
-      });
-
-      if (!material) {
-        return NextResponse.json(
-          createErrorResponse(ApiErrorCode.NOT_FOUND, `Material ${item.materialId} not found`),
-          { status: 404 }
-        );
+    try {
+      const order = await createSupplierOrder(storeId!, input);
+      return NextResponse.json(createSuccessResponse({ order }), { status: 201 });
+    } catch (error) {
+      if (error instanceof SupplierOrderError) {
+        return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, error.message), {
+          status: 404,
+        });
       }
-
-      const quantity = new Prisma.Decimal(item.quantity);
-      const unitPrice = new Prisma.Decimal(item.unitPrice);
-      const total = quantity.mul(unitPrice);
-
-      subtotal = subtotal.add(total);
-
-      orderItems.push({
-        materialId: item.materialId,
-        quantity,
-        unit: item.unit || material.unit,
-        unitPrice,
-        total,
-        expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
-      });
+      throw error;
     }
-
-    const taxAmount = new Prisma.Decimal(tax || 0);
-    const shippingAmount = new Prisma.Decimal(shipping || 0);
-    const totalAmount = subtotal.add(taxAmount).add(shippingAmount);
-
-    // Generate order number
-    const orderCount = await prisma.supplierOrder.count({
-      where: { storeId },
-    });
-    const orderNumber = `SO-${Date.now()}-${String(orderCount + 1).padStart(4, "0")}`;
-
-    // Create order transactionally.
-    //
-    // Created straight as PLACED: creating the order IS placing it. There used
-    // to be a PENDING "Orders to Place" stage with a separate "Mark as Placed"
-    // tap in between, which merchants skipped or forgot. PENDING stays in the
-    // enum only so orders created before that change still read as open.
-    const order = await prisma.supplierOrder.create({
-      data: {
-        storeId: storeId!,
-        supplierId,
-        orderNumber,
-        status: "PLACED",
-        orderDate: new Date(),
-        expectedDate: expectedDate ? new Date(expectedDate) : null,
-        subtotal,
-        tax: taxAmount,
-        shipping: shippingAmount,
-        total: totalAmount,
-        notes: notes || null,
-        items: {
-          create: orderItems,
-        },
-      },
-      include: {
-        supplier: true,
-        items: {
-          include: {
-            material: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(createSuccessResponse({ order }), { status: 201 });
   },
   {
     rateLimitEndpoint: "/api/stores/[id]/supplier-orders",

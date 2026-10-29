@@ -9,24 +9,15 @@
  * Reading follows the Finance report rule; writing is manager/owner only.
  */
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { withApiHandler } from "@/lib/api-handler";
 import { requireFinanceReportAccessApi } from "@/lib/auth/require-finance-access";
 import { createExpenseSchema } from "@/lib/validation/expense.schemas";
-import { expenseDateWindow, summarizeExpenses } from "@/lib/finance/expenses";
+import { summarizeExpenses } from "@/lib/finance/expenses";
+import { createExpense, listExpenses } from "@/lib/services/expense.service";
 import { requireExpenseWriteAccess } from "@/lib/auth/require-expense-write-access";
 
 export const dynamic = "force-dynamic";
-
-const EXPENSE_SELECT = {
-  id: true,
-  date: true,
-  category: true,
-  description: true,
-  amount: true,
-  createdAt: true,
-} as const;
 
 export const GET = withApiHandler(
   async (request, { storeId }) => {
@@ -46,16 +37,7 @@ export const GET = withApiHandler(
       );
     }
 
-    const expenses = await prisma.expense.findMany({
-      where: { storeId, date: expenseDateWindow(from, to) },
-      select: EXPENSE_SELECT,
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    });
-    const rows = expenses.map((e) => ({
-      ...e,
-      date: e.date.toISOString().slice(0, 10),
-      amount: Number(e.amount),
-    }));
+    const rows = await listExpenses(storeId!, from, to);
 
     return NextResponse.json(
       createSuccessResponse({
@@ -86,24 +68,10 @@ export const POST = withApiHandler(
       );
     }
 
-    const { date, category, description, amount } = parsed.data;
-    const expense = await prisma.expense.create({
-      data: {
-        storeId: storeId!,
-        date: new Date(`${date}T00:00:00Z`),
-        category,
-        description,
-        amount,
-      },
-      select: EXPENSE_SELECT,
-    });
+    const expense = await createExpense(storeId!, parsed.data);
 
     return NextResponse.json(
-      createSuccessResponse({
-        ...expense,
-        date: expense.date.toISOString().slice(0, 10),
-        amount: Number(expense.amount),
-      }),
+      createSuccessResponse(expense),
       { status: 201 }
     );
   },
