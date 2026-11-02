@@ -41,8 +41,13 @@ Design and tool catalog: `docs/MCP.md`.
 - [x] Dynamic client registration 200 (public client); authorize → 302 `/oauth/sign-in` with the
   signed query; signed out → `/login?callbackUrl=…`.
 
+**Verified on production after the merge (2026-11-03, `00ae413b`, 3.40.0 live ~5 min after the push):**
+- [x] Discovery on www: issuer `https://www.epidom.fr/api/auth`, registration on www, PKCE S256; the protected-resource document for `https://www.epidom.fr/api/mcp` points at that issuer; `/api/mcp` answers 401 without a token.
+- [x] The production build applied `20261029090000_claude_connector` to the live database (the Neon dev branch during the incident), after the newer fiscal migration; the 5 connector tables exist.
+- [x] Sign-in unchanged after the better-auth 1.6.33 bump: Google redirect still `https://epidom.fr/api/auth/callback/google`, session endpoint 200, a wrong password 401. A real Google and e-mail sign-in by a person is still to do (below).
+
 **Not verified yet (needs a signed-in person on www.epidom.fr):**
-- [ ] Sign-in + consent + token, then tool calls, from claude.ai and Claude Code.
+- [ ] Sign-in + consent + token, then tool calls, from claude.ai and Claude Code (and an ordinary Google and e-mail sign-in by a person, after the better-auth bump).
 - [ ] Consent screen, Profile card, Admin usage page, Data page hint in a browser.
 
 ### Operator to-do (3.40.0)
@@ -97,6 +102,7 @@ Do these in order. Nothing on the site claims compliance until step 3 ships.
 
 ### During the database incident (prod writing to the Neon dev branch)
 
+- The Claude connector's tables (`oauth_client`, `oauth_access_token`, `oauth_refresh_token`, `oauth_consent`, `mcp_tool_call`) also exist only on the live (dev-branch) database since 3.40.0: the live → main copy must include them, after `main` is migrated. Same rule as the fiscal tables: copy only once the migration is on `main`.
 - The 3.39.0 production build ran `migrate deploy` against whatever `DIRECT_URL` production uses (the dev branch at the time), so that is where the fiscal tables exist first. Neon `main` gets them from the redeploy after the env switch.
 - Any mirror / sync script (live → main): copy `fiscal_*` tables insert-only (`ON CONFLICT DO NOTHING`), never UPDATE or DELETE them (the triggers refuse it and the transaction fails), and only once `main` has the migration. Few rows today (orders ≈ 0).
 - Between switching the env to `main` and redeploying, `main` has no fiscal tables: sales still go through (savepoint), the Fiscal journal page errors, and the catch-up journals those sales late once the tables exist.
