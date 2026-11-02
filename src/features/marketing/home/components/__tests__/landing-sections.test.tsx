@@ -48,6 +48,7 @@ import { HeroSection } from "../hero-section";
 import { ProblemPickerSection } from "../problem-picker-section";
 import { MarginCalculatorSection } from "../margin-calculator-section";
 import { MigrationModal } from "../migration-modal";
+import { NF525_SETTLED } from "../../lib/migration";
 import { PricingSection } from "../pricing-section";
 import { ThreeSpacesSection } from "../three-spaces-section";
 import { PosTourSection } from "../pos-tour-section";
@@ -453,7 +454,9 @@ describe("MigrationModal", () => {
     answer("France");
     answer("Zelty");
     // No "switch fully" on the French site until NF525 is settled.
-    expect(screen.queryByRole("button", { name: "Passer entièrement à Epidom" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Passer entièrement à Epidom" }) !== null).toBe(
+      NF525_SETTLED
+    );
     answer("Garder ma caisse, ajouter la commande en ligne");
     answer("1");
     const result = screen.getByTestId("migration-result");
@@ -507,7 +510,9 @@ describe("MigrationModal", () => {
     answer("France");
     answer("Zelty");
     expect(screen.getByText("How do you want to start?")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Switch fully to Epidom" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Switch fully to Epidom" }) !== null).toBe(
+      NF525_SETTLED
+    );
   });
 
   it("en: the full switch is offered, and 2-3 outlets explains the move to Operations", () => {

@@ -15,6 +15,13 @@ AI work happens in the Claude chat.
   their role and page grants.
 - **Code:** `src/lib/mcp/`. The route is `src/app/api/mcp/route.ts`, and the OAuth pieces live in
   `src/lib/auth.ts` (`oauthProvider`).
+- **Status: Beta** (3.40.0). Labelled on Profile → Claude, the consent screen, the Data page shortcut
+  and the admin usage page. Profile → Claude lists what works and what doesn't
+  (`claudeConnector.beta.*` strings; the "doesn't" half mirrors "Never exposed" below plus MCP Apps
+  and the Connectors Directory). Drop the label once sign-in, consent and tool calls are verified
+  from claude.ai, the desktop app and Claude Code (STATUS.md 3.40.0).
+- **Auth base URL:** `authBaseUrl()` in `src/lib/app-url.ts`: `BETTER_AUTH_URL` if set, else
+  `NEXT_PUBLIC_APP_URL`, an apex value served as www, so the issuer never sits behind the redirect.
 
 ## Authentication
 

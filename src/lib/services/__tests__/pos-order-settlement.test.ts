@@ -10,6 +10,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 var prismaMock: any;
 
+// The fiscal journal (src/lib/fiscal) has its own tests; here it only has to be called.
+var fiscalJournal = vi.hoisted(() => ({
+  recordSaleInTx: vi.fn(async () => undefined),
+  recordRefundInTx: vi.fn(async () => undefined),
+  recordCancellationInTx: vi.fn(async () => undefined),
+}));
+vi.mock("@/lib/fiscal/journal", () => fiscalJournal);
+
 vi.mock("@/lib/prisma", () => {
   prismaMock = {
     customer: { findFirst: vi.fn() },
@@ -551,6 +559,12 @@ describe("applySettlementBookkeeping", () => {
       tx
     );
     expect(result.pointsEarned).toBe(7);
+    // Last: the fiscal SALE entry for the money taken (src/lib/fiscal/journal.ts).
+    expect(fiscalJournal.recordSaleInTx).toHaveBeenCalledWith(tx, {
+      orderId: "ord-1",
+      storeId: "store-1",
+      offline: false,
+    });
   });
 
   it("never earns points for a Pay Later order at placement", async () => {
@@ -563,6 +577,8 @@ describe("applySettlementBookkeeping", () => {
 
     expect(earnPointsForOrder).not.toHaveBeenCalled();
     expect(result.pointsEarned).toBe(0);
+    // Nothing was paid, so nothing is journaled yet: Mark as Paid records it later.
+    expect(fiscalJournal.recordSaleInTx).not.toHaveBeenCalled();
   });
 
   it("rethrows a lost coupon race on a normal (online) order", async () => {
@@ -778,6 +794,10 @@ describe("settlePendingOrderInTx", () => {
     });
     expect(tx.orderPayment.create).toHaveBeenCalledTimes(1);
     expect(tx.orderPayment.create.mock.calls[0][0].data.note).toBe("paid at the counter");
+    expect(fiscalJournal.recordSaleInTx).toHaveBeenCalledWith(tx, {
+      orderId: "ord-1",
+      storeId: "store-1",
+    });
   });
 
   it("does NOTHING when a concurrent settle already won the transition", async () => {
@@ -834,6 +854,11 @@ describe("cancelOrderInTx", () => {
       data: { status: "CANCELLED" },
     });
     expect(reverseLoyaltyForOrder).toHaveBeenCalledWith("ord-1", 1, tx);
+    // A paid order cancelled gets its CANCELLATION entry (the journal skips unpaid ones).
+    expect(fiscalJournal.recordCancellationInTx).toHaveBeenCalledWith(tx, {
+      orderId: "ord-1",
+      storeId: "store-1",
+    });
   });
 
   it("does not release the coupon twice when it loses the cancel race", async () => {
@@ -844,6 +869,7 @@ describe("cancelOrderInTx", () => {
       false
     );
     expect(reverseLoyaltyForOrder).not.toHaveBeenCalled();
+    expect(fiscalJournal.recordCancellationInTx).not.toHaveBeenCalled();
   });
 });
 

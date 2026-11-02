@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, FileUp, MessageSquareText, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
@@ -123,7 +124,12 @@ export function DataQuickStart({
       {open && claudeConnectorEnabled && (
         <div className="bg-muted/50 mt-4 flex flex-col gap-3 rounded-lg p-3 sm:flex-row sm:items-center">
           <MessageSquareText className="text-primary size-5 shrink-0" aria-hidden="true" />
-          <p className="min-w-0 flex-1 text-sm">{t("import.quickStart.claudeHint")}</p>
+          <p className="min-w-0 flex-1 text-sm">
+            {t("import.quickStart.claudeHint")}{" "}
+            <Badge variant="outline" className="align-middle text-[10px] font-semibold">
+              {t("claudeConnector.beta.label")}
+            </Badge>
+          </p>
           <Button asChild variant="outline" className="h-11 shrink-0">
             <Link href={`/store/${storeId}/profile`}>{t("import.quickStart.claudeCta")}</Link>
           </Button>

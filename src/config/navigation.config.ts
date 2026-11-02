@@ -23,6 +23,7 @@ import {
   ContactRound,
   Wallet,
   Scale,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -175,6 +176,15 @@ export const dashboardNavigation: NavSection[] = [
         showBadge: false,
         requiredPlan: "OPERATIONS",
         lockedHintKey: "nav.lockedHint.finance",
+      },
+      {
+        // The till's signed sales journal (src/lib/fiscal): the record the
+        // French anti-fraud VAT law asks for, kept six years. No plan gate: the
+        // records must stay reachable whatever plan the store is on later.
+        href: "/fiscal",
+        labelKey: "nav.fiscal",
+        icon: ShieldCheck,
+        showBadge: false,
       },
     ],
   },

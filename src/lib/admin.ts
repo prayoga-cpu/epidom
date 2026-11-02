@@ -4,6 +4,7 @@
  * Additional admins can be granted via the admin panel (stored in User.isAdmin).
  */
 export const HARDCODED_ADMIN_EMAILS = [
+  "founder@prionation.io",
   "prayogadevelopment@gmail.com",
   "mrcaoevan@gmail.com",
   "darwin.prayoga13@gmail.com",

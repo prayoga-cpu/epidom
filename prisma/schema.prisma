@@ -3359,3 +3359,149 @@ model NewsletterSend {
   @@index([createdAt])
   @@map("newsletter_sends")
 }
+
+// ─── Fiscal journal ─────────────────────────────────────────────────────────
+// The till's tamper-evident record for the French anti-fraud VAT law (CGI art.
+// 286, I, 3° bis: inaltérabilité, sécurisation, conservation, archivage).
+// docs/FISCAL_JOURNAL.md is the design record; src/lib/fiscal/ the code.
+//
+// None of these tables has a foreign key on purpose: a sale's fiscal record
+// must outlive the order, the store and the account (6 years), so deleting
+// any of them cascades into nothing here. The migration also installs
+// triggers that refuse UPDATE, DELETE and TRUNCATE on everything but the
+// chain heads.
+
+enum FiscalEntryKind {
+  SALE
+  REFUND
+  CANCELLATION
+}
+
+enum FiscalClosureKind {
+  DAY
+  MONTH
+  YEAR
+}
+
+/// The moving end of one store's chain ("ENTRY", "CLOSURE" or "ARCHIVE"). A
+/// cache that every append locks (UPDATE … RETURNING), which serialises the
+/// store's appends; verification recomputes all of it from the records.
+model FiscalChainHead {
+  storeId       String
+  chain         String
+  lastSeq       Int      @default(0)
+  lastHash      String   @default("")
+  /// ENTRY chain: business day of the last entry, so days never run backwards.
+  lastDay       String   @default("")
+  /// ENTRY chain: perpetual totals after the last entry (signed sum, and sum
+  /// of absolute values: the "grand total perpétuel").
+  totalNet      Decimal  @default(0) @db.Decimal(16, 2)
+  totalAbsolute Decimal  @default(0) @db.Decimal(16, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@id([storeId, chain])
+  @@map("fiscal_chain_heads")
+}
+
+/// One recorded sale, refund or cancellation of a paid order. `payload` is the
+/// exact canonical JSON that was hashed and signed; the other columns are
+/// copies of its fields for querying.
+model FiscalEntry {
+  id            String          @id @default(cuid())
+  storeId       String
+  seq           Int
+  kind          FiscalEntryKind
+  /// "<orderId>:SALE", "<orderId>:CANCELLATION", "<orderId>:REFUND:<refunded total>":
+  /// one record per event even if a caller runs twice.
+  dedupeKey     String          @unique
+  orderId       String
+  orderNumber   String
+  /// Store-local YYYY-MM-DD at recording time; closures group on it.
+  businessDay   String
+  recordedAt    DateTime
+  currency      String
+  /// Signed: positive for a sale, negative for a refund or cancellation.
+  amount        Decimal         @db.Decimal(12, 2)
+  totalNet      Decimal         @db.Decimal(16, 2)
+  totalAbsolute Decimal         @db.Decimal(16, 2)
+  payload       String          @db.Text
+  prevHash      String
+  hash          String
+  signature     String?
+  keyId         String?
+  /// Appended by the catch-up sweep rather than at payment time.
+  late          Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+
+  @@unique([storeId, seq])
+  @@index([storeId, businessDay])
+  @@index([orderId])
+  @@map("fiscal_entries")
+}
+
+/// Day, month and year closures (clôtures), chained like the entries.
+model FiscalClosure {
+  id                 String            @id @default(cuid())
+  storeId            String
+  seq                Int
+  kind               FiscalClosureKind
+  /// "2026-10-30", "2026-10" or "2026".
+  period             String
+  firstEntrySeq      Int
+  lastEntrySeq       Int
+  entryCount         Int
+  currency           String
+  salesTotal         Decimal           @db.Decimal(16, 2)
+  refundsTotal       Decimal           @db.Decimal(16, 2)
+  cancellationsTotal Decimal           @db.Decimal(16, 2)
+  net                Decimal           @db.Decimal(16, 2)
+  totalNet           Decimal           @db.Decimal(16, 2)
+  totalAbsolute      Decimal           @db.Decimal(16, 2)
+  payload            String            @db.Text
+  prevHash           String
+  hash               String
+  signature          String?
+  keyId              String?
+  createdAt          DateTime          @default(now())
+
+  @@unique([storeId, seq])
+  @@unique([storeId, kind, period])
+  @@map("fiscal_closures")
+}
+
+/// Signed monthly archive: a month's entries and closures as one gzipped JSON
+/// document, readable without Epidom (see scripts/fiscal-verify.ts).
+model FiscalArchive {
+  id            String   @id @default(cuid())
+  storeId       String
+  seq           Int
+  /// "2026-10".
+  period        String
+  firstEntrySeq Int
+  lastEntrySeq  Int
+  entryCount    Int
+  content       Bytes
+  /// sha256 of the uncompressed JSON document.
+  contentHash   String
+  payload       String   @db.Text
+  prevHash      String
+  hash          String
+  signature     String?
+  keyId         String?
+  createdAt     DateTime @default(now())
+
+  @@unique([storeId, seq])
+  @@unique([storeId, period])
+  @@map("fiscal_archives")
+}
+
+/// Every public key that ever signed a fiscal record, so old records still
+/// verify after a key rotation.
+model FiscalSigningKey {
+  keyId       String   @id
+  publicKey   String   @db.Text
+  firstUsedAt DateTime @default(now())
+
+  @@map("fiscal_signing_keys")
+}

@@ -11,6 +11,7 @@ import {
 } from "@prisma/client";
 import { PLATFORM_TO_SOURCE } from "@/config/aggregator.config";
 import { toDecimal } from "@/lib/utils/types.server";
+import { recordSaleInTx } from "@/lib/fiscal/journal";
 
 export type AggregatorEmailEventData = {
   aggregatorEmailId: string;
@@ -92,37 +93,43 @@ export const parseAggregatorEmail = inngest.createFunction(
       parsed.subtotal || parsed.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
     const total = parsed.total || subtotal;
 
-    const order = await prisma.order.create({
-      data: {
-        storeId,
-        orderNumber,
-        customerName: parsed.customerName || "Unknown",
-        customerPhone: parsed.customerPhone ?? undefined,
-        deliveryAddress: parsed.deliveryAddress ?? undefined,
-        notes: parsed.notes ?? undefined,
-        status: OrderStatus.CONFIRMED,
-        orderType: "DELIVERY",
-        paymentMethod: PaymentMethod.CASH,
-        paymentStatus: PaymentStatus.PAID,
-        source,
-        subtotal: toDecimal(subtotal),
-        total: toDecimal(total),
-        // tax/serviceCharge/processingFee intentionally left at their schema
-        // defaults (0): aggregator prices already embed the platform's own
-        // tax handling, and the platform's cut is modeled separately via
-        // commissionRate() in finance/channels — computing store fees here
-        // would double-count against the same order.
-        orderDate: parsed.orderDate ? new Date(parsed.orderDate) : new Date(),
-        items: {
-          create: parsed.items.map((item) => ({
-            name: item.name,
-            quantity: toDecimal(item.quantity),
-            unit: "pcs",
-            unitPrice: toDecimal(item.unitPrice),
-            total: toDecimal(item.unitPrice * item.quantity),
-          })),
+    // Created PAID (the platform took the money), so it gets its fiscal SALE
+    // entry in the same transaction (journal.ts).
+    const order = await prisma.$transaction(async (tx) => {
+      const created = await tx.order.create({
+        data: {
+          storeId,
+          orderNumber,
+          customerName: parsed.customerName || "Unknown",
+          customerPhone: parsed.customerPhone ?? undefined,
+          deliveryAddress: parsed.deliveryAddress ?? undefined,
+          notes: parsed.notes ?? undefined,
+          status: OrderStatus.CONFIRMED,
+          orderType: "DELIVERY",
+          paymentMethod: PaymentMethod.CASH,
+          paymentStatus: PaymentStatus.PAID,
+          source,
+          subtotal: toDecimal(subtotal),
+          total: toDecimal(total),
+          // tax/serviceCharge/processingFee intentionally left at their schema
+          // defaults (0): aggregator prices already embed the platform's own
+          // tax handling, and the platform's cut is modeled separately via
+          // commissionRate() in finance/channels — computing store fees here
+          // would double-count against the same order.
+          orderDate: parsed.orderDate ? new Date(parsed.orderDate) : new Date(),
+          items: {
+            create: parsed.items.map((item) => ({
+              name: item.name,
+              quantity: toDecimal(item.quantity),
+              unit: "pcs",
+              unitPrice: toDecimal(item.unitPrice),
+              total: toDecimal(item.unitPrice * item.quantity),
+            })),
+          },
         },
-      },
+      });
+      await recordSaleInTx(tx, { storeId, orderId: created.id });
+      return created;
     });
 
     await prisma.aggregatorEmail.update({

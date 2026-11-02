@@ -44,6 +44,11 @@ EPIDOM_OWNER_EMAIL=owner@epidom.fr
 - `NEXT_PUBLIC_APP_URL` is the app's public origin. `NEXTAUTH_URL` is a legacy fallback, read only
   where `NEXT_PUBLIC_APP_URL` or the request origin is missing (subscription checkout/portal,
   Stripe Connect). Leave it unset unless an old deployment still sets it.
+- `BETTER_AUTH_URL` (optional) overrides `NEXT_PUBLIC_APP_URL` as Better Auth's base URL
+  (`authBaseUrl()` in `src/lib/app-url.ts`): the OAuth issuer the Claude connector advertises and
+  the links in auth emails. An apex `https://epidom.fr` is served as `https://www.epidom.fr`, and a
+  trailing slash is stripped. The Google callback ignores it and stays on `NEXT_PUBLIC_APP_URL` (the
+  one registered on the Google client). Leave it unset, or set it to the same origin.
 - `DATABASE_URL` is the pooled URL (Neon: the `-pooler` host). The schema is PostgreSQL only;
   there is no SQLite fallback.
 - `DIRECT_URL` is the non-pooled URL used by the Prisma CLI (`prisma.config.ts`) and the backup/restore

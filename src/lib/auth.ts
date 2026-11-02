@@ -22,7 +22,7 @@ import {
   EMAIL_CODE_LENGTH,
   EMAIL_VERIFICATION_EXPIRES_IN,
 } from "@/lib/auth/email-verification-code";
-import { configuredAppUrl, servingAppUrl } from "@/lib/app-url";
+import { authBaseUrl, configuredAppUrl } from "@/lib/app-url";
 import {
   OAUTH_CONSENT_PAGE,
   OAUTH_PROVIDER_SCOPES,
@@ -50,7 +50,8 @@ export const auth = betterAuth({
   // The host that serves without a redirect (www.epidom.fr in production, not
   // the configured apex): the OAuth provider below advertises its issuer and
   // endpoints from this, and Claude won't follow the apex → www redirect.
-  baseURL: servingAppUrl(),
+  // BETTER_AUTH_URL, when set, overrides the configured URL (authBaseUrl).
+  baseURL: authBaseUrl(),
   trustedOrigins: [
     "http://localhost:3000",
     "https://epidom.fr",

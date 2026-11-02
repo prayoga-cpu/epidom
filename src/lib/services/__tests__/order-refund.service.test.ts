@@ -19,6 +19,10 @@ vi.mock("@/lib/services/loyalty.service", () => {
   return { reverseLoyaltyForOrder: reverseLoyaltyMock };
 });
 
+// The fiscal journal (src/lib/fiscal) has its own tests; here it only has to be called.
+var fiscalJournal = vi.hoisted(() => ({ recordRefundInTx: vi.fn(async () => undefined) }));
+vi.mock("@/lib/fiscal/journal", () => fiscalJournal);
+
 import { applyOrderRefund } from "../order-refund.service";
 
 interface TxOptions {

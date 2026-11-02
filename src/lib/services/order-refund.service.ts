@@ -27,6 +27,7 @@ import type { Prisma } from "@prisma/client";
 import { computeRefund } from "@/lib/finance/order-charges";
 import { allocateRefund } from "@/lib/finance/order-payments";
 import { reverseLoyaltyForOrder } from "@/lib/services/loyalty.service";
+import { recordRefundInTx } from "@/lib/fiscal/journal";
 
 export interface ApplyOrderRefundInput {
   orderId: string;
@@ -170,6 +171,24 @@ export async function applyOrderRefund(
   if (refundedFraction > 0) {
     await reverseLoyaltyForOrder(orderId, refundedFraction, tx);
   }
+
+  // The fiscal REFUND entry, last, so its chain lock is held for the shortest
+  // time. An order with no tender rows refunds through its own method.
+  await recordRefundInTx(tx, {
+    orderId,
+    storeId,
+    amount,
+    reason,
+    tenders:
+      allocations.length > 0
+        ? allocations.map((a) => ({
+            method:
+              existing.payments.find((p) => p.id === a.paymentId)?.method ?? existing.paymentMethod,
+            amount: a.amount,
+          }))
+        : [{ method: existing.paymentMethod, amount }],
+    refundedTotal: refund.newRefundTotal,
+  });
 
   return {
     ok: true,

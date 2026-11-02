@@ -24,7 +24,22 @@ export function configuredAppUrl(): string {
  * configured URL is the apex, any other host (localhost, dev.epidom.fr, a
  * preview) as it is.
  */
-export function servingAppUrl(): string {
-  const base = configured();
+function serving(base: string): string {
   return base === "https://epidom.fr" ? "https://www.epidom.fr" : base;
+}
+
+export function servingAppUrl(): string {
+  return serving(configured());
+}
+
+/**
+ * Better Auth's base URL: BETTER_AUTH_URL when it is set (an explicit override,
+ * trailing slashes stripped), otherwise NEXT_PUBLIC_APP_URL, served the same way
+ * as servingAppUrl(), so an apex value still advertises the OAuth issuer on www.
+ * The Google callback does not follow this: it stays pinned to configuredAppUrl()
+ * in auth.ts, the one registered on the Google client.
+ */
+export function authBaseUrl(): string {
+  const explicit = process.env.BETTER_AUTH_URL?.trim().replace(/\/+$/, "");
+  return serving(explicit || configured());
 }

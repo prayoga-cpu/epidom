@@ -9,15 +9,24 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
-## [3.39.0] - 2026-10-29 · feat
+## [3.40.0] - 2026-11-03 · feat
 
-- **Use Epidom from your own Claude** (Enterprise plan). Add Epidom as a connector in Claude (claude.ai, the desktop and mobile apps, or Claude Code) and ask in plain words: how last week went compared with the week before, what's low and what to reorder, who works on Saturday, which dishes earn the most. The AI runs on your own Claude plan.
+- **Use Epidom from your own Claude** (Beta, Enterprise plan). Add Epidom as a connector in Claude (claude.ai, the desktop and mobile apps, or Claude Code) and ask in plain words: how last week went compared with the week before, what's low and what to reorder, who works on Saturday, which dishes earn the most. The AI runs on your own Claude plan.
 - When you connect, Epidom asks what Claude may do. Reading is the default. If you also tick **Allow changes**, Claude can add or change menu items, adjust stock and record waste, place and receive supplier orders, import products, materials, suppliers or recipes from a photo or a document you share, plan and publish the roster, record expenses and add customers, asking you before each change. Payments, refunds, the till and clocking in always stay in Epidom.
 - Staff who sign in with their own Epidom account can connect too, and Claude sees only what their access at the store allows.
 - Owners and managers can also approve or turn down waiting overtime from Claude, with the same rules as the Hours tab.
 - Profile → **Claude** shows the connector URL, how to add it, and every connected app, which you can revoke at any time. Changes made from Claude appear in the Activity log.
 - On the Data page, stores with the connector get a shortcut: share a menu photo or a PDF with Claude and ask it to import it, instead of copying a prompt and uploading a file.
 - The Privacy Policy now explains what is shared with an AI assistant you connect yourself.
+- This is a beta. Taking payments, refunds, cancellations, the till and clocking in stay in the Epidom app, and Claude can't show charts yet. Profile → Claude lists what works today and what doesn't.
+
+## [3.39.0] - 2026-11-02 · feat
+
+- New **Fiscal journal** page (Back Office → Reports). Every paid sale, refund and cancellation is now recorded in a journal that can't be changed afterwards: each record is signed and chained to the one before, with running totals. A correction is always a new record (a refund or a cancellation), never an edit. **Check the journal** re-verifies all of it on demand and tells you if anything was altered.
+- Each day, month and year is closed once it's over: its sales, refunds, cancellations, tax and payment methods are frozen in a signed closure. Closed months become a signed archive you can download, and the current month can be exported at any time.
+- The journal is kept for six years, even if you close your account, as French tax law requires. It holds no customer contact details. Our Terms and Privacy Policy now say so.
+- For businesses in France, this is how the till meets the anti-fraud VAT law (article 286 of the French tax code). The publisher's attestation that proves it will be available to print from the Fiscal journal.
+- A paid order's payment can no longer be edited from the order screen. Refund it and ring up a new sale instead.
 
 ## [3.38.1] - 2026-10-28 · fix
 

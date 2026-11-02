@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -30,6 +31,9 @@ export function ConnectorUsageView({ usage }: { usage: ConnectorUsage }) {
           <h1 className="flex items-center gap-2 text-2xl font-bold">
             <Sparkles className="h-6 w-6" aria-hidden />
             Claude connector
+            <Badge variant="outline" className="text-xs font-semibold">
+              Beta
+            </Badge>
           </h1>
           <p className="text-muted-foreground text-sm">
             Tool calls from people&apos;s own Claude (Enterprise stores). Arguments and results are

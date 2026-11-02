@@ -1914,6 +1914,125 @@ what went out, to how many people, and who triggered it.
 Read-only since 3.38.0 ("Earlier sends"): campaigns replaced these sends.'
 }
 
+Table fiscal_chain_heads {
+  storeId String [not null]
+  chain String [not null]
+  lastSeq Int [not null, default: 0]
+  lastHash String [not null, default: '']
+  lastDay String [not null, default: '', note: 'ENTRY chain: business day of the last entry, so days never run backwards.']
+  totalNet Decimal [not null, default: 0, note: 'ENTRY chain: perpetual totals after the last entry (signed sum, and sum
+of absolute values: the "grand total perpétuel").']
+  totalAbsolute Decimal [not null, default: 0]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+
+  indexes {
+    (storeId, chain) [pk]
+  }
+
+  Note: 'The moving end of one store\'s chain ("ENTRY", "CLOSURE" or "ARCHIVE"). A
+cache that every append locks (UPDATE … RETURNING), which serialises the
+store\'s appends; verification recomputes all of it from the records.'
+}
+
+Table fiscal_entries {
+  id String [pk]
+  storeId String [not null]
+  seq Int [not null]
+  kind FiscalEntryKind [not null]
+  dedupeKey String [unique, not null, note: '"<orderId>:SALE", "<orderId>:CANCELLATION", "<orderId>:REFUND:<refunded total>":
+one record per event even if a caller runs twice.']
+  orderId String [not null]
+  orderNumber String [not null]
+  businessDay String [not null, note: 'Store-local YYYY-MM-DD at recording time; closures group on it.']
+  recordedAt DateTime [not null]
+  currency String [not null]
+  amount Decimal [not null, note: 'Signed: positive for a sale, negative for a refund or cancellation.']
+  totalNet Decimal [not null]
+  totalAbsolute Decimal [not null]
+  payload String [not null]
+  prevHash String [not null]
+  hash String [not null]
+  signature String
+  keyId String
+  late Boolean [not null, default: false, note: 'Appended by the catch-up sweep rather than at payment time.']
+  createdAt DateTime [default: `now()`, not null]
+
+  indexes {
+    (storeId, seq) [unique]
+  }
+
+  Note: 'One recorded sale, refund or cancellation of a paid order. `payload` is the
+exact canonical JSON that was hashed and signed; the other columns are
+copies of its fields for querying.'
+}
+
+Table fiscal_closures {
+  id String [pk]
+  storeId String [not null]
+  seq Int [not null]
+  kind FiscalClosureKind [not null]
+  period String [not null, note: '"2026-10-30", "2026-10" or "2026".']
+  firstEntrySeq Int [not null]
+  lastEntrySeq Int [not null]
+  entryCount Int [not null]
+  currency String [not null]
+  salesTotal Decimal [not null]
+  refundsTotal Decimal [not null]
+  cancellationsTotal Decimal [not null]
+  net Decimal [not null]
+  totalNet Decimal [not null]
+  totalAbsolute Decimal [not null]
+  payload String [not null]
+  prevHash String [not null]
+  hash String [not null]
+  signature String
+  keyId String
+  createdAt DateTime [default: `now()`, not null]
+
+  indexes {
+    (storeId, seq) [unique]
+    (storeId, kind, period) [unique]
+  }
+
+  Note: 'Day, month and year closures (clôtures), chained like the entries.'
+}
+
+Table fiscal_archives {
+  id String [pk]
+  storeId String [not null]
+  seq Int [not null]
+  period String [not null, note: '"2026-10".']
+  firstEntrySeq Int [not null]
+  lastEntrySeq Int [not null]
+  entryCount Int [not null]
+  content Bytes [not null]
+  contentHash String [not null, note: 'sha256 of the uncompressed JSON document.']
+  payload String [not null]
+  prevHash String [not null]
+  hash String [not null]
+  signature String
+  keyId String
+  createdAt DateTime [default: `now()`, not null]
+
+  indexes {
+    (storeId, seq) [unique]
+    (storeId, period) [unique]
+  }
+
+  Note: 'Signed monthly archive: a month\'s entries and closures as one gzipped JSON
+document, readable without Epidom (see scripts/fiscal-verify.ts).'
+}
+
+Table fiscal_signing_keys {
+  keyId String [pk]
+  publicKey String [not null]
+  firstUsedAt DateTime [default: `now()`, not null]
+
+  Note: 'Every public key that ever signed a fiscal record, so old records still
+verify after a key rotation.'
+}
+
 Enum OrderReceiptSendStatus {
   SENT
   FAILED
@@ -2345,6 +2464,18 @@ Enum NewsletterDeliveryStatus {
   SENT
   FAILED
   SKIPPED
+}
+
+Enum FiscalEntryKind {
+  SALE
+  REFUND
+  CANCELLATION
+}
+
+Enum FiscalClosureKind {
+  DAY
+  MONTH
+  YEAR
 }
 
 Ref: session.userId > user.id [delete: Cascade]

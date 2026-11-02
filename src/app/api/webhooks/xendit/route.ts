@@ -4,6 +4,7 @@ import { parseXenditWebhook, type XenditWebhookPayload } from "@/lib/payments/pr
 import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
 import { earnPointsForOrder } from "@/lib/services/loyalty.service";
 import { inngest } from "@/lib/inngest/client";
+import { recordSaleInTx } from "@/lib/fiscal/journal";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 
 // Order.status is decided once, at creation time (see resolveSettledOrderStatus
@@ -57,12 +58,23 @@ export async function POST(request: Request) {
 
     if (paid) {
       // Flip to PAID once. Guarded so a retry doesn't re-fire the Inngest event.
-      if (order.paymentStatus !== "PAID") {
-        await prisma.order.update({
-          where: { id: orderId },
-          data: { paymentStatus: "PAID" },
-        });
-
+      // The flip is a conditional claim, with the fiscal SALE entry in the same
+      // transaction (journal.ts): two deliveries racing each other pay once
+      // and record once.
+      // Never back from REFUNDED either: a late retry must not re-open a refunded sale.
+      const won =
+        order.paymentStatus !== "PAID" &&
+        order.paymentStatus !== "REFUNDED" &&
+        (await prisma.$transaction(async (tx) => {
+          const claimed = await tx.order.updateMany({
+            where: { id: orderId, paymentStatus: { notIn: ["PAID", "REFUNDED"] } },
+            data: { paymentStatus: "PAID" },
+          });
+          if (claimed.count !== 1) return false;
+          await recordSaleInTx(tx, { orderId, storeId: order.storeId });
+          return true;
+        }));
+      if (won) {
         await inngest.send({
           name: "order/payment.confirmed",
           data: {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Copy, Lock, RotateCw, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Copy, Lock, RotateCw, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,59 @@ import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useConnectedApps, useRevokeConnectedApp } from "../hooks/use-connected-apps";
+
+const BETA_WORKS = ["works1", "works2", "works3", "works4"] as const;
+const BETA_NOT_YET = ["notYet1", "notYet2", "notYet3", "notYet4"] as const;
+
+/**
+ * The connector is a beta: what it does today and what it never does (the
+ * "Never exposed" list in docs/MCP.md), so nobody connects expecting the till.
+ * Shown to every account, locked or not: it is also the sales pitch.
+ */
+function BetaDetails() {
+  const { t } = useI18n();
+  return (
+    <details className="group rounded-lg border">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+        {t("claudeConnector.beta.summary")}
+        <ChevronDown
+          className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
+      <div className="space-y-4 border-t px-3 py-3 text-sm">
+        <div className="space-y-1.5">
+          <p className="font-medium">{t("claudeConnector.beta.worksTitle")}</p>
+          <ul className="space-y-1.5">
+            {BETA_WORKS.map((key) => (
+              <li key={key} className="flex gap-2">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                <span className="text-muted-foreground">{t(`claudeConnector.beta.${key}`)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="space-y-1.5">
+          <p className="font-medium">{t("claudeConnector.beta.notYetTitle")}</p>
+          <ul className="space-y-1.5">
+            {BETA_NOT_YET.map((key) => (
+              <li key={key} className="flex gap-2">
+                <X className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span className="text-muted-foreground">{t(`claudeConnector.beta.${key}`)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {t("claudeConnector.beta.note")}{" "}
+          <Link href="/contact" className="text-foreground underline underline-offset-4">
+            {t("claudeConnector.beta.feedback")}
+          </Link>
+        </p>
+      </div>
+    </details>
+  );
+}
 
 /**
  * Profile → "Claude": the connector URL to paste into Claude, how to add it,
@@ -60,6 +113,9 @@ export function ClaudeConnectorCard() {
           <CardTitle className="flex items-center gap-2 text-xl font-bold">
             <Sparkles className="h-5 w-5" aria-hidden />
             {t("claudeConnector.card.title")}
+            <Badge variant="outline" className="text-xs font-semibold">
+              {t("claudeConnector.beta.label")}
+            </Badge>
           </CardTitle>
           <p className="text-muted-foreground text-sm">{t("claudeConnector.card.subtitle")}</p>
         </CardHeader>
@@ -171,6 +227,8 @@ export function ClaudeConnectorCard() {
               </ul>
             </div>
           )}
+
+          <BetaDetails />
         </CardContent>
       </Card>
       {confirmDialog}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ShieldCheck, Store, TriangleAlert } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -88,6 +89,9 @@ export function ConsentScreen(props: ConsentScreenProps) {
           <>
             <div className="space-y-2 text-center">
               <ShieldCheck className="text-primary mx-auto size-8" aria-hidden />
+              <Badge variant="outline" className="text-xs font-semibold">
+                {t("claudeConnector.beta.label")}
+              </Badge>
               <h1 className="text-xl font-semibold">
                 {t("claudeConnector.consent.title").replace("{app}", appName)}
               </h1>
