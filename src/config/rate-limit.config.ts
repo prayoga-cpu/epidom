@@ -196,6 +196,25 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 100,
     window: 60,
   },
+  // Fiscal journal (src/lib/fiscal). Opening the page also runs the due
+  // closures; verify re-reads and re-hashes the whole journal, and an
+  // archive or export is a whole month of records.
+  "/api/stores/[id]/fiscal": {
+    limit: 30,
+    window: 60,
+  },
+  "/api/stores/[id]/fiscal/verify": {
+    limit: 5,
+    window: 60,
+  },
+  "/api/stores/[id]/fiscal/archives/[archiveId]": {
+    limit: 10,
+    window: 60,
+  },
+  "/api/stores/[id]/fiscal/export": {
+    limit: 10,
+    window: 60,
+  },
   // Cash movements are tapped in one at a time at the till, never in bulk.
   "/api/stores/[id]/cash-movements": {
     limit: 100,

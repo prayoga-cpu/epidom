@@ -51,6 +51,7 @@ import {
 } from "./loyalty.service";
 import { claimOrderTransition, claimOrderTransitions } from "./order-status.helpers";
 import { isOfflineReplay } from "./offline-replay";
+import { recordCancellationInTx, recordSaleInTx } from "@/lib/fiscal/journal";
 
 /**
  * The one shared settlement path behind POST /pos/orders and
@@ -544,6 +545,12 @@ export async function applySettlementBookkeeping(
   // idempotent helper.
   const pointsEarned = s.paymentStatus === "PAID" ? await earnPointsForOrder(orderId, tx) : 0;
 
+  // The fiscal SALE entry, last: it records the order exactly as it commits,
+  // degraded coupon/points included, and its chain lock is held to commit.
+  if (s.paymentStatus === "PAID") {
+    await recordSaleInTx(tx, { orderId, storeId, offline: s.tolerant });
+  }
+
   return { pointsEarned, warnings };
 }
 
@@ -685,6 +692,8 @@ export async function settlePendingOrderInTx(
   // on its own (Order.pointsEarned), but gated on the claim anyway so the
   // loser does no work at all.
   const pointsEarned = await earnPointsForOrder(args.orderId, tx);
+  // Fiscal SALE entry for the money just taken (journal.ts).
+  await recordSaleInTx(tx, { orderId: args.orderId, storeId: args.storeId });
   return { settled: true, pointsEarned };
 }
 
@@ -707,6 +716,9 @@ export async function cancelOrderInTx(
   if (!won) return false;
 
   await reverseLoyaltyForOrder(args.orderId, 1, tx);
+  // A paid order cancelled is money given back: it gets its own CANCELLATION
+  // entry. An unpaid one records nothing (journal.ts).
+  await recordCancellationInTx(tx, { orderId: args.orderId, storeId: args.storeId });
   return true;
 }
 

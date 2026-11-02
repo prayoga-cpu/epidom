@@ -1,4 +1,5 @@
 import type { Locale } from "@/components/lang/i18n-provider";
+import { isFiscalAttestationReady } from "@/lib/fiscal/attestation";
 
 /**
  * The "How do you want to start?" modal: four questions, then one
@@ -56,12 +57,16 @@ export const CURRENT_POS_OPTIONS: Record<Market, readonly CurrentPos[]> = {
 export const OUTLET_OPTIONS: readonly Outlets[] = ["1", "2-3", "4+"];
 
 /**
- * French cash-register software has to be NF525-certified or attested, and
- * Epidom has neither yet. Until the founder settles that, the "switch fully"
- * path is not offered to a business in France, whatever language it reads the
- * site in. Flip to true once it is settled.
+ * French cash-register software has to be NF525-certified or covered by the
+ * publisher's individual attestation (restored by the 2026 finance law). Epidom
+ * takes the attestation route: the till keeps the signed fiscal journal
+ * (src/lib/fiscal), and this turns true by itself once the publisher's legal
+ * details are filled in (FISCAL_PUBLISHER), since the attestation can't be
+ * issued before that. Until then the "switch fully" path is not offered to a
+ * business in France, whatever language it reads the site in, and nothing on
+ * the site claims compliance.
  */
-export const NF525_SETTLED = false;
+export const NF525_SETTLED = isFiscalAttestationReady();
 
 export function availablePaths(market: Market): MigrationPath[] {
   return market === "fr" && !NF525_SETTLED ? ["A", "B"] : ["A", "B", "C"];

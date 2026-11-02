@@ -1,5 +1,50 @@
 # STATUS.md
 
+## 3.39.0 — Fiscal journal: NF525 / anti-fraud VAT law, attestation route (shipped 2026-11-02; compliance claims stay OFF until the company data below)
+
+Design record and the file to hand the lawyer/accountant: `docs/FISCAL_JOURNAL.md`. Live in this release: the journal itself (every store), the Fiscal journal page, the Terms/Privacy wording. NOT live until the blocked list below is done: the home page seal + hero fact, FAQ q6, the French "switch fully" path, the printable attestation.
+
+- [x] Append-only journal per store (`fiscal_entries`, `fiscal_closures`, `fiscal_archives`, `fiscal_signing_keys`, `fiscal_chain_heads`; migration `20261030090000_fiscal_journal`, new tables only, no foreign keys). Postgres triggers refuse UPDATE/DELETE/TRUNCATE.
+- [x] SALE / REFUND / CANCELLATION entries written inside the paying transaction on every path: till checkout + offline replay + finalize, Mark as Paid, cancel, refund, Xendit webhook, aggregator e-mail import. Ed25519 signature (key derived from `BETTER_AUTH_SECRET`, or `FISCAL_SIGNING_KEY`), hash chain, gapless seq, perpetual totals. A guard test fails if a server file marks an order PAID without the journal.
+- [x] Each journal write runs in a savepoint: if it fails (tables missing, a bug), the payment still commits and the catch-up records it late. Catch-up covers missing sales, refunds and cancellations; verification counts the gaps. Journal starts 2026-11-02 (`FISCAL_JOURNAL_START`), no backfill.
+- [x] Day / month / year closures and signed monthly archives: on the first sale of a new day (after the response), on opening the page, and hourly (Inngest `fiscal-maintenance`).
+- [x] Back Office → Reports → **Fiscal journal** (`/store/[id]/fiscal`, any plan, owner + personas with the `/fiscal` grant): totals, "Check the journal" (full re-verification), closures, archive downloads, month export. `scripts/fiscal-verify.ts` checks a downloaded archive offline.
+- [x] Printable attestation on the official model BOI-LETTRE-000242 (`/store/[id]/fiscal/attestation`, French businesses), part 1 pre-signed, part 2 for the business. Built, unreachable until `FISCAL_PUBLISHER` is complete.
+- [x] Home page (French site): Epidom's own seal (never the NF525 mark) + the four conditions, hero fact "Caisse · Conforme loi anti-fraude TVA", FAQ "Epidom est-il certifié NF525 ?" (fr + en) answering "attested, not certified". Built, hidden until `FISCAL_PUBLISHER` is complete (`NF525_SETTLED = isFiscalAttestationReady()`).
+- [x] Order route: a paid order's payment note can no longer be edited beside a status change (the method already couldn't be changed). Xendit retry can no longer flip a REFUNDED order back to PAID.
+- [x] Terms §11 and Privacy §6 (fr/en/id): the fiscal journal is kept six years, without customer contact details.
+- [x] Tests: 27 fiscal unit tests (chain, idempotency, refund/cancel amounts, tamper detection, failed write rolled back), guard test, compliance section gating, PATCH guard. Against a throwaway local Postgres with all migrations: 8 concurrent sales → seq 1–8 unbroken; triggers refuse UPDATE/DELETE/TRUNCATE; a payment commits with the chain table missing and the catch-up records it; refund catch-up; closures + archive + verification pass; an edit with the trigger disabled is caught; deleting the store keeps the journal.
+- [ ] Not browser-tested yet (Fiscal journal page, archive download, attestation print).
+
+### Blocked: waiting for the company's legal data (after the lawyer)
+
+Do these in order. Nothing on the site claims compliance until step 3 ships.
+
+1. [ ] **Lawyer / accountant sign-off** on `docs/FISCAL_JOURNAL.md` §3 (how each condition is met) and §5 (limits), and on the covered / not-covered lists in `src/lib/fiscal/attestation.ts`. Signing a false attestation is a criminal offence (Code pénal art. 441-1: 3 years, €45,000) for the legal representative who signs.
+2. [ ] **Company data** for `FISCAL_PUBLISHER` (`src/lib/fiscal/attestation.ts`), every field required:
+   - legal company name (raison sociale) of the publisher;
+   - registration number (SIREN/SIRET, or the foreign equivalent for an Indonesian company);
+   - registered address;
+   - legal representative's full name (NOM Prénom) and title (Gérant, Président, Director…);
+   - city for "Fait à";
+   - signature image of that representative, saved under `public/legal/` (e.g. `public/legal/publisher-signature.png`).
+3. [ ] **Decide offline selling for France**: keep it (offline sales are signed only at sync and listed as "not covered") or switch offline selling off for French businesses (then remove that line from `EXCLUDED_FUNCTIONS`).
+4. [ ] **Ship the claims** (dev side, once 1–3 are in): fill `FISCAL_PUBLISHER`, run the full CI (the "switch fully" tests follow `NF525_SETTLED` by themselves), browser-check the attestation print, the home page seal, hero fact and FAQ on fr + en, then push. The badge, FAQ, French "switch fully" path and attestation all go live together.
+5. [ ] After it is live: French "logiciel de caisse" titles and the `logiciel-caisse-cafe` / `logiciel-caisse-boulangerie` pages, and the Capterra / GetApp / Appvizer listings (Decisions needed → NF525).
+6. [ ] Standing rule: any later change to how sales are recorded, secured, kept or archived is a MAJOR fiscal version: bump `FISCAL_MODULE.major` and re-issue the attestation. **Never** use the NF525 logo or say "certifié NF525": the mark belongs to AFNOR/InfoCert.
+
+### Not blocked (3.39.0)
+
+- [ ] Browser pass: Fiscal journal page (owner and a manager persona), "Check the journal", archive download, month export.
+- [ ] Inngest sync in production: the hourly `fiscal-maintenance` job. Closures still happen without it (first sale of a day, page open).
+- [ ] Optional: `FISCAL_SIGNING_KEY` (32 random bytes, base64) in Vercel, so the key doesn't change if `BETTER_AUTH_SECRET` is ever rotated. Old records keep verifying either way.
+
+### During the database incident (prod writing to the Neon dev branch)
+
+- The 3.39.0 production build ran `migrate deploy` against whatever `DIRECT_URL` production uses (the dev branch at the time), so that is where the fiscal tables exist first. Neon `main` gets them from the redeploy after the env switch.
+- Any mirror / sync script (live → main): copy `fiscal_*` tables insert-only (`ON CONFLICT DO NOTHING`), never UPDATE or DELETE them (the triggers refuse it and the transaction fails), and only once `main` has the migration. Few rows today (orders ≈ 0).
+- Between switching the env to `main` and redeploying, `main` has no fiscal tables: sales still go through (savepoint), the Fiscal journal page errors, and the catch-up journals those sales late once the tables exist.
+
 ## 3.38.1 — Newsletter unsubscribe links on www (2026-10-28)
 
 - [x] Unsubscribe and one-click links point at `https://www.epidom.fr` when the app URL is the apex, since Vercel 308-redirects `epidom.fr` → `www.epidom.fr` and a mail app's one-click POST isn't guaranteed to follow it (`appUrl()` in `src/lib/newsletter/unsubscribe-token.ts`). Other hosts (dev, local) unchanged.
@@ -224,7 +269,7 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Decisions needed
 
-- [ ] **NF525.** The 2025 finance law removed the publisher's self-attestation; the **2026 finance law (n° 2026-103, art. 125) restored it**. Epidom can issue its own attestation only if the till really meets the four conditions (records can't be altered, secured, kept, archived). Confirm with an accountant. Until decided: French pages lead with online ordering, QR menu and cost tools, not "logiciel de caisse"; Capterra/Appvizer listings wait.
+- [ ] **NF525.** Decided 2026-10-30: the attestation route (3.39.0 built the fiscal journal; see the 3.39.0 to-dos at the top). The 2025 finance law removed the publisher's self-attestation; the **2026 finance law (n° 2026-103, art. 125) restored it**. Still open: publisher details + accountant review. Until the attestation is out: French pages lead with online ordering, QR menu and cost tools, not "logiciel de caisse"; Capterra/Appvizer listings wait.
 - [ ] **Features H1 visible or not.** 3.11.0 hid it at your request; Phase 0 keeps it hidden but makes its text name the product. A visible H1 is a slightly stronger signal.
 - [ ] **Real-user Web Vitals.** Today they are sent from every page view and discarded (Phase 1). Either send them to Google Analytics as events, only for visitors who accepted analytics (field data for every page; recommended), or remove the reporter and its endpoint (saves the calls; rely on Search Console's Core Web Vitals report once the site has enough Chrome traffic).
 - [ ] **Storefront index threshold.** Phase 0 noindexes stores with fewer than 3 available menu items (`MIN_INDEXABLE_MENU_ITEMS`). Lower it if real merchants with tiny menus should stay indexed.

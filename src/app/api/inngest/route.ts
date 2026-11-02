@@ -22,6 +22,7 @@ import {
   dispatchDueNewsletters,
   sendNewsletterCampaign,
 } from "@/lib/inngest/functions/newsletter-dispatch";
+import { fiscalMaintenance } from "@/lib/inngest/functions/fiscal-maintenance";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -43,5 +44,6 @@ export const { GET, POST, PUT } = serve({
     shredAuditSubject,
     dispatchDueNewsletters,
     sendNewsletterCampaign,
+    fiscalMaintenance,
   ],
 });

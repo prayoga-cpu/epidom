@@ -30,6 +30,14 @@ vi.mock("@/lib/api-handler", () => ({
 var prismaMock: any;
 var txMock: any;
 
+// The fiscal journal (src/lib/fiscal) has its own tests; here it only has to be called.
+var fiscalJournal = vi.hoisted(() => ({
+  recordSaleInTx: vi.fn(async () => undefined),
+  recordRefundInTx: vi.fn(async () => undefined),
+  recordCancellationInTx: vi.fn(async () => undefined),
+}));
+vi.mock("@/lib/fiscal/journal", () => fiscalJournal);
+
 vi.mock("@/lib/prisma", () => {
   txMock = {
     order: {
@@ -282,6 +290,39 @@ describe("PATCH /pos/orders/[orderId] — paid and cancel claims", () => {
       paymentStatus: "PAID",
       status: "DELIVERED",
     });
+  });
+
+  it("refuses to change how a paid order was paid (its fiscal record names the tender)", async () => {
+    prismaMock.order.findFirst.mockResolvedValue({
+      ...HELD_ORDER,
+      status: "DELIVERED",
+      paymentStatus: "PAID",
+      paymentMethod: "CASH",
+      table: null,
+      payments: [{ id: "pay-1" }],
+    });
+
+    const res = await patch({ status: "DELIVERED", paymentNote: "paid by card after all" });
+
+    expect(res.status).toBe(409);
+    expect(txMock.order.update).not.toHaveBeenCalled();
+  });
+
+  it("treats a late Mark as Paid on a paid order as a no-op, not an edit", async () => {
+    prismaMock.order.findFirst.mockResolvedValue({
+      ...HELD_ORDER,
+      status: "DELIVERED",
+      paymentStatus: "PAID",
+      paymentMethod: "CASH",
+      table: null,
+      payments: [{ id: "pay-1" }],
+    });
+    txMock.order.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    const res = await patch({ paymentStatus: "PAID", paymentMethod: "STRIPE_CARD" });
+
+    expect(res.status).toBe(200);
+    expect(txMock.order.update.mock.calls[0][0].data).not.toHaveProperty("paymentMethod");
   });
 
   it("writes exactly one tender row when it wins the PAID claim", async () => {

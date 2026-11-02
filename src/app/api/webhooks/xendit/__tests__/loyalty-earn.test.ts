@@ -14,9 +14,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 var prismaMock: any;
 
+// The fiscal journal (src/lib/fiscal) has its own tests; here it only has to be called.
+var fiscalJournal = vi.hoisted(() => ({
+  recordSaleInTx: vi.fn(async () => undefined),
+  recordRefundInTx: vi.fn(async () => undefined),
+  recordCancellationInTx: vi.fn(async () => undefined),
+}));
+vi.mock("@/lib/fiscal/journal", () => fiscalJournal);
+
 vi.mock("@/lib/prisma", () => {
   prismaMock = {
-    order: { findFirst: vi.fn(), update: vi.fn() },
+    order: { findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    $transaction: vi.fn(async (cb: (tx: unknown) => unknown) => cb(prismaMock)),
   };
   return { prisma: prismaMock };
 });
@@ -56,6 +65,7 @@ const call = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   prismaMock.order.update.mockResolvedValue({});
+  prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 });
 
 describe("POST /api/webhooks/xendit — loyalty earn", () => {
@@ -70,7 +80,12 @@ describe("POST /api/webhooks/xendit — loyalty earn", () => {
     const res = await call();
 
     expect(res.status).toBe(200);
-    expect(prismaMock.order.update).toHaveBeenCalledTimes(1);
+    // The PAID flip is a conditional claim, with its fiscal SALE entry in the same transaction.
+    expect(prismaMock.order.updateMany).toHaveBeenCalledTimes(1);
+    expect(fiscalJournal.recordSaleInTx).toHaveBeenCalledWith(prismaMock, {
+      orderId: "ord-1",
+      storeId: "store-1",
+    });
     expect(send).toHaveBeenCalledTimes(1);
     expect(earnPointsForOrder).toHaveBeenCalledWith("ord-1");
   });
@@ -87,7 +102,8 @@ describe("POST /api/webhooks/xendit — loyalty earn", () => {
 
     expect(res.status).toBe(200);
     // The once-only guard still holds for the status flip and the event…
-    expect(prismaMock.order.update).not.toHaveBeenCalled();
+    expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+    expect(fiscalJournal.recordSaleInTx).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
     // …but the idempotent earn runs, so a swallowed failure is recoverable.
     expect(earnPointsForOrder).toHaveBeenCalledWith("ord-1");

@@ -110,11 +110,34 @@ export async function PATCH(
       );
     }
 
+    // How a paid order was paid is part of its fiscal record (the SALE entry
+    // in the journal names the tender), so it is never rewritten afterwards: a
+    // wrong method is corrected by a refund and a new sale. The schema already
+    // takes a method only with Mark as Paid, whose lost claim drops it; this
+    // also refuses the settle-up note being edited later beside a status
+    // change, and states the rule here rather than relying on the claim. A
+    // Mark as Paid arriving after the order was paid (a retry, a second till)
+    // is not an edit: its method and note are dropped and the claim no-ops.
+    const alreadyPaid = existing.paymentStatus === "PAID" || existing.paymentStatus === "REFUNDED";
+    if (
+      alreadyPaid &&
+      paymentStatus !== "PAID" &&
+      (paymentMethod !== undefined || paymentNote !== undefined)
+    ) {
+      return NextResponse.json(
+        createErrorResponse(
+          ApiErrorCode.CONFLICT,
+          "A paid order's payment can't be changed. Refund it and ring up a new sale instead."
+        ),
+        { status: 409 }
+      );
+    }
+
     const updateData: Record<string, unknown> = {};
     if (status !== undefined) updateData.status = status;
     if (paymentStatus !== undefined) updateData.paymentStatus = paymentStatus;
-    if (paymentMethod !== undefined) updateData.paymentMethod = paymentMethod;
-    if (paymentNote !== undefined) updateData.paymentNote = paymentNote || null;
+    if (paymentMethod !== undefined && !alreadyPaid) updateData.paymentMethod = paymentMethod;
+    if (paymentNote !== undefined && !alreadyPaid) updateData.paymentNote = paymentNote || null;
 
     // When delivering, mark timestamp and free up the table
     if (status === "DELIVERED") {

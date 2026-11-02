@@ -9,6 +9,14 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.39.0] - 2026-11-02 · feat
+
+- New **Fiscal journal** page (Back Office → Reports). Every paid sale, refund and cancellation is now recorded in a journal that can't be changed afterwards: each record is signed and chained to the one before, with running totals. A correction is always a new record (a refund or a cancellation), never an edit. **Check the journal** re-verifies all of it on demand and tells you if anything was altered.
+- Each day, month and year is closed once it's over: its sales, refunds, cancellations, tax and payment methods are frozen in a signed closure. Closed months become a signed archive you can download, and the current month can be exported at any time.
+- The journal is kept for six years, even if you close your account, as French tax law requires. It holds no customer contact details. Our Terms and Privacy Policy now say so.
+- For businesses in France, this is how the till meets the anti-fraud VAT law (article 286 of the French tax code). The publisher's attestation that proves it will be available to print from the Fiscal journal.
+- A paid order's payment can no longer be edited from the order screen. Refund it and ring up a new sale instead.
+
 ## [3.38.1] - 2026-10-28 · fix
 
 - Newsletter unsubscribe links now go straight to www.epidom.fr, so the Unsubscribe button in mail apps such as Gmail works without depending on a redirect.

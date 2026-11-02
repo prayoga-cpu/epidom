@@ -12,6 +12,7 @@ import { getLocalizedPath } from "@/lib/i18n-routing";
 import { cn } from "@/lib/utils";
 import { APP_RELEASE_DATE, APP_VERSION } from "@/lib/version";
 import { HERO_PHOTO } from "../data/media";
+import { NF525_SETTLED } from "../lib/migration";
 import { usePosTrialHref } from "../lib/use-pos-trial-href";
 import { PRIMARY_BUTTON, TEXT_LINK } from "./landing-ui";
 
@@ -240,6 +241,21 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
         </Link>
       ),
     },
+    // The till's anti-fraud VAT compliance, on the French site only (it is a
+    // French law) and only once the attestation can actually be issued.
+    ...(locale === "fr" && NF525_SETTLED
+      ? [
+          {
+            key: "compliance",
+            label: t("redesign.landing.hero.complianceLabel"),
+            value: (
+              <a href="#conformite" className={FACT_LINK}>
+                {t("redesign.landing.hero.complianceValue")}
+              </a>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (

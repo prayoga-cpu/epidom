@@ -7,7 +7,13 @@ import {
   PAYMENT_FEE,
   savingBucket,
 } from "../margin-calculator";
-import { availablePaths, CURRENT_POS_OPTIONS, marketOptions, recommend } from "../migration";
+import {
+  availablePaths,
+  CURRENT_POS_OPTIONS,
+  marketOptions,
+  NF525_SETTLED,
+  recommend,
+} from "../migration";
 
 describe("computeMargin", () => {
   it("follows the spec's formula on its default inputs (EUR, POS)", () => {
@@ -137,7 +143,8 @@ describe("migration recommendation", () => {
   });
 
   it("does not offer the full switch to a business in France until NF525 is settled", () => {
-    expect(availablePaths("fr")).toEqual(["A", "B"]);
+    // Settled = the publisher attestation can be issued (FISCAL_PUBLISHER filled in).
+    expect(availablePaths("fr")).toEqual(NF525_SETTLED ? ["A", "B", "C"] : ["A", "B"]);
     expect(availablePaths("id")).toEqual(["A", "B", "C"]);
     expect(availablePaths("global")).toEqual(["A", "B", "C"]);
   });

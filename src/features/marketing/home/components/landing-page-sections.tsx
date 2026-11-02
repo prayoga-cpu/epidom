@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { SectionErrorBoundary } from "@/components/shared";
 import { trackEvent } from "@/lib/analytics";
 import { CaseStudiesSection } from "./case-studies-section";
+import { ComplianceSection } from "./compliance-section";
 import { ComparisonTeaserSection } from "./comparison-teaser-section";
 import { FinalCtaSection } from "./final-cta-section";
 import { HeroSection } from "./hero-section";
@@ -76,6 +77,10 @@ export function LandingPageSections({
 
       <SectionErrorBoundary sectionName="Trust Bar">
         <TrustBar />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="Compliance">
+        <ComplianceSection />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Switch At Your Pace">
