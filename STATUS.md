@@ -1,6 +1,8 @@
 # STATUS.md
 
-## 3.39.0 — Fiscal journal: NF525 / anti-fraud VAT law, attestation route (shipped 2026-11-02; compliance claims stay OFF until the company data below)
+## 3.39.0 — Fiscal journal: NF525 / anti-fraud VAT law, attestation route (✅ shipped 2026-11-02, f8044b37, CI green — ticket CLOSED on the dev side; the other half is PENDING until the company's legal data is delivered)
+
+**Ticket state:** everything that can be built without the company's legal data is built, tested and live. The half that is left (home page seal, hero fact, FAQ, French "switch fully" path, printable attestation) is finished code waiting on the data: it switches on by itself once `FISCAL_PUBLISHER` is complete. Reopen only for the "Blocked" list below.
 
 Design record and the file to hand the lawyer/accountant: `docs/FISCAL_JOURNAL.md`. Live in this release: the journal itself (every store), the Fiscal journal page, the Terms/Privacy wording. NOT live until the blocked list below is done: the home page seal + hero fact, FAQ q6, the French "switch fully" path, the printable attestation.
 
@@ -14,7 +16,8 @@ Design record and the file to hand the lawyer/accountant: `docs/FISCAL_JOURNAL.m
 - [x] Order route: a paid order's payment note can no longer be edited beside a status change (the method already couldn't be changed). Xendit retry can no longer flip a REFUNDED order back to PAID.
 - [x] Terms §11 and Privacy §6 (fr/en/id): the fiscal journal is kept six years, without customer contact details.
 - [x] Tests: 27 fiscal unit tests (chain, idempotency, refund/cancel amounts, tamper detection, failed write rolled back), guard test, compliance section gating, PATCH guard. Against a throwaway local Postgres with all migrations: 8 concurrent sales → seq 1–8 unbroken; triggers refuse UPDATE/DELETE/TRUNCATE; a payment commits with the chain table missing and the catch-up records it; refund catch-up; closures + archive + verification pass; an edit with the trigger disabled is caught; deleting the store keeps the journal.
-- [ ] Not browser-tested yet (Fiscal journal page, archive download, attestation print).
+- [ ] Not browser-tested yet: the Fiscal journal page and archive download (see "Not blocked"); the attestation print and the home page claims are checked in step 4 below.
+- [ ] The Claude connector on branch `dev` is ALSO numbered 3.39.0 (d10bca80, 724aee48): renumber it (3.40.0) in package.json, `src/lib/version.ts` and CHANGELOG.md before it is merged into main.
 
 ### Blocked: waiting for the company's legal data (after the lawyer)
 
@@ -269,7 +272,7 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 
 ## Decisions needed
 
-- [ ] **NF525.** Decided 2026-10-30: the attestation route (3.39.0 built the fiscal journal; see the 3.39.0 to-dos at the top). The 2025 finance law removed the publisher's self-attestation; the **2026 finance law (n° 2026-103, art. 125) restored it**. Still open: publisher details + accountant review. Until the attestation is out: French pages lead with online ordering, QR menu and cost tools, not "logiciel de caisse"; Capterra/Appvizer listings wait.
+- [x] **NF525.** Decided 2026-10-30: the attestation route; shipped in 3.39.0 (f8044b37). **Pending: the company's legal data** (see 3.39.0 → "Blocked" at the top). The 2025 finance law removed the publisher's self-attestation; the **2026 finance law (n° 2026-103, art. 125) restored it**. Still open: publisher details + accountant review. Until the attestation is out: French pages lead with online ordering, QR menu and cost tools, not "logiciel de caisse"; Capterra/Appvizer listings wait.
 - [ ] **Features H1 visible or not.** 3.11.0 hid it at your request; Phase 0 keeps it hidden but makes its text name the product. A visible H1 is a slightly stronger signal.
 - [ ] **Real-user Web Vitals.** Today they are sent from every page view and discarded (Phase 1). Either send them to Google Analytics as events, only for visitors who accepted analytics (field data for every page; recommended), or remove the reporter and its endpoint (saves the calls; rely on Search Console's Core Web Vitals report once the site has enough Chrome traffic).
 - [ ] **Storefront index threshold.** Phase 0 noindexes stores with fewer than 3 available menu items (`MIN_INDEXABLE_MENU_ITEMS`). Lower it if real merchants with tiny menus should stay indexed.
@@ -413,7 +416,7 @@ Plan: partners (Aaron = owner of a sales page, referral-link partners with a 10%
 
 Full text, context and line numbers: `docs/status-archive/2026-10-14-v3-revamp-and-releases.md`. Close an item here when it's done.
 
-**Operator to-dos:** retake 3 screenshots on realistic data (3.12.0, L12) · sales pages in three languages (3.10.0, L15) and sales pages (3.9.0, L17) · ship the offline apps (3.3.7, L24) · hero photo resolution (L31) · homepage launch blockers incl. NF525 (3.4.0, L32) · 3.8.0 checks (L37) · schedule payroll (3.7.0, L42) · turn PayPal on (3.3.4, L43) · phone/iPad checks (3.3.2, L46) · onboarding live checks (3.3.0, L50) · Enterprise price signal (L60) · before promising SLAs (L61) · All outlets on a real multi-store account (L62) · Customer portal plan switching (L63) · finish the Stripe move (L65) · POS Operational on the real till (L69) · customer display on the real till (L71) · platform commission rates are estimates (L77) · URGENT at deploy (L81) · legal and compliance (L82) · content that unlocks the redesign (L83) · config and infrastructure (L84) · zoom on a real phone and iPad (L87) · publish the Google consent screen (L94) · L95 · Preview test-mode Stripe keys (L96) · nightly dev-DB reset fix (L98).
+**Operator to-dos:** retake 3 screenshots on realistic data (3.12.0, L12) · sales pages in three languages (3.10.0, L15) and sales pages (3.9.0, L17) · ship the offline apps (3.3.7, L24) · hero photo resolution (L31) · homepage launch blockers (3.4.0, L32; NF525 moved to 3.39.0 → Blocked) · 3.8.0 checks (L37) · schedule payroll (3.7.0, L42) · turn PayPal on (3.3.4, L43) · phone/iPad checks (3.3.2, L46) · onboarding live checks (3.3.0, L50) · Enterprise price signal (L60) · before promising SLAs (L61) · All outlets on a real multi-store account (L62) · Customer portal plan switching (L63) · finish the Stripe move (L65) · POS Operational on the real till (L69) · customer display on the real till (L71) · platform commission rates are estimates (L77) · URGENT at deploy (L81) · legal and compliance (L82) · content that unlocks the redesign (L83) · config and infrastructure (L84) · zoom on a real phone and iPad (L87) · publish the Google consent screen (L94) · L95 · Preview test-mode Stripe keys (L96) · nightly dev-DB reset fix (L98).
 
 **Decisions:** offline beyond one device (L25) · unpaid storefront orders (3.8.0, L39) · billing behaviour the audit confirmed (L66) · follow-ups that need a decision (L85) · L162, L172, L222.
 
