@@ -36,7 +36,11 @@ const previewCookiePrefix = previewAuthCookiePrefix(process.env.VERCEL_ENV);
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET,
-  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  baseURL: (
+    process.env.BETTER_AUTH_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "http://localhost:3000"
+  ).replace(/\/+$/, ""),
   trustedOrigins: [
     "http://localhost:3000",
     "https://epidom.fr",

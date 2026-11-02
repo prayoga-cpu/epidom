@@ -38,6 +38,13 @@ const ALLOWLIST: ReadonlyArray<{ file: string; region: RegExp; why: string }> = 
       "where the public inbox lists ceo@). Never shown to a customer, so it must not follow " +
       "the public support address when that changes.",
   },
+  {
+    file: "src/lib/admin.ts",
+    region: /export const HARDCODED_ADMIN_EMAILS = \[[\s\S]*?\] as const;/,
+    why:
+      "The accounts that are Epidom admins by e-mail (founder@ among them). An identity, not " +
+      "a support inbox: it must not follow the public support address when that changes.",
+  },
 ];
 
 /** Scan target: application source that ships, not tests, fixtures or type stubs of tests. */
