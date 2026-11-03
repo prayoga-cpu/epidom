@@ -18,9 +18,10 @@ export interface UsePlanCheckoutOptions {
 }
 
 /**
- * Opens Stripe Checkout for the plan the owner picked during setup. A POS
- * trial collects a card and charges nothing for 14 days (the server decides
- * the trial, see posTrialApplies). `start` leaves the page on success; on a
+ * Starts the plan the owner picked during setup. A first POS subscription is
+ * the 14-day trial with no card: the server starts it and answers with the
+ * success page (see posTrialApplies, startPosTrial). Any other plan opens
+ * Stripe Checkout. `start` leaves the page on success; on a
  * failure the status goes to "failed" and a toast says so, so the launch
  * screen can offer the button again.
  */
@@ -56,8 +57,10 @@ export function usePlanCheckout({ checkout, currency, next }: UsePlanCheckoutOpt
       const data = await res.json().catch(() => null);
       const url: unknown = data?.data?.url;
       if (!res.ok || typeof url !== "string") throw new Error("checkout");
-      // An account that already pays goes to Stripe's billing portal: not a checkout.
-      if (data?.data?.portal) {
+      // An account that already pays goes to Stripe's billing portal, and the
+      // POS trial starts on the server with no card: neither is a checkout.
+      // The trial's success page records trial_started itself.
+      if (data?.data?.portal || data?.data?.trialStarted) {
         window.location.assign(url);
         return;
       }
@@ -77,7 +80,9 @@ export function usePlanCheckout({ checkout, currency, next }: UsePlanCheckoutOpt
       window.location.assign(url);
     } catch {
       setStatus("failed");
-      toast.error(t("onboarding.launch.plan.failed"));
+      toast.error(
+        t(checkout.trial ? "onboarding.launch.plan.trialFailed" : "onboarding.launch.plan.failed")
+      );
     }
   }, [checkout, currency, next, t]);
 

@@ -273,6 +273,13 @@ const checkoutOk = (): Reply => ({
   status: 201,
   body: { success: true, data: { sessionId: "cs_1", url: STRIPE_URL } },
 });
+// A first POS subscription: the trial starts on the server with no card, and
+// the answer is the success page, not Stripe.
+const TRIAL_URL = "http://localhost/checkout/success?plan=POS&trial=true&session_id=sub_trial_1";
+const trialOk = (): Reply => ({
+  status: 201,
+  body: { success: true, data: { url: TRIAL_URL, trialStarted: true } },
+});
 
 const eventsNamed = (name: string) =>
   analytics.trackEvent.mock.calls.filter(([event]) => event === name).map(([, params]) => params);
@@ -891,34 +898,33 @@ describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, (
   });
 
   describe("the plan picked goes on to Checkout", () => {
-    it("a POS pick opens the trial Checkout after publishing: a card, nothing charged today", async () => {
+    it("a POS pick starts the trial after publishing, with no card and no Checkout", async () => {
       routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: ["counter"] });
-      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      routes["POST /api/subscriptions/checkout"] = trialOk;
       renderWizard(savedStore({ step: 3 }));
 
       fireEvent.click(screen.getByRole("checkbox", { name: /Take orders at the counter/ }));
       expect(screen.getByTestId("goals-next-step")).toHaveTextContent(
-        "After publishing, you'll add a card to start your 14-day POS trial. Nothing is charged today."
+        "After publishing, your 14-day POS trial starts straight away. No card needed."
       );
       fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
 
-      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(TRIAL_URL));
       expect(bodyOf("POST", "/api/subscriptions/checkout")).toEqual({
         plan: "POS",
         yearly: false,
         currency: "EUR",
         next: "/store/store_1/dashboard?tour=1",
       });
-      expect(analytics.trackConversion).toHaveBeenCalledWith(
+      // No checkout happened: the success page records trial_started instead.
+      expect(analytics.trackConversion).not.toHaveBeenCalledWith(
         "begin_checkout",
-        expect.objectContaining({ plan: "POS", trial: true, source: "onboarding" })
+        expect.anything()
       );
-      expect(analytics.trackMetaPixelEvent).toHaveBeenCalledWith("InitiateCheckout", {
-        content_name: "POS",
-        content_category: "trial",
-        value: 13.99,
-        currency: "EUR",
-      });
+      expect(analytics.trackMetaPixelEvent).not.toHaveBeenCalledWith(
+        "InitiateCheckout",
+        expect.anything()
+      );
     });
 
     it("a plan picked on the pricing page comes ticked and keeps its billing interval", async () => {
@@ -979,7 +985,7 @@ describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, (
 
       await waitFor(() =>
         expect(toasts.error).toHaveBeenCalledWith(
-          "Checkout didn't open. Try again, or later from Billing."
+          "Your trial didn't start. Try again, or later from Billing."
         )
       );
       expect(assign).not.toHaveBeenCalled();
@@ -988,9 +994,9 @@ describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, (
       });
       expect(retry).toBeEnabled();
 
-      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      routes["POST /api/subscriptions/checkout"] = trialOk;
       fireEvent.click(retry);
-      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(TRIAL_URL));
       expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(2);
     });
 

@@ -56,6 +56,20 @@ export const portalSchema = z.object({
 export type PortalInput = z.infer<typeof portalSchema>;
 
 /**
+ * Billing → Add a card (POST /api/subscriptions/payment-method). Where Stripe's
+ * portal sends the owner back to: an app path only, never another site.
+ */
+export const paymentMethodSessionSchema = z.object({
+  returnPath: z
+    .string()
+    .max(512)
+    .refine((value) => safeInternalPath(value) !== null, "Must be an app path")
+    .optional(),
+});
+
+export type PaymentMethodSessionInput = z.infer<typeof paymentMethodSessionSchema>;
+
+/**
  * BETA / privilege freestyle plan switch.
  * Only admin-granted (non-payment) accounts may use this — any plan, no checkout.
  */

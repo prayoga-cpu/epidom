@@ -111,14 +111,14 @@ describe("PricingCards confirm dialog", () => {
     expect(d.getByText(pricing(fr).dlgEyebrow)).toBeTruthy();
     expect(d.getByText("Démarrer l'essai gratuit POS")).toBeTruthy();
     // The emphasised phrase is its own <strong>, the {name} is filled in.
-    expect(d.getByText("rien ne sera débité pendant 14 jours").tagName).toBe("STRONG");
+    expect(d.getByText("sans carte").tagName).toBe("STRONG");
     expect(d.getByText("POS", { selector: "strong" })).toBeTruthy();
     expect(d.getByRole("button", { name: "Annuler" })).toBeTruthy();
     expect(d.getByRole("button", { name: "Confirmer" })).toBeTruthy();
 
     // Nothing from the old hardcoded English survives.
     expect(dialog.textContent).not.toMatch(
-      /Confirm Plan Change|free trial|won't be charged|Cancel|Confirm\b/
+      /Confirm Plan Change|free trial|no card needed|Cancel|Confirm\b/
     );
   });
 
@@ -139,7 +139,7 @@ describe("PricingCards confirm dialog", () => {
     const d = within(screen.getByRole("dialog"));
     expect(d.getByText("Confirm Plan Change")).toBeTruthy();
     expect(d.getByText("Start POS free trial")).toBeTruthy();
-    expect(d.getByText("won't be charged for 14 days").tagName).toBe("STRONG");
+    expect(d.getByText("no card needed").tagName).toBe("STRONG");
     expect(d.getByText("Cancel")).toBeTruthy();
     expect(d.getByText("Confirm")).toBeTruthy();
   });

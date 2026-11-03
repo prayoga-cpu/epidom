@@ -55,8 +55,9 @@ export function CheckoutSuccessContent() {
     if (!trackedRef.current && firstVisitOf(sessionId)) {
       trackedRef.current = true;
       const charge = planChargeAmount(planName, currency, yearly);
-      // The Checkout session id, as Meta's eventID: one checkout, one event,
-      // also if a server-side copy is ever sent.
+      // The Checkout session id (for the card-less POS trial, its subscription
+      // id), as Meta's eventID: one checkout, one event, also if a server-side
+      // copy is ever sent.
       const metaOptions = sessionId ? { eventId: sessionId } : undefined;
       trackConversion("subscription_started", {
         event_label: planName ?? "unknown",
@@ -178,7 +179,8 @@ export function CheckoutSuccessContent() {
                 <span className="text-foreground font-semibold">{planName}</span>
               </div>
             )}
-            {sessionId && (
+            {/* A trial has no order: its id is the trial subscription's. */}
+            {sessionId && !isTrial && (
               <div className="flex items-center justify-between border-t pt-4">
                 <span className="text-muted-foreground text-sm font-medium">
                   {t("checkout.success.orderId")}

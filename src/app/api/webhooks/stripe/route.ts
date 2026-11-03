@@ -23,6 +23,9 @@ import {
 } from "@/types/stripe";
 import Stripe from "stripe";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import { sendTrialEndingEmail } from "@/lib/services/email.service";
+import { servingAppUrl } from "@/lib/app-url";
 import {
   recordInvoiceCommission,
   recordRefund,
@@ -149,6 +152,9 @@ export async function POST(request: NextRequest) {
         break;
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+      case "customer.subscription.trial_will_end":
+        await handleTrialWillEnd(event.data.object as Stripe.Subscription);
         break;
       case "invoice.payment_succeeded":
         await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
@@ -393,6 +399,56 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   });
 
   subscriptionService.invalidateUserCache(existingSubscription.userId);
+}
+
+/**
+ * Three days before a trial ends (Stripe's own timing). With no card to
+ * charge, the trial will simply end and the account go back to Free, so the
+ * owner gets one reminder with a link to Billing → Add a card. With a card on
+ * file nothing is sent: Stripe charges it and emails the receipt.
+ * A failed email is logged, never thrown, so Stripe doesn't retry the event.
+ */
+async function handleTrialWillEnd(eventSubscription: Stripe.Subscription) {
+  const row = await subscriptionRepository.findByStripeSubscriptionId(eventSubscription.id);
+  if (!row) return;
+
+  const live = await stripe.subscriptions.retrieve(eventSubscription.id, { expand: ["customer"] });
+  if (live.status !== "trialing" || !live.trial_end) return;
+  const customer = live.customer;
+  const hasCard =
+    !!live.default_payment_method ||
+    (typeof customer === "object" &&
+      !customer.deleted &&
+      !!customer.invoice_settings?.default_payment_method);
+  if (hasCard) return;
+
+  const user = await prisma.user.findUnique({
+    where: { id: row.userId },
+    select: {
+      email: true,
+      name: true,
+      locale: true,
+      business: {
+        select: { stores: { select: { id: true }, orderBy: { createdAt: "asc" }, take: 1 } },
+      },
+    },
+  });
+  if (!user) return;
+  const storeId = user.business?.stores[0]?.id;
+  const result = await sendTrialEndingEmail({
+    email: user.email,
+    name: user.name,
+    locale: user.locale,
+    trialEndsAt: new Date(live.trial_end * 1000),
+    billingUrl: `${servingAppUrl()}${storeId ? `/store/${storeId}/billing` : "/stores"}`,
+  });
+  if (!result.success) {
+    logger.error("POS trial reminder email failed", {
+      userId: row.userId,
+      subscriptionId: live.id,
+      error: result.error,
+    });
+  }
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {

@@ -44,6 +44,7 @@ vi.mock("@/lib/stripe", () => ({
       update: vi.fn().mockResolvedValue({}),
       cancel: vi.fn().mockResolvedValue({}),
       retrieve: vi.fn(),
+      create: vi.fn(),
     },
   },
 }));
@@ -748,7 +749,6 @@ describe("SubscriptionService", () => {
         "OPERATIONS",
         "https://app.test/checkout/success",
         "https://app.test/checkout/failed?reason=canceled",
-        false,
         true
       );
 
@@ -775,7 +775,7 @@ describe("SubscriptionService", () => {
         percent: 10,
       });
 
-      await service.createCheckoutSession("user-1", "OPERATIONS", "https://a/s", "https://a/c", false);
+      await service.createCheckoutSession("user-1", "OPERATIONS", "https://a/s", "https://a/c");
 
       const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
         string,
@@ -785,34 +785,12 @@ describe("SubscriptionService", () => {
       expect(params.metadata).toEqual({ userId: "user-1", plan: "OPERATIONS" });
     });
 
-    it("with the trial, the coupon waits in the metadata for the webhook", async () => {
-      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
-      mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
-      vi.mocked(getCheckoutReferralDiscount).mockResolvedValueOnce({
-        couponId: "epidom-ref-once-10",
-        percent: 10,
-      });
-
-      await service.createCheckoutSession("user-1", "POS", "https://a/s", "https://a/c", true);
-
-      const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
-        string,
-        unknown
-      >;
-      expect(params).not.toHaveProperty("discounts");
-      expect(params.metadata).toEqual({
-        userId: "user-1",
-        plan: "POS",
-        referralCoupon: "epidom-ref-once-10",
-      });
-    });
-
     it("a failed referral lookup never blocks the checkout", async () => {
       mocks.userRepo.findById.mockResolvedValue(mockUser as any);
       mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
       vi.mocked(getCheckoutReferralDiscount).mockRejectedValueOnce(new Error("Stripe down"));
 
-      await service.createCheckoutSession("user-1", "POS", "https://a/s", "https://a/c", false);
+      await service.createCheckoutSession("user-1", "POS", "https://a/s", "https://a/c");
 
       const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
         string,
@@ -821,23 +799,18 @@ describe("SubscriptionService", () => {
       expect(params).not.toHaveProperty("discounts");
     });
 
-    it("adds the 14-day trial when asked", async () => {
+    it("never adds a trial: the POS trial starts without Checkout", async () => {
       mocks.userRepo.findById.mockResolvedValue(mockUser as any);
       mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
 
-      await service.createCheckoutSession("user-1", "POS", "https://a/s", "https://a/c", true);
+      await service.createCheckoutSession("user-1", "POS", "https://a/s", "https://a/c");
 
       const params = vi.mocked(stripe.checkout.sessions.create).mock.calls[0][0] as Record<
         string,
         unknown
       >;
-      expect(params.subscription_data).toEqual({
-        metadata: { userId: "user-1", plan: "POS" },
-        trial_period_days: 14,
-      });
-      // The trial still takes a card: nothing charged today, renews on it after 14 days.
-      expect(params.payment_method_collection).toBe("always");
-      expect(params).not.toHaveProperty("payment_method_types");
+      expect(params.subscription_data).toEqual({ metadata: { userId: "user-1", plan: "POS" } });
+      expect(params).not.toHaveProperty("payment_method_collection");
     });
 
     it("charges in the currency the page quoted, not the one Stripe guesses from the IP", async () => {
@@ -849,7 +822,6 @@ describe("SubscriptionService", () => {
         "POS",
         "https://a/s",
         "https://a/c",
-        false,
         false,
         "EUR"
       );
@@ -889,7 +861,6 @@ describe("SubscriptionService", () => {
         "https://a/s",
         "https://a/c",
         false,
-        false,
         "EUR"
       );
 
@@ -916,7 +887,6 @@ describe("SubscriptionService", () => {
         "https://a/s",
         "https://a/c",
         false,
-        false,
         "EUR"
       );
 
@@ -937,7 +907,6 @@ describe("SubscriptionService", () => {
         "POS",
         "https://a/s",
         "https://a/c",
-        false,
         false,
         "EUR"
       );
@@ -962,11 +931,239 @@ describe("SubscriptionService", () => {
           "https://a/s",
           "https://a/c",
           false,
-          false,
           "EUR"
         )
       ).rejects.toThrow("No such price");
       expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("startPosTrial", () => {
+    const freeRow = {
+      ...mockSubscription,
+      stripeCustomerId: "free_user-1",
+      stripeSubscriptionId: null,
+      plan: SubscriptionPlan.FREE,
+    };
+    const trialing = {
+      id: "sub_trial_1",
+      status: "trialing",
+      trial_end: 1_800_000_000,
+      discounts: [],
+      items: {
+        data: [
+          {
+            price: { id: "price_pos_m" },
+            current_period_start: 1_798_790_400,
+            current_period_end: 1_800_000_000,
+          },
+        ],
+      },
+    };
+
+    beforeEach(() => {
+      mocks.userRepo.findById.mockResolvedValue(mockUser as any);
+      vi.mocked(stripe.subscriptions.create).mockResolvedValue(trialing as any);
+    });
+
+    it("starts a 14-day trial with no card that Stripe cancels if none is added", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(freeRow);
+
+      const created = await service.startPosTrial("user-1", false, "EUR");
+
+      expect(created.id).toBe("sub_trial_1");
+      expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+      const [params, options] = vi.mocked(stripe.subscriptions.create).mock.calls[0];
+      expect(params).toEqual({
+        customer: "cus_123",
+        items: [{ price: expect.any(String) }],
+        trial_period_days: 14,
+        trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+        payment_settings: { save_default_payment_method: "on_subscription" },
+        metadata: { userId: "user-1", plan: "POS" },
+        currency: "eur",
+      });
+      expect(params).not.toHaveProperty("default_payment_method");
+      // A double click gets the same subscription back.
+      expect(options).toEqual({ idempotencyKey: "pos-trial:cus_123:monthly:EUR" });
+    });
+
+    it("puts POS on the row at once, ACTIVE until the trial's end", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(freeRow);
+
+      await service.startPosTrial("user-1", false, "EUR");
+
+      expect(mocks.subscriptionRepo.update).toHaveBeenLastCalledWith("user-1", {
+        stripeCustomerId: "cus_123",
+        stripeSubscriptionId: "sub_trial_1",
+        stripePriceId: "price_pos_m",
+        plan: SubscriptionPlan.POS,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodStart: new Date(1_798_790_400 * 1000),
+        currentPeriodEnd: new Date(1_800_000_000 * 1000),
+        trialEndsAt: new Date(1_800_000_000 * 1000),
+        cancelAtPeriodEnd: false,
+      });
+    });
+
+    it("creates the row when the account has none yet", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(null);
+
+      await service.startPosTrial("user-1");
+
+      expect(mocks.subscriptionRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-1",
+          stripeSubscriptionId: "sub_trial_1",
+          plan: SubscriptionPlan.POS,
+          status: SubscriptionStatus.ACTIVE,
+        })
+      );
+      const params = vi.mocked(stripe.subscriptions.create).mock.calls[0][0] as unknown as Record<
+        string,
+        unknown
+      >;
+      expect(params).not.toHaveProperty("currency");
+    });
+
+    it("adds a referral coupon after creation, so the $0 trial invoice can't use it up", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(freeRow);
+      vi.mocked(getCheckoutReferralDiscount).mockResolvedValueOnce({
+        couponId: "epidom-ref-once-10",
+        percent: 10,
+      });
+
+      await service.startPosTrial("user-1", false, "EUR");
+
+      const params = vi.mocked(stripe.subscriptions.create).mock.calls[0][0] as unknown as Record<
+        string,
+        unknown
+      >;
+      expect(params).not.toHaveProperty("discounts");
+      expect(stripe.subscriptions.update).toHaveBeenCalledWith("sub_trial_1", {
+        discounts: [{ coupon: "epidom-ref-once-10" }],
+      });
+    });
+
+    it("keeps the customer's existing currency when Stripe won't mix currencies", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(freeRow);
+      vi.mocked(stripe.subscriptions.create)
+        .mockRejectedValueOnce(new Error("You cannot combine currencies on a single customer."))
+        .mockResolvedValueOnce(trialing as any);
+
+      await service.startPosTrial("user-1", true, "EUR");
+
+      const [first, retry] = vi.mocked(stripe.subscriptions.create).mock.calls;
+      expect((first[0] as unknown as Record<string, unknown>).currency).toBe("eur");
+      expect(retry[0]).not.toHaveProperty("currency");
+      expect(retry[1]).toEqual({ idempotencyKey: "pos-trial:cus_123:yearly:default" });
+    });
+
+    it("refuses an account that owes an admin-quoted price", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...freeRow,
+        status: SubscriptionStatus.INCOMPLETE,
+        customPricePendingAt: new Date(),
+      });
+
+      await expect(service.startPosTrial("user-1")).rejects.toThrow(
+        "A custom price is awaiting payment on this account."
+      );
+      expect(stripe.subscriptions.create).not.toHaveBeenCalled();
+    });
+
+    it("surfaces any other Stripe error and leaves the row alone", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      vi.mocked(stripe.subscriptions.create).mockRejectedValueOnce(new Error("No such price"));
+
+      await expect(service.startPosTrial("user-1", false, "EUR")).rejects.toThrow("No such price");
+      expect(mocks.subscriptionRepo.create).not.toHaveBeenCalled();
+      expect(mocks.subscriptionRepo.update).not.toHaveBeenCalledWith(
+        "user-1",
+        expect.objectContaining({ plan: SubscriptionPlan.POS })
+      );
+    });
+  });
+
+  describe("hasPaymentMethod", () => {
+    it("is false without a Stripe subscription", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeSubscriptionId: null,
+      });
+      expect(await service.hasPaymentMethod("user-1")).toBe(false);
+      expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+    });
+
+    it("reads the subscription's card, then the customer's default", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      const customer = (pm: string | null) => ({
+        id: "cus_123",
+        deleted: undefined,
+        invoice_settings: { default_payment_method: pm },
+      });
+      vi.mocked(stripe.subscriptions.retrieve)
+        .mockResolvedValueOnce({
+          default_payment_method: "pm_sub",
+          customer: customer(null),
+        } as any)
+        .mockResolvedValueOnce({
+          default_payment_method: null,
+          customer: customer("pm_cus"),
+        } as any)
+        .mockResolvedValueOnce({ default_payment_method: null, customer: customer(null) } as any);
+
+      expect(await service.hasPaymentMethod("user-1")).toBe(true);
+      expect(await service.hasPaymentMethod("user-1")).toBe(true);
+      expect(await service.hasPaymentMethod("user-1")).toBe(false);
+      expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_stripe_123", {
+        expand: ["customer"],
+      });
+    });
+  });
+
+  describe("createPaymentMethodSession", () => {
+    it("opens the portal straight on adding a payment method", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+
+      await service.createPaymentMethodSession("user-1", "https://app.test/store/s1/billing");
+
+      expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
+        customer: "cus_123",
+        return_url: "https://app.test/store/s1/billing",
+        flow_data: {
+          type: "payment_method_update",
+          after_completion: {
+            type: "redirect",
+            redirect: { return_url: "https://app.test/store/s1/billing" },
+          },
+        },
+      });
+    });
+
+    it("falls back to the portal home when the shortcut is refused", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      vi.mocked(stripe.billingPortal.sessions.create).mockRejectedValueOnce(
+        new Error("This feature is disabled in your portal configuration")
+      );
+
+      const session = await service.createPaymentMethodSession("user-1", "https://app.test/b");
+
+      expect(session.url).toBe("https://billing.stripe.com/session");
+      expect(vi.mocked(stripe.billingPortal.sessions.create).mock.calls[1][0]).toEqual({
+        customer: "cus_123",
+        return_url: "https://app.test/b",
+      });
+    });
+
+    it("refuses an account with no Stripe customer", async () => {
+      mocks.subscriptionRepo.findByUserId.mockResolvedValue({
+        ...mockSubscription,
+        stripeCustomerId: "free_user-1",
+      });
+      await expect(
+        service.createPaymentMethodSession("user-1", "https://app.test/b")
+      ).rejects.toThrow("No Stripe billing on this account");
     });
   });
 

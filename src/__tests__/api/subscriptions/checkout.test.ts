@@ -21,13 +21,16 @@ vi.mock("@/lib/api-handler", async () => {
 // var avoids TDZ — vi.mock factory is hoisted above const/let declarations.
 var mockCreateCheckoutSession: any;
 var mockCreatePortalSession: any;
+var mockStartPosTrial: any;
 vi.mock("@/lib/services", () => {
   mockCreateCheckoutSession = vi.fn();
   mockCreatePortalSession = vi.fn();
+  mockStartPosTrial = vi.fn();
   return {
     subscriptionService: {
       createCheckoutSession: mockCreateCheckoutSession,
       createPortalSession: mockCreatePortalSession,
+      startPosTrial: mockStartPosTrial,
     },
   };
 });
@@ -59,18 +62,51 @@ describe("POST /api/subscriptions/checkout", () => {
     mockCreatePortalSession.mockReset();
     mockFindByUserId.mockReset();
     mockFindByUserId.mockResolvedValue(null);
+    mockStartPosTrial.mockReset();
+    mockStartPosTrial.mockResolvedValue({ id: "sub_trial_1", trial_end: 1_800_000_000 });
+  });
+
+  it("starts a first POS subscription as the card-less trial, with no Checkout", async () => {
+    const res = await POST(makeReq({ plan: "POS", yearly: false, currency: "EUR" }), {} as any);
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(mockStartPosTrial).toHaveBeenCalledWith("user-1", false, "EUR");
+    expect(mockCreateCheckoutSession).not.toHaveBeenCalled();
+    expect(body.data).toMatchObject({
+      trialStarted: true,
+      trialEndsAt: new Date(1_800_000_000 * 1000).toISOString(),
+      // The success page, with the trial's subscription id where Stripe's
+      // session id goes, so a reload doesn't count the trial twice.
+      url: "https://app.test/checkout/success?plan=POS&trial=true&billing=monthly&currency=EUR&session_id=sub_trial_1",
+    });
+  });
+
+  it("sends the trial's success page on to `next`", async () => {
+    const res = await POST(
+      makeReq({ plan: "POS", yearly: true, next: "/store/s1/dashboard?tour=1" }),
+      {} as any
+    );
+
+    const next = encodeURIComponent("/store/s1/dashboard?tour=1");
+    expect((await res.json()).data.url).toBe(
+      `https://app.test/checkout/success?plan=POS&trial=true&billing=yearly&session_id=sub_trial_1&next=${next}`
+    );
+    expect(mockStartPosTrial).toHaveBeenCalledWith("user-1", true, undefined);
   });
 
   it("passes the currency the page quoted on to Checkout", async () => {
-    const res = await POST(makeReq({ plan: "POS", yearly: false, currency: "EUR" }), {} as any);
+    const res = await POST(
+      makeReq({ plan: "OPERATIONS", yearly: false, currency: "EUR" }),
+      {} as any
+    );
 
     expect(res.status).toBe(201);
     expect(mockCreateCheckoutSession).toHaveBeenCalledWith(
       "user-1",
-      "POS",
-      "https://app.test/checkout/success?plan=POS&trial=true&billing=monthly&currency=EUR&session_id={CHECKOUT_SESSION_ID}",
-      "https://app.test/checkout/failed?reason=canceled&plan=POS&billing=monthly",
-      true,
+      "OPERATIONS",
+      "https://app.test/checkout/success?plan=OPERATIONS&trial=false&billing=monthly&currency=EUR&session_id={CHECKOUT_SESSION_ID}",
+      "https://app.test/checkout/failed?reason=canceled&plan=OPERATIONS&billing=monthly",
       false,
       "EUR"
     );
@@ -85,7 +121,6 @@ describe("POST /api/subscriptions/checkout", () => {
       "OPERATIONS",
       expect.any(String),
       expect.any(String),
-      false,
       true,
       undefined
     );
@@ -93,17 +128,17 @@ describe("POST /api/subscriptions/checkout", () => {
 
   it("sends both default pages on to `next`, and the cancel page back to the plan", async () => {
     await POST(
-      makeReq({ plan: "POS", yearly: true, next: "/store/s1/dashboard?tour=1" }),
+      makeReq({ plan: "OPERATIONS", yearly: true, next: "/store/s1/dashboard?tour=1" }),
       {} as any
     );
 
     const [, , successUrl, cancelUrl] = mockCreateCheckoutSession.mock.calls[0];
     const next = encodeURIComponent("/store/s1/dashboard?tour=1");
     expect(successUrl).toBe(
-      `https://app.test/checkout/success?plan=POS&trial=true&billing=yearly&session_id={CHECKOUT_SESSION_ID}&next=${next}`
+      `https://app.test/checkout/success?plan=OPERATIONS&trial=false&billing=yearly&session_id={CHECKOUT_SESSION_ID}&next=${next}`
     );
     expect(cancelUrl).toBe(
-      `https://app.test/checkout/failed?reason=canceled&plan=POS&billing=yearly&next=${next}`
+      `https://app.test/checkout/failed?reason=canceled&plan=OPERATIONS&billing=yearly&next=${next}`
     );
   });
 
@@ -131,8 +166,9 @@ describe("POST /api/subscriptions/checkout", () => {
     });
     await POST(makeReq({ plan: "POS" }), {} as any);
 
-    const [, , successUrl, , trial] = mockCreateCheckoutSession.mock.calls[0];
-    expect(trial).toBe(false);
+    expect(mockStartPosTrial).not.toHaveBeenCalled();
+    const [, plan, successUrl] = mockCreateCheckoutSession.mock.calls[0];
+    expect(plan).toBe("POS");
     expect(successUrl).toContain("trial=false");
   });
 

@@ -9,6 +9,14 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.41.0] - 2026-11-03 · feat
+
+- **The POS trial no longer asks for a card.** Pick POS on the pricing page, during setup or in Billing, and the 14 days start straight away, with no card and no payment page.
+- Billing shows how many trial days are left and an **Add a card** button. Add one before the trial ends to keep POS: it is first charged on the trial's last day.
+- No card at the end? The account goes back to the Free plan on its own. Nothing is deleted: your menu, orders and staff are still there when you subscribe.
+- Three days before the end, owners who haven't added a card get a reminder email, in their language, with a link to Billing.
+- The pricing page, setup, Billing and the FAQ now say "no card needed", in English, French and Indonesian.
+
 ## [3.40.0] - 2026-11-03 · feat
 
 - **Use Epidom from your own Claude** (Beta, Enterprise plan). Add Epidom as a connector in Claude (claude.ai, the desktop and mobile apps, or Claude Code) and ask in plain words: how last week went compared with the week before, what's low and what to reorder, who works on Saturday, which dishes earn the most. The AI runs on your own Claude plan.

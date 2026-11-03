@@ -27,7 +27,7 @@ The current public pricing, per month before tax. Yearly figures are the per-mon
 | OPERATIONS | €27.99 (€23.49)      | $29.99 ($24.99)      | Rp 459,000 (Rp 379,000)     | none (POS only)   |
 | ENTERPRISE | Custom               | Custom               | Custom                      | Sales-assisted    |
 
-The 14-day trial is POS-only and first-subscription-only (`src/lib/plans/pos-trial.ts`, `POS_TRIAL_DAYS`); Checkout collects a card and charges nothing until it ends.
+The 14-day trial is POS-only and first-subscription-only (`src/lib/plans/pos-trial.ts`, `POS_TRIAL_DAYS`) and takes **no card** (since 3.41.0): it starts without Checkout, and Stripe ends it on day 14 unless a card was added from Billing. See "POS trial (no card)" below.
 
 (Raised from the original Rp 99k/249k/499k+ figures — see `CHANGELOG.md` 2.24.1. Enterprise moved to
 custom/sales-assisted pricing rather than a fixed Rp 499,000+ floor.)
@@ -147,13 +147,17 @@ NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_YEARLY=price_...
 
 ### Webhook events handled
 
-The production endpoint is `https://epidom.fr/api/webhooks/stripe` (the apex host: Stripe does not
-follow redirects), snapshot payloads, API version `2026-08-26.dahlia`. Subscribe it to exactly these:
+The production endpoint is `https://www.epidom.fr/api/webhooks/stripe`, snapshot payloads, API version
+`2026-08-26.dahlia`. Stripe does not follow redirects, and since the Vercel project moved (2026-10-31)
+the apex `https://epidom.fr` answers 308 → www (checked 2026-11-03), so an endpoint on the apex fails
+every delivery. Subscribe it to exactly these:
 
 - `checkout.session.completed` — provision subscription, set plan
 - `customer.subscription.created` — same, for subscriptions created outside Checkout
 - `customer.subscription.updated` — sync plan, status, period and scheduled cancellation
 - `customer.subscription.deleted` — downgrade to FREE, keep data
+- `customer.subscription.trial_will_end` — 3 days before a trial ends: with no card on file, emails
+  the owner a reminder linking to Billing → Add a card (3.41.0)
 - `invoice.payment_failed` — set status to `PAST_DUE`
 - `invoice.payment_succeeded` — back to `ACTIVE` after a recovered payment; records the account's
   first paid invoice and the partner commission (3.23.0, see "Partners & commissions")
@@ -190,6 +194,35 @@ model Subscription {
 ```
 
 A user with no subscription is implicitly on `FREE`. Don't require a `Subscription` row just to gate features.
+
+### POS trial (no card)
+
+Since 3.41.0 the 14-day POS trial takes no card and opens no Checkout. `POST /api/subscriptions/checkout`
+with `plan: "POS"` on an account that never had a Stripe subscription (`posTrialApplies`) calls
+`SubscriptionService.startPosTrial`, which creates the subscription directly:
+
+- `trial_period_days: 14`, no payment method, `trial_settings.end_behavior.missing_payment_method: "cancel"`,
+  `payment_settings.save_default_payment_method: "on_subscription"`, `currency` = the page's (same
+  "combine currencies" fallback as Checkout), idempotency key per customer, interval and currency.
+- The row gets POS / ACTIVE / `trialEndsAt` at once; the `customer.subscription.created` webhook then
+  writes the same values.
+- The route answers `{ url: /checkout/success?…&trial=true&session_id=<sub id>, trialStarted: true }`.
+  Callers navigate there and record no `begin_checkout` / `InitiateCheckout`; the success page records
+  `trial_started` / `StartTrial`.
+
+Keeping POS: Billing shows the trial (days left) and **Add a card** (`POST /api/subscriptions/payment-method`),
+Stripe's billing portal opened on `flow_data.type: "payment_method_update"` (falls back to the portal home
+if the live portal configuration refuses it). The card becomes the customer's default, and Stripe charges
+it when the trial ends. `GET /api/subscriptions/payment-method` tells the notice whether one is saved.
+
+Not keeping it: on day 14 Stripe cancels the subscription, `customer.subscription.deleted` sets the row
+CANCELED, and every plan gate reads a non-ACTIVE row as Free. Nothing is deleted. A cancelled trial
+still holds a `stripeSubscriptionId`, so the trial can't be taken twice; a later POS purchase is a normal
+Checkout with no trial.
+
+Verified on the sandbox with a test clock (2026-11-03): no card → `canceled` at day 15; card attached as
+the customer default mid-trial → `active`, €13.99 invoice paid; `trial_will_end` fires; the portal
+shortcut opens. Not yet seen end to end on the live account.
 
 ### Admin custom price override
 
@@ -243,9 +276,11 @@ Stripe), `src/lib/partners/commission-math.ts` (pure arithmetic), `src/lib/servi
   and to full admins only (`getPartnerDetail(..., { includeBankDetails: admin.full })`).
 - **Customer discount** (referral links only, default 10%, first invoice only): a one-time Stripe coupon
   per percentage (`epidom-ref-once-10`), created on first use. Without a trial it is on the Checkout
-  Session (`discounts`); with the POS trial it waits in the session metadata (`referralCoupon`) and
-  `checkout.session.completed` puts it on the subscription after the trial's $0 invoice exists, so the
-  first paid invoice gets it. Never on custom-price checkouts, capped at 50%.
+  Session (`discounts`); the POS trial (no Checkout since 3.41.0) gets it on the subscription right
+  after `startPosTrial` creates it, once the trial's $0 invoice exists, so the first paid invoice gets
+  it. (Older trials that went through Checkout carried it in the session metadata, `referralCoupon`,
+  for `checkout.session.completed`; that path stays for them.) Never on custom-price checkouts,
+  capped at 50%.
 - **Invitations**: a partner can be created for an email with no account (`Partner.inviteEmail`, `userId` null); the token is a `Verification` row (`partner-invite:<token>`, 14 days, `src/lib/partner-invite.ts`), emailed via Resend; `/partner-invite` (public) has them sign up or sign in with that address and links them (`POST /api/partner-invite/accept`), then opens their page. Commission credited before they join still counts.
 - **Following a partner without being one**: give that account the Referrals admin page (Access dialog). The read-only partner-page viewer (`PartnerViewer`) was removed in 3.27.0; its table is unused and dropped in a later release.
 - **Self-referral**: a sign-up from the partner's own mailbox (Gmail dots/+tags ignored) isn't credited;

@@ -29,6 +29,8 @@ const KEYS = [
     "checkoutCta",
     "redirecting",
     "failed",
+    "trialStarting",
+    "trialFailed",
   ].map((k) => `onboarding.launch.plan.${k}`),
   ...["continueToStore", "trialTitle", "trialSubtitle", "trialMessage", "trialStatus"].map(
     (k) => `checkout.success.${k}`
@@ -56,14 +58,15 @@ describe("plan Checkout copy", () => {
     }
   });
 
-  it("the trial copy says a card is added, and never that no card is needed", () => {
+  it("the trial copy says no card is needed (the trial starts without one, 3.41.0)", () => {
     for (const [locale, dict] of Object.entries(DICTS)) {
-      const text = [
-        lookup(dict, "onboarding.goals.next.trial"),
-        lookup(dict, "onboarding.launch.plan.trialBody"),
-      ].join(" ");
-      expect(text, locale).toMatch(/card|carte|kartu/i);
-      expect(text, locale).not.toMatch(/no card|sans carte|tanpa kartu/i);
+      for (const key of [
+        "onboarding.goals.next.trial",
+        "onboarding.launch.plan.trialBody",
+        "checkout.success.trialSubtitle",
+      ]) {
+        expect(lookup(dict, key), `${locale}: ${key}`).toMatch(/no card|sans carte|tanpa kartu/i);
+      }
     }
   });
 });

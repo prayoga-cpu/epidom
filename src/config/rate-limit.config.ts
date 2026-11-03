@@ -38,6 +38,10 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 10,
     window: 60, // 10 portal sessions per minute
   },
+  "/api/subscriptions/payment-method": {
+    limit: 10,
+    window: 60, // 10 "add a card" portal sessions / card checks per minute
+  },
   "/api/subscriptions/sync": {
     limit: 5,
     window: 60, // 5 sync operations per minute

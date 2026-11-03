@@ -1,4 +1,7 @@
-/** Length of the POS plan's free trial. Checkout collects a card and charges nothing until it ends. */
+/**
+ * Length of the POS plan's free trial. It takes no card: Stripe ends it on the
+ * last day unless one was added from Billing (see SubscriptionService.startPosTrial).
+ */
 export const POS_TRIAL_DAYS = 14;
 
 /**

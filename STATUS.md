@@ -1,5 +1,29 @@
 # STATUS.md
 
+## 3.41.0 — POS trial without a card — pushed to main 2026-11-03
+
+**Built:** first POS subscription = 14-day trial created straight in Stripe (no Checkout, no card,
+`missing_payment_method: "cancel"`); Billing trial notice + Add a card (portal `payment_method_update`);
+`trial_will_end` reminder email (en/fr/id); "no card needed" copy everywhere the trial is offered.
+Design: `docs/BILLING.md` → "POS trial (no card)".
+
+**Verified before the push:** Stripe sandbox test clock (no card → canceled at day 15; card added →
+active, €13.99 paid; `trial_will_end` fires; portal shortcut opens); the CI sequence (lint, typegen,
+type-check, 8734 tests) and `next build`. **Not verified:** a browser pass, the live Stripe account.
+
+**Operator steps (operator reported all done 2026-11-03):**
+- [x] Production Stripe env → LIVE keys, webhook secret and the four `NEXT_PUBLIC_STRIPE_PRICE_ID_*`
+  (found 2026-11-03: the new Vercel project had been copied from local `.env`, sandbox keys).
+  Right before the push the SERVING build (3.40.0) still accepted an event signed with the sandbox
+  webhook secret: env changes only reach new deployments. Re-check after this deploy (sign a
+  harmless `epidom.key_check` event with the sandbox `whsec_`: 400 = live secret in use).
+- [x] Live webhook URL → `https://www.epidom.fr/api/webhooks/stripe` (the apex answers 308; Stripe
+  doesn't follow redirects).
+- [x] `customer.subscription.trial_will_end` subscribed on that endpoint.
+- [ ] Customer portal: keep "Customers can update payment methods" on (Add a card needs it).
+- [ ] One real run after deploy: new account → POS trial → Billing shows 14 days + Add a card →
+  add a card → the notice says the card is saved.
+
 ## 3.40.0 — Claude connector (remote MCP), **Beta** — merged into main 2026-11-03 (built 2026-10-29 on `dev`, branch deleted after the merge)
 
 Design and tool catalog: `docs/MCP.md`.

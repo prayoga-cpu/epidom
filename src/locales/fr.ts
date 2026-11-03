@@ -5542,6 +5542,18 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       "Les rapports avancés ne sont disponibles que dans les forfaits Pro et Enterprise",
     storeLimitReached:
       "Vous avez atteint la limite de magasins de votre forfait ({current}/{limit}).",
+    trial: {
+      title: "Essai gratuit POS · {days} jours restants",
+      titleOneDay: "Essai gratuit POS · 1 jour restant",
+      titleLastDay: "Essai gratuit POS · dernier jour",
+      ends: "Fin de l'essai",
+      noCardBody:
+        "Ajoutez une carte pour garder le POS après le {date}. Rien n'est débité d'ici là. Sans carte, votre compte repasse au plan Gratuit le {date}, et rien n'est supprimé.",
+      cardBody:
+        "Votre carte est enregistrée : le POS se renouvelle le {date}, à la fin de l'essai. Annulez avant cette date et vous ne serez pas débité.",
+      addCard: "Ajouter une carte",
+      error: "Le formulaire de carte ne s'est pas ouvert. Veuillez réessayer.",
+    },
     planCards: {
       title: "Des forfaits qui grandissent avec vous",
       subtitle: "Comparez ce que comprend chaque forfait et changez dès que votre activité évolue.",
@@ -5569,9 +5581,9 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       checkoutBodyYearly:
         "Vous réglerez {name} sur Stripe, avec une facturation annuelle. Votre forfait s'active dès que le paiement est validé.",
       trialBodyMonthly:
-        "Vous ajouterez une carte sur Stripe sans être débité pendant 14 jours. Ensuite, {name} se renouvelle chaque mois jusqu'à résiliation.",
+        "Votre essai de 14 jours démarre tout de suite, sans carte. Pour garder {name} ensuite, facturé chaque mois, ajoutez une carte dans Facturation avant la fin de l'essai. Sans carte, vous repassez au plan Gratuit et rien n'est supprimé.",
       trialBodyYearly:
-        "Vous ajouterez une carte sur Stripe sans être débité pendant 14 jours. Ensuite, {name} se renouvelle chaque année jusqu'à résiliation.",
+        "Votre essai de 14 jours démarre tout de suite, sans carte. Pour garder {name} ensuite, facturé chaque année, ajoutez une carte dans Facturation avant la fin de l'essai. Sans carte, vous repassez au plan Gratuit et rien n'est supprimé.",
       replacesPlan: "Il remplace votre forfait {current} actuel.",
       portalBody:
         "Vous allez continuer vers le portail de facturation Stripe, où vous pourrez passer au forfait {name}.",
@@ -5767,8 +5779,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       continueToProfile: "Continuer vers le Profil",
       continueToStore: "Aller à mon établissement",
       trialTitle: "Votre essai gratuit a commencé",
-      trialSubtitle: "Rien n'a été débité aujourd'hui",
-      trialMessage: "Votre carte est enregistrée pour la fin de l'essai. Annulez depuis Facturation avant cette date et vous ne serez pas débité.",
+      trialSubtitle: "Sans carte, rien à payer",
+      trialMessage: "Le POS est à vous pendant 14 jours. Pour le garder ensuite, ajoutez une carte dans Facturation avant la fin de l'essai. Sans carte, votre compte repasse au plan Gratuit et rien n'est supprimé.",
       trialStatus: "Essai gratuit",
       viewDashboard: "Voir le Tableau de Bord",
       confirmationEmail:
@@ -5944,7 +5956,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       publishHint:
         "La publication met votre vitrine en ligne à l'adresse de votre lien. Vous pourrez la modifier à tout moment.",
       next: {
-        trial: "Après la publication, vous ajouterez une carte pour démarrer votre essai POS de 14 jours. Rien n'est débité aujourd'hui.",
+        trial: "Après la publication, votre essai POS de 14 jours démarre tout de suite. Sans carte.",
         pos: "Après la publication, vous passerez au paiement du forfait POS.",
         operations: "Après la publication, vous passerez au paiement du forfait Operations.",
         stayFree: "Laissez POS et Operations décochés pour rester sur l'offre Gratuit.",
@@ -5986,7 +5998,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       backOffice: "Aller à mon Back-Office",
       plan: {
         trialTitle: "Essayez le forfait POS gratuitement pendant 14 jours",
-        trialBody: "Encaissez au comptoir avec la caisse, l'écran cuisine et les tables. Ajoutez une carte pour commencer : rien n'est débité aujourd'hui, et vous pouvez annuler à tout moment avant la fin des 14 jours.",
+        trialBody: "Encaissez au comptoir avec la caisse, l'écran cuisine et les tables. Sans carte : pour garder le POS après les 14 jours, ajoutez-en une dans Facturation avant la fin de l'essai.",
         trialCta: "Démarrer l'essai gratuit",
         posTitle: "Passez au forfait POS",
         posBody: "Encaissez au comptoir avec la caisse, l'écran cuisine et les tables.",
@@ -5995,6 +6007,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         checkoutCta: "Continuer vers le paiement",
         redirecting: "Ouverture du paiement sécurisé…",
         failed: "Le paiement ne s'est pas ouvert. Réessayez, ou plus tard depuis Facturation.",
+        trialStarting: "Démarrage de votre essai…",
+        trialFailed: "Votre essai n'a pas démarré. Réessayez, ou plus tard depuis Facturation.",
       },
     },
   },
@@ -6352,7 +6366,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
           "Le système de prise de commande de bout en bout pour cafés, restaurants et boulangeries : lien en bio, commandes, stock, équipe et finance dans un seul lien web (epidom.fr).",
         ctaTrial: "Essai POS gratuit 14 jours",
         ctaTrialNote:
-          "Carte requise, sans engagement. Annulez avant le 14e jour, vous ne payez rien.",
+          "Sans carte. Après 14 jours, ajoutez une carte pour garder le POS, ou repassez au plan Gratuit.",
         ctaCalculator: "Calculer ma marge",
         migrationLink: "Vous avez déjà une caisse ? →",
         supportLabel: "Support en ligne 24 h/24",
@@ -6576,7 +6590,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
           "Non. Une tablette, un téléphone ou un ordinateur avec un navigateur suffit. Les imprimantes de tickets Bluetooth fonctionnent sur Android et sur ordinateur ; sur iPad, l'impression passe par le navigateur.",
         q5: "Que se passe-t-il après 14 jours ?",
         a5:
-          "L'essai porte sur le forfait POS, pour le premier abonnement d'un compte. Vous ajoutez une carte au départ et ne payez rien pendant 14 jours. Ensuite, le forfait se renouvelle automatiquement et votre carte est débitée. Annulez avant la fin des 14 jours depuis vos paramètres de facturation, et rien ne vous est prélevé.",
+          "L'essai porte sur le forfait POS, pour le premier abonnement d'un compte, et ne demande pas de carte. Pour garder le POS après les 14 jours, ajoutez une carte dans Facturation : elle est débitée pour la première fois à la fin de l'essai. Sans carte, votre compte repasse au plan Gratuit, et votre carte de menu, vos commandes et votre équipe restent là.",
         q6: "Epidom est-il certifié NF525 ?",
         a6: "Epidom respecte les quatre conditions de la loi anti-fraude TVA (inaltérabilité, sécurisation, conservation, archivage) et vous remet l'attestation individuelle de l'éditeur. Depuis le 21 février 2026, la loi de finances pour 2026 l'accepte comme preuve, au même titre qu'un certificat. Epidom n'a pas de certification NF525 délivrée par un organisme accrédité. L'attestation se télécharge depuis le Journal fiscal de votre espace.",
       },
@@ -6700,7 +6714,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       a5: "Oui. Les moyens de paiement s'adaptent à votre région — Stripe pour les cartes partout dans le monde, plus des méthodes locales comme QRIS en Indonésie.",
       a5PayAtCounter: "Oui. La devise, la langue et les taxes suivent votre région, et la caisse enregistre les moyens de paiement de vos clients sur place : carte, espèces, QRIS en Indonésie et d'autres. Les commandes en ligne se règlent au comptoir.",
       pTrialQ: "Que se passe-t-il après l'essai gratuit de 14 jours ?",
-      pTrialA: "L'essai gratuit de 14 jours est proposé sur le forfait POS, pour le premier abonnement POS d'un compte. Vous ajoutez une carte au moment du paiement et ne payez rien pendant 14 jours. Ensuite, le forfait se renouvelle automatiquement et votre carte est débitée. Annulez depuis vos paramètres de facturation avant la fin des 14 jours et rien ne vous sera prélevé.",
+      pTrialA: "L'essai gratuit de 14 jours est proposé sur le forfait POS, pour le premier abonnement POS d'un compte, et ne demande pas de carte. Pour garder le POS après les 14 jours, ajoutez une carte dans Facturation : elle est débitée pour la première fois à la fin de l'essai. Sans carte, votre compte repasse au plan Gratuit, et votre carte de menu, vos commandes et votre équipe restent là.",
       pSwitchQ: "Puis-je changer de forfait ou annuler plus tard ?",
       pSwitchA: "Oui. Vous pouvez changer de forfait à tout moment, depuis cette page ou vos paramètres de facturation. Si vous payez déjà un forfait, vous êtes redirigé vers le portail de facturation sécurisé de Stripe pour effectuer le changement. Vous pouvez annuler à tout moment depuis vos paramètres de facturation : l'annulation prend effet à la fin de la période déjà payée, vous gardez donc l'accès jusque-là.",
       pRefundQ: "Puis-je être remboursé ?",
@@ -6895,7 +6909,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       toggleYearly: "Annuel · −16 %",
       trialBar: "Essayez POS gratuitement pendant 14 jours",
       trialBarSub:
-        "Ajoutez une carte, ne payez rien pendant 14 jours, puis l'abonnement se renouvelle automatiquement. Annulez à tout moment : vos données repartent avec vous.",
+        "Sans carte. Profitez du POS complet pendant 14 jours, puis ajoutez une carte pour le garder ou repassez au plan Gratuit. Vos données restent dans tous les cas.",
       trialBarCta: "Démarrer l'essai gratuit",
       billedYearly: "Facturé annuellement · HT",
       billedMonthly: "Facturé mensuellement · HT",
@@ -7000,7 +7014,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       dlgEyebrow: "Confirmer le changement de forfait",
       dlgTrialTitle: "Démarrer l'essai gratuit {name}",
       dlgSwitchTitle: "Passer à {name}",
-      dlgTrialBody: "Vous ajoutez une carte, mais **rien ne sera débité pendant 14 jours**. À l'issue de l'essai, votre forfait **{name}** se renouvelle automatiquement : annulez à tout moment depuis les paramètres de facturation avant cette échéance pour éviter tout prélèvement.",
+      dlgTrialBody: "Votre essai démarre tout de suite, **sans carte**. Pour garder **{name}** après les 14 jours, ajoutez une carte dans Facturation avant la fin de l'essai. Sans carte, vous repassez au plan Gratuit et rien n'est supprimé.",
       dlgSwitchBody: "Votre abonnement passera immédiatement au forfait **{name}**. Vous pouvez le modifier à tout moment depuis vos paramètres de facturation.",
       dlgCancel: "Annuler",
       dlgConfirm: "Confirmer",

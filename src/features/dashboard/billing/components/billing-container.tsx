@@ -29,6 +29,7 @@ import { getApiErrorMessage } from "@/lib/utils/api-error";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { BetaPlanSwitcher } from "./beta-plan-switcher";
 import { PlanCards, type PlanChangeMode } from "./plan-cards";
+import { TrialNotice } from "./trial-notice";
 import { isPaidPlan, resolvePriceCurrency } from "../lib/plan-price";
 import { minPlanForStores, PLAN_LABELS } from "@/lib/plans/entitlements";
 
@@ -218,6 +219,14 @@ export function BillingContainer() {
 
   const planName = labelForPlan(subscription?.plan);
 
+  // A live POS trial on a real Stripe subscription (not one cancelled before
+  // its end, which the cancellation notice covers).
+  const trialRunning =
+    !!subscription?.isTrialing &&
+    subscription.status === "ACTIVE" &&
+    !subscription.cancelAtPeriodEnd &&
+    !!subscription.canCancel;
+
   // An admin quoted this account a price it hasn't paid yet: everything gated
   // by the plan is suspended until Stripe confirms the payment started here.
   const customPricePending = !!subscription?.customPricePending;
@@ -282,6 +291,14 @@ export function BillingContainer() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* POS trial: days left, and Add a card while none is saved */}
+      {trialRunning && subscription?.trialEndsAt && (
+        <TrialNotice
+          trialEndsAt={subscription.trialEndsAt}
+          returnPath={storeId ? `/store/${storeId}/billing` : "/stores"}
+        />
       )}
 
       {/* Cancellation Notice */}
@@ -368,7 +385,9 @@ export function BillingContainer() {
                 <p className="text-sm font-medium">
                   {isLifetimePeriod(subscription.currentPeriodEnd)
                     ? t("billing.lifetime")
-                    : t("billing.nextBilling")}
+                    : trialRunning
+                      ? t("billing.trial.ends")
+                      : t("billing.nextBilling")}
                 </p>
                 {!isLifetimePeriod(subscription.currentPeriodEnd) && (
                   <p className="text-muted-foreground text-sm">

@@ -159,8 +159,8 @@ export function PricingCards({
   /**
    * Where a visitor who is not signed in goes to sign up: setup, carrying the
    * plan and billing interval (see plan-intent.ts). The wizard ticks the plan's
-   * goal and, once the store is published, opens its Checkout (for POS: the
-   * 14-day trial, a card and nothing charged today). FREE has no plan to keep.
+   * goal and, once the store is published, starts it (for POS: the 14-day
+   * trial, no card needed). FREE has no plan to keep.
    */
   function registerHref(plan: string) {
     if (plan !== "POS" && plan !== "OPERATIONS") return "/register";
@@ -253,7 +253,12 @@ export function PricingCards({
       if (res.ok) {
         if (isPaid) {
           const result = await res.json();
-          if (result?.success && result?.data?.url && result.data.portal) {
+          if (result?.success && result?.data?.url && result.data.trialStarted) {
+            // The POS trial started on the server, with no card and no
+            // Checkout: the success page records trial_started / StartTrial.
+            window.location.href = result.data.url;
+            setConfirming(null);
+          } else if (result?.success && result?.data?.url && result.data.portal) {
             // Already paying: the plan change happens in Stripe's billing
             // portal, which is not a checkout, so nothing is recorded.
             window.location.href = result.data.url;

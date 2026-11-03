@@ -21,6 +21,10 @@ import { posTrialApplies } from "@/lib/plans/pos-trial";
  * Returns:
  * - sessionId: Stripe Checkout Session ID
  * - url: Redirect URL to Stripe Checkout
+ *
+ * A first POS subscription is the 14-day trial instead, with no card and no
+ * Checkout: it starts at once and `url` is the success page, with
+ * `trialStarted: true` (callers must not record a checkout for it).
  */
 export const POST = withApiHandler(
   async (request, { userId }) => {
@@ -87,13 +91,31 @@ export const POST = withApiHandler(
       );
     }
 
+    // The POS trial takes no card, so there is no Checkout to open: the trial
+    // starts here and the caller goes straight to the success page, which
+    // records trial_started. It ends on its own after 14 days unless a card
+    // is added from Billing (see startPosTrial).
+    if (applyTrial) {
+      const trial = await subscriptionService.startPosTrial(userId, yearly, currency);
+      return NextResponse.json(
+        createSuccessResponse({
+          // The subscription id stands in for Stripe's session id: the success
+          // page uses it so a reload doesn't count the trial twice.
+          url: finalSuccessUrl.replace("{CHECKOUT_SESSION_ID}", trial.id),
+          trialStarted: true,
+          trialEndsAt: trial.trial_end ? new Date(trial.trial_end * 1000).toISOString() : null,
+          message: "POS trial started",
+        }),
+        { status: 201 }
+      );
+    }
+
     // Create checkout session
     const checkoutSession = await subscriptionService.createCheckoutSession(
       userId,
       plan,
       finalSuccessUrl,
       finalCancelUrl,
-      applyTrial,
       yearly,
       currency
     );

@@ -159,7 +159,9 @@ export function PlanCards({
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.data?.url) throw new Error(getApiErrorMessage(data, failed));
 
-      if (pending.kind !== "portal") {
+      // The POS trial starts on the server with no card (no Checkout to
+      // record); the success page it lands on records trial_started.
+      if (pending.kind !== "portal" && !data.data.trialStarted) {
         trackConversion("begin_checkout", {
           event_label: pending.plan,
           plan: pending.plan,

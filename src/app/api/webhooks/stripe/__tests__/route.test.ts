@@ -31,6 +31,13 @@ vi.mock("@/lib/services/partner-commission.service", () => ({
   recordRefund: vi.fn().mockResolvedValue("no-commission"),
 }));
 
+// The trial reminder's email (its copy is tested with the email service).
+vi.mock("@/lib/services/email.service", () => ({
+  sendTrialEndingEmail: vi.fn().mockResolvedValue({ success: true }),
+}));
+import { sendTrialEndingEmail } from "@/lib/services/email.service";
+import { prisma } from "@/lib/prisma";
+
 vi.mock("@/lib/repositories", () => ({
   subscriptionRepository: {
     findByUserId: vi.fn(),
@@ -197,6 +204,84 @@ describe("Stripe Webhook Handler", () => {
           stripeSubscriptionId: "sub_123",
         })
       );
+    });
+  });
+
+  describe("customer.subscription.trial_will_end", () => {
+    const event = {
+      type: "customer.subscription.trial_will_end",
+      data: { object: { id: "sub_trial" } },
+    };
+    const live = (
+      paymentMethod: string | null,
+      customerDefault: string | null,
+      status = "trialing"
+    ) => ({
+      id: "sub_trial",
+      status,
+      trial_end: 1_800_000_000,
+      default_payment_method: paymentMethod,
+      customer: { id: "cus_1", invoice_settings: { default_payment_method: customerDefault } },
+    });
+
+    beforeEach(() => {
+      (stripe.webhooks.constructEvent as any).mockReturnValue(event);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-1",
+      });
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        email: "owner@cafe.test",
+        name: "Ayu",
+        locale: "id",
+        business: { stores: [{ id: "store-1" }] },
+      } as any);
+    });
+
+    it("reminds an owner with no card, linking to the store's Billing", async () => {
+      (stripe.subscriptions.retrieve as any).mockResolvedValue(live(null, null));
+
+      const res = await POST(createRequest(event));
+
+      expect(res.status).toBe(200);
+      expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_trial", {
+        expand: ["customer"],
+      });
+      expect(sendTrialEndingEmail).toHaveBeenCalledWith({
+        email: "owner@cafe.test",
+        name: "Ayu",
+        locale: "id",
+        trialEndsAt: new Date(1_800_000_000 * 1000),
+        billingUrl: expect.stringMatching(/\/store\/store-1\/billing$/),
+      });
+    });
+
+    it("sends nothing when a card is saved, on the subscription or as the customer's default", async () => {
+      (stripe.subscriptions.retrieve as any)
+        .mockResolvedValueOnce(live("pm_1", null))
+        .mockResolvedValueOnce(live(null, "pm_2"));
+
+      await POST(createRequest(event));
+      await POST(createRequest(event));
+
+      expect(sendTrialEndingEmail).not.toHaveBeenCalled();
+    });
+
+    it("sends nothing once the trial is over or for an unknown subscription", async () => {
+      (stripe.subscriptions.retrieve as any).mockResolvedValueOnce(live(null, null, "canceled"));
+      await POST(createRequest(event));
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValueOnce(null);
+      await POST(createRequest(event));
+
+      expect(sendTrialEndingEmail).not.toHaveBeenCalled();
+    });
+
+    it("still answers 200 when the email fails, so Stripe doesn't retry", async () => {
+      (stripe.subscriptions.retrieve as any).mockResolvedValue(live(null, null));
+      vi.mocked(sendTrialEndingEmail).mockResolvedValueOnce({ success: false, error: "quota" });
+
+      const res = await POST(createRequest(event));
+
+      expect(res.status).toBe(200);
     });
   });
 

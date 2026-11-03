@@ -692,6 +692,142 @@ export function greetingFor(name: string | null | undefined): string {
 }
 
 /**
+ * The POS trial's "3 days left" reminder, per locale. Sent only when no card
+ * is on file: without one Stripe ends the trial and the account goes back to
+ * Free. Same server-side copy pattern as RECEIPT_EMAIL_COPY.
+ */
+const TRIAL_ENDING_EMAIL_COPY: Record<
+  "en" | "fr" | "id",
+  {
+    subject: (date: string) => string;
+    greeting: (name: string | null | undefined) => string;
+    heading: string;
+    body: (date: string) => string;
+    keep: string;
+    cta: string;
+    footer: string;
+    dateLocale: string;
+  }
+> = {
+  en: {
+    subject: (date) => `Your POS trial ends on ${date}`,
+    greeting: (name) => greetingFor(name),
+    heading: "Your POS trial ends soon",
+    body: (date) =>
+      `Your 14-day POS trial ends on <strong>${date}</strong>. To keep the till, kitchen display and tables after that, add a card in Billing. You won't be charged before ${date}.`,
+    keep: "No card? Your account goes back to the Free plan on that day. Nothing is deleted: your menu, orders and staff stay, and POS comes back as soon as you subscribe.",
+    cta: "Add a card",
+    footer: "You get this email because you started a POS trial on Epidom.",
+    dateLocale: "en-GB",
+  },
+  fr: {
+    subject: (date) => `Votre essai POS se termine le ${date}`,
+    greeting: (name) => (name?.trim() ? `Bonjour ${escapeHtml(name.trim())},` : "Bonjour,"),
+    heading: "Votre essai POS se termine bientôt",
+    body: (date) =>
+      `Votre essai POS de 14 jours se termine le <strong>${date}</strong>. Pour garder la caisse, l'écran cuisine et les tables ensuite, ajoutez une carte dans Facturation. Rien n'est prélevé avant le ${date}.`,
+    keep: "Pas de carte ? Votre compte repasse au plan Gratuit ce jour-là. Rien n'est supprimé : votre carte, vos commandes et votre équipe restent là, et le POS revient dès que vous vous abonnez.",
+    cta: "Ajouter une carte",
+    footer: "Vous recevez cet e-mail parce que vous avez commencé un essai POS sur Epidom.",
+    dateLocale: "fr-FR",
+  },
+  id: {
+    subject: (date) => `Uji coba POS Anda berakhir pada ${date}`,
+    greeting: (name) => (name?.trim() ? `Halo ${escapeHtml(name.trim())},` : "Halo,"),
+    heading: "Uji coba POS Anda segera berakhir",
+    body: (date) =>
+      `Uji coba POS 14 hari Anda berakhir pada <strong>${date}</strong>. Agar kasir, layar dapur, dan meja tetap aktif setelahnya, tambahkan kartu di menu Tagihan. Tidak ada tagihan sebelum ${date}.`,
+    keep: "Tanpa kartu, akun Anda kembali ke paket Gratis pada hari itu. Tidak ada yang dihapus: menu, pesanan, dan data staf tetap tersimpan, dan POS aktif lagi begitu Anda berlangganan.",
+    cta: "Tambah kartu",
+    footer: "Anda menerima email ini karena memulai uji coba POS di Epidom.",
+    dateLocale: "id-ID",
+  },
+};
+
+/**
+ * POS trial ending in 3 days with no card on file (Stripe's
+ * customer.subscription.trial_will_end, see the Stripe webhook).
+ */
+export async function sendTrialEndingEmail(payload: {
+  email: string;
+  name: string | null;
+  locale?: string | null;
+  trialEndsAt: Date;
+  billingUrl: string;
+}): Promise<SendEmailResult> {
+  const lang = payload.locale === "fr" || payload.locale === "en" ? payload.locale : "id";
+  const copy = TRIAL_ENDING_EMAIL_COPY[lang];
+  const date = payload.trialEndsAt.toLocaleDateString(copy.dateLocale, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n⏳ [DEV] POS Trial Ending Email");
+    console.log("To:", payload.email, "| ends:", payload.trialEndsAt.toISOString());
+    console.log("Billing:", payload.billingUrl, "\n");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const href = escapeHtml(payload.billingUrl);
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: payload.email,
+      subject: copy.subject(date),
+      html: `
+<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(copy.heading)}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+  <div style="background-color: #444444; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 32px; letter-spacing: 2px; font-weight: 800;">${APP_NAME}</h1>
+  </div>
+
+  <div style="background: #ffffff; padding: 40px 35px; border: 1px solid #eeeeee; border-top: none; border-radius: 0 0 12px 12px;">
+    <h2 style="color: #111111; margin-top: 0; font-size: 24px; font-weight: 700;">${copy.heading}</h2>
+    <p style="color: #555555; font-size: 16px;">${copy.greeting(payload.name)}</p>
+    <p style="color: #555555; font-size: 16px;">${copy.body(date)}</p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${href}" style="display: inline-block; background-color: #111111; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">${copy.cta}</a>
+    </div>
+
+    <p style="color: #555555; font-size: 14px;">${copy.keep}</p>
+
+    <hr style="border: none; border-top: 1px solid #eeeeee; margin: 32px 0;">
+    <p style="color: #999999; font-size: 12px; margin: 0; text-align: center;">${copy.footer}</p>
+  </div>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send POS trial ending email:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("[Email] POS trial ending email error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
  * Send feedback notification email to the team
  */
 export async function sendFeedbackNotificationEmail(

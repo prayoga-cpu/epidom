@@ -24,6 +24,7 @@ import { ApiErrorCode } from "@/types/api/responses";
 import { planHasFeature, PLAN_LABELS, type PlanTier } from "@/lib/plans/entitlements";
 import { POS_TRIAL_DAYS } from "@/lib/plans/pos-trial";
 import type { PriceCurrency } from "@/lib/constants/plan-pricing";
+import { extractSubscriptionPeriod } from "@/types/stripe";
 
 /**
  * Subscription Service
@@ -130,13 +131,15 @@ export class SubscriptionService {
    *   Hosted Checkout picks one from the visitor's IP: from Indonesia that is
    *   IDR, which PayPal doesn't take, so PayPal never showed.
    * @returns Stripe Checkout Session
+   *
+   * The POS trial never comes through here: it starts without Checkout and
+   * without a card, see startPosTrial.
    */
   async createCheckoutSession(
     userId: string,
     plan: "FREE" | "FREE" | "POS" | "OPERATIONS",
     successUrl: string,
     cancelUrl: string,
-    trial?: boolean,
     yearly: boolean = false,
     currency?: PriceCurrency
   ): Promise<Stripe.Checkout.Session> {
@@ -189,12 +192,7 @@ export class SubscriptionService {
           userId: user.id,
           plan: plan,
         },
-        ...(trial ? { trial_period_days: POS_TRIAL_DAYS } : {}),
       },
-      // A trial still takes a card (Stripe's default, spelled out so it stays
-      // that way): nothing is charged today, and the plan renews on that card
-      // when the 14 days end unless it is cancelled first.
-      ...(trial ? { payment_method_collection: "always" as const } : {}),
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
@@ -203,23 +201,9 @@ export class SubscriptionService {
       },
     };
 
-    // A partner's referral link: % off the first paid invoice. Without a trial
-    // it goes on the session; with one, the webhook puts it on the
-    // subscription after Checkout, so the trial's $0 invoice can't use it up.
-    const referral = await getCheckoutReferralDiscount(userId, subscription).catch((error) => {
-      logger.warn("Referral discount left out of checkout", {
-        userId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    });
-    if (referral) {
-      if (trial) {
-        params.metadata = { ...params.metadata, referralCoupon: referral.couponId };
-      } else {
-        params.discounts = [{ coupon: referral.couponId }];
-      }
-    }
+    // A partner's referral link: % off the first paid invoice, which is this one.
+    const referral = await this.referralDiscountFor(userId, subscription);
+    if (referral) params.discounts = [{ coupon: referral.couponId }];
 
     let session: Stripe.Checkout.Session;
     if (!currency) {
@@ -258,6 +242,191 @@ export class SubscriptionService {
     // This prevents changing ACTIVE status to INCOMPLETE on cancel
 
     return session;
+  }
+
+  /** The partner referral discount for this account, or null. A failed lookup never blocks billing. */
+  private async referralDiscountFor(userId: string, subscription: Subscription | null) {
+    return getCheckoutReferralDiscount(userId, subscription).catch((error) => {
+      logger.warn("Referral discount left out of checkout", {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    });
+  }
+
+  /**
+   * Starts the 14-day POS trial with no card and no Checkout: a Stripe
+   * subscription in `trialing` with nothing to charge, and the plan on the row
+   * straight away (the webhook later writes the same values).
+   *
+   * When the trial ends Stripe charges the card the owner added in the
+   * meantime (Billing → Add a card, see createPaymentMethodSession). Without
+   * one it cancels the subscription (`missing_payment_method: "cancel"`), the
+   * webhook marks the row CANCELED and every plan gate reads it as Free again.
+   * Nothing is deleted: the menu, orders and staff stay for when they pay.
+   *
+   * Eligibility (first subscription only) is the caller's: posTrialApplies.
+   */
+  async startPosTrial(
+    userId: string,
+    yearly: boolean = false,
+    currency?: PriceCurrency
+  ): Promise<Stripe.Subscription> {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+    // An admin-quoted price suspends the account until it is paid; a trial
+    // that sets the row ACTIVE must not lift that for free.
+    if (subscription?.customPricePendingAt) {
+      throw new AppError(
+        "A custom price is awaiting payment on this account. Complete that checkout from your Billing page.",
+        ApiErrorCode.CONFLICT,
+        409
+      );
+    }
+    const stripeCustomerId = await this.resolveStripeCustomerId(user, subscription);
+    // A Checkout left open in another tab could still be paid next to the trial.
+    await this.expireOpenCheckoutSessions(stripeCustomerId);
+
+    const priceId = STRIPE_CONFIG.PRICE_IDS.POS[yearly ? "YEARLY" : "MONTHLY"];
+    const params: Stripe.SubscriptionCreateParams = {
+      customer: stripeCustomerId,
+      items: [{ price: priceId }],
+      trial_period_days: POS_TRIAL_DAYS,
+      trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+      payment_settings: { save_default_payment_method: "on_subscription" },
+      metadata: { userId: user.id, plan: "POS" },
+    };
+    // A double click, or a retry after a failure further down, gets the same
+    // subscription back instead of a second one (Stripe keeps keys 24 hours).
+    const idempotencyKey = (withCurrency: boolean) =>
+      `pos-trial:${stripeCustomerId}:${yearly ? "yearly" : "monthly"}:${withCurrency ? currency : "default"}`;
+
+    let created: Stripe.Subscription;
+    if (!currency) {
+      created = await stripe.subscriptions.create(params, {
+        idempotencyKey: idempotencyKey(false),
+      });
+    } else {
+      try {
+        created = await stripe.subscriptions.create(
+          { ...params, currency: currency.toLowerCase() },
+          { idempotencyKey: idempotencyKey(true) }
+        );
+      } catch (error) {
+        // Same rule as Checkout: a customer that already bills in another
+        // currency keeps it.
+        if (!/combine currencies/i.test(error instanceof Error ? error.message : "")) throw error;
+        logger.warn("POS trial kept the customer's existing currency", {
+          userId,
+          requestedCurrency: currency,
+        });
+        created = await stripe.subscriptions.create(params, {
+          idempotencyKey: idempotencyKey(false),
+        });
+      }
+    }
+
+    // The referral coupon goes on after creation: the trial's $0 invoice
+    // already exists, so it lands on the first paid invoice instead of being
+    // used up on the free one.
+    const referral = await this.referralDiscountFor(userId, subscription);
+    if (referral && (created.discounts ?? []).length === 0) {
+      try {
+        await stripe.subscriptions.update(created.id, {
+          discounts: [{ coupon: referral.couponId }],
+        });
+      } catch (error) {
+        logger.error("Could not add the referral coupon to a POS trial", {
+          userId,
+          subscriptionId: created.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    const period = extractSubscriptionPeriod(created);
+    const trialEndsAt = created.trial_end ? new Date(created.trial_end * 1000) : null;
+    const fields = {
+      stripeCustomerId,
+      stripeSubscriptionId: created.id,
+      stripePriceId: created.items.data[0]?.price.id ?? priceId,
+      plan: SubscriptionPlan.POS,
+      // Trialing grants the plan: every gate keys on ACTIVE (same as the webhook).
+      status: SubscriptionStatus.ACTIVE,
+      ...(period ?? {}),
+      trialEndsAt,
+    };
+    if (subscription) {
+      await this.subscriptionRepo.update(userId, { ...fields, cancelAtPeriodEnd: false });
+    } else {
+      await this.subscriptionRepo.create({ userId, ...fields });
+    }
+
+    return created;
+  }
+
+  /**
+   * Whether Stripe has a payment method to charge when this account's trial
+   * ends: one on the subscription (an older trial that went through Checkout)
+   * or the customer's default (what Billing → Add a card sets).
+   */
+  async hasPaymentMethod(userId: string): Promise<boolean> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+    if (!subscription?.stripeSubscriptionId) return false;
+    const live = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId, {
+      expand: ["customer"],
+    });
+    if (live.default_payment_method) return true;
+    const customer = live.customer;
+    return (
+      typeof customer === "object" &&
+      !customer.deleted &&
+      !!customer.invoice_settings?.default_payment_method
+    );
+  }
+
+  /**
+   * Stripe's billing portal opened straight on "add a payment method". The
+   * card saved there becomes the customer's default, which the trial
+   * subscription is charged on when the 14 days end. Falls back to the
+   * portal's home page (which has the same button) if this account's portal
+   * configuration doesn't allow the shortcut.
+   */
+  async createPaymentMethodSession(
+    userId: string,
+    returnUrl: string
+  ): Promise<Stripe.BillingPortal.Session> {
+    const subscription = await this.subscriptionRepo.findByUserId(userId);
+    if (
+      !subscription ||
+      subscription.stripeCustomerId.startsWith("free_") ||
+      subscription.stripeCustomerId.startsWith("admin_")
+    ) {
+      throw new AppError("No Stripe billing on this account", ApiErrorCode.VALIDATION_ERROR, 400);
+    }
+    try {
+      return await stripe.billingPortal.sessions.create({
+        customer: subscription.stripeCustomerId,
+        return_url: returnUrl,
+        flow_data: {
+          type: "payment_method_update",
+          after_completion: { type: "redirect", redirect: { return_url: returnUrl } },
+        },
+      });
+    } catch (error) {
+      logger.warn("Portal payment-method shortcut refused, opening the portal home", {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return stripe.billingPortal.sessions.create({
+        customer: subscription.stripeCustomerId,
+        return_url: returnUrl,
+      });
+    }
   }
 
   /**

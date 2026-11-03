@@ -53,10 +53,10 @@ export const QR_EXPORT_MARGIN = 4;
 /**
  * "Your store is live": shown once the storefront is published. An owner who
  * picked a paid plan (a POS or Operations goal, or a plan button before
- * signing up) is taken on to that plan's Checkout straight away: for the POS
- * trial that is a card and nothing charged for 14 days. The plan card stays
- * at the top with a button, for when Checkout doesn't open or the owner comes
- * Back from it. Then the public link with Copy, a QR code to print, a
+ * signing up) is taken on to that plan straight away: the POS trial starts
+ * on the spot with no card (14 days, then Free unless a card is added from
+ * Billing), Operations opens its Checkout. The plan card stays at the top with
+ * a button, for when that fails or the owner comes Back from Checkout. Then the public link with Copy, a QR code to print, a
  * WhatsApp share, and the way in: the 1-minute tour or the Back Office.
  */
 export function LaunchScreen({
@@ -201,7 +201,11 @@ export function LaunchScreen({
               {redirecting ? (
                 <>
                   <Loader2 aria-hidden="true" className="animate-spin" />
-                  {t("onboarding.launch.plan.redirecting")}
+                  {t(
+                    checkout?.trial
+                      ? "onboarding.launch.plan.trialStarting"
+                      : "onboarding.launch.plan.redirecting"
+                  )}
                 </>
               ) : (
                 planCard.cta

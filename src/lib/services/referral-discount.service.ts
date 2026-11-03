@@ -11,9 +11,11 @@ import { stripe } from "@/lib/stripe";
  * Applied as a one-time Stripe coupon:
  * - without a trial, on the Checkout Session (`discounts`): the first invoice
  *   is paid right away;
- * - with the POS trial, after Checkout (handleCheckoutSessionCompleted puts it
- *   on the subscription): the trial's $0 invoice already exists by then, so
- *   the coupon lands on the first paid invoice instead of being used up on it.
+ * - with the POS trial, on the subscription right after it is created
+ *   (SubscriptionService.startPosTrial; trials that went through Checkout
+ *   before 3.41.0 got it in handleCheckoutSessionCompleted): the trial's $0
+ *   invoice already exists by then, so the coupon lands on the first paid
+ *   invoice instead of being used up on it.
  */
 
 /** One coupon per percentage, reused by every referral: "epidom-ref-once-10", "epidom-ref-once-12_5". */
