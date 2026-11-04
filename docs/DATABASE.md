@@ -530,6 +530,11 @@ storage):
   A reset discards whatever the dev branch accumulated and pulls a fresh
   copy of prod data — don't rely on anything written to it surviving.
 
+> **Since 2026-11-04** production runs on the Neon `main` branch and the dev copy is the
+> `dev` branch (`br-mute-unit-aofx79qn`), a child of `main`. The redeploy hook below is
+> OPTIONAL: with no `VERCEL_DEV_DEPLOY_HOOK_URL` secret the step is skipped, and a hook that
+> fails only warns, because the reset itself has already succeeded.
+
 **A reset also removes every migration that is committed on a feature branch
 but not on production yet.** The public preview (`dev.epidom.fr`, tracking
 `epidom-revamp`) then fails with `The column … does not exist in the current
