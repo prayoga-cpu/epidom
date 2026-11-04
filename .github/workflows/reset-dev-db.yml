@@ -30,7 +30,7 @@ concurrency:
 
 env:
   NEON_PROJECT_ID: square-sound-94138774
-  NEON_DEV_BRANCH_ID: br-shy-truth-aol4cwxc
+  NEON_DEV_BRANCH_ID: br-mute-unit-aofx79qn
 
 jobs:
   reset:
