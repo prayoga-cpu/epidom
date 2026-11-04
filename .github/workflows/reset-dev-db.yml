@@ -111,5 +111,5 @@ jobs:
           echo "Vercel deploy hook responded HTTP ${code}"
           case "${code}" in
             2??) ;;
-            *) echo "::error::The Vercel deploy hook did not answer 2xx, so the preview was not redeployed."; exit 1 ;;
+            *) echo "::warning::The Vercel deploy hook did not answer 2xx, so the preview was not redeployed. The dev database WAS reset; check or remove the VERCEL_DEV_DEPLOY_HOOK_URL secret." ;;
           esac
