@@ -77,7 +77,7 @@ function VerifyEmailContent() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -92,11 +92,11 @@ function VerifyEmailContent() {
           </CardTitle>
           <CardDescription className="text-base">
             {t("auth.verifyEmail.description")}
-            {email && <span className="mt-2 block font-semibold text-gray-900">{email}</span>}
+            {email && <span className="mt-2 block font-semibold text-foreground">{email}</span>}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700">
+          <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
             {t("auth.verifyEmail.instructions")}
           </div>
 
@@ -139,7 +139,7 @@ export default function VerifyEmailSentPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       }
     >

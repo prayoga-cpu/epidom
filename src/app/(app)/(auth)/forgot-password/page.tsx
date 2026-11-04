@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold tracking-tight">
@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
         <CardContent>
           {isSent ? (
             <div className="space-y-4 text-center">
-              <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700">
+              <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">
                 {(() => {
                   const [before, after] = t("pages.authForgotCheckEmail").split("{email}");
                   return (
