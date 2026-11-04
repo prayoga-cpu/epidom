@@ -1,6 +1,6 @@
 name: Reset Dev DB Branch
 
-# Resets the Neon "development" branch back to production's current head
+# Resets the Neon "dev" branch (cut from main on 2026-11-04) back to production's current head
 # (copy-on-write, seconds not minutes). Keeps dev data fresh without ever
 # writing to production, and keeps prod isolated from whatever dev is doing.
 # Manual runs: Actions tab → "Reset Dev DB Branch" → Run workflow.
@@ -12,9 +12,10 @@ name: Reset Dev DB Branch
 # last step redeploys the preview branch through a Vercel Deploy Hook and that
 # build puts the migrations back on the fresh copy.
 #
-# The hook is bound to ONE git branch: the one dev.epidom.fr tracks (Vercel →
-# Domains). If the domain is ever pointed at another branch, create a hook for
-# that branch and update the VERCEL_DEV_DEPLOY_HOOK_URL secret.
+# The redeploy is OPTIONAL: when the VERCEL_DEV_DEPLOY_HOOK_URL secret is not
+# set, the reset still runs and the redeploy step is skipped (there is no
+# public preview domain on the new Vercel project). To bring it back, create a
+# Deploy Hook on the branch the preview tracks and add the secret.
 # Scheduled runs use this file as it exists on `main`. See docs/DATABASE.md.
 
 on:
@@ -38,19 +39,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      # Checked BEFORE anything is reset: without the secret, a reset would drop
-      # the migrations that are not on production yet and nothing would redeploy
-      # the preview to put them back. Failing here leaves the dev database
-      # untouched (it just keeps yesterday's data).
-      - name: Check the preview redeploy hook is configured
-        env:
-          VERCEL_DEV_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEV_DEPLOY_HOOK_URL }}
-        run: |
-          if [ -z "${VERCEL_DEV_DEPLOY_HOOK_URL}" ]; then
-            echo "::error::VERCEL_DEV_DEPLOY_HOOK_URL is not set, so the dev branch was NOT reset: a reset drops migrations that are not on production yet and nothing would redeploy the preview to re-apply them. Add the secret (see docs/DATABASE.md)."
-            exit 1
-          fi
-
       - name: Note when the branch was last reset
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
@@ -114,6 +102,10 @@ jobs:
           VERCEL_DEV_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEV_DEPLOY_HOOK_URL }}
         run: |
           set -euo pipefail
+          if [ -z "${VERCEL_DEV_DEPLOY_HOOK_URL}" ]; then
+            echo "::notice::No VERCEL_DEV_DEPLOY_HOOK_URL secret, so the preview was not redeployed (the dev branch was reset)."
+            exit 0
+          fi
           code=$(curl -sS --retry 3 --retry-all-errors --max-time 20 -o /dev/null -w '%{http_code}' \
             -X POST "${VERCEL_DEV_DEPLOY_HOOK_URL}")
           echo "Vercel deploy hook responded HTTP ${code}"
