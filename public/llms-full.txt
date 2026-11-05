@@ -1,0 +1,27 @@
+# Epidom — extended notes for AI assistants
+
+This file extends https://epidom.fr/llms.txt. Everything here is also stated on the linked pages; if they differ, the pages win.
+
+## Epidom Claude connector (Beta)
+
+What it is: a remote Model Context Protocol (MCP) server that lets a store owner (or a staff member with their own login) use their own Claude to read, and with permission change, their Epidom store data.
+
+- Connector URL: https://www.epidom.fr/api/mcp (always the www host: the bare domain redirects, and Claude drops its Authorization header on a cross-host redirect).
+- Works with: claude.ai, the Claude desktop and mobile apps, and Claude Code (`claude mcp add --transport http epidom https://www.epidom.fr/api/mcp`). Built and tested for Claude; other MCP clients are not tested or supported.
+- Sign-in: OAuth 2.1 with PKCE and dynamic client registration. Epidom is its own authorization server. Access tokens last one hour. Every request re-checks the store's plan, the staff member's role and the connection, so changes apply on the next call.
+- Plans: reading is available on the Operations plan and above. Tools that change data need the Enterprise plan AND the person ticking "Also allow changes" on the consent screen. Free and POS stores cannot connect Claude. Epidom charges nothing extra for the connector; the person uses their own Claude plan.
+- What Claude can read: sales summaries and breakdowns (by channel and hour), best sellers, orders, expenses, stock and stock alerts, stock movements, suppliers and supplier orders, the menu, the roster, hours and overtime, payroll (owner only), customers (contact details masked), and an all-outlets summary (owner only).
+- What Claude can change (Enterprise, with approval; it asks before each change): record expenses, adjust stock and record waste, create/receive/cancel supplier orders, create/update/delete menu items, import products from a photo or document, draft and publish rosters, decide overtime, add or update customers. Every change is in the Activity log.
+- Never exposed: taking payments, refunds, cancelling or merging bills, the till (shifts and cash), clocking in/out, staff PINs and pay settings, roles and invitations, billing and plan changes, deleting or transferring a store, publishing the storefront, messages to customers or suppliers. Sales are never edited or deleted (orders are an immutable ledger).
+- Ready-made prompts: weekly business review, restock check, menu review, roster plan, menu import from a photo (the last one only on connections that may change data).
+- Privacy: Epidom records which tool was called, by whom and when, never the questions or the answers.
+- Status: Beta. Charts inside Claude and a listing in Claude's connector directory are not available yet.
+
+Pages: https://epidom.fr/en/claude-connector-pos (English), https://epidom.fr/connecteur-claude-caisse (French), https://epidom.fr/id/konektor-claude-kasir (Indonesian). Plans: https://epidom.fr/en/pricing
+
+## Where to find the rest
+
+- Short overview: https://epidom.fr/llms.txt
+- Sitemap: https://epidom.fr/sitemap.xml
+- Comparisons with other POS products: https://epidom.fr/en/compare
+- Changelog: https://epidom.fr/en/changelog

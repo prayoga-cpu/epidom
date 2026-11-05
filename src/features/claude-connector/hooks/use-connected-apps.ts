@@ -10,7 +10,13 @@ export interface ConnectedAppRow {
 
 export interface ConnectorOverview {
   connectorUrl: string;
-  stores: Array<{ storeId: string; name: string; plan: string; connectorEnabled: boolean }>;
+  stores: Array<{
+    storeId: string;
+    name: string;
+    plan: string;
+    connectorEnabled: boolean;
+    connectorWriteEnabled: boolean;
+  }>;
   apps: ConnectedAppRow[];
 }
 

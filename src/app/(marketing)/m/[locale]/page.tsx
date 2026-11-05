@@ -15,6 +15,7 @@ import { ProductStructuredData } from "@/components/seo/structured-data";
 import { LandingPageSections } from "@/features/marketing/home/components/landing-page-sections";
 import { ResumeLastVisited } from "@/features/marketing/home/components/resume-last-visited";
 import { storefrontService } from "@/lib/services";
+import { PricingClaudeStrip } from "@/features/marketing/pricing/components/pricing-claude-strip";
 import { pageMetadata } from "@/features/marketing/seo/page-metadata";
 import { routeLocale, type LocaleParams } from "@/features/marketing/seo/route-locale";
 
@@ -39,6 +40,7 @@ export default async function HomePage({ params }: LocaleParams) {
 
       <div className="w-full overflow-x-hidden">
         <LandingPageSections exampleStorefrontSlug={exampleStorefrontSlug} />
+        <PricingClaudeStrip surface="home" />
       </div>
     </>
   );

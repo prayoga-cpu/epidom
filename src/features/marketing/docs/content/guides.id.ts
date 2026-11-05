@@ -371,4 +371,63 @@ export const idGuides: Article[] = [
       },
     ],
   },
+  {
+    slug: "konektor-claude",
+    locale: "id",
+    title: "Pakai Epidom dari Claude Anda sendiri",
+    description: "Hubungkan Claude Anda ke Epidom, tanya penjualan, stok, dan staf, lihat apa yang bisa dan tidak bisa dilakukannya, dan batalkan perubahan menu.",
+    date: "2026-11-05",
+    readMinutes: 4,
+    category: "Operasional",
+    blocks: [
+      {
+        type: "p",
+        text: "Konektor Claude memungkinkan Anda bertanya ke Claude Anda sendiri tentang toko Anda: bagaimana minggu lalu, apa yang perlu dipesan ulang, siapa yang lembur. Claude membaca jawabannya dari data Epidom Anda. Fitur ini masih Beta dan berjalan di paket Claude Anda sendiri.",
+      },
+      { type: "h2", text: "Yang termasuk di paket Anda" },
+      {
+        type: "list",
+        items: [
+          "Operations: hubungkan Claude dan ajukan pertanyaan (hanya baca).",
+          "Enterprise: Claude juga bisa membuat perubahan, hanya bila Anda mengizinkan dan dengan persetujuan jelas dari Anda setiap kali.",
+          "Paket Free dan POS belum bisa menghubungkan Claude.",
+        ],
+      },
+      { type: "h2", text: "Cara menghubungkan" },
+      {
+        type: "list",
+        items: [
+          "Buka Profil, lalu kartu Claude, dan salin alamat konektor (https://www.epidom.fr/api/mcp). Selalu pakai alamat www.",
+          "Di claude.ai atau aplikasi Claude desktop, buka Pengaturan, lalu Konektor, lalu Tambah konektor kustom, dan tempel alamatnya. Di Claude Code, jalankan: claude mcp add --transport http epidom https://www.epidom.fr/api/mcp",
+          "Claude membawa Anda ke layar Epidom. Periksa nama aplikasi dan toko yang tampil, centang Izinkan juga perubahan hanya bila paket Anda menyertakannya dan Anda memang mau, lalu setujui.",
+          "Ajukan pertanyaan pertama, misalnya: Bagaimana minggu lalu?",
+        ],
+      },
+      { type: "h2", text: "Pertanyaan awal yang bagus" },
+      {
+        type: "list",
+        items: [
+          "Bagaimana minggu lalu dibanding minggu sebelumnya?",
+          "Apa yang perlu saya pesan ulang?",
+          "Siapa yang lembur bulan ini?",
+          "Menu mana yang perlu dipikirkan ulang?",
+        ],
+      },
+      { type: "h2", text: "Yang tidak akan dilakukan Claude" },
+      {
+        type: "p",
+        text: "Pembayaran, refund, kasir, absen, PIN dan gaji staf, tagihan dan ganti paket, menghapus toko, dan menerbitkan etalase tetap berada di aplikasi Epidom. Penjualan tidak pernah diubah atau dihapus dari Claude.",
+      },
+      { type: "h2", text: "Membatalkan perubahan menu" },
+      {
+        type: "p",
+        text: "Saat Claude mengubah menu Anda (item, kategori, atau opsi sebuah produk), Epidom menyimpan keadaan sebelumnya. Minta Claude menampilkan perubahan menu terbaru dan membatalkan salah satunya. Epidom memeriksa dulu dan menolak bila ada yang menyentuh item yang sama sejak itu, sehingga perubahan yang lebih baru tidak pernah tertimpa. Pembatalan berlaku 30 hari dan hanya untuk menu. Perubahan lain, seperti stok, pengeluaran, atau jadwal, dikoreksi dengan perubahan baru.",
+      },
+      { type: "h2", text: "Hentikan kapan saja" },
+      {
+        type: "p",
+        text: "Di Profil, kartu Claude menampilkan setiap aplikasi yang terhubung. Cabut salah satunya dan aksesnya langsung berhenti. Setiap perubahan yang dilakukan Claude tercatat di Log aktivitas.",
+      },
+    ],
+  },
 ];

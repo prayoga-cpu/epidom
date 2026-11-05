@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { ClaudeConnectorPromo } from "@/features/claude-connector/components/claude-connector-promo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -494,6 +495,7 @@ export function BillingContainer() {
 
       {/* An unpaid admin quote comes first: switching plans around it would
           leave the quote dangling, so the plans wait until it is settled. */}
+      {storeId && <ClaudeConnectorPromo surface="billing" storeId={storeId} />}
       {!customPricePending && (
         <PlanCards currentPlan={currentPlan} mode={planChangeMode} currency={priceCurrency} />
       )}

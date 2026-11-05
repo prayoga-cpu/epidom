@@ -125,12 +125,13 @@ describe("PlanCards prices", () => {
     const { container } = render(<PlanCards currentPlan="FREE" mode="checkout" currency="USD" />);
     const ops = within(card(container, "OPERATIONS"));
     expect(ops.getByText(en.redesign.pricingPage.t3f1).tagName).toBe("P");
-    // t3f2..t3f10 — financial reports and the all-outlets roll-up are
-    // Operations features now, not Enterprise ones.
-    expect(ops.getAllByRole("listitem")).toHaveLength(9);
+    // t3f2..t3f11 — financial reports and the all-outlets roll-up are
+    // Operations features now, not Enterprise ones; t3f11 is the Claude connector.
+    expect(ops.getAllByRole("listitem")).toHaveLength(10);
     expect(ops.getByText(en.redesign.pricingPage.t3f8)).toBeTruthy();
     expect(ops.getByText(en.redesign.pricingPage.t3f9)).toBeTruthy();
     expect(ops.getByText(en.redesign.pricingPage.t3f10)).toBeTruthy();
+    expect(ops.getByText(en.redesign.pricingPage.t3f11)).toBeTruthy();
   });
 });
 

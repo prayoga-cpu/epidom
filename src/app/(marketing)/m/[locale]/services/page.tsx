@@ -4,6 +4,7 @@ import { FeaturesShowcaseSection } from "@/features/marketing/services/component
 import { ClosingCtaSection } from "@/features/marketing/home/components/closing-cta-section";
 import { ProblemPickerSection } from "@/features/marketing/home/components/problem-picker-section";
 import { PosTourSection } from "@/features/marketing/home/components/pos-tour-section";
+import { PricingClaudeStrip } from "@/features/marketing/pricing/components/pricing-claude-strip";
 import { pageMetadata } from "@/features/marketing/seo/page-metadata";
 
 export const generateMetadata = pageMetadata("services");
@@ -20,6 +21,7 @@ export default function ServicesPage() {
       <ProblemPickerSection />
       <SpacesSection />
       <PosTourSection />
+      <PricingClaudeStrip surface="services" />
       <FeaturesShowcaseSection />
       <ClosingCtaSection />
     </div>

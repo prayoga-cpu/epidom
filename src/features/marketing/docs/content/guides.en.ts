@@ -371,4 +371,63 @@ export const enGuides: Article[] = [
       },
     ],
   },
+  {
+    slug: "claude-connector",
+    locale: "en",
+    title: "Use Epidom from your own Claude",
+    description: "Connect your Claude to Epidom, ask about sales, stock and staff, see what it can and can't do, and undo a menu change.",
+    date: "2026-11-05",
+    readMinutes: 4,
+    category: "Operations",
+    blocks: [
+      {
+        type: "p",
+        text: "The Claude connector lets you ask your own Claude about your store: how last week went, what to reorder, who worked overtime. Claude reads the answer from your Epidom data. It is in Beta, and it runs on your own Claude plan.",
+      },
+      { type: "h2", text: "What your plan includes" },
+      {
+        type: "list",
+        items: [
+          "Operations: connect Claude and ask questions (read only).",
+          "Enterprise: Claude can also make changes, only when you allow it and with a clear yes from you each time.",
+          "Free and POS plans can't connect Claude yet.",
+        ],
+      },
+      { type: "h2", text: "Connect it" },
+      {
+        type: "list",
+        items: [
+          "Open Profile, then the Claude card, and copy the connector address (https://www.epidom.fr/api/mcp). Always use the www address.",
+          "In claude.ai or the Claude desktop app, go to Settings, then Connectors, then Add custom connector, and paste it. In Claude Code, run: claude mcp add --transport http epidom https://www.epidom.fr/api/mcp",
+          "Claude sends you to an Epidom screen. Check the app name and the stores listed, tick Also allow changes only if your plan has it and you want it, then approve.",
+          "Ask a first question, such as: How did we do last week?",
+        ],
+      },
+      { type: "h2", text: "Good first questions" },
+      {
+        type: "list",
+        items: [
+          "How did we do last week compared with the week before?",
+          "What do I need to reorder?",
+          "Who worked overtime this month?",
+          "Which dishes should I rethink?",
+        ],
+      },
+      { type: "h2", text: "What Claude will not do" },
+      {
+        type: "p",
+        text: "Payments, refunds, the till, clocking in, staff PINs and pay, billing and plan changes, deleting a store and publishing your storefront stay in the Epidom app. Sales are never edited or deleted from Claude.",
+      },
+      { type: "h2", text: "Undo a menu change" },
+      {
+        type: "p",
+        text: "When Claude changes your menu (items, categories, or the options of a product), Epidom keeps what it looked like before. Ask Claude to show the recent menu changes and undo one. It checks first and refuses if anything touched the same items since, so a newer edit is never overwritten. Undo works for 30 days and only for menu changes. Other changes, such as stock, expenses or rosters, are corrected with a new change.",
+      },
+      { type: "h2", text: "Stop it at any time" },
+      {
+        type: "p",
+        text: "In Profile, the Claude card lists every connected app. Revoke one and its access stops at once. Every change Claude made appears in your Activity log.",
+      },
+    ],
+  },
 ];

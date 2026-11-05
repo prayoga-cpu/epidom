@@ -10,7 +10,7 @@ import { en } from "@/locales/en";
 const connected = vi.hoisted(() => ({
   data: {
     connectorUrl: "https://www.epidom.fr/api/mcp",
-    stores: [{ storeId: "s1", name: "Paris 11", connectorEnabled: false }],
+    stores: [{ storeId: "s1", name: "Paris 11", connectorEnabled: false, connectorWriteEnabled: false }],
     apps: [],
   },
 }));
@@ -55,7 +55,7 @@ describe("ClaudeConnectorCard beta", () => {
   it("labels the card Beta and lists what works and what doesn't, even when locked", () => {
     render(<ClaudeConnectorCard />);
     expect(screen.getByText("Beta")).toBeTruthy();
-    // Locked (no Enterprise store): the pitch still shows.
+    // Locked (no Operations store): the pitch still shows.
     expect(screen.getByText(en.claudeConnector.card.lockedBody)).toBeTruthy();
 
     const details = screen.getByText("What works in this beta").closest("details")!;

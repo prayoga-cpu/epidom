@@ -62,3 +62,20 @@ describe("robots.txt", () => {
     expect(blocked("/en/payments")).toBe(false);
   });
 });
+
+describe("robots.txt AI crawlers", () => {
+  const rules = Array.isArray(config.rules) ? config.rules : [config.rules];
+  const ai = rules.find((r) => Array.isArray(r.userAgent) && r.userAgent.includes("ClaudeBot"));
+
+  it("names the AI search and assistant crawlers, allowed on the public site", () => {
+    expect(ai).toBeTruthy();
+    for (const bot of ["GPTBot", "ClaudeBot", "PerplexityBot", "Google-Extended"]) {
+      expect(ai!.userAgent).toContain(bot);
+    }
+    expect(ai!.allow).toBe("/");
+  });
+
+  it("keeps the same private paths closed to them", () => {
+    expect(ai!.disallow).toEqual(rule.disallow);
+  });
+});

@@ -112,6 +112,75 @@ const SAMPLES: Record<string, unknown> = {
     reason: "wrong item",
   },
   "store.delete": { storeId: "s1", storeName: "Warung A", snapshotId: "s2", rowCount: 900 },
+  "menu.items.change": {
+    storeId: "s1",
+    storefrontId: "sf1",
+    summary: "Changed 1 menu item: Quinoa",
+    updated: [
+      {
+        before: {
+          id: "i1",
+          name: "Quinoa",
+          price: "20000.00",
+          description: null,
+          categoryId: "c1",
+          department: "KITCHEN",
+          isAvailable: true,
+          showOnCashier: true,
+          isFeatured: false,
+          productId: null,
+          buildYourOwn: false,
+          modifiers: null,
+        },
+        after: {
+          id: "i1",
+          name: "Quinoa",
+          price: "20000.00",
+          description: null,
+          categoryId: "c1",
+          department: "KITCHEN",
+          isAvailable: false,
+          showOnCashier: false,
+          isFeatured: false,
+          productId: null,
+          buildYourOwn: false,
+          modifiers: null,
+        },
+      },
+    ],
+    created: [],
+  },
+  "menu.categories.change": {
+    storeId: "s1",
+    storefrontId: "sf1",
+    action: "merge_into",
+    summary: "Merged BASE into BOWLS",
+    before: [
+      { id: "c1", name: "BASE", displayOrder: 0 },
+      { id: "c2", name: "BOWLS", displayOrder: 1 },
+    ],
+    after: [{ id: "c2", name: "BOWLS", displayOrder: 1 }],
+    removed: [{ id: "c1", name: "BASE", displayOrder: 0, itemIds: ["i1"] }],
+    movedTo: "c2",
+  },
+  "menu.product_options.change": {
+    storeId: "s1",
+    productId: "p1",
+    productName: "Build Your Own",
+    before: [],
+    after: [
+      {
+        name: "Protein",
+        isRequired: false,
+        maxSelections: 2,
+        options: [
+          { name: "Chicken", priceAdjustment: "35000.00", materialId: "m1", materialQty: "100.000" },
+        ],
+      },
+    ],
+    beforeBuildYourOwn: false,
+    afterBuildYourOwn: true,
+  },
 };
 
 describe("action catalogue", () => {

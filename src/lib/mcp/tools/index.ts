@@ -1,6 +1,6 @@
 import type { McpTool } from "../define-tool";
 import { getStoreProfile, listStores } from "./context";
-import { getOrder, getSalesSummary, getTopItems, listOrders } from "./sales";
+import { getOrder, getSalesSummary, getTopItems, getTopOptions, listOrders } from "./sales";
 import {
   adjustStock,
   getStockAlerts,
@@ -16,7 +16,16 @@ import {
   proposeSupplierOrder,
   receiveSupplierOrder,
 } from "./suppliers";
-import { createMenuItems, deleteMenuItem, getMenu, updateMenuItem } from "./menu";
+import {
+  createMenuItems,
+  deleteMenuItem,
+  getMenu,
+  manageCategory,
+  setProductOptions,
+  updateMenuItem,
+  updateMenuItems,
+} from "./menu";
+import { listMenuChanges, undoMenuChange } from "./changes";
 import { importCatalog } from "./import";
 import {
   createRosterEntries,
@@ -45,6 +54,7 @@ export const MCP_TOOLS: readonly McpTool[] = [
   // Sales and finance
   getSalesSummary,
   getTopItems,
+  getTopOptions,
   getSalesBreakdown,
   getAllOutletsSummary,
   listOrders,
@@ -68,7 +78,12 @@ export const MCP_TOOLS: readonly McpTool[] = [
   getMenu,
   createMenuItems,
   updateMenuItem,
+  updateMenuItems,
+  manageCategory,
+  setProductOptions,
   deleteMenuItem,
+  listMenuChanges,
+  undoMenuChange,
   // Bulk import
   importCatalog,
   // Staff

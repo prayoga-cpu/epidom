@@ -9,7 +9,8 @@ AI work happens in the Claude chat.
 
 - **Connector URL:** `https://www.epidom.fr/api/mcp`. Always use the www host: the apex 308-redirects,
   and Claude drops the `Authorization` header on a cross-host redirect.
-- **Plan:** Enterprise only (`FEATURE_MIN_PLAN.claudeConnector`). The plan is checked on every tool
+- **Plan:** reading is open from Operations (`FEATURE_MIN_PLAN.claudeConnector`, since 2026-11-04);
+  tools that change data need Enterprise (`claudeConnectorWrite`). The plan is checked on every tool
   call against the store's plan.
 - **Who can connect:** any Epidom login. That means owners, and linked staff accounts limited to
   their role and page grants.
@@ -74,7 +75,7 @@ call has no cookies.
 | Area | Tools | Staff access |
 |---|---|---|
 | Context | `list_stores`, `get_store_profile` | any |
-| Sales & finance | `get_sales_summary`, `get_top_items`, `get_sales_breakdown`, `list_expenses` | `/finance` |
+| Sales & finance | `get_sales_summary`, `get_top_items`, `get_top_options`, `get_sales_breakdown`, `list_expenses` | `/finance` |
 | | `record_expense` (W) | `/finance`, manager |
 | | `get_all_outlets_summary` | owner |
 | Orders | `list_orders`, `get_order` | `/pos/orders` or `/dashboard` |
@@ -83,7 +84,9 @@ call has no cookies.
 | Suppliers | `list_suppliers`, `list_supplier_orders`, `propose_supplier_order` | `/data` or `/management` |
 | | `create_supplier_order`, `receive_supplier_order`, `cancel_supplier_order` (W) | `/data` or `/management` |
 | Menu | `get_menu` | `/menu` or `/storefront` |
-| | `create_menu_items`, `update_menu_item`, `delete_menu_item` (W) | `/menu` or `/storefront` |
+| | `create_menu_items`, `update_menu_item`, `update_menu_items` (bulk, all-or-nothing), `manage_category`, `delete_menu_item` (W) | `/menu` or `/storefront` |
+| | `set_product_options` (W; stock-linked choices on a product) | `/data` or `/management` |
+| | `list_menu_changes` (history), `undo_menu_change` (W) | `/menu` or `/storefront` |
 | Import | `import_catalog` (W; preview then commit) | `/data` |
 | Staff | `get_roster` (non-managers: their own published shifts) | `/schedule` or `/pos/schedule` |
 | | `get_hours_and_overtime` | `/schedule`, manager |
@@ -94,6 +97,52 @@ call has no cookies.
 
 Prompts: `weekly_review`, `restock_check`, `roster_plan`, `menu_review`, `import_menu_photo` (write
 connections only). See `src/lib/mcp/prompts.ts`.
+
+### Menu: composable items ("à composer" / Build Your Own)
+
+How Epidom stores them decides what the tools can do (see `tools/menu-options.ts`):
+
+- A menu item's **own** option groups are `MenuItem.modifiers` (price-only choices). `create_menu_items`
+  and `update_menu_item(s)` write them from `optionGroups` (`required`, `maxSelect`, choices as
+  `name` + `priceDelta`, or `fromMenuItemId` to copy an existing item's name and price). `composable`
+  sets `MenuItem.buildYourOwn` (numbered build steps).
+- A **product's** option groups (`ProductOptionGroup`) are the only ones whose choices can deduct a raw
+  **material** (`materialId` + `materialQty`). `set_product_options` replaces a product's whole set; menu
+  items linked to the product (`linkedProductId`) offer them on the till and storefront. Choices link to
+  materials, never to products.
+- `get_menu` returns `composable` and the merged `optionGroups` (product's + item's), each choice with
+  `priceDelta` and `stockLinked`. Choices have no ids: they are identified by name within their group
+  (that is also how orders match them).
+- Every menu-changing tool takes `mode: preview | commit`. Preview validates everything and writes
+  nothing (not even a new category).
+- **What Epidom cannot represent** (tools refuse or document it instead of approximating): "pick at
+  least two" (only `required` = at least one), unlimited picks (`maxSelect: null` means "as many as the
+  group has"), a per-choice sold-out toggle, and a pre-selected default choice. Adding any of them is a
+  product change (schema + till + storefront + order checks), not a connector change.
+- `get_order` returns each line's chosen options (group, option, price delta); `list_orders` shows them in
+  the one-line item list.
+
+### What is recorded, and what can be undone
+
+Three layers, from least to most detail:
+
+| Layer | Table | Holds | Undo? |
+|---|---|---|---|
+| Usage | `mcp_tool_call` | tool, user, client, store, ok/error, duration. Never arguments or results. | no |
+| Trail (Layer 1) | `ActivityEvent` | every write as `mcp.<tool>`: who, when, store, outcome. No before/after. | no |
+| Actions (Layer 2) | `ActionLog` | a before/after image for catalogued actions | menu changes only |
+
+- **Menu changes can be undone.** `menu.items.change`, `menu.categories.change` and
+  `menu.product_options.change` (catalogue in `src/lib/audit/catalog.ts`, images and inverses in
+  `src/lib/audit/menu-undo.ts`) hold what the rows looked like before and after. `list_menu_changes`
+  shows them; `undo_menu_change` runs the reversal engine (`src/lib/audit/reverse.ts`): it refuses
+  when anything touched the same rows since (compared against the after-image), when a category,
+  product or material the old state needs is gone, after 30 days, or if already undone. Items a change
+  added are deleted; categories it removed are brought back with their items.
+- **Not undoable** (no before-image is stored): expenses, stock (`stock.adjust` is a ledger entry,
+  compensate with another adjustment), supplier orders (cancel), rosters, overtime decisions,
+  customers, catalogue imports. The Activity log still says who did it and when.
+- The admin Activity log lists the same `ActionLog` rows (category `menu`).
 
 ### How tools handle data
 
@@ -151,5 +200,5 @@ These are left out on purpose:
   then `/mcp` to sign in. This needs the migration applied to the database the dev server uses.
 - **Local, Inspector:** `npx @modelcontextprotocol/inspector`, URL `http://localhost:3000/api/mcp`.
 - **Real Claude:** deploy a preview with a public HTTPS URL (dev.epidom.fr), then claude.ai → Settings
-  → Connectors → Add custom connector → that `/api/mcp` URL. Give the test account's store Enterprise
+  → Connectors → Add custom connector → that `/api/mcp` URL. Give the test account's store Operations (read) or Enterprise (read + write)
   first (Admin → Users).

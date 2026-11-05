@@ -467,3 +467,113 @@ export function BreadcrumbStructuredData({
     />
   );
 }
+
+/**
+ * WebPage JSON-LD for a landing page: carries `dateModified` (from the page's
+ * real `updated` date), the language, and ties the page to the site and the
+ * Epidom organization entity so assistants can attribute what they quote.
+ */
+export function WebPageStructuredData({
+  url,
+  name,
+  description,
+  inLanguage,
+  dateModified,
+}: {
+  url: string;
+  name: string;
+  description: string;
+  inLanguage: string;
+  dateModified: string;
+}) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "@id": url,
+          url,
+          name,
+          description,
+          inLanguage,
+          dateModified,
+          isPartOf: { "@type": "WebSite", name: "EPIDOM", url: "https://epidom.fr" },
+          publisher: { "@type": "Organization", name: "EPIDOM", url: "https://epidom.fr" },
+        }),
+      }}
+    />
+  );
+}
+
+/**
+ * HowTo JSON-LD from a page's visible numbered steps. Like the FAQ, it takes
+ * the rendered strings, so the markup can never drift from the visible text.
+ */
+export function HowToStructuredData({
+  name,
+  steps,
+}: {
+  name: string;
+  steps: ReadonlyArray<{ title: string; text: string }>;
+}) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "HowTo",
+          name,
+          step: steps.map(({ title, text }, index) => ({
+            "@type": "HowToStep",
+            position: index + 1,
+            name: title,
+            text,
+          })),
+        }),
+      }}
+    />
+  );
+}
+
+/**
+ * The Claude connector as a software feature of Epidom, for the connector
+ * landing pages: what it is, who publishes it, where it connects and what it
+ * can do. Facts mirror docs/MCP.md; `featureList` is plain text a model can
+ * quote.
+ */
+export function ClaudeConnectorStructuredData({
+  url,
+  inLanguage,
+  featureList,
+}: {
+  url: string;
+  inLanguage: string;
+  featureList: readonly string[];
+}) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "EPIDOM Claude connector",
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web",
+          url,
+          inLanguage,
+          isAccessoryOrAddOnFor: {
+            "@type": "SoftwareApplication",
+            name: "EPIDOM",
+            url: "https://epidom.fr",
+          },
+          publisher: { "@type": "Organization", name: "EPIDOM", url: "https://epidom.fr" },
+          featureList,
+        }),
+      }}
+    />
+  );
+}

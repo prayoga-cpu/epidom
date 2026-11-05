@@ -85,8 +85,18 @@ describe("authorizeMcpStore", () => {
 
   it("refuses a store whose plan doesn't include the connector", async () => {
     verifyStoreAccess.mockResolvedValue({ store: STORE, accessType: "owner" });
-    getStorePlan.mockResolvedValue("OPERATIONS");
+    getStorePlan.mockResolvedValue("POS");
     expect(await refusal(authorizeMcpStore(principal(), "store-1", {}, "read"))).toBe(
+      "PLAN_REQUIRED"
+    );
+  });
+
+  it("lets an Operations store be read but not changed from Claude", async () => {
+    verifyStoreAccess.mockResolvedValue({ store: STORE, accessType: "owner" });
+    getStorePlan.mockResolvedValue("OPERATIONS");
+    const ctx = await authorizeMcpStore(principal(), "store-1", {}, "read");
+    expect(ctx.role).toBe("OWNER");
+    expect(await refusal(authorizeMcpStore(principal(), "store-1", {}, "write"))).toBe(
       "PLAN_REQUIRED"
     );
   });

@@ -52,13 +52,14 @@ describe("finance, custom development and the Enterprise tier", () => {
   });
 
   it("no self-serve feature is gated to Enterprise — it is the custom-build tier", () => {
-    // The Claude connector is the one deliberate exception (decided 2026-10-29):
-    // like the rest of Enterprise it is sales-led and granted per store by an
-    // admin, never bought from the pricing page.
+    // Claude connector WRITE access is the one deliberate exception (decided
+    // 2026-10-29, narrowed 2026-11-04 when read opened to Operations): like the
+    // rest of Enterprise it is sales-led, never bought from the pricing page.
     const gated = Object.entries(FEATURE_MIN_PLAN)
       .filter(([, plan]) => plan === "ENTERPRISE")
       .map(([feature]) => feature);
-    expect(gated).toEqual(["claudeConnector"]);
+    expect(gated).toEqual(["claudeConnectorWrite"]);
+    expect(FEATURE_MIN_PLAN.claudeConnector).toBe("OPERATIONS");
   });
 });
 

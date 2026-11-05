@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Check, ChevronDown, Copy, Lock, RotateCw, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { upgradeHrefFor } from "@/lib/plans/entitlements";
+import { helpPageHref } from "@/features/guide/lib/help-guides";
 import { useConnectedApps, useRevokeConnectedApp } from "../hooks/use-connected-apps";
 
 const BETA_WORKS = ["works1", "works2", "works3", "works4"] as const;
@@ -71,6 +74,7 @@ function BetaDetails() {
  */
 export function ClaudeConnectorCard() {
   const { t } = useI18n();
+  const storeId = useParams<{ storeId?: string }>()?.storeId;
   const { data, isLoading, isError, refetch, isRefetching } = useConnectedApps();
   const revoke = useRevokeConnectedApp();
   const { confirm, confirmDialog } = useConfirm();
@@ -108,7 +112,7 @@ export function ClaudeConnectorCard() {
 
   return (
     <>
-      <Card className="border-2">
+      <Card id="claude" className="scroll-mt-24 border-2">
         <CardHeader className="space-y-1 pb-4">
           <CardTitle className="flex items-center gap-2 text-xl font-bold">
             <Sparkles className="h-5 w-5" aria-hidden />
@@ -141,11 +145,21 @@ export function ClaudeConnectorCard() {
               <Lock className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden />
               <p className="min-w-0 flex-1 text-sm">{t("claudeConnector.card.lockedBody")}</p>
               <Button asChild variant="outline" className="h-11 shrink-0">
-                <Link href="/contact">{t("claudeConnector.card.talkToUs")}</Link>
+                <Link href={upgradeHrefFor("OPERATIONS")}>{t("claudeConnector.card.upgrade")}</Link>
               </Button>
             </div>
           ) : (
             <>
+              {!enabledStores.some((store) => store.connectorWriteEnabled) && (
+                <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3 sm:flex-row sm:items-center">
+                  <p className="text-muted-foreground min-w-0 flex-1 text-sm">
+                    {t("claudeConnector.card.writeLocked")}
+                  </p>
+                  <Button asChild variant="outline" size="sm" className="shrink-0">
+                    <Link href="/contact">{t("claudeConnector.card.talkToUs")}</Link>
+                  </Button>
+                </div>
+              )}
               <div className="space-y-2">
                 <p className="text-sm font-medium">{t("claudeConnector.card.urlLabel")}</p>
                 <div className="flex items-center gap-2">
@@ -168,6 +182,22 @@ export function ClaudeConnectorCard() {
                 <li>{t("claudeConnector.card.step2")}</li>
                 <li>{t("claudeConnector.card.step3")}</li>
               </ol>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">{t("claudeConnector.promo.tryPrompts")}</p>
+                <ul className="text-muted-foreground list-disc space-y-0.5 pl-5 text-sm">
+                  {(["Dashboard", "Finance", "Stock", "Schedule"] as const).map((key) => (
+                    <li key={key}>{t(`claudeConnector.promo.example${key}`)}</li>
+                  ))}
+                </ul>
+                {storeId && (
+                  <Link
+                    href={helpPageHref(storeId, "claude-connector")}
+                    className="text-primary inline-block pt-1 text-sm underline underline-offset-2"
+                  >
+                    {t("claudeConnector.card.guide")}
+                  </Link>
+                )}
+              </div>
               <p className="text-muted-foreground text-xs">
                 {t("claudeConnector.card.claudeCode")}{" "}
                 <code className="break-all">

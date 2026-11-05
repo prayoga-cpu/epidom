@@ -11,6 +11,7 @@ import { TrackingCard } from "../tracking/tracking-card";
 import { SubscriptionLockedState } from "@/features/dashboard/shared/components/subscription-locked-state";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { SetupChecklist } from "@/features/guide/components/setup-checklist";
+import { ClaudeConnectorPromo } from "@/features/claude-connector/components/claude-connector-promo";
 import { WelcomeTourAutoOpen } from "@/features/guide/components/welcome-tour";
 
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
@@ -140,6 +141,12 @@ export function DashboardClient({
       {/* Welcome tour (a dialog: renders nothing in the flow) + Getting-started checklist */}
       <WelcomeTourAutoOpen isOwner={isOwner} isNewStore={isNewStore} />
       <SetupChecklist storeId={storeId} canView={showSetupGuide} isNewStore={isNewStore} />
+      {/* Owner or manager, once the first-weeks setup is behind them */}
+      <ClaudeConnectorPromo
+        surface="dashboard"
+        storeId={storeId}
+        canView={showSetupGuide && !isNewStore}
+      />
 
       <AnalyticsSection storeId={storeId} canOpenFinance={canOpenFinance} />
 

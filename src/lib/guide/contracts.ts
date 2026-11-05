@@ -24,6 +24,8 @@ export const PAGE_INTRO_IDS = [
   "tables",
   "operational",
   "hardware",
+  /** The "Ask Claude" promo strip (src/features/claude-connector): one dismissal hides it everywhere. */
+  "claudeConnector",
 ] as const;
 export type PageIntroId = (typeof PAGE_INTRO_IDS)[number];
 

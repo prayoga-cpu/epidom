@@ -1,5 +1,16 @@
 import { z } from "zod";
 import { defineAction, type AnyActionDefinition } from "./catalog-types";
+import {
+  menuCategoriesChangeSchema,
+  menuItemsChangeSchema,
+  menuProductOptionsChangeSchema,
+  precheckMenuCategories,
+  precheckMenuItems,
+  precheckProductOptions,
+  reverseMenuCategories,
+  reverseMenuItems,
+  reverseProductOptions,
+} from "./menu-undo";
 
 /**
  * The Layer 2 action catalogue.
@@ -633,6 +644,55 @@ export const ACTION_CATALOG = {
       reason: z.string().nullable(),
     }),
     label: (p) => `Refunded ${p.amount} on order ${p.orderNumber}`,
+  }),
+
+  // ================================================== store domain: menu
+  // Written by the Claude connector's menu tools. Each carries the before- and
+  // after-image of what it touched, so undo_menu_change can restore it, and
+  // refuses (precheck) when anything has changed since (src/lib/audit/menu-undo.ts).
+  "menu.items.change": defineAction({
+    category: "menu",
+    severity: "NOTICE",
+    reversibility: "REVERSIBLE",
+    maxReversalAgeDays: 30,
+    targetType: "MenuItem",
+    payload: menuItemsChangeSchema,
+    label: (p) => p.summary,
+    roundTrip: (p) => {
+      menuItemsChangeSchema.parse(JSON.parse(JSON.stringify(p)));
+    },
+    precheck: ({ payload, db }) => precheckMenuItems(payload, db),
+    reverse: ({ payload, tx }) => reverseMenuItems(payload, tx),
+  }),
+
+  "menu.categories.change": defineAction({
+    category: "menu",
+    severity: "NOTICE",
+    reversibility: "REVERSIBLE",
+    maxReversalAgeDays: 30,
+    targetType: "MenuCategory",
+    payload: menuCategoriesChangeSchema,
+    label: (p) => p.summary,
+    roundTrip: (p) => {
+      menuCategoriesChangeSchema.parse(JSON.parse(JSON.stringify(p)));
+    },
+    precheck: ({ payload, db }) => precheckMenuCategories(payload, db),
+    reverse: ({ payload, tx }) => reverseMenuCategories(payload, tx),
+  }),
+
+  "menu.product_options.change": defineAction({
+    category: "menu",
+    severity: "NOTICE",
+    reversibility: "REVERSIBLE",
+    maxReversalAgeDays: 30,
+    targetType: "Product",
+    payload: menuProductOptionsChangeSchema,
+    label: (p) => `Changed the options of ${p.productName}`,
+    roundTrip: (p) => {
+      menuProductOptionsChangeSchema.parse(JSON.parse(JSON.stringify(p)));
+    },
+    precheck: ({ payload, db }) => precheckProductOptions(payload, db),
+    reverse: ({ payload, tx }) => reverseProductOptions(payload, tx),
   }),
 
   "store.delete": defineAction({

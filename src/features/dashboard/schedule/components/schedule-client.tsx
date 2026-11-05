@@ -21,6 +21,7 @@ import { ApplyShiftTemplateDialog } from "./apply-shift-template-dialog";
 import { ScheduleLog } from "./schedule-log";
 import { ScheduleImagePanel } from "./schedule-image-panel";
 import { PageIntro } from "@/features/guide/components/page-intro";
+import { ClaudeConnectorPromo } from "@/features/claude-connector/components/claude-connector-promo";
 import { ScheduleWeekGrid, type ScheduleWeekGridEntry } from "./schedule-week-grid";
 import type { StaffRole } from "@prisma/client";
 
@@ -249,6 +250,7 @@ export function ScheduleClient({
       </div>
 
       <PageIntro id="schedule" storeId={storeId} />
+      <ClaudeConnectorPromo surface="schedule" storeId={storeId} />
 
       {/* Two ways to publish a roster. Same date range either way (below). */}
       <Tabs value={view} onValueChange={(v) => changeView(v as ScheduleView)}>

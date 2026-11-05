@@ -51,6 +51,11 @@ export const LANDING_GROUPS = {
     id: "printer-struk-kasir",
     en: "receipt-printer-pos",
   },
+  "claude-connector": {
+    fr: "connecteur-claude-caisse",
+    id: "konektor-claude-kasir",
+    en: "claude-connector-pos",
+  },
 } as const satisfies Record<string, Partial<Record<Locale, string>>>;
 
 export type LandingGroup = keyof typeof LANDING_GROUPS;
@@ -114,6 +119,9 @@ export const LANDING_LABELS: Record<string, string> = {
   "restaurant-inventory-software": "Restaurant inventory",
   "restaurant-staff-scheduling": "Staff scheduling",
   "receipt-printer-pos": "Receipt printers",
+  "connecteur-claude-caisse": "Connecteur Claude",
+  "konektor-claude-kasir": "Konektor Claude",
+  "claude-connector-pos": "Claude connector",
 };
 
 /** A language's landing pages in registry order (tools, then businesses, then features). */

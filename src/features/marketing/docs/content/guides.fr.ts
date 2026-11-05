@@ -382,4 +382,63 @@ export const frGuides: Article[] = [
       },
     ],
   },
+  {
+    slug: "connecteur-claude",
+    locale: "fr",
+    title: "Utiliser Epidom depuis votre propre Claude",
+    description: "Connectez votre Claude à Epidom, interrogez ventes, stocks et équipe, voyez ce qu'il peut et ne peut pas faire, et annulez une modification de la carte.",
+    date: "2026-11-05",
+    readMinutes: 4,
+    category: "Opérations",
+    blocks: [
+      {
+        type: "p",
+        text: "Le connecteur Claude vous permet d'interroger votre propre Claude sur votre établissement\u00a0: comment s'est passée la semaine, que recommander, qui a fait des heures supplémentaires. Claude lit la réponse dans vos données Epidom. Il est en bêta et fonctionne avec votre propre abonnement Claude.",
+      },
+      { type: "h2", text: "Ce que comprend votre offre" },
+      {
+        type: "list",
+        items: [
+          "Operations\u00a0: connecter Claude et poser des questions (lecture seule).",
+          "Enterprise\u00a0: Claude peut aussi faire des modifications, seulement si vous l'autorisez et avec votre accord clair à chaque fois.",
+          "Les offres Free et POS ne peuvent pas encore connecter Claude.",
+        ],
+      },
+      { type: "h2", text: "Le connecter" },
+      {
+        type: "list",
+        items: [
+          "Ouvrez le Profil, puis la carte Claude, et copiez l'adresse du connecteur (https://www.epidom.fr/api/mcp). Utilisez toujours l'adresse en www.",
+          "Dans claude.ai ou l'application Claude pour ordinateur, ouvrez Paramètres, puis Connecteurs, puis Ajouter un connecteur personnalisé, et collez-la. Dans Claude Code, lancez\u00a0: claude mcp add --transport http epidom https://www.epidom.fr/api/mcp",
+          "Claude vous envoie vers un écran Epidom. Vérifiez le nom de l'application et les établissements listés, cochez Autoriser aussi les modifications seulement si votre offre l'inclut et si vous le voulez, puis validez.",
+          "Posez une première question, par exemple\u00a0: Comment s'est passée la semaine dernière\u00a0?",
+        ],
+      },
+      { type: "h2", text: "De bonnes premières questions" },
+      {
+        type: "list",
+        items: [
+          "Comment s'est passée la semaine par rapport à la précédente\u00a0?",
+          "Que dois-je recommander\u00a0?",
+          "Qui a fait des heures supplémentaires ce mois-ci\u00a0?",
+          "Quels plats faut-il repenser\u00a0?",
+        ],
+      },
+      { type: "h2", text: "Ce que Claude ne fera pas" },
+      {
+        type: "p",
+        text: "L'encaissement, les remboursements, la caisse, le pointage, les codes PIN et la rémunération du personnel, la facturation et le changement d'offre, la suppression d'un établissement et la publication de votre vitrine restent dans l'application Epidom. Une vente n'est jamais modifiée ni supprimée depuis Claude.",
+      },
+      { type: "h2", text: "Annuler une modification de la carte" },
+      {
+        type: "p",
+        text: "Quand Claude modifie votre carte (articles, catégories ou options d'un produit), Epidom garde l'état d'avant. Demandez à Claude d'afficher les dernières modifications de la carte et d'en annuler une. Il vérifie d'abord et refuse si quoi que ce soit a touché les mêmes articles depuis, pour ne jamais écraser une modification plus récente. L'annulation fonctionne pendant 30 jours et seulement pour la carte. Les autres changements, comme les stocks, les dépenses ou les plannings, se corrigent par un nouveau changement.",
+      },
+      { type: "h2", text: "L'arrêter à tout moment" },
+      {
+        type: "p",
+        text: "Dans le Profil, la carte Claude liste chaque application connectée. Révoquez-en une et son accès s'arrête aussitôt. Chaque modification faite par Claude figure dans votre journal d'activité.",
+      },
+    ],
+  },
 ];

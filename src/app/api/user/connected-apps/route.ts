@@ -27,6 +27,7 @@ export const GET = withApiHandler(async (_request, { userId }) => {
         name: store.name,
         plan: store.plan,
         connectorEnabled: store.connectorEnabled,
+        connectorWriteEnabled: store.connectorWriteEnabled,
       })),
       apps,
     })

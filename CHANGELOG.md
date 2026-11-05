@@ -9,6 +9,19 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.42.0] - 2026-11-04 · feat
+
+- **Ask Claude about your store from the Operations plan.** Connecting Epidom to your own Claude (Beta) and asking about sales, stock, staff and finance is now included from Operations. Letting Claude make changes (stock, menu, suppliers, rosters) stays on Enterprise, and the consent screen only offers it to stores that have it.
+- New page explaining the Claude connector in English, French and Indonesian: what you can ask, how to connect, what Claude can't do, and how access is controlled.
+- Operations and Enterprise on the pricing page now list the Claude connector, and the comparison table has two new rows for it.
+- A dismissible "Ask Claude" tip appears on the dashboard, Finance and Billing for owners and managers, with an example question; it goes away for good once you connect Claude or tap close.
+- **Claude can now build "à composer" items.** It can create or edit a Build Your Own item with its choice groups (what to pick, how many, extra prices, copied from existing items), tie items to an inventory product, change an item's kitchen or bar department, and set the stock a choice uses. Every menu change can be previewed first, so nothing goes live until you say yes.
+- **Undo for menu changes.** Every menu change Claude makes is kept with what it looked like before. Ask Claude to list the recent changes and undo one: it restores the items, brings back removed categories, or puts a product's previous options back, and refuses if anything touched the same items since, so a newer edit is never overwritten. Works for 30 days and only for menu changes.
+- Claude can also change up to 50 menu items at once, all or nothing (hide a batch, move a batch), and rename, reorder, merge or remove empty menu categories.
+- Orders listed by Claude now show the choices picked on each line, and Claude can rank the most-picked choices for a period.
+- New blog post, "Ask Claude about your café" (also in French and Indonesian), a short Claude line on the Features and home pages, and a full Claude guide in Help.
+- Profile → Claude suggests four questions to try, and says plainly when your stores can read but not change data.
+
 ## [3.41.0] - 2026-11-03 · feat
 
 - **The POS trial no longer asks for a card.** Pick POS on the pricing page, during setup or in Billing, and the 14 days start straight away, with no card and no payment page.

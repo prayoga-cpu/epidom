@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { MCP_SCOPE_WRITE } from "@/lib/mcp/config";
+import { trackEvent } from "@/lib/analytics";
 
 interface ConsentStore {
   storeId: string;
   name: string;
   role: string;
   connectorEnabled: boolean;
+  connectorWriteEnabled: boolean;
 }
 
 interface ConsentScreenProps {
@@ -63,6 +65,13 @@ export function ConsentScreen(props: ConsentScreenProps) {
       } | null;
       const next = data?.url ?? data?.redirect_uri;
       if (!res.ok || !next) throw new Error("consent failed");
+      if (accept) {
+        trackEvent("claude_connect_consent", {
+          event_category: "claude_connector",
+          allowWrite,
+          stores: props.stores.filter((store) => store.connectorEnabled).length,
+        });
+      }
       window.location.href = next;
     } catch {
       setState("error");
@@ -71,6 +80,8 @@ export function ConsentScreen(props: ConsentScreenProps) {
 
   const appName = props.clientName || t("claudeConnector.consent.unnamedApp");
   const enabledStores = props.stores.filter((store) => store.connectorEnabled);
+  // Changes need Enterprise: offer the box only when some store could use it.
+  const anyWriteStore = props.stores.some((store) => store.connectorWriteEnabled);
 
   return (
     <div className="flex min-h-[calc(100dvh/var(--app-zoom,1))] items-center justify-center px-4 py-12">
@@ -119,10 +130,16 @@ export function ConsentScreen(props: ConsentScreenProps) {
                     <li key={store.storeId} className="flex items-center gap-2 text-sm">
                       <Store className="text-muted-foreground size-4 shrink-0" aria-hidden />
                       <span className="min-w-0 flex-1 truncate">{store.name}</span>
-                      {!store.connectorEnabled && (
+                      {!store.connectorEnabled ? (
                         <span className="text-muted-foreground shrink-0 text-xs">
-                          {t("claudeConnector.consent.needsEnterprise")}
+                          {t("claudeConnector.consent.needsOperations")}
                         </span>
+                      ) : (
+                        !store.connectorWriteEnabled && (
+                          <span className="text-muted-foreground shrink-0 text-xs">
+                            {t("claudeConnector.consent.readOnlyStore")}
+                          </span>
+                        )
                       )}
                     </li>
                   ))}
@@ -135,7 +152,7 @@ export function ConsentScreen(props: ConsentScreenProps) {
               )}
             </div>
 
-            {props.writeRequested && (
+            {props.writeRequested && anyWriteStore && (
               <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3">
                 <Checkbox
                   checked={allowWrite}

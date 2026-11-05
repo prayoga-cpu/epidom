@@ -2,6 +2,100 @@ import type { BlogPost } from "./types";
 
 export const idPosts: BlogPost[] = [
   {
+    slug: "tanya-claude-soal-kasir-anda",
+    locale: "id",
+    title: "Tanya Claude soal Kasir Anda: 12 Pertanyaan Berguna untuk Kafe dan Restoran",
+    description:
+      "Apa yang bisa ditanyakan ke asisten AI yang terhubung ke kasir Anda: penjualan, margin, stok, staf, dan menu, cara membaca jawabannya, dan di mana tetap waspada.",
+    date: "2026-11-05",
+    readMinutes: 6,
+    category: "Alat",
+    related: ["konektor-claude-kasir"],
+    blocks: [
+      {
+        type: "p",
+        text: "Kebanyakan pemilik kafe dan restoran sebenarnya sudah punya angkanya di kepala: hari Selasa terasa sepi, susu oat selalu habis duluan, satu menu tidak pernah laku. Yang memakan waktu adalah memeriksanya. Anda membuka layar penjualan, lalu daftar stok, lalu jadwal staf, dan saat jawabannya ketemu jam makan siang sudah dimulai.",
+      },
+      {
+        type: "p",
+        text: "Asisten AI yang terhubung ke kasir mengubah urutan kerja itu. Anda bertanya dengan bahasa sehari-hari, dan asisten membaca jawabannya dari data Anda sendiri. Panduan ini memuat dua belas pertanyaan yang berguna, menjelaskan seperti apa jawaban yang baik, dan jujur soal bagian mana yang tetap perlu Anda periksa sendiri. Panduan ini mengandaikan kasir Anda menyediakan koneksi seperti itu; konektor Claude di Epidom adalah salah satunya, dan masih berstatus Beta.",
+      },
+      { type: "h2", text: "Pertama, apa yang bisa dan tidak bisa dilakukan asisten yang terhubung" },
+      {
+        type: "p",
+        text: "Terhubung bukan berarti memegang kendali. Asisten hanya bisa menjangkau apa yang diizinkan akun Anda, dan di Epidom Anda memilih apakah ia hanya boleh membaca atau juga boleh mengubah. Menerima pembayaran, refund, kasir, dan absen sengaja tetap berada di dalam aplikasi kasir. Anggap asisten seperti rekan kerja yang cekatan dan bisa membuka laporan Anda, bukan manajer yang memegang kunci.",
+      },
+      {
+        type: "p",
+        text: "Membaca data adalah tempat yang aman untuk memulai. Semua pertanyaan di bawah ini adalah pertanyaan baca. Setelah Anda percaya pada jawabannya, Anda bisa memutuskan apakah ia boleh mengusulkan perubahan, dan itu pun ia harus menunjukkan apa yang akan dilakukan lalu menunggu jawaban ya yang jelas.",
+      },
+      { type: "h2", text: "Pertanyaan soal penjualan" },
+      {
+        type: "list",
+        items: [
+          "Bagaimana minggu lalu dibanding minggu sebelumnya? Jawaban yang baik memberi omzet, jumlah pesanan, dan rata-rata nota untuk kedua minggu, serta menyebut apa yang berubah, bukan hanya berapa besarnya.",
+          "Apa lima menu terlaris bulan ini menurut omzet, lalu menurut jumlah? Kedua daftar itu sering berbeda. Minuman murah bisa unggul dalam jumlah, sementara hidangan utama unggul dalam omzet.",
+          "Jam dan kanal mana yang paling banyak membawa penjualan? Minta rincian per jam dan per kanal (di tempat, online, pengantaran). Rincian ini menunjukkan kapan Anda kekurangan atau kelebihan staf.",
+        ],
+      },
+      {
+        type: "p",
+        text: "Saat asisten menyebut sebuah angka, tanyakan periode yang dipakai. Minggu yang dimulai Senin dan minggu yang dimulai Minggu memberi total yang berbeda, dan alat yang baik harus memberi tahu mana yang dipilih dan di zona waktu apa.",
+      },
+      { type: "h2", text: "Pertanyaan soal margin" },
+      {
+        type: "list",
+        items: [
+          "Kenapa margin turun minggu lalu? Jawaban yang berguna memisahkan tiga sebab: penjualan lebih rendah, biaya lebih tinggi, dan perubahan pada apa yang dipesan pelanggan.",
+          "Menu mana yang paling menguntungkan, dan mana yang populer tetapi hampir tidak untung? Ini tinjauan menu yang klasik. Populer dan untung dibiarkan; populer tetapi tipis mungkin perlu penyesuaian harga kecil; tidak populer dan tipis adalah calon yang dicoret.",
+          "Berapa biaya diskon dan refund bulan ini? Kebocoran kecil menumpuk, dan mudah terlewat bila Anda hanya melihat total penjualan.",
+        ],
+      },
+      {
+        type: "p",
+        text: "Jawaban soal margin hanya sebaik biaya di baliknya. Kalau resep dan harga bahan Anda sudah usang, margin juga usang. Asisten yang terhubung tidak akan memperbaikinya, tetapi ia bisa membuat celahnya terlihat: tanyakan item mana yang belum punya biaya tercatat.",
+      },
+      { type: "h2", text: "Pertanyaan soal stok dan pemasok" },
+      {
+        type: "list",
+        items: [
+          "Apa yang menipis dan apa yang perlu dipesan ulang? Jawaban yang baik mengelompokkan usulan per pemasok, lengkap dengan jumlah dan harga, dan tidak memesan apa pun sendiri.",
+          "Apa yang saya buang bulan ini dan berapa biayanya? Bahan terbuang biasanya biaya tak terlihat terbesar di dapur, dan banyak pemilik belum pernah melihatnya sebagai satu angka.",
+        ],
+      },
+      {
+        type: "p",
+        text: "Untuk pemesanan, biarkan langkah terakhir dilakukan manusia. Minta asisten menyiapkan daftar, baca sendiri, lalu kirim sendiri. Jumlah yang salah pada kiriman hari Jumat lebih mahal daripada waktu yang dihemat.",
+      },
+      { type: "h2", text: "Pertanyaan soal tim dan menu" },
+      {
+        type: "list",
+        items: [
+          "Siapa yang lembur bulan ini, dan berapa lama? Ini pembacaan jam kerja terhadap jadwal, dan hanya tersedia untuk pemilik dan manajer.",
+          "Item mana yang sudah berbulan-bulan ada di menu tanpa laku? Ini cara tercepat menemukan yang perlu dicoret, dan menyembunyikan lebih aman daripada menghapus, karena pesanan lama dan tautan stok tetap utuh.",
+        ],
+      },
+      { type: "h2", text: "Cara membaca jawaban tanpa tertipu" },
+      {
+        type: "p",
+        text: "Asisten bisa membaca angka Anda dengan benar tetapi salah menafsirkan artinya. Jaga empat kebiasaan. Pertama, minta periode dan mata uang di setiap jawaban. Kedua, bila ada angka yang mengejutkan, minta baris-baris di baliknya, lalu buka laporannya sendiri sekali. Ketiga, ingat bahwa ia menjelaskan, bukan memutuskan: margin yang turun bisa karena harga pemasok naik, promo, atau menu baru, dan hanya Anda yang tahu yang mana. Keempat, jangan pernah menempelkan data pribadi pelanggan ke percakapan; Anda tidak membutuhkannya.",
+      },
+      {
+        type: "p",
+        text: "Hati-hati juga dengan penyebab. Kalau asisten bilang hari Selasa sepi karena cuaca, itu tebakan, bukan fakta dari data Anda. Minta ia memisahkan apa yang ditunjukkan data dari apa yang ia tebak.",
+      },
+      { type: "h2", text: "Mulai dengan Epidom" },
+      {
+        type: "p",
+        text: "Di Epidom, membaca data Anda dari Claude sudah termasuk mulai paket Operations, dan mengizinkan Claude membuat perubahan adalah bagian dari Enterprise. Anda menambahkan Epidom ke Claude sekali dengan satu alamat, masuk ke akun Epidom, lalu menyetujui apa yang boleh dilihat Claude. Akses bisa dicabut kapan saja dari profil Anda. Konektor ini masih Beta, jadi wajar bila ada yang kurang mulus; beri tahu kami apa yang rusak.",
+      },
+      {
+        type: "p",
+        text: "Mulailah dari pertanyaan pertama dalam daftar ini. Bila jawabannya cocok dengan perasaan Anda soal minggu lalu, Anda tahu koneksinya bisa diandalkan. Bila tidak, Anda baru saja belajar sesuatu tentang minggu Anda.",
+      },
+    ],
+  },
+  {
     slug: "cara-mengurangi-komisi-gofood-grabfood",
     locale: "id",
     title: "Cara Mengurangi Ketergantungan pada Komisi GoFood dan GrabFood",

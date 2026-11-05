@@ -59,6 +59,7 @@ export default async function OAuthConsentPage({
         name: store.name,
         role: store.role,
         connectorEnabled: store.connectorEnabled,
+        connectorWriteEnabled: store.connectorWriteEnabled,
       }))}
     />
   );

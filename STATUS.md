@@ -1,5 +1,21 @@
 # STATUS.md
 
+## 3.42.0 — Claude connector as a sales hook (built 2026-11-04, **not pushed**)
+
+Goal: sell the first POS/Operations plan with the connector. Plan: `~/.claude/plans/give-me-the-best-gleaming-dolphin.md`.
+
+- [x] **Plan split.** `claudeConnector` is now OPERATIONS (connect + read); new `claudeConnectorWrite` is ENTERPRISE. `authorize.ts` refuses write tools on non-Enterprise stores with a plain message; `connectorWriteEnabled` flows through `listConnectorStores`, the consent screen (the "Also allow changes" box only shows if some store has it) and the Profile card.
+- [x] **Public page** (landing system, group `claude-connector`): `/en/claude-connector-pos`, `/connecteur-claude-caisse`, `/id/konektor-claude-kasir`. WebPage (`dateModified`), HowTo (from the steps) and SoftwareApplication JSON-LD; `llms.txt` updated, new `llms-full.txt`, named AI crawlers in `robots.ts`.
+- [x] **Promo** `ClaudeConnectorPromo` (dashboard, Finance, Billing): dismissal is `dismissedTips` + new `claudeConnector` id in `PAGE_INTRO_IDS` (cross-device, no migration; "Show page tips again" restores it). Hidden for Free, for anyone with a connected app, for new stores' dashboards.
+- [x] **Pricing**: Operations `t3f11`, Enterprise `t4f9`, two comparison rows, a strip under the hero.
+- [x] **Menu tools from the OTIUM report (2026-11-05)**: composable items (`optionGroups`, `composable`, `fromMenuItemId`) on `create_menu_items`/`update_menu_item`; `get_menu` returns them; `linkedProductId` and `department` on update; `update_menu_items` (bulk, atomic); `manage_category`; `mode: preview|commit` on every menu change; `set_product_options` (stock-linked choices); `list_orders` shows chosen options; dead `upsert_product` reference removed. 38 tools now. Not possible without a product change: min picks > 1, unlimited picks, per-choice sold-out, default choice (documented in `docs/MCP.md`).
+- [ ] **Verify live first** (STATUS 3.40.0 "Not verified yet"): sign-in/consent/tool calls from claude.ai, desktop, Claude Code, on an Operations store (read only) and an Enterprise store. The page says Beta; do not advertise it before this.
+- [ ] Privacy-policy wording: plan reference updated to "Operations and above" in en/fr/id; the operator's legal review is still open.
+- [x] Added 2026-11-05: promo on Stock and Schedule, a Claude strip on `/services`, blog posts in EN/FR/ID, `claude_connect_consent` analytics event on the consent screen, `get_top_options`, keyword rows (below).
+- [x] Added 2026-11-05 (2): **undo for menu changes** (`list_menu_changes`, `undo_menu_change`; catalogue `menu.items.change`, `menu.categories.change`, `menu.product_options.change`; `src/lib/audit/menu-undo.ts`; 41 tools), a Claude strip on the home page (below the existing sections, one line), and an in-app **Help guide** "Use Epidom from your own Claude" in EN/FR/ID (linked from the Profile card).
+- [ ] Still not done, and why: per-choice sold-out, a default choice, "pick at least two" and unlimited picks (a product change: schema + till + storefront + order checks + a migration you run); live sign-in checks; the privacy-text legal review; Connectors Directory submission; an MCP App for charts; a server-side connect event (the consent screen sends one, and the admin usage page counts connections). Undo covers menu changes only: stock, expenses, supplier orders, rosters, customers have a who/when record but no before-image.
+- [ ] Add keywords to the tracker: "Claude POS integration", "ask Claude about sales", "connecteur Claude caisse", "konektor Claude kasir".
+
 ## 3.41.0 — POS trial without a card — pushed to main 2026-11-03
 
 **Built:** first POS subscription = 14-day trial created straight in Stripe (no Checkout, no card,
@@ -342,6 +358,9 @@ Demand is an estimate (no Keyword Planner/Ahrefs data yet). Fill "Position" from
 | fr | logiciel caisse café | /logiciel-caisse-cafe | 2 (after NF525) | – |
 | fr | logiciel caisse boulangerie | /logiciel-caisse-boulangerie | 2 (after NF525) | – |
 | fr | logiciel de caisse | home | 12+ months | – |
+| fr | connecteur Claude caisse / interroger Claude sur ma caisse | /connecteur-claude-caisse, /blog/interroger-claude-sur-votre-caisse | 3.42 | – |
+| id | konektor Claude kasir / tanya Claude soal kasir | /id/konektor-claude-kasir, /id/blog/tanya-claude-soal-kasir-anda | 3.42 | – |
+| en | Claude POS integration / ask Claude about my sales | /en/claude-connector-pos, /en/blog/ask-claude-about-your-cafe | 3.42 | – |
 | id | kalkulator HPP menu | margin calculator | 2 | – |
 | id | komisi GoFood GrabFood | commission calculator | 2 | – |
 | id | aplikasi kasir offline | /id/aplikasi-kasir-offline | 2 | – |

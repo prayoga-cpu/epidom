@@ -2,6 +2,7 @@ import type { Locale } from "@/components/lang/i18n-provider";
 import type { LandingPage } from "../types";
 import { bakeryPages } from "./bakery";
 import { cafePages } from "./cafe";
+import { claudeConnectorPages } from "./claude-connector";
 import { commissionPages } from "./commission";
 import { kitchenDisplayPages } from "./kitchen-display";
 import { offlinePages } from "./offline";
@@ -32,6 +33,7 @@ export const LANDING_PAGES: readonly LandingPage[] = [
   ...stockRecipesPages,
   ...staffSchedulingPages,
   ...receiptPrinterPages,
+  ...claudeConnectorPages,
 ];
 
 const BY_SLUG = new Map(LANDING_PAGES.map((p) => [p.slug, p]));

@@ -23,9 +23,9 @@ const TIERS = [
 // Free lists 5 features: it has no POS or KDS (the till is gated to the POS plan),
 // so the old sixth line "POS + KDS" was wrong and is gone from the locales.
 // Operations lists 10: financial reports and the all-outlets roll-up moved down
-// from Enterprise. Enterprise lists 8: unlimited outlets (Operations stops at
+// from Enterprise, then the Claude connector (read). Enterprise lists 9: unlimited outlets (Operations stops at
 // three) first, then the custom-build and service lines.
-const FEAT_COUNTS = [5, 6, 10, 8] as const;
+const FEAT_COUNTS = [5, 6, 11, 9] as const;
 
 const FREE_PRICES = new Set(["$0", "0 €", "Rp 0", "€0"]);
 const CUSTOM_PRICES = new Set(["Custom", "Sur devis", "Kustom"]);

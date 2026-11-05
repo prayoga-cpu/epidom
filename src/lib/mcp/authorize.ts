@@ -118,6 +118,15 @@ export async function authorizeMcpStore(
         "Epidom about it from the Profile page."
     );
   }
+  if (kind === "write" && !planHasFeature(plan, "claudeConnectorWrite")) {
+    throw new McpAccessError(
+      "PLAN_REQUIRED",
+      `${storeAccess.store.name} is on the ${PLAN_LABELS[plan]} plan, which lets Claude read its ` +
+        `data but not change it. Making changes from Claude needs the ` +
+        `${PLAN_LABELS[minPlanFor("claudeConnectorWrite")]} plan: the store owner can ask Epidom ` +
+        "about it from the Profile page."
+    );
+  }
   if (access.feature && !planHasFeature(plan, access.feature)) {
     throw new McpAccessError(
       "PLAN_REQUIRED",

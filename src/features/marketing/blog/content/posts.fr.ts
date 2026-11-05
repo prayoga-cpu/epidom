@@ -2,6 +2,100 @@ import type { BlogPost } from "./types";
 
 export const frPosts: BlogPost[] = [
   {
+    slug: "interroger-claude-sur-votre-caisse",
+    locale: "fr",
+    title: "Interroger Claude sur votre caisse\u00a0: 12 questions utiles pour un café ou un restaurant",
+    description:
+      "Que demander à un assistant IA relié à votre caisse\u00a0: ventes, marge, stocks, équipe et carte, comment lire les réponses et où rester prudent.",
+    date: "2026-11-05",
+    readMinutes: 6,
+    category: "Outils",
+    related: ["connecteur-claude-caisse"],
+    blocks: [
+      {
+        type: "p",
+        text: "La plupart des gérants de café et de restaurant ont déjà les chiffres en tête\u00a0: mardi a été calme, le lait d'avoine manque toujours en premier, un plat ne part jamais. Ce qui prend du temps, c'est de vérifier. On ouvre l'écran des ventes, puis la liste des stocks, puis le planning, et quand on a la réponse le coup de feu de midi a commencé.",
+      },
+      {
+        type: "p",
+        text: "Un assistant IA relié à votre caisse change l'ordre du travail. Vous posez la question en langage courant et il lit la réponse dans vos propres données. Ce guide propose douze questions utiles, explique à quoi ressemble une bonne réponse et dit franchement où vous devez encore vérifier les chiffres vous-même. Il suppose une caisse qui offre une telle connexion\u00a0; le connecteur Claude d'Epidom en est une, et il est encore en bêta.",
+      },
+      { type: "h2", text: "D'abord, ce qu'un assistant relié peut et ne peut pas faire" },
+      {
+        type: "p",
+        text: "Relié ne veut pas dire aux commandes. L'assistant n'atteint que ce que votre compte permet, et dans Epidom vous choisissez s'il peut seulement lire ou aussi modifier. L'encaissement, les remboursements, la caisse et le pointage restent dans la caisse, volontairement. Voyez l'assistant comme un collègue vif qui peut ouvrir vos rapports, pas comme un directeur qui a les clés.",
+      },
+      {
+        type: "p",
+        text: "Lire vos données est le bon point de départ. Toutes les questions ci-dessous sont des questions de lecture. Quand vous aurez confiance dans les réponses, vous déciderez s'il peut proposer des modifications, et même alors il doit vous montrer ce qu'il va faire et attendre un oui clair.",
+      },
+      { type: "h2", text: "Questions sur les ventes" },
+      {
+        type: "list",
+        items: [
+          "Comment s'est passée la semaine par rapport à la précédente\u00a0? Une bonne réponse donne le chiffre d'affaires, le nombre de commandes et le ticket moyen des deux semaines, et dit ce qui a bougé, pas seulement de combien.",
+          "Quelles sont mes cinq meilleures ventes du mois en chiffre d'affaires, puis en quantité\u00a0? Les deux listes diffèrent souvent. Une boisson bon marché peut mener en quantité alors qu'un plat mène en chiffre d'affaires.",
+          "Quelles heures et quels canaux rapportent le plus\u00a0? Demandez la répartition par heure et par canal (sur place, en ligne, livraison). Elle montre où vous manquez de monde ou en avez trop.",
+        ],
+      },
+      {
+        type: "p",
+        text: "Quand l'assistant cite un chiffre, demandez la période utilisée. Une semaine qui commence le lundi et une qui commence le dimanche donnent des totaux différents, et un bon outil doit dire laquelle il a choisie et dans quel fuseau horaire.",
+      },
+      { type: "h2", text: "Questions sur la marge" },
+      {
+        type: "list",
+        items: [
+          "Pourquoi la marge a-t-elle baissé la semaine dernière\u00a0? La réponse utile distingue trois causes\u00a0: des ventes plus faibles, des coûts plus élevés et un changement dans ce que les clients ont commandé.",
+          "Quels plats rapportent le plus et lesquels sont populaires mais peu rentables\u00a0? C'est la revue de carte classique. Populaire et rentable, on ne touche pas\u00a0; populaire et mince, un petit ajustement de prix\u00a0; impopulaire et mince, un candidat à retirer.",
+          "Combien m'ont coûté les remises et les remboursements ce mois-ci\u00a0? Les petites fuites s'additionnent et passent inaperçues quand on ne regarde que le total des ventes.",
+        ],
+      },
+      {
+        type: "p",
+        text: "Une réponse sur la marge ne vaut que par les coûts qui la sous-tendent. Si vos recettes et vos prix d'achat sont périmés, la marge l'est aussi. Un assistant relié ne corrigera pas cela, mais il peut rendre l'écart visible\u00a0: demandez quels articles n'ont aucun coût renseigné.",
+      },
+      { type: "h2", text: "Questions sur les stocks et les fournisseurs" },
+      {
+        type: "list",
+        items: [
+          "Qu'est-ce qui manque et que dois-je recommander\u00a0? Une bonne réponse regroupe la proposition par fournisseur, avec les quantités et les prix, et ne passe aucune commande toute seule.",
+          "Qu'ai-je jeté ce mois-ci et combien cela a-t-il coûté\u00a0? Les pertes sont souvent le plus gros coût invisible d'une cuisine, et beaucoup de gérants ne les ont jamais vues sous la forme d'un seul chiffre.",
+        ],
+      },
+      {
+        type: "p",
+        text: "Pour les commandes, gardez la dernière étape humaine. Laissez l'assistant préparer la liste, relisez-la et envoyez-la vous-même. Une mauvaise quantité sur la livraison du vendredi coûte plus cher que la minute gagnée.",
+      },
+      { type: "h2", text: "Questions sur l'équipe et la carte" },
+      {
+        type: "list",
+        items: [
+          "Qui a fait des heures supplémentaires ce mois-ci, et combien\u00a0? C'est une lecture des heures face au planning, réservée aux propriétaires et aux responsables.",
+          "Quels articles sont à la carte depuis des mois sans se vendre\u00a0? C'est le moyen le plus rapide de trouver ce qu'il faut retirer, et masquer est plus sûr que supprimer, car les commandes passées et les liens de stock restent intacts.",
+        ],
+      },
+      { type: "h2", text: "Lire les réponses sans se laisser piéger" },
+      {
+        type: "p",
+        text: "Un assistant peut lire vos chiffres correctement et en comprendre mal le sens. Gardez quatre réflexes. D'abord, demandez la période et la devise dans chaque réponse. Ensuite, si un chiffre vous surprend, demandez les lignes qui le composent, puis ouvrez le rapport vous-même une fois. Ensuite, rappelez-vous qu'il explique, il ne décide pas\u00a0: une marge qui baisse peut venir d'une hausse chez un fournisseur, d'une promotion ou d'un nouveau plat, et vous seul savez laquelle. Enfin, ne collez jamais les coordonnées privées d'un client dans la conversation\u00a0; vous n'en avez pas besoin.",
+      },
+      {
+        type: "p",
+        text: "Méfiez-vous aussi des causes. Si l'assistant dit que mardi était faible à cause de la météo, c'est une supposition, pas un fait tiré de vos données. Demandez-lui de séparer ce que montrent les données de ce qu'il devine.",
+      },
+      { type: "h2", text: "Pour commencer avec Epidom" },
+      {
+        type: "p",
+        text: "Dans Epidom, la lecture de vos données depuis Claude est incluse dès l'offre Operations, et laisser Claude faire des modifications fait partie d'Enterprise. Vous ajoutez Epidom à Claude une seule fois avec une adresse, vous vous connectez à votre compte Epidom et vous validez ce que Claude peut voir. L'accès se retire à tout moment depuis votre profil. Le connecteur est en bêta\u00a0: attendez-vous à des aspérités et dites-nous ce qui casse.",
+      },
+      {
+        type: "p",
+        text: "Commencez par la première question de cette liste. Si la réponse correspond à ce que vous ressentez déjà de la semaine dernière, vous savez que la connexion est fiable. Sinon, vous avez appris quelque chose sur votre semaine.",
+      },
+    ],
+  },
+  {
     slug: "reduire-commission-deliveroo-uber-eats",
     locale: "fr",
     title: "Réduire sa dépendance aux commissions Deliveroo et Uber Eats",

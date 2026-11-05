@@ -56,6 +56,11 @@ export const HELP_GUIDE_SLUGS = {
     fr: "materiel-imprimantes-et-scanner",
     id: "perangkat-printer-dan-scanner",
   },
+  "claude-connector": {
+    en: "claude-connector",
+    fr: "connecteur-claude",
+    id: "konektor-claude",
+  },
 } as const satisfies Record<string, Record<Locale, string>>;
 
 export type HelpGuideId = keyof typeof HELP_GUIDE_SLUGS;

@@ -23,6 +23,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: h.replace, push: vi.fn() }),
   usePathname: () => "/store/s1/finance",
   useSearchParams: () => new URLSearchParams(h.search.current),
+  useParams: () => ({ storeId: "s1" }),
 }));
 
 // Keys come back as themselves; {placeholders} stay visible for assertions.

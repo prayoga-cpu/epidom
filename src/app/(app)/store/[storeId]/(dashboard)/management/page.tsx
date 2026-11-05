@@ -6,6 +6,9 @@ import { ManagementClient } from "@/features/dashboard/management/components/man
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import { PageIntro } from "@/features/guide/components/page-intro";
+import { ClaudeConnectorPromo } from "@/features/claude-connector/components/claude-connector-promo";
+import { getStoreViewer } from "@/lib/auth/store-viewer";
+import { getActiveStaffSession } from "@/lib/staff-session";
 
 function ManagementSkeleton() {
   return (
@@ -31,6 +34,17 @@ export default async function ManagementPage({ params }: { params: Promise<{ sto
   }
   await requireStaffPageAccess(storeId, "/management");
 
+  // The "Ask Claude" tip is for the owner or a manager persona on the owner's
+  // device (the same rule as the dashboard's setup guide), never a cashier.
+  const [viewer, staffSession] = await Promise.all([
+    getStoreViewer(storeId),
+    getActiveStaffSession(),
+  ]);
+  const personaRole = staffSession && staffSession.storeId === storeId ? staffSession.role : null;
+  const showClaudePromo =
+    viewer.kind === "owner" &&
+    (personaRole === null || personaRole === "OWNER" || personaRole === "MANAGER");
+
   // Fetch initial supplier orders.
   //
   // This seeds ONE React Query cache key (`["supplier-orders","list",storeId]`)
@@ -48,6 +62,12 @@ export default async function ManagementPage({ params }: { params: Promise<{ sto
     <>
       {/* The page has no header of its own: the intro sits above the tabs. */}
       <PageIntro id="stock" storeId={storeId} className="mb-4" />
+      <ClaudeConnectorPromo
+        surface="stock"
+        storeId={storeId}
+        canView={showClaudePromo}
+        className="mb-4"
+      />
       <Suspense fallback={<ManagementSkeleton />}>
         <ManagementClient initialSupplierOrders={supplierOrdersResult.orders} storeId={storeId} />
       </Suspense>

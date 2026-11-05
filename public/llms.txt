@@ -7,6 +7,7 @@
 - A merchant creates a free public storefront page (`https://epidom.fr/@their-shop-name`) with their menu, theme and QR code. The storefront is free forever.
 - Online ordering from the storefront, the POS cashier, the kitchen display and table reservations are part of the POS plan (14-day free trial). Storefront orders are currently paid at the counter; online payment from the storefront is switched off.
 - The Operations plan adds staff, stock, recipe-costing and finance tools; Enterprise adds unlimited outlets and custom builds.
+- Claude connector (Beta): an owner connects their own Claude (claude.ai, the desktop app or Claude Code) to their store through a remote MCP server at `https://www.epidom.fr/api/mcp` (OAuth 2.1 + PKCE) and asks questions about sales, stock, staff and finance in plain words. Reading is included from the Operations plan; letting Claude change data is Enterprise. Payments, refunds, the till, PINs and billing are never exposed. Details: https://epidom.fr/en/claude-connector-pos (French: https://epidom.fr/connecteur-claude-caisse, Indonesian: https://epidom.fr/id/konektor-claude-kasir).
 - Primary market: France. Secondary market: Indonesia. Also usable worldwide. The site is in French (default), Indonesian (`/id/`) and English (`/en/`).
 
 ## Pricing (billed monthly, or yearly at a lower monthly rate; EUR / USD / IDR shown on epidom.fr/en/pricing)
@@ -34,7 +35,7 @@ Independent café, restaurant, bakery, coffee shop, warung (small Indonesian foo
 - Comparisons: https://epidom.fr/en/compare
 - Blog and guides: https://epidom.fr/en/blog
 - Free tools: https://epidom.fr/en/recipe-cost-calculator, https://epidom.fr/en/delivery-app-commission-calculator
-- Guides by business and feature: https://epidom.fr/en/cafe-pos-system, https://epidom.fr/en/bakery-pos-system, https://epidom.fr/en/free-qr-code-menu, https://epidom.fr/en/commission-free-online-ordering, https://epidom.fr/en/offline-pos-system, https://epidom.fr/en/kitchen-display-system, https://epidom.fr/en/restaurant-inventory-software, https://epidom.fr/en/restaurant-staff-scheduling, https://epidom.fr/en/receipt-printer-pos
+- Guides by business and feature: https://epidom.fr/en/cafe-pos-system, https://epidom.fr/en/bakery-pos-system, https://epidom.fr/en/free-qr-code-menu, https://epidom.fr/en/commission-free-online-ordering, https://epidom.fr/en/offline-pos-system, https://epidom.fr/en/kitchen-display-system, https://epidom.fr/en/restaurant-inventory-software, https://epidom.fr/en/restaurant-staff-scheduling, https://epidom.fr/en/receipt-printer-pos, https://epidom.fr/en/claude-connector-pos
 - About: https://epidom.fr/en/about
 - Custom builds (Enterprise, with Prionation): https://epidom.fr/en/build-with-us
 - Contact: https://epidom.fr/en/contact

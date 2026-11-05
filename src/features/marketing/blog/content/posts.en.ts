@@ -2,6 +2,100 @@ import type { BlogPost } from "./types";
 
 export const enPosts: BlogPost[] = [
   {
+    slug: "ask-claude-about-your-cafe",
+    locale: "en",
+    title: "Ask Claude About Your Café: 12 Questions Worth Asking Your POS",
+    description:
+      "What to ask an AI assistant connected to your POS: sales, margin, stock, staff and menu questions, how to read the answers, and where to stay careful.",
+    date: "2026-11-05",
+    readMinutes: 6,
+    category: "Tools",
+    related: ["claude-connector-pos"],
+    blocks: [
+      {
+        type: "p",
+        text: "Most café and restaurant owners already carry the numbers in their head: Tuesday felt slow, the oat milk always runs out first, one dish never sells. What takes time is checking. You open the sales screen, then the stock list, then the roster, and by the time you have your answer the lunch rush has started.",
+      },
+      {
+        type: "p",
+        text: "An AI assistant connected to your point of sale changes the order of work. You ask the question in plain words and it reads the answer from your own data. This guide lists twelve questions worth asking, explains what a good answer looks like, and is honest about where you should still check the numbers yourself. It assumes you use a POS that offers such a connection; Epidom's Claude connector is one, and it is still in Beta.",
+      },
+      { type: "h2", text: "First, what a connected assistant can and cannot do" },
+      {
+        type: "p",
+        text: "Connected does not mean in charge. The assistant can only reach what your account allows, and in Epidom you choose whether it may read only or also make changes. Taking payments, refunds, the till and clocking in stay inside the POS on purpose. Treat the assistant like a sharp colleague who can open your reports, not like a manager with the keys.",
+      },
+      {
+        type: "p",
+        text: "Reading your data is the safe place to start. Every question below is a read question. Once you trust the answers, you can decide whether to let it propose changes, and even then it should show you what it will do and wait for a clear yes.",
+      },
+      { type: "h2", text: "Questions about sales" },
+      {
+        type: "list",
+        items: [
+          "How did we do last week compared with the week before? A good answer gives revenue, number of orders and average ticket for both weeks, and says what moved, not just how much.",
+          "What are my five best sellers this month by revenue, and by quantity? The two lists are often different. A cheap drink can lead on quantity while a plate leads on revenue.",
+          "Which hours and which channels bring the most sales? Ask for the split by hour and by channel (in-store, online, delivery). It shows where you are short-staffed or over-staffed.",
+        ],
+      },
+      {
+        type: "p",
+        text: "When the assistant quotes a figure, ask for the period it used. Weeks that start on Monday and weeks that start on Sunday give different totals, and a good tool should tell you which one it picked and in which timezone.",
+      },
+      { type: "h2", text: "Questions about margin" },
+      {
+        type: "list",
+        items: [
+          "Why was margin down last week? The useful answer separates three causes: lower sales, higher costs, and a change in what people ordered.",
+          "Which dishes earn the most profit, and which are popular but barely profitable? This is the classic menu review. Popular and profitable items stay put; popular and thin ones may need a small price change; unpopular and thin ones are candidates to drop.",
+          "How much did discounts and refunds cost me this month? Small leaks add up, and they are easy to miss when you only look at total sales.",
+        ],
+      },
+      {
+        type: "p",
+        text: "Margin answers are only as good as the costs behind them. If your recipes and ingredient prices are out of date, the margin is out of date too. A connected assistant will not fix that, but it can make the gap visible: ask which items have no cost recorded.",
+      },
+      { type: "h2", text: "Questions about stock and suppliers" },
+      {
+        type: "list",
+        items: [
+          "What is running low, and what should I reorder? A good answer groups the proposal by supplier, with quantities and prices, and does not place anything by itself.",
+          "What did I throw away this month, and what did it cost? Waste is usually the biggest invisible cost in a kitchen, and many owners have never seen it as a single number.",
+        ],
+      },
+      {
+        type: "p",
+        text: "For ordering, keep the final step human. Let the assistant prepare the list, read it yourself, and send it. A wrong quantity on a Friday delivery costs more than the minute you save.",
+      },
+      { type: "h2", text: "Questions about your team and your menu" },
+      {
+        type: "list",
+        items: [
+          "Who worked overtime this month, and how much? This is a read of hours against the roster, and it is only available to owners and managers.",
+          "Which items have been on the menu for months without selling? It is the quickest way to find what to retire, and retiring (hiding) is safer than deleting, because past orders and stock links stay intact.",
+        ],
+      },
+      { type: "h2", text: "How to read the answers without being fooled" },
+      {
+        type: "p",
+        text: "An assistant can read your numbers correctly and still misread what they mean. Keep four habits. First, ask for the period and the currency in every answer. Second, if a figure surprises you, ask it to show the lines behind it, then open the report yourself once. Third, remember that it explains, it does not decide: a falling margin might be a supplier price rise, a promotion or a new dish, and only you know which. Fourth, never paste a customer's private details into the conversation; you do not need to.",
+      },
+      {
+        type: "p",
+        text: "Be careful with causes too. If the assistant says Tuesday was weak because of the weather, that is a guess, not a fact from your data. Ask it to separate what the data shows from what it is guessing.",
+      },
+      { type: "h2", text: "Getting started with Epidom" },
+      {
+        type: "p",
+        text: "In Epidom, reading your data from Claude is included from the Operations plan, and letting Claude make changes is part of Enterprise. You add Epidom to Claude once with a single address, sign in to your Epidom account, and approve what Claude may see. Access can be removed at any time from your profile. The connector is in Beta, so expect rough edges, and tell us what breaks.",
+      },
+      {
+        type: "p",
+        text: "Start with the first question on this list. If the answer matches what you already feel about last week, you have learned that the connection is reliable. If it does not, you have learned something about your week.",
+      },
+    ],
+  },
+  {
     slug: "reduce-delivery-app-commission-dependency",
     locale: "en",
     title: "How to Reduce Delivery-App Commission Dependency",

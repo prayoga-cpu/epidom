@@ -17,6 +17,8 @@ export interface ConnectorStore {
   plan: string;
   /** Whether the store's plan includes the Claude connector. */
   connectorEnabled: boolean;
+  /** Claude may also change this store's data (Enterprise). */
+  connectorWriteEnabled: boolean;
   currency: string;
 }
 
@@ -86,6 +88,7 @@ export async function listConnectorStores(userId: string): Promise<ConnectorStor
         ...row,
         plan: PLAN_LABELS[plan],
         connectorEnabled: planHasFeature(plan, "claudeConnector"),
+        connectorWriteEnabled: planHasFeature(plan, "claudeConnectorWrite"),
         currency: finance.currency,
       };
     })

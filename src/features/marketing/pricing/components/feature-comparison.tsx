@@ -105,11 +105,18 @@ const CATEGORIES = [
         ops: true,
         ent: true,
       },
+      {
+        labelKey: "redesign.pricingPage.cmp_claude_read",
+        free: false,
+        pos: false,
+        ops: true,
+        ent: true,
+      },
     ],
   },
   {
     // What only Enterprise buys — the same promises as its plan card's
-    // t4f3 / t4f5 / t4f8, so the table and the card never disagree.
+    // t4f3 / t4f5 / t4f8 / t4f9, so the table and the card never disagree.
     labelKey: "redesign.pricingPage.cmpCat5",
     rows: [
       {
@@ -127,6 +134,13 @@ const CATEGORIES = [
         ent: true,
       },
       { labelKey: "redesign.pricingPage.cmp_sla", free: false, pos: false, ops: false, ent: true },
+      {
+        labelKey: "redesign.pricingPage.cmp_claude_write",
+        free: false,
+        pos: false,
+        ops: false,
+        ent: true,
+      },
     ],
   },
 ] as const;

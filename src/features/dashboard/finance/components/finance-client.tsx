@@ -94,6 +94,7 @@ import {
 } from "@/lib/finance/report-totals";
 import { DateRangeField } from "@/components/ui/date-range-field";
 import { PageIntro } from "@/features/guide/components/page-intro";
+import { ClaudeConnectorPromo } from "@/features/claude-connector/components/claude-connector-promo";
 import {
   todayLocalISO,
   startOfMonthLocalISO,
@@ -1518,6 +1519,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
       </div>
 
       <PageIntro id="finance" storeId={storeId} />
+      <ClaudeConnectorPromo surface="finance" storeId={storeId} />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { PricingCards } from "./pricing-cards";
+import { PricingClaudeStrip } from "./pricing-claude-strip";
 import { FeatureComparison } from "./feature-comparison";
 import { PricingFaq } from "./pricing-faq";
 import { PricingCta } from "./pricing-cta";
@@ -124,6 +125,7 @@ export function PricingPageClient() {
         </div>
       </section>
 
+      <PricingClaudeStrip />
       <PricingCards yearly={yearly} currentPlan={currentPlan} onYearlyChange={setYearly} />
       <FeatureComparison />
       <PricingFaq />
