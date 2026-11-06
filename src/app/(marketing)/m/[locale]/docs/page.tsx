@@ -10,7 +10,7 @@ export default async function DocsPage({ params }: LocaleParams) {
   const guides = getDocsGuides(locale);
 
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-clip">
       <DocsList locale={locale} guides={guides} />
     </div>
   );

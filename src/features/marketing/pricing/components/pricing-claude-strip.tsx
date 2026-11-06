@@ -7,10 +7,14 @@ import { trackEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 
 /**
- * One line under the pricing hero (and on the Features page): the Claude connector is a reason to pick
+ * One line under the pricing hero (and on the Products page): the Claude connector is a reason to pick
  * Operations, and the connector page explains it. A plain link, no state.
  */
-export function PricingClaudeStrip({ surface = "pricing" }: { surface?: "pricing" | "services" | "home" }) {
+export function PricingClaudeStrip({
+  surface = "pricing",
+}: {
+  surface?: "pricing" | "products" | "home";
+}) {
   const { t, locale } = useI18n();
   const slug = LANDING_GROUPS["claude-connector"][locale];
   if (!slug) return null;

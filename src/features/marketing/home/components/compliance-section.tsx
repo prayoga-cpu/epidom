@@ -3,7 +3,8 @@
 import { Archive, Database, Lock, ShieldCheck, type LucideIcon } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { NF525_SETTLED } from "../lib/migration";
-import { SectionHeading } from "./landing-ui";
+import { cn } from "@/lib/utils";
+import { CARD, SectionHeading } from "./landing-ui";
 
 /** The law's four conditions, in its own order (CGI art. 286, I, 3° bis). */
 const POINTS: readonly { key: "p1" | "p2" | "p3" | "p4"; icon: LucideIcon }[] = [
@@ -61,10 +62,7 @@ export function ComplianceSection() {
 
         <ul className="m-0 mt-10 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4">
           {POINTS.map(({ key, icon: Icon }) => (
-            <li
-              key={key}
-              className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-6"
-            >
+            <li key={key} data-reveal className={cn(CARD, "flex flex-col gap-3 p-6")}>
               <Icon aria-hidden="true" className="text-epi-gold-400 size-6" />
               <h3 className="text-epi-cream-50 m-0 text-lg font-medium">
                 {t(`redesign.landing.compliance.${key}Title`)}

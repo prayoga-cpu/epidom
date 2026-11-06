@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { MarketFlag } from "@/components/market-flag";
 import { FaqStructuredData } from "@/components/seo/structured-data";
 import { MailIcon, WhatsAppIcon } from "@/features/marketing/shared/components/contact-icons";
 import {
@@ -78,7 +79,7 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
       <div className="epi-container">
         <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
           {/* Left — sticky heading */}
-          <div className="lg:sticky lg:top-28">
+          <div data-reveal className="lg:sticky lg:top-28">
             <div className="epi-eyebrow" style={{ marginBottom: 16 }}>
               {t("redesign.faq.eyebrow")}
             </div>
@@ -131,7 +132,10 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
                   >
                     {t("redesign.faq.helpWa")}
                     {waOptions.length > 1 ? (
-                      <span style={{ opacity: 0.55 }}> · {opt.label}</span>
+                      <span style={{ opacity: 0.55 }}>
+                        {" "}
+                        · <MarketFlag market={opt.market} />
+                      </span>
                     ) : null}
                   </ContactLink>
                 </li>
@@ -159,7 +163,7 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
           {/* Right — accordion */}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
             {faqs.map((faq, i) => (
-              <div key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+              <div key={i} data-reveal style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                 <button
                   type="button"
                   aria-expanded={open === i}
@@ -224,8 +228,8 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
                     visibility: open === i ? "visible" : "hidden",
                     transition:
                       open === i
-                        ? "max-height 0.3s ease, padding 0.2s, visibility 0s"
-                        : "max-height 0.3s ease, padding 0.2s, visibility 0s linear 0.3s",
+                        ? "max-height 0.3s var(--epi-ease-out), padding 0.2s, visibility 0s"
+                        : "max-height 0.3s var(--epi-ease-out), padding 0.2s, visibility 0s linear 0.3s",
                     paddingBottom: open === i ? 24 : 0,
                   }}
                 >

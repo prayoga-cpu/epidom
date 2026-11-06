@@ -17,7 +17,7 @@ export const olseraComparison: Partial<Record<Locale, CompetitorComparisonData>>
     slug: "olsera",
     eyebrow: "Epidom vs. Olsera POS",
     titleParts: ["Olsera lengkap untuk kasir dan retail.", "Epidom fokus ke kafe dan resto kecil."],
-    lede: "Olsera adalah aplikasi kasir Indonesia dengan fitur kasir, pesanan online, manajemen resep, dan absensi karyawan, dengan harga paket yang tertera per tahun. Epidom cocok jika Anda ingin halaman toko gratis, lalu kasir dan back office khusus F&B (stok, resep, HPP) dengan harga bulanan yang tertera dan uji coba 14 hari.",
+    lede: "Olsera adalah aplikasi kasir Indonesia dengan fitur kasir, pesanan online, manajemen resep, dan absensi karyawan, dengan harga paket yang tertera per tahun. Epidom cocok jika Anda ingin halaman toko gratis, lalu kasir dan dasbor toko khusus F&B (stok, resep, HPP) dengan harga bulanan yang tertera dan uji coba 14 hari.",
     colCompetitor: "Olsera POS",
     rows: [
       {
@@ -83,7 +83,7 @@ export const olseraComparison: Partial<Record<Locale, CompetitorComparisonData>>
       "Olsera is broad across retail and F&B.",
       "Epidom is built for small cafés and restaurants.",
     ],
-    lede: "Olsera is an Indonesian POS with cashier, online order, recipe management and staff attendance features, with plan prices listed per year. Epidom fits when you want a free storefront page, then a food-and-beverage POS and back office (stock, recipes, cost per dish) with monthly prices listed and a 14-day trial.",
+    lede: "Olsera is an Indonesian POS with cashier, online order, recipe management and staff attendance features, with plan prices listed per year. Epidom fits when you want a free storefront page, then a food-and-beverage POS and store dashboard (stock, recipes, cost per dish) with monthly prices listed and a 14-day trial.",
     colCompetitor: "Olsera POS",
     rows: [
       {

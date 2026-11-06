@@ -227,7 +227,7 @@ export const frGuides: Article[] = [
       {
         type: "list",
         items: [
-          "Passer du Système de caisse à la page Opérationnel et, pour le propriétaire et les managers, au Back-Office",
+          "Passer du Système de caisse à la page Opérationnel et, pour le propriétaire et les managers, au Tableau de bord",
           "Synchroniser les ventes : envoyer les ventes encaissées hors ligne et rafraîchir la copie du menu et des commandes sur cet appareil",
           "Activer l'écran client et l'ouvrir sur un second écran",
           "Réglages du matériel : les imprimantes et le lecteur de codes-barres de cet appareil",
@@ -297,7 +297,7 @@ export const frGuides: Article[] = [
     blocks: [
       {
         type: "p",
-        text: "Personnel, Planning et Quarts de travail sont inclus dans le forfait Operations. Dans le menu du Back-Office, Personnel et Planning se trouvent dans la section « Operations », et les Quarts de travail dans « Reports ».",
+        text: "Personnel, Planning et Quarts de travail sont inclus dans le forfait Operations. Dans le menu du Tableau de bord, Personnel et Planning se trouvent dans la section « Operations », et les Quarts de travail dans « Reports ».",
       },
       { type: "h2", text: "Le personnel" },
       {

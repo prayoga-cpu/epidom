@@ -60,7 +60,16 @@ describe("landing registry ↔ content ↔ routes", () => {
   it("never reuses a slug across languages or collides with another marketing route", () => {
     const slugs = [...LANDING_SLUGS.keys()];
     expect(new Set(slugs).size).toBe(slugs.length);
-    for (const reserved of ["pricing", "about", "services", "blog", "docs", "compare", "contact"]) {
+    for (const reserved of [
+      "pricing",
+      "about",
+      "products",
+      "services",
+      "blog",
+      "docs",
+      "compare",
+      "contact",
+    ]) {
       expect(slugs).not.toContain(reserved);
     }
   });

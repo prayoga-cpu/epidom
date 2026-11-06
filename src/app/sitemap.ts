@@ -33,11 +33,15 @@ const BASE_URL = "https://epidom.fr";
 // stamping them with "now" makes every URL look freshly changed on every
 // request — crawlers that see that learn to ignore lastmod for the whole site.
 // Omitting it is honest; a wrong date isn't.
-const STATIC_ROUTES: Array<{ path: string; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"]; priority: number }> = [
+const STATIC_ROUTES: Array<{
+  path: string;
+  changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
+  priority: number;
+}> = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
   { path: "/pricing", changeFrequency: "weekly", priority: 0.9 },
   { path: "/about", changeFrequency: "monthly", priority: 0.6 },
-  { path: "/services", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/products", changeFrequency: "monthly", priority: 0.7 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.5 },
   { path: "/blog", changeFrequency: "weekly", priority: 0.7 },
   { path: "/docs", changeFrequency: "weekly", priority: 0.6 },

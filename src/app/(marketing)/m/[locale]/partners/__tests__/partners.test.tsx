@@ -72,8 +72,8 @@ describe("PartnersClient — supplier application path", () => {
       whatsappHref(WHATSAPP_NUMBERS.fr.number, en.partners.supplier.msgGeneric),
       whatsappHref(WHATSAPP_NUMBERS.id.number, en.partners.supplier.msgGeneric),
     ]);
-    expect(links[0].textContent).toBe(`${en.partners.supplier.whatsappCta} (France)`);
-    expect(links[1].textContent).toBe(`${en.partners.supplier.whatsappCta} (Indonesia)`);
+    expect(links[0].textContent).toBe(`${en.partners.supplier.whatsappCta} France`);
+    expect(links[1].textContent).toBe(`${en.partners.supplier.whatsappCta} Indonesia`);
   });
 
   it.each(["en", "fr", "id"] as const)(

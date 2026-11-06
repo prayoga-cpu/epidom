@@ -8,7 +8,7 @@ export default async function BuildWithUsPage({ params }: LocaleParams) {
   const locale = await routeLocale(params);
 
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-clip">
       <BuildWithUsClient locale={locale} />
     </div>
   );

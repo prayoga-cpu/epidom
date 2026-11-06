@@ -5,7 +5,7 @@ export const generateMetadata = pageMetadata("about");
 
 export default function AboutPage() {
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-clip">
       <AboutPageClient />
     </div>
   );

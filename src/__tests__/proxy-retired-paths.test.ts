@@ -147,6 +147,43 @@ describe("proxy: the deleted /status page", () => {
   });
 });
 
+describe("proxy: the renamed /services page (now /products)", () => {
+  it.each([
+    ["/services", "/products"],
+    ["/id/services", "/id/products"],
+    ["/en/services", "/en/products"],
+    ["/en/services/", "/en/products"],
+  ])("%s permanently redirects (308) to %s", async (from, to) => {
+    const res = await proxy(request(from));
+
+    expect(res.status).toBe(308);
+    const location = new URL(res.headers.get("location") as string);
+    expect(location.origin).toBe(ORIGIN);
+    expect(location.pathname).toBe(to);
+  });
+
+  it("keeps the query string, so an old ad link keeps its utm_ tags", async () => {
+    const res = await proxy(request("/id/services?utm_source=meta&utm_campaign=x"));
+    const location = new URL(res.headers.get("location") as string);
+    expect(location.pathname).toBe("/id/products");
+    expect(location.search).toBe("?utm_source=meta&utm_campaign=x");
+  });
+
+  it("wins over the resume-redirect for a returning signed-in visitor", async () => {
+    const res = await proxy(request("/services", { cookies: SIGNED_IN_WITH_RESUME }));
+    expect(res.status).toBe(308);
+    expect(new URL(res.headers.get("location") as string).pathname).toBe("/products");
+  });
+
+  it.each(["/products", "/id/products", "/en/products"])(
+    "%s is a public marketing page: an anonymous visitor is not sent to the login wall",
+    async (path) => {
+      const { finalPath } = await follow(path);
+      expect(finalPath).toMatch(/^(\/id|\/en)?\/products$/);
+    }
+  );
+});
+
 describe("proxy: retired-path redirects never loop", () => {
   const VISITORS: Array<[string, Parameters<typeof request>[1]]> = [
     ["anonymous", {}],
@@ -194,6 +231,17 @@ describe("proxy: retired-path redirects never loop", () => {
     async (path) => {
       const res = await proxy(request(path, { cookies: SIGNED_IN_WITH_RESUME }));
       expect(isRedirect(res.status)).toBe(false);
+    }
+  );
+
+  it.each(VISITORS)(
+    "%s: the renamed /services goes to /products first and never comes back",
+    async (_who, opts) => {
+      const { hops } = await follow("/services", opts);
+
+      expect(hops[0].status).toBe(308);
+      expect(hops[0].to).toMatch(/^(\/id|\/en)?\/products$/);
+      expect(hops.map((h) => h.to).join(" ")).not.toContain("services");
     }
   );
 

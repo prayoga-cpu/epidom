@@ -5,7 +5,7 @@ export const generateMetadata = pageMetadata("pricing");
 
 export default function PricingPage() {
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-clip">
       <PricingPageClient />
     </div>
   );

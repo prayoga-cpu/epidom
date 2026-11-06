@@ -5,24 +5,23 @@ import { SectionErrorBoundary } from "@/components/shared";
 import { trackEvent } from "@/lib/analytics";
 import { CaseStudiesSection } from "./case-studies-section";
 import { ComplianceSection } from "./compliance-section";
-import { ComparisonTeaserSection } from "./comparison-teaser-section";
 import { FinalCtaSection } from "./final-cta-section";
 import { HeroSection } from "./hero-section";
+import { HubSection } from "./hub-section";
 import { MarginCalculatorSection } from "./margin-calculator-section";
 import { MigrationModal } from "./migration-modal";
 import { PosTourSection } from "./pos-tour-section";
 import { PricingSection } from "./pricing-section";
-import { SwitchPaceSection } from "./switch-pace-section";
 import { SwitcherFaqSection } from "./switcher-faq-section";
 import { ThreeSpacesSection } from "./three-spaces-section";
 import { TrustBar } from "./trust-bar";
-import { WorksWithSection } from "./works-with-section";
+import { UsesSection } from "./uses-section";
 
 /**
  * The home page, in the order of the homepage spec (28.09.2026), except that
  * the POS tour (real screens, 13.10.2026) and then "one link, three spaces"
  * come straight after the hero, and the problem picker has moved to the top of
- * /services (11.10.2026): make switching feel
+ * /products (11.10.2026): make switching feel
  * safe, and show what Epidom does for margin. Each section has its own error
  * boundary so one failing section never takes the page down.
  *
@@ -48,7 +47,7 @@ export function LandingPageSections({
     trackEvent("migration_modal_open", { source });
   }, []);
 
-  // Read once on arrival: the problem picker on /services links here with
+  // Read once on arrival: the problem picker on /products links here with
   // ?commission=, and the calculator only needs the rate when it mounts.
   useEffect(() => {
     const commission = Number(new URLSearchParams(window.location.search).get("commission"));
@@ -63,6 +62,10 @@ export function LandingPageSections({
         <HeroSection onOpenMigration={() => openMigration("hero")} />
       </SectionErrorBoundary>
 
+      <SectionErrorBoundary sectionName="Uses">
+        <UsesSection />
+      </SectionErrorBoundary>
+
       <SectionErrorBoundary sectionName="POS Tour">
         <PosTourSection />
       </SectionErrorBoundary>
@@ -71,8 +74,16 @@ export function LandingPageSections({
         <ThreeSpacesSection exampleStorefrontSlug={exampleStorefrontSlug} />
       </SectionErrorBoundary>
 
+      <SectionErrorBoundary sectionName="Hub">
+        <HubSection />
+      </SectionErrorBoundary>
+
       <SectionErrorBoundary sectionName="Margin Calculator">
         <MarginCalculatorSection preset={calculatorPreset} />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="Pricing">
+        <PricingSection />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Trust Bar">
@@ -81,22 +92,6 @@ export function LandingPageSections({
 
       <SectionErrorBoundary sectionName="Compliance">
         <ComplianceSection />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary sectionName="Switch At Your Pace">
-        <SwitchPaceSection onOpenMigration={() => openMigration("switch_section")} />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary sectionName="Works With">
-        <WorksWithSection />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary sectionName="Comparison Teaser">
-        <ComparisonTeaserSection />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary sectionName="Pricing">
-        <PricingSection />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Case Studies">

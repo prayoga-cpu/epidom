@@ -31,7 +31,7 @@ Independent café, restaurant, bakery, coffee shop, warung (small Indonesian foo
 
 - Homepage: https://epidom.fr/en
 - Pricing: https://epidom.fr/en/pricing
-- Features / services: https://epidom.fr/en/services
+- Products (features): https://epidom.fr/en/products
 - Comparisons: https://epidom.fr/en/compare
 - Blog and guides: https://epidom.fr/en/blog
 - Free tools: https://epidom.fr/en/recipe-cost-calculator, https://epidom.fr/en/delivery-app-commission-calculator

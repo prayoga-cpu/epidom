@@ -19,7 +19,10 @@ export function FinalCtaSection() {
   return (
     <section aria-labelledby="final-cta-title" className="pt-16 pb-20 sm:pt-24 sm:pb-24">
       <div className="epi-container">
-        <div className="from-epi-navy-800 to-epi-navy-900 relative overflow-hidden rounded-[32px] border border-white/[0.08] bg-gradient-to-br px-6 py-14 text-center sm:px-16 sm:py-20">
+        <div
+          data-reveal="scale"
+          className="from-epi-navy-800 to-epi-navy-900 relative overflow-hidden rounded-[32px] border border-white/[0.08] bg-gradient-to-br px-6 py-14 text-center sm:px-16 sm:py-20"
+        >
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -top-1/2 left-1/2 size-[800px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(217,174,59,0.2),transparent_60%)]"

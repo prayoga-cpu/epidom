@@ -90,7 +90,7 @@ function slugTakenError(slug: string, suggestion: string): AppError {
 
 function alreadyCompletedError(): AppError {
   return new AppError(
-    "Setup is already complete. Edit your store from the Back Office instead.",
+    "Setup is already complete. Edit your store from the Store Dashboard instead.",
     ApiErrorCode.CONFLICT,
     409,
     { reason: ONBOARDING_CONFLICT_REASON.alreadyCompleted }

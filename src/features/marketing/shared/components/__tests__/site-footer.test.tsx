@@ -41,8 +41,8 @@ describe("SiteFooter contact column", () => {
     [
       "en",
       [
-        { name: "WhatsApp (France)", href: whatsappHref(WHATSAPP_NUMBERS.fr.number) },
-        { name: "WhatsApp (Indonesia)", href: whatsappHref(WHATSAPP_NUMBERS.id.number) },
+        { name: "WhatsApp France", href: whatsappHref(WHATSAPP_NUMBERS.fr.number) },
+        { name: "WhatsApp Indonesia", href: whatsappHref(WHATSAPP_NUMBERS.id.number) },
       ],
     ],
   ] as const)("%s: offers that market's WhatsApp number(s)", (locale, expected) => {

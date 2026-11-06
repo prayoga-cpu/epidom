@@ -5,7 +5,7 @@
  * margin. Composed of the sections in landing-page-sections.tsx (hero,
  * three spaces, margin calculator, trust bar, switch at your pace, hardware,
  * comparisons, pricing, case studies, switcher FAQ, final CTA; the problem
- * picker moved to /services). Each section is wrapped with an error
+ * picker moved to /products). Each section is wrapped with an error
  * boundary to prevent one section's failure from crashing the entire page.
  *
  * @page
@@ -15,7 +15,6 @@ import { ProductStructuredData } from "@/components/seo/structured-data";
 import { LandingPageSections } from "@/features/marketing/home/components/landing-page-sections";
 import { ResumeLastVisited } from "@/features/marketing/home/components/resume-last-visited";
 import { storefrontService } from "@/lib/services";
-import { PricingClaudeStrip } from "@/features/marketing/pricing/components/pricing-claude-strip";
 import { pageMetadata } from "@/features/marketing/seo/page-metadata";
 import { routeLocale, type LocaleParams } from "@/features/marketing/seo/route-locale";
 
@@ -38,9 +37,9 @@ export default async function HomePage({ params }: LocaleParams) {
       <ProductStructuredData locale={locale} />
       <ResumeLastVisited />
 
-      <div className="w-full overflow-x-hidden">
+      {/* overflow-x-clip, not -hidden: hidden would break the sticky pinned sections. */}
+      <div className="w-full overflow-x-clip">
         <LandingPageSections exampleStorefrontSlug={exampleStorefrontSlug} />
-        <PricingClaudeStrip surface="home" />
       </div>
     </>
   );

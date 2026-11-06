@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { MarketFlag } from "@/components/market-flag";
 import { PlaceholderCta } from "@/features/marketing/shared/components/placeholder-page";
 import { trackConversion } from "@/lib/analytics";
 import {
@@ -126,9 +127,13 @@ export function SupplierApplication() {
               })
             }
           >
-            {whatsappOptions.length > 1
-              ? `${t("partners.supplier.whatsappCta")} (${option.label})`
-              : t("partners.supplier.whatsappCta")}
+            {t("partners.supplier.whatsappCta")}
+            {whatsappOptions.length > 1 ? (
+              <>
+                {" "}
+                <MarketFlag market={option.market} />
+              </>
+            ) : null}
           </PlaceholderCta>
         ))}
         <PlaceholderCta

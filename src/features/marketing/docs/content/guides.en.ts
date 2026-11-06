@@ -216,7 +216,7 @@ export const enGuides: Article[] = [
       {
         type: "list",
         items: [
-          "Switch between the POS System, the Operational page and, for owners and managers, the Back Office",
+          "Switch between the POS System, the Operational page and, for owners and managers, the Store Dashboard",
           "Sync sales: send the sales rung up while offline and refresh this device's copy of the menu and orders",
           "Turn on the customer display and open it on a second screen",
           "Hardware settings: this device's printers and barcode scanner",
@@ -286,7 +286,7 @@ export const enGuides: Article[] = [
     blocks: [
       {
         type: "p",
-        text: "Staff, Schedule and Shifts come with the Operations plan. In the Back Office menu, Staff and Schedule sit under Operations and Shifts under Reports.",
+        text: "Staff, Schedule and Shifts come with the Operations plan. In the Store Dashboard menu, Staff and Schedule sit under Operations and Shifts under Reports.",
       },
       { type: "h2", text: "Staff" },
       {

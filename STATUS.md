@@ -1,5 +1,22 @@
 # STATUS.md
 
+## 3.43.0 — Website revamp, Phone Orders search, Products, Store Dashboard (built 2026-11-06, pushed to `dev` only)
+
+- [x] **Hero**: "Phone Ordering Cashier"; store search (modal on desktop, swipe-down drawer on phones) over `GET /api/public/storefront-search` (published stores, rate-limited 120/min); "Open Link ↗" or "Register your store now".
+- [x] **Renames**: Storefront → Phone Orders (website only); Features `/services` → Products `/products` (`RENAMED_MARKETING_PATHS` in `src/proxy.ts`, 308 that keeps the query string, so utm tags survive); Back Office → Store Dashboard and its Dashboard page → Overview (app and site, en/fr/id). No route moved in the app.
+- [x] **Home**: "What is Epidom used for?" tabs; POS tour pinned and scroll-driven on desktop (≥1024×780, `.epi-pin-*` in globals.css), tap/autoplay elsewhere, an icon per feature; hub diagram with Claude (no pause control, by request); testimonials carousel (PLACEHOLDER stories in development only, see below); "How we compare" card removed, its link now sits beside the calculator heading.
+- [x] **Calculator**: currency switch (EUR/USD/IDR, amounts reset to that currency's examples: no exchange rate) and a "Your current POS" picker. Prices come from the comparison pages only (`home/data/pos-competitors.ts`; `pos-competitors.test.ts` fails if one stops matching). Sunday and Klikit left out (not tills). Innovorder is listed at Starter €79 although its online ordering is on Growth €299 (understates the saving rather than overstates it).
+- [x] **Contact**: one "24h online support" button with a green online dot, opening France / Indonesia WhatsApp (shared `WhatsAppSupportMenu`, also used by the hero). fr/id pages now offer both numbers there (own first).
+- [x] **Header**: "Start on macOS / Windows / iPhone / iPad / Android / Chromebook / Linux" from the browser (`src/lib/device-platform.ts`); "Start Trial" on the server's HTML and when unknown.
+- [x] **Footer**: download row (all four devices open the PWA installer), sunset illustration (kept, the palette's one exception) and tagline "Your dream café, running on autopilot."
+- [x] **Look**: Inter + Instrument Serif accents, sentence-case buttons; reveal-on-scroll system (`RevealRoot`, still under reduced motion); palette = navy, gold and one purple-blue gradient (`aurora()` in `landing-ui.tsx`); flags instead of "(France)/(Indonesia)".
+- [x] **Fix**: `overflow-x: hidden` on page wrappers turned them into scroll containers, so no `sticky` ever worked on the site (FAQ heading). Now Tailwind's `overflow-x-clip` (Lightning CSS rewrites a hand-written `overflow-x: clip` to `hidden`).
+- [x] Verified: local CI sequence (lint, typegen, type-check, full test suite); Chromium passes on the dev server at desktop and phone widths for each change above, no console errors.
+- [ ] **Not verified**: `next build` (the Vercel preview build is the first one); Safari/WebKit; a real iPad and Android phone for the "Start on" label; the pinned tour on a real trackpad.
+- [ ] **Operator**: real customer stories with permission. Until then the testimonials section shows nothing in production or on the preview (placeholders render only in local development).
+- [ ] **Operator**: after the push to `main`, check Search Console picks up `/products` (sitemap updated; `/services` answers 308) and that ads pointing at `/services` keep their utm tags through the redirect.
+- [ ] **Decide**: list Innovorder at Growth (€299) in the calculator instead of Starter (€79)?
+
 ## 3.42.0 — Claude connector as a sales hook (built 2026-11-04, **not pushed**)
 
 Goal: sell the first POS/Operations plan with the connector. Plan: `~/.claude/plans/give-me-the-best-gleaming-dolphin.md`.

@@ -6,8 +6,8 @@ import type { Locale } from "@/components/lang/i18n-provider";
  * swap in a third number without confirming it's real first.
  */
 export const WHATSAPP_NUMBERS = {
-  fr: { number: "33781732386", label: "France" },
-  id: { number: "6285156329091", label: "Indonesia" },
+  fr: { market: "fr", number: "33781732386", label: "France" },
+  id: { market: "id", number: "6285156329091", label: "Indonesia" },
 } as const;
 
 export function whatsappHref(number: string, text?: string): string {
@@ -21,7 +21,7 @@ export function whatsappHref(number: string, text?: string): string {
  */
 export function getWhatsAppOptions(
   locale: Locale
-): Array<{ number: string; label: string }> {
+): Array<{ market: "fr" | "id"; number: string; label: string }> {
   if (locale === "id") return [WHATSAPP_NUMBERS.id];
   if (locale === "en") return [WHATSAPP_NUMBERS.fr, WHATSAPP_NUMBERS.id];
   return [WHATSAPP_NUMBERS.fr];

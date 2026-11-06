@@ -8,7 +8,7 @@ export default async function ComparePage({ params }: LocaleParams) {
   const locale = await routeLocale(params);
 
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-clip">
       <CompareHub locale={locale} />
     </div>
   );

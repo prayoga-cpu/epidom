@@ -79,8 +79,8 @@ export const PATCH = withApiHandler(
         createErrorResponse(
           ApiErrorCode.FORBIDDEN,
           openedBy
-            ? `Only ${openedBy} can end this shift. The owner can close it from the Back Office.`
-            : "Only the person who opened this shift can end it. The owner can close it from the Back Office.",
+            ? `Only ${openedBy} can end this shift. The owner can close it from the Store Dashboard.`
+            : "Only the person who opened this shift can end it. The owner can close it from the Store Dashboard.",
           { reason: NOT_SHIFT_OPENER, openedBy }
         ),
         { status: 403 }

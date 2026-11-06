@@ -71,7 +71,7 @@ const LOCALIZED_MARKETING_PATHS = new Set([
   "/",
   "/pricing",
   "/about",
-  "/services",
+  "/products",
   "/contact",
   "/partners",
   "/careers",
@@ -116,6 +116,17 @@ const RETIRED_MARKETING_PATHS: ReadonlyMap<string, string> = new Map([
   ["/payments", "/pricing"],
   ["/status", "/contact"],
 ]);
+
+/**
+ * Marketing pages that moved to a new address (both unprefixed base paths):
+ * the same page, so unlike a retired one above the query string carries over
+ * (an old ad link keeps its utm_ tags, which the attribution cookies read on
+ * the page the redirect lands on). Permanent, path-only, answered before the
+ * resume-redirect, exactly like the retired ones.
+ *
+ * `/services` (the "Features" page) became `/products` on 2026-11-06.
+ */
+const RENAMED_MARKETING_PATHS: ReadonlyMap<string, string> = new Map([["/services", "/products"]]);
 
 /**
  * Marketing pages the resume-redirect must never fire on, because the app
@@ -222,7 +233,7 @@ function preferredLocaleForUnprefixedVisit(req: NextRequest): Locale {
  * - Redirects unauthenticated users to /login ONLY for protected routes
  * - Checks subscription status for dashboard access
  * - Redirects users with inactive subscriptions to /pricing
- * - Marketing pages (/, /services, /pricing, /contact, etc.) are ALWAYS accessible without authentication
+ * - Marketing pages (/, /products, /pricing, /contact, etc.) are ALWAYS accessible without authentication
  *
  * Protected routes are configured below in the matcher array.
  */
@@ -266,13 +277,18 @@ async function routeRequest(req: NextRequest): Promise<NextResponse> {
   // visitor to their last app page instead. The answer depends only on the
   // path (never on a cookie), so unlike the redirects below it is safe for a
   // browser or CDN to keep, and it is answered for prefetches too.
-  const replacement = RETIRED_MARKETING_PATHS.get(
-    basePath.length > 1 ? basePath.replace(/\/+$/, "") : basePath
-  );
+  const trimmedBasePath = basePath.length > 1 ? basePath.replace(/\/+$/, "") : basePath;
+  const replacement = RETIRED_MARKETING_PATHS.get(trimmedBasePath);
   if (replacement) {
     // Built from scratch (not cloned from req.nextUrl) so nothing of the old
     // URL — its query string, a trailing slash — carries over.
     return NextResponse.redirect(new URL(getLocalizedPath(replacement, locale), req.url), 308);
+  }
+  const renamed = RENAMED_MARKETING_PATHS.get(trimmedBasePath);
+  if (renamed) {
+    const target = new URL(getLocalizedPath(renamed, locale), req.url);
+    target.search = req.nextUrl.search;
+    return NextResponse.redirect(target, 308);
   }
 
   // Marketing pages are served from src/app/(marketing)/m/[locale]/ (static,
@@ -377,7 +393,7 @@ async function routeRequest(req: NextRequest): Promise<NextResponse> {
   // Marketing pages and auth pages should never be blocked
   const publicRoutes = [
     "/", // Home page
-    "/services",
+    "/products",
     "/pricing",
     "/contact",
     "/about",

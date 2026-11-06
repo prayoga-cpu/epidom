@@ -9,7 +9,15 @@ import { getLocalizedPath } from "@/lib/i18n-routing";
 import { SPACE_SCREENSHOTS } from "../data/media";
 import type { ProductScreen } from "@/features/marketing/shared/content/product-screens";
 import type { BadgePlan } from "../data/problems";
-import { PlanBadge, SECONDARY_BUTTON, SectionHeading, TEXT_LINK } from "./landing-ui";
+import { cn } from "@/lib/utils";
+import {
+  CARD,
+  CARD_INTERACTIVE,
+  PlanBadge,
+  SECONDARY_BUTTON,
+  SectionHeading,
+  TEXT_LINK,
+} from "./landing-ui";
 import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
 
 const SPACES: readonly {
@@ -52,7 +60,8 @@ export function ThreeSpacesSection({
             return (
               <li
                 key={key}
-                className="flex flex-col gap-5 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.01] p-6"
+                data-reveal
+                className={cn(CARD, CARD_INTERACTIVE, "flex flex-col gap-5 p-6")}
               >
                 {shot ? (
                   <SpaceShot shot={shot} alt={shot.alt[locale]} />
@@ -97,7 +106,7 @@ export function ThreeSpacesSection({
         </ul>
 
         <div className="mt-10">
-          <Link href={getLocalizedPath("/services", locale)} className={SECONDARY_BUTTON}>
+          <Link href={getLocalizedPath("/products", locale)} className={SECONDARY_BUTTON}>
             {t("redesign.landing.spaces.cta")}
           </Link>
         </div>
@@ -111,7 +120,7 @@ export function ThreeSpacesSection({
  * the capture's shape. A phone capture stands in it as a phone, cut off at the
  * bottom; a desktop capture fills it from the top-left corner.
  */
-function SpaceShot({ shot, alt }: { shot: ProductScreen; alt: string }) {
+export function SpaceShot({ shot, alt }: { shot: ProductScreen; alt: string }) {
   const placeholder = shot.src.blurDataURL ? "blur" : "empty";
   return (
     <div className="bg-epi-navy-900 relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_50%_0%,rgba(217,174,59,0.16),transparent_65%)]">

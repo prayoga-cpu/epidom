@@ -817,7 +817,7 @@ describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, (
         "href",
         "/store/store_1/dashboard?tour=1"
       );
-      expect(screen.getByRole("link", { name: /Go to my Back Office/ })).toHaveAttribute(
+      expect(screen.getByRole("link", { name: /Go to my Store Dashboard/ })).toHaveAttribute(
         "href",
         "/store/store_1/dashboard"
       );

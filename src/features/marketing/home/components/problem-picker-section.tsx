@@ -51,7 +51,7 @@ const ILLUSTRATION: Record<PainId, { before: LucideIcon; after: LucideIcon }> = 
  * selected on load so the panel is never empty, and the panel is a polite
  * live region so a screen reader hears the new content.
  *
- * It opens /services (the Features page).
+ * It opens /products (the Products page).
  */
 export function ProblemPickerSection() {
   const { t, locale } = useI18n();

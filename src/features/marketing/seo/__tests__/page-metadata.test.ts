@@ -16,7 +16,7 @@ const PAGE_FILES: Record<MarketingMetaPage, string> = {
   pricing: "pricing/page.tsx",
   about: "about/page.tsx",
   contact: "contact/page.tsx",
-  services: "services/page.tsx",
+  products: "products/page.tsx",
   partners: "partners/page.tsx",
   careers: "careers/page.tsx",
   press: "press/page.tsx",

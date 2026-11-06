@@ -148,6 +148,30 @@ export class StorefrontService {
   }
 
   /**
+   * Live published storefronts whose @username or name matches what a visitor
+   * is typing in the homepage search ("find your store"). Only the public slug
+   * and name leave, never the storefront itself; the most-viewed shops come
+   * first. The caller passes a query already stripped to letters, digits,
+   * spaces, apostrophes and hyphens (no LIKE wildcards). Same deactivation
+   * filter as getStorefrontBySlug.
+   */
+  async searchPublished(query: string, limit = 6): Promise<{ slug: string; displayName: string }[]> {
+    return prisma.storefront.findMany({
+      where: {
+        isPublished: true,
+        store: { business: { user: { deactivatedAt: null } } },
+        OR: [
+          { slug: { contains: query.replace(/\s+/g, "-"), mode: "insensitive" } },
+          { displayName: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      orderBy: { viewCount: "desc" },
+      take: limit,
+      select: { slug: true, displayName: true },
+    });
+  }
+
+  /**
    * Slugs + last-update timestamp for every live, published storefront —
    * used to build the dynamic sitemap. Same deactivation filter as
    * getStorefrontBySlug so a deactivated owner's page drops out of the

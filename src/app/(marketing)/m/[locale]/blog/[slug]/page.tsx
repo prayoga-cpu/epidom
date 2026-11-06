@@ -56,7 +56,7 @@ export default async function BlogPostPage({ params }: PageProps) {
   const canonical = `https://epidom.fr${getLocalizedPath(`/blog/${slug}`, locale)}`;
 
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-clip">
       <BlogPostingStructuredData
         url={canonical}
         title={post.title}

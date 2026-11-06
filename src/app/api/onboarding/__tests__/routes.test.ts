@@ -224,7 +224,7 @@ describe("POST /api/onboarding/store", () => {
   it("a store that is already live is a 409 already_completed (the wizard sends the owner to /stores)", async () => {
     h.saveStoreStep.mockRejectedValue(
       new AppError(
-        "Setup is already complete. Edit your store from the Back Office instead.",
+        "Setup is already complete. Edit your store from the Store Dashboard instead.",
         ApiErrorCode.CONFLICT,
         409,
         { reason: "already_completed" }

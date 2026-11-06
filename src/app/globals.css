@@ -349,6 +349,26 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
    Centralized keyframes for marketing sections
    ======================================== */
 
+/* The home page hub's connection lines: a dash travels from each tile to the chip. */
+.hub-flow {
+  animation: hub-flow 2.4s linear infinite;
+}
+@keyframes hub-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+/* The progress line of the home page's POS tour: fills left to right, then the next feature opens. */
+@keyframes epi-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 /* Gradient text animation for hero headlines */
 @keyframes gradient-shift {
   0%,
@@ -501,8 +521,67 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
     var(--epi-navy-900);
   color: var(--epi-cream-50);
   min-height: calc(100vh / var(--app-zoom, 1));
-  overflow-x: hidden;
+  /* No overflow-x here. It must be clip, not hidden (hidden makes this a scroll
+     container, and then nothing inside can be position: sticky: the pinned POS
+     tour, the FAQ heading), and Lightning CSS rewrites a hand-written
+     overflow-x: clip back to hidden for the older browser targets. The
+     marketing layout's wrapper carries Tailwind's overflow-x-clip instead,
+     which reaches the browser as written. */
   -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Marketing typography (2026-11) ----
+   The rules, after the brands people read as professional (Stripe, Linear,
+   Airbnb, lovable.dev):
+   1. Two typefaces: Inter for everything, Instrument Serif italic for a few
+      warm accent words. No third face; Bebas stays only in the logo (an SVG).
+   2. Headings are written in sentence case, never set in capitals. Capitals
+      are kept for small labels (.epi-eyebrow), spaced out.
+   3. Large type is tight (-0.035em), body type is not, capitals are open.
+   4. Three weights: 400 body, 500 labels and buttons, 600 headings.
+   5. Hierarchy comes from size and colour, not from more faces.
+   The heading sizes in the components were set for Bebas, a condensed face;
+   font-size-adjust scales Inter so its lowercase is 0.42 of each size, which
+   brings every heading (64px Bebas reads as ~49px Inter) into proportion in one
+   place, with no size to retune per component. Letter-spacing and case are
+   forced here because older components set Bebas-era values inline. */
+.epidom-dark-page {
+  --epi-font-display: var(--font-inter), "Inter", system-ui, sans-serif;
+  --epi-font-body: var(--font-inter), "Inter", system-ui, sans-serif;
+  --epi-font-serif: var(--font-instrument-serif), "Instrument Serif", Georgia, serif;
+  font-optical-sizing: auto;
+  font-feature-settings: "cv11";
+}
+.epidom-dark-page .epi-display {
+  font-weight: 600;
+  font-size-adjust: 0.42;
+  /* Of the SET size: Inter is drawn ~23% smaller (font-size-adjust), so 0.88
+     here is ~1.12 of the letters you see, the usual for a two-line heading. */
+  line-height: 0.88;
+  letter-spacing: -0.035em !important;
+  text-transform: none !important;
+  text-wrap: balance;
+}
+.epidom-dark-page .epi-display-light {
+  font-family: var(--epi-font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-transform: none;
+}
+.epidom-dark-page .epi-eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+}
+.epidom-dark-page .epi-script {
+  letter-spacing: -0.005em;
+}
+/* Figures that sit in columns (prices, KPIs) line up. */
+.epidom-dark-page .tabular-nums,
+.epidom-dark-page .epi-figure {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Section spacing ---- */
@@ -736,6 +815,155 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
   }
 }
 
+/* ---- Motion system (marketing) ----
+   After lovable.dev's: native scrolling, short entrances (14px of travel) on an
+   ease-out-cubic curve, staggered within a list, and slow ambient motion on the
+   hero only. Every rule below is off with reduced motion. */
+:root {
+  --epi-ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --epi-ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --epi-reveal-duration: 700ms;
+  --epi-reveal-distance: 14px;
+}
+
+/* Scroll reveal. RevealRoot (features/marketing/shared/components/reveal-root.tsx)
+   marks each [data-reveal] element that starts BELOW the fold "pending" once the
+   page is interactive, and "in" when it scrolls into view. What is on screen at
+   load is never hidden, and without JS or with reduced motion nothing is. The
+   transition is only set while revealing, so an element's own hover transition
+   is untouched afterwards. data-reveal="fade" skips the travel, "scale" grows in. */
+[data-reveal-state="pending"] {
+  opacity: 0;
+  transform: translate3d(0, var(--epi-reveal-distance), 0);
+}
+[data-reveal="fade"][data-reveal-state="pending"] {
+  transform: none;
+}
+[data-reveal="scale"][data-reveal-state="pending"] {
+  transform: scale(0.96);
+}
+[data-reveal-state="in"] {
+  transition:
+    opacity var(--epi-reveal-duration) var(--epi-ease-out),
+    transform var(--epi-reveal-duration) var(--epi-ease-out);
+  transition-delay: calc(min(var(--reveal-i, 0), 6) * 80ms);
+}
+@media print {
+  [data-reveal-state] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Hero: the photo drifts very slowly (40 s, like lovable.dev's ambient
+   background) and, where the browser has scroll-driven animations, sinks a
+   little as the hero scrolls away. The headline is never animated: it and the
+   photo are the LCP candidates and paint straight away. */
+@keyframes epi-ambient {
+  from {
+    transform: scale(1.1);
+  }
+  to {
+    transform: scale(1.16) translate3d(-1%, -1%, 0);
+  }
+}
+@keyframes epi-parallax {
+  to {
+    transform: translate3d(0, 5%, 0);
+  }
+}
+/* Below-the-headline hero parts rise in once, a beat after the headline. */
+@keyframes epi-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* A gold light passes once across a line of text (lovable.dev's headline sweep). */
+@keyframes epi-sweep {
+  from {
+    background-position: 100% 0;
+    filter: blur(0.6px);
+  }
+  to {
+    background-position: 0% 0;
+    filter: blur(0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .epi-hero-photo {
+    animation: epi-ambient 40s var(--epi-ease-in-out) infinite alternate;
+  }
+  @supports (animation-timeline: view()) {
+    .epi-hero-parallax {
+      animation: epi-parallax linear both;
+      animation-timeline: view();
+      animation-range: exit 0% exit 100%;
+    }
+  }
+  .epi-rise {
+    animation: epi-rise 0.8s var(--epi-ease-out) 0.15s both;
+  }
+  .epi-rise-late {
+    animation: epi-rise 0.8s var(--epi-ease-out) 0.35s both;
+  }
+  .epi-sweep {
+    background-image: linear-gradient(
+      100deg,
+      rgb(251 249 228 / 0.85) 0 42%,
+      var(--epi-gold-300) 50%,
+      rgb(251 249 228 / 0.85) 58% 100%
+    );
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: epi-sweep 1.4s var(--epi-ease-in-out) 0.25s both;
+  }
+}
+
+/* ---- Scroll-pinned section (the home POS tour) ----
+   As lovable.dev's "For building and beyond": on a desktop screen tall enough
+   for the content, the section is several screens tall and its content sticks
+   to the screen while the page's scroll walks through its steps (--pin-steps,
+   55% of a screen each). The query MUST match PIN_QUERY in pos-tour-section.tsx.
+   Heights divide by --app-zoom like every viewport unit here. */
+@media (min-width: 1024px) and (min-height: 780px) {
+  .epi-pin-section {
+    padding: 0;
+    height: calc((100svh + var(--pin-steps, 6) * 55svh) / var(--app-zoom, 1));
+  }
+  .epi-pin-sticky {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    height: calc(100svh / var(--app-zoom, 1));
+    padding-top: 88px;
+    padding-bottom: 24px;
+  }
+  .epi-pin-sticky > .epi-container {
+    width: 100%;
+  }
+  .epi-pin-sticky .epi-pin-stage {
+    min-height: 0;
+    height: min(560px, calc(100svh / var(--app-zoom, 1) - 150px));
+  }
+}
+
+/* ---- Inset surface panel ----
+   A section drawn as a rounded panel inset from the screen edges, like the
+   home hero card (and lovable.dev's alternating panels). The warm cream
+   section's navy edge fades are for a full-bleed band, so a panel drops them. */
+.epi-surface-panel::before,
+.epi-surface-panel::after {
+  content: none;
+}
+
 /* ---- Page fade-in ---- */
 @keyframes epi-page-fade {
   from {
@@ -775,8 +1003,22 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
   justify-content: space-between;
   gap: 18px;
   transition:
+    top 0.35s var(--epi-ease-out, ease),
     width 0.3s ease,
-    background 0.3s ease;
+    background 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+/* At the top of the page the bar is lighter glass; once the page scrolls
+   (SiteHeader sets data-scrolled) it settles darker with a shadow, as
+   lovable.dev's header does. */
+.epi-floating-nav:not([data-scrolled]) {
+  background: rgba(6, 15, 27, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.epi-floating-nav[data-scrolled] {
+  background: rgba(6, 15, 27, 0.8);
+  border-color: rgba(245, 244, 220, 0.14);
 }
 /* Below Tailwind's lg (1024px), where the header swaps its links for the menu
    button. Ending at 1024px itself hid BOTH at exactly 1024 (iPad landscape). */
@@ -805,6 +1047,17 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
   .epidom-dark-page:has([data-hero-card]) .epi-floating-nav {
     top: 28px;
     width: calc(100% - 48px);
+  }
+}
+/* Once the home page scrolls, the header leaves the hero card and settles at
+   the top like on every other page. */
+.epidom-dark-page:has([data-hero-card]) .epi-floating-nav[data-scrolled] {
+  top: 16px;
+}
+@media (max-width: 1023.98px) {
+  .epidom-dark-page:has([data-hero-card]) .epi-floating-nav[data-scrolled] {
+    top: 12px;
+    width: calc(100% - 32px);
   }
 }
 @media (max-width: 720px) {

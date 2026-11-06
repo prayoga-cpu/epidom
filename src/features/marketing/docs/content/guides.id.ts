@@ -216,7 +216,7 @@ export const idGuides: Article[] = [
       {
         type: "list",
         items: [
-          "Pindah antara Sistem Kasir, halaman Operasional, dan (untuk pemilik dan manajer) Back Office",
+          "Pindah antara Sistem Kasir, halaman Operasional, dan (untuk pemilik dan manajer) Dasbor Toko",
           "Sinkronkan Penjualan: kirim penjualan yang tercatat saat offline dan segarkan salinan menu dan pesanan di perangkat ini",
           "Nyalakan layar pelanggan dan buka di layar kedua",
           "Pengaturan perangkat keras: printer dan pemindai barcode di perangkat ini",
@@ -286,7 +286,7 @@ export const idGuides: Article[] = [
     blocks: [
       {
         type: "p",
-        text: "Staf, Jadwal Kerja, dan Sif Kerja termasuk di paket Operations. Di menu Back Office, Staf dan Jadwal Kerja ada di bagian “Operations”, sedangkan Sif Kerja di bagian “Reports”.",
+        text: "Staf, Jadwal Kerja, dan Sif Kerja termasuk di paket Operations. Di menu Dasbor Toko, Staf dan Jadwal Kerja ada di bagian “Operations”, sedangkan Sif Kerja di bagian “Reports”.",
       },
       { type: "h2", text: "Staf" },
       {

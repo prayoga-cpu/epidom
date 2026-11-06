@@ -15,7 +15,7 @@ const PAGE_NAME = {
 export default async function DeliveryCommissionComparePage({ params }: LocaleParams) {
   const locale = await routeLocale(params);
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-clip">
       <BreadcrumbStructuredData
         items={buildBreadcrumbs(locale, [
           { name: BREADCRUMB_LABELS[locale].compare, path: "/compare" },

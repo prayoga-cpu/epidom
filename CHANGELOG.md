@@ -9,6 +9,18 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.43.0] - 2026-11-06 · feat
+
+- **Back Office is now the Store Dashboard**, and its Dashboard page is now **Overview** (in French "Tableau de bord" and "Vue d'ensemble", in Indonesian "Dasbor Toko" and "Ringkasan"). Same pages, same addresses: only the names changed.
+- **A new home page.** It opens on a search for a store's phone-orders link: type a name or an @link to open that store's page, or register yours if it isn't on Epidom yet. Then what Epidom does for cafés, restaurants, bakeries, bars and food trucks, a tour of six till features that scrolls along as you read on a computer, and how every part connects, Claude included.
+- **The savings calculator takes your currency and your current till.** Switch between euros, dollars and rupiah, pick the POS you use today, and its public price is filled in and set against Epidom's, with a link to the full comparison. For a till with no public price, type what you pay.
+- On the website the storefront is now called **Phone Orders**, and the Features page is **Products**, at /products. Old /services links still work.
+- **One support button on the Contact page**: "24h online support" opens WhatsApp for France or Indonesia. A green light marks support as online on the home page too.
+- The header button names your device ("Start on macOS", "Start on Android"...): Epidom runs in the browser on all of them.
+- Country flags replace "(France)" and "(Indonesia)" next to our phone numbers. The footer has a download row that installs the app from your browser, a new illustration and a tagline.
+- New lettering and gentle scroll animations across the website. They stay still if your device is set to reduce motion.
+- Fixed: headings meant to stay in view while you scroll (the home page FAQ) scrolled away instead.
+
 ## [3.42.0] - 2026-11-04 · feat
 
 - **Ask Claude about your store from the Operations plan.** Connecting Epidom to your own Claude (Beta) and asking about sales, stock, staff and finance is now included from Operations. Letting Claude make changes (stock, menu, suppliers, rosters) stays on Enterprise, and the consent screen only offers it to stores that have it.

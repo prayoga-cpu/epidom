@@ -13,13 +13,14 @@ import { useSession, signOut } from "@/lib/auth-client";
 import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
 import { trackEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
+import { PLATFORM_NAME } from "@/lib/device-platform";
+import { useDevicePlatform } from "@/hooks/use-device-platform";
+import { PlatformIcon } from "@/components/platform-icon";
 
 const GOLD_BUTTON_STYLE: React.CSSProperties = {
   background: "linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c)",
   color: "#151004",
   fontFamily: "var(--epi-font-body)",
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
   boxShadow: "0 0 0 1px rgba(255,255,255,.22) inset",
 };
 
@@ -50,6 +51,26 @@ export const SiteHeader = memo(function SiteHeader({
     setMounted(true);
   }, []);
 
+  // Lighter glass at the top of the page; once scrolled it settles darker
+  // (and, on the home page, leaves the hero card). See .epi-floating-nav[data-scrolled].
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      setScrolled(window.scrollY > 24);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(read);
+    };
+    read();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   const variant = useMemo(() => variantOverride ?? "landing", [variantOverride]);
   const navigationItems = useMemo(() => getNavigationByVariant(variant), [variant]);
   // navigation.config.ts hrefs are locale-agnostic ("/pricing") — only the
@@ -62,9 +83,26 @@ export const SiteHeader = memo(function SiteHeader({
   const isActiveHref = (item: NavItem, href: string) =>
     pathname === href || (item.href !== "/" && pathname.startsWith(`${href}/`));
 
+  // "Start on macOS" / "Start on Android": the sign-up button names the
+  // device the visitor is on (Epidom runs in its browser, nothing to install).
+  // Until that is known (the server, the first paint) it reads "Start Trial".
+  const platform = useDevicePlatform();
+  const startLabel = platform ? (
+    <>
+      <PlatformIcon platform={platform} className="size-4 shrink-0" />
+      {t("nav.startOn").replace("{device}", PLATFORM_NAME[platform])}
+    </>
+  ) : (
+    <>{t("nav.startTrial")} →</>
+  );
+
   const handleLogin = () => router.push("/login");
   const handleStartFree = () => {
-    trackEvent("cta_click", { event_category: "engagement", event_label: "header_try_epidom" });
+    trackEvent("cta_click", {
+      event_category: "engagement",
+      event_label: "header_try_epidom",
+      platform: platform ?? "unknown",
+    });
     router.push("/register");
   };
   const handleGoToStores = () => router.push("/stores");
@@ -132,7 +170,7 @@ export const SiteHeader = memo(function SiteHeader({
       return (
         <button
           onClick={handleLogout}
-          className="cursor-pointer rounded-full px-5 py-2 text-sm font-bold transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px]"
+          className="cursor-pointer rounded-full px-5 py-2 text-sm font-semibold transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px]"
           style={GOLD_BUTTON_STYLE}
         >
           {t("common.actions.logout")}
@@ -143,7 +181,7 @@ export const SiteHeader = memo(function SiteHeader({
       return (
         <button
           onClick={handleGoToStores}
-          className="cursor-pointer rounded-full px-5 py-2 text-sm font-bold transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px]"
+          className="cursor-pointer rounded-full px-5 py-2 text-sm font-semibold transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px]"
           style={GOLD_BUTTON_STYLE}
         >
           {t("common.nav.stores")} →
@@ -153,10 +191,10 @@ export const SiteHeader = memo(function SiteHeader({
     return (
       <button
         onClick={handleStartFree}
-        className="cursor-pointer rounded-full px-5 py-2 text-sm font-bold transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px] active:translate-y-0"
+        className="inline-flex cursor-pointer items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold whitespace-nowrap transition-[transform,box-shadow] duration-150 hover:-translate-y-[2px] active:translate-y-0"
         style={GOLD_BUTTON_STYLE}
       >
-        {t("nav.startTrial")} →
+        {startLabel}
       </button>
     );
   };
@@ -164,6 +202,7 @@ export const SiteHeader = memo(function SiteHeader({
   return (
     <nav
       className="epi-floating-nav backdrop-blur-xs"
+      data-scrolled={scrolled ? "" : undefined}
       role="navigation"
       aria-label={t("common.nav.mainHeader")}
     >
@@ -299,10 +338,10 @@ export const SiteHeader = memo(function SiteHeader({
                       <SheetClose asChild>
                         <button
                           onClick={handleStartFree}
-                          className="w-full cursor-pointer rounded-full py-3 text-sm font-bold tracking-[0.06em] uppercase transition-transform hover:-translate-y-[2px]"
+                          className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold transition-transform hover:-translate-y-[2px]"
                           style={GOLD_BUTTON_STYLE}
                         >
-                          {t("nav.startTrial")} →
+                          {startLabel}
                         </button>
                       </SheetClose>
                     )}

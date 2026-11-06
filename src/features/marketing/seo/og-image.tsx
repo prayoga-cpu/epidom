@@ -55,9 +55,9 @@ export function findOgEntry(kind: string, locale: string, slug: string): OgEntry
 }
 
 const FOOTER: Record<Locale, string> = {
-  fr: "Caisse, commande en ligne et back-office pour cafés",
-  id: "Kasir, pesanan online, dan back office untuk kafe",
-  en: "POS, online ordering and back office for cafés",
+  fr: "Caisse, commande en ligne et tableau de bord pour cafés",
+  id: "Kasir, pesanan online, dan dasbor toko untuk kafe",
+  en: "POS, online ordering and store dashboard for cafés",
 };
 
 const NAVY = "#060f1b";

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { MarketFlag, marketName } from "@/components/market-flag";
 import { trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 import {
   SUPPORT_EMAIL_DISPLAY,
@@ -10,7 +12,12 @@ import {
   whatsappHref,
 } from "@/lib/constants/contact";
 import { getLocalizedPath } from "@/lib/i18n-routing";
-import { WhatsAppIcon } from "@/features/marketing/shared/components/contact-icons";
+import { cn } from "@/lib/utils";
+import {
+  OnlineDot,
+  WhatsAppSupportMenu,
+} from "@/features/marketing/shared/components/whatsapp-support-menu";
+import { PRIMARY_BUTTON } from "@/features/marketing/home/components/landing-ui";
 
 /**
  * There is deliberately no form here. The old one only faked a send (a timer,
@@ -32,6 +39,7 @@ function trackWhatsAppClick() {
 type Channel = {
   key: string;
   title: string;
+  market?: "fr" | "id";
   body: string;
   cta: string;
   href: string;
@@ -58,9 +66,8 @@ export function ContactPageClient() {
     },
     ...waOptions.map((opt, i) => ({
       key: `whatsapp-${opt.number}`,
-      title: hasSeveralMarkets
-        ? `${t("contact.page.channel2title")} (${opt.label})`
-        : t("contact.page.channel2title"),
+      title: t("contact.page.channel2title"),
+      market: hasSeveralMarkets ? opt.market : undefined,
       body: t("contact.page.channel2body"),
       cta: t("contact.page.whatsappCta"),
       href: whatsappHref(opt.number, waMessage),
@@ -96,25 +103,27 @@ export function ContactPageClient() {
             {t("contact.page.script")}
           </p>
 
-          {/* One button per number: a single market on fr/id, France then Indonesia on en. */}
-          <div className="mx-auto mt-9 flex w-full max-w-md flex-col items-stretch gap-3 sm:max-w-none sm:flex-row sm:items-center sm:justify-center">
-            {waOptions.map((opt) => (
-              <a
-                key={opt.number}
-                href={whatsappHref(opt.number, waMessage)}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={trackWhatsAppClick}
-                className="bg-epi-gold-500 text-epi-navy-900 shadow-epi-gold-500/30 hover:bg-epi-gold-400 focus-visible:outline-epi-cream-50 inline-flex min-h-[52px] w-full items-center justify-center gap-3 rounded-full px-7 py-3.5 text-center text-sm font-bold tracking-[0.08em] uppercase shadow-lg transition hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-4 sm:w-auto"
+          {/* One button, "24h online support", with the online light; it opens
+              both markets' WhatsApp numbers (the visitor's own first). */}
+          <div className="mx-auto mt-9 flex w-full max-w-md justify-center sm:max-w-none">
+            <WhatsAppSupportMenu
+              side="bottom"
+              align="center"
+              message={waMessage}
+              onPick={trackWhatsAppClick}
+            >
+              <button
+                type="button"
+                className={cn(PRIMARY_BUTTON, "group min-h-[52px] w-full gap-3 sm:w-auto")}
               >
-                <WhatsAppIcon className="size-5 shrink-0" />
-                <span>
-                  {hasSeveralMarkets
-                    ? `${t("contact.page.whatsappPrimary")} (${opt.label})`
-                    : t("contact.page.whatsappPrimary")}
-                </span>
-              </a>
-            ))}
+                <OnlineDot onGold />
+                {t("contact.page.supportButton")}
+                <ChevronDown
+                  aria-hidden="true"
+                  className="size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180"
+                />
+              </button>
+            </WhatsAppSupportMenu>
           </div>
         </div>
       </section>
@@ -141,6 +150,7 @@ export function ContactPageClient() {
 function ChannelCard({
   index,
   title,
+  market,
   body,
   cta,
   href,
@@ -148,6 +158,7 @@ function ChannelCard({
   gold,
   onClick,
 }: Omit<Channel, "key"> & { index: string }) {
+  const { locale } = useI18n();
   // The link is stretched over the whole card (after:inset-0) so the tap target
   // is the card, not a 13px line of text. The title stays in the accessible
   // name because two WhatsApp cards share the same "Open chat" label on en.
@@ -160,7 +171,10 @@ function ChannelCard({
 
   const linkContent = (
     <>
-      <span className="sr-only">{title}: </span>
+      <span className="sr-only">
+        {title}
+        {market ? ` (${marketName(market, locale)})` : ""}:{" "}
+      </span>
       {cta}
     </>
   );
@@ -184,7 +198,15 @@ function ChannelCard({
         {index}
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="text-epi-cream-50 m-0 mb-1.5 text-[15px] font-bold">{title}</h3>
+        <h3 className="text-epi-cream-50 m-0 mb-1.5 text-[15px] font-bold">
+          {title}
+          {market ? (
+            <>
+              {" "}
+              <MarketFlag market={market} />
+            </>
+          ) : null}
+        </h3>
         <p className="text-epi-cream-50/60 m-0 mb-1 text-[13px] leading-normal">{body}</p>
         {href.startsWith("/") ? (
           <Link href={href} className={linkClass}>

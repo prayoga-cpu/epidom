@@ -253,15 +253,55 @@ describe("CaseStudiesSection", () => {
     expect(screen.queryByText(/Owner interview/)).toBeNull();
   });
 
-  it("rejects entries with a number of metrics other than zero or two, or without a quote", () => {
-    const oneMetric = study({
-      metrics: [
-        { value: "-30%", label: "Missed orders", source: "Interview" },
-      ] as unknown as CaseStudy["metrics"],
-    });
-    expect(isPublishableCaseStudy(oneMetric)).toBe(false);
+  it("rejects entries with a number of metrics other than zero, two or three, or without a quote", () => {
+    const m = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        value: `${i}`,
+        label: `Label ${i}`,
+        source: "Interview",
+      })) as unknown as CaseStudy["metrics"];
+    expect(isPublishableCaseStudy(study({ metrics: m(1) }))).toBe(false);
+    expect(isPublishableCaseStudy(study({ metrics: m(2) }))).toBe(true);
+    expect(isPublishableCaseStudy(study({ metrics: m(3) }))).toBe(true);
+    expect(isPublishableCaseStudy(study({ metrics: m(4) }))).toBe(false);
     expect(isPublishableCaseStudy(study({ quote: "  " }))).toBe(false);
     expect(isPublishableCaseStudy(study({ quote: {} }))).toBe(false);
+  });
+
+  it("shows three figures, the owner's role and the summary, and a single story has no arrows", () => {
+    render(
+      <CaseStudiesSection
+        studies={[
+          study({
+            summary: "A neighbourhood café with a queue at nine.",
+            ownerRole: "Co-founder",
+            metrics: [
+              { value: "-30%", label: "Missed orders", source: "Owner interview, 2026-01" },
+              { value: "12 min", label: "Saved per closing", source: "Owner interview, 2026-01" },
+              { value: "2x", label: "Phone orders", source: "Dashboard export, 2026-02" },
+            ],
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText("2x")).toBeInTheDocument();
+    expect(screen.getByText(/Dashboard export, 2026-02/)).toBeInTheDocument();
+    expect(screen.getByText("A neighbourhood café with a queue at nine.")).toBeInTheDocument();
+    expect(screen.getByText(/Co-founder · Café Test · Lyon/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /story/i })).toBeNull();
+  });
+
+  it("several stories: previous/next arrows, and it opens on the second story", () => {
+    render(
+      <CaseStudiesSection
+        studies={[study({ slug: "a" }), study({ slug: "b", shopName: "Other", location: "Nice" })]}
+      />
+    );
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    // Two stories: the second is open, so only Previous leads anywhere.
+    expect(screen.getByRole("button", { name: "Previous story" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Next story" })).toBeDisabled();
+    expect(screen.getAllByRole("listitem")[1].className).toMatch(/opacity-100/);
   });
 
   it("keeps the valid entries and drops only the invalid one", () => {

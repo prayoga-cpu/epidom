@@ -77,8 +77,9 @@ export function PricingSection() {
           {tiers.map((tier) => (
             <li
               key={tier.key}
+              data-reveal
               className={cn(
-                "relative flex flex-col gap-4 rounded-3xl border p-6",
+                "relative flex flex-col gap-4 rounded-3xl border p-6 transition-[border-color,transform] duration-300 motion-safe:hover:-translate-y-0.5",
                 tier.highlight
                   ? "border-epi-gold-500/50 from-epi-gold-500/20 to-epi-gold-500/[0.04] bg-gradient-to-br"
                   : "border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01]"

@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { MarketFlag } from "@/components/market-flag";
 import { LANGUAGE_OPTIONS, rememberLocaleChoice } from "@/components/lang/language-options";
 import { landingLinksFor } from "@/features/marketing/landing/registry";
 import { trackEvent } from "@/lib/analytics";
@@ -18,7 +19,9 @@ import { getLocalizedPath } from "@/lib/i18n-routing";
 import { APP_VERSION } from "@/lib/version";
 import { MailIcon, WhatsAppIcon } from "./contact-icons";
 import { Container } from "./container";
-import { EpidomLogo, EpidomWordmark } from "./epidom-logo";
+import { FooterDownloads } from "./footer-downloads";
+import { FooterScene } from "./footer-scene";
+import { EpidomLogo } from "./epidom-logo";
 import { NewsletterSignup } from "./newsletter-signup";
 
 // Instagram only — no other social accounts are actively maintained.
@@ -139,7 +142,7 @@ export const SiteFooter = memo(function SiteFooter() {
             heading={t("footer.colProduct")}
             links={[
               { label: t("footer.linkHome"), href: getLocalizedPath("/", locale) },
-              { label: t("footer.linkFeatures"), href: getLocalizedPath("/services", locale) },
+              { label: t("footer.linkProducts"), href: getLocalizedPath("/products", locale) },
               { label: t("footer.linkPricing"), href: getLocalizedPath("/pricing", locale) },
               { label: t("footer.linkCompare"), href: getLocalizedPath("/compare", locale) },
               { label: t("footer.linkContact"), href: getLocalizedPath("/contact", locale) },
@@ -245,7 +248,13 @@ export const SiteFooter = memo(function SiteFooter() {
                       style={linkStyle}
                       className="hover:text-[rgba(251,249,228,0.9)]"
                     >
-                      {waOptions.length > 1 ? `WhatsApp (${opt.label})` : "WhatsApp"}
+                      WhatsApp
+                      {waOptions.length > 1 ? (
+                        <>
+                          {" "}
+                          <MarketFlag market={opt.market} />
+                        </>
+                      ) : null}
                     </Link>
                   </ContactRow>
                 </li>
@@ -280,22 +289,14 @@ export const SiteFooter = memo(function SiteFooter() {
           </div>
         </div>
 
-        {/* Big wordmark, outlined */}
-        <div
-          className="hidden select-none sm:block"
-          style={{ color: "rgba(245,244,220,0.08)", marginTop: 52, marginBottom: 24 }}
-        >
-          <EpidomWordmark
-            outline
-            style={{
-              display: "block",
-              width: "clamp(155px, 31.5vw, 472px)",
-              height: "auto",
-              margin: "0 auto",
-            }}
-          />
-        </div>
+        {/* Downloads: one way, the web app (PWA), from any device. */}
+        <FooterDownloads />
+      </Container>
 
+      {/* The illustration and the large wordmark run edge to edge, outside the container. */}
+      <FooterScene tagline={t("footer.sceneTagline")} />
+
+      <Container maxWidth="7xl" className="relative z-10 px-4 sm:px-6 lg:px-8">
         {/* PRIONATION credit */}
         <div className="my-4 md:mb-7" style={{ display: "flex", justifyContent: "center" }}>
           <div

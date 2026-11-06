@@ -5,7 +5,7 @@ export const generateMetadata = pageMetadata("contact");
 
 export default function ContactPage() {
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-clip">
       <ContactPageClient />
     </div>
   );

@@ -51,6 +51,8 @@ describe("SiteHeader call-to-action", () => {
     expect(h.trackEvent).toHaveBeenCalledWith("cta_click", {
       event_category: "engagement",
       event_label: "header_try_epidom",
+      // jsdom's user agent names no device, so the button keeps "Start Trial".
+      platform: "unknown",
     });
     expect(h.push).toHaveBeenLastCalledWith("/register");
 
@@ -58,6 +60,30 @@ describe("SiteHeader call-to-action", () => {
     const sheet = within(openMobileMenu());
     fireEvent.click(sheet.getByRole("button", { name: /nav\.startTrial/ }));
     expect(h.push).toHaveBeenLastCalledWith("/register");
+  });
+
+  it("signed out on a Mac: the button names the device, with its mark, on desktop and in the menu", () => {
+    const ua = vi
+      .spyOn(navigator, "userAgent", "get")
+      .mockReturnValue(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15"
+      );
+    try {
+      render(<SiteHeader />);
+      const desktop = screen.getByRole("button", { name: /nav\.startOn/ });
+      expect(desktop.querySelector("svg")).not.toBeNull();
+      expect(screen.queryByRole("button", { name: /nav\.startTrial/ })).toBeNull();
+      fireEvent.click(desktop);
+      expect(h.trackEvent).toHaveBeenCalledWith("cta_click", {
+        event_category: "engagement",
+        event_label: "header_try_epidom",
+        platform: "macos",
+      });
+      const sheet = within(openMobileMenu());
+      expect(sheet.getByRole("button", { name: /nav\.startOn/ })).toBeInTheDocument();
+    } finally {
+      ua.mockRestore();
+    }
   });
 
   it("signed in: 'Your stores' on desktop and in the mobile menu, both going to /stores", () => {

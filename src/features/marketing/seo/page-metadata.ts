@@ -31,7 +31,7 @@ export type MarketingMetaPage =
   | "pricing"
   | "about"
   | "contact"
-  | "services"
+  | "products"
   | "partners"
   | "careers"
   | "press"
@@ -209,9 +209,10 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
     },
   },
 
-  services: {
-    path: "/services",
+  products: {
+    path: "/products",
     keywords: [
+      "epidom products",
       "epidom features",
       "f&b pos app",
       "restaurant cashier app",
@@ -223,28 +224,28 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
     ],
     copy: {
       en: {
-        title: "Features: POS, Kitchen Display, Stock & Staff — EPIDOM",
+        title: "Products: POS, Kitchen Display, Stock & Staff — EPIDOM",
         description:
           "Everything Epidom offers: a free menu page, POS, kitchen display (KDS), stock and recipe costing, staff schedules, finance reports and multi-outlet.",
-        ogTitle: "Epidom Features — POS, Kitchen & Back Office",
+        ogTitle: "Epidom Products — POS, Kitchen & Store Dashboard",
         ogDescription:
-          "From a free menu page to a POS, kitchen display and back office. One platform for cafés, bakeries and restaurants.",
+          "From a free menu page to a POS, kitchen display and store dashboard. One platform for cafés, bakeries and restaurants.",
       },
       fr: {
         title: "Caisse, écran cuisine, stocks et planning d'équipe — EPIDOM",
         description:
           "Tout Epidom : page menu gratuite, caisse, écran cuisine (KDS), stocks et coût des recettes, planning d'équipe, rapports financiers et multi-établissements.",
-        ogTitle: "Fonctionnalités Epidom — caisse, cuisine et back-office",
+        ogTitle: "Produits Epidom — caisse, cuisine et tableau de bord",
         ogDescription:
-          "De la page menu gratuite à la caisse, à l'écran cuisine et au back-office. Une seule plateforme pour cafés, boulangeries et restaurants.",
+          "De la page menu gratuite à la caisse, à l'écran cuisine et au tableau de bord. Une seule plateforme pour cafés, boulangeries et restaurants.",
       },
       id: {
-        title: "Fitur Aplikasi Kasir: Dapur, Stok & Jadwal Staf — EPIDOM",
+        title: "Produk Aplikasi Kasir: Dapur, Stok & Jadwal Staf — EPIDOM",
         description:
           "Semua fitur Epidom: halaman menu gratis, kasir POS, kitchen display (KDS), stok dan HPP resep, jadwal staf, laporan keuangan, dan multi-outlet.",
-        ogTitle: "Fitur Epidom — Kasir, Dapur & Back Office",
+        ogTitle: "Produk Epidom — Kasir, Dapur & Dasbor Toko",
         ogDescription:
-          "Dari halaman menu gratis hingga kasir POS, layar dapur, dan back office. Satu platform untuk kafe, warung, dan restoran.",
+          "Dari halaman menu gratis hingga kasir POS, layar dapur, dan dasbor toko. Satu platform untuk kafe, warung, dan restoran.",
       },
     },
   },

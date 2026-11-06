@@ -225,8 +225,8 @@ export const landingNavigation: NavItem[] = [
     icon: Home,
   },
   {
-    href: "/services",
-    labelKey: "common.nav.features",
+    href: "/products",
+    labelKey: "common.nav.products",
     icon: Briefcase,
   },
   {

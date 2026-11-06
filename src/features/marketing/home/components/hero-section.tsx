@@ -3,18 +3,20 @@
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
 import { INTL_LOCALES, useI18n } from "@/components/lang/i18n-provider";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MarketFlag } from "@/components/market-flag";
 import { trackEvent, trackMetaPixelEvent } from "@/lib/analytics";
-import { WHATSAPP_NUMBERS, whatsappHref } from "@/lib/constants/contact";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { cn } from "@/lib/utils";
 import { APP_RELEASE_DATE, APP_VERSION } from "@/lib/version";
 import { HERO_PHOTO } from "../data/media";
 import { NF525_SETTLED } from "../lib/migration";
-import { usePosTrialHref } from "../lib/use-pos-trial-href";
-import { PRIMARY_BUTTON, TEXT_LINK } from "./landing-ui";
+import {
+  OnlineDot,
+  WhatsAppSupportMenu,
+} from "@/features/marketing/shared/components/whatsapp-support-menu";
+import { HeroStoreSearch } from "./hero-store-search";
+import { TEXT_LINK } from "./landing-ui";
 
 /**
  * The letter drawn as a lightning bolt: the "i" of "realtime" ("REALT⚡ME
@@ -116,9 +118,14 @@ function useEmWidth(text: string, emPerChar: number) {
   return [ref, em] as const;
 }
 
-/** Average widths of one capital, in em (tracking included): the h1's Bebas, the tagline's Oswald Light. */
-const TITLE_EM_PER_CHAR = 0.37;
-const TAGLINE_EM_PER_CHAR = 0.48;
+/**
+ * Average width of one character, in em of the set size (tracking included),
+ * for the first paint before the real width is measured: the h1's Inter 600
+ * (scaled by font-size-adjust, see "Marketing typography" in globals.css) and
+ * the tagline's Instrument Serif italic.
+ */
+const TITLE_EM_PER_CHAR = 0.43;
+const TAGLINE_EM_PER_CHAR = 0.4;
 
 /**
  * A fact's value that opens something: plain text until hovered, then gold. The
@@ -151,7 +158,6 @@ const FACT_LINK =
  */
 export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }) {
   const { t, locale } = useI18n();
-  const trialHref = usePosTrialHref();
   // One letter of the "realtime" word is drawn as a gold lightning bolt (see
   // BOLT_LETTER), in the h1 or, in French, in the tagline. The drawn copy keeps
   // the replaced letter in its text, undrawn, so the h1's text is the title
@@ -176,60 +182,28 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
     timeZone: "UTC",
   }).format(new Date(`${APP_RELEASE_DATE}T00:00:00Z`));
 
-  // Both markets' numbers, the visitor's own first.
-  const supportLines = (locale === "id" ? (["id", "fr"] as const) : (["fr", "id"] as const)).map(
-    (market) => ({
-      market,
-      number: WHATSAPP_NUMBERS[market].number,
-      label: t(`redesign.landing.hero.${market === "fr" ? "supportFrance" : "supportIndonesia"}`),
-    })
-  );
-
   const facts = [
     {
       key: "support",
       label: t("redesign.landing.hero.supportLabel"),
       value: (
-        <Popover>
-          <PopoverTrigger asChild>
-            <button type="button" className={cn(FACT_LINK, "cursor-pointer")}>
-              {t("redesign.landing.hero.supportValue")}
-            </button>
-          </PopoverTrigger>
-          {/* Above the site's floating header (z-index 60), like the migration
-              modal, and flipped below the trigger rather than opening under it
-              when the hero is scrolled near the top (the header ends ~102px down). */}
-          <PopoverContent
-            side="top"
-            align="end"
-            sideOffset={10}
-            collisionPadding={{ top: 112 }}
-            className="bg-epi-navy-900 text-epi-cream-50 z-[70] w-64 rounded-2xl border-white/10 p-2"
+        <WhatsAppSupportMenu
+          onPick={(market) => {
+            trackEvent("hero_support_click", { market });
+            trackMetaPixelEvent("Contact", { content_name: "hero_support" });
+          }}
+        >
+          <button
+            type="button"
+            className={cn(
+              FACT_LINK,
+              "inline-flex cursor-pointer items-center gap-1.5 no-underline"
+            )}
           >
-            <p className="text-epi-cream-50/55 m-0 px-3 pt-2 pb-1 text-[11px] tracking-[0.16em] uppercase">
-              {t("redesign.landing.hero.supportPopoverTitle")}
-            </p>
-            <ul className="m-0 list-none p-0">
-              {supportLines.map((line) => (
-                <li key={line.market}>
-                  <a
-                    href={whatsappHref(line.number)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => {
-                      trackEvent("hero_support_click", { market: line.market });
-                      trackMetaPixelEvent("Contact", { content_name: "hero_support" });
-                    }}
-                    className="text-epi-cream-50 hover:text-epi-gold-300 focus-visible:outline-epi-gold-300 flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 text-[15px] hover:bg-white/[0.06] focus-visible:outline-2"
-                  >
-                    {line.label}
-                    <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 opacity-60" />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </PopoverContent>
-        </Popover>
+            <MarketFlag market="fr" /> <MarketFlag market="id" />{" "}
+            {t("redesign.landing.hero.supportValue")}
+          </button>
+        </WhatsAppSupportMenu>
       ),
     },
     {
@@ -250,7 +224,7 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
             label: t("redesign.landing.hero.complianceLabel"),
             value: (
               <a href="#conformite" className={FACT_LINK}>
-                {t("redesign.landing.hero.complianceValue")}
+                <MarketFlag market="fr" /> {t("redesign.landing.hero.complianceValue")}
               </a>
             ),
           },
@@ -265,18 +239,24 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
         className="bg-epi-navy-850 relative isolate flex min-h-[calc(100svh/var(--app-zoom,1)_-_1rem)] flex-col overflow-hidden rounded-[24px] ring-1 ring-white/10 sm:min-h-[calc(100svh/var(--app-zoom,1)_-_1.5rem)] sm:rounded-[32px] lg:min-h-[calc(100svh/var(--app-zoom,1)_-_2rem)]"
       >
         {HERO_PHOTO ? (
-          <Image
-            src={HERO_PHOTO.src}
-            alt={HERO_PHOTO.alt[locale]}
-            fill
-            preload
-            loading="eager"
-            fetchPriority="high"
-            sizes="100vw"
-            // The build always provides blurDataURL for a static import; tests don't.
-            placeholder={HERO_PHOTO.src.blurDataURL ? "blur" : "empty"}
-            className="-z-20 object-cover object-[50%_40%]"
-          />
+          // Two layers so the two motions never fight over one transform: the
+          // outer one sinks a little as the hero scrolls away (scroll-driven,
+          // where supported), the photo drifts very slowly (globals.css). The
+          // photo never fades in: it is the LCP and paints straight away.
+          <div className="epi-hero-parallax absolute inset-0 -z-20 overflow-hidden">
+            <Image
+              src={HERO_PHOTO.src}
+              alt={HERO_PHOTO.alt[locale]}
+              fill
+              preload
+              loading="eager"
+              fetchPriority="high"
+              sizes="100vw"
+              // The build always provides blurDataURL for a static import; tests don't.
+              placeholder={HERO_PHOTO.src.blurDataURL ? "blur" : "empty"}
+              className="epi-hero-photo object-cover object-[50%_40%]"
+            />
+          </div>
         ) : null}
         {/* Navy wash, a darker pool behind the headline (the photo's white wall
             sits right there), a gold glow in the corner, and a dark foot for the
@@ -314,7 +294,7 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
                 id="hero-title"
                 aria-label={titleHasBolt ? plainText(title) : undefined}
                 style={{ "--title-em": titleEm } as React.CSSProperties}
-                className="epi-display text-epi-cream-50 sm:short:[--title-size:clamp(44px,min(9.5vw,12svh),144px)] m-0 max-w-[8.2em] text-[length:var(--title-size)] text-balance [--title-size:clamp(52px,min(9.5vw,14svh),144px)] supports-[width:1cqi]:max-w-none supports-[width:1cqi]:text-[length:min(var(--title-size),calc(100cqi/var(--title-em)))] supports-[width:1cqi]:whitespace-nowrap"
+                className="epi-display text-epi-cream-50 sm:short:[--title-size:clamp(36px,min(7vw,9svh),88px)] m-0 max-w-[8.2em] text-[length:var(--title-size)] text-balance [--title-size:clamp(40px,min(8vw,11svh),96px)] supports-[width:1cqi]:max-w-none supports-[width:1cqi]:text-[length:min(var(--title-size),calc(100cqi/var(--title-em)))] supports-[width:1cqi]:whitespace-nowrap"
               >
                 {/* A two-line title is measured as a block, its longest line. */}
                 <span ref={titleRef} className={titleLines > 1 ? "inline-block" : undefined}>
@@ -324,45 +304,31 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
               <div className="[container-type:inline-size] w-0 min-w-full">
                 <p
                   style={{ "--tagline-em": taglineEm } as React.CSSProperties}
-                  className="epi-display-light text-epi-cream-50/85 mt-3 text-[length:clamp(16px,2.4vw,40px)] supports-[width:1cqi]:text-[length:calc(100cqi/var(--tagline-em))] supports-[width:1cqi]:whitespace-nowrap sm:mt-[clamp(0.5rem,1.5svh,1rem)]"
+                  className="epi-display-light text-epi-cream-50/85 mt-3 text-[length:clamp(14px,2vw,28px)] supports-[width:1cqi]:text-[length:calc(100cqi/var(--tagline-em))] supports-[width:1cqi]:whitespace-nowrap sm:mt-[clamp(0.5rem,1.5svh,1rem)]"
                 >
-                  <span ref={taglineRef}>
+                  {/* A gold light passes across the tagline once (not the h1: the h1 paints as is). */}
+                  <span ref={taglineRef} className="epi-sweep">
                     <DrawnText text={tagline} />
                   </span>
                 </p>
               </div>
             </div>
-            {/* The lede is set at the size of the trial note under the buttons
-                (text-sm), so the h1 and its tagline carry the hero. */}
-            <p className="text-epi-cream-50/75 sm:short:mt-[clamp(0.75rem,2.5svh,1.5rem)] mt-6 max-w-xl text-sm leading-snug text-balance sm:mt-[clamp(1rem,3svh,2rem)]">
-              {t("redesign.landing.hero.sub")}
-            </p>
-
-            <div className="sm:short:mt-5 mt-8 flex w-full flex-col items-stretch gap-3 sm:mt-[clamp(1.5rem,5svh,3rem)] sm:w-auto sm:flex-row sm:items-center sm:gap-6">
-              <Link
-                href={trialHref}
-                onClick={() => trackEvent("hero_cta_click", { cta: "trial" })}
-                className={cn(PRIMARY_BUTTON, "min-h-14 px-8")}
-              >
-                {t("redesign.landing.hero.ctaTrial")}
-              </Link>
-              <a
-                href="#calculator"
-                onClick={() => trackEvent("hero_cta_click", { cta: "calculator" })}
-                className="text-epi-cream-50 hover:text-epi-gold-300 focus-visible:outline-epi-gold-300 inline-flex min-h-14 items-center justify-center rounded-full px-6 text-sm font-medium tracking-[0.06em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-              >
-                {t("redesign.landing.hero.ctaCalculator")}
-              </a>
+            {/* The reference layout: a modest headline, its tagline, then one big
+                white search card. No trial or calculator buttons here: they live
+                further down (plans, calculator). The lede sits under the card. */}
+            <div className="epi-rise flex w-full justify-center">
+              <HeroStoreSearch registerHref="/register" />
             </div>
-            <p className="text-epi-cream-50/60 mt-4 max-w-md text-sm leading-snug text-balance lg:max-w-xl">
-              {t("redesign.landing.hero.ctaTrialNote")}
+
+            <p className="epi-rise-late text-epi-cream-50/75 mt-6 max-w-xl text-sm leading-snug text-balance">
+              {t("redesign.landing.hero.sub")}
             </p>
           </div>
 
           {/* On desktop the bottom row takes the floating nav pill's width, so the
               link starts under the logo and the facts end under the header's
               button, as in the reference (see .epi-floating-nav in globals.css). */}
-          <div className="lg:short:mt-4 mt-12 flex flex-col gap-8 lg:mx-auto lg:mt-[clamp(1.5rem,4svh,2.5rem)] lg:w-full lg:max-w-[min(max(72vw,920px),1080px)] lg:flex-row lg:items-end lg:justify-between">
+          <div className="epi-rise-late lg:short:mt-4 mt-12 flex flex-col gap-8 lg:mx-auto lg:mt-[clamp(1.5rem,4svh,2.5rem)] lg:w-full lg:max-w-[min(max(72vw,920px),1080px)] lg:flex-row lg:items-end lg:justify-between">
             <button
               type="button"
               onClick={onOpenMigration}
@@ -380,6 +346,7 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
                   className="flex items-baseline justify-between gap-6 border-t border-white/10 pt-3 lg:justify-end lg:border-0 lg:pt-0"
                 >
                   <dt className="text-epi-cream-50/55 text-[11px] tracking-[0.16em] uppercase">
+                    {fact.key === "support" ? <OnlineDot className="mr-2" /> : null}
                     {fact.label}
                   </dt>
                   <dd className="text-epi-cream-50 m-0 text-right text-[15px]">{fact.value}</dd>

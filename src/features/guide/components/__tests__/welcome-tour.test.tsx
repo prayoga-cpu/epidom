@@ -103,7 +103,7 @@ describe("WelcomeTour", () => {
     fireEvent.click(button("Next"));
     expect(title()).toHaveTextContent("POS Mode");
     fireEvent.click(button("Next"));
-    expect(title()).toHaveTextContent("Back Office");
+    expect(title()).toHaveTextContent("Store Dashboard");
     expect(screen.getByText("4 of 4")).toBeInTheDocument();
     // Last card: Done replaces Next, and Skip steps aside.
     expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
@@ -152,7 +152,7 @@ describe("WelcomeTour", () => {
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
-    expect(title()).toHaveTextContent("Back Office");
+    expect(title()).toHaveTextContent("Store Dashboard");
     fireEvent.keyDown(dialog, { key: "ArrowLeft" });
     expect(title()).toHaveTextContent("POS Mode");
     // Arrows never finish the tour.

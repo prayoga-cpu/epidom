@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
@@ -73,10 +73,15 @@ function renderPage(locale: Loc) {
   return render(<ContactPageClient />);
 }
 
-/** The big gold buttons in the hero, not the secondary WhatsApp cards. */
-function primaryWhatsAppLinks(locale: Loc): HTMLAnchorElement[] {
-  const label = text(locale, "contact.page.whatsappPrimary");
-  return screen.getAllByRole("link", { name: new RegExp(label) }) as HTMLAnchorElement[];
+/** The one gold "24h online support" button in the hero. */
+function supportButton(locale: Loc): HTMLElement {
+  return screen.getByRole("button", { name: text(locale, "contact.page.supportButton") });
+}
+
+/** Opens the support button's menu and returns its WhatsApp links, in order. */
+function openSupportMenu(locale: Loc): HTMLAnchorElement[] {
+  fireEvent.click(supportButton(locale));
+  return within(screen.getByRole("dialog")).getAllByRole("link") as HTMLAnchorElement[];
 }
 
 function allWhatsAppLinks(container: HTMLElement): HTMLAnchorElement[] {
@@ -95,46 +100,41 @@ afterEach(() => {
 });
 
 describe("ContactPageClient: WhatsApp is the primary action", () => {
-  it("fr: one button, the France number, with the French message prefilled", () => {
-    renderPage("fr");
-    const links = primaryWhatsAppLinks("fr");
-    const message = text("fr", "contact.page.whatsappMessage");
+  it.each(LOCALES)(
+    '%s: one gold button, "24h online support", and no number before it is opened',
+    (locale) => {
+      const { container } = renderPage(locale);
 
-    expect(links).toHaveLength(1);
-    expect(links[0].getAttribute("href")).toBe(whatsappHref(WHATSAPP_NUMBERS.fr.number, message));
-    expect(links[0].href.startsWith(`https://wa.me/${WHATSAPP_NUMBERS.fr.number}?text=`)).toBe(
-      true
-    );
-    expect(new URL(links[0].href).searchParams.get("text")).toBe(message);
-  });
+      // With the pulsing green "online" light, which is decoration only.
+      const dot = supportButton(locale).querySelector("[class*='animate-ping']");
+      expect(dot?.closest("[aria-hidden='true']")).not.toBeNull();
+      // Only the secondary cards link to WhatsApp until the menu opens.
+      expect(allWhatsAppLinks(container)).toHaveLength(locale === "en" ? 2 : 1);
+      expect(screen.queryByRole("dialog")).toBeNull();
+    }
+  );
 
-  it("id: one button, the Indonesia number, with the Indonesian message prefilled", () => {
-    renderPage("id");
-    const links = primaryWhatsAppLinks("id");
-    const message = text("id", "contact.page.whatsappMessage");
+  it.each([
+    ["fr", ["fr", "id"]],
+    ["id", ["id", "fr"]],
+    ["en", ["fr", "id"]],
+  ] as const)(
+    "%s: the button opens both numbers, the visitor's own first, the message prefilled",
+    (locale, order) => {
+      renderPage(locale);
+      const links = openSupportMenu(locale);
+      const message = text(locale, "contact.page.whatsappMessage");
 
-    expect(links).toHaveLength(1);
-    expect(links[0].getAttribute("href")).toBe(whatsappHref(WHATSAPP_NUMBERS.id.number, message));
-    expect(new URL(links[0].href).searchParams.get("text")).toBe(message);
-  });
-
-  it("en: one button per number, France first, each labelled with its market", () => {
-    renderPage("en");
-    const links = primaryWhatsAppLinks("en");
-    const message = text("en", "contact.page.whatsappMessage");
-
-    expect(links).toHaveLength(2);
-    expect(links.map((a) => a.getAttribute("href"))).toEqual([
-      whatsappHref(WHATSAPP_NUMBERS.fr.number, message),
-      whatsappHref(WHATSAPP_NUMBERS.id.number, message),
-    ]);
-    expect(links[0]).toHaveTextContent(`(${WHATSAPP_NUMBERS.fr.label})`);
-    expect(links[1]).toHaveTextContent(`(${WHATSAPP_NUMBERS.id.label})`);
-  });
+      expect(links.map((a) => a.getAttribute("href"))).toEqual(
+        order.map((market) => whatsappHref(WHATSAPP_NUMBERS[market].number, message))
+      );
+      expect(new URL(links[0].href).searchParams.get("text")).toBe(message);
+    }
+  );
 
   it("URL-encodes the message and leaves no raw whitespace in the href", () => {
     renderPage("fr");
-    const [link] = primaryWhatsAppLinks("fr");
+    const [link] = openSupportMenu("fr");
     const message = text("fr", "contact.page.whatsappMessage");
 
     expect(link.getAttribute("href")).toContain(encodeURIComponent(message));
@@ -143,9 +143,9 @@ describe("ContactPageClient: WhatsApp is the primary action", () => {
 
   it("opens WhatsApp in a new tab safely", () => {
     const { container } = renderPage("en");
-    const links = allWhatsAppLinks(container);
+    const links = [...allWhatsAppLinks(container), ...openSupportMenu("en")];
 
-    expect(links.length).toBeGreaterThan(0);
+    expect(links).toHaveLength(4);
     for (const link of links) {
       expect(link.getAttribute("target")).toBe("_blank");
       expect(link.getAttribute("rel")).toContain("noopener");
@@ -155,31 +155,29 @@ describe("ContactPageClient: WhatsApp is the primary action", () => {
 
   it("is full-width on mobile and at least 44px tall", () => {
     renderPage("fr");
-    const [link] = primaryWhatsAppLinks("fr");
+    const button = supportButton("fr");
 
-    expect(link.className).toContain("w-full");
-    expect(link.className).toContain("min-h-[52px]");
+    expect(button.className).toContain("w-full");
+    expect(button.className).toContain("min-h-[52px]");
   });
 
   it("comes before the secondary channels in the page", () => {
     renderPage("fr");
-    const [primary] = primaryWhatsAppLinks("fr");
     const secondary = screen.getByRole("heading", { level: 2 });
 
     expect(
-      primary.compareDocumentPosition(secondary) & Node.DOCUMENT_POSITION_FOLLOWING
+      supportButton("fr").compareDocumentPosition(secondary) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
 
   it("every WhatsApp link on the page carries the prefilled message", () => {
     for (const locale of LOCALES) {
       const { container, unmount } = renderPage(locale);
-      const links = allWhatsAppLinks(container);
+      const links = [...allWhatsAppLinks(container), ...openSupportMenu(locale)];
       const message = text(locale, "contact.page.whatsappMessage");
-      // The primary buttons plus one secondary card per number.
-      const numbers = locale === "en" ? 2 : 1;
 
-      expect(links).toHaveLength(numbers * 2);
+      // The secondary card per number, plus the menu's two.
+      expect(links).toHaveLength((locale === "en" ? 2 : 1) + 2);
       for (const link of links) {
         expect(new URL(link.href).searchParams.get("text")).toBe(message);
       }
@@ -194,9 +192,12 @@ describe("ContactPageClient: analytics", () => {
     h.trackMetaPixelEvent.mockClear();
   });
 
-  it("fires contact_whatsapp with the contact_page label when the primary button is clicked", () => {
+  it("fires contact_whatsapp with the contact_page label when a number is picked from the button", () => {
     renderPage("fr");
-    fireEvent.click(primaryWhatsAppLinks("fr")[0]);
+    // Opening the menu alone is not a contact.
+    const [france] = openSupportMenu("fr");
+    expect(h.trackConversion).not.toHaveBeenCalled();
+    fireEvent.click(france);
 
     expect(h.trackConversion).toHaveBeenCalledTimes(1);
     expect(h.trackConversion).toHaveBeenCalledWith("contact_whatsapp", {
@@ -207,9 +208,9 @@ describe("ContactPageClient: analytics", () => {
     expect(h.trackMetaPixelEvent).toHaveBeenCalledWith("Contact", { content_name: "contact_page" });
   });
 
-  it("counts the second en button as the same conversion", () => {
+  it("counts the second number in the menu as the same conversion", () => {
     renderPage("en");
-    fireEvent.click(primaryWhatsAppLinks("en")[1]);
+    fireEvent.click(openSupportMenu("en")[1]);
 
     expect(h.trackConversion).toHaveBeenCalledTimes(1);
     expect(h.trackConversion).toHaveBeenCalledWith("contact_whatsapp", {
@@ -219,9 +220,8 @@ describe("ContactPageClient: analytics", () => {
 
   it("also fires when the secondary WhatsApp card is used", () => {
     const { container } = renderPage("id");
-    const card = allWhatsAppLinks(container).find(
-      (a) => !a.textContent?.includes(text("id", "contact.page.whatsappPrimary"))
-    );
+    // The menu is closed, so the only WhatsApp link in the page is the card.
+    const [card] = allWhatsAppLinks(container);
 
     expect(card).toBeDefined();
     fireEvent.click(card!);
@@ -313,7 +313,7 @@ describe("ContactPageClient: the fake form is gone", () => {
     const timer = vi.spyOn(globalThis, "setTimeout");
     try {
       renderPage("fr");
-      fireEvent.click(primaryWhatsAppLinks("fr")[0]);
+      fireEvent.click(openSupportMenu("fr")[0]);
       expect(timer).not.toHaveBeenCalledWith(expect.any(Function), 1200);
     } finally {
       timer.mockRestore();
@@ -405,7 +405,7 @@ describe("ContactPageClient: locales", () => {
       "title2",
       "script",
       "orTitle",
-      "whatsappPrimary",
+      "supportButton",
       "whatsappMessage",
       "whatsappCta",
       "channel1title",

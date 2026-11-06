@@ -53,7 +53,7 @@ export default async function DocsGuidePage({ params }: PageProps) {
   const nextGuide = index >= 0 && index < guides.length - 1 ? guides[index + 1] : undefined;
 
   return (
-    <div className="w-full overflow-x-hidden">
+    <div className="w-full overflow-x-clip">
       <BreadcrumbStructuredData
         items={buildBreadcrumbs(locale, [
           { name: BREADCRUMB_LABELS[locale].docs, path: "/docs" },

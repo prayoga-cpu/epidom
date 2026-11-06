@@ -9,22 +9,28 @@ import posCustomerDisplay from "../../../../../public/images/screens/pos-custome
 import storefrontMenu from "../../../../../public/images/screens/storefront-menu.png";
 import storefrontCheckout from "../../../../../public/images/screens/storefront-checkout.png";
 import backOfficeStock from "../../../../../public/images/screens/back-office-stock.png";
+import backOfficeFinance from "../../../../../public/images/screens/back-office-finance.png";
+import posMenuDrawer from "../../../../../public/images/screens/pos-menu-drawer.png";
 
 /**
  * Real Epidom screens (captured 13.10.2026 on v3.11.0, dark theme), shown on
- * the home page, /services and the sign-in / sign-up pages. Not mockups.
+ * the home page, /products and the sign-in / sign-up pages. Not mockups.
  *
- * public/images/screens/ also holds captures that are deliberately NOT shown:
+ * public/images/screens/ also holds captures that are NOT shown whole:
  * back-office-finance.png (the test store's P&L reads €62 million, retake it
- * on realistic numbers before using it), pos-menu-drawer.png and
- * website-home.png (the source of public/images/og-image.png). The owner's
- * email in the drawer and a customer's phone in the order queue are blurred.
+ * on realistic numbers before showing any figure from it) and
+ * pos-menu-drawer.png (it carries the owner's account block) appear only as
+ * CROPS (`crop`) of the part with no figures and no account details: the
+ * report tabs and the three modes. website-home.png is the source of
+ * public/images/og-image.png. A customer's phone in the order queue is blurred.
  */
 export interface ProductScreen {
   src: StaticImageData;
   /** Phone captures are portrait and get a phone-shaped frame, not a window. */
   device: "desktop" | "phone";
   alt: Record<Locale, string>;
+  /** Show only this rectangle of the capture, in the file's own pixels. */
+  crop?: { x: number; y: number; w: number; h: number };
 }
 
 export const PRODUCT_SCREENS = {
@@ -77,9 +83,31 @@ export const PRODUCT_SCREENS = {
     src: backOfficeStock,
     device: "desktop",
     alt: {
-      fr: "Le back-office : le stock des matières premières, les fournisseurs avec leurs contacts, et les derniers mouvements de stock, chacun créé par une vente en caisse.",
-      en: "The Back Office: raw-material stock levels, suppliers with their contacts, and the latest stock movements, each one made by a POS sale.",
-      id: "Back Office: level stok bahan baku, pemasok beserta kontaknya, dan pergerakan stok terbaru, masing-masing dibuat oleh penjualan POS.",
+      fr: "Le tableau de bord : le stock des matières premières, les fournisseurs avec leurs contacts, et les derniers mouvements de stock, chacun créé par une vente en caisse.",
+      en: "The Store Dashboard: raw-material stock levels, suppliers with their contacts, and the latest stock movements, each one made by a POS sale.",
+      id: "Dasbor Toko: level stok bahan baku, pemasok beserta kontaknya, dan pergerakan stok terbaru, masing-masing dibuat oleh penjualan POS.",
+    },
+  },
+  // Only the report tabs of the Finance page: no figure of the test store shows.
+  backOfficeFinanceTabs: {
+    src: backOfficeFinance,
+    device: "desktop",
+    crop: { x: 450, y: 300, w: 870, h: 102 },
+    alt: {
+      fr: "Les rapports financiers du tableau de bord : bilan, quotidien, dépenses, par canal, par moyen de paiement et tendances de vente, chacun dans son onglet.",
+      en: "The Store Dashboard finance reports: P&L statement, daily, expenses, by channel, payment method and sales patterns, each on its own tab.",
+      id: "Laporan keuangan Dasbor Toko: laba rugi, harian, pengeluaran, per kanal, metode pembayaran, dan pola penjualan, masing-masing di tabnya sendiri.",
+    },
+  },
+  // Only the three modes of the till's menu: no account block shows.
+  posModes: {
+    src: posMenuDrawer,
+    device: "desktop",
+    crop: { x: 1466, y: 354, w: 928, h: 372 },
+    alt: {
+      fr: "Le menu de la caisse : Tableau de bord, Système POS, et Opérationnel pour le shift, les plannings et le pointage.",
+      en: "The till's menu: Store Dashboard, POS System, and Operational for the shift, schedules and clock in/out.",
+      id: "Menu kasir: Dasbor Toko, Sistem POS, dan Operasional untuk shift, jadwal, dan absen masuk/pulang.",
     },
   },
 } as const satisfies Record<string, ProductScreen>;

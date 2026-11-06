@@ -3,9 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 // The layout module pulls in web fonts and the whole site chrome; none of it
 // matters for the static metadata export under test.
 vi.mock("next/font/google", () => ({
-  Jost: () => ({ variable: "jost" }),
-  IM_Fell_French_Canon: () => ({ variable: "imfell" }),
-  Oswald: () => ({ variable: "oswald" }),
+  Inter: () => ({ variable: "inter" }),
+  Instrument_Serif: () => ({ variable: "instrument-serif" }),
 }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/features/marketing/shared/components/site-header", () => ({ SiteHeader: () => null }));
