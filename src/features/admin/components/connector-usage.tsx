@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { USAGE_RANGES, type ConnectorUsage } from "@/lib/mcp/usage";
+import { USAGE_RANGES, type ConnectorUsage } from "@/lib/mcp/usage-shared";
 
 /** Admin → Claude connector: how much the connector is used, and where it fails. */
 export function ConnectorUsageView({ usage }: { usage: ConnectorUsage }) {

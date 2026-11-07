@@ -1,26 +1,19 @@
 import { prisma } from "@/lib/prisma";
+import type { ConnectorUsage, UsageRangeDays } from "./usage-shared";
 
 /**
  * Claude connector usage for Admin → Claude connector, from mcp_tool_call
  * (one row per tool call, no arguments or results) and the OAuth tables.
+ * Server only (Prisma). The ranges and the report's shape live in
+ * usage-shared.ts so the page's client component can import them.
  */
 
-export const USAGE_RANGES = [7, 30, 90] as const;
-export type UsageRangeDays = (typeof USAGE_RANGES)[number];
-
-export function parseUsageRange(value: string | undefined): UsageRangeDays {
-  const days = Number(value);
-  return (USAGE_RANGES as readonly number[]).includes(days) ? (days as UsageRangeDays) : 30;
-}
-
-export interface ConnectorUsage {
-  days: UsageRangeDays;
-  totals: { calls: number; errors: number; accounts: number; stores: number; connections: number };
-  byDay: Array<{ day: string; calls: number; errors: number }>;
-  byTool: Array<{ tool: string; calls: number; errors: number; avgMs: number }>;
-  byStore: Array<{ storeId: string; name: string; calls: number }>;
-  recentErrors: Array<{ at: string; tool: string; errorCode: string | null; store: string | null }>;
-}
+export {
+  USAGE_RANGES,
+  parseUsageRange,
+  type ConnectorUsage,
+  type UsageRangeDays,
+} from "./usage-shared";
 
 export async function getConnectorUsage(days: UsageRangeDays): Promise<ConnectorUsage> {
   const since = new Date(Date.now() - days * 86_400_000);

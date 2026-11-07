@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -13,6 +15,13 @@ vi.mock("@/features/dashboard/shared/store-switcher", () => ({
   StoreSwitcher: () => null,
 }));
 vi.mock("@/components/lang/lang-switcher", () => ({ default: () => null }));
+// The drawer's install / offline footer needs providers this test does not mount.
+vi.mock("@/features/dashboard/shared/pwa-install-dialog", () => ({
+  OfflineSyncTrigger: () => null,
+  PwaInstallTrigger: () => null,
+}));
+// The bell reads notifications through React Query; this test has no provider.
+vi.mock("@/features/dashboard/shared/notification-bell", () => ({ NotificationBell: () => null }));
 vi.mock("@/components/lang/i18n-provider", () => ({
   useI18n: () => ({ t: (k: string) => k }),
 }));
@@ -24,13 +33,23 @@ vi.mock("@/features/stores/stores/hooks/use-subscription-status", () => ({
 
 import { Sidebar } from "@/features/dashboard/shared/sidebar";
 
+// The sidebar's profile and notification hooks use React Query.
+const render = (ui: ReactElement) =>
+  rtlRender(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      {ui}
+    </QueryClientProvider>
+  );
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function renderSidebar(plan: string | null) {
   mockSubData.mockReturnValue({
     data: plan ? { subscription: { plan }, hasSubscription: true } : null,
   });
-  return render(<Sidebar />);
+  return render(<Sidebar mode="mobile" />);
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -180,7 +199,7 @@ describe("Sidebar plan gating", () => {
   describe("no subscription / error state", () => {
     it("defaults to FREE (all premium items locked) without crashing", () => {
       mockSubData.mockReturnValue({ data: null });
-      expect(() => render(<Sidebar />)).not.toThrow();
+      expect(() => render(<Sidebar mode="mobile" />)).not.toThrow();
       const links = screen.getAllByRole("link");
       const pricingLinks = links.filter((l) => l.getAttribute("href")?.startsWith("/pricing"));
       expect(pricingLinks.length).toBeGreaterThan(0);
@@ -190,9 +209,12 @@ describe("Sidebar plan gating", () => {
 
 // The Help centre is a footer link, not a rail item: every plan, never locked.
 describe("Sidebar Help link", () => {
-  it.each(["FREE", "POS", "OPERATIONS"])("%s: the rail's footer links to the store's Help page", (plan) => {
-    renderSidebar(plan);
-    const help = screen.getByRole("link", { name: "nav.help" });
-    expect(help).toHaveAttribute("href", "/store/store-1/help");
-  });
+  it.each(["FREE", "POS", "OPERATIONS"])(
+    "%s: the rail's footer links to the store's Help page",
+    (plan) => {
+      renderSidebar(plan);
+      const help = screen.getByRole("link", { name: "nav.help" });
+      expect(help).toHaveAttribute("href", "/store/store-1/help");
+    }
+  );
 });
