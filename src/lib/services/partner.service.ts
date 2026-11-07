@@ -698,7 +698,7 @@ export interface PartnerCustomerRow {
   /** The customer's business name; null until they set one up. */
   label: string | null;
   signedUpAt: string;
-  source: "REFERRAL_LINK" | "SALES_PAGE" | null;
+  source: "REFERRAL_LINK" | "REFERRAL_CODE" | "SALES_PAGE" | null;
   salesPage: string | null;
   utmSource: string | null;
   utmCampaign: string | null;

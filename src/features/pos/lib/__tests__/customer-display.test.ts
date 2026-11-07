@@ -166,6 +166,39 @@ describe("buildCustomerDisplayBuildingSnapshot", () => {
     });
     expect(parseCustomerDisplaySnapshot(JSON.stringify(snapshot))).toEqual(snapshot);
   });
+
+  it("asks for QRIS only while there is something to pay", () => {
+    const paying = buildCustomerDisplayBuildingSnapshot({
+      lines: [line("a")],
+      highlight: null,
+      totals,
+      paymentPrompt: "QRIS",
+      updatedAt: 5,
+    });
+    expect(paying.paymentPrompt).toBe("QRIS");
+    expect(paying.changeDue).toBeNull();
+
+    const empty = buildCustomerDisplayBuildingSnapshot({
+      lines: [],
+      highlight: null,
+      totals,
+      paymentPrompt: "QRIS",
+      updatedAt: 5,
+    });
+    expect(empty.paymentPrompt).toBeNull();
+  });
+
+  it("reads a snapshot from a till older than the QRIS and change fields", () => {
+    const { paymentPrompt: _p, changeDue: _c, ...old } = buildCustomerDisplayBuildingSnapshot({
+      lines: [line("a")],
+      highlight: null,
+      totals,
+      updatedAt: 7,
+    });
+    const parsed = parseCustomerDisplaySnapshot(JSON.stringify(old));
+    expect(parsed?.paymentPrompt).toBeNull();
+    expect(parsed?.changeDue).toBeNull();
+  });
 });
 
 describe("the snapshot shape across releases", () => {

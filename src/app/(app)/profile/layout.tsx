@@ -3,7 +3,7 @@ import { I18nProvider } from "@/components/lang/i18n-provider";
 import { SiteHeader } from "@/features/marketing/shared/components/site-header";
 
 export const metadata: Metadata = {
-  title: "Profile - EPIDOM",
+  title: "Settings - EPIDOM",
   description: "Manage your profile and payment settings",
 };
 

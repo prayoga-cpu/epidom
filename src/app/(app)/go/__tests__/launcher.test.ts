@@ -149,7 +149,7 @@ describe("/go/* launcher", () => {
     });
 
     it("is dropped when the section falls back to the default landing page", async () => {
-      expect(await launch(["owner"], { scope: "all" })).toBe("/store/store_new/dashboard");
+      expect(await launch(["owner"], { scope: "all" })).toBe("/store/store_new/home");
     });
 
     it("survives the login hop", async () => {

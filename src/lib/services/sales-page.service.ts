@@ -110,7 +110,7 @@ export type SignupPlanStatus =
 
 export interface TrackedSignupRow {
   createdAt: string;
-  source: "REFERRAL_LINK" | "SALES_PAGE" | null;
+  source: "REFERRAL_LINK" | "REFERRAL_CODE" | "SALES_PAGE" | null;
   refCode: string | null;
   salesPage: string | null;
   salesPageLocale: string | null;

@@ -1,5 +1,5 @@
 import { trackConversion, trackEvent, trackMetaPixelEvent } from "@/lib/analytics";
-import type { OnboardingGoal, OnboardingStepNumber } from "@/lib/onboarding/contracts";
+import type { OnboardingStepNumber } from "@/lib/onboarding/contracts";
 
 /**
  * GA4 events for the setup wizard, so the drop-off between steps is visible.
@@ -10,7 +10,6 @@ import type { OnboardingGoal, OnboardingStepNumber } from "@/lib/onboarding/cont
 export const ONBOARDING_STEP_NAMES: Record<OnboardingStepNumber, string> = {
   1: "store",
   2: "storefront",
-  3: "goals",
 };
 
 const CATEGORY = "onboarding";
@@ -25,8 +24,7 @@ export function trackStepViewed(step: OnboardingStepNumber): void {
 
 export type StepCompletion =
   | { step: 1; method: "instagram" | "manual" }
-  | { step: 2; method: "saved" | "skipped"; itemsCount: number }
-  | { step: 3; goals: OnboardingGoal[] };
+  | { step: 2; method: "saved" | "skipped"; itemsCount: number };
 
 export function trackStepCompleted(completion: StepCompletion): void {
   const base = {
@@ -36,28 +34,28 @@ export function trackStepCompleted(completion: StepCompletion): void {
   };
   if (completion.step === 1) {
     trackEvent("onboarding_step_completed", { ...base, method: completion.method });
-  } else if (completion.step === 2) {
+  } else {
     trackEvent("onboarding_step_completed", {
       ...base,
       method: completion.method,
       items_count: completion.itemsCount,
     });
-  } else {
-    trackEvent("onboarding_step_completed", {
-      ...base,
-      method: "published",
-      goals: completion.goals.join(","),
-      goals_count: completion.goals.length,
-    });
   }
 }
 
 /** The key activation milestone: the wizard finished and the storefront is live. */
-export function trackOnboardingCompleted(goals: OnboardingGoal[]): void {
-  trackConversion("onboarding_completed", {
-    goals: goals.join(","),
-    goals_count: goals.length,
-  });
+export function trackOnboardingCompleted(): void {
+  trackConversion("onboarding_completed", {});
+}
+
+/** The owner left setup from its first screen and stays on Free. */
+export function trackOnboardingSkipped(): void {
+  trackEvent("onboarding_skipped", { event_category: CATEGORY, step_number: 1 });
+}
+
+/** A valid partner code was typed in the wizard. */
+export function trackReferralCodeEntered(): void {
+  trackEvent("onboarding_referral_code_entered", { event_category: CATEGORY });
 }
 
 /** Keys that make the landing events fire once per browser session. */

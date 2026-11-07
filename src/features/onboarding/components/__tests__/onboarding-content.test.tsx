@@ -192,7 +192,7 @@ const completeResult: OnboardingCompleteResult = {
   storeId: "store_1",
   slug: "le-petit-four",
   publicUrl: "https://epidom.fr/@le-petit-four",
-  goals: ["storefront", "counter"],
+  goals: [],
 };
 
 interface Reply {
@@ -247,7 +247,7 @@ const bodyOf = (method: string, path: string, index = 0) =>
   JSON.parse(String((callsTo(method, path)[index][1] as RequestInit).body));
 
 /** A new account: on Free, never subscribed, so a POS Checkout is the trial. */
-const FREE_NEW: OnboardingBilling = { canCheckout: true, posTrialEligible: true };
+const FREE_NEW: OnboardingBilling = { canCheckout: true, posTrialEligible: true, referral: null };
 
 function renderWizard(
   state: OnboardingState,
@@ -263,7 +263,12 @@ function renderWizard(
   return renderIn(
     locale,
     <QueryClientProvider client={client}>
-      <OnboardingContent initialState={state} billing={billing} planIntent={planIntent} />
+      <OnboardingContent
+        initialState={state}
+        billing={billing}
+        planIntent={planIntent}
+        user={{ name: "Sam Rivera", email: "sam@example.com" }}
+      />
     </QueryClientProvider>
   );
 }
@@ -324,825 +329,331 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("<OnboardingContent> setup wizard", { timeout: RENDER_TEST_TIMEOUT }, () => {
-  describe("resume", () => {
-    it("opens at the server's step", () => {
-      renderWizard(savedStore({ step: 3 }));
-      expect(screen.getByText("Step 3 of 3")).toBeInTheDocument();
-      expect(
-        screen.getByRole("heading", { name: "What do you want Epidom to help with?" })
-      ).toBeInTheDocument();
-      expect(screen.getByRole("listitem", { current: "step" })).toHaveTextContent("Your goals");
-    });
-
-    it("fires onboarding_step_viewed for the step shown", () => {
-      renderWizard(savedStore({ step: 2 }));
-      expect(eventsNamed("onboarding_step_viewed")).toEqual([
-        expect.objectContaining({ step_number: 2, step_name: "storefront" }),
-      ]);
-    });
+const withItems = (over: Partial<OnboardingState> = {}) =>
+  savedStore({
+    menuItems: [
+      { id: "m1", name: "Butter croissant", price: 9.5 },
+      { id: "m2", name: "Sourdough loaf", price: 4.5 },
+      { id: "m3", name: "Chocolate muffin", price: 3 },
+    ],
+    ...over,
   });
 
-  describe("step 1: Your store", () => {
-    it("validates the name before saving", async () => {
-      mockBrowserTimezone("Europe/Paris");
+/** The mocked API of a store being set up: step 1 saves it empty, step 2 adds the examples. */
+function routeSetup() {
+  // Like the server: once the examples are saved, saving the store again returns them.
+  routes["POST /api/onboarding/store"] = () =>
+    ok(callsTo("POST", "/api/onboarding/storefront").length > 0 ? withItems() : savedStore());
+  routes["POST /api/onboarding/storefront"] = () => ok(withItems());
+  routes["POST /api/onboarding/complete"] = () => ok(completeResult);
+  routes["POST /api/subscriptions/activate-free"] = () => ok({});
+}
+
+const heading = (name: string | RegExp) => screen.findByRole("heading", { name });
+const press = (name: string | RegExp) => fireEvent.click(screen.getByRole("button", { name }));
+
+/** Question 1 → question 2. */
+async function answerName(name = "Le Petit Four") {
+  fireEvent.change(screen.getByLabelText("What's your store called?"), { target: { value: name } });
+  press("Continue");
+  await heading("What kind of place is it?");
+}
+
+/** Questions 1-2 → the plan question. */
+async function toPlan() {
+  await answerName();
+  press("Continue");
+  await heading("How do you want to start?");
+}
+
+/** Through the plan question → the referral question. */
+async function toReferral() {
+  await toPlan();
+  press("Continue");
+  await heading("Have a partner referral code?");
+}
+
+async function claim(code: string) {
+  fireEvent.change(screen.getByLabelText(/Have a partner referral code/), {
+    target: { value: code },
+  });
+  press("Claim");
+}
+
+/** The draft: everything on one screen. */
+const DRAFT = "Here's your store, ready to go";
+const LAUNCH = "Looks good, launch my store";
+
+describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TIMEOUT }, () => {
+  describe("the store questions", () => {
+    it("greets the owner by first name and shows the registered email", () => {
       renderWizard(baseState());
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      expect(await screen.findByText("Enter your store's name.")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Welcome, Sam!" })).toBeInTheDocument();
+      expect(screen.getByText("Registered as sam@example.com")).toBeInTheDocument();
+      expect(screen.getByTestId("detected-market")).toBeInTheDocument();
+    });
+
+    it("hides the stay-on-Free sentence on phones (the Skip setup link says it)", () => {
+      renderWizard(baseState());
+      const skip = screen.getByText("Skip it and you stay on the Free plan.");
+      expect(skip).toHaveClass("hidden", "sm:inline");
+      expect(
+        screen.getByText(/Finish setup and your 14-day POS trial starts automatically/)
+      ).toBeVisible();
+    });
+
+    it("asks one thing at a time: the kind of place only after the name", async () => {
+      renderWizard(baseState());
+      expect(screen.queryByRole("combobox")).toBeNull();
+      await answerName();
+      expect(screen.queryByLabelText("What's your store called?")).toBeNull();
+      expect(
+        screen.getByRole("combobox", { name: "What kind of place is it?" })
+      ).toBeInTheDocument();
+    });
+
+    it("needs a store name, and saves nothing while the questions are answered", async () => {
+      renderWizard(baseState());
+      press("Continue");
+      expect(await screen.findByRole("alert")).toHaveTextContent("Enter your store's name.");
+      await toPlan();
       expect(callsTo("POST", "/api/onboarding/store")).toHaveLength(0);
     });
 
-    it("saves the essentials with the browser timezone, then shows step 2", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["POST /api/onboarding/store"] = () => ok(savedStore());
+    it("Back returns to the name with the answer kept", async () => {
       renderWizard(baseState());
+      await answerName("Chez Sam");
+      press("Back");
+      await heading("Welcome, Sam!");
+      expect(screen.getByLabelText("What's your store called?")).toHaveValue("Chez Sam");
+    });
 
-      const name = screen.getByLabelText(/Store name/);
-      expect(name).toHaveFocus();
-      await waitFor(() => expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("France"));
-      fireEvent.change(name, { target: { value: "Le Petit Four" } });
-      fireEvent.change(screen.getByPlaceholderText("e.g. Austin"), { target: { value: "Lyon" } });
-      fireEvent.click(screen.getByRole("button", { name: "Bakery" }));
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
+    it("skips to the Free plan from the very first question", async () => {
+      routeSetup();
+      renderWizard(baseState());
+      press("Skip setup");
+      await waitFor(() => expect(nav.router.replace).toHaveBeenCalledWith("/stores"));
+      expect(callsTo("POST", "/api/subscriptions/activate-free")).toHaveLength(1);
+      expect(callsTo("POST", "/api/onboarding/store")).toHaveLength(0);
+    });
+  });
 
-      expect(
-        await screen.findByRole("heading", { name: "Make your storefront yours" })
-      ).toBeInTheDocument();
-      expect(bodyOf("POST", "/api/onboarding/store")).toEqual({
+  describe("plan and referral", () => {
+    it("starts with the 14-day POS trial picked", async () => {
+      renderWizard(baseState());
+      await toPlan();
+      expect(screen.getByTestId("plan-trial")).toHaveAttribute("aria-checked", "true");
+      expect(screen.getByTestId("plan-monthly")).toHaveAttribute("aria-checked", "false");
+      expect(screen.getByTestId("plan-yearly")).toBeInTheDocument();
+      // The referral code is its own question, after this one.
+      expect(screen.queryByLabelText(/Have a partner referral code/)).toBeNull();
+    });
+
+    it("leaves out the trial when it was already used", async () => {
+      renderWizard(baseState(), "en", {
+        billing: { canCheckout: true, posTrialEligible: false, referral: null },
+      });
+      await toPlan();
+      expect(screen.queryByTestId("plan-trial")).toBeNull();
+      expect(screen.getByTestId("plan-monthly")).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("shows the discount as soon as a code is claimed, and on the plan cards after it", async () => {
+      routes["GET /api/onboarding/referral-code"] = () =>
+        ok({ code: "BOB10", displayName: "Bob", discountPercent: 10 });
+      renderWizard(baseState());
+      await toReferral();
+      expect(screen.queryByTestId("referral-price")).toBeNull();
+      await claim("bob10");
+      expect(await screen.findByTestId("referral-discount")).toHaveTextContent(
+        "Bob's code: 10% off your first payment."
+      );
+      expect(screen.getByTestId("referral-price")).toHaveTextContent("on your first payment");
+
+      press("Back");
+      await heading("How do you want to start?");
+      expect(screen.getByTestId("plan-trial-deal")).toBeInTheDocument();
+      expect(screen.getByTestId("plan-monthly-deal")).toBeInTheDocument();
+    });
+
+    it("says so for an unknown code and gives no discount", async () => {
+      routes["GET /api/onboarding/referral-code"] = () => ({
+        status: 404,
+        body: { success: false, error: { code: "NOT_FOUND", message: "no" } },
+      });
+      renderWizard(baseState());
+      await toReferral();
+      await claim("NOPE");
+      expect(await screen.findByText(/We don't know this code/)).toBeInTheDocument();
+      expect(screen.queryByTestId("referral-price")).toBeNull();
+    });
+
+    it("skipping keeps the Free plan but saves the store and its draft, so one Confirm is left", async () => {
+      routeSetup();
+      renderWizard(baseState());
+      await toPlan();
+      press("Skip setup, stay on Free");
+      await waitFor(() => expect(nav.router.replace).toHaveBeenCalledWith("/stores"));
+      expect(callsTo("POST", "/api/onboarding/store")).toHaveLength(1);
+      expect(callsTo("POST", "/api/onboarding/storefront")).toHaveLength(1);
+      expect(callsTo("POST", "/api/subscriptions/activate-free")).toHaveLength(1);
+      expect(callsTo("POST", "/api/onboarding/complete")).toHaveLength(0);
+    });
+  });
+
+  describe("the draft and the launch", () => {
+    it("sets the store up and shows it all on one screen: link on top, preview, details", async () => {
+      routeSetup();
+      mockBrowserTimezone("Europe/Paris");
+      renderWizard(baseState());
+      await toReferral();
+      press("I don't have a code");
+      await heading(DRAFT);
+
+      expect(bodyOf("POST", "/api/onboarding/store")).toMatchObject({
         name: "Le Petit Four",
         countryCode: "FR",
-        city: "Lyon",
-        businessType: "bakery",
-        browserTimezone: "Europe/Paris",
       });
-      const [, init] = callsTo("POST", "/api/onboarding/store")[0];
-      expect(((init as RequestInit).headers as Record<string, string>)["x-epidom-locale"]).toBe(
-        "en"
+      const storefront = bodyOf("POST", "/api/onboarding/storefront");
+      expect(storefront.themeColor).toMatch(/^#[0-9A-F]{6}$/);
+      expect(storefront.menuItems).toHaveLength(3);
+
+      expect(screen.getByTestId("draft-link")).toHaveTextContent("le-petit-four");
+      expect(screen.getAllByText("Butter croissant").length).toBeGreaterThan(0);
+      expect(screen.getByTestId("draft-plan")).toHaveTextContent("14-day free trial");
+      expect(screen.getByTestId("market-note")).toHaveTextContent(
+        "You can change the currency, payments and time zone later in Settings."
       );
-      expect(eventsNamed("onboarding_step_completed")).toEqual([
-        expect.objectContaining({ step_number: 1, step_name: "store", method: "manual" }),
-      ]);
-      expect(screen.getByText("Step 2 of 3")).toBeInTheDocument();
+      // The dishes are edited from the card's pencil, not shown as fields up front.
+      expect(screen.queryByLabelText("Item name 1")).toBeNull();
+      press("Edit menu items");
+      expect(screen.getByLabelText("Item name 1")).toHaveValue("Butter croissant");
+      expect(screen.getByRole("button", { name: LAUNCH })).toBeEnabled();
     });
 
-    it("previews the store link under the name as it is typed", async () => {
-      mockBrowserTimezone("Europe/Paris");
+    it("Enter in a dish field doesn't launch the store", async () => {
+      routeSetup();
       renderWizard(baseState());
-      const link = screen.getByTestId("store-link");
-      expect(link).toHaveTextContent("Your link appears as you type your store's name.");
-      fireEvent.change(screen.getByLabelText(/Store name/), {
-        target: { value: "Crêperie du Port" },
-      });
-      expect(link).toHaveTextContent("epidom.fr/@creperie-du-port");
+      await toReferral();
+      press("I don't have a code");
+      await heading(DRAFT);
+      press("Edit menu items");
+      fireEvent.keyDown(screen.getByLabelText("Item name 1"), { key: "Enter" });
+      await new Promise((r) => setTimeout(r, 20));
+      expect(callsTo("POST", "/api/onboarding/complete")).toHaveLength(0);
     });
 
-    it("checks an edited link and offers the free suggestion when it is taken", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["GET /api/onboarding/slug-check"] = (url) => {
-        const slug = new URL(url, "http://x").searchParams.get("slug");
-        return slug === "taken-link"
-          ? ok({ slug, available: false, suggestion: "taken-link-2" })
-          : ok({ slug, available: true, suggestion: null });
-      };
-      renderWizard(baseState());
-      fireEvent.change(screen.getByLabelText(/Store name/), { target: { value: "Mon Café" } });
-      fireEvent.click(screen.getByRole("button", { name: "Edit link" }));
-
-      const input = screen.getByRole("textbox", { name: "Store link" });
-      expect(input).toHaveValue("mon-cafe");
-      expect(input).toHaveFocus();
-
-      fireEvent.change(input, { target: { value: "ab" } });
-      expect(
-        await screen.findByText(
-          "Use 3 to 50 lowercase letters, numbers or dashes.",
-          {},
-          { timeout: SLUG_WAIT }
-        )
-      ).toBeInTheDocument();
-
-      fireEvent.change(input, { target: { value: "Taken Link" } });
-      expect(input).toHaveValue("taken-link");
-      expect(screen.getByText("Checking…")).toBeInTheDocument();
-      expect(
-        await screen.findByText("This link is already taken.", {}, { timeout: SLUG_WAIT })
-      ).toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole("button", { name: "Use taken-link-2" }));
-      expect(input).toHaveValue("taken-link-2");
-      expect(
-        await screen.findByText("This link is available.", {}, { timeout: SLUG_WAIT })
-      ).toBeInTheDocument();
-      expect(
-        callsTo("GET", "/api/onboarding/slug-check").map(([url]) =>
-          new URL(String(url), "http://x").searchParams.get("slug")
-        )
-      ).toEqual(expect.arrayContaining(["taken-link", "taken-link-2"]));
-    });
-
-    it("shows the server's suggestion when the link is taken on save (409)", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["POST /api/onboarding/store"] = () =>
-        conflict("slug_taken", { slug: "mon-cafe", suggestion: "mon-cafe-7" });
-      renderWizard(baseState());
-      await waitFor(() => expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("France"));
-      fireEvent.change(screen.getByLabelText(/Store name/), { target: { value: "Mon Café" } });
-      fireEvent.click(screen.getByRole("button", { name: "Edit link" }));
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-
-      // The link check is debounced (400 ms) before the taken state shows.
-      expect(
-        await screen.findByRole("button", { name: "Use mon-cafe-7" }, { timeout: SLUG_WAIT })
-      ).toBeInTheDocument();
-      expect(screen.getByText("This link is already taken.")).toBeInTheDocument();
-      expect(bodyOf("POST", "/api/onboarding/store")).toMatchObject({ slug: "mon-cafe" });
-      expect(toasts.error).toHaveBeenCalledWith("Someone just took this link. Pick another one.");
-      expect(screen.getByRole("heading", { name: "Tell us about your store" })).toBeInTheDocument();
-    });
-
-    it("sends what Fill from Instagram found with the step", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["POST /api/onboarding/store"] = () => ok(savedStore());
-      renderWizard(baseState());
-      await waitFor(() => expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("France"));
-
-      fireEvent.click(screen.getByRole("button", { name: "Fill from Instagram" }));
-      fireEvent.click(await screen.findByRole("button", { name: "mock-instagram-complete" }));
-
-      await waitFor(() => expect(screen.getByLabelText(/Store name/)).toHaveValue("Sunset Café"));
-      expect(screen.getByRole("textbox", { name: "Store link" })).toHaveValue("sunset-cafe");
-      expect(screen.getByRole("status")).toHaveTextContent("Filled from your Instagram");
-
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await screen.findByRole("heading", { name: "Make your storefront yours" });
-      expect(bodyOf("POST", "/api/onboarding/store")).toEqual({
-        name: "Sunset Café",
-        countryCode: "FR",
-        browserTimezone: "Europe/Paris",
-        slug: "sunset-cafe",
-        tagline: "Coffee & cake",
-        logoUrl: "https://abc.public.blob.vercel-storage.com/ig-logo.png",
-        themeColor: "#123456",
-        instagramUrl: "https://instagram.com/sunset.cafe",
-        whatsappNumber: "+6281234567890",
-      });
-      expect(eventsNamed("onboarding_step_completed")[0]).toMatchObject({ method: "instagram" });
-    });
-
-    it("Use my store name swaps a saved custom link for the name's, and asks the server for it", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["POST /api/onboarding/store"] = () => ok(savedStore());
-      renderWizard(
-        savedStore({ step: 1, storefront: { ...savedStore().storefront!, slug: "lpf-paris" } })
-      );
-
-      expect(screen.getByRole("textbox", { name: "Store link" })).toHaveValue("lpf-paris");
-      fireEvent.click(screen.getByRole("button", { name: "Use my store name" }));
-      expect(screen.getByTestId("store-link")).toHaveTextContent("epidom.fr/@le-petit-four");
-
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await screen.findByRole("heading", { name: "Make your storefront yours" });
-      const body = bodyOf("POST", "/api/onboarding/store");
-      expect(body).toMatchObject({ name: "Le Petit Four", slugFromName: true });
-      expect(body).not.toHaveProperty("slug");
-    });
-
-    it("an unchanged saved custom link is kept (nothing asked of the server)", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["POST /api/onboarding/store"] = () => ok(savedStore());
-      renderWizard(
-        savedStore({ step: 1, storefront: { ...savedStore().storefront!, slug: "lpf-paris" } })
-      );
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await screen.findByRole("heading", { name: "Make your storefront yours" });
-      const body = bodyOf("POST", "/api/onboarding/store");
-      expect(body).toMatchObject({ slug: "lpf-paris" });
-      expect(body).not.toHaveProperty("slugFromName");
-    });
-
-    it("goes to /stores when setup was already completed elsewhere", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["POST /api/onboarding/store"] = () => conflict("already_completed");
-      renderWizard(baseState());
-      await waitFor(() => expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("France"));
-      fireEvent.change(screen.getByLabelText(/Store name/), { target: { value: "Mon Café" } });
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await waitFor(() => expect(nav.router.replace).toHaveBeenCalledWith("/stores"));
-    });
-  });
-
-  describe("step 2: Your storefront", () => {
-    it("saves logo, colour, tagline and the named dishes, then shows step 3", async () => {
-      routes["POST /api/onboarding/storefront"] = () => ok(savedStore({ step: 3 }));
-      renderWizard(savedStore());
-
-      expect(screen.getByPlaceholderText("Cappuccino")).toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: "mock-upload-logo" }));
-      fireEvent.click(screen.getByRole("radio", { name: "Ocean" }));
-      fireEvent.change(screen.getByPlaceholderText("e.g. Fresh bread every morning"), {
-        target: { value: "Fresh bread every morning" },
-      });
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 1 name" }), {
-        target: { value: "Croissant" },
-      });
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 1 price" }), {
-        target: { value: "1.5" },
-      });
-
-      const preview = screen.getByTestId("storefront-preview-compact");
-      expect(preview).toHaveTextContent("Le Petit Four");
-      expect(preview).toHaveTextContent("Croissant");
-      expect(preview).toHaveTextContent("€1.50");
-
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      expect(
-        await screen.findByRole("heading", { name: "What do you want Epidom to help with?" })
-      ).toBeInTheDocument();
-      expect(bodyOf("POST", "/api/onboarding/storefront")).toEqual({
-        logoUrl: "https://abc.public.blob.vercel-storage.com/new.png",
-        themeColor: "#1C7ED6",
-        tagline: "Fresh bread every morning",
-        menuItems: [{ name: "Croissant", price: 1.5 }],
-      });
-      expect(eventsNamed("onboarding_step_completed")).toEqual([
-        expect.objectContaining({ step_number: 2, method: "saved", items_count: 1 }),
-      ]);
-    });
-
-    it("pre-fills a resumed step and sends the saved item ids back", async () => {
-      routes["POST /api/onboarding/storefront"] = () => ok(savedStore({ step: 3 }));
-      renderWizard(
-        savedStore({
-          currency: "IDR",
-          menuItems: [{ id: "item_1", name: "Nasi goreng", price: 25000 }],
-        })
-      );
-      expect(screen.getByRole("textbox", { name: "Dish 1 name" })).toHaveValue("Nasi goreng");
-      expect(screen.getByRole("textbox", { name: "Dish 2 price" })).toHaveAttribute(
-        "placeholder",
-        "18,000"
-      );
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await screen.findByRole("heading", { name: "What do you want Epidom to help with?" });
-      expect(bodyOf("POST", "/api/onboarding/storefront").menuItems).toEqual([
-        { id: "item_1", name: "Nasi goreng", price: 25000 },
-      ]);
-    });
-
-    it("needs a price for a named dish", async () => {
-      renderWizard(savedStore());
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 2 name" }), {
-        target: { value: "Café crème" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      expect(await screen.findByText("Add a price for this dish.")).toBeInTheDocument();
-      expect(callsTo("POST", "/api/onboarding/storefront")).toHaveLength(0);
-    });
-
-    it("Skip for now still saves the step", async () => {
-      routes["POST /api/onboarding/storefront"] = () => ok(savedStore({ step: 3 }));
-      renderWizard(savedStore());
-      fireEvent.click(screen.getByRole("button", { name: "Skip for now" }));
-      await screen.findByRole("heading", { name: "What do you want Epidom to help with?" });
-      expect(bodyOf("POST", "/api/onboarding/storefront")).toEqual({});
-      expect(eventsNamed("onboarding_step_completed")).toEqual([
-        expect.objectContaining({ step_number: 2, method: "skipped", items_count: 0 }),
-      ]);
-    });
-
-    it("Back returns to step 1 with the saved details", async () => {
-      renderWizard(savedStore());
-      fireEvent.click(screen.getByRole("button", { name: "Back" }));
-      const heading = await screen.findByRole("heading", { name: "Tell us about your store" });
-      expect(heading).toHaveFocus();
-      expect(screen.getByLabelText(/Store name/)).toHaveValue("Le Petit Four");
-      expect(screen.getByTestId("store-link")).toHaveTextContent("epidom.fr/@le-petit-four");
-      expect(callsTo("POST", "/api/onboarding/storefront")).toHaveLength(0);
-    });
-
-    it("Back to step 1 and on again keeps what was typed here but not saved", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["POST /api/onboarding/store"] = () => ok(savedStore());
-      renderWizard(savedStore());
-
-      fireEvent.click(screen.getByRole("button", { name: "mock-upload-logo" }));
-      fireEvent.click(screen.getByRole("radio", { name: "Ocean" }));
-      fireEvent.change(screen.getByPlaceholderText("e.g. Fresh bread every morning"), {
-        target: { value: "Fresh bread" },
-      });
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 1 name" }), {
-        target: { value: "Croissant" },
-      });
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 1 price" }), {
-        target: { value: "1.5" },
-      });
-
-      fireEvent.click(screen.getByRole("button", { name: "Back" }));
-      await screen.findByRole("heading", { name: "Tell us about your store" });
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await screen.findByRole("heading", { name: "Make your storefront yours" });
-
-      expect(callsTo("POST", "/api/onboarding/storefront")).toHaveLength(0);
-      expect(screen.getByTestId("logo-value")).toHaveTextContent(
-        "https://abc.public.blob.vercel-storage.com/new.png"
-      );
-      expect(screen.getByRole("radio", { name: "Ocean" })).toBeChecked();
-      expect(screen.getByPlaceholderText("e.g. Fresh bread every morning")).toHaveValue(
-        "Fresh bread"
-      );
-      expect(screen.getByRole("textbox", { name: "Dish 1 name" })).toHaveValue("Croissant");
-      expect(screen.getByRole("textbox", { name: "Dish 1 price" })).toHaveValue("1.5");
-    });
-
-    it("drops a drafted price when step 1 changed the currency, keeping the dish", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["POST /api/onboarding/store"] = () => ok(savedStore({ currency: "IDR" }));
-      renderWizard(savedStore());
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 1 name" }), {
-        target: { value: "Croissant" },
-      });
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 1 price" }), {
-        target: { value: "4.5" },
-      });
-
-      fireEvent.click(screen.getByRole("button", { name: "Back" }));
-      await screen.findByRole("heading", { name: "Tell us about your store" });
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await screen.findByRole("heading", { name: "Make your storefront yours" });
-
-      expect(screen.getByRole("textbox", { name: "Dish 1 name" })).toHaveValue("Croissant");
-      expect(screen.getByRole("textbox", { name: "Dish 1 price" })).toHaveValue("");
-    });
-
-    it("clearing a saved dish row removes that item on Continue", async () => {
-      routes["POST /api/onboarding/storefront"] = () => ok(savedStore({ step: 3 }));
-      renderWizard(
-        savedStore({
-          menuItems: [
-            { id: "item_1", name: "Croissant", price: 1.5 },
-            { id: "item_2", name: "Jus d'orange", price: 4 },
-          ],
-        })
-      );
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 2 name" }), {
-        target: { value: "" },
-      });
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 2 price" }), {
-        target: { value: "" },
-      });
-      expect(screen.getByTestId("storefront-preview-compact")).not.toHaveTextContent(
-        "Jus d'orange"
-      );
-
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await screen.findByRole("heading", { name: "What do you want Epidom to help with?" });
-      expect(bodyOf("POST", "/api/onboarding/storefront")).toMatchObject({
-        menuItems: [{ id: "item_1", name: "Croissant", price: 1.5 }],
-        removedItemIds: ["item_2"],
-      });
-    });
-
-    it("reads a rupiah price typed as '25.000' as 25000, not 25", async () => {
-      routes["POST /api/onboarding/storefront"] = () => ok(savedStore({ step: 3 }));
-      renderWizard(savedStore({ currency: "IDR" }));
-      fireEvent.change(screen.getByRole("textbox", { name: "Dish 1 name" }), {
-        target: { value: "Nasi goreng" },
-      });
-      const price = screen.getByRole("textbox", { name: "Dish 1 price" });
-      for (const text of ["2", "25", "25.", "25.0", "25.00", "25.000"]) {
-        fireEvent.change(price, { target: { value: text } });
-      }
-      expect(price).toHaveValue("25.000");
-
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await screen.findByRole("heading", { name: "What do you want Epidom to help with?" });
-      expect(bodyOf("POST", "/api/onboarding/storefront").menuItems).toEqual([
-        { name: "Nasi goreng", price: 25000 },
-      ]);
-    });
-
-    it("the logo uploader never deletes the saved file itself (Skip and Back save nothing)", () => {
-      renderWizard(
-        savedStore({
-          storefront: {
-            ...savedStore().storefront!,
-            logoUrl: "https://abc.public.blob.vercel-storage.com/users/u1/images/ig.png",
-          },
-        })
-      );
-      expect(screen.getByTestId("logo-upload")).toHaveAttribute("data-delete-previous", "false");
-    });
-
-    it("a returning owner (setup already complete) gets no Back to step 1 once the store exists", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      routes["POST /api/onboarding/store"] = () => ok(savedStore({ step: 1, completed: true }));
-      renderWizard(
-        baseState({
-          business: {
-            name: "Le Petit Four",
-            countryCode: "FR",
-            city: "Lyon",
-            businessType: "bakery",
-            timezone: "Europe/Paris",
-          },
-        })
-      );
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-      await screen.findByRole("heading", { name: "Make your storefront yours" });
-
-      expect(screen.queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Skip for now" })).toBeInTheDocument();
-    });
-
-    it("gates the spreadsheet import to POS", () => {
-      renderWizard(savedStore());
-      fireEvent.click(screen.getByRole("button", { name: "Import from a spreadsheet" }));
-      expect(gate.requireFeature).toHaveBeenCalledWith(
-        "POS",
-        "Importing your existing menu is a POS feature."
-      );
-      expect(screen.queryByTestId("smart-import")).not.toBeInTheDocument();
-    });
-
-    it("goes back to step 1 when the server says step 1 isn't saved", async () => {
-      routes["POST /api/onboarding/storefront"] = () => conflict("step_order");
-      renderWizard(savedStore());
-      fireEvent.click(screen.getByRole("button", { name: "Skip for now" }));
-      expect(
-        await screen.findByRole("heading", { name: "Tell us about your store" })
-      ).toBeInTheDocument();
-      expect(toasts.error).toHaveBeenCalledWith("Let's finish the first step first.");
-    });
-  });
-
-  describe("step 3 and the launch screen", () => {
-    it("publishes with the picked goals, then shows the launch screen", async () => {
-      routes["POST /api/onboarding/complete"] = () => ok(completeResult);
-      routes["POST /api/subscriptions/checkout"] = checkoutOk;
-      renderWizard(savedStore({ step: 3 }));
-
-      fireEvent.click(screen.getByRole("checkbox", { name: /Take orders at the counter/ }));
-      fireEvent.click(screen.getByRole("checkbox", { name: /Share my menu online/ }));
-      expect(screen.getByText("14-day free trial on the POS plan")).toBeInTheDocument();
-      expect(screen.getByText("Operations")).toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
-
-      expect(await screen.findByRole("heading", { name: "Your store is live" })).toHaveFocus();
-      expect(bodyOf("POST", "/api/onboarding/complete")).toEqual({
-        goals: ["storefront", "counter"],
-      });
-      expect(analytics.trackConversion).toHaveBeenCalledWith(
-        "onboarding_completed",
-        expect.objectContaining({ goals: "storefront,counter", goals_count: 2 })
-      );
-
-      expect(screen.getByTestId("launch-public-url")).toHaveTextContent(
-        "https://epidom.fr/@le-petit-four"
-      );
-      expect(screen.getByTestId("qr")).toHaveAttribute(
-        "data-value",
-        "https://epidom.fr/@le-petit-four"
-      );
-      const whatsapp = screen.getByRole("link", { name: /Share on WhatsApp/ });
-      expect(whatsapp.getAttribute("href")).toBe(
-        `https://wa.me/?text=${encodeURIComponent(
-          "Le Petit Four is now online! See our menu: https://epidom.fr/@le-petit-four"
-        )}`
-      );
-      expect(screen.getByRole("link", { name: /Open my store/ })).toHaveAttribute(
-        "href",
-        "https://epidom.fr/@le-petit-four"
-      );
-      expect(screen.getByRole("link", { name: /Take the 1-minute tour/ })).toHaveAttribute(
-        "href",
-        "/store/store_1/dashboard?tour=1"
-      );
-      expect(screen.getByRole("link", { name: /Go to my Store Dashboard/ })).toHaveAttribute(
-        "href",
-        "/store/store_1/dashboard"
-      );
-      expect(
-        within(screen.getByTestId("launch-plan")).getByText("Start your 14-day POS trial")
-      ).toBeInTheDocument();
-      expect(screen.queryByText(/Step \d of 3/)).not.toBeInTheDocument();
-    });
-
-    it("publishes with no goals: no plan, no Checkout", async () => {
-      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: [] });
-      renderWizard(savedStore({ step: 3 }));
-      expect(screen.queryByTestId("goals-next-step")).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
-      await screen.findByRole("heading", { name: "Your store is live" });
-      expect(bodyOf("POST", "/api/onboarding/complete")).toEqual({ goals: [] });
-      expect(screen.queryByTestId("launch-plan")).not.toBeInTheDocument();
-      expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(0);
-    });
-
-    it("pre-selects saved goals and Back returns to step 2", async () => {
-      renderWizard(savedStore({ step: 3, goals: ["operations"] }));
-      expect(screen.getByRole("checkbox", { name: /Run stock and staff/ })).toBeChecked();
-      fireEvent.click(screen.getByRole("button", { name: "Back" }));
-      expect(
-        await screen.findByRole("heading", { name: "Make your storefront yours" })
-      ).toBeInTheDocument();
-    });
-
-    it("downloads a print-ready QR code: 4-module quiet zone, 1024 px", async () => {
-      vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockImplementation(function (
-        this: HTMLCanvasElement
-      ) {
-        const { testid, margin, size } = this.dataset;
-        return `data:image/png;base64,${testid}-${margin}-${size}`;
-      });
-      routes["POST /api/onboarding/complete"] = () => ok(completeResult);
-      renderWizard(savedStore({ step: 3 }));
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
-      await screen.findByRole("heading", { name: "Your store is live" });
-      expect(screen.queryByTestId("launch-qr-export")).not.toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole("button", { name: /Download QR code/ }));
-
-      await waitFor(() =>
-        expect(exporter.downloadDataUrl).toHaveBeenCalledWith(
-          "data:image/png;base64,launch-qr-export-4-1024",
-          "le-petit-four-qr.png"
-        )
-      );
-      expect(exporter.downloadDataUrl).toHaveBeenCalledTimes(1);
-      await waitFor(() => expect(screen.queryByTestId("launch-qr-export")).not.toBeInTheDocument());
-    });
-
-    it("asks the goals question in natural French", () => {
-      renderWizard(savedStore({ step: 3 }), "fr");
-      expect(
-        screen.getByRole("heading", { name: "En quoi Epidom peut-il vous aider ?" })
-      ).toBeInTheDocument();
-    });
-
-    it("copies the public link", async () => {
-      const writeText = vi.fn(async () => undefined);
-      Object.defineProperty(navigator, "clipboard", {
-        value: { writeText },
-        configurable: true,
-      });
-      routes["POST /api/onboarding/complete"] = () => ok(completeResult);
-      renderWizard(savedStore({ step: 3 }));
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
-      await screen.findByRole("heading", { name: "Your store is live" });
-      await act(async () => {
-        fireEvent.click(screen.getByRole("button", { name: /Copy/ }));
-      });
-      expect(writeText).toHaveBeenCalledWith("https://epidom.fr/@le-petit-four");
-      expect(toasts.success).toHaveBeenCalledWith("Link copied");
-    });
-  });
-
-  describe("the plan picked goes on to Checkout", () => {
-    it("a POS pick starts the trial after publishing, with no card and no Checkout", async () => {
-      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: ["counter"] });
+    it("a link changed with the pencil is saved with the launch", async () => {
+      routeSetup();
       routes["POST /api/subscriptions/checkout"] = trialOk;
-      renderWizard(savedStore({ step: 3 }));
+      renderWizard(baseState());
+      await toReferral();
+      press("I don't have a code");
+      await heading(DRAFT);
+      press("Edit link");
+      fireEvent.change(screen.getByLabelText("Store link"), { target: { value: "chez-sam" } });
+      await waitFor(() => expect(screen.getByRole("button", { name: LAUNCH })).toBeEnabled(), {
+        timeout: SLUG_WAIT,
+      });
+      press(LAUNCH);
+      await heading("Your store is live");
+      const stores = callsTo("POST", "/api/onboarding/store");
+      expect(bodyOf("POST", "/api/onboarding/store", stores.length - 1)).toMatchObject({
+        slug: "chez-sam",
+      });
+    });
 
-      fireEvent.click(screen.getByRole("checkbox", { name: /Take orders at the counter/ }));
-      expect(screen.getByTestId("goals-next-step")).toHaveTextContent(
-        "After publishing, your 14-day POS trial starts straight away. No card needed."
-      );
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
+    it("keeps a renamed dish when going back to the plan and on again", async () => {
+      routeSetup();
+      renderWizard(baseState());
+      await toReferral();
+      press("I don't have a code");
+      await heading(DRAFT);
+      press("Edit menu items");
+      fireEvent.change(screen.getByLabelText("Item name 1"), { target: { value: "Pain perdu" } });
 
+      // The plan row's Change (the market has one too).
+      const changes = screen.getAllByRole("button", { name: "Change" });
+      fireEvent.click(changes[changes.length - 1]);
+      await heading("How do you want to start?");
+      fireEvent.click(screen.getByTestId("plan-monthly"));
+      press("Continue");
+      await heading("Have a partner referral code?");
+      press("I don't have a code");
+      await heading(DRAFT);
+      expect(screen.getByTestId("draft-plan")).toHaveTextContent("billed monthly");
+      press(LAUNCH);
+      await heading("Your store is live");
+      const saved = bodyOf("POST", "/api/onboarding/storefront", 1);
+      expect(saved.menuItems[0]).toMatchObject({ id: "m1", name: "Pain perdu" });
+    });
+
+    it("confirm publishes with the claimed code and starts the trial", async () => {
+      routeSetup();
+      routes["GET /api/onboarding/referral-code"] = () =>
+        ok({ code: "BOB10", displayName: "Bob", discountPercent: 10 });
+      routes["POST /api/subscriptions/checkout"] = trialOk;
+      renderWizard(baseState());
+      await toReferral();
+      await claim("BOB10");
+      await screen.findByTestId("referral-discount");
+      press("Continue");
+      await heading(DRAFT);
+      press(LAUNCH);
+
+      await heading("Your store is live");
+      expect(bodyOf("POST", "/api/onboarding/complete")).toEqual({ referralCode: "BOB10" });
       await waitFor(() => expect(assign).toHaveBeenCalledWith(TRIAL_URL));
-      expect(bodyOf("POST", "/api/subscriptions/checkout")).toEqual({
+      expect(bodyOf("POST", "/api/subscriptions/checkout")).toMatchObject({
         plan: "POS",
         yearly: false,
-        currency: "EUR",
-        next: "/store/store_1/dashboard?tour=1",
       });
-      // No checkout happened: the success page records trial_started instead.
-      expect(analytics.trackConversion).not.toHaveBeenCalledWith(
-        "begin_checkout",
-        expect.anything()
-      );
-      expect(analytics.trackMetaPixelEvent).not.toHaveBeenCalledWith(
-        "InitiateCheckout",
-        expect.anything()
-      );
     });
 
-    it("a plan picked on the pricing page comes ticked and keeps its billing interval", async () => {
-      routes["POST /api/onboarding/complete"] = () =>
-        ok({ ...completeResult, goals: ["operations"] });
+    it("a yearly pick goes on to the paid Checkout, not the trial", async () => {
+      routeSetup();
       routes["POST /api/subscriptions/checkout"] = checkoutOk;
-      renderWizard(savedStore({ step: 3 }), "en", {
-        planIntent: { plan: "OPERATIONS", yearly: true },
-      });
-
-      expect(screen.getByRole("checkbox", { name: /Run stock and staff/ })).toBeChecked();
-      expect(screen.getByTestId("goals-next-step")).toHaveTextContent(
-        "After publishing, you'll go to checkout for the Operations plan."
-      );
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
-
+      renderWizard(baseState());
+      await toPlan();
+      fireEvent.click(screen.getByTestId("plan-yearly"));
+      press("Continue");
+      await heading("Have a partner referral code?");
+      press("I don't have a code");
+      await heading(DRAFT);
+      press(LAUNCH);
       await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
-      expect(bodyOf("POST", "/api/onboarding/complete")).toEqual({ goals: ["operations"] });
-      expect(bodyOf("POST", "/api/subscriptions/checkout")).toEqual(
-        expect.objectContaining({ plan: "OPERATIONS", yearly: true })
-      );
-    });
-
-    it("drops the plan from the address bar once published", async () => {
-      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: ["counter"] });
-      routes["POST /api/subscriptions/checkout"] = checkoutOk;
-      window.location.href = "http://localhost/onboarding?plan=POS&billing=monthly&ref=ad";
-      const replaceState = vi.spyOn(window.history, "replaceState");
-      renderWizard(savedStore({ step: 3 }), "en", { planIntent: { plan: "POS", yearly: false } });
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
-      await waitFor(() => expect(assign).toHaveBeenCalled());
-      expect(replaceState.mock.calls.at(-1)?.slice(1)).toEqual(["", "/onboarding?ref=ad"]);
-    });
-
-    it("unticking the pre-picked plan publishes on Free, with no Checkout", async () => {
-      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: [] });
-      renderWizard(savedStore({ step: 3 }), "en", { planIntent: { plan: "POS", yearly: false } });
-      const counter = screen.getByRole("checkbox", { name: /Take orders at the counter/ });
-      expect(counter).toBeChecked();
-      fireEvent.click(counter);
-      expect(screen.queryByTestId("goals-next-step")).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
-      await screen.findByRole("heading", { name: "Your store is live" });
-      expect(bodyOf("POST", "/api/onboarding/complete")).toEqual({ goals: [] });
-      expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(0);
-      expect(assign).not.toHaveBeenCalled();
-    });
-
-    it("when Checkout doesn't open, says so and keeps a button to try again", async () => {
-      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: ["counter"] });
-      routes["POST /api/subscriptions/checkout"] = () => ({
-        status: 500,
-        body: { success: false, error: { code: "INTERNAL", message: "boom" } },
+      expect(bodyOf("POST", "/api/subscriptions/checkout")).toMatchObject({
+        plan: "POS",
+        yearly: true,
       });
-      renderWizard(savedStore({ step: 3 }));
-      fireEvent.click(screen.getByRole("checkbox", { name: /Take orders at the counter/ }));
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
+    });
 
-      await waitFor(() =>
-        expect(toasts.error).toHaveBeenCalledWith(
-          "Your trial didn't start. Try again, or later from Billing."
-        )
-      );
-      expect(assign).not.toHaveBeenCalled();
-      const retry = within(screen.getByTestId("launch-plan")).getByRole("button", {
-        name: "Start my free trial",
-      });
-      expect(retry).toBeEnabled();
-
+    it("a skipped setup resumes on the draft: one Confirm starts the trial", async () => {
+      routes["POST /api/onboarding/storefront"] = () => ok(withItems());
+      routes["POST /api/onboarding/complete"] = () => ok(completeResult);
       routes["POST /api/subscriptions/checkout"] = trialOk;
-      fireEvent.click(retry);
+      renderWizard(withItems());
+      expect(screen.getByRole("heading", { name: DRAFT })).toBeInTheDocument();
+      press(LAUNCH);
+      await heading("Your store is live");
       await waitFor(() => expect(assign).toHaveBeenCalledWith(TRIAL_URL));
-      expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(2);
     });
 
-    it("an account that already had its trial is told it goes to checkout, not a free trial", async () => {
-      routes["POST /api/onboarding/complete"] = () => ok({ ...completeResult, goals: ["counter"] });
-      routes["POST /api/subscriptions/checkout"] = checkoutOk;
-      renderWizard(savedStore({ step: 3 }), "en", {
-        billing: { canCheckout: true, posTrialEligible: false },
+    it("an account already on a plan has no plan questions", async () => {
+      routeSetup();
+      renderWizard(baseState(), "en", {
+        billing: { canCheckout: false, posTrialEligible: false, referral: null },
       });
-      expect(screen.queryByText("14-day free trial on the POS plan")).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("checkbox", { name: /Take orders at the counter/ }));
-      expect(screen.getByTestId("goals-next-step")).toHaveTextContent(
-        "After publishing, you'll go to checkout for the POS plan."
-      );
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
-      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
-      expect(
-        within(screen.getByTestId("launch-plan")).getByText("Get the POS plan")
-      ).toBeInTheDocument();
-    });
-
-    it("an owner already paying for a plan is never sent to Checkout from setup", async () => {
-      routes["POST /api/onboarding/complete"] = () =>
-        ok({ ...completeResult, goals: ["operations"] });
-      renderWizard(savedStore({ step: 3 }), "en", {
-        billing: { canCheckout: false, posTrialEligible: false },
-        planIntent: { plan: "OPERATIONS", yearly: false },
-      });
-      expect(screen.queryByTestId("goals-next-step")).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: /Publish my store/ }));
-      await screen.findByRole("heading", { name: "Your store is live" });
-      expect(screen.queryByTestId("launch-plan")).not.toBeInTheDocument();
-      expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(0);
+      await answerName();
+      press("Continue");
+      await heading(DRAFT);
+      expect(screen.queryByTestId("plan-trial")).toBeNull();
+      expect(screen.queryByTestId("draft-plan")).toBeNull();
     });
   });
 
-  describe("landing params", () => {
-    it("tracks a confirmed email once and strips the flag", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      nav.searchParams = new URLSearchParams("verified=1");
-      const first = renderWizard(baseState());
-      await waitFor(() =>
-        expect(nav.router.replace).toHaveBeenCalledWith("/onboarding", { scroll: false })
-      );
-      expect(eventsNamed("email_verified")).toHaveLength(1);
-      first.unmount();
-
-      renderWizard(baseState());
-      await waitFor(() => expect(nav.router.replace).toHaveBeenCalledTimes(2));
-      expect(eventsNamed("email_verified")).toHaveLength(1);
-    });
-
-    it("explains a bad verification link instead of tracking it", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      nav.searchParams = new URLSearchParams("verified=1&error=TOKEN_EXPIRED&ref=mail");
-      renderWizard(baseState(), "fr");
-      expect(
-        await screen.findByText("Ce lien de vérification n'a pas fonctionné")
-      ).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "Aller à la connexion" })).toHaveAttribute(
-        "href",
-        "/login"
-      );
-      expect(eventsNamed("email_verified")).toHaveLength(0);
-      expect(nav.router.replace).toHaveBeenCalledWith("/onboarding?ref=mail", { scroll: false });
-
-      fireEvent.click(screen.getByRole("button", { name: "Fermer" }));
-      expect(
-        screen.queryByText("Ce lien de vérification n'a pas fonctionné")
-      ).not.toBeInTheDocument();
-    });
-
-    it("fires the Google sign_up conversion for a brand-new account only", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      nav.searchParams = new URLSearchParams("signup=google");
-      const view = renderWizard(baseState());
-      await waitFor(() =>
-        expect(analytics.trackConversion).toHaveBeenCalledWith(
-          "sign_up",
-          expect.objectContaining({ method: "google" })
-        )
-      );
-      expect(nav.router.replace).toHaveBeenCalledWith("/onboarding", { scroll: false });
-      view.unmount();
-
-      analytics.trackConversion.mockClear();
-      window.sessionStorage.clear();
-      renderWizard(savedStore());
-      await waitFor(() => expect(nav.router.replace).toHaveBeenCalledTimes(2));
-      expect(analytics.trackConversion).not.toHaveBeenCalledWith("sign_up", expect.anything());
-    });
-
-    it("congratulates a new account on choosing Epidom after email verification", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      nav.searchParams = new URLSearchParams("verified=1");
-      renderWizard(baseState(), "fr");
-      expect(await screen.findByText("Félicitations d'avoir choisi Epidom !")).toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole("button", { name: "Fermer" }));
-      expect(screen.queryByText("Félicitations d'avoir choisi Epidom !")).not.toBeInTheDocument();
-    });
-
-    it("congratulates a brand-new Google account, not an existing one", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      nav.searchParams = new URLSearchParams("signup=google");
-      const view = renderWizard(baseState());
-      expect(await screen.findByText("Congratulations on choosing Epidom!")).toBeInTheDocument();
-      view.unmount();
-
-      renderWizard(savedStore());
-      await waitFor(() => expect(nav.router.replace).toHaveBeenCalledTimes(2));
-      expect(screen.queryByText("Congratulations on choosing Epidom!")).not.toBeInTheDocument();
-    });
-
-    it("no congratulations on a bad link or without a landing flag", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      nav.searchParams = new URLSearchParams("verified=1&error=TOKEN_EXPIRED");
-      const view = renderWizard(baseState());
-      expect(await screen.findByText("This verification link didn't work")).toBeInTheDocument();
-      expect(screen.queryByText("Congratulations on choosing Epidom!")).not.toBeInTheDocument();
-      view.unmount();
-
-      nav.searchParams = new URLSearchParams();
-      renderWizard(baseState());
-      expect(screen.queryByText("Congratulations on choosing Epidom!")).not.toBeInTheDocument();
-    });
-
-    it("the congratulations stays on the first step only", async () => {
-      mockBrowserTimezone("Europe/Paris");
-      nav.searchParams = new URLSearchParams("verified=1");
-      routes["POST /api/onboarding/store"] = () => ok(savedStore());
-      renderWizard(baseState());
-      expect(await screen.findByText("Congratulations on choosing Epidom!")).toBeInTheDocument();
-
-      await waitFor(() => expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("France"));
-      fireEvent.change(screen.getByLabelText(/Store name/), {
-        target: { value: "Le Petit Four" },
-      });
-      fireEvent.change(screen.getByPlaceholderText("e.g. Austin"), { target: { value: "Lyon" } });
-      fireEvent.click(screen.getByRole("button", { name: "Bakery" }));
-      fireEvent.click(screen.getByRole("button", { name: /Continue/ }));
-
-      expect(
-        await screen.findByRole("heading", { name: "Make your storefront yours" })
-      ).toBeInTheDocument();
-      expect(screen.queryByText("Congratulations on choosing Epidom!")).not.toBeInTheDocument();
-    });
+  it("is available in French", () => {
+    renderWizard(baseState(), "fr");
+    expect(screen.getByRole("heading", { name: "Bienvenue, Sam\u00a0!" })).toBeInTheDocument();
   });
 });

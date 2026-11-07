@@ -31,11 +31,11 @@ describe("<MarketSummary>", { timeout: RENDER_TEST_TIMEOUT }, () => {
     expect(panel).not.toHaveTextContent("Autre plateforme");
     expect(panel).not.toHaveTextContent("GoFood");
     expect(panel).toHaveTextContent(
-      "Vous pourrez modifier la devise et les paiements plus tard dans Profil → Frais & Taxes."
+      "Vous pourrez modifier la devise et les paiements plus tard dans Paramètres → Frais & Taxes."
     );
     // The zone is changed with the business info, not in Fees & Taxes.
     expect(panel).toHaveTextContent(
-      "Le fuseau horaire est commun à tous vos établissements. Modifiez-le dans Profil → Informations sur l'entreprise."
+      "Le fuseau horaire est commun à tous vos établissements. Modifiez-le dans Paramètres → Informations sur l'entreprise."
     );
   });
 
@@ -56,7 +56,7 @@ describe("<MarketSummary>", { timeout: RENDER_TEST_TIMEOUT }, () => {
       expect(panel).toHaveTextContent(platform);
     }
     expect(panel).not.toHaveTextContent("Uber Eats");
-    expect(panel).toHaveTextContent("Profil → Biaya & Pajak");
+    expect(panel).toHaveTextContent("Pengaturan → Biaya & Pajak");
   });
 
   it("uses the international market for other listed countries", () => {
@@ -67,7 +67,7 @@ describe("<MarketSummary>", { timeout: RENDER_TEST_TIMEOUT }, () => {
     expect(panel).toHaveTextContent("PayPal");
     expect(panel).toHaveTextContent("DoorDash");
     expect(panel).toHaveTextContent(
-      "You can change the currency and payments later in Profile → Fees & Taxes."
+      "You can change the currency and payments later in Settings → Fees & Taxes."
     );
   });
 
@@ -81,8 +81,19 @@ describe("<MarketSummary>", { timeout: RENDER_TEST_TIMEOUT }, () => {
     expect(panel).toHaveTextContent("IDR (Rp)");
     // Where to change it: Business Information, never Fees & Taxes.
     expect(panel).toHaveTextContent(
-      "The time zone is shared by all your stores. Change it in Profile → Business Information."
+      "The time zone is shared by all your stores. Change it in Settings → Business Information."
     );
+  });
+
+  it("shortNote: one line pointing to Settings instead of the two exact pages", () => {
+    // The setup flow: currency, payments and time zone all change in Settings.
+    renderIn("en", <MarketSummary countryCode="ID" timezone="Asia/Jakarta" shortNote />);
+    const panel = summary();
+    expect(screen.getByTestId("market-note")).toHaveTextContent(
+      "You can change the currency, payments and time zone later in Settings."
+    );
+    expect(panel).not.toHaveTextContent("Fees & Taxes");
+    expect(panel).not.toHaveTextContent("Business Information");
   });
 
   it("hides the time zone row when told the zone is not set here", () => {

@@ -14,6 +14,7 @@ import { useKdsSettings } from "../hooks/use-kds-settings";
 import {
   clearCustomerIntake,
   markCustomerDisplayPaid,
+  setCustomerDisplayPaymentPrompt,
   useCustomerIntake,
 } from "../hooks/use-customer-display";
 import { paymentMethodEnum, type CreatePosOrderInput } from "@/lib/validation/pos.schemas";
@@ -334,6 +335,15 @@ export function PosCheckoutDialog({
   const cannotSubmit =
     isSubmitting || priced.items.length === 0 || isCashUnderpaid || (splitMode && !!tendersError);
 
+  // QRIS picked for the whole bill: the customer display shows the store's QRIS
+  // (when one is uploaded) beside the total. Never for a split-by-items bill or
+  // split tenders — the display shows the cart's total, not this payment's share.
+  const promptQris = open && !basis && !splitMode && !isFree && paymentMethod === "QRIS";
+  useEffect(() => {
+    setCustomerDisplayPaymentPrompt(promptQris ? "QRIS" : null);
+  }, [promptQris]);
+  useEffect(() => () => setCustomerDisplayPaymentPrompt(null), []);
+
   // Order type, pax, table and customer are owned by the cart; the dialog just
   // reads them back to the cashier so nothing is charged blind.
   const guests = basis ? basis.guestCount : cart.guestCount;
@@ -608,7 +618,7 @@ export function PosCheckoutDialog({
           onPaid?.();
         } else {
           // Before clearCart(), which wipes the total this reads.
-          markCustomerDisplayPaid(args.orderNumber, finalTotal);
+          markCustomerDisplayPaid(args.orderNumber, finalTotal, isFree ? null : change);
           // This customer's number, name and email must not survive onto the next order.
           clearCustomerIntake();
           cart.clearCart();

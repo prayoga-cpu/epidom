@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { isBackOfficeAppPath, isPosAppPath, isResumableAppPath } from "../last-visited";
+import {
+  isBackOfficeAppPath,
+  isPosAppPath,
+  isResumableAppPath,
+  normalizeDefaultLanding,
+} from "../last-visited";
 
 describe("isResumableAppPath", () => {
   it("no longer resumes onto the legacy root /profile", () => {
@@ -82,5 +87,31 @@ describe("isPosAppPath", () => {
   it("rejects anything isResumableAppPath already rejects", () => {
     expect(isPosAppPath("//evil.com")).toBe(false);
     expect(isPosAppPath("/store/short/pos")).toBe(false);
+  });
+});
+
+describe("Home", () => {
+  it("is a resumable Back Office page", () => {
+    expect(isResumableAppPath("/store/cljabc12345/home")).toBe(true);
+    expect(isResumableAppPath("/store/cljabc12345/analytics")).toBe(true);
+    expect(isBackOfficeAppPath("/store/cljabc12345/home")).toBe(true);
+    expect(isPosAppPath("/store/cljabc12345/home")).toBe(false);
+  });
+});
+
+describe("normalizeDefaultLanding", () => {
+  it("reads the column default 'dashboard' (the old Overview), and anything unknown, as Home", () => {
+    expect(normalizeDefaultLanding("dashboard")).toBe("home");
+    expect(normalizeDefaultLanding(null)).toBe("home");
+    expect(normalizeDefaultLanding(undefined)).toBe("home");
+    expect(normalizeDefaultLanding("tracking")).toBe("home");
+  });
+
+  it("keeps an explicit choice of another section", () => {
+    expect(normalizeDefaultLanding("home")).toBe("home");
+    expect(normalizeDefaultLanding("analytics")).toBe("analytics");
+    expect(normalizeDefaultLanding("pos")).toBe("pos");
+    expect(normalizeDefaultLanding("storefront")).toBe("storefront");
+    expect(normalizeDefaultLanding("data")).toBe("data");
   });
 });

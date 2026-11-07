@@ -136,14 +136,14 @@ describe("<EditStoreDialog>", { timeout: RENDER_TEST_TIMEOUT }, () => {
     expect(h.update.mock.calls[0][0]).toMatchObject({ countryCode: "ZZ", country: "Japan" });
   });
 
-  it("has no finance block — currency and payments point to Profile → Fees & Taxes", () => {
+  it("has no finance block — currency and payments point to Settings → Fees & Taxes", () => {
     const dialog = openDialog(store({}));
 
     expect(within(dialog).queryByText("Currency & payments")).toBeNull();
     expect(within(dialog).queryByRole("switch")).toBeNull();
     expect(within(dialog).queryByTestId("market-summary")).toBeNull();
     expect(
-      within(dialog).getByText("Currency and payments are managed in Profile → Fees & Taxes.")
+      within(dialog).getByText("Currency and payments are managed in Settings → Fees & Taxes.")
     ).toBeInTheDocument();
   });
 

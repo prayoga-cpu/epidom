@@ -483,9 +483,9 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                   {t("data.products.limitReached.description")
                     ?.replace("{current}", String(productUsage.current))
                     .replace("{limit}", String(productUsage.limit)) ||
-                    `You've reached your plan's product limit (${productUsage.current}/${productUsage.limit}). Upgrade to Pro for unlimited products.`}
+                    `You've reached your plan's product limit (${productUsage.current}/${productUsage.limit}). Upgrade to the Operations plan for unlimited products.`}
                   <Link href="/pricing" className="ml-2 font-medium underline">
-                    {t("data.products.limitReached.upgrade") || "Upgrade to Pro"}
+                    {t("data.products.limitReached.upgrade") || "Upgrade plan"}
                   </Link>
                 </AlertDescription>
               </Alert>

@@ -120,7 +120,7 @@ describe("links", () => {
   it("builds the Help page, tour and checklist links", () => {
     expect(helpPageHref("s1")).toBe("/store/s1/help");
     expect(helpPageHref("s1", "demarrage")).toBe("/store/s1/help?guide=demarrage");
-    expect(tourHref("s1")).toBe("/store/s1/dashboard?tour=1");
-    expect(checklistHref("s1")).toBe("/store/s1/dashboard?checklist=1");
+    expect(tourHref("s1")).toBe("/store/s1/home?tour=1");
+    expect(checklistHref("s1")).toBe("/store/s1/analytics?checklist=1");
   });
 });

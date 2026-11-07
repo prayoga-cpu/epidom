@@ -51,12 +51,12 @@ describe("useStoreLaunchTargets", () => {
     expect(result.current.posHref).toBe(`/store/${ID}/pos`);
   });
 
-  it("falls back to the default landing section, and 'pos' to the dashboard", () => {
+  it("falls back to the default landing section, and 'pos' to Home", () => {
     expect(
       renderHook(() => useStoreLaunchTargets(ID, "storefront")).result.current.backOfficeHref
     ).toBe(`/store/${ID}/storefront`);
     expect(renderHook(() => useStoreLaunchTargets(ID, "pos")).result.current.backOfficeHref).toBe(
-      `/store/${ID}/dashboard`
+      `/store/${ID}/home`
     );
     expect(defaultBackOfficeHref(ID, "data")).toBe(`/store/${ID}/data`);
   });

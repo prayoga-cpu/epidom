@@ -1,5 +1,5 @@
 import { requireAdminSection } from "@/lib/auth/require-admin-page";
-import { getPixelReport } from "@/lib/services/tracking-event.service";
+import { MAX_REPORT_PAGES, getPixelReport } from "@/lib/services/tracking-event.service";
 import { pixelReportRangeParamSchema } from "@/lib/validation/tracking-event.schemas";
 import { resolveReportRange } from "@/lib/report-range";
 import { META_PIXEL_ID } from "@/components/analytics/tracking-vendors";
@@ -19,5 +19,5 @@ export default async function AdminPixelPage({
     resolveReportRange(pixelReportRangeParamSchema.parse(range), { from, to }, "7")
   );
 
-  return <PixelReportView report={report} pixelId={META_PIXEL_ID} />;
+  return <PixelReportView report={report} pixelId={META_PIXEL_ID} maxPages={MAX_REPORT_PAGES} />;
 }

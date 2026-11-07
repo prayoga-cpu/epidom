@@ -64,6 +64,7 @@ describe("the staff allow-list itself", () => {
         "GET /api/stores/*/finance/settings",
         "GET /api/stores/*/notifications",
         "GET /api/stores/*/receipt-settings",
+        "GET /api/stores/*/customer-display",
         "GET /api/stores/*/orders",
         "GET /api/stores/*/orders/payment-totals",
         "GET /api/stores/*/orders/stream",

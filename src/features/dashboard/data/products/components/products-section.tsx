@@ -647,7 +647,7 @@ export function ProductsSection({
                       {t("data.products.limitTooltip")
                         ?.replace("{current}", String(productUsage.current))
                         .replace("{limit}", String(productUsage.limit)) ||
-                        `You've reached your plan's product limit (${productUsage.current}/${productUsage.limit}). Upgrade to Pro for unlimited products.`}
+                        `You've reached your plan's product limit (${productUsage.current}/${productUsage.limit}). Upgrade to the Operations plan for unlimited products.`}
                     </p>
                   </TooltipContent>
                 )}

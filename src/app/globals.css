@@ -349,15 +349,6 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
    Centralized keyframes for marketing sections
    ======================================== */
 
-/* The home page hub's connection lines: a dash travels from each tile to the chip. */
-.hub-flow {
-  animation: hub-flow 2.4s linear infinite;
-}
-@keyframes hub-flow {
-  to {
-    stroke-dashoffset: -16;
-  }
-}
 
 /* The progress line of the home page's POS tour: fills left to right, then the next feature opens. */
 @keyframes epi-fill {
@@ -935,7 +926,7 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
 @media (min-width: 1024px) and (min-height: 780px) {
   .epi-pin-section {
     padding: 0;
-    height: calc((100svh + var(--pin-steps, 6) * 55svh) / var(--app-zoom, 1));
+    height: calc((100svh + var(--pin-steps, 4) * 40svh) / var(--app-zoom, 1));
   }
   .epi-pin-sticky {
     position: sticky;

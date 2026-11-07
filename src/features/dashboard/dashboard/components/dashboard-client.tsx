@@ -12,7 +12,6 @@ import { SubscriptionLockedState } from "@/features/dashboard/shared/components/
 import { useI18n } from "@/components/lang/i18n-provider";
 import { SetupChecklist } from "@/features/guide/components/setup-checklist";
 import { ClaudeConnectorPromo } from "@/features/claude-connector/components/claude-connector-promo";
-import { WelcomeTourAutoOpen } from "@/features/guide/components/welcome-tour";
 
 import type { MaterialWithSuppliers } from "@/lib/repositories/material.repository";
 import type { Alert } from "@/features/dashboard/shared/hooks/use-alerts";
@@ -76,8 +75,6 @@ interface DashboardClientProps {
   canOpenFinance: boolean;
   /** The owner or a MANAGER persona — shows the Getting-started checklist. */
   showSetupGuide: boolean;
-  /** The store's owner on their own persona — the welcome tour may open by itself. */
-  isOwner: boolean;
   /** Store created within NEW_STORE_WINDOW_DAYS (server clock). */
   isNewStore: boolean;
 }
@@ -91,7 +88,6 @@ export function DashboardClient({
   showOperations,
   canOpenFinance,
   showSetupGuide,
-  isOwner,
   isNewStore,
 }: DashboardClientProps) {
   const { t } = useI18n();
@@ -139,7 +135,6 @@ export function DashboardClient({
       <PageHeader pageTitle={t("dashboard.title")} pageDescription={t("dashboard.description")} />
 
       {/* Welcome tour (a dialog: renders nothing in the flow) + Getting-started checklist */}
-      <WelcomeTourAutoOpen isOwner={isOwner} isNewStore={isNewStore} />
       <SetupChecklist storeId={storeId} canView={showSetupGuide} isNewStore={isNewStore} />
       {/* Owner or manager, once the first-weeks setup is behind them */}
       <ClaudeConnectorPromo

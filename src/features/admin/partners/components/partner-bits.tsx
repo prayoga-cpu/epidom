@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/lang/i18n-provider";
 import { formatCurrency } from "@/lib/utils/formatting";
 import type { CurrencyTotals } from "@/lib/services/partner.service";
 
@@ -24,11 +25,14 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
+  const { t } = useI18n();
+  const key = `adminPages.partners.statuses.${status}`;
+  const translated = t(key);
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${STATUS_STYLES[status] ?? STATUS_STYLES.ENDED}`}
     >
-      {label ?? status.toLowerCase()}
+      {label ?? (translated && translated !== key ? translated : status.toLowerCase())}
     </span>
   );
 }
@@ -36,15 +40,24 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
 /** Commission per currency: on hold, ready to pay, paid. Currencies are never added together. */
 export function CurrencyTotalsList({
   totals,
-  labels = { onHold: "On hold", ready: "Ready to pay", paid: "Paid" },
-  locale = "en-GB",
-  empty = "No commission yet",
+  labels,
+  locale,
+  empty,
 }: {
   totals: CurrencyTotals[];
   labels?: { onHold: string; ready: string; paid: string };
   locale?: string;
   empty?: string;
 }) {
+  // The partner's own page passes its labels; the admin pages use these.
+  const { t, intlLocale } = useI18n();
+  labels ??= {
+    onHold: t("adminPages.partners.totals.onHold"),
+    ready: t("adminPages.partners.totals.ready"),
+    paid: t("adminPages.partners.totals.paid"),
+  };
+  locale ??= intlLocale;
+  empty ??= t("adminPages.partners.totals.empty");
   if (totals.length === 0) return <p className="text-muted-foreground text-xs">{empty}</p>;
   return (
     <div className="space-y-1.5">

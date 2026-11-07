@@ -4,8 +4,8 @@ import { unwrapApiData } from "@/lib/api/unwrap";
 import { LOCALE_HEADER } from "@/lib/i18n-routing";
 import type {
   OnboardingCompleteResult,
-  OnboardingGoal,
   OnboardingState,
+  ReferralCodePreviewResult,
   SlugCheckResult,
 } from "@/lib/onboarding/contracts";
 import type {
@@ -115,11 +115,18 @@ export const onboardingApi = {
       body: JSON.stringify(body),
     }),
 
-  complete: (goals: OnboardingGoal[]) =>
+  complete: (referralCode?: string) =>
     request<OnboardingCompleteResult>("/api/onboarding/complete", {
       method: "POST",
-      body: JSON.stringify({ goals }),
+      body: JSON.stringify(referralCode ? { referralCode } : {}),
     }),
+
+  /** A partner code typed in the wizard: the partner's name and the % off. 404 when unknown. */
+  checkReferralCode: (code: string, signal?: AbortSignal) =>
+    request<ReferralCodePreviewResult>(
+      `/api/onboarding/referral-code?code=${encodeURIComponent(code)}`,
+      { signal }
+    ),
 
   checkSlug: (slug: string, signal?: AbortSignal) =>
     request<SlugCheckResult>(`/api/onboarding/slug-check?slug=${encodeURIComponent(slug)}`, {

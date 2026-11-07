@@ -124,6 +124,12 @@ export function PricingSection() {
                     {tier.cta}
                   </Link>
                 )}
+                {/* The trial's one condition, said where the decision is made. */}
+                {tier.key === "pos" ? (
+                  <p className="text-epi-cream-50/70 m-0 mt-2 text-center text-xs">
+                    {t("redesign.landing.hero.noCard")}
+                  </p>
+                ) : null}
               </div>
             </li>
           ))}

@@ -40,12 +40,14 @@ vi.mock("../../hooks/use-kds-settings", () => ({
 const display = vi.hoisted(() => ({
   clearCustomerIntake: vi.fn(),
   markCustomerDisplayPaid: vi.fn(),
+  setCustomerDisplayPaymentPrompt: vi.fn(),
   phone: null as string | null,
   email: "",
 }));
 vi.mock("../../hooks/use-customer-display", () => ({
   clearCustomerIntake: display.clearCustomerIntake,
   markCustomerDisplayPaid: display.markCustomerDisplayPaid,
+  setCustomerDisplayPaymentPrompt: display.setCustomerDisplayPaymentPrompt,
   useCustomerIntake: (
     select: (s: { phone: string | null; email: string; receivedAt: number }) => unknown
   ) => select({ phone: display.phone, email: display.email, receivedAt: 0 }),
@@ -312,7 +314,7 @@ describe("PosCheckoutDialog — single-method sale keeps the exact legacy payloa
     await submit();
 
     expect(cart().items).toHaveLength(0);
-    expect(display.markCustomerDisplayPaid).toHaveBeenCalledWith("#101", 25);
+    expect(display.markCustomerDisplayPaid).toHaveBeenCalledWith("#101", 25, 5);
     expect(display.clearCustomerIntake).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(analytics.trackEvent).toHaveBeenCalledWith(
@@ -369,7 +371,7 @@ describe("PosCheckoutDialog — single-method sale keeps the exact legacy payloa
     expect(result.total).toBe(22.5);
     expect(result.change).toBe(7.5);
     expect(result.receipt).toMatchObject({ total: 22.5, discountAmount: 2.5, change: 7.5 });
-    expect(display.markCustomerDisplayPaid).toHaveBeenCalledWith("#101", 22.5);
+    expect(display.markCustomerDisplayPaid).toHaveBeenCalledWith("#101", 22.5, 7.5);
   });
 
   it("QRIS sends no cash fields, and no change is shown", async () => {
@@ -388,6 +390,15 @@ describe("PosCheckoutDialog — single-method sale keeps the exact legacy payloa
       paymentMethod: "QRIS",
     });
     expect(lastComplete().result.change).toBeNull();
+  });
+
+  it("puts the store's QRIS on the customer display while QRIS is picked, and takes it down after", async () => {
+    renderCheckout();
+    expect(display.setCustomerDisplayPaymentPrompt).not.toHaveBeenCalledWith("QRIS");
+    chooseMethod("publicOrder.paymentMethods.QRIS");
+    expect(display.setCustomerDisplayPaymentPrompt).toHaveBeenLastCalledWith("QRIS");
+    chooseMethod("publicOrder.paymentMethods.CASH");
+    expect(display.setCustomerDisplayPaymentPrompt).toHaveBeenLastCalledWith(null);
   });
 
   it("Other needs a label, and sends it as paymentNote", async () => {

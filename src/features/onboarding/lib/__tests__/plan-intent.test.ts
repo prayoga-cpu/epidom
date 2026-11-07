@@ -7,12 +7,11 @@ import {
   checkoutAfterPublish,
   onboardingPathFor,
   parsePlanIntent,
-  planForGoals,
   pricingHrefFor,
   registerHrefFor,
 } from "../plan-intent";
 
-const FREE_NEW: OnboardingBilling = { canCheckout: true, posTrialEligible: true };
+const FREE_NEW: OnboardingBilling = { canCheckout: true, posTrialEligible: true, referral: null };
 
 describe("parsePlanIntent", () => {
   it("reads a paid plan and its billing interval", () => {
@@ -66,55 +65,38 @@ describe("links", () => {
   });
 });
 
-describe("planForGoals", () => {
-  it("is the highest paid plan picked", () => {
-    expect(planForGoals(["storefront", "counter"])).toBe("POS");
-    expect(planForGoals(["counter", "operations"])).toBe("OPERATIONS");
-    expect(planForGoals(["operations"])).toBe("OPERATIONS");
-  });
-
-  it("is null when only the storefront, or nothing, is picked", () => {
-    expect(planForGoals(["storefront"])).toBeNull();
-    expect(planForGoals([])).toBeNull();
-  });
-});
-
 describe("checkoutAfterPublish", () => {
-  it("a POS goal on a first subscription is the trial, monthly", () => {
-    expect(checkoutAfterPublish(["counter"], FREE_NEW, null)).toEqual({
+  it("finishing setup is the POS trial, monthly, whatever was picked before", () => {
+    expect(checkoutAfterPublish(FREE_NEW, null)).toEqual({ plan: "POS", yearly: false, trial: true });
+  });
+
+  it("keeps the interval picked on the pricing page for POS", () => {
+    expect(checkoutAfterPublish(FREE_NEW, { plan: "POS", yearly: true })).toEqual({
       plan: "POS",
-      yearly: false,
+      yearly: true,
       trial: true,
     });
   });
 
-  it("keeps the interval picked on the pricing page for that same plan", () => {
-    expect(
-      checkoutAfterPublish(["operations"], FREE_NEW, { plan: "OPERATIONS", yearly: true })
-    ).toEqual({ plan: "OPERATIONS", yearly: true, trial: false });
+  it("the Operations button on the pricing page still goes to the Operations Checkout", () => {
+    expect(checkoutAfterPublish(FREE_NEW, { plan: "OPERATIONS", yearly: true })).toEqual({
+      plan: "OPERATIONS",
+      yearly: true,
+      trial: false,
+    });
   });
 
-  it("follows the goals over the pricing page: a different plan is billed monthly", () => {
-    expect(
-      checkoutAfterPublish(["counter"], FREE_NEW, { plan: "OPERATIONS", yearly: true })
-    ).toEqual({ plan: "POS", yearly: false, trial: true });
-  });
-
-  it("unticking the plan's goal means staying on Free", () => {
-    expect(
-      checkoutAfterPublish(["storefront"], FREE_NEW, { plan: "POS", yearly: false })
-    ).toBeNull();
-  });
-
-  it("no trial for an account that already had a subscription", () => {
-    expect(
-      checkoutAfterPublish(["counter"], { canCheckout: true, posTrialEligible: false }, null)
-    ).toEqual({ plan: "POS", yearly: false, trial: false });
+  it("a spent trial stays on Free, unless POS was asked for on the pricing page", () => {
+    const spent = { ...FREE_NEW, posTrialEligible: false };
+    expect(checkoutAfterPublish(spent, null)).toBeNull();
+    expect(checkoutAfterPublish(spent, { plan: "POS", yearly: false })).toEqual({
+      plan: "POS",
+      yearly: false,
+      trial: false,
+    });
   });
 
   it("nothing for an account that can't use a self-serve Checkout", () => {
-    expect(
-      checkoutAfterPublish(["operations"], { canCheckout: false, posTrialEligible: true }, null)
-    ).toBeNull();
+    expect(checkoutAfterPublish({ ...FREE_NEW, canCheckout: false }, null)).toBeNull();
   });
 });

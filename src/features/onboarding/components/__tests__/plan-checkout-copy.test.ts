@@ -17,7 +17,12 @@ function lookup(dict: object, path: string): unknown {
 }
 
 const KEYS = [
-  ...["trial", "pos", "operations", "stayFree"].map((k) => `onboarding.goals.next.${k}`),
+  ...["label", "hint", "valid", "price", "unknown", "credited"].map(
+    (k) => `onboarding.referral.${k}`
+  ),
+  "onboarding.store.planNote",
+  "onboarding.store.planNoteSkip",
+  "onboarding.actions.skipSetup",
   ...[
     "trialTitle",
     "trialBody",
@@ -61,7 +66,7 @@ describe("plan Checkout copy", () => {
   it("the trial copy says no card is needed (the trial starts without one, 3.41.0)", () => {
     for (const [locale, dict] of Object.entries(DICTS)) {
       for (const key of [
-        "onboarding.goals.next.trial",
+        "onboarding.store.planNote",
         "onboarding.launch.plan.trialBody",
         "checkout.success.trialSubtitle",
       ]) {

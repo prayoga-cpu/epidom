@@ -10,7 +10,7 @@ const routerPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: routerPush }),
 }));
-const defaultLanding = vi.hoisted(() => ({ current: "dashboard" }));
+const defaultLanding = vi.hoisted(() => ({ current: "home" }));
 vi.mock("@/features/dashboard/profile/hooks/use-default-landing", () => ({
   useDefaultLanding: () => defaultLanding.current,
 }));
@@ -55,7 +55,7 @@ const card = () => screen.getByRole("link", { name: "Test Store" });
 
 beforeEach(() => {
   localStorage.clear();
-  defaultLanding.current = "dashboard";
+  defaultLanding.current = "home";
   routerPush.mockClear();
 });
 
@@ -98,7 +98,7 @@ describe("StoreCard — launch chooser (owner)", () => {
     );
     expect(within(dialog).getByRole("link", { name: "nav.backOffice" })).toHaveAttribute(
       "href",
-      "/store/store-001/dashboard"
+      "/store/store-001/home"
     );
     expect(within(dialog).getByText("stores.launch.posDesc")).toBeInTheDocument();
     expect(within(dialog).getByText("stores.launch.backOfficeDesc")).toBeInTheDocument();
@@ -136,7 +136,7 @@ describe("StoreCard — launch chooser (owner)", () => {
     );
     expect(within(dialog).getByRole("link", { name: "nav.backOffice" })).toHaveAttribute(
       "href",
-      "/store/store-001/dashboard"
+      "/store/store-001/home"
     );
   });
 
@@ -153,7 +153,7 @@ describe("StoreCard — launch chooser (owner)", () => {
     expect(within(dialog).queryByText("stores.launch.posDesc")).toBeNull();
 
     const backOffice = within(dialog).getByRole("link", { name: "nav.backOffice" });
-    expect(backOffice).toHaveAttribute("href", "/store/store-001/dashboard");
+    expect(backOffice).toHaveAttribute("href", "/store/store-001/home");
     await waitFor(() => expect(document.activeElement).toBe(backOffice));
   });
 
@@ -230,17 +230,17 @@ describe("StoreCard — launch chooser (owner)", () => {
     const dialog = await screen.findByRole("dialog");
     const pos = within(dialog).getByRole("link", { name: "nav.posSystem" });
     await waitFor(() => expect(document.activeElement).toBe(pos));
-    // "pos" is not a Back Office page, so Back Office falls back to the dashboard.
+    // "pos" is not a Back Office page, so Back Office falls back to Home.
     expect(within(dialog).getByRole("link", { name: "nav.backOffice" })).toHaveAttribute(
       "href",
-      "/store/store-001/dashboard"
+      "/store/store-001/home"
     );
   });
 
   it("with default landing 'pos' on FREE, the card's href falls back to Back Office", () => {
     defaultLanding.current = "pos";
     render(<StoreCard store={store} currentPlan="FREE" />);
-    expect(card()).toHaveAttribute("href", "/store/store-001/dashboard");
+    expect(card()).toHaveAttribute("href", "/store/store-001/home");
   });
 
   it("with default landing 'storefront', Back Office opens the storefront", async () => {
@@ -327,7 +327,7 @@ describe("StoreCard — a store the account works at as linked staff", () => {
 
     expect(screen.queryByText("stores.staffBadge")).toBeNull();
     expect(screen.getByText("Open menu")).toBeInTheDocument();
-    expect(card().getAttribute("href")).toBe("/store/store-001/dashboard");
+    expect(card().getAttribute("href")).toBe("/store/store-001/home");
   });
 
   it("a role with no POS page: the card says so, links nowhere, and never sends them to pricing", () => {

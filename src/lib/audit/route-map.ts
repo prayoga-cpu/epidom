@@ -513,6 +513,11 @@ export const ROUTE_ACTION_MAP: Record<string, RouteActionSpec> = {
     severity: I,
     targetType: "StoreReceiptSettings",
   },
+  "PUT /api/stores/*/customer-display": {
+    code: "store.customer_display.update",
+    severity: I,
+    targetType: "CustomerDisplaySettings",
+  },
   "PATCH /api/stores/*/production/settings": { code: "store.production_settings.update", severity: N, targetType: "Store" },
   "PATCH /api/stores/*/custom-products/settings": {
     code: "store.custom_products_settings.update",

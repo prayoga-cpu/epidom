@@ -1,26 +1,19 @@
 "use client";
 
-import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import {
-  Check,
-  Hourglass,
-  Maximize2,
-  Minimize2,
-  MessageCircle,
-  MonitorOff,
-  ShoppingBag,
-} from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useCurrency } from "@/components/providers/currency-provider";
-import { EpidomMark, EpidomWordmark } from "@/features/marketing/shared/components/epidom-logo";
-import { getContrastingInk, getPremiumTheme } from "@/lib/utils/color";
-import { cn } from "@/lib/utils";
+import type { CustomerDisplayConfig } from "@/types/api/customer-display";
 import {
   useCustomerDisplaySnapshot,
   useCustomerIntakeChannel,
 } from "../hooks/use-customer-display";
-import { isCustomerDisplayStandby } from "../lib/customer-display";
+import { useLiveCustomerDisplayConfig } from "../hooks/use-customer-display-config";
+import {
+  EMPTY_CUSTOMER_DISPLAY_SNAPSHOT,
+  isCustomerDisplayStandby,
+  type CustomerDisplaySnapshot,
+} from "../lib/customer-display";
+import { CustomerDisplayView, type CustomerDisplayPhoneCta } from "./customer-display-view";
 import { PosCustomerDisplayPhone } from "./pos-customer-display-phone";
 import { useFullscreen } from "@/hooks/use-fullscreen";
 
@@ -32,33 +25,41 @@ const ASK_FRESH_MS = 10_000;
 
 interface PosCustomerDisplayProps {
   storeId: string;
-  storeName: string;
-  logoUrl: string | null;
-  themeColor: string | null;
   /** ISO-2 country for the store, used to preselect the phone dial code. */
   defaultCountry: string;
+  /** Server-rendered look and banners; kept current by polling (see useLiveCustomerDisplayConfig). */
+  initialConfig: CustomerDisplayConfig;
+}
+
+/** Identifies one settled order, so a re-announced "paid" isn't a new thank-you. */
+function paidKeyOf(snapshot: CustomerDisplaySnapshot): string {
+  return `${snapshot.paidOrderNumber ?? ""}|${snapshot.total}`;
+}
+
+interface PaidHold {
+  key: string;
+  snapshot: CustomerDisplaySnapshot;
+  seenAt: number;
 }
 
 /**
  * The customer's side of the till — a read-only mirror of the cashier's cart,
- * meant for a second screen turned to face the customer. No controls, nothing
- * tappable beyond the fullscreen toggle: everything here is driven by the
- * cashier window over `useCustomerDisplaySnapshot`.
+ * meant for a second screen turned to face the customer. Everything is driven
+ * by the cashier window over `useCustomerDisplaySnapshot`; the only things a
+ * customer can touch are the WhatsApp receipt button and fullscreen.
+ *
+ * The till holds its "paid" state for a fixed 12 s. The store's own thank-you
+ * length (5-60 s) is applied here, on the screen: a longer one keeps the
+ * thank-you up after the till has gone idle, a shorter one drops it early.
+ * Anything the till rings up next always wins at once.
  */
 export function PosCustomerDisplay({
   storeId,
-  storeName,
-  logoUrl,
-  themeColor,
   defaultCountry,
+  initialConfig,
 }: PosCustomerDisplayProps) {
-  const { t, formatDate } = useI18n();
-  // Cart amounts are literal in the store's display currency, never IDR —
-  // passing `currency` skips formatPrice's default base-currency conversion,
-  // exactly as the cashier's own cart does.
-  const { currency, formatPrice: formatPriceRaw } = useCurrency();
-  const formatPrice = (value: number | null | undefined) => formatPriceRaw(value, currency);
-
+  const { t } = useI18n();
+  const config = useLiveCustomerDisplayConfig(storeId, initialConfig);
   const snapshot = useCustomerDisplaySnapshot(storeId);
   const {
     status: intakeStatus,
@@ -80,29 +81,57 @@ export function PosCustomerDisplay({
     return () => clearInterval(timer);
   }, []);
 
-  const theme = getPremiumTheme(themeColor || "#FF6B35");
-  const ink = getContrastingInk(theme);
-  // A pale brand color gets dark ink, so the gradient has to deepen *away*
-  // from that ink (toward white) or the bottom of the screen goes unreadable.
-  const depth = ink === "#FFFFFF" ? "black" : "white";
-  const themeStyle = {
-    "--cfd-ink": ink,
-    // Text that sits on top of an ink-filled surface (the confirm button).
-    "--cfd-on-ink": ink === "#FFFFFF" ? theme : "#FFFFFF",
-    // Set as `background` rather than a Tailwind arbitrary class: a gradient
-    // through a CSS var is the shape public-profile.tsx already uses for
-    // --store-theme-gradient, and `bg-[var(--x)]` would emit background-COLOR.
-    background: `linear-gradient(155deg, ${theme}, color-mix(in srgb, ${theme} 60%, ${depth}))`,
-    "--cfd-panel": `color-mix(in srgb, ${ink} 10%, transparent)`,
-    "--cfd-panel-strong": `color-mix(in srgb, ${ink} 18%, transparent)`,
-    "--cfd-border": `color-mix(in srgb, ${ink} 16%, transparent)`,
-    "--cfd-total": `color-mix(in srgb, ${ink} 22%, transparent)`,
-  } as React.CSSProperties;
+  // ── The thank-you hold ──
+  const holdMs = config.settings.thankYouSeconds * 1000;
+  const [paidHold, setPaidHold] = useState<PaidHold | null>(null);
+  const [expiredKey, setExpiredKey] = useState<string | null>(null);
+  const paidKey = snapshot.phase === "paid" ? paidKeyOf(snapshot) : null;
 
-  const lines = snapshot.lines;
-  const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
-  const highlight = lines.find((line) => line.id === snapshot.highlightLineId) ?? null;
-  const isPaid = snapshot.phase === "paid";
+  useEffect(() => {
+    if (snapshot.phase === "paid") {
+      const key = paidKeyOf(snapshot);
+      if (key === expiredKey) return;
+      // Timed from when the till settled it, not from when this screen first
+      // saw it: a display reopened over a sale settled minutes ago (the
+      // snapshot mirror) must not replay that customer's thank-you.
+      const settledAt = snapshot.updatedAt > 0 ? Math.min(Date.now(), snapshot.updatedAt) : Date.now();
+      setPaidHold((current) =>
+        current?.key === key ? { ...current, snapshot } : { key, snapshot, seenAt: settledAt }
+      );
+    } else if (snapshot.phase !== "idle") {
+      // The next order started, or the till went away: the thank-you is over.
+      setPaidHold(null);
+    }
+  }, [snapshot, expiredKey]);
+
+  useEffect(() => {
+    if (!paidHold) return;
+    const expire = () => {
+      setExpiredKey(paidHold.key);
+      setPaidHold(null);
+    };
+    const remaining = paidHold.seenAt + holdMs - Date.now();
+    if (remaining <= 0) {
+      expire();
+      return;
+    }
+    const timer = setTimeout(expire, remaining);
+    return () => clearTimeout(timer);
+  }, [paidHold, holdMs]);
+
+  // A paid snapshot is shown the moment it lands (before the hold effect has
+  // run, so there is no idle flash), held while the till sits idle, and
+  // replaced by the idle screen once this store's thank-you time is up.
+  const shown: CustomerDisplaySnapshot =
+    paidKey !== null && paidKey !== expiredKey
+      ? snapshot
+      : paidHold && snapshot.phase === "idle"
+        ? paidHold.snapshot
+        : snapshot.phase === "paid"
+          ? { ...EMPTY_CUSTOMER_DISPLAY_SNAPSHOT, updatedAt: snapshot.updatedAt }
+          : snapshot;
+
+  const tillPaid = snapshot.phase === "paid";
   // The till said this number belongs to an existing customer: greet them on the
   // button instead of just repeating the number back.
   const member =
@@ -114,296 +143,59 @@ export function PosCustomerDisplay({
   // is the handover point, so clear it there — and close the pad if it is
   // somehow still open.
   useEffect(() => {
-    if (!isPaid) return;
+    if (!tillPaid) return;
     setSubmittedPhone(null);
     setPhoneOpen(false);
-  }, [isPaid]);
+  }, [tillPaid]);
   // Standby rather than a frozen last order — a customer must never be shown
-  // a total that stopped tracking. Two kinds, told apart on screen so staff
-  // know what to fix: `off` — the cashier switched the display off; `closed`
-  // — the setting is on but no till is driving this screen right now.
+  // a total that stopped tracking (see CustomerDisplayView for the two kinds).
   const isStandby = isCustomerDisplayStandby(snapshot.phase);
-  const isClosed = snapshot.phase === "closed";
 
   // The cashier asked for the customer's details: open the pad for them, the
-  // same one the WhatsApp button opens. Never over a thank-you. On standby the
-  // ask is held, not dropped: it comes from a live till, so the standby is
-  // stale and about to be replaced — the pad opens the moment it is.
+  // same one the WhatsApp button opens. Never over the till's own thank-you.
+  // On standby the ask is held, not dropped: it comes from a live till, so the
+  // standby is stale and about to be replaced — the pad opens the moment it
+  // is. A thank-you this screen is only HOLDING (the till is already idle)
+  // gives way: the cashier has moved on to the next customer.
   const handledAskRef = useRef(0);
   useEffect(() => {
     if (askedAt === 0 || handledAskRef.current === askedAt) return;
-    if (isPaid) {
+    if (tillPaid) {
       handledAskRef.current = askedAt;
       return;
     }
     if (isStandby) return;
     handledAskRef.current = askedAt;
-    if (Date.now() - askedAt <= ASK_FRESH_MS) setPhoneOpen(true);
-  }, [askedAt, isStandby, isPaid]);
+    if (Date.now() - askedAt <= ASK_FRESH_MS) {
+      if (paidHold) {
+        setExpiredKey(paidHold.key);
+        setPaidHold(null);
+      }
+      setPhoneOpen(true);
+    }
+  }, [askedAt, isStandby, tillPaid, paidHold]);
+
+  const phoneCta: CustomerDisplayPhoneCta = submittedPhone
+    ? {
+        done: true,
+        label: member
+          ? member.firstName
+            ? t("pos.customerDisplay.welcomeBack").replace("{name}", member.firstName)
+            : t("pos.customerDisplay.welcomeBackNoName")
+          : t("pos.customerDisplay.phoneSentTo").replace("{phone}", submittedPhone),
+        onClick: () => setPhoneOpen(true),
+      }
+    : { done: false, label: t("pos.customerDisplay.phoneCta"), onClick: () => setPhoneOpen(true) };
 
   return (
-    <div
-      style={themeStyle}
-      className="relative flex min-h-[calc(100dvh/var(--app-zoom,1))] w-full flex-col overflow-y-auto p-4 text-[color:var(--cfd-ink)] sm:p-6 lg:h-[calc(100dvh/var(--app-zoom,1))] lg:overflow-hidden lg:p-8"
+    <CustomerDisplayView
+      config={config}
+      snapshot={shown}
+      now={now}
+      variant="screen"
+      phoneCta={phoneCta}
+      fullscreen={{ active: isFullscreen, onToggle: toggleFullscreen }}
     >
-      <header className="flex shrink-0 items-center justify-between gap-3 px-1 pb-4 sm:pb-6">
-        <p className="min-w-0 truncate text-sm font-medium tracking-wide opacity-70 sm:text-base">
-          {now ? formatDate(now, "d MMMM yyyy • HH:mm") : ""}
-        </p>
-        <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <p className="max-w-[45vw] truncate text-sm font-semibold tracking-[0.14em] uppercase opacity-70 sm:text-base">
-            {storeName}
-          </p>
-          {/* Always visible rather than revealed on hover — a customer display
-              is a touch screen with no hover state to reveal it with. */}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            aria-label={t(
-              isFullscreen ? "pos.customerDisplay.exitFullscreen" : "pos.customerDisplay.fullscreen"
-            )}
-            className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full opacity-50 transition-opacity hover:opacity-100"
-          >
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </button>
-        </div>
-      </header>
-
-      {isStandby ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-5 rounded-3xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] p-8 text-center">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={logoUrl}
-              alt={storeName}
-              className="max-h-[calc(24dvh/var(--app-zoom,1))] w-auto max-w-[60%] object-contain opacity-85"
-            />
-          ) : (
-            <EpidomMark size={96} />
-          )}
-          <div className="flex max-w-md flex-col items-center gap-1.5">
-            <div className="flex items-center gap-2 opacity-60">
-              {isClosed ? (
-                <Hourglass className="h-4 w-4 shrink-0" />
-              ) : (
-                <MonitorOff className="h-4 w-4 shrink-0" />
-              )}
-              <p className="text-sm sm:text-base">
-                {t(isClosed ? "pos.customerDisplay.waitingTill" : "pos.customerDisplay.standby")}
-              </p>
-            </div>
-            {/* For staff setting the screen up — the customer has nothing to do
-                here, so it stays small and quiet. */}
-            <p className="text-xs opacity-45 sm:text-sm">
-              {t(
-                isClosed ? "pos.customerDisplay.waitingTillHint" : "pos.customerDisplay.standbyHint"
-              )}
-            </p>
-          </div>
-        </div>
-      ) : isPaid ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-5 rounded-3xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] p-8 text-center sm:gap-6">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[color:var(--cfd-panel-strong)] sm:h-20 sm:w-20">
-            <Check className="h-8 w-8 sm:h-10 sm:w-10" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-semibold sm:text-4xl lg:text-5xl">
-              {t("pos.customerDisplay.thankYou")}
-            </h1>
-            <p className="mt-2 text-base opacity-70 sm:text-lg">
-              {t("pos.customerDisplay.thankYouDesc")}
-            </p>
-          </div>
-          <p className="text-4xl font-bold tabular-nums sm:text-5xl">
-            {formatPrice(snapshot.total)}
-          </p>
-          {snapshot.paidOrderNumber && (
-            <p className="text-sm tracking-[0.16em] uppercase opacity-60 sm:text-base">
-              {t("pos.queue.orderNumber")} {snapshot.paidOrderNumber}
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="grid flex-1 grid-cols-1 gap-4 sm:gap-5 lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(340px,40%)] lg:gap-6">
-          {/* ── Left: the item just rung up, over the store's mark ── */}
-          <div className="flex min-w-0 flex-col gap-4 sm:gap-5 lg:min-h-0">
-            <div className="shrink-0 rounded-3xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] p-5 shadow-lg sm:p-7">
-              {highlight ? (
-                <>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      {snapshot.highlightIsNew && (
-                        <p className="text-xs font-semibold tracking-[0.18em] uppercase opacity-60">
-                          {t("pos.customerDisplay.justAdded")}
-                        </p>
-                      )}
-                      <h2 className="mt-2 text-2xl leading-tight font-semibold break-words sm:text-3xl lg:text-4xl">
-                        {highlight.name}
-                      </h2>
-                      {highlight.modifiers.length > 0 && (
-                        <p className="mt-2 text-sm opacity-70 sm:text-base">
-                          {highlight.modifiers.join(" · ")}
-                        </p>
-                      )}
-                      {highlight.notes && (
-                        <p className="mt-1 text-sm italic opacity-60 sm:text-base">
-                          {highlight.notes}
-                        </p>
-                      )}
-                    </div>
-                    <span className="shrink-0 rounded-full bg-[color:var(--cfd-panel-strong)] px-3.5 py-1.5 text-lg font-bold tabular-nums sm:text-xl">
-                      {highlight.quantity}×
-                    </span>
-                  </div>
-                  <p className="mt-5 text-right text-3xl font-bold tabular-nums sm:text-4xl lg:text-5xl">
-                    {formatPrice(highlight.lineTotal)}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h2 className="text-2xl leading-tight font-semibold sm:text-3xl lg:text-4xl">
-                    {t("pos.customerDisplay.welcome")}
-                  </h2>
-                  <p className="mt-2 text-base opacity-70 sm:text-lg">
-                    {t("pos.customerDisplay.welcomeDesc")}
-                  </p>
-                </>
-              )}
-            </div>
-
-            <div className="flex min-h-[180px] flex-1 items-center justify-center overflow-hidden rounded-3xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] p-6 shadow-lg sm:p-8 lg:min-h-0">
-              {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={logoUrl}
-                  alt={storeName}
-                  className="max-h-full w-auto max-w-[70%] object-contain lg:max-h-[calc(38dvh/var(--app-zoom,1))]"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-4 opacity-85">
-                  <EpidomMark size={104} />
-                  <div className="opacity-70">
-                    <EpidomWordmark height={28} />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* The only thing on this screen the customer can touch. */}
-            <button
-              type="button"
-              onClick={() => setPhoneOpen(true)}
-              className="flex min-h-14 shrink-0 touch-manipulation items-center justify-center gap-2.5 rounded-3xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] px-5 py-3 text-left text-base font-semibold shadow-lg transition-opacity active:opacity-70 sm:text-lg"
-            >
-              {submittedPhone ? (
-                <>
-                  <Check className="h-5 w-5 shrink-0" />
-                  <span className="min-w-0 truncate">
-                    {member
-                      ? member.firstName
-                        ? t("pos.customerDisplay.welcomeBack").replace("{name}", member.firstName)
-                        : t("pos.customerDisplay.welcomeBackNoName")
-                      : t("pos.customerDisplay.phoneSentTo").replace("{phone}", submittedPhone)}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <MessageCircle className="h-5 w-5 shrink-0" />
-                  <span className="min-w-0">{t("pos.customerDisplay.phoneCta")}</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* ── Right: the running receipt ── */}
-          <div className="flex flex-col overflow-hidden rounded-3xl border border-[color:var(--cfd-border)] bg-[color:var(--cfd-panel)] shadow-lg lg:min-h-0">
-            <div className="flex shrink-0 items-baseline justify-between gap-3 border-b border-[color:var(--cfd-border)] px-5 py-4 sm:px-6">
-              <h2 className="text-base font-semibold tracking-wide sm:text-lg">
-                {t("pos.customerDisplay.yourOrder")}
-              </h2>
-              {itemCount > 0 && (
-                <span className="text-sm tabular-nums opacity-70 sm:text-base">
-                  {t(
-                    itemCount === 1
-                      ? "pos.customerDisplay.itemCountSingular"
-                      : "pos.customerDisplay.itemCountPlural"
-                  ).replace("{count}", String(itemCount))}
-                </span>
-              )}
-            </div>
-
-            {lines.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center opacity-60">
-                <ShoppingBag className="h-8 w-8" />
-                <p className="text-sm sm:text-base">{t("pos.customerDisplay.emptyOrder")}</p>
-              </div>
-            ) : (
-              <ul className="max-h-[calc(40dvh/var(--app-zoom,1))] min-h-0 flex-1 divide-y divide-[color:var(--cfd-border)] overflow-y-auto px-5 sm:px-6 lg:max-h-none">
-                {lines.map((line) => (
-                  <li
-                    key={line.id}
-                    className={cn(
-                      "flex items-start justify-between gap-4 py-3 transition-opacity",
-                      line.id === snapshot.highlightLineId ? "opacity-100" : "opacity-80"
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium sm:text-base">
-                        <span className="tabular-nums opacity-70">{line.quantity}×</span>{" "}
-                        {line.name}
-                      </p>
-                      {line.modifiers.length > 0 && (
-                        <p className="mt-0.5 text-xs opacity-60 sm:text-sm">
-                          {line.modifiers.join(" · ")}
-                        </p>
-                      )}
-                      {line.notes && (
-                        <p className="mt-0.5 text-xs italic opacity-55 sm:text-sm">{line.notes}</p>
-                      )}
-                    </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums sm:text-base">
-                      {formatPrice(line.lineTotal)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <div className="shrink-0 border-t border-[color:var(--cfd-border)] px-5 py-4 sm:px-6 sm:py-5">
-              <dl className="space-y-1.5 text-sm sm:text-base">
-                <TotalsRow label={t("pos.cart.subtotal")} value={formatPrice(snapshot.subtotal)} />
-                {snapshot.serviceCharge > 0 && (
-                  <TotalsRow
-                    label={t("pos.cart.serviceCharge")}
-                    value={formatPrice(snapshot.serviceCharge)}
-                  />
-                )}
-                {snapshot.discountAmount > 0 && (
-                  <TotalsRow
-                    label={
-                      snapshot.discountReason
-                        ? `${t("pos.cart.discount")} (${snapshot.discountReason})`
-                        : t("pos.cart.discount")
-                    }
-                    value={`-${formatPrice(snapshot.discountAmount)}`}
-                  />
-                )}
-                <TotalsRow label={t("pos.cart.tax")} value={formatPrice(snapshot.tax)} />
-              </dl>
-
-              <div className="mt-4 flex items-baseline justify-between gap-3 rounded-2xl bg-[color:var(--cfd-total)] px-4 py-3 sm:px-5 sm:py-4">
-                <span className="text-sm font-semibold tracking-[0.12em] uppercase opacity-80 sm:text-base">
-                  {t("pos.cart.total")}
-                </span>
-                <span className="text-2xl font-bold tabular-nums sm:text-3xl">
-                  {formatPrice(snapshot.total)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <PosCustomerDisplayPhone
         open={phoneOpen}
         onClose={() => setPhoneOpen(false)}
@@ -417,15 +209,6 @@ export function PosCustomerDisplay({
         onSubmitDetails={sendDetails}
         onFinishDetails={submitDetails}
       />
-    </div>
-  );
-}
-
-function TotalsRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="min-w-0 truncate opacity-70">{label}</dt>
-      <dd className="shrink-0 tabular-nums">{value}</dd>
-    </div>
+    </CustomerDisplayView>
   );
 }

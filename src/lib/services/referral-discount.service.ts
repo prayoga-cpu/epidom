@@ -74,7 +74,7 @@ export async function getCheckoutReferralDiscount(
   });
   if (
     !attribution ||
-    attribution.source !== "REFERRAL_LINK" ||
+    (attribution.source !== "REFERRAL_LINK" && attribution.source !== "REFERRAL_CODE") ||
     !attribution.partner ||
     attribution.partner.status === "ENDED" ||
     attribution.discountRedeemedAt ||

@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
 import type {
   OnboardingCompleteResult,
-  OnboardingGoal,
   OnboardingState,
 } from "@/lib/onboarding/contracts";
 import {
@@ -36,9 +35,9 @@ export function useSaveStorefrontStep() {
 
 export function useCompleteOnboarding() {
   const queryClient = useQueryClient();
-  return useMutation<OnboardingCompleteResult, Error, OnboardingGoal[]>({
+  return useMutation<OnboardingCompleteResult, Error, string | undefined>({
     mutationKey: ["onboarding", "complete"],
-    mutationFn: (goals) => onboardingApi.complete(goals),
+    mutationFn: (referralCode) => onboardingApi.complete(referralCode),
     // The account just gained a live store: whatever the session cached about
     // it (profile, stores, subscription) is stale for the pages that follow.
     onSuccess: () => queryClient.invalidateQueries(),

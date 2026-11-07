@@ -3,20 +3,22 @@
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { INTL_LOCALES, useI18n } from "@/components/lang/i18n-provider";
 import { MarketFlag } from "@/components/market-flag";
 import { trackEvent, trackMetaPixelEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { cn } from "@/lib/utils";
-import { APP_RELEASE_DATE, APP_VERSION } from "@/lib/version";
+import { APP_RELEASE_DATE } from "@/lib/version";
 import { HERO_PHOTO } from "../data/media";
 import { NF525_SETTLED } from "../lib/migration";
+import { usePosTrialHref } from "../lib/use-pos-trial-href";
 import {
   OnlineDot,
   WhatsAppSupportMenu,
 } from "@/features/marketing/shared/components/whatsapp-support-menu";
 import { HeroStoreSearch } from "./hero-store-search";
-import { TEXT_LINK } from "./landing-ui";
+import { SECONDARY_BUTTON, TEXT_LINK } from "./landing-ui";
 
 /**
  * The letter drawn as a lightning bolt: the "i" of "realtime" ("REALT⚡ME
@@ -158,6 +160,7 @@ const FACT_LINK =
  */
 export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }) {
   const { t, locale } = useI18n();
+  const trialHref = usePosTrialHref();
   // One letter of the "realtime" word is drawn as a gold lightning bolt (see
   // BOLT_LETTER), in the h1 or, in French, in the tagline. The drawn copy keeps
   // the replaced letter in its text, undrawn, so the h1's text is the title
@@ -211,7 +214,7 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
       label: t("redesign.landing.hero.releaseLabel"),
       value: (
         <Link href={getLocalizedPath("/changelog", locale)} className={FACT_LINK}>
-          {`${releaseDay} / ${APP_VERSION}`}
+          {releaseDay}
         </Link>
       ),
     },
@@ -261,10 +264,10 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
         {/* Navy wash, a darker pool behind the headline (the photo's white wall
             sits right there), a gold glow in the corner, and a dark foot for the
             facts: cream text stays at WCAG AA over any part of the photo. */}
-        <div aria-hidden="true" className="bg-epi-navy-950/50 absolute inset-0 -z-10" />
+        <div aria-hidden="true" className="bg-epi-navy-950/35 absolute inset-0 -z-10" />
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_62%_58%_at_50%_44%,rgba(4,8,15,0.82),rgba(4,8,15,0.3)_70%,transparent)]"
+          className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_62%_58%_at_50%_44%,rgba(4,8,15,0.74),rgba(4,8,15,0.22)_70%,transparent)]"
         />
         <div
           aria-hidden="true"
@@ -313,11 +316,29 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
                 </p>
               </div>
             </div>
-            {/* The reference layout: a modest headline, its tagline, then one big
-                white search card. No trial or calculator buttons here: they live
-                further down (plans, calculator). The lede sits under the card. */}
+            {/* A modest headline, its tagline, then the owner's two ways in: claim
+                a link (the search card) or start the POS trial, with "no card"
+                said right there rather than buried in the FAQ. The lede follows. */}
             <div className="epi-rise flex w-full justify-center">
               <HeroStoreSearch registerHref="/register" />
+            </div>
+            <div className="epi-rise mt-4 flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
+              <Link
+                href={trialHref}
+                onClick={() =>
+                  trackEvent("cta_click", {
+                    event_category: "engagement",
+                    event_label: "hero_trial",
+                  })
+                }
+                className={cn(SECONDARY_BUTTON, "min-h-11 px-5 text-sm backdrop-blur")}
+              >
+                {t("redesign.landing.hero.trialCta")}
+              </Link>
+              <span className="text-epi-cream-50/80 inline-flex items-center gap-1.5 text-sm">
+                <Check aria-hidden="true" className="text-epi-gold-300 size-4 shrink-0" />
+                {t("redesign.landing.hero.noCard")}
+              </span>
             </div>
 
             <p className="epi-rise-late text-epi-cream-50/75 mt-6 max-w-xl text-sm leading-snug text-balance">

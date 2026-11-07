@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { I18nProvider } from "@/components/lang/i18n-provider";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { UserAccessDialog, type AccessUser } from "../user-access-dialog";
@@ -10,7 +11,11 @@ import { NewPartnerDialog } from "@/features/admin/partners/components/partners-
 const calls: { url: string; method: string; body: unknown }[] = [];
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+  return render(
+    <I18nProvider>
+      <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
+    </I18nProvider>
+  );
 }
 
 beforeEach(() => {

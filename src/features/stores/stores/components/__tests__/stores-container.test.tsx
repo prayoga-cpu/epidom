@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 
 vi.mock("@/components/lang/i18n-provider", () => ({
   useI18n: () => ({ t: (k: string) => k }),
@@ -84,7 +84,7 @@ vi.mock("../../hooks/use-store-overviews", () => ({
 
 import { StoresContainer } from "../stores-container";
 import { UnauthorizedError } from "@/lib/api/unauthorized";
-import { rememberWizardRedirect } from "../../lib/stores-gatekeeper";
+import { markSetupSkipped, rememberWizardRedirect } from "../../lib/stores-gatekeeper";
 
 const ownerStore = { id: "s1", name: "Owned Cafe", accessRole: "owner" };
 const staffStore = {
@@ -109,6 +109,7 @@ function mockProfile(profile: unknown) {
 
 beforeEach(() => {
   window.sessionStorage.clear();
+  window.localStorage.clear();
   h.stores.current = [];
   h.error.current = null;
   h.subscription.current = activeSub;
@@ -210,6 +211,36 @@ describe("StoresContainer — the onboarding gatekeeper", () => {
 
     expect(await screen.findByTestId("store-card")).toBeInTheDocument();
     expect(window.location.href).toBe("http://localhost/stores");
+  });
+
+  it("a setup skipped on its plan questions stays here, with the banner offering the last step", async () => {
+    markSetupSkipped();
+    h.stores.current = [ownerStore];
+    mockProfile({
+      hasOnboarded: false,
+      business: { stores: [{ id: "s1" }], onboardingStep: 2 },
+      staffLink: null,
+    });
+    render(<StoresContainer />);
+
+    expect(await screen.findByTestId("store-card")).toBeInTheDocument();
+    expect(window.location.href).toBe("http://localhost/stores");
+    const banner = screen.getByTestId("finish-setup-banner");
+    expect(banner).toHaveTextContent("stores.finishSetup.title");
+    expect(within(banner).getByRole("link")).toHaveAttribute("href", "/onboarding");
+  });
+
+  it("a finished setup shows no banner", async () => {
+    h.stores.current = [ownerStore];
+    mockProfile({
+      hasOnboarded: true,
+      business: { stores: [{ id: "s1" }], onboardingStep: null },
+      staffLink: null,
+    });
+    render(<StoresContainer />);
+
+    expect(await screen.findByTestId("store-card")).toBeInTheDocument();
+    expect(screen.queryByTestId("finish-setup-banner")).toBeNull();
   });
 
   it("keeps the skeleton while the check is pending — no flash of the empty state or the create button", async () => {

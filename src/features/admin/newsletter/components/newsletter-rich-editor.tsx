@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/lang/i18n-provider";
+
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -80,6 +82,7 @@ function ToolbarButton({
 }
 
 function LinkPopover({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [href, setHref] = useState("");
   const [asButton, setAsButton] = useState(false);
@@ -122,8 +125,8 @@ function LinkPopover({ editor, disabled }: { editor: Editor; disabled?: boolean 
           variant={editor.isActive("link") ? "secondary" : "ghost"}
           size="icon"
           className="size-10"
-          aria-label="Link or button"
-          title="Link or button"
+          aria-label={t("adminPages.newsletter.rich.link")}
+          title={t("adminPages.newsletter.rich.link")}
           disabled={disabled}
         >
           <Link2 className="size-4" />
@@ -131,7 +134,7 @@ function LinkPopover({ editor, disabled }: { editor: Editor; disabled?: boolean 
       </PopoverTrigger>
       <PopoverContent className="w-80 space-y-3" align="start">
         <div className="space-y-1.5">
-          <Label htmlFor="newsletter-link-url">Link address</Label>
+          <Label htmlFor="newsletter-link-url">{t("adminPages.newsletter.rich.linkAddress")}</Label>
           <Input
             id="newsletter-link-url"
             value={href}
@@ -147,9 +150,9 @@ function LinkPopover({ editor, disabled }: { editor: Editor; disabled?: boolean 
         </div>
         <label className="flex min-h-10 cursor-pointer items-center justify-between gap-3 text-sm">
           <span>
-            Show as a button
+            {t("adminPages.newsletter.rich.asButton")}
             <span className="text-muted-foreground block text-xs">
-              A dark call-to-action button
+              {t("adminPages.newsletter.rich.asButtonHint")}
             </span>
           </span>
           <Switch checked={asButton} onCheckedChange={setAsButton} />
@@ -162,7 +165,7 @@ function LinkPopover({ editor, disabled }: { editor: Editor; disabled?: boolean 
             onClick={apply}
             disabled={!href.trim()}
           >
-            Apply
+            {t("adminPages.newsletter.rich.apply")}
           </Button>
           {editor.isActive("link") && (
             <Button
@@ -174,7 +177,7 @@ function LinkPopover({ editor, disabled }: { editor: Editor; disabled?: boolean 
                 setOpen(false);
               }}
             >
-              Remove link
+              {t("adminPages.newsletter.rich.removeLink")}
             </Button>
           )}
         </div>
@@ -184,6 +187,7 @@ function LinkPopover({ editor, disabled }: { editor: Editor; disabled?: boolean 
 }
 
 function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
+  const { t } = useI18n();
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const state = useEditorState({
@@ -204,7 +208,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
 
   async function uploadImage(file: File) {
     if (!isValidImage(file)) {
-      toast.error("Use a JPEG, PNG, WebP or GIF image.");
+      toast.error(t("adminPages.newsletter.toasts.badImage"));
       return;
     }
     setUploading(true);
@@ -213,10 +217,10 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
       formData.append("file", await compressImage(file));
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.data?.url) throw new Error(json?.error?.message || "Upload failed");
+      if (!res.ok || !json?.data?.url) throw new Error(json?.error?.message || t("adminPages.newsletter.toasts.uploadFailed"));
       editor.chain().focus().setImage({ src: json.data.url, alt: "" }).run();
     } catch (error) {
-      toast.error(error instanceof Error && error.message ? error.message : "Upload failed");
+      toast.error(error instanceof Error && error.message ? error.message : t("adminPages.newsletter.toasts.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -227,7 +231,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
   return (
     <div className="border-border flex flex-wrap items-center gap-0.5 border-b p-1">
       <ToolbarButton
-        label="Bold"
+        label={t("adminPages.newsletter.rich.bold")}
         active={state.bold}
         disabled={disabled}
         onClick={() => chain().toggleBold().run()}
@@ -235,7 +239,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
         <Bold className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Italic"
+        label={t("adminPages.newsletter.rich.italic")}
         active={state.italic}
         disabled={disabled}
         onClick={() => chain().toggleItalic().run()}
@@ -243,7 +247,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
         <Italic className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Underline"
+        label={t("adminPages.newsletter.rich.underline")}
         active={state.underline}
         disabled={disabled}
         onClick={() => chain().toggleUnderline().run()}
@@ -251,7 +255,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
         <Underline className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Heading"
+        label={t("adminPages.newsletter.rich.heading")}
         active={state.h2}
         disabled={disabled}
         onClick={() => chain().toggleHeading({ level: 2 }).run()}
@@ -259,7 +263,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
         <Heading2 className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Subheading"
+        label={t("adminPages.newsletter.rich.subheading")}
         active={state.h3}
         disabled={disabled}
         onClick={() => chain().toggleHeading({ level: 3 }).run()}
@@ -267,7 +271,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
         <Heading3 className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Bulleted list"
+        label={t("adminPages.newsletter.rich.bulleted")}
         active={state.bullet}
         disabled={disabled}
         onClick={() => chain().toggleBulletList().run()}
@@ -275,7 +279,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
         <List className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Numbered list"
+        label={t("adminPages.newsletter.rich.numbered")}
         active={state.ordered}
         disabled={disabled}
         onClick={() => chain().toggleOrderedList().run()}
@@ -283,7 +287,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
         <ListOrdered className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Quote"
+        label={t("adminPages.newsletter.rich.quote")}
         active={state.quote}
         disabled={disabled}
         onClick={() => chain().toggleBlockquote().run()}
@@ -292,28 +296,28 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
       </ToolbarButton>
       <LinkPopover editor={editor} disabled={disabled} />
       <ToolbarButton
-        label="Image"
+        label={t("adminPages.newsletter.rich.image")}
         disabled={disabled || uploading}
         onClick={() => fileInput.current?.click()}
       >
         {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
       </ToolbarButton>
       <ToolbarButton
-        label="Divider"
+        label={t("adminPages.newsletter.rich.divider")}
         disabled={disabled}
         onClick={() => chain().setHorizontalRule().run()}
       >
         <Minus className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Undo"
+        label={t("adminPages.newsletter.rich.undo")}
         disabled={disabled || !state.canUndo}
         onClick={() => chain().undo().run()}
       >
         <Undo2 className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Redo"
+        label={t("adminPages.newsletter.rich.redo")}
         disabled={disabled || !state.canRedo}
         onClick={() => chain().redo().run()}
       >
@@ -347,6 +351,7 @@ export function NewsletterRichEditor({
   onChange: (html: string) => void;
   disabled?: boolean;
 }) {
+  const { t } = useI18n();
   const editor = useEditor({
     immediatelyRender: false,
     editable: !disabled,
@@ -359,7 +364,7 @@ export function NewsletterRichEditor({
         HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
       }),
       Image,
-      Placeholder.configure({ placeholder: "Write your newsletter…" }),
+      Placeholder.configure({ placeholder: t("adminPages.newsletter.rich.placeholder") }),
     ],
     content: value,
     // Pasted HTML switched to the editor comes back as what the editor kept.

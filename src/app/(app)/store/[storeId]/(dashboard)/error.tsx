@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AlertTriangle, LayoutDashboard, RefreshCw } from "lucide-react";
+import { AlertTriangle, Home, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -96,8 +96,8 @@ export default function DashboardError({
               {t("common.routeError.tryAgain")}
             </Button>
             <Button asChild variant="outline" size="lg" className="flex-1">
-              <Link href={storeId ? `/store/${storeId}/dashboard` : "/"}>
-                <LayoutDashboard className="size-4" aria-hidden="true" />
+              <Link href={storeId ? `/store/${storeId}/home` : "/"}>
+                <Home className="size-4" aria-hidden="true" />
                 {t("common.routeError.backToDashboard")}
               </Link>
             </Button>

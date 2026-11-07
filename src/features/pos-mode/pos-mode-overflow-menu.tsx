@@ -23,6 +23,7 @@ import {
   Cable,
   AlertTriangle,
   LogIn,
+  Palette,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
@@ -283,7 +284,7 @@ export function PosModeOverflowMenu({
   // dropping back onto /dashboard — mirrors the same resume behavior already
   // used app-wide (src/lib/last-visited.ts), scoped to non-POS pages only so
   // it can't just point right back at this same shell.
-  const [backOfficeHref, setBackOfficeHref] = useState(`/store/${storeId}/dashboard`);
+  const [backOfficeHref, setBackOfficeHref] = useState(`/store/${storeId}/home`);
   useEffect(() => {
     try {
       const last = localStorage.getItem(LAST_VISITED_BACK_OFFICE_COOKIE);
@@ -291,7 +292,7 @@ export function PosModeOverflowMenu({
         setBackOfficeHref(last);
       }
     } catch {
-      // Ignore blocked storage — falls back to the default /dashboard landing.
+      // Ignore blocked storage — falls back to the default Home landing.
     }
   }, [storeId]);
 
@@ -556,6 +557,16 @@ export function PosModeOverflowMenu({
                   />
                 </label>
               </div>
+              {/* Its banners and look are the owner's to edit (an owner-only
+                  Store Dashboard page), so only the owner is offered the way there. */}
+              {profileRole === "OWNER" && !linkedStaff && (
+                <MenuRow
+                  icon={Palette}
+                  label={t("pos.customerDisplay.editor.customizeMenu")}
+                  href={`/store/${storeId}/customer-display`}
+                  onClick={close}
+                />
+              )}
 
               <MenuRow
                 icon={Cable}

@@ -1,115 +1,130 @@
 /**
- * Dashboard Sidebar Component
+ * Dashboard Sidebar
  *
- * Renders navigation sidebar with navigation links, store switcher, and language selector.
- * Supports both desktop and mobile layouts.
+ * `mode="desktop"` (xl+) is the two-pane DesktopSidebar: a category rail and the
+ * active category's pages. `mode="mobile"` is the phone / tablet menu drawer
+ * (opened from the Topbar): one scrolling list of every group, with the store,
+ * language, display preferences and the account menu at the bottom.
  */
 
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 import { Search, Lock, Monitor, ArrowRight, CircleHelp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { useAlertsCount } from "@/features/dashboard/alerts/hooks/use-alerts-count";
-import { useCurrentStore } from "./hooks/use-current-store";
-import { dashboardNavigation, type NavSection, type PlanTier } from "@/config/navigation.config";
+import { dashboardNavigation, homeNavItem, type NavSection } from "@/config/navigation.config";
 import LangSwitcher from "@/components/lang/lang-switcher";
-import { StoreSwitcher } from "./store-switcher";
+import { FeedbackButton } from "@/features/dashboard/feedback/components/feedback-button";
+import { APP_VERSION } from "@/lib/version";
+import { PLAN_LABELS, upgradeHrefFor } from "@/lib/plans/entitlements";
+import { cn } from "@/lib/utils";
+import { DesktopSidebar } from "./desktop-sidebar";
+import { NavItemLink, useNavContext } from "./nav-item-link";
+import { NavUserDrawerSection } from "./nav-user";
 import { OfflineSyncTrigger, PwaInstallTrigger } from "./pwa-install-dialog";
+import { StoreSwitcher } from "./store-switcher";
 import { ThemeToggle } from "./theme-toggle";
 import { ZoomControl } from "./zoom-control";
-import { FeedbackButton } from "@/features/dashboard/feedback/components/feedback-button";
-import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
-import { APP_VERSION } from "@/lib/version";
-import { planRank, PLAN_LABELS, upgradeHrefFor } from "@/lib/plans/entitlements";
-import { usePosSession } from "@/features/pos/hooks/use-pos-session";
+
+/** Case- and accent-insensitive, so "resume" finds "Résumé" and "kasir" finds "Kasir". */
+function foldForSearch(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
 
 interface SidebarProps {
   mode?: "desktop" | "mobile";
   navigation?: NavSection[];
+  /** Opens the global search dialog (desktop: its button in the rail). */
+  onSearch?: () => void;
 }
 
-export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: SidebarProps) {
-  const pathname = usePathname();
+export function Sidebar({
+  mode = "desktop",
+  navigation = dashboardNavigation,
+  onSearch,
+}: SidebarProps) {
+  if (mode === "desktop") return <DesktopSidebar navigation={navigation} onSearch={onSearch} />;
+  return <MobileSidebar navigation={navigation} />;
+}
+
+function MobileSidebar({ navigation }: { navigation: NavSection[] }) {
   const { t } = useI18n();
-  const { storeId } = useCurrentStore();
+  const ctx = useNavContext();
+  const { pathname, storeId, staffAllowedPages, hasAccess } = ctx;
 
-  const alertsCount = useAlertsCount();
-  const { data: subData } = useSubscriptionStatus();
-  const posSession = usePosSession();
-
-  const currentPlan: PlanTier = (subData?.subscription?.plan as PlanTier) ?? "FREE";
-
-  // Role-based, not ID-based: a StaffMember row can itself have role "OWNER"
-  // (e.g. seeded accounts) and is functionally unrestricted, same as the
-  // synthetic "owner" bypass login.
-  const staffAllowedPages =
-    posSession.isActive && posSession.storeId === storeId && posSession.staffRole !== "OWNER"
-      ? posSession.allowedPages
-      : null;
-
-  function hasAccess(requiredPlan: PlanTier | undefined, href: string): boolean {
-    if (requiredPlan && planRank(currentPlan) < planRank(requiredPlan)) return false;
-    if (staffAllowedPages && !staffAllowedPages.includes(href)) return false;
-    return true;
-  }
-
-  const getBadgeCount = (badgeKey?: string): number | null => {
-    if (!badgeKey) return null;
-    return badgeKey === "alerts" ? alertsCount : null;
-  };
-
-  // The Help centre: a footer link, not a rail item — every member of the store
+  // The Help centre: a footer link, not a nav item — every member of the store
   // can open it (no plan tier, no page grant), like the changelog.
   const helpHref = storeId ? `/store/${storeId}/help` : null;
   const helpActive = helpHref !== null && pathname === helpHref;
 
+  // Home: its own first row rather than a dashboardNavigation item (see
+  // homeNavItem) — open to every member of the store, no plan, no grant.
+  const homeHref = storeId ? `/store/${storeId}${homeNavItem.href}` : `/go${homeNavItem.href}`;
+  const homeActive = pathname === homeHref;
+  const HomeIcon = homeNavItem.icon;
+
+  // The drawer's search box filters the list by label.
+  const [navQuery, setNavQuery] = useState("");
+  const foldedQuery = foldForSearch(navQuery.trim());
+  const matchesQuery = (label: string) =>
+    foldedQuery === "" || foldForSearch(label).includes(foldedQuery);
+  const filteredNavigation =
+    foldedQuery === ""
+      ? navigation
+      : navigation.map((section) => ({
+          ...section,
+          items: section.items.filter((item) => matchesQuery(t(item.labelKey))),
+        }));
+  const showHome = matchesQuery(t(homeNavItem.labelKey));
+  const showPos = matchesQuery(t("nav.pos"));
+  const nothingMatches =
+    foldedQuery !== "" &&
+    !showHome &&
+    !showPos &&
+    filteredNavigation.every((section) => section.items.length === 0);
+
   return (
-    <aside
-      className={cn(
-        mode === "desktop"
-          ? // Fixed rail only at true desktop/laptop widths (xl+) — every iPad
-            // size (including 1024px landscape) uses the hamburger-drawer
-            // Sidebar (mode="mobile") instead, so tablets keep full content width.
-            "hidden h-full w-[230px] shrink-0 xl:block"
-          : "mt-12 flex h-[calc(100%-3rem)] xl:hidden"
-      )}
-    >
-      <div
-        className={cn(
-          "scrollbar-thin bg-card flex h-full w-full flex-col overflow-y-auto border shadow-sm",
-          // Desktop keeps full rounding; the mobile drawer squares the bottom (flush to edge)
-          mode === "desktop" ? "rounded-xl" : "rounded-t-xl"
-        )}
-      >
-        {mode === "mobile" && (
-          <div className="border-b p-3">
-            <div className="relative">
-              <Search className="text-foreground/70 pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-              <Input
-                placeholder={t("actions.searchPlaceholder")}
-                aria-label={t("actions.searchPlaceholder")}
-                className="h-9 rounded-full pl-9"
-              />
-            </div>
+    <aside className="mt-12 flex h-[calc(100%-3rem)] lg:hidden">
+      <div className="scrollbar-thin bg-card flex h-full w-full flex-col overflow-y-auto rounded-t-xl border shadow-sm">
+        <div className="border-b p-3">
+          <div className="relative">
+            <Search className="text-foreground/70 pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Input
+              type="search"
+              value={navQuery}
+              onChange={(event) => setNavQuery(event.target.value)}
+              placeholder={t("actions.searchPlaceholder")}
+              aria-label={t("actions.searchPlaceholder")}
+              className="h-10 rounded-full pl-9"
+            />
           </div>
-        )}
+        </div>
         <nav className="flex-1 p-3">
-          {/* Switch to POS Mode — the one deliberate way from Back Office into
-              the cashier/kitchen shell (docs/back-office-revamp.md: the two
-              shells are separate on purpose, but an Owner/Manager legitimately
-              needs a way in, e.g. to cover a rush or check the till). Not a
-              dashboardNavigation item — /pos lives in posModeNavItems, its own
-              shell's tab bar, not this rail — so it's rendered as a distinct,
-              always-first element instead of blending into a nav section.
-              Hidden entirely for a staff persona without /pos access (Cashier/
-              Kitchen never reach Back Office at all, so in practice this only
-              ever hides for a Manager persona an owner has hand-restricted). */}
-          {(staffAllowedPages === null || staffAllowedPages.includes("/pos")) && (
+          {showHome && (
+            <Link
+              href={homeHref}
+              aria-current={homeActive ? "page" : undefined}
+              className={cn(
+                "mb-2 flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition active:scale-[0.98]",
+                homeActive
+                  ? "bg-muted/60 text-foreground shadow-inner"
+                  : "text-foreground/80 hover:bg-muted/40 hover:text-foreground"
+              )}
+            >
+              <HomeIcon className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{t(homeNavItem.labelKey)}</span>
+            </Link>
+          )}
+          {/* Switch to POS Mode — the one deliberate way from the Store Dashboard
+              into the cashier/kitchen shell (docs/back-office-revamp.md). Not a
+              dashboardNavigation item: /pos lives in posModeNavItems, its own
+              shell's tab bar. Hidden for a staff persona without /pos access. */}
+          {showPos && (staffAllowedPages === null || staffAllowedPages.includes("/pos")) && (
             <div className="mb-3">
               {hasAccess("POS", "/pos") ? (
                 <Link
@@ -140,214 +155,93 @@ export function Sidebar({ mode = "desktop", navigation = dashboardNavigation }: 
               )}
             </div>
           )}
-          {navigation.map((section, sectionIndex) => {
-            // A staff persona with none of this section's pages granted
-            // shouldn't see a dangling section title with nothing under it.
+          {nothingMatches && (
+            <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+              {t("search.noResults")}
+            </p>
+          )}
+          {filteredNavigation.map((section, sectionIndex) => {
+            // A staff persona with none of this section's pages granted shouldn't
+            // see a dangling title with nothing under it — nor should a section
+            // the search filtered empty.
             const sectionHasVisibleItem =
-              staffAllowedPages === null ||
-              section.items.some((item) => staffAllowedPages.includes(item.href));
+              section.items.length > 0 &&
+              (staffAllowedPages === null ||
+                section.items.some((item) => staffAllowedPages.includes(item.href)));
             if (!sectionHasVisibleItem) return null;
-
             return (
-            <div key={sectionIndex} className={sectionIndex > 0 ? "mt-4" : ""}>
-              {section.title && (
-                <h3 className="text-muted-foreground mb-2 px-3 text-xs font-semibold tracking-wider uppercase">
-                  {section.title}
-                </h3>
-              )}
-              <ul className="space-y-1.5">
-                {section.items.map((item) => {
-                  // `storeId` comes from `useParams()`, so it's only populated while
-                  // the sidebar is actually mounted under `/store/[storeId]/…` — an
-                  // error/not-found boundary, or a shell rendered outside that segment,
-                  // leaves it undefined. The old fallback was the bare `item.href`,
-                  // which produced root-level links (`/dashboard`, `/data`, `/menu`, …).
-                  // None of those exist as routes, so the "safe" branch guaranteed a
-                  // 404 on every item. `/go/*` is the store launcher: it resolves the
-                  // signed-in user's store server-side and redirects to
-                  // `/store/{storeId}{item.href}`, so the fallback always lands on a
-                  // real page.
-                  const fullHref = storeId ? `/store/${storeId}${item.href}` : `/go${item.href}`;
-                  const active = pathname === fullHref;
-                  const label = t(item.labelKey);
-                  const Icon = item.icon;
-                  const badge = getBadgeCount(item.badgeKey);
-                  const staffRestricted =
-                    staffAllowedPages !== null && !staffAllowedPages.includes(item.href);
-                  const locked = !hasAccess(item.requiredPlan, item.href);
-                  const upgradeLabel = item.requiredPlan
-                    ? `Upgrade to ${PLAN_LABELS[item.requiredPlan]}`
-                    : undefined;
-                  // Event/benefit-framed copy (STRATEGY.md §5: "upgrade prompts
-                  // should explain the event... rather than the feature"), not
-                  // the generic upgradeLabel — that stays only as a supplementary
-                  // hover title, not the primary, always-visible line. A title
-                  // attribute is invisible on the mobile drawer (no hover there),
-                  // the exact device this shell's own spec names for a solo
-                  // owner checking in — see docs/back-office-revamp.md.
-                  const lockedHint = item.lockedHintKey ? t(item.lockedHintKey) : undefined;
-
-                  // A staff persona without access to this page just never sees
-                  // it — unlike a plan-tier lock, there's no upgrade path to show.
-                  if (staffRestricted) return null;
-
-                  if (locked) {
-                    // Locked items route to the pricing/upgrade flow (POS → trial promo),
-                    // consistent with the requirePlan redirect and the upgrade modal.
-                    const lockedHref = item.requiredPlan
-                      ? upgradeHrefFor(item.requiredPlan)
-                      : "/pricing#plans";
-                    return (
-                      <li key={item.href}>
-                        <Link
-                          href={lockedHref}
-                          title={upgradeLabel}
-                          className="group text-muted-foreground/40 flex cursor-pointer items-start justify-between gap-3 rounded-md px-3 py-2 text-sm transition hover:bg-amber-500/8 hover:text-amber-500/70 active:scale-[0.98]"
-                        >
-                          <span className="flex min-w-0 items-start gap-3">
-                            <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
-                            <span className="flex min-w-0 flex-col">
-                              <span className="truncate">{label}</span>
-                              {lockedHint && (
-                                <span className="text-muted-foreground/50 truncate text-[11px] font-normal">
-                                  {lockedHint}
-                                </span>
-                              )}
-                            </span>
-                          </span>
-                          <span className="mt-0.5 flex shrink-0 items-center gap-1 text-[10px] font-medium whitespace-nowrap text-amber-500/50 transition-colors group-hover:text-amber-500">
-                            <Lock className="size-3 shrink-0" />
-                            {item.requiredPlan && PLAN_LABELS[item.requiredPlan]}
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  }
-
-                  // No explicit `prefetch` below — Next's default is deliberate, but be
-                  // precise about what it does and does not buy, because the obvious
-                  // reading is wrong: the default does NOT stop prefetching. Every
-                  // in-viewport <Link> still issues an RSC request, and on the desktop
-                  // rail all 13 are in view at once, so the request COUNT is roughly
-                  // unchanged.
-                  //
-                  // What changes is the SHAPE of each one. `prefetch={true}` forces a
-                  // full payload for the whole target route. The default stops at the
-                  // nearest `loading.tsx` — which now exists at `(dashboard)/loading.tsx`
-                  // — so each prefetch fetches the shared shell and the skeleton rather
-                  // than the page's own server work. The heavy per-page fetches (Finance
-                  // aggregation, the Data page's four parallel repository reads) stop
-                  // running 18-at-a-time on mount against a serverless Postgres pool,
-                  // which is the actual win, and prefetches that fail on flaky in-store
-                  // wifi now cost a skeleton rather than a full render.
-                  //
-                  // Note this does not avoid re-running `(dashboard)/layout.tsx` itself:
-                  // it is dynamic (getSession reads cookies), so it executes per request
-                  // either way. If sidebar prefetch load ever needs to actually drop, the
-                  // next lever is `prefetch={false}` on the non-primary items — not
-                  // reverting this.
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={fullHref}
-                        className={cn(
-                          "group flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition active:scale-[0.98]",
-                          active
-                            ? "bg-muted/60 text-foreground shadow-inner"
-                            : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                        )}
-                        aria-current={active ? "page" : undefined}
-                      >
-                        <span className="flex min-w-0 items-center gap-3">
-                          <Icon className="size-4 shrink-0" aria-hidden />
-                          <span className="truncate">{label}</span>
-                        </span>
-                        {badge !== null && badge > 0 && (
-                          <span
-                            className="animate-in fade-in flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-semibold text-white shadow-sm"
-                            aria-label={`${badge} ${item.badgeKey}`}
-                          >
-                            {badge > 99 ? "99+" : badge}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+              <div key={section.id} className={sectionIndex > 0 ? "mt-4" : ""}>
+                {section.title && (
+                  <h3 className="text-muted-foreground mb-2 px-3 text-xs font-semibold tracking-wider uppercase">
+                    {section.title}
+                  </h3>
+                )}
+                <ul className="space-y-1.5">
+                  {section.items.map((item) => (
+                    <NavItemLink key={item.href} item={item} ctx={ctx} />
+                  ))}
+                </ul>
+              </div>
             );
           })}
         </nav>
-        {mode === "desktop" && helpHref && (
-          <div className="border-t p-3">
+        <div className="space-y-3 border-t p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          {/* Store and language: from sm the Topbar shows both, so only phones need them here. */}
+          <div className="flex flex-col gap-2 sm:hidden">
+            <span className="text-muted-foreground text-xs font-medium">
+              {t("dashboard.storeSelector.label")}
+            </span>
+            <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:min-w-0">
+              <StoreSwitcher />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:hidden">
+            <span className="text-muted-foreground text-xs font-medium">
+              {t("common.language.label")}
+            </span>
+            <LangSwitcher className="w-full" />
+          </div>
+          {/* Zoom sits with the other per-device display preferences: on a phone
+              the drawer is where language and theme live, so it is where someone
+              looking for it will look. */}
+          <div className="flex flex-col gap-2">
+            <span className="text-muted-foreground text-xs font-medium">{t("nav.zoom")}</span>
+            <ZoomControl label="none" />
+          </div>
+          {/* Quick actions: theme + feedback. Styled for the light card surface
+              (override the topbar-only cream color to the themed foreground). */}
+          <div className="text-foreground flex items-center gap-1">
+            <ThemeToggle tone="surface" />
+            <div style={{ "--epi-cream-50": "var(--foreground)" } as CSSProperties}>
+              <FeedbackButton />
+            </div>
+          </div>
+          <PwaInstallTrigger variant="full" />
+          <OfflineSyncTrigger variant="full" />
+          {helpHref && (
             <Link
               href={helpHref}
               aria-current={helpActive ? "page" : undefined}
-              className={cn(
-                "flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm transition active:scale-[0.98]",
-                helpActive
-                  ? "bg-muted/60 text-foreground shadow-inner"
-                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-              )}
+              className="text-muted-foreground hover:text-foreground flex min-h-10 items-center gap-2 text-sm transition-colors"
             >
               <CircleHelp className="size-4 shrink-0" aria-hidden />
-              <span className="truncate">{t("nav.help")}</span>
+              <span>{t("nav.help")}</span>
             </Link>
+          )}
+          <Link
+            href={storeId ? `/store/${storeId}/changelog` : "/changelog"}
+            className="text-muted-foreground hover:text-foreground flex items-center justify-between gap-2 text-xs transition-colors"
+          >
+            <span>{t("footer.linkChangelog")}</span>
+            <span className="font-medium">{`v${APP_VERSION}`}</span>
+          </Link>
+          {/* The account menu lives here on a phone — the topbar has no avatar
+              below sm (see topbar.tsx); from sm the avatar's own menu has it.
+              Log out stays the last row. */}
+          <div className="border-t pt-3 sm:hidden">
+            <NavUserDrawerSection />
           </div>
-        )}
-        {mode === "mobile" && (
-          <div className="space-y-3 border-t p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-            <div className="flex flex-col gap-2">
-              <span className="text-muted-foreground text-xs font-medium">
-                {t("dashboard.storeSelector.label")}
-              </span>
-              <div className="[&_button]:w-full [&_button]:max-w-none [&_button]:min-w-0">
-                <StoreSwitcher />
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <span className="text-muted-foreground text-xs font-medium">
-                {t("common.language.label")}
-              </span>
-              <LangSwitcher className="w-full" />
-            </div>
-            {/* Zoom sits with the other per-device display preferences. The account
-                dropdown carries it too, but on a phone the drawer is where language
-                and theme live, so it is where someone looking for it will look. */}
-            <div className="flex flex-col gap-2">
-              <span className="text-muted-foreground text-xs font-medium">{t("nav.zoom")}</span>
-              <ZoomControl label="none" />
-            </div>
-            {/* Quick actions: theme + feedback. Styled for the light card surface
-                (override the topbar-only cream color to the themed foreground). */}
-            <div className="text-foreground flex items-center gap-1">
-              <ThemeToggle tone="surface" />
-              <div style={{ "--epi-cream-50": "var(--foreground)" } as CSSProperties}>
-                <FeedbackButton />
-              </div>
-            </div>
-            <PwaInstallTrigger variant="full" />
-            <OfflineSyncTrigger variant="full" />
-            {helpHref && (
-              <Link
-                href={helpHref}
-                aria-current={helpActive ? "page" : undefined}
-                className="text-muted-foreground hover:text-foreground flex min-h-10 items-center gap-2 text-sm transition-colors"
-              >
-                <CircleHelp className="size-4 shrink-0" aria-hidden />
-                <span>{t("nav.help")}</span>
-              </Link>
-            )}
-            <Link
-              href={storeId ? `/store/${storeId}/changelog` : "/changelog"}
-              className="text-muted-foreground hover:text-foreground flex items-center justify-between gap-2 text-xs transition-colors"
-            >
-              <span>{t("footer.linkChangelog")}</span>
-              <span className="font-medium">{`v${APP_VERSION}`}</span>
-            </Link>
-          </div>
-        )}
+        </div>
       </div>
     </aside>
   );

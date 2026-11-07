@@ -49,6 +49,8 @@ export function isSafeRedirectTarget(value: string): boolean {
  */
 const RESUMABLE_STORE_SECTIONS = new Set([
   "/alerts",
+  // Analytics, the renamed Overview. "/dashboard" stays so old cookies still land (it redirects).
+  "/analytics",
   "/attendance",
   "/billing",
   "/changelog",
@@ -57,6 +59,9 @@ const RESUMABLE_STORE_SECTIONS = new Set([
   "/dashboard",
   "/data",
   "/finance",
+  // The Store Dashboard's start page (greeting, quick actions, recently
+  // visited, setup progress) and the default landing since 3.44.0.
+  "/home",
   "/management",
   "/owner",
   "/pos",
@@ -204,12 +209,20 @@ export function isPosAppPath(value: string): boolean {
  * server/Edge-safe copy so the store index page and the /go launcher can
  * resolve the same preference without pulling in a React hook.
  */
-export const DEFAULT_LANDING_SECTIONS = ["dashboard", "pos", "storefront", "data"] as const;
+export const DEFAULT_LANDING_SECTIONS = ["home", "analytics", "pos", "storefront", "data"] as const;
 
-/** Coerces a raw `User.defaultLanding` value to a section that really exists. */
+/**
+ * Coerces a raw `User.defaultLanding` value to a section that really exists.
+ *
+ * Home is the landing for everyone who has not chosen another. The column's
+ * database default is still "dashboard" (`@default("dashboard")`, the old
+ * Overview page, which is Analytics now), and nobody could pick a landing
+ * before Settings gained the choice, so a stored "dashboard" means "never
+ * chose" and reads as Home. An explicit Analytics choice is stored as
+ * "analytics"; "pos", "storefront" and "data" are honoured as before.
+ */
 export function normalizeDefaultLanding(value: unknown): string {
-  return typeof value === "string" &&
-    (DEFAULT_LANDING_SECTIONS as readonly string[]).includes(value)
+  return typeof value === "string" && (DEFAULT_LANDING_SECTIONS as readonly string[]).includes(value)
     ? value
-    : "dashboard";
+    : "home";
 }

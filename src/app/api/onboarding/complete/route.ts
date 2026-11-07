@@ -5,9 +5,9 @@ import { onboardingCompleteSchema } from "@/lib/validation/onboarding.schemas";
 import { createSuccessResponse } from "@/types/api/responses";
 
 /**
- * POST /api/onboarding/complete — setup wizard step 3 ("Your goals"), then publish.
+ * POST /api/onboarding/complete — publish, at the end of setup wizard step 2.
  *
- * Saves the goals, publishes the draft storefront, clears
+ * Credits an optional partner code typed in the wizard (`referralCode`), publishes the draft storefront, clears
  * Business.onboardingStep and sets User.hasOnboarded (subsequent visits to
  * /onboarding redirect away). Idempotent. Body: `{ goals?: OnboardingGoal[] }`
  * (an empty body means no goals); response: `OnboardingCompleteResult`.

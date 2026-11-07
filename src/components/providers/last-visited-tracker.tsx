@@ -12,6 +12,7 @@ import {
   isBackOfficeAppPath,
   isPosAppPath,
 } from "@/lib/last-visited";
+import { recordRecentVisit } from "@/lib/recent-visits";
 
 // 400 days — the Chrome-enforced ceiling on Set-Cookie max-age, used here as
 // "as long as the platform allows" rather than a deliberately chosen TTL.
@@ -77,6 +78,8 @@ export function LastVisitedTracker(): null {
     if (pathname.endsWith("/print")) return;
     const search = searchParams.toString();
     const url = pathname + (search ? `?${search}` : "");
+    // Home's "Recently visited" row (per store, this device only).
+    recordRecentVisit(url);
     try {
       localStorage.setItem(LAST_VISITED_COOKIE, url);
     } catch {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/lang/i18n-provider";
+
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -220,13 +222,14 @@ function OrdersTrendChart({ data }: { data: { date: string; count: number }[] })
 }
 
 export function CapacityDashboard() {
+  const { t, intlLocale } = useI18n();
   const router = useRouter();
   const { data, isLoading, error } = useQuery<{ data: CapacityData }>({
     queryKey: ["admin-capacity"],
     queryFn: async () => {
       const res = await fetch("/api/admin/capacity");
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.detail || json?.error || "Failed to fetch capacity");
+      if (!res.ok) throw new Error(json?.detail || json?.error || t("adminPages.capacity.fetchCapacity"));
       return json;
     },
   });
@@ -238,7 +241,7 @@ export function CapacityDashboard() {
     queryFn: async () => {
       const res = await fetch("/api/admin/platform-usage");
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error || "Failed to fetch platform usage");
+      if (!res.ok) throw new Error(json?.error || t("adminPages.capacity.fetchPlatform"));
       return json;
     },
   });
@@ -256,7 +259,7 @@ export function CapacityDashboard() {
     queryFn: async () => {
       const res = await fetch("/api/admin/backups");
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(apiErrorMessage(json, "Failed to fetch backups"));
+      if (!res.ok) throw new Error(apiErrorMessage(json, t("adminPages.capacity.fetchBackups")));
       return json;
     },
     // Poll while a run is in flight so its row settles without a reload.
@@ -272,14 +275,14 @@ export function CapacityDashboard() {
     mutationFn: async () => {
       const res = await fetch("/api/admin/backups", { method: "POST" });
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(apiErrorMessage(json, "Failed to start the backup"));
+      if (!res.ok) throw new Error(apiErrorMessage(json, t("adminPages.capacity.startFailed")));
       return json.data as { runId: string; folder: string };
     },
     // Starting a backup isn't idempotent: never resend on failure.
     retry: false,
     onSuccess: ({ runId }) => {
       startedRunId.current = runId;
-      toast.success("Backup started");
+      toast.success(t("adminPages.capacity.toasts.started"));
     },
     onError: (e: Error) => toast.error(e.message),
     // Returned so the button stays pending until the RUNNING row (ours, or the
@@ -293,13 +296,17 @@ export function CapacityDashboard() {
     startedRunId.current = null;
     if (run.status === "SUCCESS") {
       toast.success(
-        `Backup finished: ${run.tableCount} tables, ${formatBytes(Number(run.totalBytes))}`
+        t("adminPages.capacity.toasts.finished")
+          .replace("{tables}", String(run.tableCount))
+          .replace("{size}", formatBytes(Number(run.totalBytes)))
       );
     } else if (run.status === "FAILED") {
-      toast.error(`Backup failed: ${run.errorMessage ?? "unknown error"}`);
+      toast.error(
+        t("adminPages.capacity.toasts.failed").replace("{error}", run.errorMessage ?? t("adminPages.capacity.toasts.unknownError"))
+      );
     } else {
       toast.error(
-        `The backup never finished (still running after ${ACTIVE_RUN_WINDOW_MINUTES} minutes).`
+        t("adminPages.capacity.toasts.neverFinished").replace("{minutes}", String(ACTIVE_RUN_WINDOW_MINUTES))
       );
     }
   }, [backups, backupsUpdatedAt]);
@@ -313,9 +320,9 @@ export function CapacityDashboard() {
       <div className="p-8">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t("adminPages.capacity.error")}</AlertTitle>
           <AlertDescription>
-            {error instanceof Error ? error.message : "Failed to load capacity data."}
+            {error instanceof Error ? error.message : t("adminPages.capacity.loadFailed")}
           </AlertDescription>
         </Alert>
       </div>
@@ -332,14 +339,14 @@ export function CapacityDashboard() {
               <Gauge className="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <h1 className="text-foreground text-lg font-bold">Capacity & Usage</h1>
+              <h1 className="text-foreground text-lg font-bold">{t("adminPages.capacity.title")}</h1>
               <p className="text-muted-foreground text-xs">
-                Database, storage, and tenant scale — early warning before a plan limit hits.
+                {t("adminPages.capacity.subtitle")}
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => router.push("/admin")}>
-                ← Back
+                {t("adminPages.capacity.back")}
               </Button>
             </div>
           </div>
@@ -352,21 +359,21 @@ export function CapacityDashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2 font-medium">
-                <Database className="h-4 w-4 text-blue-500" /> Database Size
+                <Database className="h-4 w-4 text-blue-500" /> {t("adminPages.capacity.cards.dbSize")}
               </CardDescription>
               <CardTitle className="text-2xl">
                 {isLoading ? <Skeleton className="h-8 w-24" /> : formatBytes(capacity?.db.totalBytes ?? 0)}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-xs">Total Postgres storage (all tables).</p>
+              <p className="text-muted-foreground text-xs">{t("adminPages.capacity.cards.dbNote")}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2 font-medium">
-                <ImageIcon className="h-4 w-4 text-violet-500" /> Blob Storage
+                <ImageIcon className="h-4 w-4 text-violet-500" /> {t("adminPages.capacity.cards.blob")}
               </CardDescription>
               <CardTitle className="text-2xl">
                 {isLoading ? (
@@ -374,15 +381,20 @@ export function CapacityDashboard() {
                 ) : capacity?.blob ? (
                   formatBytes(capacity.blob.totalBytes)
                 ) : (
-                  <span className="text-muted-foreground text-base font-normal">Not configured</span>
+                  <span className="text-muted-foreground text-base font-normal">
+                    {t("adminPages.capacity.cards.notConfigured")}
+                  </span>
                 )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground text-xs">
                 {capacity?.blob
-                  ? `${capacity.blob.count.toLocaleString()} objects (menu photos, receipts, logos).`
-                  : "Set BLOB_READ_WRITE_TOKEN to enable."}
+                  ? t("adminPages.capacity.cards.blobObjects").replace(
+                      "{count}",
+                      capacity.blob.count.toLocaleString(intlLocale)
+                    )
+                  : t("adminPages.capacity.cards.blobSetup")}
               </p>
             </CardContent>
           </Card>
@@ -390,40 +402,40 @@ export function CapacityDashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2 font-medium">
-                <Store className="h-4 w-4 text-emerald-500" /> Stores
+                <Store className="h-4 w-4 text-emerald-500" /> {t("adminPages.capacity.cards.stores")}
               </CardDescription>
               <CardTitle className="text-2xl">
                 {isLoading ? <Skeleton className="h-8 w-16" /> : capacity?.tenants.storeCount}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-xs">Total stores across all businesses.</p>
+              <p className="text-muted-foreground text-xs">{t("adminPages.capacity.cards.storesNote")}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2 font-medium">
-                <Users className="h-4 w-4 text-amber-500" /> Users
+                <Users className="h-4 w-4 text-amber-500" /> {t("adminPages.capacity.cards.users")}
               </CardDescription>
               <CardTitle className="text-2xl">
                 {isLoading ? <Skeleton className="h-8 w-16" /> : capacity?.tenants.userCount}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-xs">Total registered accounts.</p>
+              <p className="text-muted-foreground text-xs">{t("adminPages.capacity.cards.usersNote")}</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Platform usage */}
         <div>
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">Platform Usage</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight">{t("adminPages.capacity.platform.title")}</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Triangle className="h-4 w-4" /> Vercel — This Billing Period
+                  <Triangle className="h-4 w-4" /> {t("adminPages.capacity.platform.vercel")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -434,13 +446,13 @@ export function CapacityDashboard() {
                     <p className="text-2xl font-bold">
                       ${platform.vercel.totalCostUsd.toFixed(2)}
                       <span className="text-muted-foreground ml-1 text-xs font-normal">
-                        so far this period
+                        {t("adminPages.capacity.platform.soFar")}
                       </span>
                     </p>
                     <div className="space-y-1.5">
                       {platform.vercel.byService.length === 0 ? (
                         <p className="text-muted-foreground text-xs">
-                          No billable usage this period.
+                          {t("adminPages.capacity.platform.noUsage")}
                         </p>
                       ) : (
                         platform.vercel.byService.slice(0, 6).map((s) => (
@@ -450,22 +462,22 @@ export function CapacityDashboard() {
                           >
                             <span className="text-muted-foreground">{s.serviceName}</span>
                             <span className="text-foreground tabular-nums">
-                              {s.consumedQuantity.toLocaleString()} {s.consumedUnit}
+                              {s.consumedQuantity.toLocaleString(intlLocale)} {s.consumedUnit}
                             </span>
                           </div>
                         ))
                       )}
                     </div>
                     <p className="text-muted-foreground pt-1 text-[11px]">
-                      Vercel doesn&apos;t expose per-account plan limits via API — compare against{" "}
+                      {t("adminPages.capacity.platform.vercelLimits")}{" "}
                       vercel.com/docs/limits.
                     </p>
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-xs">
                     {platform?.vercelError
-                      ? `Error: ${platform.vercelError}`
-                      : "Not configured — add VERCEL_API_TOKEN and VERCEL_TEAM_ID to enable."}
+                      ? t("adminPages.capacity.platform.errorPrefix").replace("{error}", platform.vercelError)
+                      : t("adminPages.capacity.platform.vercelSetup")}
                   </p>
                 )}
               </CardContent>
@@ -474,7 +486,7 @@ export function CapacityDashboard() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Zap className="h-4 w-4" /> Neon — Storage & Compute
+                  <Zap className="h-4 w-4" /> {t("adminPages.capacity.platform.neon")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -484,7 +496,7 @@ export function CapacityDashboard() {
                   <div className="space-y-3">
                     <div>
                       <div className="mb-1 flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Storage</span>
+                        <span className="text-muted-foreground">{t("adminPages.capacity.platform.storage")}</span>
                         <span className="text-foreground tabular-nums">
                           {formatBytes(platform.neon.storageBytes)}
                           {platform.neon.storageLimitBytes
@@ -500,7 +512,7 @@ export function CapacityDashboard() {
                     </div>
                     <div>
                       <div className="mb-1 flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Compute time</span>
+                        <span className="text-muted-foreground">{t("adminPages.capacity.platform.compute")}</span>
                         <span className="text-foreground tabular-nums">
                           {formatHours(platform.neon.computeTimeSeconds)}
                           {platform.neon.computeLimitSeconds
@@ -521,8 +533,8 @@ export function CapacityDashboard() {
                 ) : (
                   <p className="text-muted-foreground text-xs">
                     {platform?.neonError
-                      ? `Error: ${platform.neonError}`
-                      : "Not configured — add NEON_API_KEY and NEON_PROJECT_ID to enable."}
+                      ? t("adminPages.capacity.platform.errorPrefix").replace("{error}", platform.neonError)
+                      : t("adminPages.capacity.platform.neonSetup")}
                   </p>
                 )}
               </CardContent>
@@ -536,10 +548,10 @@ export function CapacityDashboard() {
             <div>
               <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
                 <Archive className="text-muted-foreground h-5 w-5" />
-                Database Backups
+                {t("adminPages.capacity.backups.title")}
               </h2>
               <p className="text-muted-foreground mt-1 text-xs">
-                Nightly at 02:00 UTC by the Inngest cron, kept 90 days in Cloudflare R2.
+                {t("adminPages.capacity.backups.schedule")}
               </p>
             </div>
             <Button
@@ -553,7 +565,7 @@ export function CapacityDashboard() {
               ) : (
                 <DatabaseBackup />
               )}
-              {activeRun ? "Backing up…" : "Run backup now"}
+              {activeRun ? t("adminPages.capacity.backups.running") : t("adminPages.capacity.backups.runNow")}
             </Button>
           </div>
           <Card>
@@ -563,36 +575,35 @@ export function CapacityDashboard() {
               ) : backups?.lastSuccess ? (
                 <div className="flex flex-wrap items-center gap-4">
                   <div>
-                    <p className="text-muted-foreground text-xs">Last Successful Backup</p>
+                    <p className="text-muted-foreground text-xs">{t("adminPages.capacity.backups.lastSuccess")}</p>
                     <p
                       className={`text-lg font-bold ${backupsStale ? "text-amber-500" : "text-emerald-500"}`}
                     >
-                      {new Date(backups.lastSuccess.finishedAt!).toLocaleString()}
-                      {backupsStale && " ⚠ stale"}
+                      {new Date(backups.lastSuccess.finishedAt!).toLocaleString(intlLocale)}
+                      {backupsStale && t("adminPages.capacity.backups.stale")}
                     </p>
                   </div>
                   <div className="text-muted-foreground text-xs">
-                    {backups.lastSuccess.tableCount} tables ·{" "}
-                    {backups.lastSuccess.totalRows.toLocaleString()} rows ·{" "}
-                    {formatBytes(Number(backups.lastSuccess.totalBytes))} compressed
+                    {t("adminPages.capacity.backups.summary")
+                      .replace("{tables}", String(backups.lastSuccess.tableCount))
+                      .replace("{rows}", backups.lastSuccess.totalRows.toLocaleString(intlLocale))
+                      .replace("{size}", formatBytes(Number(backups.lastSuccess.totalBytes)))}
                   </div>
                 </div>
               ) : backups?.r2Configured ? (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>R2 is configured — no backup has run yet</AlertTitle>
+                  <AlertTitle>{t("adminPages.capacity.backups.noneYetTitle")}</AlertTitle>
                   <AlertDescription>
-                    The nightly job runs at 02:00 UTC. Use Run backup now to take one immediately
-                    instead of waiting.
+                    {t("adminPages.capacity.backups.noneYetBody")}
                   </AlertDescription>
                 </Alert>
               ) : (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>No successful backup recorded yet</AlertTitle>
+                  <AlertTitle>{t("adminPages.capacity.backups.noneTitle")}</AlertTitle>
                   <AlertDescription>
-                    Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_BUCKET_NAME to
-                    enable the nightly backup job.
+                    {t("adminPages.capacity.backups.noneBody")}
                   </AlertDescription>
                 </Alert>
               )}
@@ -602,10 +613,10 @@ export function CapacityDashboard() {
                   <table className="w-full min-w-[520px] text-sm">
                     <thead>
                       <tr className="border-border text-muted-foreground border-b text-xs tracking-wide uppercase">
-                        <th className="px-2 py-2 text-left font-medium">Status</th>
-                        <th className="px-2 py-2 text-left font-medium">Started</th>
-                        <th className="px-2 py-2 text-right font-medium">Tables</th>
-                        <th className="px-2 py-2 text-right font-medium">Size</th>
+                        <th className="px-2 py-2 text-left font-medium">{t("adminPages.capacity.backups.head.status")}</th>
+                        <th className="px-2 py-2 text-left font-medium">{t("adminPages.capacity.backups.head.started")}</th>
+                        <th className="px-2 py-2 text-right font-medium">{t("adminPages.capacity.backups.head.tables")}</th>
+                        <th className="px-2 py-2 text-right font-medium">{t("adminPages.capacity.backups.head.size")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -625,11 +636,11 @@ export function CapacityDashboard() {
                                 <Icon
                                   className={`h-3.5 w-3.5 ${status === "RUNNING" ? "animate-spin" : ""}`}
                                 />
-                                {abandoned ? "ABANDONED" : run.status}
+                                {t(`adminPages.capacity.backups.statuses.${abandoned ? "ABANDONED" : run.status}`)}
                               </span>
                             </td>
                             <td className="text-muted-foreground px-2 py-2 text-xs whitespace-nowrap">
-                              {new Date(run.startedAt).toLocaleString()}
+                              {new Date(run.startedAt).toLocaleString(intlLocale)}
                             </td>
                             <td className="text-muted-foreground px-2 py-2 text-right tabular-nums">
                               {run.tableCount || "—"}
@@ -650,7 +661,7 @@ export function CapacityDashboard() {
 
         {/* Orders trend */}
         <div>
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">Orders / Day (last 30 days)</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight">{t("adminPages.capacity.orders.title")}</h2>
           <Card>
             <CardContent className="h-64 pt-4">
               {isLoading ? (
@@ -659,7 +670,7 @@ export function CapacityDashboard() {
                 <OrdersTrendChart data={capacity!.tenants.ordersByDay} />
               ) : (
                 <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                  No orders in the last 30 days.
+                  {t("adminPages.capacity.orders.none")}
                 </div>
               )}
             </CardContent>
@@ -669,8 +680,8 @@ export function CapacityDashboard() {
         {/* Table growth */}
         <div>
           <h2 className="mb-4 text-lg font-semibold tracking-tight">
-            Fastest-Growing Tables{" "}
-            <span className="text-muted-foreground text-sm font-normal">(new rows written)</span>
+            {t("adminPages.capacity.growth.title")}{" "}
+            <span className="text-muted-foreground text-sm font-normal">{t("adminPages.capacity.growth.note")}</span>
           </h2>
           <Card>
             <CardContent className="p-0">
@@ -684,10 +695,10 @@ export function CapacityDashboard() {
                   <table className="w-full min-w-[560px] text-sm">
                     <thead>
                       <tr className="border-border text-muted-foreground border-b text-xs tracking-wide uppercase">
-                        <th className="px-4 py-3 text-left font-medium">Table</th>
-                        <th className="px-4 py-3 text-right font-medium">Last 24h</th>
-                        <th className="px-4 py-3 text-right font-medium">Last 7d</th>
-                        <th className="px-4 py-3 text-right font-medium">Last 30d</th>
+                        <th className="px-4 py-3 text-left font-medium">{t("adminPages.capacity.growth.table")}</th>
+                        <th className="px-4 py-3 text-right font-medium">{t("adminPages.capacity.growth.h24")}</th>
+                        <th className="px-4 py-3 text-right font-medium">{t("adminPages.capacity.growth.d7")}</th>
+                        <th className="px-4 py-3 text-right font-medium">{t("adminPages.capacity.growth.d30")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -698,13 +709,13 @@ export function CapacityDashboard() {
                           <tr key={g.table} className="border-border/60 border-b last:border-0">
                             <td className="text-foreground px-4 py-3 font-medium">{g.table}</td>
                             <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
-                              {g.last24h.toLocaleString()}
+                              {g.last24h.toLocaleString(intlLocale)}
                             </td>
                             <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
-                              {g.last7d.toLocaleString()}
+                              {g.last7d.toLocaleString(intlLocale)}
                             </td>
                             <td className="text-foreground px-4 py-3 text-right font-semibold tabular-nums">
-                              {g.last30d.toLocaleString()}
+                              {g.last30d.toLocaleString(intlLocale)}
                             </td>
                           </tr>
                         ))}
@@ -720,7 +731,7 @@ export function CapacityDashboard() {
         <div>
           <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
             <HardDrive className="text-muted-foreground h-5 w-5" />
-            Largest Tables by Disk Size
+            {t("adminPages.capacity.largest.title")}
           </h2>
           <Card>
             <CardContent className="p-0">
@@ -734,20 +745,20 @@ export function CapacityDashboard() {
                   <table className="w-full min-w-[560px] text-sm">
                     <thead>
                       <tr className="border-border text-muted-foreground border-b text-xs tracking-wide uppercase">
-                        <th className="px-4 py-3 text-left font-medium">Table</th>
-                        <th className="px-4 py-3 text-right font-medium">Rows (est.)</th>
-                        <th className="px-4 py-3 text-right font-medium">Size</th>
+                        <th className="px-4 py-3 text-left font-medium">{t("adminPages.capacity.growth.table")}</th>
+                        <th className="px-4 py-3 text-right font-medium">{t("adminPages.capacity.largest.rows")}</th>
+                        <th className="px-4 py-3 text-right font-medium">{t("adminPages.capacity.largest.size")}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(capacity?.db.tables ?? []).map((t) => (
-                        <tr key={t.name} className="border-border/60 border-b last:border-0">
-                          <td className="text-foreground px-4 py-3 font-medium">{t.name}</td>
+                      {(capacity?.db.tables ?? []).map((table) => (
+                        <tr key={table.name} className="border-border/60 border-b last:border-0">
+                          <td className="text-foreground px-4 py-3 font-medium">{table.name}</td>
                           <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
-                            {t.rowEstimate.toLocaleString()}
+                            {table.rowEstimate.toLocaleString(intlLocale)}
                           </td>
                           <td className="text-foreground px-4 py-3 text-right font-semibold tabular-nums">
-                            {formatBytes(t.totalBytes)}
+                            {formatBytes(table.totalBytes)}
                           </td>
                         </tr>
                       ))}

@@ -1,5 +1,52 @@
 # STATUS.md
 
+## 3.46.0 — Customer display: promo banners, look, thank-you extras, QRIS (built 2026-11-07, **not committed**: the tree also holds another session's 3.44.0–3.45.0 work)
+
+- [x] **Store-wide settings** in `CustomerDisplaySettings` (one row per store, migration `20261106120000_customer_display_settings`); banners are a JSON list on the row (max 20), validated by `customerDisplaySettingsSchema`. The on/off switch stays per device (localStorage), unchanged.
+- [x] **API** `GET/PUT /api/stores/{id}/customer-display`: GET for staff with `/pos` (the display polls it every 2 min); PUT owner-only (`requireOwnerOnlyApi`), audited as `store.customer_display.update`, deletes the owner's own uploads the new config dropped (best effort, after the save).
+- [x] **Editor** at `/store/{id}/customer-display` (owner-only + POS plan): Banners / Look / Text / After payment tabs, live preview of the real `CustomerDisplayView` (welcome, order, QRIS, thank-you; landscape or upright). Linked from a Settings card and the till menu (owner only). Not in the sidebar nav on purpose (navigation.config.ts was mid-edit in another session).
+- [x] **Display**: welcome screen instead of an empty receipt; idle slideshow; banners beside the order; photo/solid/gradient backgrounds; glass/solid panels; font; logo override + size; order side; portrait layout; tax row hidden at 0; thank-you title/message/length, change due, Google review + Instagram QR, guest WiFi; QRIS full size while the checkout has QRIS selected (single method, whole bill only). Container queries (`@2xl`/`@5xl`, `cqh`) so the preview lays out exactly like the screen.
+- [x] A settings read that fails (table not migrated yet) shows the defaults; the customer screen never errors over it.
+- [x] Tests: schema, banner schedule + look helpers, route (owner gate, validation, defaults, upload cleanup), display states, checkout QRIS prompt and change. tsc clean. Screens checked in headless Chromium at 1280×800, 800×1280 and 390×844 via a temporary page (deleted).
+- [ ] **Operator: apply the migration on the dev branch** (`prisma migrate deploy`; the agent can't run it). Until then the display and editor load the defaults and Save fails. Production applies it on deploy.
+- [ ] Browser pass on real hardware: an iPad or second monitor as the customer screen, Electron desktop, a live till sale (cash change, QRIS prompt), a save from a phone reaching an open screen within 2 min.
+- [ ] Not done: video backgrounds/banners (`/api/upload` is images only), banners linked to cart items (upsell), a sidebar nav entry.
+- [ ] Not verified: Safari/WebKit, `next build`.
+
+## 3.44.0–3.45.0 — Store Dashboard navigation, Home, admin in three languages (built 2026-11-06/07, **not committed**, not browser-tested)
+
+- [x] **Home** (`/store/{id}/home`) is the start page: search with Claude MCP, quick actions, recently visited (device-local, `src/lib/recent-visits.ts`), setup progress, welcome tour. A stored `defaultLanding` of `"dashboard"` (the column default) now reads as Home; Settings has a Default landing page picker.
+- [x] **Overview → Analytics** at `/analytics`; `/dashboard` redirects (keeps the query). The staff grant key stays `"/dashboard"` (`NavItem.route` holds the path), so no `StaffMember.allowedPages` migration.
+- [x] **Storefront → Phone Orders**, **Profile → Settings** (labels and icons only; routes and grant keys unchanged).
+- [x] **Desktop sidebar** from `lg` (1024px): category strip + minimizable pages panel (`desktop-sidebar.tsx`), no top bar; on Home a wider strip and the panel forced closed. Phone drawer in `sidebar.tsx`; shared row in `nav-item-link.tsx`.
+- [x] **⌘K search** rebuilt on the Home search (`use-search-targets.ts`): recents, actions, pages, Claude MCP; full screen on phones.
+- [x] **Admin panel** translated (all pages, `adminPages.*` / `adminDash.*` / `adminNav.*`), language + theme toggles in the admin menu bar.
+- [ ] Browser pass: phone (drawer, Home search, full-screen search), iPad landscape (sidebar minimized by default on first visit), desktop (collapse, drag, More popover), admin pages in FR/ID.
+- [ ] The `User.defaultLanding` column default is still `"dashboard"` (read as Home). Changing it needs a migration; not required.
+
+## Home page review fixes (built 2026-11-07, **not committed**: the tree also holds another session's onboarding/navigation work)
+
+From the 2026-11-06 review (proof first, trial visible, plain words, shorter page).
+
+- [x] Headline: fr "Commande en ligne et caisse, pour cafés", en "Online ordering + POS for cafés" (id kept).
+- [x] Hero search is "claim your link": `GET /api/public/storefront-search` now also returns `link: { slug, available }` (wizard's slug rule, any storefront published or not); free -> "Create my store with this link", taken -> try another; matching cafés listed under "Already on Epidom".
+- [x] Hero trial button + "No card needed"; the same line under the POS pricing card; a sticky trial bar on phones (`mobile-trial-bar.tsx`, hidden at the hero, the closing CTA and the footer, under the cookie bar).
+- [x] Header button "Try free on macOS" / "Essai gratuit sur macOS" / "Coba gratis di macOS".
+- [x] Hero facts: the release date only, no version number. Lighter navy veil over the hero photo.
+- [x] "One order, three steps" replaces the three-spaces cards AND the hub diagram (deleted, with its strings and `.hub-flow` CSS); "Then ask Claude about your café" replaces "Connect Claude MCP".
+- [x] POS tour: 4 features (f1-f4), 40svh per pinned step (was 6 x 55svh). Unused `posModes` crop removed.
+- [x] Order: hero -> logos -> 3 steps -> who it's for -> POS tour -> calculator -> stories -> plans -> compliance -> FAQ -> closing CTA.
+- [x] Measured (local dev, Chromium): first trial button 371 px down on a French phone (was 9,025), 363 px in English (was 11,906); "no card" shown 2-3 times on load (was 0); desktop page 12,638 px (was 14,836); no console errors.
+- [ ] **Dev, blocked on the onboarding rewrite**: read the claimed link in the wizard. One line in `setUpStore` (`onboarding-content.tsx`): `const slugFromPrefill = slugFromInstagram(answers.prefill) ?? takeClaimedLink();` (`home/lib/claimed-link.ts`, localStorage, 2 days, read once; the taken-slug fallback already handles a link taken since).
+- [ ] **Operator: retake the 8 product screenshots** on a believable demo café (named, real photos, prices €2.80-€14, orders €4-€38, stock mostly green with 2 amber). Hide the account name, the version badge and the debug icon. Capture the renamed "Overview" / "Store Dashboard". Crop to one moment each. Files: `public/images/screens/*.png`, wired in `shared/content/product-screens.ts`.
+- [ ] **Operator: written logo consent** from Holy Cookie, La Fabrique, Laura Todd, Momma Cookies, Pépite, then uncomment them in `home/data/trusted-brands.ts`.
+- [ ] **Operator: one real case study** (owner photo, own words, 2 measured numbers); until then the stories section stays hidden in production.
+- [ ] **Operator: French identity**: a contact@epidom.fr mailbox (then `src/lib/constants/contact.ts`), the French company and address for the footer, and the legal details that unlock NF525.
+- [ ] **Operator: hero photo edit**: the real menu on the phone screen in `public/images/hero.jpeg` (the veil is already lighter).
+- [ ] **Decide**: a public "try without an account" demo store (the seed route is admin-only; a public sandbox needs abuse limits and a reset schedule). Not built.
+- [ ] **Operator: measure** two weeks before/after: `hero_store_search` (`claim`, `open`), `cta_click` (`hero_trial`, `sticky_trial`, header with platform).
+- [ ] Not verified: Safari/WebKit, a real phone, `next build`.
+
 ## 3.43.0 — Website revamp, Phone Orders search, Products, Store Dashboard (built 2026-11-06, pushed to `dev` only)
 
 - [x] **Hero**: "Phone Ordering Cashier"; store search (modal on desktop, swipe-down drawer on phones) over `GET /api/public/storefront-search` (published stores, rate-limited 120/min); "Open Link ↗" or "Register your store now".

@@ -3,7 +3,7 @@ import { StorefrontEditorClient } from "@/features/storefront/editor/components/
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 
 export const metadata: Metadata = {
-  title: "Storefront - Epidom",
+  title: "Phone Orders - Epidom",
   description: "Manage your public storefront and menu",
 };
 

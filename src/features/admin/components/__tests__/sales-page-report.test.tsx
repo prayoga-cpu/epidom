@@ -66,6 +66,7 @@ describe("SalesPageReportView", () => {
 
   it("offers the custom range next to the presets", () => {
     const { container } = render(<SalesPageReportView report={report()} />);
-    expect(container.textContent).toContain("Custom");
+    // useI18n is stubbed to return keys: the picker's label is the translated "Custom".
+    expect(container.textContent).toContain("adminPages.salesPages.custom");
   });
 });

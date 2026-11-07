@@ -15,7 +15,7 @@ interface SubscriptionLockedStateProps {
   /**
    * Tier that unlocks the feature. When set, the CTA routes to the right pricing
    * URL (POS → trial promo) and reads "Upgrade to {plan}". Defaults to the legacy
-   * "Upgrade to Pro" → /pricing#plans behaviour when omitted.
+   * "Upgrade plan" → /pricing#plans behaviour when omitted.
    */
   requiredPlan?: PlanTier;
 }

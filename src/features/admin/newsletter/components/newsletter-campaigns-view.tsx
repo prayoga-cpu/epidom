@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/components/lang/i18n-provider";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -55,25 +56,26 @@ type SendRecord = {
 };
 
 function AudienceBadges({ campaign }: { campaign: CampaignSummary }) {
+  const { t } = useI18n();
   if (campaign.audiences.length === 0) {
-    return <span className="text-muted-foreground text-xs">No audience yet</span>;
+    return <span className="text-muted-foreground text-xs">{t("adminPages.newsletter.noAudience")}</span>;
   }
   return (
     <div className="flex flex-wrap gap-1">
       {campaign.audiences.length === 5 ? (
         <Badge variant="secondary" className="text-xs">
-          Everyone
+          {t("adminPages.newsletter.everyone")}
         </Badge>
       ) : (
         campaign.audiences.map((a) => (
           <Badge key={a} variant="secondary" className="text-xs">
-            {AUDIENCE_LABELS[a].label}
+            {t(`adminPages.newsletter.audiences.${a}.label`)}
           </Badge>
         ))
       )}
       {campaign.language !== "all" && (
         <Badge variant="outline" className="text-xs">
-          {LANGUAGE_LABELS[campaign.language]}
+          {t(`adminPages.newsletter.languages.${campaign.language}`)}
         </Badge>
       )}
     </div>
@@ -99,6 +101,7 @@ function CampaignRow({
   busy: boolean;
   actions: RowActions;
 }) {
+  const { t, intlLocale } = useI18n();
   const editable = campaign.status === "DRAFT" || campaign.status === "SCHEDULED";
   const when =
     campaign.status === "SENT" || campaign.status === "FAILED"
@@ -108,21 +111,26 @@ function CampaignRow({
     <div className="flex items-start gap-3 py-3">
       <NextLink href={`/admin/newsletter/${campaign.id}`} className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate font-medium">{campaign.subject || "(No subject)"}</span>
+          <span className="truncate font-medium">{campaign.subject || t("adminPages.newsletter.noSubject")}</span>
           <CampaignStatusBadge campaign={campaign} now={now} />
         </div>
         {when && (
           <p className="text-muted-foreground text-xs">
-            {campaign.status === "DRAFT" ? "Planned for " : ""}
-            {formatInZone(when, campaign.timezone)} ({zoneLabel(campaign.timezone)})
+            {campaign.status === "DRAFT" ? t("adminPages.newsletter.row.plannedFor") : ""}
+            {formatInZone(when, campaign.timezone, true, intlLocale)} ({zoneLabel(campaign.timezone)})
             {(campaign.status === "SENT" || campaign.status === "FAILED") &&
-              ` · ${campaign.sentCount.toLocaleString("en")} sent${campaign.failedCount ? `, ${campaign.failedCount.toLocaleString("en")} failed` : ""}`}
+              `${t("adminPages.newsletter.row.sentCount").replace("{sent}", campaign.sentCount.toLocaleString(intlLocale))}${
+                campaign.failedCount
+                  ? t("adminPages.newsletter.row.failedCount").replace("{failed}", campaign.failedCount.toLocaleString(intlLocale))
+                  : ""
+              }`}
           </p>
         )}
         {campaign.status === "DRAFT" && (
           <p className="text-muted-foreground text-xs">
-            Edited {formatInZone(campaign.updatedAt, campaign.timezone, false)} by{" "}
-            {campaign.updatedBy}
+            {t("adminPages.newsletter.row.edited")
+              .replace("{when}", formatInZone(campaign.updatedAt, campaign.timezone, false, intlLocale))
+              .replace("{name}", campaign.updatedBy)}
           </p>
         )}
         {campaign.lastError && (
@@ -137,7 +145,7 @@ function CampaignRow({
             variant="ghost"
             size="icon"
             className="size-10 shrink-0"
-            aria-label="Actions"
+            aria-label={t("adminPages.newsletter.actions")}
             disabled={busy}
           >
             <MoreHorizontal className="size-4" />
@@ -147,25 +155,25 @@ function CampaignRow({
           <DropdownMenuItem asChild>
             <NextLink href={`/admin/newsletter/${campaign.id}`}>
               {editable ? <Pencil className="size-4" /> : <FilePen className="size-4" />}
-              {editable ? "Edit" : "View"}
+              {editable ? t("adminPages.newsletter.menu.edit") : t("adminPages.newsletter.menu.view")}
             </NextLink>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => actions.onDuplicate(campaign)}>
-            <Copy className="size-4" /> Duplicate
+            <Copy className="size-4" /> {t("adminPages.newsletter.menu.duplicate")}
           </DropdownMenuItem>
           {editable && campaign.subject && campaign.audiences.length > 0 && (
             <DropdownMenuItem onSelect={() => actions.onSendNow(campaign)}>
-              <Send className="size-4" /> Send now
+              <Send className="size-4" /> {t("adminPages.newsletter.menu.sendNow")}
             </DropdownMenuItem>
           )}
           {campaign.status === "SCHEDULED" && (
             <DropdownMenuItem onSelect={() => actions.onUnschedule(campaign)}>
-              <Undo2 className="size-4" /> Move to drafts
+              <Undo2 className="size-4" /> {t("adminPages.newsletter.menu.toDrafts")}
             </DropdownMenuItem>
           )}
           {campaign.status === "FAILED" && (
             <DropdownMenuItem onSelect={() => actions.onRetry(campaign)}>
-              <RotateCcw className="size-4" /> Retry the rest
+              <RotateCcw className="size-4" /> {t("adminPages.newsletter.menu.retry")}
             </DropdownMenuItem>
           )}
           {editable && (
@@ -175,7 +183,7 @@ function CampaignRow({
                 onSelect={() => actions.onDelete(campaign)}
                 className="text-destructive"
               >
-                <Trash2 className="size-4" /> Delete
+                <Trash2 className="size-4" /> {t("adminPages.newsletter.menu.delete")}
               </DropdownMenuItem>
             </>
           )}
@@ -187,6 +195,7 @@ function CampaignRow({
 
 /** Drafts, the schedule week by week, and what went out. */
 export function NewsletterCampaignsView() {
+  const { t, intlLocale } = useI18n();
   const router = useRouter();
   const { confirm, confirmDialog } = useConfirm();
   const [campaigns, setCampaigns] = useState<CampaignSummary[] | null>(null);
@@ -242,45 +251,45 @@ export function NewsletterCampaignsView() {
   const sendNow = (c: CampaignSummary) =>
     act(c.id, async () => {
       const ok = await confirm({
-        title: "Send this newsletter now?",
-        description: `"${c.subject || "(No subject)"}" goes out right away instead of at its scheduled time. This can't be undone.`,
-        confirmText: "Send now",
+        title: t("adminPages.newsletter.confirm.sendTitle"),
+        description: t("adminPages.newsletter.confirm.sendListDesc").replace("{subject}", c.subject || t("adminPages.newsletter.noSubject")),
+        confirmText: t("adminPages.newsletter.confirm.sendConfirm"),
       });
       if (!ok) return;
       const { via } = await campaignApi.sendNow(c.id);
-      return via === "queued" ? "Sending now" : "The scheduler will send it within 5 minutes.";
+      return via === "queued" ? t("adminPages.newsletter.toasts.sendingNow") : t("adminPages.newsletter.toasts.schedulerSoon");
     });
 
   const remove = (c: CampaignSummary) =>
     act(c.id, async () => {
       const ok = await confirm({
-        title: "Delete this newsletter?",
-        description: `"${c.subject || "(No subject)"}" is removed for good and won't be sent.`,
-        confirmText: "Delete",
+        title: t("adminPages.newsletter.confirm.deleteTitle"),
+        description: t("adminPages.newsletter.confirm.deleteListDesc").replace("{subject}", c.subject || t("adminPages.newsletter.noSubject")),
+        confirmText: t("adminPages.newsletter.confirm.deleteConfirm"),
         variant: "destructive",
       });
       if (!ok) return;
       await campaignApi.remove(c.id);
-      return "Newsletter deleted";
+      return t("adminPages.newsletter.toasts.deleted");
     });
 
   const duplicate = (c: CampaignSummary) =>
     act(c.id, async () => {
       const copy = await campaignApi.duplicate(c.id);
       router.push(`/admin/newsletter/${copy.id}`);
-      return "Copied to a new draft";
+      return t("adminPages.newsletter.toasts.duplicated");
     });
 
   const unschedule = (c: CampaignSummary) =>
     act(c.id, async () => {
       await campaignApi.unschedule(c.id);
-      return "Moved to drafts. It won't be sent until you schedule it again.";
+      return t("adminPages.newsletter.toasts.unscheduled");
     });
 
   const retry = (c: CampaignSummary) =>
     act(c.id, async () => {
       await campaignApi.retry(c.id);
-      return "Sending the rest again. People already emailed won't get it twice.";
+      return t("adminPages.newsletter.toasts.retrying");
     });
 
   const rowActions: RowActions = {
@@ -302,9 +311,9 @@ export function NewsletterCampaignsView() {
     <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Newsletter</h1>
+          <h1 className="text-2xl font-bold">{t("adminPages.newsletter.list.title")}</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Write newsletters ahead, pick who gets them, and schedule each for a day and hour.
+            {t("adminPages.newsletter.list.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -314,13 +323,13 @@ export function NewsletterCampaignsView() {
             size="icon"
             className="size-10"
             onClick={load}
-            aria-label="Refresh"
+            aria-label={t("adminPages.newsletter.list.refresh")}
           >
             <RefreshCw className="size-4" />
           </Button>
           <Button asChild className="h-10">
             <NextLink href="/admin/newsletter/new">
-              <Plus className="size-4" /> New newsletter
+              <Plus className="size-4" /> {t("adminPages.newsletter.list.new")}
             </NextLink>
           </Button>
         </div>
@@ -330,10 +339,9 @@ export function NewsletterCampaignsView() {
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertDescription>
-            {overdue.length === 1 ? "A newsletter is" : `${overdue.length} newsletters are`} past
-            {overdue.length === 1 ? " its" : " their"} time and hasn't gone out, so the scheduler
-            (Inngest) is probably not running. Use Send now from the menu, and ask the developer to
-            check Inngest.
+            {overdue.length === 1
+              ? t("adminPages.newsletter.list.overdueOne")
+              : t("adminPages.newsletter.list.overdueMany").replace("{count}", String(overdue.length))}
           </AlertDescription>
         </Alert>
       )}
@@ -350,15 +358,26 @@ export function NewsletterCampaignsView() {
       ) : (
         <Tabs defaultValue="upcoming">
           <TabsList>
-            <TabsTrigger value="upcoming">Scheduled ({upcoming.length})</TabsTrigger>
-            <TabsTrigger value="drafts">Drafts ({drafts.length})</TabsTrigger>
-            <TabsTrigger value="sent">Sent ({sent.length})</TabsTrigger>
+            <TabsTrigger value="upcoming">
+              {t("adminPages.newsletter.list.tabScheduled").replace("{count}", String(upcoming.length))}
+            </TabsTrigger>
+            <TabsTrigger value="drafts">
+              {t("adminPages.newsletter.list.tabDrafts").replace("{count}", String(drafts.length))}
+            </TabsTrigger>
+            <TabsTrigger value="sent">
+              {t("adminPages.newsletter.list.tabSent").replace("{count}", String(sent.length))}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="upcoming" className="mt-4 space-y-4">
             {upcoming.length === 0
-              ? empty("Nothing scheduled. Write a newsletter and pick a day and hour.")
-              : groupByWeek(upcoming, now).map((group) => (
+              ? empty(t("adminPages.newsletter.list.noneScheduled"))
+              : groupByWeek(upcoming, now, {
+                  thisWeek: t("adminPages.newsletter.weeks.thisWeek"),
+                  nextWeek: t("adminPages.newsletter.weeks.nextWeek"),
+                  weekOf: t("adminPages.newsletter.weeks.weekOf"),
+                  locale: intlLocale,
+                }).map((group) => (
                   <Card key={group.key}>
                     <CardHeader className="pb-0">
                       <CardTitle className="flex items-center gap-2 text-sm">
@@ -373,7 +392,7 @@ export function NewsletterCampaignsView() {
           <TabsContent value="drafts" className="mt-4">
             <Card>
               <CardContent className="divide-y pt-2">
-                {drafts.length === 0 ? empty("No drafts.") : drafts.map(row)}
+                {drafts.length === 0 ? empty(t("adminPages.newsletter.list.noDrafts")) : drafts.map(row)}
               </CardContent>
             </Card>
           </TabsContent>
@@ -381,7 +400,7 @@ export function NewsletterCampaignsView() {
           <TabsContent value="sent" className="mt-4 space-y-4">
             <Card>
               <CardContent className="divide-y pt-2">
-                {sent.length === 0 ? empty("Nothing sent yet.") : sent.map(row)}
+                {sent.length === 0 ? empty(t("adminPages.newsletter.list.noneSent")) : sent.map(row)}
               </CardContent>
             </Card>
 
@@ -389,7 +408,7 @@ export function NewsletterCampaignsView() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm">
-                    <History className="size-4" /> Earlier sends (before scheduling)
+                    <History className="size-4" /> {t("adminPages.newsletter.list.earlier")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -397,13 +416,13 @@ export function NewsletterCampaignsView() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b text-left">
-                          <th className="text-muted-foreground pr-4 pb-2 font-medium">Subject</th>
-                          <th className="text-muted-foreground pr-4 pb-2 font-medium">Type</th>
+                          <th className="text-muted-foreground pr-4 pb-2 font-medium">{t("adminPages.newsletter.list.head.subject")}</th>
+                          <th className="text-muted-foreground pr-4 pb-2 font-medium">{t("adminPages.newsletter.list.head.type")}</th>
                           <th className="text-muted-foreground pr-4 pb-2 font-medium">
-                            Recipients
+                            {t("adminPages.newsletter.list.head.recipients")}
                           </th>
-                          <th className="text-muted-foreground pr-4 pb-2 font-medium">Sent by</th>
-                          <th className="text-muted-foreground pb-2 font-medium">Date</th>
+                          <th className="text-muted-foreground pr-4 pb-2 font-medium">{t("adminPages.newsletter.list.head.sentBy")}</th>
+                          <th className="text-muted-foreground pb-2 font-medium">{t("adminPages.newsletter.list.head.date")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -412,13 +431,13 @@ export function NewsletterCampaignsView() {
                             <td className="py-2 pr-4">{row.subject}</td>
                             <td className="py-2 pr-4 capitalize">{row.type}</td>
                             <td className="py-2 pr-4">
-                              {row.recipients === -1 ? "Audience" : row.recipients}
+                              {row.recipients === -1 ? t("adminPages.newsletter.list.audience") : row.recipients}
                             </td>
                             <td className="text-muted-foreground py-2 pr-4 text-xs">
                               {row.sentBy}
                             </td>
                             <td className="text-muted-foreground py-2 text-xs">
-                              {new Date(row.createdAt).toLocaleString("en-GB")}
+                              {new Date(row.createdAt).toLocaleString(intlLocale)}
                             </td>
                           </tr>
                         ))}

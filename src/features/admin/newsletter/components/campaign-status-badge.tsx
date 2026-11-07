@@ -1,4 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
 import { isOverdue, type CampaignSummary } from "../lib/campaign-display";
 
@@ -24,10 +27,12 @@ export function CampaignStatusBadge({
   campaign: Pick<CampaignSummary, "status" | "scheduledAt">;
   now?: Date;
 }) {
-  const style = STYLES[isOverdue(campaign, now) ? "OVERDUE" : campaign.status];
+  const { t } = useI18n();
+  const key = isOverdue(campaign, now) ? "OVERDUE" : campaign.status;
+  const style = STYLES[key];
   return (
     <Badge variant="outline" className={cn("text-xs", style.className)}>
-      {style.label}
+      {t(`adminPages.newsletter.statuses.${key}`)}
     </Badge>
   );
 }

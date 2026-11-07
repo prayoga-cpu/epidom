@@ -28,9 +28,10 @@ async function parse<T>(response: Response, fallback: string): Promise<T> {
   return result.data as T;
 }
 
-export function useConnectedApps() {
+export function useConnectedApps({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: KEY,
+    enabled,
     queryFn: async () =>
       parse<ConnectorOverview>(
         await fetch("/api/user/connected-apps"),

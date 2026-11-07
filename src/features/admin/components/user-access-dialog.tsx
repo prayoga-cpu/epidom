@@ -20,6 +20,8 @@ import { GRANTABLE_ADMIN_SECTIONS } from "@/config/admin-sections.config";
 import { apiJson } from "@/features/admin/partners/lib/partner-form";
 import { PARTNERS_QUERY_KEY } from "@/features/admin/partners/components/partners-admin";
 import { ADMIN_SECTION_ICONS } from "./admin-section-icons";
+import { useI18n } from "@/components/lang/i18n-provider";
+import { adminSectionLabel, adminSectionWarning } from "./admin-section-labels";
 
 export interface AccessUser {
   id: string;
@@ -50,6 +52,7 @@ export function UserAccessDialog({
   onOpenChange: (open: boolean) => void;
   onMakePartner: (user: AccessUser) => void;
 }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [full, setFull] = useState(false);
   const [sections, setSections] = useState<string[]>([]);
@@ -80,11 +83,11 @@ export function UserAccessDialog({
       }
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: PARTNERS_QUERY_KEY });
-      toast.success("Access saved");
+      toast.success(t("adminDash.access.saved"));
       onOpenChange(false);
       if (makePartner) onMakePartner(user);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save");
+      toast.error(e instanceof Error ? e.message : t("adminDash.access.couldntSave"));
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     } finally {
       setSaving(false);
@@ -95,10 +98,19 @@ export function UserAccessDialog({
     <Dialog open={Boolean(user)} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] flex-col overflow-hidden sm:max-w-lg">
         <DialogHeader className="shrink-0">
-          <DialogTitle>Access</DialogTitle>
+          <DialogTitle>{t("adminDash.access.title")}</DialogTitle>
           <DialogDescription>
-            What <strong>{user.name || user.email}</strong> can open in the admin panel.
-            {locked && " You can't change your own admin access."}
+            {(() => {
+              const [before, after = ""] = t("adminDash.access.desc").split("{name}");
+              return (
+                <>
+                  {before}
+                  <strong>{user.name || user.email}</strong>
+                  {after}
+                </>
+              );
+            })()}
+            {locked && t("adminDash.access.selfLocked")}
           </DialogDescription>
         </DialogHeader>
 
@@ -107,9 +119,11 @@ export function UserAccessDialog({
           <label className="border-border flex min-h-12 cursor-pointer items-start gap-3 rounded-lg border p-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
             <span className="min-w-0 flex-1">
-              <span className="text-foreground block text-sm font-medium">Full admin</span>
+              <span className="text-foreground block text-sm font-medium">
+                {t("adminDash.access.fullAdmin")}
+              </span>
               <span className="text-muted-foreground block text-xs">
-                Every admin page, the users list and the activity log.
+                {t("adminDash.access.fullAdminDesc")}
               </span>
             </span>
             <Switch checked={full} onCheckedChange={setFull} disabled={locked} />
@@ -117,11 +131,9 @@ export function UserAccessDialog({
 
           {/* Admin pages */}
           <div className={full ? "opacity-50" : undefined}>
-            <p className="text-foreground mb-1 text-sm font-medium">Admin pages</p>
+            <p className="text-foreground mb-1 text-sm font-medium">{t("adminDash.access.pages")}</p>
             <p className="text-muted-foreground mb-2 text-xs">
-              {full
-                ? "A full admin opens them all."
-                : "Only these pages, nothing else of the admin panel."}
+              {full ? t("adminDash.access.pagesAll") : t("adminDash.access.pagesOnly")}
             </p>
             <div className="space-y-1">
               {GRANTABLE_ADMIN_SECTIONS.map((section) => {
@@ -149,10 +161,12 @@ export function UserAccessDialog({
                     <span className="min-w-0">
                       <span className="text-foreground flex items-center gap-1.5 text-sm">
                         <Icon className="h-3.5 w-3.5" />
-                        {section.label}
+                        {adminSectionLabel(t, section.key, section.label)}
                       </span>
                       {section.grantWarning && (
-                        <span className="block text-xs text-amber-500">{section.grantWarning}</span>
+                        <span className="block text-xs text-amber-500">
+                          {adminSectionWarning(t, section.key, section.grantWarning)}
+                        </span>
                       )}
                     </span>
                   </label>
@@ -167,12 +181,12 @@ export function UserAccessDialog({
               <div className="flex flex-wrap items-center gap-3">
                 <Handshake className="h-4 w-4 shrink-0 text-emerald-500" />
                 <span className="text-foreground min-w-0 flex-1 text-sm">
-                  Referral partner
+                  {t("adminDash.access.partner")}
                   {user.partner.referralCode ? ` · ${user.partner.referralCode}` : ""}
                 </span>
                 <Button variant="outline" size="sm" className="min-h-10" asChild>
                   <Link href={`/admin/partners/${user.partner.id}`}>
-                    Open <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                    {t("adminDash.access.open")} <ExternalLink className="ml-1 h-3.5 w-3.5" />
                   </Link>
                 </Button>
               </div>
@@ -187,11 +201,10 @@ export function UserAccessDialog({
                 <span className="min-w-0">
                   <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
                     <Handshake className="h-3.5 w-3.5 text-emerald-500" />
-                    Referral partner
+                    {t("adminDash.access.partner")}
                   </span>
                   <span className="text-muted-foreground block text-xs">
-                    Their own page with their link (or sales page), its report and their commission.
-                    You&apos;ll set the deal next.
+                    {t("adminDash.access.partnerDesc")}
                   </span>
                 </span>
               </label>
@@ -201,11 +214,11 @@ export function UserAccessDialog({
 
         <DialogFooter className="shrink-0 pt-3">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("adminDash.common.cancel")}
           </Button>
           <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {makePartner ? "Save and set the deal" : "Save"}
+            {makePartner ? t("adminDash.access.saveAndDeal") : t("adminDash.common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

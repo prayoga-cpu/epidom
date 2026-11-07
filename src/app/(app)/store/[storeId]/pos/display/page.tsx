@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { verifyStoreAccess } from "@/lib/utils/store-verification";
 import { requirePlan } from "@/lib/auth/require-plan";
 import { requireStaffPageAccess } from "@/lib/auth/require-staff-page-access";
 import countryNames from "react-phone-number-input/locale/en.json";
 import { PosCustomerDisplay } from "@/features/pos/components/pos-customer-display";
+import { getCustomerDisplayConfig } from "@/lib/services/customer-display.service";
 
 // Deliberately outside the (dashboard) route group so it doesn't inherit
 // PageShell's sidebar/topbar chrome — this window faces the customer across
@@ -57,20 +57,16 @@ export default async function PosCustomerDisplayPage({
   await requirePlan(storeId, "POS");
   await requireStaffPageAccess(storeId, "/pos");
 
-  // Branding is reused from the storefront rather than duplicated onto the
-  // store — same reasoning as StoreReceiptSettings. A store with no published
-  // storefront falls back to its own name and the Epidom mark.
-  const storefront = await prisma.storefront.findUnique({
-    where: { storeId },
-    select: { displayName: true, logoUrl: true, themeColor: true },
-  });
+  // The store's own look and promo banners (Store Dashboard → Customer display),
+  // over branding reused from the storefront rather than duplicated onto the
+  // store — same reasoning as StoreReceiptSettings. A store that never saved
+  // any gets the defaults: the storefront's logo and colour, no banners.
+  const config = await getCustomerDisplayConfig(storeId);
 
   return (
     <PosCustomerDisplay
       storeId={storeId}
-      storeName={storefront?.displayName || store.name}
-      logoUrl={storefront?.logoUrl ?? store.image ?? null}
-      themeColor={storefront?.themeColor ?? null}
+      initialConfig={config}
       defaultCountry={resolveCountryCode(store.country)}
     />
   );

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, MessageSquarePlus } from "lucide-react";
+import { MessageSquarePlus } from "lucide-react";
+import { MarketFlag, type Market } from "@/components/market-flag";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { WHATSAPP_NUMBERS, getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 import { FeedbackDialog } from "@/features/dashboard/feedback/components/feedback-dialog";
@@ -23,14 +24,12 @@ export function HelpContact() {
     >
       <HelpRowGroup label={t("helpCenter.contact.title")}>
         {getWhatsAppOptions(locale ?? "en").map((option) => {
-          const market =
-            option.number === WHATSAPP_NUMBERS.id.number
-              ? t("helpCenter.contact.markets.id")
-              : t("helpCenter.contact.markets.fr");
+          const code: Market = option.number === WHATSAPP_NUMBERS.id.number ? "id" : "fr";
+          const market = t(`helpCenter.contact.markets.${code}`);
           return (
             <HelpActionRow
               key={option.number}
-              icon={MessageCircle}
+              leading={<MarketFlag market={code} decorative className="size-5" />}
               label={t("helpCenter.contact.whatsappMarket").replace("{market}", market)}
               description={t("helpCenter.contact.whatsappDesc")}
               externalHref={whatsappHref(option.number, message)}

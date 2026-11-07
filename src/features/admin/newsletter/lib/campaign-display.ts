@@ -74,8 +74,13 @@ export function browserTimezone(): string | null {
 }
 
 /** "Tue 3 Nov 2026, 10:00", on the clock of `zone`. */
-export function formatInZone(iso: string, zone: string, withYear = true): string {
-  return new Intl.DateTimeFormat("en-GB", {
+export function formatInZone(
+  iso: string,
+  zone: string,
+  withYear = true,
+  locale = "en-GB"
+): string {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: zone,
     weekday: "short",
     day: "numeric",
@@ -114,7 +119,14 @@ function mondayOf(date: Date): Date {
  */
 export function groupByWeek<T extends Pick<CampaignSummary, "scheduledAt">>(
   campaigns: T[],
-  now: Date
+  now: Date,
+  /** Translated labels; `weekOf` holds "{date}". English when omitted. */
+  labels: { thisWeek: string; nextWeek: string; weekOf: string; locale: string } = {
+    thisWeek: "This week",
+    nextWeek: "Next week",
+    weekOf: "Week of {date}",
+    locale: "en-GB",
+  }
 ): { key: string; label: string; campaigns: T[] }[] {
   const thisWeek = mondayOf(now).getTime();
   const groups = new Map<number, T[]>();
@@ -130,10 +142,17 @@ export function groupByWeek<T extends Pick<CampaignSummary, "scheduledAt">>(
     key: String(start),
     label:
       start === thisWeek
-        ? "This week"
+        ? labels.thisWeek
         : start === nextWeek
-          ? "Next week"
-          : `Week of ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: new Date(start).getFullYear() === now.getFullYear() ? undefined : "numeric" }).format(new Date(start))}`,
+          ? labels.nextWeek
+          : labels.weekOf.replace(
+              "{date}",
+              new Intl.DateTimeFormat(labels.locale, {
+                day: "numeric",
+                month: "short",
+                year: new Date(start).getFullYear() === now.getFullYear() ? undefined : "numeric",
+              }).format(new Date(start))
+            ),
     campaigns: items,
   }));
 }

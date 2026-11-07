@@ -71,6 +71,7 @@ const h = vi.hoisted(() => {
     prisma,
     storefrontService,
     activateFree: vi.fn(),
+    applyReferralCode: vi.fn(async () => true),
     getFinanceSettings: vi.fn(),
     /** Blob storage delete (a replaced logo). */
     storageDelete: vi.fn(),
@@ -82,6 +83,10 @@ vi.mock("@/lib/storage", () => ({ getStorageAdapter: () => ({ delete: h.storageD
 vi.mock("../storefront.service", () => ({ storefrontService: h.storefrontService }));
 vi.mock("../subscription.service", () => ({
   subscriptionService: { activateFree: h.activateFree },
+}));
+vi.mock("../referral-code.service", () => ({
+  getCreditedReferral: vi.fn(async () => null),
+  applyReferralCode: h.applyReferralCode,
 }));
 vi.mock("../finance-settings.service", () => ({ getFinanceSettings: h.getFinanceSettings }));
 
@@ -687,7 +692,7 @@ describe("saveStoreStep", () => {
     seedFrenchStore({ business: { onboardingStep: 3 } });
     const state = await saveStoreStep(USER_ID, frenchStep);
     expect(db.business!.onboardingStep).toBe(3);
-    expect(state.step).toBe(3);
+    expect(state.step).toBe(2);
   });
 
   it("an owner who already finished setup and deleted every store can set one up; no wizard step", async () => {
@@ -727,7 +732,7 @@ describe("saveStoreStep", () => {
     // Still in the wizard: step 1 can be re-saved and step 2 advances.
     await saveStoreStep(USER_ID, { ...frenchStep, city: "Quimper" });
     expect(db.store!.city).toBe("Quimper");
-    expect((await saveStorefrontStep(USER_ID, { menuItems: [] })).step).toBe(3);
+    expect((await saveStorefrontStep(USER_ID, { menuItems: [] })).step).toBe(2);
   });
 
   it("refuses to rewrite a finished owner's live store", async () => {
@@ -972,8 +977,8 @@ describe("saveStorefrontStep", () => {
     const [sql, ...values] = tx.$executeRaw.mock.calls[0] as [TemplateStringsArray, ...unknown[]];
     expect(sql.join("?")).toContain("pg_advisory_xact_lock");
     expect(values).toEqual(["epidom-onboarding-menu:sf_1"]);
-    expect(db.business!.onboardingStep).toBe(3);
-    expect(state.step).toBe(3);
+    expect(db.business!.onboardingStep).toBe(2);
+    expect(state.step).toBe(2);
     expect(state.menuItems).toEqual([
       { id: "item_1", name: "Galette complète", price: 9.5 },
       { id: "item_2", name: "Crêpe beurre sucre", price: 4.5 },
@@ -1229,14 +1234,14 @@ describe("saveStorefrontStep", () => {
       },
     });
     const state = await saveStorefrontStep(USER_ID, { logoUrl: "", menuItems: [] });
-    expect(state.step).toBe(3);
+    expect(state.step).toBe(2);
     expect(db.storefront!.logoUrl).toBeNull();
   });
 
-  it("skipping (empty body) still advances to step 3 and creates nothing", async () => {
+  it("skipping (empty body) still advances to the last step and creates nothing", async () => {
     seedFrenchStore();
     const state = await saveStorefrontStep(USER_ID, { menuItems: [] });
-    expect(state.step).toBe(3);
+    expect(state.step).toBe(2);
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(tx.menuCategory.create).not.toHaveBeenCalled();
     expect(prisma.storefront.update).not.toHaveBeenCalled();
@@ -1292,6 +1297,18 @@ describe("completeOnboarding", () => {
     expect(err.statusCode).toBe(409);
     expect(err.details?.reason).toBe("step_order");
     expect(db.user.hasOnboarded).toBe(false);
+  });
+
+  it("credits a partner code typed in the wizard after publishing, and never fails on it", async () => {
+    seedFrenchStore({ business: { onboardingStep: 2 } });
+    await completeOnboarding(USER_ID, { goals: [], referralCode: "BOB10" });
+    expect(h.applyReferralCode).toHaveBeenCalledWith(
+      { id: USER_ID, email: "camille@example.fr" },
+      "BOB10"
+    );
+    h.applyReferralCode.mockClear();
+    await completeOnboarding(USER_ID, { goals: [] });
+    expect(h.applyReferralCode).not.toHaveBeenCalled();
   });
 
   it("is idempotent; a repeat with an empty body keeps the goals saved the first time", async () => {
@@ -1356,7 +1373,7 @@ describe("getOnboardingState", () => {
     expect((await getOnboardingState(USER_ID)).business?.countryCode).toBeNull();
   });
 
-  it("clamps the stored step to 1–3, drops unknown goals and business types", async () => {
+  it("clamps the stored step to 1–2, drops unknown goals and business types", async () => {
     seedFrenchStore({
       business: {
         onboardingStep: 9,
@@ -1365,7 +1382,7 @@ describe("getOnboardingState", () => {
       },
     });
     const state = await getOnboardingState(USER_ID);
-    expect(state.step).toBe(3);
+    expect(state.step).toBe(2);
     expect(state.goals).toEqual(["counter"]);
     expect(state.business?.businessType).toBeNull();
   });
@@ -1409,11 +1426,13 @@ describe("getOnboardingBilling", () => {
     expect(await getOnboardingBilling(USER_ID)).toEqual({
       canCheckout: true,
       posTrialEligible: true,
+      referral: null,
     });
     h.db.subscription = sub({});
     expect(await getOnboardingBilling(USER_ID)).toEqual({
       canCheckout: true,
       posTrialEligible: true,
+      referral: null,
     });
   });
 
@@ -1422,6 +1441,7 @@ describe("getOnboardingBilling", () => {
     expect(await getOnboardingBilling(USER_ID)).toEqual({
       canCheckout: true,
       posTrialEligible: false,
+      referral: null,
     });
   });
 

@@ -22,33 +22,22 @@ interface OnboardingPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/** Same frame as the wizard (see WizardFrame): full-bleed on phones, a centred card from sm. */
+/** Same frame as the setup questions (see FlowFrame): header, thin progress bar, one question. */
 function OnboardingSkeleton() {
   return (
-    <div className="bg-background sm:bg-muted/40 flex min-h-[calc(100dvh/var(--app-zoom,1))] flex-col">
+    <div className="bg-background flex min-h-[calc(100dvh/var(--app-zoom,1))] flex-col">
       <div className="flex h-14 items-center justify-between px-4 sm:h-16 sm:px-6">
         <Skeleton className="h-7 w-28" />
-        <Skeleton className="h-8 w-16" />
+        <Skeleton className="h-10 w-28" />
       </div>
-      <div className="flex flex-1 flex-col sm:items-center sm:px-4 sm:pb-10">
-        <div className="bg-background w-full flex-1 space-y-6 px-4 py-6 sm:max-w-2xl sm:flex-none sm:rounded-2xl sm:border sm:p-8">
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-24" />
-            <div className="grid grid-cols-3 gap-3">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-1.5 w-full" />
-              ))}
-            </div>
-          </div>
-          <Skeleton className="h-8 w-2/3" />
+      <Skeleton className="h-1 w-full rounded-none" />
+      <div className="flex flex-1 flex-col items-center px-4 sm:px-6">
+        <div className="w-full max-w-xl space-y-6 py-6 sm:py-10">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-10 w-2/3" />
           <Skeleton className="h-4 w-full" />
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-11 w-full" />
-            </div>
-          ))}
-          <Skeleton className="ml-auto h-11 w-40 rounded-xl" />
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-12 w-40 rounded-xl" />
         </div>
       </div>
     </div>
@@ -121,7 +110,12 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
 
   return (
     <Suspense fallback={<OnboardingSkeleton />}>
-      <OnboardingContent initialState={state} billing={billing} planIntent={planIntent} />
+      <OnboardingContent
+        initialState={state}
+        billing={billing}
+        planIntent={planIntent}
+        user={{ name: session.user.name ?? null, email: session.user.email }}
+      />
     </Suspense>
   );
 }

@@ -26,7 +26,7 @@ export default function manifest(): MetadataRoute.Manifest {
     // start_url is the dashboard rather than "/": launching a chromeless
     // standalone window onto the marketing homepage strands a cashier with no
     // address bar and no obvious way into the app.
-    start_url: "/go/dashboard",
+    start_url: "/go/home",
     // Deliberately wider than start_url. Scope is what the browser considers
     // "inside the app" — narrowing it to /go or /store would kick the public
     // storefront (/@slug) and every marketing/legal page out to the system

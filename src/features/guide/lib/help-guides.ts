@@ -132,7 +132,7 @@ export function helpPageHref(storeId: string, guideSlug?: string | null): string
  * which opens it for any viewer, seen or not, then drops the param).
  */
 export function tourHref(storeId: string): string {
-  return `/store/${storeId}/dashboard?tour=1`;
+  return `/store/${storeId}/home?tour=1`;
 }
 
 /**
@@ -141,5 +141,5 @@ export function tourHref(storeId: string): string {
  * param once read, so Back or a reload doesn't bring a hidden one back.
  */
 export function checklistHref(storeId: string): string {
-  return `/store/${storeId}/dashboard?checklist=1`;
+  return `/store/${storeId}/analytics?checklist=1`;
 }

@@ -92,6 +92,14 @@ export interface CustomerDisplaySnapshot {
   total: number;
   /** Set only while `phase === "paid"`. */
   paidOrderNumber: string | null;
+  /** Cash change handed back, set only while `phase === "paid"` and only for a
+   * cash sale that had some. Optional on the wire: a till from before this
+   * field existed simply never sends it. */
+  changeDue?: number | null;
+  /** `building` only: the cashier has QRIS selected at checkout for the whole
+   * bill, so the display shows the store's QRIS to scan. Optional on the wire,
+   * like `changeDue`. */
+  paymentPrompt?: "QRIS" | null;
   /** Epoch ms. Monotonic guard: a subscriber ignores any snapshot older than
    * the one it already has, so a late `storage` event can't resurrect stale
    * state over a fresher broadcast. */
@@ -139,6 +147,12 @@ export type CustomerDisplayMessage =
    * customer's number and first name have no business being written there.
    */
   | { type: "customer-status"; status: CustomerDisplayIntakeStatus }
+  /**
+   * Store Dashboard -> display: the owner saved a new look or new banners. A
+   * display on the same device refetches at once instead of at its next poll.
+   * Carries nothing; the display reads the new config from the API.
+   */
+  | { type: "config-updated" }
   /**
    * Cashier -> display: "please enter your details" — opens the number pad (and,
    * for a new customer, the optional name / email step) on the customer's
@@ -208,6 +222,8 @@ export const EMPTY_CUSTOMER_DISPLAY_SNAPSHOT: CustomerDisplaySnapshot = {
   pointsDiscountAmount: 0,
   total: 0,
   paidOrderNumber: null,
+  changeDue: null,
+  paymentPrompt: null,
   updatedAt: 0,
 };
 
@@ -250,6 +266,8 @@ export function buildCustomerDisplayBuildingSnapshot(args: {
   lines: CustomerDisplayLine[];
   highlight: CustomerDisplayHighlight | null;
   totals: CustomerDisplayCartTotals;
+  /** QRIS selected at checkout for the whole bill (see CustomerDisplaySnapshot). */
+  paymentPrompt?: "QRIS" | null;
   updatedAt: number;
 }): CustomerDisplaySnapshot {
   const { lines, highlight, totals } = args;
@@ -267,6 +285,9 @@ export function buildCustomerDisplayBuildingSnapshot(args: {
     pointsDiscountAmount: totals.pointsDiscountAmount,
     total: totals.total,
     paidOrderNumber: null,
+    changeDue: null,
+    // An empty cart has nothing to pay.
+    paymentPrompt: lines.length > 0 ? (args.paymentPrompt ?? null) : null,
     updatedAt: args.updatedAt,
   };
 }

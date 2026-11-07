@@ -9,6 +9,7 @@ import { AccountSettingsCard } from "./account-settings-card";
 import { ActivityLogCard } from "./activity-log-card";
 import { FeesAndTaxesCard } from "./fees-and-taxes-card";
 import { ReceiptSettingsCard } from "./receipt-settings-card";
+import { CustomerDisplayCard } from "./customer-display-card";
 import { StoreOwnershipTransferCard } from "./store-ownership-transfer-card";
 import { ClaudeConnectorCard } from "@/features/claude-connector/components/claude-connector-card";
 import { useProfile } from "../hooks/use-profile";
@@ -103,6 +104,12 @@ export function ProfileClient({
       {storeId && (
         <div className="animate-slide-up-delayed-3">
           <ReceiptSettingsCard storeId={storeId} storeName={storeName} />
+        </div>
+      )}
+
+      {storeId && (
+        <div className="animate-slide-up-delayed-3">
+          <CustomerDisplayCard storeId={storeId} />
         </div>
       )}
 

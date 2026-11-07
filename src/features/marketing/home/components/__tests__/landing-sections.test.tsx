@@ -52,7 +52,6 @@ import { NF525_SETTLED } from "../../lib/migration";
 import { PricingSection } from "../pricing-section";
 import { ThreeSpacesSection } from "../three-spaces-section";
 import { UsesSection } from "../uses-section";
-import { HubSection } from "../hub-section";
 import { PosTourSection } from "../pos-tour-section";
 import { FinalCtaSection } from "../final-cta-section";
 import { PAINS } from "../../data/problems";
@@ -111,8 +110,8 @@ describe("HeroSection", () => {
   });
 
   it.each([
-    ["fr", "Caisse de commande par téléphone", "Vos clients commandent, vous encaissez"],
-    ["en", "Phone Ordering Cashier", "Customers order on their phone, you get paid"],
+    ["fr", "Commande en ligne et caisse, pour cafés", "Vos clients commandent, vous encaissez"],
+    ["en", "Online ordering + POS for cafés", "Customers order on their phone, you get paid"],
     ["id", "Kasir Pesan Lewat HP", "Pelanggan pesan dari HP, Anda langsung dibayar"],
   ] as const)("%s: one h1, with its tagline under it", (loc, headline, tagline) => {
     mockLocale.value = loc;
@@ -130,58 +129,79 @@ describe("HeroSection", () => {
     render(<HeroSection onOpenMigration={() => {}} />);
     const h1 = screen.getByRole("heading", { level: 1 });
     expect(h1.querySelectorAll("br")).toHaveLength(1);
-    expect(h1.textContent).toBe("Caisse de commande par téléphone");
+    expect(h1.textContent).toBe("Commande en ligne et caisse, pour cafés");
   });
 
-  it("has a store search card that opens a dialog, lists matching stores live, and offers to register when none match", async () => {
+  it("the search card checks whether a link is free, offers to claim it, and lists the cafés already on Epidom", async () => {
     mockLocale.value = "en";
+    window.localStorage.clear();
     vi.stubGlobal("matchMedia", (query: string) => ({
       matches: false,
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
     }));
-    const fetchMock = vi.fn(async (url: string) => ({
-      ok: true,
-      json: async () => ({
-        data: {
-          stores: url.includes("q=Bob") ? [{ slug: "bobs-cafe", displayName: "Bob's Café" }] : [],
-        },
-      }),
-    }));
+    const fetchMock = vi.fn(async (url: string) => {
+      const q = new URL(url, "http://x").searchParams.get("q") ?? "";
+      const data =
+        q === "Bob"
+          ? {
+              stores: [{ slug: "bobs-cafe", displayName: "Bob's Café" }],
+              link: { slug: "bob", available: false },
+            }
+          : q === "my-new-cafe"
+            ? { stores: [], link: { slug: "my-new-cafe", available: true } }
+            : { stores: [], link: null };
+      return { ok: true, json: async () => ({ data }) };
+    });
     vi.stubGlobal("fetch", fetchMock);
     render(<HeroSection onOpenMigration={() => {}} />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /Find your store by its @phone-orders link/ })
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Claim your free phone-orders link/ }));
     const input = await screen.findByRole("combobox", {
-      name: "Find your store by its @phone-orders link",
+      name: "Claim your free phone-orders link",
     });
     expect(input).toHaveFocus();
 
+    // Taken: said plainly; the cafés that match are listed, each opening its page.
     fireEvent.change(input, { target: { value: "@Bob" } });
     const option = await screen.findByRole("option", { name: /Bob's Café/ });
+    expect(screen.getByText("epidom.fr/@bob is taken. Try another name.")).toBeInTheDocument();
+    expect(screen.getByText("Already on Epidom")).toBeInTheDocument();
     expect(within(option).getByRole("link", { name: /^Open Link$/ })).toHaveAttribute(
       "href",
       "/@bobs-cafe"
     );
     expect(fetchMock.mock.calls[0][0]).toBe("/api/public/storefront-search?q=Bob");
 
-    fireEvent.change(input, { target: { value: "nobody-here" } });
-    expect(await screen.findByText("@nobody-here is not on Epidom yet.")).toBeInTheDocument();
+    // Free: claim it. The link is handed to the setup wizard through the browser.
+    fireEvent.change(input, { target: { value: "my-new-cafe" } });
+    expect(await screen.findByText("epidom.fr/@my-new-cafe is free")).toBeInTheDocument();
+    const claim = screen.getByRole("link", { name: "Create my store with this link" });
+    expect(claim).toHaveAttribute("href", "/register");
+    expect(screen.getByText(/no card needed/)).toBeInTheDocument();
+    fireEvent.click(claim);
+    expect(JSON.parse(window.localStorage.getItem("epidom:claimed-link")!).slug).toBe(
+      "my-new-cafe"
+    );
+
+    // Too short to be a link, and no café: the old "not on Epidom" answer.
+    fireEvent.change(input, { target: { value: "zq" } });
+    expect(await screen.findByText("@zq is not on Epidom yet.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Register your store now" })).toHaveAttribute(
       "href",
       "/register"
     );
     vi.unstubAllGlobals();
+    window.localStorage.clear();
   });
 
-  it("has no trial or calculator buttons: the search card is the one action", () => {
+  it("offers the 14-day POS trial next to the search, and says no card is needed", () => {
     render(<HeroSection onOpenMigration={() => {}} />);
     expect(
-      screen.queryByRole("link", { name: text("fr", "redesign.landing.hero.ctaTrial") })
-    ).toBeNull();
+      screen.getByRole("link", { name: text("fr", "redesign.landing.hero.trialCta") })
+    ).toBeInTheDocument();
+    expect(screen.getByText(text("fr", "redesign.landing.hero.noCard"))).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: text("fr", "redesign.landing.hero.ctaCalculator") })
     ).toBeNull();
@@ -237,18 +257,17 @@ describe("HeroSection", () => {
       expect(within(facts).queryByText("Vitrine")).toBeNull();
       expect(within(facts).getByRole("button", { name: /par WhatsApp$/ })).toBeInTheDocument();
       expect(within(facts).getByText("Dernière mise à jour")).toBeInTheDocument();
-      const update = within(facts).getByRole("link", { name: new RegExp(`/ ${APP_VERSION}$`) });
+      const update = within(facts).getByRole("link", { name: plain(releaseDay("fr-FR")) });
       expect(update).toHaveAttribute("href", getLocalizedPath("/changelog", "fr"));
-      expect(plain(update.textContent)).toBe(plain(`${releaseDay("fr-FR")} / ${APP_VERSION}`));
+      // The date only: a version number means nothing to a café owner.
+      expect(update.textContent).not.toContain(APP_VERSION);
     });
 
     it("en: the update date reads the English way, year included", () => {
       mockLocale.value = "en";
       render(<HeroSection onOpenMigration={() => {}} />);
       expect(screen.getByText("Last updated")).toBeInTheDocument();
-      expect(screen.getByText(new RegExp(`/ ${APP_VERSION}$`)).textContent).toBe(
-        `${releaseDay("en-US")} / ${APP_VERSION}`
-      );
+      expect(screen.getByRole("link", { name: releaseDay("en-US") })).toBeInTheDocument();
       expect(releaseDay("en-US")).toMatch(/\d{4}$/);
     });
 
@@ -699,7 +718,7 @@ describe("PosTourSection", () => {
     mockLocale.value = loc;
     const { container } = render(<PosTourSection />);
     expect(container.textContent).not.toContain("redesign.");
-    expect(tabs()).toHaveLength(6);
+    expect(tabs()).toHaveLength(4);
   });
 
   it("opens on phone orders: its pitch is shown and only the visible screens are announced", () => {
@@ -721,13 +740,13 @@ describe("PosTourSection", () => {
   it("a tap opens that feature: its pitch and its screen, and stops the autoplay", () => {
     mockLocale.value = "en";
     render(<PosTourSection />);
-    fireEvent.click(screen.getByRole("tab", { name: /Receipts and a customer screen/ }));
-    expect(tabs()[5]).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(screen.getByRole("tab", { name: /One link, no app store/ }));
+    expect(tabs()[3]).toHaveAttribute("aria-selected", "true");
     expect(tabs()[0]).toHaveAttribute("aria-selected", "false");
     expect(
-      screen.getByRole("img", { name: PRODUCT_SCREENS.posCustomerDisplay.alt.en })
+      screen.getByRole("img", { name: PRODUCT_SCREENS.posCashier.alt.en })
     ).toBeInTheDocument();
-    expect(screen.getByText(text("en", "redesign.posTour.f6Body"))).toBeInTheDocument();
+    expect(screen.getByText(text("en", "redesign.posTour.f4Body"))).toBeInTheDocument();
   });
 
   it("the progress line opens the next feature when it ends, and wraps round", () => {
@@ -735,14 +754,14 @@ describe("PosTourSection", () => {
     const { container } = render(<PosTourSection />);
     fireEvent.animationEnd(container.querySelector("[style*='animation-duration']")!);
     expect(tabs()[1]).toHaveAttribute("aria-selected", "true");
-    fireEvent.click(tabs()[5]);
+    fireEvent.click(tabs()[3]);
     // Picked by hand: nothing advances any more.
     expect(container.querySelector("[style*='animation-duration']")?.className).not.toMatch(
       /animate-\[epi-fill/
     );
   });
 
-  it("finance and the modes show a crop, never the whole capture", () => {
+  it("finance shows a crop, never the whole capture", () => {
     mockLocale.value = "en";
     render(<PosTourSection />);
     fireEvent.click(tabs()[1]);
@@ -773,15 +792,15 @@ describe("PosTourSection", () => {
 
   it("arrow keys, Home and End move between features (roving focus)", () => {
     render(<PosTourSection />);
-    expect(tabs().map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1, -1, -1]);
+    expect(tabs().map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1]);
     fireEvent.keyDown(tabs()[0], { key: "ArrowUp" });
-    expect(tabs()[5]).toHaveAttribute("aria-selected", "true");
-    expect(tabs()[5]).toHaveFocus();
-    fireEvent.keyDown(tabs()[5], { key: "ArrowDown" });
+    expect(tabs()[3]).toHaveAttribute("aria-selected", "true");
+    expect(tabs()[3]).toHaveFocus();
+    fireEvent.keyDown(tabs()[3], { key: "ArrowDown" });
     expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(tabs()[0], { key: "End" });
-    expect(tabs()[5]).toHaveAttribute("aria-selected", "true");
-    fireEvent.keyDown(tabs()[5], { key: "Home" });
+    expect(tabs()[3]).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(tabs()[3], { key: "Home" });
     expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
     expect(tabs()[0]).toHaveFocus();
   });
@@ -863,41 +882,39 @@ describe("UsesSection", () => {
   });
 });
 
-// ── Hub: everything connected ───────────────────────────────────────────────
+// ── One order, three steps ──────────────────────────────────────────────────
 
-describe("HubSection", () => {
+describe("ThreeSpacesSection: one order in three steps", () => {
   it.each(["fr", "en", "id"] as const)(
-    "%s: nine labelled tiles, Claude among them, no missing string",
+    "%s: an ordered list of three numbered steps, no missing string",
     (loc) => {
       mockLocale.value = loc;
-      const { container } = render(<HubSection />);
+      const { container } = render(<ThreeSpacesSection exampleStorefrontSlug={null} />);
       expect(container.textContent).not.toContain("redesign.");
-      expect(screen.getAllByRole("listitem")).toHaveLength(9);
-      expect(screen.getByText("Claude")).toBeInTheDocument();
-      expect(
-        screen.getByRole("link", { name: text(loc, "redesign.landing.hub.cta") })
-      ).toBeInTheDocument();
+      const steps = within(container.querySelector("ol")!).getAllByRole("listitem");
+      expect(steps).toHaveLength(3);
+      steps.forEach((step, i) => {
+        expect(step).toHaveTextContent(
+          text(loc, "redesign.landing.spaces.stepLabel").replace("{n}", String(i + 1))
+        );
+      });
+      expect(steps[1]).toHaveTextContent(text(loc, "redesign.landing.spaces.posStep"));
     }
   );
 
-  it("the call to action goes to the Claude connector page in the visitor's language", () => {
+  it("says 'ask Claude' in plain words and links to the connector page in the visitor's language", () => {
     for (const [loc, href] of [
       ["en", "/en/claude-connector-pos"],
       ["fr", "/connecteur-claude-caisse"],
       ["id", "/id/konektor-claude-kasir"],
     ] as const) {
       mockLocale.value = loc;
-      const { unmount } = render(<HubSection />);
+      const { container, unmount } = render(<ThreeSpacesSection exampleStorefrontSlug={null} />);
+      expect(container.textContent).not.toMatch(/MCP/);
       expect(
-        screen.getByRole("link", { name: text(loc, "redesign.landing.hub.cta") })
+        screen.getByRole("link", { name: new RegExp(text(loc, "redesign.landing.spaces.claude")) })
       ).toHaveAttribute("href", href);
       unmount();
     }
-  });
-
-  it("has no pause control over the diagram", () => {
-    mockLocale.value = "en";
-    render(<HubSection />);
-    expect(screen.queryByRole("button")).toBeNull();
   });
 });

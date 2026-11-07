@@ -5,6 +5,7 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { StoreCard } from "./store-card";
 import { AdminCard } from "./admin-card";
 import { CreateStoreDialog } from "./create-store-dialog";
+import { FinishSetupBanner } from "./finish-setup-banner";
 import { useStores } from "../hooks/use-stores";
 import { useStoreOverviews } from "../hooks/use-store-overviews";
 import { useSubscriptionStatus } from "../hooks/use-subscription-status";
@@ -27,6 +28,7 @@ import {
   clearWizardRedirect,
   gatekeeperVerdict,
   rememberWizardRedirect,
+  setupSkipped,
   wizardRedirectedRecently,
   type GatekeeperProfile,
 } from "../lib/stores-gatekeeper";
@@ -45,6 +47,8 @@ type GateState =
       businessCountry: string | null;
       businessTimezone: string | null;
       hasBusiness: boolean;
+      /** Setup was left before its last Confirm (skipped on the plan questions): offer to finish it. */
+      setupUnfinished: boolean;
       /** Admin pages / partner page the account may open (null when unknown). */
       adminAccess: AdminAccessSummary | null;
     };
@@ -123,6 +127,7 @@ export function StoresContainer() {
         businessCountry: profile?.business?.country ?? null,
         businessTimezone: profile?.business?.timezone ?? null,
         hasBusiness: !!profile?.business,
+        setupUnfinished: gatekeeperVerdict(profile) === "wizard-unfinished",
         adminAccess:
           (profile as { adminAccess?: AdminAccessSummary } | null | undefined)?.adminAccess ?? null,
       });
@@ -137,6 +142,12 @@ export function StoresContainer() {
         // effect) must not record a redirect the live run would then skip.
         if (cancelled) return;
         const verdict = gatekeeperVerdict(profile);
+        // Setup was skipped on purpose: stay. With no store, Create a store is
+        // here; with the store saved (skipped on the plan questions), the
+        // banner offers the last step instead of forcing it.
+        if ((verdict === "no-store" || verdict === "wizard-unfinished") && setupSkipped()) {
+          return stay(profile);
+        }
         if (verdict === "partner-page") {
           setGate({ status: "redirecting" });
           window.location.href = PARTNER_PAGE_PATH;
@@ -297,6 +308,10 @@ export function StoresContainer() {
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-5 md:px-8 md:py-6 lg:py-8">
+          {gate.status === "stay" && gate.setupUnfinished && !showSkeleton ? (
+            <FinishSetupBanner />
+          ) : null}
+
           {/* Loading State (also while the gatekeeper decides — no flash before a redirect) */}
           {showSkeleton && (
             <div className="animate-slide-up-delayed grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-5 lg:gap-6">

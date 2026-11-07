@@ -42,18 +42,10 @@ import {
 import { PartnerDealFields } from "./partner-deal-fields";
 import { CurrencyTotalsList, StatusBadge, money, shortDate } from "./partner-bits";
 import { PARTNERS_QUERY_KEY } from "./partners-admin";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 type Detail = Awaited<ReturnType<typeof getPartnerDetail>>;
 
-const STATUS_TEXT: Record<string, string> = {
-  FREE: "Free",
-  CHECKOUT: "Checkout not finished",
-  TRIAL: "Trial",
-  ACTIVE: "Paying",
-  PAST_DUE: "Payment failed",
-  CANCELED: "Canceled",
-  GRANTED: "Granted by admin",
-};
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -72,6 +64,7 @@ function EditDealDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const p = detail.partner;
   const form = useForm<PartnerDealFormValues>({
@@ -96,7 +89,7 @@ function EditDealDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-partner", p.id] });
       queryClient.invalidateQueries({ queryKey: PARTNERS_QUERY_KEY });
-      toast.success("Deal updated");
+      toast.success(t("adminPages.partners.toasts.dealUpdated"));
       onOpenChange(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -105,10 +98,9 @@ function EditDealDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] flex-col overflow-hidden sm:max-w-lg">
         <DialogHeader className="shrink-0">
-          <DialogTitle>Edit deal</DialogTitle>
+          <DialogTitle>{t("adminPages.partners.editDeal.title")}</DialogTitle>
           <DialogDescription>
-            Changes apply to new sign-ups only. Customers who already signed up keep the deal they
-            signed up with, including the discount the banner promised them.
+            {t("adminPages.partners.editDeal.desc")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -121,11 +113,11 @@ function EditDealDialog({
             </div>
             <DialogFooter className="shrink-0 pt-3">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("adminPages.common.cancel")}
               </Button>
               <Button type="submit" disabled={save.isPending}>
                 {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save
+                {t("adminPages.common.save")}
               </Button>
             </DialogFooter>
           </form>
@@ -136,6 +128,7 @@ function EditDealDialog({
 }
 
 function SalesPagesCard({ detail }: { detail: Detail }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const p = detail.partner;
   const initial = useMemo(
@@ -162,8 +155,8 @@ function SalesPagesCard({ detail }: { detail: Detail }) {
       queryClient.invalidateQueries({ queryKey: PARTNERS_QUERY_KEY });
       toast.success(
         res.credited > 0
-          ? `Sales pages saved · ${res.credited} earlier sign-up${res.credited === 1 ? "" : "s"} credited`
-          : "Sales pages saved"
+          ? t("adminPages.partners.toasts.salesSavedCredited").replace("{count}", String(res.credited))
+          : t("adminPages.partners.toasts.salesSaved")
       );
     },
     onError: (e: Error) => toast.error(e.message),
@@ -172,11 +165,9 @@ function SalesPagesCard({ detail }: { detail: Detail }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Sales pages owned</CardTitle>
+        <CardTitle className="text-base">{t("adminPages.partners.salesCard.title")}</CardTitle>
         <p className="text-muted-foreground text-xs">
-          Every sign-up from an owned page (French, English and Indonesian) since its &quot;credit
-          from&quot; date earns this partner commission. No customer discount on sales pages. A page
-          has one owner.
+          {t("adminPages.partners.salesCard.desc")}
         </p>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -201,12 +192,12 @@ function SalesPagesCard({ detail }: { detail: Detail }) {
                     })
                   }
                 />
-                {page.replace("sales-page-", "Sales page ")}
+                {t("adminPages.partners.salesPage").replace("{n}", page.replace("sales-page-", ""))}
               </label>
               {checked && (
                 <div className="flex items-center gap-2">
                   <Label htmlFor={`${id}-from`} className="text-muted-foreground text-xs">
-                    Credit from
+                    {t("adminPages.partners.salesCard.creditFrom")}
                   </Label>
                   <Input
                     id={`${id}-from`}
@@ -227,7 +218,7 @@ function SalesPagesCard({ detail }: { detail: Detail }) {
             className="min-h-10"
           >
             {save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save sales pages
+            {t("adminPages.partners.salesCard.save")}
           </Button>
         </div>
       </CardContent>
@@ -237,39 +228,39 @@ function SalesPagesCard({ detail }: { detail: Detail }) {
 
 /** Where to transfer: the partner enters it on their page. Full admins see it to pay. */
 function BankDetailsAdminCard({ detail, canPay }: { detail: Detail; canPay: boolean }) {
+  const { t, intlLocale } = useI18n();
   const p = detail.partner;
   const view = p.bankDetails;
   const d = view?.details ?? null;
   const copy = (value: string) =>
-    navigator.clipboard.writeText(value).then(() => toast.success("Copied"));
+    navigator.clipboard.writeText(value).then(() => toast.success(t("adminPages.common.copied")));
   return (
     <Card className={!p.bankDetailsSet ? "border-amber-500/40" : undefined}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Payout details</CardTitle>
+        <CardTitle className="text-base">{t("adminPages.partners.bank.title")}</CardTitle>
         <p className="text-muted-foreground text-xs">
-          Entered by the partner on their page, stored encrypted.
+          {t("adminPages.partners.bank.desc")}
         </p>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         {!p.bankDetailsSet ? (
           <p className="text-amber-500">
-            Not provided yet: {p.displayName} adds them on their partner page.
+            {t("adminPages.partners.bank.notProvided").replace("{name}", p.displayName)}
           </p>
         ) : !canPay ? (
-          <p className="text-muted-foreground">Provided. Only a full admin sees them.</p>
+          <p className="text-muted-foreground">{t("adminPages.partners.bank.providedHidden")}</p>
         ) : !d ? (
           <p className="text-amber-500">
-            Saved, but they can&apos;t be read here (encrypted in another environment). Ask the
-            partner to enter them again if this is production.
+            {t("adminPages.partners.bank.unreadable")}
           </p>
         ) : (
           <>
             {(
               [
-                ["Account holder", d.accountHolder],
-                ["Bank", d.bankName],
-                ["IBAN / account number", d.accountNumber],
-                ...(d.swift ? [["BIC / SWIFT", d.swift]] : []),
+                [t("adminPages.partners.bank.holder"), d.accountHolder],
+                [t("adminPages.partners.bank.bank"), d.bankName],
+                [t("adminPages.partners.bank.account"), d.accountNumber],
+                ...(d.swift ? [[t("adminPages.partners.bank.swift"), d.swift]] : []),
               ] as [string, string][]
             ).map(([label, value]) => (
               <div key={label} className="flex items-center justify-between gap-2">
@@ -281,7 +272,7 @@ function BankDetailsAdminCard({ detail, canPay }: { detail: Detail; canPay: bool
                   variant="ghost"
                   size="sm"
                   className="min-h-10 shrink-0"
-                  aria-label={`Copy ${label}`}
+                  aria-label={t("adminPages.partners.bank.copyLabel").replace("{label}", label)}
                   onClick={() => copy(value)}
                 >
                   <Copy className="h-3.5 w-3.5" />
@@ -289,7 +280,9 @@ function BankDetailsAdminCard({ detail, canPay }: { detail: Detail; canPay: bool
               </div>
             ))}
             {view?.updatedAt && (
-              <p className="text-muted-foreground text-xs">Updated {shortDate(view.updatedAt)}</p>
+              <p className="text-muted-foreground text-xs">
+                {t("adminPages.partners.bank.updated").replace("{date}", shortDate(view.updatedAt, intlLocale))}
+              </p>
             )}
           </>
         )}
@@ -307,6 +300,7 @@ function PayoutDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const payable = detail.totals.filter((t) => Number(t.ready) > 0);
   const [currency, setCurrency] = useState(payable[0]?.currency ?? "");
@@ -335,7 +329,7 @@ function PayoutDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-partner", detail.partner.id] });
       queryClient.invalidateQueries({ queryKey: PARTNERS_QUERY_KEY });
-      toast.success("Payout recorded");
+      toast.success(t("adminPages.partners.toasts.payoutRecorded"));
       onOpenChange(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -345,18 +339,17 @@ function PayoutDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Record a payout</DialogTitle>
+          <DialogTitle>{t("adminPages.partners.payout.title")}</DialogTitle>
           <DialogDescription>
-            After you&apos;ve sent the bank transfer: everything ready to pay in this currency is
-            marked paid. The amount is the sum of those commissions, refunds already taken off.
+            {t("adminPages.partners.payout.desc")}
           </DialogDescription>
         </DialogHeader>
         {payable.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Nothing is ready to pay yet.</p>
+          <p className="text-muted-foreground text-sm">{t("adminPages.partners.payout.nothingReady")}</p>
         ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Currency</Label>
+              <Label>{t("adminPages.partners.payout.currency")}</Label>
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger className="min-h-10 w-full">
                   <SelectValue />
@@ -371,7 +364,7 @@ function PayoutDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="payout-ref">Bank transfer reference</Label>
+              <Label htmlFor="payout-ref">{t("adminPages.partners.payout.reference")}</Label>
               <Input
                 id="payout-ref"
                 value={reference}
@@ -379,7 +372,7 @@ function PayoutDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="payout-date">Paid on</Label>
+              <Label htmlFor="payout-date">{t("adminPages.partners.payout.paidOn")}</Label>
               <Input
                 id="payout-date"
                 type="date"
@@ -389,32 +382,33 @@ function PayoutDialog({
             </div>
             {amount && (
               <p className="text-foreground text-sm">
-                Amount: <strong>{money(amount, currency)}</strong>
+                {t("adminPages.partners.payout.amount")} <strong>{money(amount, currency)}</strong>
               </p>
             )}
             {detail.partner.bankDetails?.details ? (
               <p className="text-muted-foreground text-sm">
-                Transfer to <strong>{detail.partner.bankDetails.details.accountHolder}</strong>,{" "}
-                {detail.partner.bankDetails.details.bankName},{" "}
-                <span className="tabular-nums">{detail.partner.bankDetails.details.accountNumber}</span>
+                {t("adminPages.partners.payout.transferTo")
+                  .replace("{holder}", detail.partner.bankDetails.details.accountHolder)
+                  .replace("{bank}", detail.partner.bankDetails.details.bankName)
+                  .replace("{account}", detail.partner.bankDetails.details.accountNumber)}
                 {detail.partner.bankDetails.details.swift
                   ? ` (${detail.partner.bankDetails.details.swift})`
                   : ""}
               </p>
             ) : (
               <p className="text-sm text-amber-500">
-                {detail.partner.displayName} hasn&apos;t entered their bank details yet.
+                {t("adminPages.partners.payout.noBank").replace("{name}", detail.partner.displayName)}
               </p>
             )}
           </div>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("adminPages.common.cancel")}
           </Button>
           <Button disabled={!amount || record.isPending} onClick={() => record.mutate()}>
             {record.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Record payout
+            {t("adminPages.partners.payout.record")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -423,6 +417,7 @@ function PayoutDialog({
 }
 
 export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay: boolean }) {
+  const { t, intlLocale } = useI18n();
   const queryClient = useQueryClient();
   const origin = useOrigin();
   const [editing, setEditing] = useState(false);
@@ -441,14 +436,14 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-partner", partnerId] });
       queryClient.invalidateQueries({ queryKey: PARTNERS_QUERY_KEY });
-      toast.success("Status updated");
+      toast.success(t("adminPages.partners.toasts.statusUpdated"));
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const resend = useMutation({
     mutationFn: () => apiJson(`/api/admin/partners/${partnerId}/invite`, { method: "POST" }),
-    onSuccess: () => toast.success("Invitation sent again (the previous link no longer works)"),
+    onSuccess: () => toast.success(t("adminPages.partners.toasts.resent")),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -460,16 +455,19 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-partner", partnerId] });
-      toast.success("Commission voided");
+      toast.success(t("adminPages.partners.toasts.voided"));
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  if (isLoading) return <p className="text-muted-foreground px-4 py-6 text-sm sm:px-6">Loading…</p>;
+  if (isLoading)
+    return (
+      <p className="text-muted-foreground px-4 py-6 text-sm sm:px-6">{t("adminPages.common.loading")}</p>
+    );
   if (error || !data) {
     return (
       <p className="px-4 py-6 text-sm text-red-400 sm:px-6">
-        {(error as Error)?.message ?? "Not found"}
+        {(error as Error)?.message ?? t("adminPages.partners.detail.notFound")}
       </p>
     );
   }
@@ -482,7 +480,7 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="ghost" size="sm" asChild className="min-h-10">
             <Link href="/admin/partners">
-              <ArrowLeft className="mr-1 h-4 w-4" /> Partners
+              <ArrowLeft className="mr-1 h-4 w-4" /> {t("adminPages.partners.detail.partners")}
             </Link>
           </Button>
           <div className="min-w-0">
@@ -491,7 +489,9 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
             </h1>
             <p className="text-muted-foreground truncate text-xs">
               {p.user?.email ??
-                (p.inviteEmail ? `Invited: ${p.inviteEmail} (not joined yet)` : "Account deleted")}
+                (p.inviteEmail
+                  ? t("adminPages.partners.list.invited").replace("{email}", p.inviteEmail)
+                  : t("adminPages.partners.list.accountDeleted"))}
             </p>
           </div>
           <div className="ml-auto flex flex-wrap gap-2">
@@ -504,7 +504,7 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                 onClick={() => resend.mutate()}
               >
                 {resend.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-                Resend invitation
+                {t("adminPages.partners.detail.resend")}
               </Button>
             )}
             {p.status !== "ACTIVE" && (
@@ -514,7 +514,7 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                 className="min-h-10"
                 onClick={() => setStatus.mutate("ACTIVE")}
               >
-                Resume
+                {t("adminPages.partners.detail.resume")}
               </Button>
             )}
             {p.status === "ACTIVE" && (
@@ -524,7 +524,7 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                 className="min-h-10"
                 onClick={() => setStatus.mutate("PAUSED")}
               >
-                Pause
+                {t("adminPages.partners.detail.pause")}
               </Button>
             )}
             {p.status !== "ENDED" && (
@@ -534,15 +534,13 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                 className="min-h-10 text-red-400"
                 onClick={() => {
                   if (
-                    window.confirm(
-                      "End this partner? New sign-ups stop counting and their link stops giving the discount. Existing customers finish their window."
-                    )
+                    window.confirm(t("adminPages.partners.detail.endConfirm"))
                   ) {
                     setStatus.mutate("ENDED");
                   }
                 }}
               >
-                End
+                {t("adminPages.partners.detail.end")}
               </Button>
             )}
           </div>
@@ -551,28 +549,29 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-              <CardTitle className="text-base">Deal</CardTitle>
+              <CardTitle className="text-base">{t("adminPages.partners.detail.deal")}</CardTitle>
               <Button
                 variant="outline"
                 size="sm"
                 className="min-h-10"
                 onClick={() => setEditing(true)}
               >
-                <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit deal
+                <Pencil className="mr-1.5 h-3.5 w-3.5" /> {t("adminPages.partners.detail.editDeal")}
               </Button>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <p>
-                <strong>{Number(p.commissionRate)}%</strong> of what each customer pays during their
-                first <strong>{p.commissionMonths}</strong> month
-                {p.commissionMonths === 1 ? "" : "s"} of paid billing (a yearly plan counts{" "}
-                {p.commissionMonths}/12 of the year).
+                {t(p.commissionMonths === 1 ? "adminPages.partners.detail.termsOne" : "adminPages.partners.detail.termsMany")
+                  .replace("{rate}", String(Number(p.commissionRate)))
+                  .replace(/\{months\}/g, String(p.commissionMonths))}
               </p>
               {p.referralCode ? (
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs">
-                    Referral link · customers get{" "}
-                    <strong>{Number(p.customerDiscountPercent)}%</strong> off their first payment
+                    {t("adminPages.partners.detail.referralLinkNote").replace(
+                      "{percent}",
+                      String(Number(p.customerDiscountPercent))
+                    )}
                   </p>
                   <div className="flex items-center gap-2">
                     <code className="bg-muted/50 min-w-0 flex-1 truncate rounded px-2 py-1.5 text-xs">
@@ -584,7 +583,7 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                       className="min-h-10"
                       onClick={() =>
                         link &&
-                        navigator.clipboard.writeText(link).then(() => toast.success("Copied"))
+                        navigator.clipboard.writeText(link).then(() => toast.success(t("adminPages.common.copied")))
                       }
                     >
                       <Copy className="h-3.5 w-3.5" />
@@ -593,7 +592,7 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                 </div>
               ) : (
                 <p className="text-muted-foreground text-xs">
-                  No referral link (sales pages only).
+                  {t("adminPages.partners.detail.noLink")}
                 </p>
               )}
               {p.notes && (
@@ -604,19 +603,18 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-              <CardTitle className="text-base">Commission</CardTitle>
+              <CardTitle className="text-base">{t("adminPages.partners.detail.commission")}</CardTitle>
               {canPay && (
                 <Button size="sm" className="min-h-10" onClick={() => setPaying(true)}>
-                  Record payout
+                  {t("adminPages.partners.payout.record")}
                 </Button>
               )}
             </CardHeader>
             <CardContent className="space-y-2">
               <CurrencyTotalsList totals={data.totals} />
               <p className="text-muted-foreground text-[11px]">
-                Each commission is on hold for 30 days after the payment, in case it&apos;s
-                refunded.
-                {!canPay && " Payouts are recorded by a full admin."}
+                {t("adminPages.partners.detail.holdNote")}
+                {!canPay && t("adminPages.partners.detail.fullAdminPays")}
               </p>
             </CardContent>
           </Card>
@@ -629,54 +627,62 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Customers ({data.customers.length})</CardTitle>
+            <CardTitle className="text-base">
+              {t("adminPages.partners.detail.customers").replace("{count}", String(data.customers.length))}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {data.customers.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No sign-ups credited yet.</p>
+              <p className="text-muted-foreground text-sm">{t("adminPages.partners.detail.noCustomers")}</p>
             ) : (
               <div className="-mx-4 overflow-x-auto sm:mx-0">
                 <table className="w-full min-w-[900px] text-sm">
                   <thead>
                     <tr className="text-muted-foreground border-border border-b text-left text-xs">
-                      <th className="px-4 py-2 font-medium sm:px-2">Signed up</th>
-                      <th className="px-2 py-2 font-medium">Customer</th>
-                      <th className="px-2 py-2 font-medium">Came from</th>
-                      <th className="px-2 py-2 font-medium">Ad</th>
-                      <th className="px-2 py-2 font-medium">Plan</th>
-                      <th className="px-2 py-2 font-medium">Window ends</th>
-                      <th className="px-4 py-2 text-right font-medium sm:px-2">Earned</th>
+                      <th className="px-4 py-2 font-medium sm:px-2">{t("adminPages.partners.detail.head.signedUp")}</th>
+                      <th className="px-2 py-2 font-medium">{t("adminPages.partners.detail.head.customer")}</th>
+                      <th className="px-2 py-2 font-medium">{t("adminPages.partners.detail.head.cameFrom")}</th>
+                      <th className="px-2 py-2 font-medium">{t("adminPages.partners.detail.head.ad")}</th>
+                      <th className="px-2 py-2 font-medium">{t("adminPages.partners.detail.head.plan")}</th>
+                      <th className="px-2 py-2 font-medium">{t("adminPages.partners.detail.head.windowEnds")}</th>
+                      <th className="px-4 py-2 text-right font-medium sm:px-2">{t("adminPages.partners.detail.head.earned")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-border divide-y">
                     {data.customers.map((c) => (
                       <tr key={c.userId}>
                         <td className="px-4 py-2 whitespace-nowrap sm:px-2">
-                          {shortDate(c.signedUpAt)}
+                          {shortDate(c.signedUpAt, intlLocale)}
                         </td>
                         <td className="px-2 py-2">
-                          <p className="text-foreground">{c.label ?? "New sign-up"}</p>
+                          <p className="text-foreground">{c.label ?? t("adminPages.partners.detail.newSignup")}</p>
                           <p className="text-muted-foreground text-xs">{c.email}</p>
                           {c.selfReferralFlag && (
-                            <p className="text-xs text-red-400">Same IP as the partner: check it</p>
+                            <p className="text-xs text-red-400">{t("adminPages.partners.detail.selfReferral")}</p>
                           )}
                         </td>
                         <td className="px-2 py-2 whitespace-nowrap">
-                          {c.source === "REFERRAL_LINK"
-                            ? `Link${c.discountPercent ? ` · ${Number(c.discountPercent)}% off${c.discountRedeemed ? " (used)" : ""}` : ""}`
-                            : (c.salesPage?.replace("sales-page-", "Sales page ") ?? "—")}
+                          {c.source === "REFERRAL_LINK" || c.source === "REFERRAL_CODE"
+                            ? `${t(c.source === "REFERRAL_CODE" ? "adminPages.partners.detail.code" : "adminPages.partners.detail.link")}${
+                                c.discountPercent
+                                  ? `${t("adminPages.partners.detail.percentOff").replace("{percent}", String(Number(c.discountPercent)))}${c.discountRedeemed ? t("adminPages.partners.detail.used") : ""}`
+                                  : ""
+                              }`
+                            : c.salesPage
+                              ? t("adminPages.partners.salesPage").replace("{n}", c.salesPage.replace("sales-page-", ""))
+                              : "—"}
                         </td>
                         <td className="px-2 py-2">
                           {[c.utmSource, c.utmCampaign].filter(Boolean).join(" / ") ||
-                            (c.adClick ? `${c.adClick} ad` : "—")}
+                            (c.adClick ? t("adminPages.partners.detail.adSuffix").replace("{name}", c.adClick) : "—")}
                         </td>
                         <td className="px-2 py-2 whitespace-nowrap">
                           {PLAN_LABELS[c.plan as PlanTier] ?? c.plan}{" "}
                           <span className="text-muted-foreground text-xs">
-                            · {STATUS_TEXT[c.status] ?? c.status}
+                            · {t(`adminPages.salesPages.statuses.${c.status}`)}
                           </span>
                         </td>
-                        <td className="px-2 py-2 whitespace-nowrap">{shortDate(c.windowEnd)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap">{shortDate(c.windowEnd, intlLocale)}</td>
                         <td className="px-4 py-2 text-right whitespace-nowrap tabular-nums sm:px-2">
                           {c.earned.length === 0
                             ? "—"
@@ -693,22 +699,22 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Ledger</CardTitle>
+            <CardTitle className="text-base">{t("adminPages.partners.detail.ledger")}</CardTitle>
           </CardHeader>
           <CardContent>
             {data.ledger.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No commission yet.</p>
+              <p className="text-muted-foreground text-sm">{t("adminPages.partners.detail.noCommission")}</p>
             ) : (
               <div className="-mx-4 overflow-x-auto sm:mx-0">
                 <table className="w-full min-w-[860px] text-sm">
                   <thead>
                     <tr className="text-muted-foreground border-border border-b text-left text-xs">
-                      <th className="px-4 py-2 font-medium sm:px-2">Paid on</th>
-                      <th className="px-2 py-2 font-medium">Customer</th>
-                      <th className="px-2 py-2 font-medium">Payment</th>
-                      <th className="px-2 py-2 font-medium">Counts</th>
-                      <th className="px-2 py-2 text-right font-medium">Commission</th>
-                      <th className="px-2 py-2 font-medium">Status</th>
+                      <th className="px-4 py-2 font-medium sm:px-2">{t("adminPages.partners.detail.head.paidOn")}</th>
+                      <th className="px-2 py-2 font-medium">{t("adminPages.partners.detail.head.customer")}</th>
+                      <th className="px-2 py-2 font-medium">{t("adminPages.partners.detail.head.payment")}</th>
+                      <th className="px-2 py-2 font-medium">{t("adminPages.partners.detail.head.counts")}</th>
+                      <th className="px-2 py-2 text-right font-medium">{t("adminPages.partners.detail.head.commission")}</th>
+                      <th className="px-2 py-2 font-medium">{t("adminPages.partners.detail.head.status")}</th>
                       <th className="px-4 py-2 sm:px-2" />
                     </tr>
                   </thead>
@@ -716,11 +722,11 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                     {data.ledger.map((r) => (
                       <tr key={r.id} className={r.status === "VOID" ? "opacity-50" : undefined}>
                         <td className="px-4 py-2 whitespace-nowrap sm:px-2">
-                          {shortDate(r.earnedAt)}
+                          {shortDate(r.earnedAt, intlLocale)}
                         </td>
                         <td className="px-2 py-2">
                           {r.customerLabel ??
-                            (r.customerDeleted ? "Deleted account" : "New sign-up")}
+                            (r.customerDeleted ? t("adminPages.partners.detail.deletedAccount") : t("adminPages.partners.detail.newSignup"))}
                           {r.note && <p className="text-muted-foreground text-xs">{r.note}</p>}
                         </td>
                         <td className="px-2 py-2 whitespace-nowrap tabular-nums">
@@ -729,26 +735,29 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                             <span className="text-muted-foreground text-xs">
                               {" "}
                               · {PLAN_LABELS[r.plan as PlanTier] ?? r.plan}
-                              {r.billingInterval === "YEARLY" ? " yearly" : ""}
+                              {r.billingInterval === "YEARLY" ? t("adminPages.partners.detail.yearly") : ""}
                             </span>
                           )}
                         </td>
                         <td className="px-2 py-2 whitespace-nowrap tabular-nums">
                           {r.kind === "INVOICE"
                             ? `${money(r.commissionableAmount, r.currency)} × ${Number(r.rate)}%`
-                            : "Refund"}
+                            : t("adminPages.partners.detail.refund")}
                         </td>
                         <td className="px-2 py-2 text-right font-semibold whitespace-nowrap tabular-nums">
                           {money(r.amount, r.currency)}
                         </td>
                         <td className="px-2 py-2 text-xs whitespace-nowrap">
                           {r.status === "PAID"
-                            ? "Paid"
+                            ? t("adminPages.partners.detail.paid")
                             : r.status === "VOID"
-                              ? "Void"
+                              ? t("adminPages.partners.detail.void")
                               : r.ready
-                                ? "Ready to pay"
-                                : `On hold until ${shortDate(r.payableAt)}`}
+                                ? t("adminPages.partners.detail.readyToPay")
+                                : t("adminPages.partners.detail.onHoldUntil").replace(
+                                    "{date}",
+                                    shortDate(r.payableAt, intlLocale)
+                                  )}
                         </td>
                         <td className="px-4 py-2 text-right sm:px-2">
                           {canPay && r.status === "PENDING" && (
@@ -758,12 +767,12 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                               className="min-h-10 text-red-400"
                               disabled={voidRow.isPending}
                               onClick={() => {
-                                const reason = window.prompt("Why void this commission?");
+                                const reason = window.prompt(t("adminPages.partners.detail.voidPrompt"));
                                 if (reason?.trim())
                                   voidRow.mutate({ id: r.id, reason: reason.trim() });
                               }}
                             >
-                              Void
+                              {t("adminPages.partners.detail.void")}
                             </Button>
                           )}
                         </td>
@@ -778,11 +787,11 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Payouts</CardTitle>
+            <CardTitle className="text-base">{t("adminPages.partners.detail.payouts")}</CardTitle>
           </CardHeader>
           <CardContent>
             {data.payouts.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No payouts yet.</p>
+              <p className="text-muted-foreground text-sm">{t("adminPages.partners.detail.noPayouts")}</p>
             ) : (
               <div className="divide-border divide-y text-sm">
                 {data.payouts.map((po) => (
@@ -790,9 +799,9 @@ export function PartnerDetail({ partnerId, canPay }: { partnerId: string; canPay
                     key={po.id}
                     className="flex flex-wrap items-center justify-between gap-2 py-2"
                   >
-                    <span>{shortDate(po.paidAt)}</span>
+                    <span>{shortDate(po.paidAt, intlLocale)}</span>
                     <span className="text-muted-foreground text-xs">
-                      {po.reference ?? "No reference"}
+                      {po.reference ?? t("adminPages.partners.detail.noReference")}
                     </span>
                     <span className="font-semibold tabular-nums">
                       {money(po.amount, po.currency)}

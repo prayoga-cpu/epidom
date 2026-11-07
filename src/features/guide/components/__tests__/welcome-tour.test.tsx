@@ -95,7 +95,7 @@ describe("WelcomeTour", () => {
     expect(button("Back")).toBeDisabled();
 
     fireEvent.click(button("Next"));
-    expect(title()).toHaveTextContent("Storefront");
+    expect(title()).toHaveTextContent("Phone Orders");
     fireEvent.click(button("Back"));
     expect(title()).toHaveTextContent("Epidom has three spaces");
 
@@ -148,7 +148,7 @@ describe("WelcomeTour", () => {
     fireEvent.keyDown(dialog, { key: "ArrowLeft" });
     expect(title()).toHaveTextContent("Epidom has three spaces");
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
-    expect(title()).toHaveTextContent("Storefront");
+    expect(title()).toHaveTextContent("Phone Orders");
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
@@ -188,7 +188,7 @@ describe("WelcomeTour", () => {
 
     fireEvent.click(button("Go to step 4"));
     const row = (label: string) => screen.getByText(label).closest("li")!;
-    expect(row("Menu — in Storefront")).toHaveTextContent("Free");
+    expect(row("Menu — in Phone Orders")).toHaveTextContent("Free");
     expect(row("Stock & supplier orders")).toHaveTextContent("Operations");
     expect(row("Staff & schedules")).toHaveTextContent("Operations");
     // Finance moved to Operations.

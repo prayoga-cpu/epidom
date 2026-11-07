@@ -68,7 +68,7 @@ function RowCheckbox({
 // detail underneath that, not the other way around.
 const BACK_OFFICE_SECTIONS = dashboardNavigation
   .map((section) => ({
-    ...section,
+    title: section.title,
     items: section.items.filter((item) => !OWNER_ONLY_PAGES.has(item.href)),
   }))
   .filter((section) => section.items.length > 0)

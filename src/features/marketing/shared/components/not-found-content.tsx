@@ -27,7 +27,7 @@ export function NotFoundContent({ showDashboardButton = false }: NotFoundContent
   const pathname = usePathname();
   // Extract storeId from /store/[storeId]/... pattern if present
   const storeIdMatch = pathname?.match(/\/store\/([^/]+)/);
-  const dashboardHref = storeIdMatch ? `/store/${storeIdMatch[1]}/dashboard` : "/stores";
+  const dashboardHref = storeIdMatch ? `/store/${storeIdMatch[1]}/home` : "/stores";
 
   return (
     <Container maxWidth="2xl">

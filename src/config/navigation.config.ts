@@ -1,6 +1,9 @@
 import {
-  LayoutDashboard,
-  UserRound,
+  ChartNoAxesCombined,
+  CircleUser,
+  LayoutGrid,
+  Workflow,
+  Settings,
   Boxes,
   Database,
   AlertTriangle,
@@ -9,6 +12,7 @@ import {
   CreditCard,
   Mail,
   Store,
+  Smartphone,
   Monitor,
   UtensilsCrossed,
   ChefHat,
@@ -37,7 +41,11 @@ import {
 export type PlanTier = "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE";
 
 export interface NavItem {
+  /** Permission key (what StaffMember.allowedPages stores) AND, unless `route` is set, the in-store path. */
   href: string;
+  /** In-store path when it differs from the permission key: Analytics lives at
+   * /analytics but is still granted as "/dashboard", so no stored grant needs a migration. */
+  route?: string;
   labelKey: string; // i18n translation key
   icon: LucideIcon;
   showBadge?: boolean;
@@ -53,7 +61,12 @@ export interface NavItem {
 }
 
 export interface NavSection {
-  title?: string; // Optional section title
+  /** Stable id: the desktop sidebar's category rail keys on it. */
+  id: string;
+  title?: string; // Optional section title (the phone drawer's heading)
+  /** i18n key and icon for the category rail on desktop (the left strip of the sidebar). */
+  labelKey: string;
+  icon: LucideIcon;
   items: NavItem[];
 }
 
@@ -62,26 +75,35 @@ export interface NavSection {
  * skeleton (docs/back-office-revamp.md): General (always-visible product
  * surfaces), Operations (run the back-of-house, all OPERATIONS-tier),
  * Reports (Shifts, and Finance with its All outlets roll-up — also
- * OPERATIONS-tier), Account (your relationship with Epidom as a platform —
- * billing, support, profile).
+ * OPERATIONS-tier). Settings, Billing and Custom Development (your relationship
+ * with Epidom as a platform) sit at the end of General since 3.45.0: there is no
+ * separate Account category.
  *
  * /menu and POS Mode's own routes are deliberately absent — see
  * grantableOnlyNavItems and posModeNavItems below for why.
  */
 export const dashboardNavigation: NavSection[] = [
   {
+    id: "general",
+    labelKey: "nav.sections.general",
+    icon: LayoutGrid,
     title: "General",
     items: [
       {
+        // Analytics (3.44.0; "Overview" before). Home is the start page now.
         href: "/dashboard",
+        route: "/analytics",
         labelKey: "nav.dashboard",
-        icon: LayoutDashboard,
+        icon: ChartNoAxesCombined,
         showBadge: false,
       },
       {
+        // Phone Orders (3.44.0; "Storefront" before): the public menu page
+        // customers open and order from on their phone. The route and the
+        // grant keep the old /storefront name so no allowedPages migration.
         href: "/storefront",
         labelKey: "nav.storefront",
-        icon: Store,
+        icon: Smartphone,
         showBadge: false,
       },
       // Customer records captured at POS (name / phone / e-mail, plus loyalty
@@ -96,9 +118,35 @@ export const dashboardNavigation: NavSection[] = [
         requiredPlan: "POS",
         lockedHintKey: "nav.lockedHint.customers",
       },
+      {
+        href: "/billing",
+        labelKey: "nav.billing",
+        icon: CreditCard,
+        showBadge: false,
+      },
+      {
+        href: "/custom-development",
+        labelKey: "nav.customDevelopment",
+        icon: Wrench,
+        showBadge: false,
+        requiredPlan: "POS",
+        lockedHintKey: "nav.lockedHint.customDevelopment",
+      },
+      // Settings (the old Profile page) is last: the desktop sidebar pins it to the
+      // bottom of its panel, and the phone drawer lists it at the end of General.
+      {
+        href: "/profile",
+        labelKey: "nav.profile",
+        icon: Settings,
+        showBadge: false,
+      },
+
     ],
   },
   {
+    id: "operations",
+    labelKey: "nav.sections.operations",
+    icon: Workflow,
     title: "Operations",
     items: [
       {
@@ -153,6 +201,9 @@ export const dashboardNavigation: NavSection[] = [
     ],
   },
   {
+    id: "reports",
+    labelKey: "nav.sections.reports",
+    icon: BarChart3,
     title: "Reports",
     items: [
       {
@@ -188,32 +239,26 @@ export const dashboardNavigation: NavSection[] = [
       },
     ],
   },
-  {
-    title: "Account",
-    items: [
-      {
-        href: "/profile",
-        labelKey: "nav.profile",
-        icon: UserRound,
-        showBadge: false,
-      },
-      {
-        href: "/billing",
-        labelKey: "nav.billing",
-        icon: CreditCard,
-        showBadge: false,
-      },
-      {
-        href: "/custom-development",
-        labelKey: "nav.customDevelopment",
-        icon: Wrench,
-        showBadge: false,
-        requiredPlan: "POS",
-        lockedHintKey: "nav.lockedHint.customDevelopment",
-      },
-    ],
-  },
+
 ];
+
+/**
+ * Home — the Store Dashboard's start page (greeting, "What do you want to
+ * do?", quick actions, recently visited, setup progress) and the default
+ * landing page since 3.44.0.
+ *
+ * Deliberately NOT in dashboardNavigation: that list is also the universe of
+ * staff page grants (getAllAppNavItems → ALL_STAFF_PAGES, the permission
+ * checklist), and Home is not a permission — like Help, every member of the
+ * store may open it, and each tile on it is gated by its own page. The
+ * sidebar renders it as its own first row.
+ */
+export const homeNavItem: NavItem = {
+  href: "/home",
+  labelKey: "nav.home",
+  icon: Home,
+  showBadge: false,
+};
 
 /**
  * Landing page navigation items (for marketing/public pages)

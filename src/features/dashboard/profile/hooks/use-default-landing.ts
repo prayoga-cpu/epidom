@@ -2,13 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/lib/auth-client";
-
-const ALLOWED = new Set(["dashboard", "pos", "storefront", "data"]);
+import { normalizeDefaultLanding } from "@/lib/last-visited";
 
 /**
  * The user's preferred section to land on when entering a store. Reads from the
  * shared ["profile", userId] cache (same source as the currency provider), so it
- * doesn't add a duplicate request. Falls back to "dashboard".
+ * doesn't add a duplicate request. Resolved by normalizeDefaultLanding, the
+ * same rule the store index page uses: Home unless "pos", "storefront" or
+ * "data" was chosen.
  */
 export function useDefaultLanding(): string {
   const { user } = useUser();
@@ -23,9 +24,9 @@ export function useDefaultLanding(): string {
     staleTime: 5 * 60 * 1000,
     select: (d: any): string => {
       const v = typeof d === "string" ? d : (d?.defaultLanding ?? d?.data?.defaultLanding);
-      return typeof v === "string" && ALLOWED.has(v) ? v : "dashboard";
+      return normalizeDefaultLanding(v);
     },
   });
 
-  return data || "dashboard";
+  return data || "home";
 }

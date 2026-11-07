@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getAllAppNavItems } from "@/config/navigation.config";
+import { getAllAppNavItems, homeNavItem } from "@/config/navigation.config";
 import { LAST_VISITED_COOKIE, normalizeDefaultLanding } from "@/lib/last-visited";
 import { getLinkedStaffForUser, linkedStaffLandingPath } from "@/lib/auth/staff-link";
 
@@ -35,7 +35,11 @@ export const metadata: Metadata = {
  * deleted in a refactor, a shortcut from an old installed manifest) falls
  * back to the user's default landing rather than assembling a 404.
  */
-const LAUNCHABLE_SECTIONS = new Set(getAllAppNavItems().map((item) => item.href));
+// Home is not a grantable page (homeNavItem), but it is the PWA start URL (/go/home).
+const LAUNCHABLE_SECTIONS = new Set([
+  ...getAllAppNavItems().map((item) => item.href),
+  homeNavItem.href,
+]);
 
 /** Pulls `{storeId}` out of a `/store/{storeId}/...` path, if that's what this is. */
 function storeIdFromPath(pathname: string): string | null {

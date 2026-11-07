@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { EditPersonalInfoDialog } from "./edit-personal-info-dialog";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { normalizeDefaultLanding } from "@/lib/last-visited";
 
 interface PersonalInfoCardProps {
   user: {
@@ -16,6 +17,7 @@ interface PersonalInfoCardProps {
     locale: "en" | "fr" | "id" | undefined;
     timezone: string;
     rememberLastVisited?: boolean;
+    defaultLanding?: string;
   };
   onUpdate?: () => void;
 }
@@ -43,6 +45,10 @@ export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
     { label: t("profile.personal.phone"), value: user.phone || "—" },
     { label: t("profile.personal.language"), value: getLanguageLabel(user.locale) },
     { label: t("profile.personal.timezone"), value: user.timezone || "—" },
+    {
+      label: t("profile.personal.defaultLanding"),
+      value: t(`profile.personal.landingOptions.${normalizeDefaultLanding(user.defaultLanding)}`),
+    },
     {
       label: t("profile.personal.rememberLastVisited"),
       value:

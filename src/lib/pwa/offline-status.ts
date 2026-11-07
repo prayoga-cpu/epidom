@@ -71,7 +71,8 @@ export const OFFLINE_PAGES: readonly OfflinePage[] = [
   { id: "billing", section: "/billing", domains: [] },
   { id: "finance", section: "/finance", domains: [] },
   { id: "customDevelopment", section: "/custom-development", domains: [] },
-  { id: "dashboard", section: "/dashboard", domains: [] },
+  { id: "dashboard", section: "/analytics", domains: [] },
+  { id: "home", section: "/home", domains: [] },
 ];
 
 export function offlinePagePath(storeId: string, page: OfflinePage): string {

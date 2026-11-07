@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Check, ChevronDown, CircleDollarSign, Copy, Crown, Eye, EyeOff, Infinity, KeyRound, LogIn, Power, PowerOff, RotateCcw, Search, Shield, Store, Trash2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,19 @@ import { UserAccessDialog } from "./user-access-dialog";
 import { useUser } from "@/lib/auth-client";
 import { isLifetimePeriod } from "@/lib/utils/formatting";
 import { CURRENCIES } from "@/lib/constants/currencies";
+import { useI18n } from "@/components/lang/i18n-provider";
+
+/** Renders `text` with its `{token}` replaced by `value` in bold (a translated sentence around an email). */
+function withStrong(text: string, token: string, value: ReactNode) {
+  const [before, after = ""] = text.split(token);
+  return (
+    <>
+      {before}
+      <strong>{value}</strong>
+      {after}
+    </>
+  );
+}
 
 type Plan = "FREE" | "POS" | "OPERATIONS" | "ENTERPRISE";
 type SubStatus = "ACTIVE" | "CANCELED" | "PAST_DUE" | "INCOMPLETE";
@@ -116,25 +129,30 @@ const statusColors: Record<SubStatus, string> = {
  * schema default from account creation, not a real signal about the user.
  * Currency is no longer on User — it's per-store/business now (Fees & Taxes).
  */
-function regionLabel(u: UserRow): string {
-  if (!u.timezoneUpdatedAt) return "Unknown";
+function regionLabel(u: UserRow, unknown: string): string {
+  if (!u.timezoneUpdatedAt) return unknown;
   return u.timezone?.split("/").pop()?.replace(/_/g, " ") || "—";
 }
 
+/** `key` is the label under adminDash.periods. */
 const PERIOD_OPTIONS = [
-  { label: "1 month", months: 1 },
-  { label: "2 months", months: 2 },
-  { label: "3 months", months: 3 },
-  { label: "6 months", months: 6 },
-  { label: "1 year", months: 12 },
-  { label: "2 years", months: 24 },
-  { label: "Lifetime ∞", months: null },
+  { key: "m1", months: 1 },
+  { key: "m2", months: 2 },
+  { key: "m3", months: 3 },
+  { key: "m6", months: 6 },
+  { key: "y1", months: 12 },
+  { key: "y2", months: 24 },
+  { key: "lifetime", months: null },
 ];
 
-function formatPeriodEnd(dateStr: string | null | undefined): string {
+function formatPeriodEnd(
+  dateStr: string | null | undefined,
+  lifetimeLabel: string,
+  locale: string
+): string {
   if (!dateStr) return "—";
-  if (isLifetimePeriod(dateStr)) return "Lifetime ∞";
-  return new Date(dateStr).toLocaleDateString("en-GB", {
+  if (isLifetimePeriod(dateStr)) return lifetimeLabel;
+  return new Date(dateStr).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -146,30 +164,37 @@ function formatPeriodEnd(dateStr: string | null | undefined): string {
  * payment" marker while that quote has suspended the account.
  */
 function CustomPricePills({ subscription }: { subscription: UserRow["subscription"] }) {
+  const { t } = useI18n();
   if (subscription?.customPriceAmount == null) return null;
 
   const quote = `${subscription.customPriceAmount} ${subscription.customPriceCurrency ?? ""}${
-    subscription.customPriceInterval === "YEARLY" ? "/yr" : "/mo"
+    subscription.customPriceInterval === "YEARLY"
+      ? t("adminDash.badges.perYear")
+      : t("adminDash.badges.perMonth")
   }`;
 
   return (
     <>
       <span
         className="inline-flex items-center gap-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-cyan-400 uppercase"
-        title={`Custom price: ${quote}${
-          subscription.customPricePlan ? ` for ${subscription.customPricePlan}` : ""
-        }`}
+        title={
+          subscription.customPricePlan
+            ? t("adminDash.badges.customTitlePlan")
+                .replace("{quote}", quote)
+                .replace("{plan}", subscription.customPricePlan)
+            : t("adminDash.badges.customTitle").replace("{quote}", quote)
+        }
       >
         <CircleDollarSign className="h-2.5 w-2.5" />
-        Custom
+        {t("adminDash.badges.custom")}
         {subscription.customPricePlan ? ` · ${subscription.customPricePlan}` : ""}
       </span>
       {subscription.customPricePendingAt && (
         <span
           className="inline-flex items-center rounded-full border border-orange-500/30 bg-orange-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-orange-400 uppercase"
-          title="Access suspended until they pay the quoted price"
+          title={t("adminDash.badges.awaitingPaymentTitle")}
         >
-          Awaiting payment
+          {t("adminDash.badges.awaitingPayment")}
         </span>
       )}
     </>
@@ -177,6 +202,7 @@ function CustomPricePills({ subscription }: { subscription: UserRow["subscriptio
 }
 
 export function AdminDashboard() {
+  const { t, intlLocale } = useI18n();
   const queryClient = useQueryClient();
   const { user: me } = useUser();
   const [search, setSearch] = useState("");
@@ -225,7 +251,7 @@ export function AdminDashboard() {
       }).then(async (r) => {
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          throw new Error(err.error ?? "Request failed");
+          throw new Error(err.error ?? t("adminDash.toasts.requestFailed"));
         }
         return r.json();
       }),
@@ -235,42 +261,44 @@ export function AdminDashboard() {
       if (action === "delete-user") {
         setDeleteTarget(null);
         setDeleteConfirm("");
-        toast.success("Account deleted");
+        toast.success(t("adminDash.toasts.deleted"));
       } else if (action === "reset-account") {
         setResetTarget(null);
         setResetConfirm("");
-        toast.success("Account data reset — the user will restart onboarding on next login");
+        toast.success(t("adminDash.toasts.reset"));
       } else if (action === "reset-password") {
         setPwTarget(null);
         setNewPw("");
-        toast.success("Password updated");
+        toast.success(t("adminDash.toasts.passwordUpdated"));
       } else if (action === "set-admin") {
-        toast.success((vars as any).isAdmin ? "Admin access granted" : "Admin access revoked");
+        toast.success(
+          t((vars as any).isAdmin ? "adminDash.toasts.adminGranted" : "adminDash.toasts.adminRevoked")
+        );
 
       } else if (action === "set-period") {
-        toast.success("Subscription period updated — reloading…");
+        toast.success(t("adminDash.toasts.periodUpdated"));
         setTimeout(() => window.location.reload(), 800);
       } else if (action === "set-plan") {
-        toast.success("Plan updated — reloading…");
+        toast.success(t("adminDash.toasts.planUpdated"));
         setTimeout(() => window.location.reload(), 800);
       } else if (action === "reactivate-user") {
-        toast.success("Account reactivated");
+        toast.success(t("adminDash.toasts.reactivated"));
       } else if (action === "set-custom-price") {
         setPriceTarget(null);
         toast.success(
           (_data as { subscription?: { customPricePendingAt: string | null } })?.subscription
             ?.customPricePendingAt
-            ? "Price quoted — old subscription canceled, access suspended until they pay"
-            : "Custom price updated"
+            ? t("adminDash.toasts.priceQuoted")
+            : t("adminDash.toasts.priceUpdated")
         );
       } else if (action === "clear-custom-price") {
         setPriceTarget(null);
-        toast.success("Custom price cleared");
+        toast.success(t("adminDash.toasts.priceCleared"));
       } else {
-        toast.success("Subscription updated");
+        toast.success(t("adminDash.toasts.subscriptionUpdated"));
       }
     },
-    onError: (e: Error) => toast.error(e.message || "Failed"),
+    onError: (e: Error) => toast.error(e.message || t("adminDash.toasts.failed")),
   });
 
   const users = data?.users ?? [];
@@ -305,12 +333,14 @@ export function AdminDashboard() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs">
-            Manage <ChevronDown className="h-3 w-3" />
+            {t("adminDash.menu.manage")} <ChevronDown className="h-3 w-3" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           {/* Plan */}
-          <DropdownMenuLabel className="text-muted-foreground text-xs">Set Plan</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-muted-foreground text-xs">
+            {t("adminDash.menu.setPlan")}
+          </DropdownMenuLabel>
           {PLAN_ORDER.map((p) => (
             <DropdownMenuItem
               key={p}
@@ -329,7 +359,9 @@ export function AdminDashboard() {
               />
               {p}
               {plan === p && (
-                <span className="text-muted-foreground ml-auto text-[10px]">current</span>
+                <span className="text-muted-foreground ml-auto text-[10px]">
+                  {t("adminDash.menu.current")}
+                </span>
               )}
             </DropdownMenuItem>
           ))}
@@ -338,11 +370,11 @@ export function AdminDashboard() {
 
           {/* Period */}
           <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            <Calendar className="h-3 w-3" /> Set Duration
+            <Calendar className="h-3 w-3" /> {t("adminDash.menu.setDuration")}
           </DropdownMenuLabel>
-          {PERIOD_OPTIONS.map(({ label, months }) => (
+          {PERIOD_OPTIONS.map(({ key, months }) => (
             <DropdownMenuItem
-              key={label}
+              key={key}
               disabled={mutation.isPending}
               onClick={() =>
                 mutation.mutate({
@@ -357,7 +389,7 @@ export function AdminDashboard() {
               ) : (
                 <Calendar className="text-muted-foreground mr-2 h-3.5 w-3.5" />
               )}
-              {label}
+              {t(`adminDash.periods.${key}`)}
             </DropdownMenuItem>
           ))}
 
@@ -365,7 +397,7 @@ export function AdminDashboard() {
 
           {/* Custom price */}
           <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            <CircleDollarSign className="h-3 w-3" /> Custom Price
+            <CircleDollarSign className="h-3 w-3" /> {t("adminDash.menu.customPrice")}
           </DropdownMenuLabel>
           <DropdownMenuItem
             onClick={() => {
@@ -387,15 +419,15 @@ export function AdminDashboard() {
           >
             <CircleDollarSign className="mr-2 h-3.5 w-3.5" />
             {user.subscription?.customPriceAmount != null
-              ? "Edit Custom Price"
-              : "Set Custom Price"}
+              ? t("adminDash.menu.editCustomPrice")
+              : t("adminDash.menu.setCustomPrice")}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
           {/* Status */}
           <DropdownMenuLabel className="text-muted-foreground text-xs">
-            Set Status
+            {t("adminDash.menu.setStatus")}
           </DropdownMenuLabel>
           {(["ACTIVE", "CANCELED", "INCOMPLETE"] as SubStatus[]).map((s) => (
             <DropdownMenuItem
@@ -413,9 +445,11 @@ export function AdminDashboard() {
               <span
                 className={`mr-2 inline-block h-2 w-2 rounded-full ${s === "ACTIVE" ? "bg-emerald-400" : s === "CANCELED" ? "bg-red-400" : "bg-zinc-400"}`}
               />
-              {s}
+              {t(`adminDash.statuses.${s}`)}
               {status === s && (
-                <span className="text-muted-foreground ml-auto text-[10px]">current</span>
+                <span className="text-muted-foreground ml-auto text-[10px]">
+                  {t("adminDash.menu.current")}
+                </span>
               )}
             </DropdownMenuItem>
           ))}
@@ -434,7 +468,7 @@ export function AdminDashboard() {
                 }}
               >
                 <KeyRound className="mr-2 h-3.5 w-3.5" />
-                {user.hasPassword ? "Reset Password" : "Set Password"}
+                {user.hasPassword ? t("adminDash.menu.resetPassword") : t("adminDash.menu.setPassword")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-emerald-400 focus:bg-emerald-500/10 focus:text-emerald-400"
@@ -454,10 +488,10 @@ export function AdminDashboard() {
                       }),
                     });
                     const json = await res.json();
-                    if (!res.ok) throw new Error(json.error ?? "Failed");
+                    if (!res.ok) throw new Error(json.error ?? t("adminDash.toasts.failed"));
                     setTempPw(json.tempPassword);
                   } catch (e: any) {
-                    toast.error(e.message || "Failed to generate temp password");
+                    toast.error(e.message || t("adminDash.toasts.tempFailed"));
                     setTempPwUser(null);
                   } finally {
                     setTempLoading(false);
@@ -465,7 +499,7 @@ export function AdminDashboard() {
                 }}
               >
                 <LogIn className="mr-2 h-3.5 w-3.5" />
-                Get Temp Access
+                {t("adminDash.menu.tempAccess")}
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
@@ -473,12 +507,12 @@ export function AdminDashboard() {
               {/* Access: full admin, admin pages, referral partner, partner-page views */}
               {isHardcodedAdmin ? (
                 <DropdownMenuItem disabled className="text-muted-foreground text-xs">
-                  <Shield className="mr-2 h-3.5 w-3.5" /> Hardcoded master
+                  <Shield className="mr-2 h-3.5 w-3.5" /> {t("adminDash.menu.hardcodedMaster")}
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem onClick={() => setAccessUser(user)}>
                   <Shield className="mr-2 h-3.5 w-3.5" />
-                  Access…
+                  {t("adminDash.menu.access")}
                 </DropdownMenuItem>
               )}
 
@@ -492,7 +526,7 @@ export function AdminDashboard() {
                   onClick={() => mutation.mutate({ action: "reactivate-user", userId: user.id })}
                 >
                   <Power className="mr-2 h-3.5 w-3.5" />
-                  Reactivate Account
+                  {t("adminDash.menu.reactivate")}
                 </DropdownMenuItem>
               )}
 
@@ -505,7 +539,7 @@ export function AdminDashboard() {
                 }}
               >
                 <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                Reset Account Data
+                {t("adminDash.menu.resetData")}
               </DropdownMenuItem>
 
               {/* Delete */}
@@ -517,7 +551,7 @@ export function AdminDashboard() {
                 }}
               >
                 <Trash2 className="mr-2 h-3.5 w-3.5" />
-                Delete Account
+                {t("adminDash.menu.delete")}
               </DropdownMenuItem>
             </>
           )}
@@ -536,8 +570,8 @@ export function AdminDashboard() {
               <Shield className="h-5 w-5 text-red-400" />
             </div>
             <div>
-              <h1 className="text-foreground text-lg font-bold">Master Admin Panel</h1>
-              <p className="text-muted-foreground text-xs">Epidom internal — restricted access</p>
+              <h1 className="text-foreground text-lg font-bold">{t("adminDash.header.title")}</h1>
+              <p className="text-muted-foreground text-xs">{t("adminDash.header.subtitle")}</p>
             </div>
           </div>
         </div>
@@ -547,12 +581,12 @@ export function AdminDashboard() {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {[
-            { label: "Total Users", value: stats.total, icon: Users, color: "text-blue-400" },
-            { label: "Active Subs", value: stats.active, icon: Crown, color: "text-emerald-400" },
-            { label: "Enterprise", value: stats.enterprise, icon: Store, color: "text-violet-400" },
-            { label: "Admins", value: stats.admins, icon: Shield, color: "text-red-400" },
+            { label: t("adminDash.stats.totalUsers"), value: stats.total, icon: Users, color: "text-blue-400" },
+            { label: t("adminDash.stats.activeSubs"), value: stats.active, icon: Crown, color: "text-emerald-400" },
+            { label: t("adminDash.stats.enterprise"), value: stats.enterprise, icon: Store, color: "text-violet-400" },
+            { label: t("adminDash.stats.admins"), value: stats.admins, icon: Shield, color: "text-red-400" },
             {
-              label: "Deactivated",
+              label: t("adminDash.stats.deactivated"),
               value: stats.deactivated,
               icon: PowerOff,
               color: "text-amber-400",
@@ -573,7 +607,7 @@ export function AdminDashboard() {
           <div className="relative flex-1">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
-              placeholder="Search by name or email..."
+              placeholder={t("adminDash.filters.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -581,10 +615,10 @@ export function AdminDashboard() {
           </div>
           <Select value={planFilter} onValueChange={(v) => setPlanFilter(v as Plan | "ALL")}>
             <SelectTrigger className="w-full sm:w-[160px]">
-              <SelectValue placeholder="Filter by plan" />
+              <SelectValue placeholder={t("adminDash.filters.filterByPlan")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Plans</SelectItem>
+              <SelectItem value="ALL">{t("adminDash.filters.allPlans")}</SelectItem>
               {PLAN_ORDER.map((p) => (
                 <SelectItem key={p} value={p}>
                   {p}
@@ -597,10 +631,10 @@ export function AdminDashboard() {
         {/* Mobile/Tablet: card list */}
         <div className="space-y-3 lg:hidden">
           {isLoading && (
-            <p className="text-muted-foreground py-12 text-center text-sm">Loading users...</p>
+            <p className="text-muted-foreground py-12 text-center text-sm">{t("adminDash.list.loading")}</p>
           )}
           {!isLoading && filtered.length === 0 && (
-            <p className="text-muted-foreground py-12 text-center text-sm">No users found</p>
+            <p className="text-muted-foreground py-12 text-center text-sm">{t("adminDash.list.empty")}</p>
           )}
           {filtered.map((user) => {
             const isHardcodedAdmin = (HARDCODED_ADMIN_EMAILS as readonly string[]).includes(
@@ -626,33 +660,38 @@ export function AdminDashboard() {
                         {isHardcodedAdmin ? (
                           <span className="inline-flex items-center gap-0.5 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-red-400 uppercase">
                             <Shield className="h-2.5 w-2.5" />
-                            Master
+                            {t("adminDash.badges.master")}
                           </span>
                         ) : (
                           (user.isAdmin || (user.adminSections?.length ?? 0) > 0) && (
                             <span
                               className="inline-flex items-center gap-0.5 rounded-full border border-yellow-500/40 bg-yellow-400/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-yellow-600 uppercase dark:text-yellow-400"
-                              title={user.isAdmin ? "Full admin" : `Admin pages: ${user.adminSections.join(", ")}`}
+                              title={
+                                user.isAdmin
+                                  ? t("adminDash.badges.fullAdmin")
+                                  : t("adminDash.badges.adminPages").replace("{pages}", user.adminSections.join(", "))
+                              }
                             >
                               <Shield className="h-2.5 w-2.5" />
-                              Admin
+                              {t("adminDash.badges.admin")}
                             </span>
                           )
                         )}
                         {user.partner && (
                           <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-500 uppercase">
-                            Partner{user.partner.referralCode ? ` · ${user.partner.referralCode}` : ""}
+                            {t("adminDash.badges.partner")}
+                            {user.partner.referralCode ? ` · ${user.partner.referralCode}` : ""}
                           </span>
                         )}
                         {isSelf && (
                           <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-blue-400 uppercase">
-                            You
+                            {t("adminDash.badges.you")}
                           </span>
                         )}
                         {user.deactivatedAt && (
                           <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-amber-400 uppercase">
                             <PowerOff className="h-2.5 w-2.5" />
-                            Deactivated
+                            {t("adminDash.badges.deactivated")}
                           </span>
                         )}
                       </p>
@@ -677,25 +716,29 @@ export function AdminDashboard() {
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}
                   >
-                    {status}
+                    {t(`adminDash.statuses.${status}`)}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <p className="text-muted-foreground/70">Region</p>
-                    <p className="text-foreground">{regionLabel(user)}</p>
+                    <p className="text-muted-foreground/70">{t("adminDash.table.region")}</p>
+                    <p className="text-foreground">{regionLabel(user, t("adminDash.values.unknown"))}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground/70">Period End</p>
+                    <p className="text-muted-foreground/70">{t("adminDash.table.periodEnd")}</p>
                     <p className="text-foreground">
-                      {formatPeriodEnd(user.subscription?.currentPeriodEnd)}
+                      {formatPeriodEnd(
+                        user.subscription?.currentPeriodEnd,
+                        t("adminDash.values.lifetime"),
+                        intlLocale
+                      )}
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground/70">Joined</p>
+                    <p className="text-muted-foreground/70">{t("adminDash.table.joined")}</p>
                     <p className="text-foreground">
-                      {new Date(user.createdAt).toLocaleDateString("en-GB", {
+                      {new Date(user.createdAt).toLocaleDateString(intlLocale, {
                         day: "2-digit",
                         month: "short",
                         year: "numeric",
@@ -715,29 +758,31 @@ export function AdminDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
-                    <TableHead className="text-muted-foreground">User</TableHead>
-                    <TableHead className="text-muted-foreground">Login</TableHead>
-                    <TableHead className="text-muted-foreground">Business</TableHead>
-                    <TableHead className="text-muted-foreground">Region</TableHead>
-                    <TableHead className="text-muted-foreground">Plan</TableHead>
-                    <TableHead className="text-muted-foreground">Status</TableHead>
-                    <TableHead className="text-muted-foreground">Period End</TableHead>
-                    <TableHead className="text-muted-foreground">Joined</TableHead>
-                    <TableHead className="text-muted-foreground text-right">Actions</TableHead>
+                    <TableHead className="text-muted-foreground">{t("adminDash.table.user")}</TableHead>
+                    <TableHead className="text-muted-foreground">{t("adminDash.table.login")}</TableHead>
+                    <TableHead className="text-muted-foreground">{t("adminDash.table.business")}</TableHead>
+                    <TableHead className="text-muted-foreground">{t("adminDash.table.region")}</TableHead>
+                    <TableHead className="text-muted-foreground">{t("adminDash.table.plan")}</TableHead>
+                    <TableHead className="text-muted-foreground">{t("adminDash.table.status")}</TableHead>
+                    <TableHead className="text-muted-foreground">{t("adminDash.table.periodEnd")}</TableHead>
+                    <TableHead className="text-muted-foreground">{t("adminDash.table.joined")}</TableHead>
+                    <TableHead className="text-muted-foreground text-right">
+                      {t("adminDash.table.actions")}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading && (
                     <TableRow>
                       <TableCell colSpan={9} className="text-muted-foreground py-12 text-center">
-                        Loading users...
+                        {t("adminDash.list.loading")}
                       </TableCell>
                     </TableRow>
                   )}
                   {!isLoading && filtered.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={9} className="text-muted-foreground py-12 text-center">
-                        No users found
+                        {t("adminDash.list.empty")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -765,33 +810,38 @@ export function AdminDashboard() {
                                 {isHardcodedAdmin ? (
                                   <span className="inline-flex items-center gap-0.5 rounded-full border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-red-400 uppercase">
                                     <Shield className="h-2.5 w-2.5" />
-                                    Master
+                                    {t("adminDash.badges.master")}
                                   </span>
                                 ) : (
                                   (user.isAdmin || (user.adminSections?.length ?? 0) > 0) && (
                                     <span
                                       className="inline-flex items-center gap-0.5 rounded-full border border-yellow-500/40 bg-yellow-400/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-yellow-600 uppercase dark:text-yellow-400"
-                                      title={user.isAdmin ? "Full admin" : `Admin pages: ${user.adminSections.join(", ")}`}
+                                      title={
+                                user.isAdmin
+                                  ? t("adminDash.badges.fullAdmin")
+                                  : t("adminDash.badges.adminPages").replace("{pages}", user.adminSections.join(", "))
+                              }
                                     >
                                       <Shield className="h-2.5 w-2.5" />
-                                      Admin
+                                      {t("adminDash.badges.admin")}
                                     </span>
                                   )
                                 )}
                                 {user.partner && (
                                   <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-500 uppercase">
-                                    Partner{user.partner.referralCode ? ` · ${user.partner.referralCode}` : ""}
+                                    {t("adminDash.badges.partner")}
+                            {user.partner.referralCode ? ` · ${user.partner.referralCode}` : ""}
                                   </span>
                                 )}
                                 {isSelf && (
                                   <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-blue-400 uppercase">
-                                    You
+                                    {t("adminDash.badges.you")}
                                   </span>
                                 )}
                                 {user.deactivatedAt && (
                                   <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-amber-400 uppercase">
                                     <PowerOff className="h-2.5 w-2.5" />
-                                    Deactivated
+                                    {t("adminDash.badges.deactivated")}
                                   </span>
                                 )}
                               </p>
@@ -813,9 +863,9 @@ export function AdminDashboard() {
                                 }`}
                               >
                                 {p === "credential"
-                                  ? "🔑 Password"
+                                  ? t("adminDash.login.password")
                                   : p === "google"
-                                    ? "G Google"
+                                    ? t("adminDash.login.google")
                                     : p}
                               </span>
                             ))}
@@ -829,17 +879,22 @@ export function AdminDashboard() {
                             <div>
                               <p className="text-foreground text-sm">{user.business.name}</p>
                               <p className="text-muted-foreground text-xs">
-                                {user.business._count.stores} store
-                                {user.business._count.stores !== 1 ? "s" : ""}
+                                {t(
+                                  user.business._count.stores === 1
+                                    ? "adminDash.values.storeOne"
+                                    : "adminDash.values.storeMany"
+                                ).replace("{count}", String(user.business._count.stores))}
                               </p>
                             </div>
                           ) : (
-                            <span className="text-muted-foreground text-xs">No business</span>
+                            <span className="text-muted-foreground text-xs">
+                              {t("adminDash.values.noBusiness")}
+                            </span>
                           )}
                         </TableCell>
                         <TableCell>
                           <span className="text-muted-foreground text-xs whitespace-nowrap">
-                            {regionLabel(user)}
+                            {regionLabel(user, t("adminDash.values.unknown"))}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -861,14 +916,18 @@ export function AdminDashboard() {
                           <span
                             className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${statusColors[status as SubStatus]}`}
                           >
-                            {status}
+                            {t(`adminDash.statuses.${status}`)}
                           </span>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                          {formatPeriodEnd(user.subscription?.currentPeriodEnd)}
+                          {formatPeriodEnd(
+                        user.subscription?.currentPeriodEnd,
+                        t("adminDash.values.lifetime"),
+                        intlLocale
+                      )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                          {new Date(user.createdAt).toLocaleDateString("en-GB", {
+                          {new Date(user.createdAt).toLocaleDateString(intlLocale, {
                             day: "2-digit",
                             month: "short",
                             year: "numeric",
@@ -887,7 +946,9 @@ export function AdminDashboard() {
         </div>
 
         <p className="text-muted-foreground pb-4 text-center text-xs">
-          {filtered.length} of {users.length} users — Master Admin Panel v2
+          {t("adminDash.list.footer")
+            .replace("{shown}", String(filtered.length))
+            .replace("{total}", String(users.length))}
         </p>
       </div>
 
@@ -906,12 +967,10 @@ export function AdminDashboard() {
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <LogIn className="h-4 w-4 text-emerald-400" />
-              Temporary Access
+              {t("adminDash.temp.title")}
             </DialogTitle>
             <DialogDescription>
-              A one-time temp password has been set for <strong>{tempPwUser?.email}</strong>. Use it
-              to log in as this user. It replaces their existing password — remember to reset it
-              after.
+              {withStrong(t("adminDash.temp.desc"), "{email}", tempPwUser?.email)}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 space-y-3 overflow-y-auto py-2">
@@ -921,12 +980,12 @@ export function AdminDashboard() {
               </div>
             ) : (
               <>
-                <p className="text-muted-foreground text-xs">Login credentials:</p>
+                <p className="text-muted-foreground text-xs">{t("adminDash.temp.credentials")}</p>
                 <div className="border-border bg-muted/30 space-y-2 rounded-lg border p-3">
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                        Email
+                        {t("adminDash.temp.email")}
                       </p>
                       <p className="text-foreground font-mono text-sm">{tempPwUser?.email}</p>
                     </div>
@@ -934,7 +993,7 @@ export function AdminDashboard() {
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                        Temp Password
+                        {t("adminDash.temp.tempPassword")}
                       </p>
                       <p className="font-mono text-base font-bold tracking-widest text-emerald-500">
                         {tempPw}
@@ -955,13 +1014,12 @@ export function AdminDashboard() {
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}
-                      {copied ? "Copied!" : "Copy"}
+                      {copied ? t("adminDash.temp.copied") : t("adminDash.temp.copy")}
                     </Button>
                   </div>
                 </div>
                 <p className="text-[11px] text-amber-500/80">
-                  ⚠ This password is shown only once and will not be displayed again. After logging
-                  in, reset the account password or the user can change it themselves.
+                  {t("adminDash.temp.warning")}
                 </p>
               </>
             )}
@@ -975,12 +1033,12 @@ export function AdminDashboard() {
                 setCopied(false);
               }}
             >
-              Close
+              {t("adminDash.temp.close")}
             </Button>
             {tempPw && (
               <Button onClick={() => window.open("/login", "_blank")}>
                 <LogIn className="mr-2 h-4 w-4" />
-                Open Login Page
+                {t("adminDash.temp.openLogin")}
               </Button>
             )}
           </DialogFooter>
@@ -998,26 +1056,29 @@ export function AdminDashboard() {
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-blue-400" />
-              {pwTarget?.hasPassword ? "Reset Password" : "Set Password"}
+              {pwTarget?.hasPassword
+                ? t("adminDash.password.resetTitle")
+                : t("adminDash.password.setTitle")}
             </DialogTitle>
             <DialogDescription>
-              {pwTarget?.hasPassword
-                ? `Replace the existing password for ${pwTarget?.email}.`
-                : `Create a password login for ${pwTarget?.email}. They currently sign in via OAuth only.`}
+              {t(pwTarget?.hasPassword ? "adminDash.password.resetDesc" : "adminDash.password.setDesc").replace(
+                "{email}",
+                pwTarget?.email ?? ""
+              )}
               <br />
               <span className="text-muted-foreground mt-1 inline-block text-xs">
-                Passwords are hashed with bcrypt before saving — not stored in plaintext.
+                {t("adminDash.password.hashed")}
               </span>
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 space-y-2 overflow-y-auto py-2">
-            <p className="text-muted-foreground text-xs">New password (min 8 characters)</p>
+            <p className="text-muted-foreground text-xs">{t("adminDash.password.newLabel")}</p>
             <div className="relative">
               <Input
                 type={showPw ? "text" : "password"}
                 value={newPw}
                 onChange={(e) => setNewPw(e.target.value)}
-                placeholder="Enter new password"
+                placeholder={t("adminDash.password.placeholder")}
                 className="pr-10 font-mono text-sm"
                 autoComplete="new-password"
               />
@@ -1032,7 +1093,7 @@ export function AdminDashboard() {
           </div>
           <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => setPwTarget(null)}>
-              Cancel
+              {t("adminDash.common.cancel")}
             </Button>
             <Button
               disabled={newPw.length < 8 || mutation.isPending}
@@ -1047,7 +1108,7 @@ export function AdminDashboard() {
               }}
             >
               <KeyRound className="mr-2 h-4 w-4" />
-              {pwTarget?.hasPassword ? "Update Password" : "Set Password"}
+              {pwTarget?.hasPassword ? t("adminDash.password.update") : t("adminDash.password.set")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1064,17 +1125,20 @@ export function AdminDashboard() {
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <CircleDollarSign className="h-4 w-4 text-emerald-400" />
-              Set Custom Price
+              {t("adminDash.price.title")}
             </DialogTitle>
             <DialogDescription>
-              {isStripeBilled(priceTarget)
-                ? `${priceTarget?.email} is billed via Stripe — quoting a price here replaces their subscription.`
-                : `${priceTarget?.email} isn't Stripe-billed — this is a reference figure only, shown here and on their Billing page, for your own manual invoicing.`}
+              {t(isStripeBilled(priceTarget) ? "adminDash.price.stripeDesc" : "adminDash.price.manualDesc").replace(
+                "{email}",
+                priceTarget?.email ?? ""
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 space-y-3 overflow-y-auto py-2">
             <div className="space-y-1.5">
-              <label className="text-muted-foreground text-xs font-medium">Plan</label>
+              <label className="text-muted-foreground text-xs font-medium">
+                {t("adminDash.price.plan")}
+              </label>
               <Select value={pricePlan} onValueChange={(v) => setPricePlan(v as PaidPlan)}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -1083,14 +1147,16 @@ export function AdminDashboard() {
                   {PAID_PLANS.map((p) => (
                     <SelectItem key={p} value={p}>
                       {p}
-                      {priceTarget?.subscription?.plan === p ? " (current)" : ""}
+                      {priceTarget?.subscription?.plan === p ? t("adminDash.price.currentSuffix") : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-muted-foreground text-xs font-medium">Price</label>
+              <label className="text-muted-foreground text-xs font-medium">
+                {t("adminDash.price.price")}
+              </label>
               <div className="flex gap-2">
                 <Input
                   type="number"
@@ -1098,7 +1164,7 @@ export function AdminDashboard() {
                   min="0"
                   value={priceAmount}
                   onChange={(e) => setPriceAmount(e.target.value)}
-                  placeholder="Amount"
+                  placeholder={t("adminDash.price.amount")}
                   className="flex-1"
                 />
                 <Select value={priceCurrency} onValueChange={setPriceCurrency}>
@@ -1123,20 +1189,17 @@ export function AdminDashboard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="MONTHLY">Monthly</SelectItem>
-                <SelectItem value="YEARLY">Yearly</SelectItem>
+                <SelectItem value="MONTHLY">{t("adminDash.price.monthly")}</SelectItem>
+                <SelectItem value="YEARLY">{t("adminDash.price.yearly")}</SelectItem>
               </SelectContent>
             </Select>
             {isStripeBilled(priceTarget) && (
               <div className="space-y-1 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
-                <p className="font-semibold">On save, for this account:</p>
+                <p className="font-semibold">{t("adminDash.price.onSave")}</p>
                 <ul className="list-inside list-disc space-y-0.5 text-amber-200/90">
-                  <li>their current Stripe subscription is canceled immediately</li>
-                  <li>access is suspended and every plan-gated page sends them to Billing</li>
-                  <li>
-                    Billing shows a pay button that charges this price for {pricePlan} — access
-                    comes back when Stripe confirms the payment
-                  </li>
+                  <li>{t("adminDash.price.effect1")}</li>
+                  <li>{t("adminDash.price.effect2")}</li>
+                  <li>{t("adminDash.price.effect3").replace("{plan}", pricePlan)}</li>
                 </ul>
               </div>
             )}
@@ -1153,12 +1216,12 @@ export function AdminDashboard() {
                 }
               >
                 {priceTarget?.subscription?.customPricePendingAt
-                  ? "Withdraw & Restore Access"
-                  : "Clear Custom Price"}
+                  ? t("adminDash.price.withdraw")
+                  : t("adminDash.price.clear")}
               </Button>
             )}
             <Button variant="outline" onClick={() => setPriceTarget(null)}>
-              Cancel
+              {t("adminDash.common.cancel")}
             </Button>
             <Button
               disabled={!priceAmount || Number(priceAmount) < 0 || mutation.isPending}
@@ -1176,7 +1239,7 @@ export function AdminDashboard() {
               }}
             >
               <CircleDollarSign className="mr-2 h-4 w-4" />
-              {isStripeBilled(priceTarget) ? "Quote & Suspend" : "Save"}
+              {isStripeBilled(priceTarget) ? t("adminDash.price.quote") : t("adminDash.common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1194,14 +1257,13 @@ export function AdminDashboard() {
       >
         <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
-            <DialogTitle className="text-red-500">Delete Account</DialogTitle>
+            <DialogTitle className="text-red-500">{t("adminDash.deleteDialog.title")}</DialogTitle>
             <DialogDescription>
-              This permanently deletes <strong>{deleteTarget?.email}</strong> and all their data
-              (stores, products, orders, subscriptions). This cannot be undone.
+              {withStrong(t("adminDash.deleteDialog.desc"), "{email}", deleteTarget?.email)}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 space-y-2 overflow-y-auto py-2">
-            <p className="text-muted-foreground text-xs">Type the email address to confirm:</p>
+            <p className="text-muted-foreground text-xs">{t("adminDash.common.typeEmail")}</p>
             <Input
               value={deleteConfirm}
               onChange={(e) => setDeleteConfirm(e.target.value)}
@@ -1217,7 +1279,7 @@ export function AdminDashboard() {
                 setDeleteConfirm("");
               }}
             >
-              Cancel
+              {t("adminDash.common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -1228,7 +1290,7 @@ export function AdminDashboard() {
                 }
               }}
             >
-              Delete Permanently
+              {t("adminDash.deleteDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1263,16 +1325,13 @@ export function AdminDashboard() {
       >
         <DialogContent className="flex max-h-[calc(85dvh/var(--app-zoom,1))] flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
-            <DialogTitle className="text-amber-500">Reset Account Data</DialogTitle>
+            <DialogTitle className="text-amber-500">{t("adminDash.resetDialog.title")}</DialogTitle>
             <DialogDescription>
-              This wipes all business data for <strong>{resetTarget?.email}</strong> — stores,
-              storefront, menu, orders, inventory, staff, and shifts — signs them out on all
-              devices, and sends them back to onboarding on their next login. Their login account
-              and subscription/billing are kept untouched. This cannot be undone.
+              {withStrong(t("adminDash.resetDialog.desc"), "{email}", resetTarget?.email)}
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 space-y-2 overflow-y-auto py-2">
-            <p className="text-muted-foreground text-xs">Type the email address to confirm:</p>
+            <p className="text-muted-foreground text-xs">{t("adminDash.common.typeEmail")}</p>
             <Input
               value={resetConfirm}
               onChange={(e) => setResetConfirm(e.target.value)}
@@ -1288,7 +1347,7 @@ export function AdminDashboard() {
                 setResetConfirm("");
               }}
             >
-              Cancel
+              {t("adminDash.common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -1299,7 +1358,7 @@ export function AdminDashboard() {
                 }
               }}
             >
-              Reset Account Data
+              {t("adminDash.resetDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

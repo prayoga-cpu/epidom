@@ -73,7 +73,7 @@ export const POST = withApiHandler(
       return NextResponse.json(
         createErrorResponse(
           ApiErrorCode.SUBSCRIPTION_LIMIT_EXCEEDED,
-          `You have reached your plan's product limit (${productCheck.current}/${productCheck.limit}). Upgrade to Pro to add more products.`,
+          `You have reached your plan's product limit (${productCheck.current}/${productCheck.limit}). Upgrade to the Operations plan to add more products.`,
           {
             current: productCheck.current,
             limit: productCheck.limit,

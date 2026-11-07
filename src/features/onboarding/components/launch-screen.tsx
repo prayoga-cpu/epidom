@@ -81,7 +81,7 @@ export function LaunchScreen({
     };
   }, []);
 
-  const dashboardHref = `/store/${result.storeId}/dashboard`;
+  const dashboardHref = `/store/${result.storeId}/home`;
   const tourHref = `${dashboardHref}?tour=1`;
   const shareHref = whatsappShareHref(
     t("onboarding.launch.whatsappMessage").replace("{store}", storeName),

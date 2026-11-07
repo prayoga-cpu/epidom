@@ -155,7 +155,10 @@ export class StorefrontService {
    * spaces, apostrophes and hyphens (no LIKE wildcards). Same deactivation
    * filter as getStorefrontBySlug.
    */
-  async searchPublished(query: string, limit = 6): Promise<{ slug: string; displayName: string }[]> {
+  async searchPublished(
+    query: string,
+    limit = 6
+  ): Promise<{ slug: string; displayName: string }[]> {
     return prisma.storefront.findMany({
       where: {
         isPublished: true,
@@ -169,6 +172,15 @@ export class StorefrontService {
       take: limit,
       select: { slug: true, displayName: true },
     });
+  }
+
+  /**
+   * Whether a store link (slug) is already held by any storefront, published or
+   * not: the home page's "claim your link" check. Says nothing else about it.
+   */
+  async isSlugTaken(slug: string): Promise<boolean> {
+    const holder = await prisma.storefront.findUnique({ where: { slug }, select: { id: true } });
+    return holder !== null;
   }
 
   /**
@@ -369,7 +381,9 @@ export class StorefrontService {
         const parsed = parseGoogleReviewInput(link);
         if (!parsed.ok) {
           // "empty" can't happen past the trim check above.
-          throw new GoogleReviewLinkError(parsed.reason === "mapsListing" ? "mapsListing" : "invalid");
+          throw new GoogleReviewLinkError(
+            parsed.reason === "mapsListing" ? "mapsListing" : "invalid"
+          );
         }
         data.googlePlaceId = parsed.placeId;
         data.googleReviewUrl = parsed.reviewUrl;
@@ -639,8 +653,7 @@ export class StorefrontService {
         currency: input.currency !== undefined ? input.currency : item.currency,
         imageUrl: input.imageUrl !== undefined ? input.imageUrl : item.imageUrl,
         isAvailable: input.isAvailable !== undefined ? input.isAvailable : item.isAvailable,
-        showOnCashier:
-          input.showOnCashier !== undefined ? input.showOnCashier : item.showOnCashier,
+        showOnCashier: input.showOnCashier !== undefined ? input.showOnCashier : item.showOnCashier,
         isFeatured: input.isFeatured !== undefined ? input.isFeatured : item.isFeatured,
         displayOrder: input.displayOrder !== undefined ? input.displayOrder : item.displayOrder,
         modifiers:

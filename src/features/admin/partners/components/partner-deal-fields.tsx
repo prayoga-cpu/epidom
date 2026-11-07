@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useI18n } from "@/components/lang/i18n-provider";
 import type { UseFormReturn } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,7 @@ export interface SalesPageOption {
   ownedBy: string | null;
 }
 
-const pageLabel = (page: string) => page.replace("sales-page-", "Sales page ");
+const pageLabel = (page: string, label: string) => label.replace("{n}", page.replace("sales-page-", ""));
 
 /**
  * The deal's fields, shared by "New referral partner" and "Edit deal".
@@ -42,6 +43,7 @@ export function PartnerDealFields({
   salesPageOptions?: SalesPageOption[];
   autoCode?: boolean;
 }) {
+  const { t } = useI18n();
   const f = form as UseFormReturn<PartnerDealFormValues>;
   const landing = f.watch("referralLanding");
   const displayName = f.watch("displayName");
@@ -61,7 +63,7 @@ export function PartnerDealFields({
         name="displayName"
         render={({ field }) => (
           <FormItem className="sm:col-span-2">
-            <FormLabel>Partner name (shown on their banner and page)</FormLabel>
+            <FormLabel>{t("adminPages.partners.deal.name")}</FormLabel>
             <FormControl>
               <Input placeholder="Bob" autoComplete="off" {...field} />
             </FormControl>
@@ -74,7 +76,7 @@ export function PartnerDealFields({
         name="referralLanding"
         render={({ field }) => (
           <FormItem className={salesPage ? "" : "sm:col-span-1"}>
-            <FormLabel>Link opens</FormLabel>
+            <FormLabel>{t("adminPages.partners.deal.linkOpens")}</FormLabel>
             <Select value={field.value} onValueChange={field.onChange}>
               <FormControl>
                 <SelectTrigger className="min-h-10 w-full">
@@ -83,17 +85,17 @@ export function PartnerDealFields({
               </FormControl>
               <SelectContent>
                 <SelectGroup>
-                  <SelectLabel>Referral link (customers get the discount)</SelectLabel>
-                  <SelectItem value="REGISTER">Sign-up page (/register)</SelectItem>
-                  <SelectItem value="HOME">Home page</SelectItem>
+                  <SelectLabel>{t("adminPages.partners.deal.referralGroup")}</SelectLabel>
+                  <SelectItem value="REGISTER">{t("adminPages.partners.deal.register")}</SelectItem>
+                  <SelectItem value="HOME">{t("adminPages.partners.deal.home")}</SelectItem>
                 </SelectGroup>
                 {salesPageOptions && salesPageOptions.length > 0 && (
                   <SelectGroup>
-                    <SelectLabel>A sales page they own (every sign-up from it counts)</SelectLabel>
+                    <SelectLabel>{t("adminPages.partners.deal.salesGroup")}</SelectLabel>
                     {salesPageOptions.map((o) => (
                       <SelectItem key={o.page} value={o.page} disabled={Boolean(o.ownedBy)}>
-                        {pageLabel(o.page)}
-                        {o.ownedBy ? ` (owned by ${o.ownedBy})` : ""}
+                        {pageLabel(o.page, t("adminPages.partners.salesPage"))}
+                        {o.ownedBy ? t("adminPages.partners.deal.ownedBy").replace("{name}", o.ownedBy) : ""}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -110,7 +112,7 @@ export function PartnerDealFields({
           name="creditFrom"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Count sign-ups from</FormLabel>
+              <FormLabel>{t("adminPages.partners.deal.countFrom")}</FormLabel>
               <FormControl>
                 <Input type="date" className="min-h-10" {...field} />
               </FormControl>
@@ -124,7 +126,7 @@ export function PartnerDealFields({
           name="referralCode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Referral code</FormLabel>
+              <FormLabel>{t("adminPages.partners.deal.code")}</FormLabel>
               <FormControl>
                 <Input
                   placeholder="BOB"
@@ -147,7 +149,7 @@ export function PartnerDealFields({
         name="commissionRate"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Commission (%)</FormLabel>
+            <FormLabel>{t("adminPages.partners.deal.commission")}</FormLabel>
             <FormControl>
               <Input inputMode="decimal" {...field} />
             </FormControl>
@@ -160,7 +162,7 @@ export function PartnerDealFields({
         name="commissionMonths"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>For the customer&apos;s first … months</FormLabel>
+            <FormLabel>{t("adminPages.partners.deal.months")}</FormLabel>
             <FormControl>
               <Input inputMode="numeric" {...field} />
             </FormControl>
@@ -174,7 +176,7 @@ export function PartnerDealFields({
           name="customerDiscountPercent"
           render={({ field }) => (
             <FormItem className="sm:col-span-2">
-              <FormLabel>Customer discount on the first payment (%)</FormLabel>
+              <FormLabel>{t("adminPages.partners.deal.discount")}</FormLabel>
               <FormControl>
                 <Input inputMode="decimal" {...field} />
               </FormControl>
@@ -188,11 +190,11 @@ export function PartnerDealFields({
         name="notes"
         render={({ field }) => (
           <FormItem className="sm:col-span-2">
-            <FormLabel>Notes (admin only)</FormLabel>
+            <FormLabel>{t("adminPages.partners.deal.notes")}</FormLabel>
             <FormControl>
               <Textarea
                 rows={2}
-                placeholder="The agreement, how they're paid (no bank details here)"
+                placeholder={t("adminPages.partners.deal.notesPlaceholder")}
                 {...field}
               />
             </FormControl>

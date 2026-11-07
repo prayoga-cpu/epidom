@@ -19,11 +19,57 @@ export default function LangSwitcher({
    * preference and there's no per-locale URL to go to.
    */
   urlDriven = false,
+  tone = "dark",
 }: {
   className?: string;
   dropUp?: boolean;
   urlDriven?: boolean;
+  /**
+   * "dark" (default) is the cream-on-navy look for the dark marketing/app
+   * topbars. "surface" follows the page theme (light or dark) through the
+   * design tokens, for pages that sit on the normal background such as the
+   * setup wizard.
+   */
+  tone?: "dark" | "surface";
 }) {
+  const c =
+    tone === "surface"
+      ? {
+          border: "var(--border)",
+          bg: "var(--card)",
+          text: "var(--muted-foreground)",
+          openBorder: "color-mix(in srgb, var(--epi-gold-500) 55%, transparent)",
+          openBg: "color-mix(in srgb, var(--epi-gold-500) 14%, var(--card))",
+          openText: "var(--foreground)",
+          menuBg: "var(--popover)",
+          menuBorder: "var(--border)",
+          menuShadow: "0 12px 32px rgba(10,24,46,0.18)",
+          activeBg: "color-mix(in srgb, var(--epi-gold-500) 16%, transparent)",
+          hoverBg: "var(--accent)",
+          short: "var(--muted-foreground)",
+          shortActive: "var(--foreground)",
+          label: "var(--muted-foreground)",
+          labelActive: "var(--foreground)",
+          check: "var(--epi-gold-600)",
+        }
+      : {
+          border: "rgba(255,255,255,0.12)",
+          bg: "rgba(255,255,255,0.04)",
+          text: "rgba(251,249,228,0.65)",
+          openBorder: "rgba(217,174,59,0.40)",
+          openBg: "rgba(217,174,59,0.08)",
+          openText: "var(--epi-gold-400)",
+          menuBg: "color-mix(in srgb, var(--epi-navy-900) 96%, transparent)",
+          menuBorder: "rgba(255,255,255,0.10)",
+          menuShadow: "0 20px 48px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06) inset",
+          activeBg: "rgba(217,174,59,0.10)",
+          hoverBg: "rgba(255,255,255,0.05)",
+          short: "rgba(251,249,228,0.55)",
+          shortActive: "var(--epi-gold-400)",
+          label: "rgba(251,249,228,0.32)",
+          labelActive: "var(--epi-cream-100)",
+          check: "var(--epi-gold-400)",
+        };
   const { locale, setLocale } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
@@ -51,10 +97,11 @@ export default function LangSwitcher({
     alignItems: "center",
     gap: 6,
     padding: "6px 12px",
+    minHeight: tone === "surface" ? 40 : undefined,
     borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.04)",
-    color: "rgba(251,249,228,0.65)",
+    border: `1px solid ${c.border}`,
+    background: c.bg,
+    color: c.text,
     fontSize: 12,
     fontFamily: "var(--epi-font-body)",
     letterSpacing: "0.08em",
@@ -80,9 +127,9 @@ export default function LangSwitcher({
         onClick={() => setOpen((v) => !v)}
         style={{
           ...triggerStyle,
-          border: `1px solid ${open ? "rgba(217,174,59,0.40)" : "rgba(255,255,255,0.12)"}`,
-          background: open ? "rgba(217,174,59,0.08)" : "rgba(255,255,255,0.04)",
-          color: open ? "var(--epi-gold-400)" : "rgba(251,249,228,0.65)",
+          border: `1px solid ${open ? c.openBorder : c.border}`,
+          background: open ? c.openBg : c.bg,
+          color: open ? c.openText : c.text,
         }}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -101,10 +148,10 @@ export default function LangSwitcher({
             right: 0,
             minWidth: 160,
             borderRadius: 14,
-            border: "1px solid rgba(255,255,255,0.10)",
-            background: "color-mix(in srgb, var(--epi-navy-900) 96%, transparent)",
+            border: `1px solid ${c.menuBorder}`,
+            background: c.menuBg,
             backdropFilter: "blur(24px)",
-            boxShadow: "0 20px 48px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06) inset",
+            boxShadow: c.menuShadow,
             padding: "6px",
             zIndex: 200,
           }}
@@ -135,21 +182,19 @@ export default function LangSwitcher({
                   padding: "9px 11px",
                   borderRadius: 9,
                   border: "none",
-                  background: active ? "rgba(217,174,59,0.10)" : "transparent",
+                  background: active ? c.activeBg : "transparent",
                   cursor: "pointer",
                   textAlign: "left",
                   transition: "background 0.12s",
                   outline: "none",
                 }}
                 onMouseEnter={(e) => {
-                  if (!active)
-                    (e.currentTarget as HTMLButtonElement).style.background =
-                      "rgba(255,255,255,0.05)";
+                  if (!active) (e.currentTarget as HTMLButtonElement).style.background = c.hoverBg;
                 }}
                 onMouseLeave={(e) => {
                   if (!active)
                     (e.currentTarget as HTMLButtonElement).style.background = active
-                      ? "rgba(217,174,59,0.10)"
+                      ? c.activeBg
                       : "transparent";
                 }}
               >
@@ -160,7 +205,7 @@ export default function LangSwitcher({
                     fontFamily: "var(--epi-font-body)",
                     fontWeight: 700,
                     letterSpacing: "0.1em",
-                    color: active ? "var(--epi-gold-400)" : "rgba(251,249,228,0.55)",
+                    color: active ? c.shortActive : c.short,
                     flexShrink: 0,
                   }}
                 >
@@ -170,7 +215,7 @@ export default function LangSwitcher({
                   style={{
                     fontSize: 12,
                     fontFamily: "var(--epi-font-body)",
-                    color: active ? "var(--epi-cream-100)" : "rgba(251,249,228,0.32)",
+                    color: active ? c.labelActive : c.label,
                     marginLeft: "auto",
                     whiteSpace: "nowrap",
                   }}
@@ -187,7 +232,7 @@ export default function LangSwitcher({
                   >
                     <path
                       d="M2 5.5l2.5 2.5 4.5-5"
-                      stroke="var(--epi-gold-400)"
+                      stroke={c.check}
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"

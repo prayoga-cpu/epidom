@@ -168,7 +168,7 @@ describe("AcceptTransferClient — signed in as the invited address", () => {
     await waitFor(() =>
       expect(h.post).toHaveBeenCalledWith("/transfer-ownership/accept", { token: TOKEN })
     );
-    await waitFor(() => expect(window.location.href).toBe("/store/store_9/dashboard"));
+    await waitFor(() => expect(window.location.href).toBe("/store/store_9/home"));
   });
 
   it("shows the server's reason on failure and lets the user retry", async () => {

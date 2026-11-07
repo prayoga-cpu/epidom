@@ -3,8 +3,17 @@
 import { Suspense, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LayoutDashboard, MonitorSmartphone, Store, type LucideIcon } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  LayoutDashboard,
+  MonitorSmartphone,
+  Store,
+  type LucideIcon,
+} from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { LANDING_GROUPS } from "@/features/marketing/landing/registry";
+import { trackEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { SPACE_SCREENSHOTS } from "../data/media";
 import type { ProductScreen } from "@/features/marketing/shared/content/product-screens";
@@ -31,11 +40,15 @@ const SPACES: readonly {
 ];
 
 /**
- * One link, three spaces: Storefront (free), POS Mode (POS), Back Office
- * (Operations). Each card shows the real screenshot set in data/media.ts, and
- * a plain icon for a space that has none, never a mockup. The Storefront
- * card links to a real, currently published storefront when there is one; the
- * server page streams that slug in, so the link can arrive after the hero.
+ * "One order, three steps": the three spaces told as what happens to one
+ * order. 1. The customer orders on Phone Orders (free); 2. it lands on the
+ * till and prints in the kitchen (POS); 3. stock and profit update in the
+ * Store Dashboard (Operations). It replaced both the "three spaces" cards and
+ * the nine-tile hub diagram (2026-11-06), so the Claude connector is a line
+ * under the steps. Each card shows the real screenshot set in data/media.ts,
+ * or a plain icon, never a mockup. The first card links to a real, currently
+ * published storefront when there is one; the server page streams that slug
+ * in, so the link can arrive after the hero.
  */
 export function ThreeSpacesSection({
   exampleStorefrontSlug,
@@ -43,6 +56,8 @@ export function ThreeSpacesSection({
   exampleStorefrontSlug?: Promise<string | null> | string | null;
 }) {
   const { t, locale } = useI18n();
+  // The Claude connector page, in the visitor's language (else the products page).
+  const connectorSlug = LANDING_GROUPS["claude-connector"][locale];
 
   return (
     <section aria-labelledby="spaces-title" className="epi-section">
@@ -54,15 +69,34 @@ export function ThreeSpacesSection({
           sub={t("redesign.landing.spaces.sub")}
         />
 
-        <ul className="m-0 mt-12 grid list-none gap-4 p-0 md:grid-cols-3">
-          {SPACES.map(({ key, icon: Icon, plan }) => {
+        <ol className="m-0 mt-12 grid list-none gap-8 p-0 md:grid-cols-3 md:gap-6">
+          {SPACES.map(({ key, icon: Icon, plan }, index) => {
             const shot = SPACE_SCREENSHOTS[key];
+            const last = index === SPACES.length - 1;
             return (
               <li
                 key={key}
                 data-reveal
-                className={cn(CARD, CARD_INTERACTIVE, "flex flex-col gap-5 p-6")}
+                className={cn(CARD, CARD_INTERACTIVE, "relative flex flex-col gap-5 p-6")}
               >
+                {/* What happens next: right on a wide screen, down on a phone. */}
+                {!last ? (
+                  <span
+                    aria-hidden="true"
+                    className="bg-epi-navy-900 text-epi-gold-300 absolute -bottom-[34px] left-1/2 z-10 inline-flex size-9 -translate-x-1/2 items-center justify-center rounded-full border border-white/15 md:top-1/2 md:-right-[30px] md:bottom-auto md:left-auto md:translate-x-0 md:-translate-y-1/2"
+                  >
+                    <ArrowDown className="size-4 md:hidden" />
+                    <ArrowRight className="hidden size-4 md:block" />
+                  </span>
+                ) : null}
+                <div>
+                  <p className="text-epi-gold-300 m-0 text-xs font-medium tracking-[0.12em] uppercase">
+                    {t("redesign.landing.spaces.stepLabel").replace("{n}", String(index + 1))}
+                  </p>
+                  <p className="text-epi-cream-50 m-0 mt-1.5 text-lg leading-snug font-medium">
+                    {t(`redesign.landing.spaces.${key}Step`)}
+                  </p>
+                </div>
                 {shot ? (
                   <SpaceShot shot={shot} alt={shot.alt[locale]} />
                 ) : (
@@ -71,7 +105,7 @@ export function ThreeSpacesSection({
                   </span>
                 )}
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="epi-display text-epi-cream-50 m-0 text-3xl">
+                  <h3 className="epi-display text-epi-cream-50 m-0 text-2xl">
                     {t(`redesign.landing.spaces.${key}Name`)}
                   </h3>
                   <PlanBadge plan={plan} />
@@ -103,11 +137,23 @@ export function ThreeSpacesSection({
               </li>
             );
           })}
-        </ul>
+        </ol>
 
-        <div className="mt-10">
+        <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
           <Link href={getLocalizedPath("/products", locale)} className={SECONDARY_BUTTON}>
             {t("redesign.landing.spaces.cta")}
+          </Link>
+          <Link
+            href={getLocalizedPath(connectorSlug ? `/${connectorSlug}` : "/products", locale)}
+            onClick={() =>
+              trackEvent("claude_promo_click", {
+                event_category: "claude_connector",
+                surface: "home_steps",
+              })
+            }
+            className={TEXT_LINK}
+          >
+            {t("redesign.landing.spaces.claude")} →
           </Link>
         </div>
       </div>

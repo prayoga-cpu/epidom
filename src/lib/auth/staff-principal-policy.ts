@@ -172,6 +172,9 @@ const POLICY: Record<string, StaffRoutePolicy> = {
   // every receipt (useReceiptSettings in the checkout and the bill). Denied, a
   // staff account's receipts went out bare. The PATCH stays owner-only.
   "GET /api/stores/*/receipt-settings": post(POS),
+  // Read-only: the customer display (/pos/display, itself gated on /pos) polls
+  // its look and promo banners from here. The PUT stays owner-only.
+  "GET /api/stores/*/customer-display": post(POS),
   // (Realtime channel auth, POST /api/pusher/auth, is not listed: it resolves
   // its own identity from the PIN persona — see resolveIdentity there — and
   // never goes through this table.)

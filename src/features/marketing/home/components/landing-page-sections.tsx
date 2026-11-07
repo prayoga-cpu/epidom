@@ -7,9 +7,9 @@ import { CaseStudiesSection } from "./case-studies-section";
 import { ComplianceSection } from "./compliance-section";
 import { FinalCtaSection } from "./final-cta-section";
 import { HeroSection } from "./hero-section";
-import { HubSection } from "./hub-section";
 import { MarginCalculatorSection } from "./margin-calculator-section";
 import { MigrationModal } from "./migration-modal";
+import { MobileTrialBar } from "./mobile-trial-bar";
 import { PosTourSection } from "./pos-tour-section";
 import { PricingSection } from "./pricing-section";
 import { SwitcherFaqSection } from "./switcher-faq-section";
@@ -18,17 +18,18 @@ import { TrustBar } from "./trust-bar";
 import { UsesSection } from "./uses-section";
 
 /**
- * The home page, in the order of the homepage spec (28.09.2026), except that
- * the POS tour (real screens, 13.10.2026) and then "one link, three spaces"
- * come straight after the hero, and the problem picker has moved to the top of
- * /products (11.10.2026): make switching feel
- * safe, and show what Epidom does for margin. Each section has its own error
- * boundary so one failing section never takes the page down.
+ * The home page (order from the 2026-11-06 review): proof and the product
+ * first, the numbers after. Hero (claim your link, or start the trial with no
+ * card) -> customer logos -> one order in three steps -> who it is for -> the
+ * till up close -> the calculator -> customer stories -> plans -> compliance
+ * -> switching FAQ -> the closing call to action. Logos, stories and
+ * compliance render nothing until they have real content. A sticky trial bar
+ * follows on phones. The problem picker lives at the top of /products.
  *
- * The "how do you want to start" modal is shared between sections (opened from
- * the hero and from "switch at your pace"). The calculator takes a commission
- * rate from the URL: the problem picker's commissions button lands here on
- * `?commission=30#calculator`.
+ * Each section has its own error boundary so one failing section never takes
+ * the page down. The "how do you want to start" modal is opened from the hero.
+ * The calculator takes a commission rate from the URL: the problem picker's
+ * commissions button lands here on `?commission=30#calculator`.
  */
 export function LandingPageSections({
   exampleStorefrontSlug,
@@ -62,6 +63,14 @@ export function LandingPageSections({
         <HeroSection onOpenMigration={() => openMigration("hero")} />
       </SectionErrorBoundary>
 
+      <SectionErrorBoundary sectionName="Trust Bar">
+        <TrustBar />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="Three Steps">
+        <ThreeSpacesSection exampleStorefrontSlug={exampleStorefrontSlug} />
+      </SectionErrorBoundary>
+
       <SectionErrorBoundary sectionName="Uses">
         <UsesSection />
       </SectionErrorBoundary>
@@ -70,32 +79,20 @@ export function LandingPageSections({
         <PosTourSection />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="Three Spaces">
-        <ThreeSpacesSection exampleStorefrontSlug={exampleStorefrontSlug} />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary sectionName="Hub">
-        <HubSection />
-      </SectionErrorBoundary>
-
       <SectionErrorBoundary sectionName="Margin Calculator">
         <MarginCalculatorSection preset={calculatorPreset} />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="Case Studies">
+        <CaseStudiesSection />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Pricing">
         <PricingSection />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="Trust Bar">
-        <TrustBar />
-      </SectionErrorBoundary>
-
       <SectionErrorBoundary sectionName="Compliance">
         <ComplianceSection />
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary sectionName="Case Studies">
-        <CaseStudiesSection />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="Switcher FAQ">
@@ -109,6 +106,8 @@ export function LandingPageSections({
       <SectionErrorBoundary sectionName="Migration Modal">
         <MigrationModal open={migrationOpen} onClose={() => setMigrationOpen(false)} />
       </SectionErrorBoundary>
+
+      <MobileTrialBar />
     </>
   );
 }

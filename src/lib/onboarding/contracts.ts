@@ -7,10 +7,12 @@ import type { BusinessType } from "./markets";
  *
  * Steps (stored on Business.onboardingStep while the wizard is in progress):
  *   1. Your store      — name, country, city, type (+ optional Instagram fill)
- *   2. Your storefront — logo, colour, tagline, up to 3 menu items
- *   3. Your goals      — what the owner wants Epidom for, then publish
+ *   2. Your storefront — logo, colour, tagline, up to 3 menu items, then publish
+ *
+ * Publishing starts the 14-day POS trial (no card). The old third step, "Your
+ * goals", is gone; Business.onboardingGoals is kept for the checklist order.
  */
-export const ONBOARDING_STEP = { store: 1, storefront: 2, goals: 3 } as const;
+export const ONBOARDING_STEP = { store: 1, storefront: 2 } as const;
 export type OnboardingStepNumber = (typeof ONBOARDING_STEP)[keyof typeof ONBOARDING_STEP];
 
 /** What the owner wants Epidom for, picked on step 3; orders the Getting-started checklist. */
@@ -69,6 +71,16 @@ export interface OnboardingBilling {
   canCheckout: boolean;
   /** A POS Checkout would include the 14-day trial (first subscription only). */
   posTrialEligible: boolean;
+  /** A partner this account is already credited to (their link, or a code typed earlier): no code field then. */
+  referral: { displayName: string; discountPercent: number } | null;
+}
+
+/** GET /api/onboarding/referral-code?code=… response: a valid partner code. */
+export interface ReferralCodePreviewResult {
+  code: string;
+  displayName: string;
+  /** % off the first paid invoice (after the trial). */
+  discountPercent: number;
 }
 
 /** POST /api/onboarding/complete response. */

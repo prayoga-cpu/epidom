@@ -528,7 +528,7 @@ export function MyReferrals({
                         </td>
                         <td className="px-2 py-2">{c.label ?? t("partnerPortal.newSignup")}</td>
                         <td className="px-2 py-2 whitespace-nowrap">
-                          {c.source === "REFERRAL_LINK"
+                          {c.source === "REFERRAL_LINK" || c.source === "REFERRAL_CODE"
                             ? t("partnerPortal.fromLink")
                             : t("partnerPortal.fromPage").replace(
                                 "{n}",

@@ -79,7 +79,7 @@ export function CreateStoreDialog({
         setOpen(false);
         isSubmittingRef.current = false;
         // The new store's dashboard shows its Getting-started checklist.
-        router.push(`/store/${store.id}/dashboard`);
+        router.push(`/store/${store.id}/home`);
       },
       onError: (error) => {
         // The server's reason (name taken, store limit…) when there is one.

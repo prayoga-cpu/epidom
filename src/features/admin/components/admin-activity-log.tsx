@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/lang/i18n-provider";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -98,13 +100,6 @@ const severityStyles: Record<string, string> = {
   INFO: "border-muted-foreground/20 bg-muted text-muted-foreground",
 };
 
-const reversibilityCopy: Record<string, string> = {
-  REVERSIBLE: "Revertible",
-  REVERSIBLE_WITH_CAVEAT: "Revertible with caveats",
-  SNAPSHOT_RESTORE: "Restorable from snapshot",
-  COMPENSATE_ONLY: "Needs a compensating entry",
-  IRREVERSIBLE: "Cannot be undone",
-};
 
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -116,6 +111,7 @@ function fmtTime(iso: string): string {
 }
 
 export function AdminActivityLog() {
+  const { t } = useI18n();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -240,7 +236,7 @@ export function AdminActivityLog() {
         : queryClient.invalidateQueries({ queryKey: ["admin-activity"] }),
     // A failed flag or legal hold used to fail silently, leaving the icon
     // showing the state the click did not achieve.
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Request failed"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : t("adminPages.common.requestFailed")),
   });
 
   const resetPaging = useCallback(() => setCursorStack([]), []);
@@ -256,7 +252,7 @@ export function AdminActivityLog() {
   const statItems = [
     {
       key: "total",
-      label: "Events",
+      label: t("adminPages.activity.stats.total"),
       value: stats?.total ?? 0,
       icon: Activity,
       color: "text-blue-400",
@@ -265,7 +261,7 @@ export function AdminActivityLog() {
     },
     {
       key: "critical",
-      label: "Critical",
+      label: t("adminPages.activity.stats.critical"),
       value: stats?.critical ?? 0,
       icon: ShieldAlert,
       color: "text-red-400",
@@ -274,7 +270,7 @@ export function AdminActivityLog() {
     },
     {
       key: "denied",
-      label: "Denied",
+      label: t("adminPages.activity.stats.denied"),
       value: stats?.denied ?? 0,
       icon: AlertTriangle,
       color: "text-amber-400",
@@ -283,7 +279,7 @@ export function AdminActivityLog() {
     },
     {
       key: "flagged",
-      label: "Flagged",
+      label: t("adminPages.activity.stats.flagged"),
       value: stats?.flagged ?? 0,
       icon: Flag,
       color: "text-orange-400",
@@ -295,7 +291,7 @@ export function AdminActivityLog() {
     },
     {
       key: "revertable",
-      label: "Revertible",
+      label: t("adminPages.activity.stats.revertable"),
       value: stats?.revertable ?? 0,
       icon: Undo2,
       color: "text-emerald-400",
@@ -314,9 +310,9 @@ export function AdminActivityLog() {
               <Activity className="h-5 w-5 text-violet-400" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-foreground text-lg font-bold">Activity</h1>
+              <h1 className="text-foreground text-lg font-bold">{t("adminPages.activity.title")}</h1>
               <p className="text-muted-foreground truncate text-xs">
-                Who did what, and what can be undone
+                {t("adminPages.activity.subtitle")}
               </p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -335,8 +331,7 @@ export function AdminActivityLog() {
           <div className="border-border bg-muted/40 text-muted-foreground flex items-start gap-2 rounded-lg border p-3 text-xs">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              Recording began {fmtTime(stats.earliest)}. Actions before that date were never
-              captured — this log cannot show them.
+              {t("adminPages.activity.recordingBegan").replace("{when}", fmtTime(stats.earliest))}
             </span>
           </div>
         )}
@@ -360,7 +355,7 @@ export function AdminActivityLog() {
                     <Icon className={`h-4 w-4 shrink-0 ${color}`} />
                   </div>
                   <p className="text-foreground text-2xl font-bold">{value}</p>
-                  {allTime && <p className="text-muted-foreground mt-0.5 text-[10px]">all time</p>}
+                  {allTime && <p className="text-muted-foreground mt-0.5 text-[10px]">{t("adminPages.activity.allTime")}</p>}
                 </>
               );
 
@@ -402,10 +397,10 @@ export function AdminActivityLog() {
           <div className="flex gap-2 overflow-x-auto pb-1">
             {(
               [
-                ["timeline", "Timeline"],
-                ["actors", "By user"],
-                ["entities", "By table"],
-                ["coverage", "Coverage"],
+                ["timeline", t("adminPages.activity.views.timeline")],
+                ["actors", t("adminPages.activity.views.actors")],
+                ["entities", t("adminPages.activity.views.entities")],
+                ["coverage", t("adminPages.activity.views.coverage")],
               ] as const
             ).map(([mode, label]) => (
               <Button
@@ -429,13 +424,13 @@ export function AdminActivityLog() {
                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
                 <input
                   type="text"
-                  aria-label="Search the activity trail"
+                  aria-label={t("adminPages.activity.filters.searchLabel")}
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
                     resetPaging();
                   }}
-                  placeholder="Search person, email, restaurant, action…"
+                  placeholder={t("adminPages.activity.filters.searchPlaceholder")}
                   className="border-border bg-card focus:ring-ring h-9 w-full rounded-md border pr-2 pl-8 text-sm focus:ring-2 focus:outline-none"
                 />
               </div>
@@ -448,13 +443,13 @@ export function AdminActivityLog() {
                 }}
               >
                 <SelectTrigger className="h-9 w-[140px]">
-                  <SelectValue placeholder="Severity" />
+                  <SelectValue placeholder={t("adminPages.activity.filters.severity")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All severities</SelectItem>
-                  <SelectItem value="CRITICAL">Critical</SelectItem>
-                  <SelectItem value="NOTICE">Notice</SelectItem>
-                  <SelectItem value="INFO">Info</SelectItem>
+                  <SelectItem value="ALL">{t("adminPages.activity.filters.allSeverities")}</SelectItem>
+                  <SelectItem value="CRITICAL">{t("adminPages.activity.severities.CRITICAL")}</SelectItem>
+                  <SelectItem value="NOTICE">{t("adminPages.activity.severities.NOTICE")}</SelectItem>
+                  <SelectItem value="INFO">{t("adminPages.activity.severities.INFO")}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -466,13 +461,13 @@ export function AdminActivityLog() {
                 }}
               >
                 <SelectTrigger className="h-9 w-[130px]">
-                  <SelectValue placeholder="Outcome" />
+                  <SelectValue placeholder={t("adminPages.activity.filters.outcome")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All outcomes</SelectItem>
-                  <SelectItem value="SUCCESS">Success</SelectItem>
-                  <SelectItem value="DENIED">Denied</SelectItem>
-                  <SelectItem value="FAILED">Failed</SelectItem>
+                  <SelectItem value="ALL">{t("adminPages.activity.filters.allOutcomes")}</SelectItem>
+                  <SelectItem value="SUCCESS">{t("adminPages.activity.outcomes.SUCCESS")}</SelectItem>
+                  <SelectItem value="DENIED">{t("adminPages.activity.outcomes.DENIED")}</SelectItem>
+                  <SelectItem value="FAILED">{t("adminPages.activity.outcomes.FAILED")}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -486,7 +481,7 @@ export function AdminActivityLog() {
                     resetPaging();
                   }}
                 >
-                  Clear user filter ✕
+                  {t("adminPages.activity.filters.clearUser")}
                 </Button>
               )}
 
@@ -504,7 +499,9 @@ export function AdminActivityLog() {
                     resetPaging();
                   }}
                 >
-                  <span className="truncate">Restaurant: {storeLabel ?? storeId.slice(0, 8)}</span>{" "}
+                  <span className="truncate">
+                    {t("adminPages.activity.filters.restaurant").replace("{name}", storeLabel ?? storeId.slice(0, 8))}
+                  </span>{" "}
                   ✕
                 </Button>
               )}
@@ -518,7 +515,7 @@ export function AdminActivityLog() {
                     resetPaging();
                   }}
                 >
-                  Table: {targetType} ✕
+                  {t("adminPages.activity.filters.table").replace("{name}", targetType)}
                 </Button>
               )}
             </div>
@@ -535,7 +532,7 @@ export function AdminActivityLog() {
 
         {isError && (
           <p className="text-destructive text-sm">
-            {error instanceof Error ? error.message : "Could not load the activity log."}
+            {error instanceof Error ? error.message : t("adminPages.activity.loadError")}
           </p>
         )}
 
@@ -594,18 +591,18 @@ export function AdminActivityLog() {
               disabled={cursorStack.length === 0}
               onClick={() => setCursorStack((s) => s.slice(0, -1))}
             >
-              Previous page
+              {t("adminPages.activity.paging.previous")}
             </Button>
             <Button
               variant="outline"
               disabled={!data?.nextCursor}
               onClick={() => setCursorStack((s) => [...s, data!.nextCursor!])}
             >
-              Next page
+              {t("adminPages.activity.paging.next")}
             </Button>
             {cursorStack.length > 0 && (
               <Button variant="ghost" onClick={resetPaging}>
-                Back to newest
+                {t("adminPages.activity.paging.newest")}
               </Button>
             )}
           </div>
@@ -618,6 +615,7 @@ export function AdminActivityLog() {
 }
 
 function OutcomeBadge({ outcome }: { outcome: string }) {
+  const { t } = useI18n();
   if (outcome === "SUCCESS") return null;
   return (
     <Badge
@@ -628,7 +626,7 @@ function OutcomeBadge({ outcome }: { outcome: string }) {
           : "border-dashed border-red-500/50 text-red-400"
       }
     >
-      {outcome}
+      {t(`adminPages.activity.outcomeCodes.${outcome}`)}
     </Badge>
   );
 }
@@ -642,10 +640,11 @@ function TimelineView({
   onSelect: (r: ActivityRow) => void;
   onFilterActor: (id: string, kind: string) => void;
 }) {
+  const { t } = useI18n();
   if (rows.length === 0) {
     return (
       <p className="text-muted-foreground py-12 text-center text-sm">
-        No activity matches these filters.
+        {t("adminPages.activity.timeline.empty")}
       </p>
     );
   }
@@ -670,7 +669,7 @@ function TimelineView({
               <span
                 className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] ${severityStyles[r.severity]}`}
               >
-                {r.severity}
+                {t(`adminPages.activity.severityCodes.${r.severity}`)}
               </span>
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
@@ -680,12 +679,12 @@ function TimelineView({
               <OutcomeBadge outcome={r.outcome} />
               {r.detail?.revertable && (
                 <Badge variant="outline" className="border-emerald-500/40 text-emerald-400">
-                  Revertible
+                  {t("adminPages.activity.timeline.revertible")}
                 </Badge>
               )}
               {r.detail?.flaggedAt && (
                 <Badge variant="outline" className="border-orange-500/40 text-orange-400">
-                  Flagged
+                  {t("adminPages.activity.timeline.flagged")}
                 </Badge>
               )}
             </div>
@@ -701,25 +700,25 @@ function TimelineView({
             <thead className="text-muted-foreground border-border border-b text-xs">
               <tr>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  When
+                  {t("adminPages.activity.timeline.when")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  Actor
+                  {t("adminPages.activity.timeline.actor")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  Action
+                  {t("adminPages.activity.timeline.action")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  Table
+                  {t("adminPages.activity.timeline.table")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  Severity
+                  {t("adminPages.activity.timeline.severity")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  Status
+                  {t("adminPages.activity.timeline.status")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">
-                  <span className="sr-only">Details</span>
+                  <span className="sr-only">{t("adminPages.activity.timeline.details")}</span>
                 </th>
               </tr>
             </thead>
@@ -750,18 +749,18 @@ function TimelineView({
                       <Badge
                         variant="outline"
                         className="ml-1.5 border-violet-500/40 text-[10px] text-violet-400"
-                        title="Admin via the hardcoded email list — no DB flag"
+                        title={t("adminPages.activity.timeline.hardcodedTitle")}
                       >
-                        hardcoded
+                        {t("adminPages.activity.timeline.hardcoded")}
                       </Badge>
                     )}
                     {r.actorGrant === "SECTION_GRANT" && (
                       <Badge
                         variant="outline"
                         className="ml-1.5 border-sky-500/40 text-[10px] text-sky-400"
-                        title="Admin for some admin pages only (Admin access in the users table)"
+                        title={t("adminPages.activity.timeline.pageAccessTitle")}
                       >
-                        page access
+                        {t("adminPages.activity.timeline.pageAccess")}
                       </Badge>
                     )}
                   </td>
@@ -769,7 +768,7 @@ function TimelineView({
                     <span className="text-foreground">{r.detail?.targetLabel ?? r.actionCode}</span>
                     {r.detail && (
                       <Badge variant="outline" className="ml-1.5 text-[10px]">
-                        detailed
+                        {t("adminPages.activity.timeline.detailed")}
                       </Badge>
                     )}
                   </td>
@@ -778,7 +777,7 @@ function TimelineView({
                     <span
                       className={`rounded border px-1.5 py-0.5 text-[10px] ${severityStyles[r.severity]}`}
                     >
-                      {r.severity}
+                      {t(`adminPages.activity.severityCodes.${r.severity}`)}
                     </span>
                   </td>
                   <td className="px-3 py-2">
@@ -793,7 +792,7 @@ function TimelineView({
                       size="sm"
                       className="h-10 w-10 p-0"
                       onClick={() => onSelect(r)}
-                      aria-label="Open details"
+                      aria-label={t("adminPages.activity.timeline.openDetails")}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -828,10 +827,11 @@ function StoreCell({
   stores: ActorStoreRef[];
   onFilterStore: (store: ActorStoreRef) => void;
 }) {
+  const { t } = useI18n();
   if (!stores || stores.length === 0) {
     return (
-      <span className="text-muted-foreground text-xs" title="Acted outside any single restaurant">
-        Platform-wide
+      <span className="text-muted-foreground text-xs" title={t("adminPages.activity.store.platformWideTitle")}>
+        {t("adminPages.activity.store.platformWide")}
       </span>
     );
   }
@@ -848,7 +848,7 @@ function StoreCell({
           key={s.id}
           type="button"
           onClick={() => onFilterStore(s)}
-          title={`${s.name} — show only this restaurant`}
+          title={t("adminPages.activity.store.onlyThis").replace("{name}", s.name)}
           className="border-border bg-muted/50 hover:border-foreground/30 max-w-[180px] truncate rounded border px-1.5 py-0.5 text-xs"
         >
           {s.name}
@@ -859,7 +859,7 @@ function StoreCell({
           className="text-muted-foreground text-xs"
           title={stores.map((s) => s.name).join(", ")}
         >
-          +{rest} more
+          {t("adminPages.activity.store.more").replace("{count}", String(rest))}
         </span>
       )}
     </div>
@@ -875,9 +875,10 @@ function ActorsView({
   onDrillDown: (id: string, kind: string) => void;
   onFilterStore: (store: ActorStoreRef) => void;
 }) {
+  const { t } = useI18n();
   if (actors.length === 0) {
     return (
-      <p className="text-muted-foreground py-12 text-center text-sm">No actors recorded yet.</p>
+      <p className="text-muted-foreground py-12 text-center text-sm">{t("adminPages.activity.actors.empty")}</p>
     );
   }
 
@@ -905,7 +906,7 @@ function ActorsView({
                   <span className="text-muted-foreground text-sm">{a.actorKind}</span>
                 )}
                 <p className="text-muted-foreground truncate text-xs" title={a.actorEmail ?? ""}>
-                  {a.actorEmail ?? "No email on record"}
+                  {a.actorEmail ?? t("adminPages.activity.actors.noEmail")}
                 </p>
               </div>
               <Badge variant="outline" className="shrink-0 text-[10px]">
@@ -918,12 +919,16 @@ function ActorsView({
             </div>
 
             <p className="text-muted-foreground mt-2 text-xs">
-              {a.total} actions
+              {t("adminPages.activity.actors.actions").replace("{count}", String(a.total))}
               {a.destructive > 0 && (
-                <span className="font-semibold text-red-400"> · {a.destructive} destructive</span>
+                <span className="font-semibold text-red-400">
+                  {t("adminPages.activity.actors.destructive").replace("{count}", String(a.destructive))}
+                </span>
               )}
               {a.denied > 0 && (
-                <span className="font-semibold text-amber-400"> · {a.denied} denied</span>
+                <span className="font-semibold text-amber-400">
+                  {t("adminPages.activity.actors.denied").replace("{count}", String(a.denied))}
+                </span>
               )}
               {a.lastSeen ? ` · ${fmtTime(a.lastSeen)}` : ""}
             </p>
@@ -937,25 +942,25 @@ function ActorsView({
             <thead className="text-muted-foreground border-border border-b text-xs">
               <tr>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  User
+                  {t("adminPages.activity.actors.head.user")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  Restaurant
+                  {t("adminPages.activity.actors.head.restaurant")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  Role
+                  {t("adminPages.activity.actors.head.role")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">
-                  Actions
+                  {t("adminPages.activity.actors.head.actions")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">
-                  Destructive
+                  {t("adminPages.activity.actors.head.destructive")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">
-                  Denied
+                  {t("adminPages.activity.actors.head.denied")}
                 </th>
                 <th scope="col" className="px-3 py-2 text-left font-medium">
-                  Last seen
+                  {t("adminPages.activity.actors.head.lastSeen")}
                 </th>
               </tr>
             </thead>
@@ -984,7 +989,7 @@ function ActorsView({
                       className="text-muted-foreground max-w-[260px] truncate text-xs"
                       title={a.actorEmail ?? ""}
                     >
-                      {a.actorEmail ?? "No email on record"}
+                      {a.actorEmail ?? t("adminPages.activity.actors.noEmail")}
                     </p>
                   </td>
                   <td className="px-3 py-2 align-top">
@@ -1026,9 +1031,10 @@ function EntitiesView({
   entities: any[];
   onDrillDown: (t: string) => void;
 }) {
+  const { t } = useI18n();
   if (entities.length === 0) {
     return (
-      <p className="text-muted-foreground py-12 text-center text-sm">No table activity yet.</p>
+      <p className="text-muted-foreground py-12 text-center text-sm">{t("adminPages.activity.entities.empty")}</p>
     );
   }
   return (
@@ -1038,16 +1044,16 @@ function EntitiesView({
           <thead className="text-muted-foreground border-border border-b text-xs">
             <tr>
               <th scope="col" className="px-3 py-2 text-left font-medium">
-                Table
+                {t("adminPages.activity.entities.head.table")}
               </th>
               <th scope="col" className="px-3 py-2 text-right font-medium">
-                Writes
+                {t("adminPages.activity.entities.head.writes")}
               </th>
               <th scope="col" className="px-3 py-2 text-right font-medium">
-                Destructive
+                {t("adminPages.activity.entities.head.destructive")}
               </th>
               <th scope="col" className="px-3 py-2 text-left font-medium">
-                Last write
+                {t("adminPages.activity.entities.head.lastWrite")}
               </th>
             </tr>
           </thead>
@@ -1086,6 +1092,7 @@ function EntitiesView({
  * timeline unambiguous.
  */
 function CoverageView({ coverage }: { coverage: any }) {
+  const { t } = useI18n();
   if (!coverage) return null;
   return (
     <div className="space-y-6">
@@ -1095,7 +1102,7 @@ function CoverageView({ coverage }: { coverage: any }) {
 
       <div>
         <h2 className="text-foreground mb-2 text-sm font-semibold">
-          Curated actions ({coverage.curatedCount})
+          {t("adminPages.activity.coverage.curated").replace("{count}", String(coverage.curatedCount))}
         </h2>
         <div className="-mx-4 overflow-x-auto sm:mx-0">
           <div className="min-w-[620px]">
@@ -1103,16 +1110,16 @@ function CoverageView({ coverage }: { coverage: any }) {
               <thead className="text-muted-foreground border-border border-b text-xs">
                 <tr>
                   <th scope="col" className="px-3 py-2 text-left font-medium">
-                    Action
+                    {t("adminPages.activity.coverage.head.action")}
                   </th>
                   <th scope="col" className="px-3 py-2 text-left font-medium">
-                    Category
+                    {t("adminPages.activity.coverage.head.category")}
                   </th>
                   <th scope="col" className="px-3 py-2 text-left font-medium">
-                    Severity
+                    {t("adminPages.activity.coverage.head.severity")}
                   </th>
                   <th scope="col" className="px-3 py-2 text-left font-medium">
-                    Reversibility
+                    {t("adminPages.activity.coverage.head.reversibility")}
                   </th>
                 </tr>
               </thead>
@@ -1125,11 +1132,11 @@ function CoverageView({ coverage }: { coverage: any }) {
                       <span
                         className={`rounded border px-1.5 py-0.5 text-[10px] ${severityStyles[c.severity]}`}
                       >
-                        {c.severity}
+                        {t(`adminPages.activity.severityCodes.${c.severity}`)}
                       </span>
                     </td>
                     <td className="text-muted-foreground px-3 py-2 text-xs">
-                      {reversibilityCopy[c.reversibility] ?? c.reversibility}
+                      {t(`adminPages.activity.reversibility.${c.reversibility}`)}
                     </td>
                   </tr>
                 ))}
@@ -1140,7 +1147,7 @@ function CoverageView({ coverage }: { coverage: any }) {
       </div>
 
       <div>
-        <h2 className="text-foreground mb-2 text-sm font-semibold">Deliberately not recorded</h2>
+        <h2 className="text-foreground mb-2 text-sm font-semibold">{t("adminPages.activity.coverage.notRecorded")}</h2>
         <ul className="space-y-1.5">
           {coverage.waivers.map((w: any) => (
             <li key={w.route} className="text-muted-foreground text-xs">
@@ -1162,6 +1169,7 @@ function DetailSheet({
   onClose: () => void;
   act: ReturnType<typeof useMutation<any, Error, Record<string, unknown>>>;
 }) {
+  const { t } = useI18n();
   const [reason, setReason] = useState("");
   /** The plan, stamped with the action it was actually computed for. */
   const [plan, setPlan] = useState<{ forActionLogId: string; value: any } | null>(null);
@@ -1203,7 +1211,7 @@ function DetailSheet({
     } catch (e) {
       // Without this the preview of a DESTRUCTIVE operation could fail with no
       // message at all, leaving the admin staring at an unchanged panel.
-      toast.error(e instanceof Error ? e.message : "Could not preview the revert");
+      toast.error(e instanceof Error ? e.message : t("adminPages.activity.toasts.previewFailed"));
     }
   };
 
@@ -1211,10 +1219,10 @@ function DetailSheet({
     if (!actionLogId || !activePlan?.ok) return;
     try {
       await act.mutateAsync({ op: "revert", actionLogId, reason, confirmed: true });
-      toast.success("Reverted — the action was undone and recorded.");
+      toast.success(t("adminPages.activity.toasts.reverted"));
       close();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not revert");
+      toast.error(e instanceof Error ? e.message : t("adminPages.activity.toasts.revertFailed"));
     }
   };
 
@@ -1241,26 +1249,25 @@ function DetailSheet({
             of both textareas, sat flush against the panel edges. */}
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <dl className="space-y-2 text-sm">
-            <Field label="When" value={row ? fmtTime(row.occurredAt) : ""} />
-            <Field label="Actor" value={`${row?.actorName ?? "—"} (${row?.actorKind})`} />
-            {row?.actorGrant && <Field label="Admin via" value={row.actorGrant} />}
-            <Field label="Route" value={`${row?.method} ${row?.route}`} />
-            <Field label="Outcome" value={`${row?.outcome} ${row?.statusCode ?? ""}`} />
+            <Field label={t("adminPages.activity.detail.when")} value={row ? fmtTime(row.occurredAt) : ""} />
+            <Field label={t("adminPages.activity.detail.actor")} value={`${row?.actorName ?? "—"} (${row?.actorKind})`} />
+            {row?.actorGrant && <Field label={t("adminPages.activity.detail.adminVia")} value={row.actorGrant} />}
+            <Field label={t("adminPages.activity.detail.route")} value={`${row?.method} ${row?.route}`} />
+            <Field label={t("adminPages.activity.detail.outcome")} value={`${row?.outcome} ${row?.statusCode ?? ""}`} />
             {row?.targetType && (
-              <Field label="Target" value={`${row.targetType} ${row.targetId ?? ""}`} />
+              <Field label={t("adminPages.activity.detail.target")} value={`${row.targetType} ${row.targetId ?? ""}`} />
             )}
             {row?.detail && (
               <Field
-                label="Reversibility"
-                value={reversibilityCopy[row.detail.reversibility] ?? row.detail.reversibility}
+                label={t("adminPages.activity.detail.reversibility")}
+                value={t(`adminPages.activity.reversibility.${row.detail.reversibility}`)}
               />
             )}
           </dl>
 
           {!row?.detail && (
             <p className="text-muted-foreground border-border rounded-lg border border-dashed p-3 text-xs">
-              This request was recorded in the activity trail but has no curated entry, so its
-              before/after values were not captured and it cannot be reverted.
+              {t("adminPages.activity.detail.noCurated")}
             </p>
           )}
 
@@ -1272,13 +1279,13 @@ function DetailSheet({
                   : "border-amber-500/40 bg-amber-500/10"
               }`}
             >
-              <p className="font-medium">{activePlan.ok ? "Safe to revert" : "Refused"}</p>
+              <p className="font-medium">{activePlan.ok ? t("adminPages.activity.detail.safe") : t("adminPages.activity.detail.refused")}</p>
               <p className="text-muted-foreground mt-1">
                 {activePlan.ok ? activePlan.effect : activePlan.refusal?.message}
               </p>
               {activePlan.caveat && (
                 <p className="mt-2 text-amber-400">
-                  <strong>Caveat:</strong> {activePlan.caveat}
+                  <strong>{t("adminPages.activity.detail.caveat")}</strong> {activePlan.caveat}
                 </p>
               )}
             </div>
@@ -1287,28 +1294,28 @@ function DetailSheet({
           {activePlan?.ok && (
             <div className="space-y-2.5">
               <label htmlFor="revert-reason" className="text-foreground block text-xs font-medium">
-                Why are you reverting this? (required, min 10 characters)
+                {t("adminPages.activity.detail.reasonLabel")}
               </label>
               <Textarea
                 id="revert-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
-                placeholder="This becomes part of the permanent record."
+                placeholder={t("adminPages.activity.detail.reasonPlaceholder")}
               />
             </div>
           )}
 
           <div className="space-y-2.5">
             <label htmlFor="activity-note" className="text-foreground block text-xs font-medium">
-              Add a note
+              {t("adminPages.activity.detail.addNote")}
             </label>
             <Textarea
               id="activity-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              placeholder="Visible to other admins on this action."
+              placeholder={t("adminPages.activity.detail.notePlaceholder")}
             />
             <Button
               size="sm"
@@ -1318,7 +1325,7 @@ function DetailSheet({
                 try {
                   await act.mutateAsync({ op: "annotate", actionLogId, body: note });
                   setNote("");
-                  toast.success("Note added");
+                  toast.success(t("adminPages.activity.toasts.noteAdded"));
                 } catch {
                   // The shared onError already toasts; this only stops the
                   // rejection from escaping as an unhandled promise, and keeps
@@ -1326,7 +1333,7 @@ function DetailSheet({
                 }
               }}
             >
-              Save note
+              {t("adminPages.activity.detail.saveNote")}
             </Button>
           </div>
         </div>
@@ -1347,9 +1354,9 @@ function DetailSheet({
                 {act.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : activePlan ? (
-                  "Preview again"
+                  t("adminPages.activity.detail.previewAgain")
                 ) : (
-                  "Preview revert"
+                  t("adminPages.activity.detail.preview")
                 )}
               </Button>
             )}
@@ -1360,14 +1367,14 @@ function DetailSheet({
                 disabled={reason.trim().length < 10 || act.isPending}
                 onClick={runRevert}
               >
-                Apply revert
+                {t("adminPages.activity.detail.apply")}
               </Button>
             )}
             <Button
               variant="outline"
               size="icon"
               className="h-10 w-10"
-              aria-label={row.detail.flaggedAt ? "Unflag" : "Flag"}
+              aria-label={row.detail.flaggedAt ? t("adminPages.activity.detail.unflag") : t("adminPages.activity.detail.flag")}
               onClick={() =>
                 act.mutate({ op: "flag", actionLogId, flagged: !row.detail!.flaggedAt })
               }

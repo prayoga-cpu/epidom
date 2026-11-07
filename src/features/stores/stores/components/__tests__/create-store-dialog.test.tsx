@@ -190,7 +190,7 @@ describe("<CreateStoreDialog>", { timeout: RENDER_TEST_TIMEOUT }, () => {
       financeSource: { mode: "copy", storeId: "s-old" },
     });
     expect(h.toastSuccess).toHaveBeenCalledWith("Store created successfully");
-    expect(h.push).toHaveBeenCalledWith("/store/new-store/dashboard");
+    expect(h.push).toHaveBeenCalledWith("/store/new-store/home");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 

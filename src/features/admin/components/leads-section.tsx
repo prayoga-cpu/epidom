@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/components/lang/i18n-provider";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +29,8 @@ export type NewsletterSub = {
 
 type Tab = "leads" | "newsletter";
 
-const fmt = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+const fmt = (iso: string, locale: string) =>
+  new Date(iso).toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
 
 export function LeadsSection({
   salesLeads,
@@ -39,6 +40,7 @@ export function LeadsSection({
   subscribers: NewsletterSub[];
 }) {
   const [tab, setTab] = useState<Tab>("leads");
+  const { t, intlLocale } = useI18n();
 
   if (salesLeads.length === 0 && subscribers.length === 0) return null;
 
@@ -46,7 +48,7 @@ export function LeadsSection({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-base">Submissions</CardTitle>
+          <CardTitle className="text-base">{t("adminPages.salesPages.leads.title")}</CardTitle>
           <div className="flex gap-1.5">
             <Button
               variant={tab === "leads" ? "default" : "outline"}
@@ -54,7 +56,7 @@ export function LeadsSection({
               onClick={() => setTab("leads")}
               className="h-7 text-xs"
             >
-              Popup leads
+              {t("adminPages.salesPages.leads.popupLeads")}
               {salesLeads.length > 0 && (
                 <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
                   {salesLeads.length}
@@ -67,7 +69,7 @@ export function LeadsSection({
               onClick={() => setTab("newsletter")}
               className="h-7 text-xs"
             >
-              Newsletter
+              {t("adminPages.salesPages.leads.newsletter")}
               {subscribers.length > 0 && (
                 <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
                   {subscribers.length}
@@ -82,17 +84,17 @@ export function LeadsSection({
         {tab === "leads" && (
           <>
             {salesLeads.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No popup leads yet.</p>
+              <p className="text-muted-foreground text-sm">{t("adminPages.salesPages.leads.noLeads")}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">Name</th>
-                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">Email</th>
-                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">Phone</th>
-                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">Page</th>
-                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">Source</th>
-                    <th className="text-muted-foreground py-2 text-left font-medium">Date</th>
+                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">{t("adminPages.salesPages.leads.head.name")}</th>
+                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">{t("adminPages.salesPages.leads.head.email")}</th>
+                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">{t("adminPages.salesPages.leads.head.phone")}</th>
+                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">{t("adminPages.salesPages.leads.head.page")}</th>
+                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">{t("adminPages.salesPages.leads.head.source")}</th>
+                    <th className="text-muted-foreground py-2 text-left font-medium">{t("adminPages.salesPages.leads.head.date")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -109,7 +111,7 @@ export function LeadsSection({
                         </Badge>
                       </td>
                       <td className="text-muted-foreground py-2 pr-4 text-xs">{l.source}</td>
-                      <td className="text-muted-foreground py-2 text-xs">{fmt(l.createdAt)}</td>
+                      <td className="text-muted-foreground py-2 text-xs">{fmt(l.createdAt, intlLocale)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -121,15 +123,15 @@ export function LeadsSection({
         {tab === "newsletter" && (
           <>
             {subscribers.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No newsletter subscribers yet.</p>
+              <p className="text-muted-foreground text-sm">{t("adminPages.salesPages.leads.noSubs")}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">Email</th>
-                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">Source</th>
-                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">Page</th>
-                    <th className="text-muted-foreground py-2 text-left font-medium">Date</th>
+                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">{t("adminPages.salesPages.leads.head.email")}</th>
+                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">{t("adminPages.salesPages.leads.head.source")}</th>
+                    <th className="text-muted-foreground py-2 pr-4 text-left font-medium">{t("adminPages.salesPages.leads.head.page")}</th>
+                    <th className="text-muted-foreground py-2 text-left font-medium">{t("adminPages.salesPages.leads.head.date")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,7 +146,7 @@ export function LeadsSection({
                           </Badge>
                         )}
                       </td>
-                      <td className="text-muted-foreground py-2 text-xs">{fmt(s.createdAt)}</td>
+                      <td className="text-muted-foreground py-2 text-xs">{fmt(s.createdAt, intlLocale)}</td>
                     </tr>
                   ))}
                 </tbody>

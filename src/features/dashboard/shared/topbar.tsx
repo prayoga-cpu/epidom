@@ -1,45 +1,46 @@
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Search, Menu } from "lucide-react";
-import { useCurrentStore } from "./hooks/use-current-store";
-import { APP_VERSION } from "@/lib/version";
 import { Sidebar } from "./sidebar";
 import { StoreSwitcher } from "./store-switcher";
-import { OfflineSyncTrigger, PwaInstallTrigger } from "./pwa-install-dialog";
 import { useI18n } from "../../../components/lang/i18n-provider";
 import LangSwitcher from "../../../components/lang/lang-switcher";
 import { NavUser } from "./nav-user";
 import { NotificationBell } from "./notification-bell";
-import { FeedbackButton } from "@/features/dashboard/feedback/components/feedback-button";
-import { ThemeToggle } from "./theme-toggle";
 import { useEffect, useRef, useState } from "react";
-import { GlobalSearchDialog } from "./global-search-dialog";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { useCurrentStore } from "./hooks/use-current-store";
+import { homeNavItem } from "@/config/navigation.config";
 import { EpidomLogo } from "@/features/marketing/shared/components/epidom-logo";
 
-export function Topbar() {
-  const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const { t } = useI18n();
-  const { storeId } = useCurrentStore();
+interface TopbarProps {
+  /** Opens the global search dialog, which PageShell owns (the desktop rail opens it too). */
+  onSearch: () => void;
+}
 
-  // The brand mark is the one deliberate way back to the marketing site from
-  // inside the app — LastVisitedTracker only runs in (app), so without this
-  // the click would land on "/" with the OLD app URL still recorded as "last
-  // visited" and ResumeLastVisited would immediately bounce back into the
-  // app, making it impossible to ever actually see the marketing page again.
-  // Recording "/" itself as the last-visited URL first breaks that loop.
-  const handleLogoClick = () => {
-    try {
-      localStorage.setItem("epidom:lastVisitedUrl", "/");
-    } catch {
-      // Ignore — worst case this one click still redirects, same as before.
-    }
-    router.push("/");
-  };
+/**
+ * The phone / tablet header (below xl). On desktop there is no top bar: its
+ * search, store switcher, bell, language, quick controls and account all live in
+ * the left rail (Sidebar mode="desktop").
+ */
+export function Topbar({ onSearch }: TopbarProps) {
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  // The drawer outlives navigation (this topbar lives in the persistent
+  // PageShell), so a tapped link used to leave it open over the new page.
+  // Close it whenever the route changes — state adjusted during render, not
+  // in an effect, so the new page never paints with the drawer still up.
+  const [drawerPathname, setDrawerPathname] = useState(pathname);
+  if (pathname !== drawerPathname) {
+    setDrawerPathname(pathname);
+    if (menuOpen) setMenuOpen(false);
+  }
+  const { t } = useI18n();
+
+  // The logo opens the store's Home, like every other way into the app's start
+  // page (on desktop the logo minimizes the sidebar instead).
+  const { storeId } = useCurrentStore();
+  const homeHref = storeId ? `/store/${storeId}${homeNavItem.href}` : "/stores";
 
   // Swipe in from the RIGHT edge to open the nav drawer (below the xl
   // breakpoint, where the fixed desktop rail isn't shown and the hamburger is
@@ -53,7 +54,7 @@ export function Topbar() {
     let start: { x: number; y: number } | null = null;
 
     function onTouchStart(e: TouchEvent) {
-      if (window.innerWidth >= 1280) return;
+      if (window.innerWidth >= 1024) return; // lg+: the sidebar is always on screen
       const touch = e.touches[0];
       if (touch.clientX < window.innerWidth - EDGE_PX) return;
       start = { x: touch.clientX, y: touch.clientY };
@@ -120,7 +121,7 @@ export function Topbar() {
   return (
     <header
       role="banner"
-      className="navbar-no-transition navbar-static fixed top-0 z-10 w-full rounded-none shadow"
+      className="navbar-no-transition navbar-static fixed top-0 z-10 w-full rounded-none shadow lg:hidden"
       style={{
         background: "var(--epi-navy-850)",
         color: "var(--epi-cream-50)",
@@ -138,17 +139,17 @@ export function Topbar() {
           100% — the only thing that changes is that the two caps now keep the
           same ratio to each other across the whole zoom ladder. */}
       <div className="mx-auto max-w-[calc(80rem/var(--app-zoom,1))] px-2 sm:px-3 lg:px-3">
-        {/* Mobile/Tablet Layout — covers phones through every iPad size
-            (including 1024px landscape), matching Sidebar's xl: breakpoint
-            for the fixed desktop rail */}
-        <div className="flex h-14 items-center justify-between gap-1 sm:gap-2 xl:hidden">
+        {/* Phone / tablet layout: phones and iPad portrait. From lg (1024px,
+            iPad landscape and up) the desktop sidebar replaces this bar. */}
+        <div className="flex h-14 items-center justify-between gap-1 sm:gap-2 lg:hidden">
           {/* Left: Logo */}
           <div className="flex min-w-0 items-center justify-center">
-            <EpidomLogo size={22} onClick={handleLogoClick} />
+            <EpidomLogo size={22} href={homeHref} />
           </div>
 
-          {/* Right: search, profile (logout now lives in the profile dropdown),
-              then the menu. The hamburger sits at the far right, on the same
+          {/* Right: search, profile (tablet only — on a phone the account
+              menu, logout included, lives in the drawer), then the menu. The
+              hamburger sits at the far right, on the same
               side as the drawer it opens and the edge-swipe that opens it —
               phones are held in the right hand, and the top-left corner is the
               hardest place on the screen to reach one-handed. */}
@@ -159,7 +160,7 @@ export function Topbar() {
               size="icon"
               className="h-9 w-9 shrink-0 hover:bg-white/10"
               style={{ color: "var(--epi-cream-50)" }}
-              onClick={() => setSearchOpen(true)}
+              onClick={onSearch}
             >
               <Search className="size-5" />
               <span className="sr-only">{t("common.nav.searchAriaLabel")}</span>
@@ -178,8 +179,13 @@ export function Topbar() {
             {/* Notifications */}
             <NotificationBell />
 
-            {/* Profile */}
-            <NavUser />
+            {/* Profile — tablet only. Below sm the avatar is gone: the drawer's
+                Account block (NavUserDrawerSection) carries every action the
+                dropdown does, and the header keeps room for search, the bell
+                and the menu. */}
+            <div className="hidden sm:flex sm:items-center">
+              <NavUser />
+            </div>
 
             {/* The app's only nav drawer. There used to be a second <Sheet>
                 bound to this same `menuOpen` state in the desktop layout
@@ -215,74 +221,8 @@ export function Topbar() {
             </Sheet>
           </div>
         </div>
-
-        {/* Desktop Layout */}
-        <div className="hidden h-14 grid-cols-[1fr_minmax(220px,720px)_1fr] items-center gap-3 xl:grid">
-          {/* Left: Logo. No hamburger here — this layout only renders at xl,
-              where the fixed sidebar rail is always on screen. */}
-          <div className="flex items-center">
-            <EpidomLogo size={26} onClick={handleLogoClick} />
-          </div>
-
-          {/* Center: Search */}
-          <div className="hidden w-full items-center justify-end md:flex">
-            <Button
-              variant="outline"
-              className="text-muted-foreground bg-background relative h-9 w-80 max-w-xl justify-start rounded-full text-sm font-normal sm:max-w-2xl"
-              onClick={() => setSearchOpen(true)}
-            >
-              <Search className="mr-1 hidden size-4 shrink-0 sm:inline" />
-              <span>{t("actions.searchPlaceholder")}</span>
-              <KbdGroup className="absolute right-3 hidden md:flex">
-                <Kbd>⌘</Kbd>
-                <Kbd>k</Kbd>
-              </KbdGroup>
-            </Button>
-          </div>
-
-          {/* Right: store switcher, language, profile (logout now lives in the profile dropdown) */}
-          <div className="ml-auto flex items-center justify-end gap-2">
-            {/* Store switcher */}
-            <div className="hidden sm:flex sm:items-center">
-              <StoreSwitcher />
-            </div>
-            {/* Language switcher */}
-            <div className="hidden sm:flex sm:items-center">
-              <LangSwitcher />
-            </div>
-            <div className="flex items-center">
-              <PwaInstallTrigger variant="icon" />
-            </div>
-            <div className="flex items-center">
-              <OfflineSyncTrigger variant="icon" />
-            </div>
-            <div className="flex items-center">
-              <ThemeToggle />
-            </div>
-            <div className="flex items-center">
-              <FeedbackButton />
-            </div>
-            <div className="hidden items-center lg:flex">
-              <Link
-                href={storeId ? `/store/${storeId}/changelog` : "/changelog"}
-                className="rounded-lg px-2 py-1 text-xs font-medium text-white/50 transition-colors hover:bg-white/10 hover:text-white/80"
-                aria-label={t("changelog.viewChangelog")}
-              >
-                {`v${APP_VERSION}`}
-              </Link>
-            </div>
-            <div className="flex items-center">
-              <NotificationBell />
-            </div>
-            <div className="flex items-center">
-              <NavUser />
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Global Search Dialog */}
-      <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 }

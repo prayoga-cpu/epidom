@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Handshake, Loader2, Mail, Plus, Search, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -60,6 +61,7 @@ function UserPicker({
   selected: Candidate | null;
   onSelect: (user: Candidate | null) => void;
 }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   useEffect(() => {
@@ -88,7 +90,7 @@ function UserPicker({
           variant="ghost"
           size="sm"
           className="min-h-10"
-          aria-label="Choose someone else"
+          aria-label={t("adminPages.partners.picker.chooseOther")}
           onClick={() => onSelect(null)}
         >
           <X className="h-4 w-4" />
@@ -104,7 +106,7 @@ function UserPicker({
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           className="min-h-10 pl-9"
-          placeholder="Search users by name or email"
+          placeholder={t("adminPages.partners.picker.search")}
           autoComplete="off"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -112,10 +114,10 @@ function UserPicker({
       </div>
       <div className="border-border max-h-56 overflow-y-auto rounded-lg border">
         {isFetching && users.length === 0 ? (
-          <p className="text-muted-foreground p-3 text-sm">Searching…</p>
+          <p className="text-muted-foreground p-3 text-sm">{t("adminPages.partners.picker.searching")}</p>
         ) : users.length === 0 ? (
           <p className="text-muted-foreground p-3 text-sm">
-            No user found. Invite them by email instead.
+            {t("adminPages.partners.picker.noUser")}
           </p>
         ) : (
           users.map((u) => (
@@ -157,6 +159,7 @@ export function NewPartnerDialog({
   onOpenChange: (v: boolean) => void;
   initialUser?: Candidate | null;
 }) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [picked, setPicked] = useState<Candidate | null>(initialUser);
   const form = useForm<CreatePartnerFormValues>({
@@ -206,8 +209,8 @@ export function NewPartnerDialog({
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       toast.success(
         res.invited
-          ? `Invitation sent to ${values.inviteEmail.trim()}`
-          : "Referral partner created: they can open their partner page now"
+          ? t("adminPages.partners.newDialog.invitedToast").replace("{email}", values.inviteEmail.trim())
+          : t("adminPages.partners.newDialog.createdToast")
       );
       onOpenChange(false);
     },
@@ -218,10 +221,9 @@ export function NewPartnerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[calc(90dvh/var(--app-zoom,1))] flex-col overflow-hidden sm:max-w-lg">
         <DialogHeader className="shrink-0">
-          <DialogTitle>New referral partner</DialogTitle>
+          <DialogTitle>{t("adminPages.partners.newDialog.title")}</DialogTitle>
           <DialogDescription>
-            They get their own page (Partner dashboard in their account menu) with their link, the
-            report of their sales page and their commission, and nothing else of the admin panel.
+            {t("adminPages.partners.newDialog.desc")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -234,8 +236,8 @@ export function NewPartnerDialog({
                 <div className="border-border bg-muted/40 grid grid-cols-2 gap-1 rounded-lg border p-1">
                   {(
                     [
-                      ["user", "From the users list", UserRound],
-                      ["invite", "Invite by email", Mail],
+                      ["user", t("adminPages.partners.newDialog.fromUsers"), UserRound],
+                      ["invite", t("adminPages.partners.newDialog.inviteByEmail"), Mail],
                     ] as const
                   ).map(([value, label, Icon]) => (
                     <button
@@ -262,7 +264,7 @@ export function NewPartnerDialog({
                   name="userId"
                   render={() => (
                     <FormItem>
-                      <FormLabel>Who</FormLabel>
+                      <FormLabel>{t("adminPages.partners.newDialog.who")}</FormLabel>
                       <UserPicker
                         selected={picked}
                         onSelect={(u) => {
@@ -283,13 +285,12 @@ export function NewPartnerDialog({
                   name="inviteEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Their email</FormLabel>
+                      <FormLabel>{t("adminPages.partners.newDialog.theirEmail")}</FormLabel>
                       <FormControl>
                         <Input type="email" autoComplete="off" placeholder="bob@example.com" {...field} />
                       </FormControl>
                       <p className="text-muted-foreground text-xs">
-                        They get an email to create their Epidom account (or sign in, if this
-                        address already has one) and land on their partner page.
+                        {t("adminPages.partners.newDialog.emailHint")}
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -301,11 +302,11 @@ export function NewPartnerDialog({
             </div>
             <DialogFooter className="shrink-0 pt-3">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("adminPages.common.cancel")}
               </Button>
               <Button type="submit" disabled={create.isPending}>
                 {create.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {who === "invite" ? "Send invitation" : "Create referral partner"}
+                {who === "invite" ? t("adminPages.partners.newDialog.sendInvite") : t("adminPages.partners.newDialog.create")}
               </Button>
             </DialogFooter>
           </form>
@@ -316,6 +317,7 @@ export function NewPartnerDialog({
 }
 
 export function PartnersAdmin() {
+  const { t } = useI18n();
   const [creating, setCreating] = useState(false);
   const { data, isLoading, error } = useQuery<{ partners: PartnerListRow[] }>({
     queryKey: PARTNERS_QUERY_KEY,
@@ -331,26 +333,25 @@ export function PartnersAdmin() {
             <Handshake className="h-5 w-5 text-amber-400" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-foreground text-lg font-bold">Referrals</h1>
+            <h1 className="text-foreground text-lg font-bold">{t("adminPages.partners.list.title")}</h1>
             <p className="text-muted-foreground text-xs">
-              Referral partners: their links, the sales pages they own, and their commission
+              {t("adminPages.partners.list.subtitle")}
             </p>
           </div>
           <Button className="ml-auto min-h-10" onClick={() => setCreating(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            New referral partner
+            {t("adminPages.partners.list.newPartner")}
           </Button>
         </div>
 
         {isLoading ? (
-          <p className="text-muted-foreground text-sm">Loading…</p>
+          <p className="text-muted-foreground text-sm">{t("adminPages.partners.list.loading")}</p>
         ) : error ? (
           <p className="text-sm text-red-400">{(error as Error).message}</p>
         ) : partners.length === 0 ? (
           <Card>
             <CardContent className="text-muted-foreground py-10 text-center text-sm">
-              No referral partners yet. Create one here, or from a user in the users list, to give
-              them a referral link or a sales page.
+              {t("adminPages.partners.list.empty")}
             </CardContent>
           </Card>
         ) : (
@@ -364,7 +365,9 @@ export function PartnersAdmin() {
                         <CardTitle className="truncate text-base">{p.displayName}</CardTitle>
                         <p className="text-muted-foreground truncate text-xs">
                           {p.user?.email ??
-                            (p.inviteEmail ? `Invited: ${p.inviteEmail} (not joined yet)` : "Account deleted")}
+                            (p.inviteEmail
+                              ? t("adminPages.partners.list.invited").replace("{email}", p.inviteEmail)
+                              : t("adminPages.partners.list.accountDeleted"))}
                         </p>
                       </div>
                       <StatusBadge status={p.status} />
@@ -374,7 +377,7 @@ export function PartnersAdmin() {
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       {!p.bankDetailsSet && p.user && (
                         <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-500">
-                          No bank details
+                          {t("adminPages.partners.list.noBank")}
                         </span>
                       )}
                       {p.referralCode && (
@@ -387,24 +390,25 @@ export function PartnersAdmin() {
                           key={s.page}
                           className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-semibold text-sky-300"
                         >
-                          {s.page.replace("sales-page-", "Sales page ")}
+                          {t("adminPages.partners.salesPage").replace("{n}", s.page.replace("sales-page-", ""))}
                         </span>
                       ))}
                     </div>
                     <p className="text-muted-foreground text-xs">
-                      {p.commissionRate}% for {p.commissionMonths} month
-                      {p.commissionMonths === 1 ? "" : "s"}
+                      {t(p.commissionMonths === 1 ? "adminPages.partners.list.dealOne" : "adminPages.partners.list.dealMany")
+                        .replace("{rate}", String(p.commissionRate))
+                        .replace("{months}", String(p.commissionMonths))}
                       {p.referralCode && Number(p.customerDiscountPercent) > 0
-                        ? ` · customers get ${p.customerDiscountPercent}% off the first payment`
+                        ? t("adminPages.partners.list.customerDiscount").replace("{percent}", String(p.customerDiscountPercent))
                         : ""}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-muted/40 rounded-md p-2">
-                        <p className="text-muted-foreground text-[11px]">Sign-ups</p>
+                        <p className="text-muted-foreground text-[11px]">{t("adminPages.partners.list.signups")}</p>
                         <p className="text-foreground font-semibold tabular-nums">{p.signups}</p>
                       </div>
                       <div className="bg-muted/40 rounded-md p-2">
-                        <p className="text-muted-foreground text-[11px]">Paid at least once</p>
+                        <p className="text-muted-foreground text-[11px]">{t("adminPages.partners.list.paying")}</p>
                         <p className="text-foreground font-semibold tabular-nums">
                           {p.payingCustomers}
                         </p>

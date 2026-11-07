@@ -1,62 +1,69 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { Command as CommandPrimitive } from "cmdk";
+import { ArrowUp, Lock, Search, X } from "lucide-react";
 import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import {
-  LayoutDashboard,
-  UserRound,
-  Boxes,
-  Database,
-  AlertTriangle,
-  Package,
-  UtensilsCrossed,
-  ShoppingCart,
-  Store,
-  FileText,
-  Settings,
-  ContactRound,
-  TicketPercent,
-} from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { useI18n } from "@/components/lang/i18n-provider";
+import {
+  ClaudeSearchControls,
+  useHomeClaude,
+} from "@/features/dashboard/home/components/home-claude";
+import {
+  useSearchTargets,
+  type SearchTarget,
+} from "@/features/dashboard/home/hooks/use-search-targets";
+import { PLAN_LABELS } from "@/lib/plans/entitlements";
+import { cn } from "@/lib/utils";
 import { useCurrentStore } from "./hooks/use-current-store";
-import { usePosSession } from "@/features/pos/hooks/use-pos-session";
-
-interface SearchItem {
-  id: string;
-  title: string;
-  description?: string;
-  href: string;
-  icon: React.ReactNode;
-  category: string;
-  /** Nav-config href (e.g. "/management") this item's visibility is gated
-   * on for a staff persona — defaults to always visible when omitted. */
-  gateHref?: string;
-}
 
 interface GlobalSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogProps) {
-  const router = useRouter();
-  const { t } = useI18n();
-  const { storeId } = useCurrentStore();
-  const posSession = usePosSession();
-  const [searchQuery, setSearchQuery] = React.useState("");
+const ITEM =
+  "data-[selected=true]:bg-muted/70 flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-left text-sm outline-none";
+const HEADING =
+  "text-muted-foreground px-3 pt-3 pb-1 text-xs font-semibold tracking-wider uppercase";
 
-  const actingAsStaff =
-    posSession.isActive && posSession.storeId === storeId && posSession.staffRole !== "OWNER";
-  const staffAllowedPages = actingAsStaff ? (posSession.allowedPages ?? []) : null;
+/**
+ * ⌘K / the sidebar's Search: the Home search in a window. Empty, it lists what
+ * you opened recently and the quick actions; typing finds actions and pages by
+ * name or keyword (plan locks and staff access applied, same as Home); and with
+ * Claude MCP connected it can hand a question to your own Claude instead.
+ */
+export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogProps) {
+  const { t } = useI18n();
+  const { store, storeId } = useCurrentStore();
+  const id = storeId ?? "";
+  const targets = useSearchTargets(id);
+  const {
+    staffAllowed,
+    actions,
+    visible,
+    locked,
+    search,
+    open: openTarget,
+    recentCards,
+    when,
+  } = targets;
+  const claude = useHomeClaude({
+    storeId: id,
+    storeName: store?.name,
+    enabled: staffAllowed === null,
+  });
+  const [query, setQuery] = React.useState("");
+  const [pickedMode, setPickedMode] = React.useState<"ask" | "search" | null>(null);
+  // Connected: the bar is the Claude chat until switched to search.
+  const asking = claude.state === "connected" && (pickedMode ?? "ask") === "ask";
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -65,182 +72,206 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
         onOpenChange(!open);
       }
     };
-
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, [open, onOpenChange]);
 
-  // Define all searchable items
-  const searchItems: SearchItem[] = React.useMemo(() => {
-    if (!storeId) return [];
+  // A fresh start every time it opens.
+  React.useEffect(() => {
+    if (!open) {
+      setQuery("");
+      setPickedMode(null);
+    }
+  }, [open]);
 
-    return [
-      // Main Navigation
-      {
-        id: "dashboard",
-        title: t("nav.dashboard"),
-        description: t("dashboard.description"),
-        href: `/store/${storeId}/dashboard`,
-        icon: <LayoutDashboard className="size-4" />,
-        category: t("search.categories.navigation"),
-        gateHref: "/dashboard",
-      },
-      {
-        id: "profile",
-        title: t("nav.profile"),
-        description: t("profile.title"),
-        href: `/store/${storeId}/profile`,
-        icon: <UserRound className="size-4" />,
-        category: t("search.categories.navigation"),
-        gateHref: "/profile",
-      },
-      {
-        id: "management",
-        title: t("nav.management"),
-        description: t("management.editStock.description"),
-        href: `/store/${storeId}/management`,
-        icon: <Boxes className="size-4" />,
-        category: t("search.categories.navigation"),
-        gateHref: "/management",
-      },
-      {
-        id: "data",
-        title: t("nav.data"),
-        description: t("data.materials.pageTitle"),
-        href: `/store/${storeId}/data`,
-        icon: <Database className="size-4" />,
-        category: t("search.categories.navigation"),
-        gateHref: "/data",
-      },
-      {
-        id: "customers",
-        title: t("nav.customers"),
-        description: t("customers.page.description"),
-        href: `/store/${storeId}/customers`,
-        icon: <ContactRound className="size-4" />,
-        category: t("search.categories.navigation"),
-        gateHref: "/customers",
-      },
-      {
-        id: "promotions",
-        title: t("promotions.tab"),
-        description: t("promotions.searchDescription"),
-        href: `/store/${storeId}/data?tab=promotions`,
-        icon: <TicketPercent className="size-4" />,
-        category: t("search.categories.navigation"),
-        gateHref: "/data",
-      },
-      {
-        id: "alerts",
-        title: t("nav.alerts"),
-        description: t("alerts.title"),
-        href: `/store/${storeId}/alerts`,
-        icon: <AlertTriangle className="size-4" />,
-        category: t("search.categories.navigation"),
-        gateHref: "/alerts",
-      },
-      {
-        id: "production",
-        title: t("nav.production"),
-        description: t("management.recipeProduction.description"),
-        href: `/store/${storeId}/production`,
-        icon: <UtensilsCrossed className="size-4" />,
-        category: t("search.categories.navigation"),
-        gateHref: "/production",
-      },
-
-      // Management Section
-      {
-        id: "supplier-orders",
-        title: t("management.supplierOrders.title"),
-        description: t("management.supplierOrders.description"),
-        href: `/store/${storeId}/management?tab=delivery`,
-        icon: <FileText className="size-4" />,
-        category: t("search.categories.management"),
-        gateHref: "/management",
-      },
-    ];
-  }, [t, storeId]);
-
-  // Filter items based on search query
-  const filteredItems = React.useMemo(() => {
-    // Filter out items with undefined/invalid translations, and any page a
-    // staff persona isn't granted access to.
-    const validItems = searchItems.filter(
-      (item) =>
-        item.title &&
-        item.category &&
-        typeof item.title === "string" &&
-        typeof item.category === "string" &&
-        (!staffAllowedPages || !item.gateHref || staffAllowedPages.includes(item.gateHref))
-    );
-
-    if (!searchQuery) return validItems;
-
-    const query = searchQuery.toLowerCase();
-    return validItems.filter(
-      (item) =>
-        item.title.toLowerCase().includes(query) ||
-        (item.description && item.description.toLowerCase().includes(query)) ||
-        item.category.toLowerCase().includes(query)
-    );
-  }, [searchQuery, searchItems, staffAllowedPages]);
-
-  // Group filtered items by category
-  const groupedItems = React.useMemo(() => {
-    const groups = new Map<string, SearchItem[]>();
-
-    filteredItems.forEach((item) => {
-      const existing = groups.get(item.category) || [];
-      groups.set(item.category, [...existing, item]);
-    });
-
-    return Array.from(groups.entries());
-  }, [filteredItems]);
-
-  const handleSelect = (href: string) => {
-    onOpenChange(false);
-    router.push(href);
-    setSearchQuery("");
+  const close = () => onOpenChange(false);
+  const pick = (x: SearchTarget) => {
+    close();
+    openTarget(x);
+  };
+  const ask = (question: string) => {
+    close();
+    claude.ask(question);
   };
 
+  const results = asking ? null : search(query);
+  const claudeExamples = [
+    t("claudeConnector.promo.exampleDashboard"),
+    t("claudeConnector.promo.exampleStock"),
+    t("claudeConnector.promo.exampleSchedule"),
+    ...(claude.canWrite ? [t("home.claude.exampleWrite")] : []),
+  ];
+
+  const row = (x: SearchTarget, extra?: React.ReactNode) => (
+    <CommandPrimitive.Item key={x.id} value={x.id} onSelect={() => pick(x)} className={ITEM}>
+      <x.icon className="text-muted-foreground size-4 shrink-0" aria-hidden />
+      <span className="flex-1 truncate">{x.label}</span>
+      {extra}
+      {locked(x) && (
+        <Lock className="size-3.5 shrink-0 text-amber-500" aria-label={PLAN_LABELS[x.plan!]} />
+      )}
+    </CommandPrimitive.Item>
+  );
+
   return (
-    <CommandDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t("search.title")}
-      description={t("search.description")}
-    >
-      <CommandInput
-        placeholder={t("search.placeholder")}
-        value={searchQuery}
-        onValueChange={setSearchQuery}
-      />
-      <CommandList>
-        <CommandEmpty>{t("search.noResults")}</CommandEmpty>
-        {groupedItems.map(([category, items], index) => (
-          <React.Fragment key={category}>
-            {index > 0 && <CommandSeparator />}
-            <CommandGroup heading={category}>
-              {items.map((item) => (
-                <CommandItem
-                  key={item.id}
-                  value={item.title}
-                  onSelect={() => handleSelect(item.href)}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton={false}
+        className={cn(
+          // Phones: a full-screen sheet (input on top, results filling the screen,
+          // nothing left for the keyboard to hide). From sm: a centred window.
+          "top-0 left-0 flex h-[calc(100dvh/var(--app-zoom,1))] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-0 p-0",
+          "sm:top-[16%] sm:left-[50%] sm:h-auto sm:max-w-xl sm:-translate-x-1/2 sm:rounded-lg sm:border"
+        )}
+      >
+        <DialogHeader className="sr-only">
+          <DialogTitle>{t("search.title")}</DialogTitle>
+          <DialogDescription>{t("search.description")}</DialogDescription>
+        </DialogHeader>
+        <CommandPrimitive shouldFilter={false} loop className="flex min-h-0 flex-1 flex-col">
+          <div className="flex items-center gap-2 border-b px-3">
+            <Search className="text-muted-foreground size-5 shrink-0" aria-hidden />
+            <CommandPrimitive.Input
+              autoFocus
+              value={query}
+              onValueChange={setQuery}
+              placeholder={asking ? t("home.claude.askPlaceholder") : t("home.searchPlaceholder")}
+              aria-label={asking ? t("home.claude.askPlaceholder") : t("home.searchLabel")}
+              className="placeholder:text-muted-foreground h-14 min-w-0 flex-1 bg-transparent text-base outline-none"
+            />
+            <div className="flex shrink-0 items-center gap-1">
+              {/* A phone has no Esc key: an explicit close. */}
+              <button
+                type="button"
+                onClick={close}
+                aria-label={t("search.hintClose")}
+                className="text-muted-foreground hover:text-foreground order-last flex size-10 items-center justify-center rounded-md sm:hidden"
+              >
+                <X className="size-5" aria-hidden />
+              </button>
+              <ClaudeSearchControls
+                claude={claude}
+                asking={asking}
+                hasText={query.trim().length > 0}
+                onAsk={() => ask(query)}
+                onSwitch={setPickedMode}
+                onNavigate={close}
+              />
+            </div>
+          </div>
+
+          <CommandPrimitive.List className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-2 sm:max-h-[min(calc(58dvh/var(--app-zoom,1)),420px)] sm:flex-none">
+            {asking ? (
+              <>
+                {query.trim() ? (
+                  <CommandPrimitive.Group>
+                    <CommandPrimitive.Item
+                      value="ask-claude"
+                      onSelect={() => ask(query)}
+                      className={ITEM}
+                    >
+                      <ArrowUp className="text-muted-foreground size-4 shrink-0" aria-hidden />
+                      <span className="flex-1 truncate">
+                        {t("home.claude.send")}: “{query.trim()}”
+                      </span>
+                    </CommandPrimitive.Item>
+                  </CommandPrimitive.Group>
+                ) : (
+                  <CommandPrimitive.Group heading={t("home.claude.ask")}>
+                    {claudeExamples.map((example) => (
+                      <CommandPrimitive.Item
+                        key={example}
+                        value={example}
+                        onSelect={() => setQuery(example)}
+                        className={ITEM}
+                      >
+                        <span className="flex-1 truncate">{example}</span>
+                      </CommandPrimitive.Item>
+                    ))}
+                  </CommandPrimitive.Group>
+                )}
+                <p className="text-muted-foreground px-3 py-2 text-xs">
+                  {claude.canWrite ? t("home.claude.hintWrite") : t("home.claude.hintRead")}
+                </p>
+              </>
+            ) : results ? (
+              results.actions.length + results.pages.length === 0 ? (
+                <p className="text-muted-foreground px-3 py-8 text-center text-sm">
+                  {t("home.noResults")}
+                </p>
+              ) : (
+                (
+                  [
+                    ["actions", results.actions],
+                    ["pages", results.pages],
+                  ] as const
+                ).map(([group, list]) =>
+                  list.length === 0 ? null : (
+                    <CommandPrimitive.Group
+                      key={group}
+                      heading={t(`home.groups.${group}`)}
+                      className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:uppercase"
+                    >
+                      {list.map((x) => row(x))}
+                    </CommandPrimitive.Group>
+                  )
+                )
+              )
+            ) : (
+              <>
+                {recentCards.length > 0 && (
+                  <CommandPrimitive.Group
+                    heading={t("home.recent.title")}
+                    className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:uppercase"
+                  >
+                    {recentCards.slice(0, 5).map(({ visit, item }) => {
+                      const target: SearchTarget = {
+                        id: `recent-${visit.section}`,
+                        label: t(item.labelKey),
+                        keywords: "",
+                        icon: item.icon,
+                        href: `/store/${id}${visit.section}`,
+                        gate: item.href,
+                        plan: item.requiredPlan,
+                      };
+                      return row(
+                        target,
+                        <span className="text-muted-foreground shrink-0 text-xs">
+                          {when(visit.at)}
+                        </span>
+                      );
+                    })}
+                  </CommandPrimitive.Group>
+                )}
+                <CommandPrimitive.Group
+                  heading={t("home.groups.actions")}
+                  className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:uppercase"
                 >
-                  {item.icon}
-                  <div className="flex flex-col">
-                    <span className="font-medium">{item.title}</span>
-                    {item.description && (
-                      <span className="text-muted-foreground text-xs">{item.description}</span>
-                    )}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </React.Fragment>
-        ))}
-      </CommandList>
-    </CommandDialog>
+                  {actions.filter(visible).map((x) => row(x))}
+                </CommandPrimitive.Group>
+              </>
+            )}
+          </CommandPrimitive.List>
+
+          <div className="text-muted-foreground hidden items-center gap-4 border-t px-4 py-2.5 text-xs sm:flex">
+            <span className="flex items-center gap-1.5">
+              {t("search.hintClose")}
+              <Kbd>Esc</Kbd>
+            </span>
+            <span className="flex items-center gap-1.5">
+              {t("search.hintNavigate")}
+              <KbdGroup>
+                <Kbd>↑</Kbd>
+                <Kbd>↓</Kbd>
+              </KbdGroup>
+            </span>
+            <span className="flex items-center gap-1.5">
+              {t("search.hintOpen")}
+              <Kbd>↵</Kbd>
+            </span>
+          </div>
+        </CommandPrimitive>
+      </DialogContent>
+    </Dialog>
   );
 }

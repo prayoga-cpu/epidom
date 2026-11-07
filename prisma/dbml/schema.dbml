@@ -241,6 +241,7 @@ Table stores {
   wasteEntries waste_entries [not null]
   pushSubscriptions push_subscriptions [not null]
   receiptSettings store_receipt_settings
+  customerDisplaySettings customer_display_settings
   syncFinanceWithBusiness Boolean [not null, default: false]
   payLaterEnabled Boolean [not null, default: false]
   kitchenDisplayEnabled Boolean [not null, default: true]
@@ -303,6 +304,49 @@ what isn\'t already on Storefront (tagline/logoUrl/instagramUrl/tiktokUrl —
 reused directly from there when a store has a published storefront; a
 cash-only store with no storefront simply omits those lines on its
 receipt instead of duplicating the same fields here).'
+}
+
+Table customer_display_settings {
+  id String [pk]
+  storeId String [unique, not null]
+  themeColor String [note: 'Overrides Storefront.themeColor for this screen only. Null = the storefront\'s.']
+  backgroundStyle String [not null, default: 'GRADIENT', note: 'GRADIENT (the theme colour, deepening) | SOLID | IMAGE']
+  backgroundImageUrl String
+  backgroundDim Int [not null, default: 45, note: 'IMAGE only: how much of the theme colour is laid over the photo, 0-90 (%).']
+  backgroundBlur Int [not null, default: 0, note: 'IMAGE only: blur in px, 0-24.']
+  panelStyle String [not null, default: 'GLASS', note: 'GLASS (translucent, the original look) | SOLID']
+  fontStyle String [note: 'SANS | SERIF | ROUNDED | MONO. Null = follow the storefront\'s font.']
+  logoUrl String [note: 'Overrides the storefront logo on this screen (e.g. a transparent PNG).']
+  logoSize String [not null, default: 'M', note: 'S | M | L']
+  orderSide String [not null, default: 'RIGHT', note: 'LEFT | RIGHT: which side the running order sits on in landscape.']
+  welcomeTitle String [note: 'Custom copy. Null = the translated default.']
+  welcomeMessage String
+  thankYouTitle String
+  thankYouMessage String
+  thankYouSeconds Int [not null, default: 12, note: 'How long the thank-you stays up after a sale, 5-60 s.']
+  showReviewQr Boolean [not null, default: true]
+  showWifi Boolean [not null, default: true]
+  showInstagramQr Boolean [not null, default: false]
+  qrisImageUrl String [note: 'The store\'s static QRIS, shown full size while the cashier has QRIS
+selected at checkout so the customer can scan without leaning over.']
+  idleSlideshow Boolean [not null, default: true, note: 'Full-screen slideshow of the banners while no order is being rung up.']
+  bannersDuringOrder Boolean [not null, default: true, note: 'The banners rotate in the big panel beside the order while it is built.']
+  slideSeconds Int [not null, default: 8, note: 'Seconds each banner stays up, 3-60.']
+  banners Json [not null, default: '[]', note: 'CustomerDisplayBanner[] (see customer-display.schemas.ts): id, imageUrl,
+label, active, schedule. A list edited and saved as one, at most 20.']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  store stores [not null]
+
+  Note: 'How the customer-facing second screen at the till looks: background, panels,
+text, the thank-you extras and the promo banners. One row per store, created
+on first save; a store without one gets the defaults (the storefront\'s logo
+and colour, no banners), which is exactly what the screen showed before this
+existed. Store-wide on purpose, unlike the on/off switch (a per-device
+localStorage setting): every till of the store shows the same promotions.
+
+The string "enum" columns are validated by customerDisplaySettingsSchema, not
+by Postgres, so a new option needs no migration.'
 }
 
 Table business_finance_settings {
@@ -1424,7 +1468,8 @@ Table signup_attributions {
   userId String [unique, not null]
   source SignupSource [note: 'The last referral link or sales page the browser opened before signing up.']
   sourceAt DateTime [note: 'When that link or page was opened.']
-  refCode String [note: 'REFERRAL_LINK: the ?ref= code, upper case, as it was in the link.']
+  refCode String [note: 'REFERRAL_LINK: the ?ref= code, upper case, as it was in the link.
+REFERRAL_CODE: the partner code typed during setup, upper case.']
   salesPage String [note: 'SALES_PAGE: "sales-page-2" and the copy\'s language ("fr", "en", "id").']
   salesPageLocale String
   utmSource String [note: 'Campaign tags of the last tagged visit (any page, not only the source).']
@@ -1442,7 +1487,8 @@ had an active one at sign-up), and their deal as it was then: later
 edits to the partner\'s deal don\'t change it.']
   commissionRate Decimal
   commissionMonths Int
-  discountPercent Decimal [note: 'REFERRAL_LINK only: % off the first invoice the banner promised.']
+  discountPercent Decimal [note: 'REFERRAL_LINK / REFERRAL_CODE only: % off the first invoice the banner
+(or the setup wizard\'s code field) promised.']
   discountRedeemedAt DateTime [note: 'When an invoice carrying that discount was paid.']
   selfReferralFlag Boolean [not null, default: false, note: 'The sign-up\'s IP matched one of the partner\'s own sessions: review it.']
   firstPaidAt DateTime [note: 'The account\'s first paid invoice (amount > 0), for every account.']
@@ -1461,6 +1507,8 @@ start, commissionMonths calendar months long.']
 (src/lib/services/signup-attribution.service.ts) from the first-party
 cookies the proxy sets (src/lib/attribution/cookies.ts). Written once and
 never changed: the source it names is the one the account is credited to.
+The one exception: an account no partner is credited with may type a
+partner code during setup, once (src/lib/services/referral-code.service.ts).
 Every new account gets a row; one with nothing set came in directly.'
 }
 
@@ -2348,6 +2396,7 @@ Enum SalesPageEventType {
 Enum SignupSource {
   REFERRAL_LINK
   SALES_PAGE
+  REFERRAL_CODE
 }
 
 Enum PartnerStatus {
@@ -2511,6 +2560,8 @@ Ref: stores.businessId > businesses.id [delete: Cascade]
 Ref: store_finance_settings.storeId - stores.id [delete: Cascade]
 
 Ref: store_receipt_settings.storeId - stores.id [delete: Cascade]
+
+Ref: customer_display_settings.storeId - stores.id [delete: Cascade]
 
 Ref: business_finance_settings.businessId - businesses.id [delete: Cascade]
 

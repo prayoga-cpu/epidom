@@ -251,7 +251,7 @@ describe("SetupChecklist — layout", () => {
   it("shows the sections in the order the server sent (goals first)", () => {
     loaded(progress("OPERATIONS", { sections: ["operations", "storefront", "counter"] }));
     renderChecklist();
-    expect(sectionHeadings()).toEqual(["Stock & team", "Storefront", "At the counter"]);
+    expect(sectionHeadings()).toEqual(["Stock & team", "Phone Orders", "At the counter"]);
   });
 
   it("shows a counted step's progress", () => {

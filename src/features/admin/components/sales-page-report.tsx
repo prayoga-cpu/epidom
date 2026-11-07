@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ExternalLink, Info, Megaphone, Trophy } from "lucide-react";
@@ -19,20 +21,15 @@ import type {
 import { customRangeQuery, type CustomDays } from "@/lib/report-range";
 import { CustomRangePicker } from "@/components/reports/custom-range-picker";
 import { LeadsSection, type SalesLead, type NewsletterSub } from "./leads-section";
+import { useI18n } from "@/components/lang/i18n-provider";
 
-const RANGES: { value: SalesPageReportRange; label: string }[] = [
-  { value: "7", label: "7 days" },
-  { value: "30", label: "30 days" },
-  { value: "90", label: "90 days" },
-  { value: "all", label: "All time" },
-];
+type Translate = (key: string) => string;
 
-const LANGS: { value: SalesPageReportLang; label: string }[] = [
-  { value: "all", label: "All languages" },
-  { value: "fr", label: "FR" },
-  { value: "en", label: "EN" },
-  { value: "id", label: "ID" },
-];
+const RANGES: SalesPageReportRange[] = ["7", "30", "90", "all"];
+
+
+const LANGS: SalesPageReportLang[] = ["all", "fr", "en", "id"];
+
 
 const reportHref = (
   range: SalesPageReportRange | "custom",
@@ -97,7 +94,8 @@ const percent = (value: number | null) => (value === null ? "—" : `${(value * 
 const share = (part: number, whole: number) =>
   whole > 0 ? `${part} · ${((part / whole) * 100).toFixed(0)}%` : String(part);
 
-const pageLabel = (page: string) => page.replace("sales-page-", "Sales page ");
+const pageLabel = (page: string, t: Translate) =>
+  t("adminPages.salesPages.pageLabel").replace("{n}", page.replace("sales-page-", ""));
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
@@ -117,12 +115,14 @@ function PageCard({
   leading: string | null;
   lang: SalesPageReportLang;
 }) {
+  const { t } = useI18n();
+  const C = (key: string) => t(`adminPages.salesPages.card.${key}`);
   const href = pageHref(row.page, lang);
   return (
     <Card className={leading ? "border-amber-500/50" : undefined}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">{pageLabel(row.page)}</CardTitle>
+          <CardTitle className="text-base">{pageLabel(row.page, t)}</CardTitle>
           <a
             href={href}
             target="_blank"
@@ -143,13 +143,13 @@ function PageCard({
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-muted/40 rounded-lg p-3">
-            <p className="text-muted-foreground text-xs">Signup rate</p>
+            <p className="text-muted-foreground text-xs">{C("signupRate")}</p>
             <p className="text-foreground text-2xl font-bold tabular-nums">
               {percent(row.signupRate)}
             </p>
           </div>
           <div className="bg-muted/40 rounded-lg p-3">
-            <p className="text-muted-foreground text-xs">Button click rate</p>
+            <p className="text-muted-foreground text-xs">{C("clickRate")}</p>
             <p className="text-foreground text-2xl font-bold tabular-nums">
               {percent(row.clickRate)}
             </p>
@@ -157,28 +157,30 @@ function PageCard({
         </div>
 
         <div className="divide-border divide-y">
-          <Stat label="Visitors" value={row.visitors} />
-          <Stat label="Page views" value={row.views} />
-          <Stat label="Read half the page" value={share(row.scrolled50, row.visitors)} />
-          <Stat label="Read to the end" value={share(row.scrolled90, row.visitors)} />
-          <Stat label="Clicked a button" value={share(row.ctaVisitors, row.visitors)} />
-          <Stat label="Signups" value={row.signups} />
-          <Stat label="Signups who created a store" value={share(row.signupsWithStore, row.signups)} />
+          <Stat label={C("visitors")} value={row.visitors} />
+          <Stat label={C("views")} value={row.views} />
+          <Stat label={C("half")} value={share(row.scrolled50, row.visitors)} />
+          <Stat label={C("end")} value={share(row.scrolled90, row.visitors)} />
+          <Stat label={C("clicked")} value={share(row.ctaVisitors, row.visitors)} />
+          <Stat label={C("signups")} value={row.signups} />
+          <Stat label={C("withStore")} value={share(row.signupsWithStore, row.signups)} />
         </div>
 
         <div>
           <p className="text-muted-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
-            Clicks per button
+            {C("clicksPerButton")}
           </p>
           {row.ctas.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No clicks yet.</p>
+            <p className="text-muted-foreground text-sm">{C("noClicks")}</p>
           ) : (
             <div className="divide-border divide-y">
               {row.ctas.map((c) => (
                 <Stat
                   key={c.cta}
                   label={c.cta}
-                  value={`${c.clicks} (${c.visitors} visitor${c.visitors === 1 ? "" : "s"})`}
+                  value={C(c.visitors === 1 ? "clickValueOne" : "clickValueMany")
+                    .replace("{clicks}", String(c.clicks))
+                    .replace("{visitors}", String(c.visitors))}
                 />
               ))}
             </div>
@@ -189,20 +191,21 @@ function PageCard({
   );
 }
 
-const STATUS_LABELS: Record<SignupPlanStatus, { label: string; className: string }> = {
-  FREE: { label: "Free", className: "text-muted-foreground" },
-  CHECKOUT: { label: "Checkout not finished", className: "text-amber-400" },
-  TRIAL: { label: "Trial", className: "text-blue-400" },
-  ACTIVE: { label: "Paying", className: "text-emerald-400" },
-  PAST_DUE: { label: "Payment failed", className: "text-red-400" },
-  CANCELED: { label: "Canceled", className: "text-muted-foreground" },
-  GRANTED: { label: "Granted by admin", className: "text-muted-foreground" },
+/** Colour per plan status; the label is adminPages.salesPages.statuses.<status>. */
+const STATUS_CLASS: Record<SignupPlanStatus, string> = {
+  FREE: "text-muted-foreground",
+  CHECKOUT: "text-amber-400",
+  TRIAL: "text-blue-400",
+  ACTIVE: "text-emerald-400",
+  PAST_DUE: "text-red-400",
+  CANCELED: "text-muted-foreground",
+  GRANTED: "text-muted-foreground",
 };
 
-const AD_LABELS: Record<string, string> = { meta: "Meta ad", google: "Google ad", tiktok: "TikTok ad" };
+const AD_KEYS = new Set(["meta", "google", "tiktok"]);
 
-const signupDate = (iso: string) =>
-  new Date(iso).toLocaleString("en-GB", {
+const signupDate = (iso: string, locale: string) =>
+  new Date(iso).toLocaleString(locale, {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -210,39 +213,46 @@ const signupDate = (iso: string) =>
     timeZone: "UTC",
   });
 
-function cameFrom(row: TrackedSignupRow): string {
-  if (row.source === "REFERRAL_LINK") return `Referral link · ${row.refCode ?? "?"}`;
+function cameFrom(row: TrackedSignupRow, t: Translate): string {
+  if (row.source === "REFERRAL_LINK")
+    return t("adminPages.salesPages.cameFrom.referralLink").replace("{code}", row.refCode ?? "?");
+  if (row.source === "REFERRAL_CODE")
+    return t("adminPages.salesPages.cameFrom.typedCode").replace("{code}", row.refCode ?? "?");
   if (row.source === "SALES_PAGE" && row.salesPage) {
-    return `${pageLabel(row.salesPage)} · ${(row.salesPageLocale ?? "fr").toUpperCase()}`;
+    return `${pageLabel(row.salesPage, t)} · ${(row.salesPageLocale ?? "fr").toUpperCase()}`;
   }
-  return "No page or link";
+  return t("adminPages.salesPages.cameFrom.none");
 }
 
 const tags = (...values: (string | null)[]) => values.filter(Boolean).join(" / ") || "—";
 
 function TrackedSignupsSection({ tracked }: { tracked: TrackedSignups }) {
+  const { t, intlLocale } = useI18n();
+  const R = (key: string) => t(`adminPages.salesPages.tracked.${key}`);
   const paying = tracked.rows.filter((r) => r.status === "ACTIVE").length;
   const trials = tracked.rows.filter((r) => r.status === "TRIAL").length;
   const fromAds = tracked.rows.filter((r) => r.adClick || r.utmSource).length;
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Tracked sign-ups</CardTitle>
+        <CardTitle className="text-base">{R("title")}</CardTitle>
         <p className="text-muted-foreground text-xs">
-          Where each new account came from (sales page or referral link, plus the ad&apos;s
-          campaign tags) and the plan it is on now. {tracked.rows.length} tracked of{" "}
-          {tracked.totalSignups} sign-up{tracked.totalSignups === 1 ? "" : "s"} in this range ·{" "}
-          {fromAds} with ad tags · {trials} on trial · {paying} paying.
+          {R("desc")
+            .replace("{tracked}", String(tracked.rows.length))
+            .replace("{total}", String(tracked.totalSignups))
+            .replace("{ads}", String(fromAds))
+            .replace("{trials}", String(trials))
+            .replace("{paying}", String(paying))}
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
         {tracked.rows.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No tracked sign-ups in this range yet.</p>
+          <p className="text-muted-foreground text-sm">{R("none")}</p>
         ) : (
           <>
             <div>
               <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">
-                By campaign
+                {R("byCampaign")}
               </p>
               <div className="-mx-4 overflow-x-auto sm:mx-0">
                 <table className="w-full min-w-[520px] text-sm">
@@ -250,15 +260,15 @@ function TrackedSignupsSection({ tracked }: { tracked: TrackedSignups }) {
                     <tr className="text-muted-foreground border-border border-b text-left text-xs">
                       <th className="px-4 py-2 font-medium sm:px-2">utm_source</th>
                       <th className="px-2 py-2 font-medium">utm_campaign</th>
-                      <th className="px-2 py-2 text-right font-medium">Sign-ups</th>
-                      <th className="px-2 py-2 text-right font-medium">Trials</th>
-                      <th className="px-4 py-2 text-right font-medium sm:px-2">Paying</th>
+                      <th className="px-2 py-2 text-right font-medium">{R("head.signups")}</th>
+                      <th className="px-2 py-2 text-right font-medium">{R("head.trials")}</th>
+                      <th className="px-4 py-2 text-right font-medium sm:px-2">{R("head.paying")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-border divide-y">
                     {tracked.campaigns.map((c) => (
                       <tr key={`${c.utmSource}|${c.utmCampaign}`}>
-                        <td className="px-4 py-2 sm:px-2">{c.utmSource ?? "No tags"}</td>
+                        <td className="px-4 py-2 sm:px-2">{c.utmSource ?? R("noTags")}</td>
                         <td className="px-2 py-2">{c.utmCampaign ?? "—"}</td>
                         <td className="px-2 py-2 text-right tabular-nums">{c.signups}</td>
                         <td className="px-2 py-2 text-right tabular-nums">{c.trials}</td>
@@ -274,40 +284,47 @@ function TrackedSignupsSection({ tracked }: { tracked: TrackedSignups }) {
 
             <div>
               <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">
-                Each sign-up
+                {R("eachSignup")}
               </p>
               <div className="-mx-4 overflow-x-auto sm:mx-0">
                 <table className="w-full min-w-[860px] text-sm">
                   <thead>
                     <tr className="text-muted-foreground border-border border-b text-left text-xs">
-                      <th className="px-4 py-2 font-medium sm:px-2">Date (UTC)</th>
-                      <th className="px-2 py-2 font-medium">Came from</th>
-                      <th className="px-2 py-2 font-medium">Ad</th>
-                      <th className="px-2 py-2 font-medium">Source / medium</th>
-                      <th className="px-2 py-2 font-medium">Campaign / content</th>
-                      <th className="px-2 py-2 font-medium">Plan</th>
-                      <th className="px-4 py-2 font-medium sm:px-2">Store</th>
+                      <th className="px-4 py-2 font-medium sm:px-2">{R("head.date")}</th>
+                      <th className="px-2 py-2 font-medium">{R("head.cameFrom")}</th>
+                      <th className="px-2 py-2 font-medium">{R("head.ad")}</th>
+                      <th className="px-2 py-2 font-medium">{R("head.sourceMedium")}</th>
+                      <th className="px-2 py-2 font-medium">{R("head.campaignContent")}</th>
+                      <th className="px-2 py-2 font-medium">{R("head.plan")}</th>
+                      <th className="px-4 py-2 font-medium sm:px-2">{R("head.store")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-border divide-y">
                     {tracked.rows.map((row, i) => {
-                      const status = STATUS_LABELS[row.status];
                       return (
                         <tr key={`${row.createdAt}-${i}`}>
                           <td className="px-4 py-2 whitespace-nowrap tabular-nums sm:px-2">
-                            {signupDate(row.createdAt)}
+                            {signupDate(row.createdAt, intlLocale)}
                           </td>
-                          <td className="px-2 py-2 whitespace-nowrap">{cameFrom(row)}</td>
+                          <td className="px-2 py-2 whitespace-nowrap">{cameFrom(row, t)}</td>
                           <td className="px-2 py-2 whitespace-nowrap">
-                            {row.adClick ? (AD_LABELS[row.adClick] ?? row.adClick) : "—"}
+                            {row.adClick
+                              ? AD_KEYS.has(row.adClick)
+                                ? t(`adminPages.salesPages.ads.${row.adClick}`)
+                                : row.adClick
+                              : "—"}
                           </td>
                           <td className="px-2 py-2">{tags(row.utmSource, row.utmMedium)}</td>
                           <td className="px-2 py-2">{tags(row.utmCampaign, row.utmContent)}</td>
                           <td className="px-2 py-2 whitespace-nowrap">
                             {PLAN_LABELS[row.plan as PlanTier] ?? row.plan}{" "}
-                            <span className={`text-xs ${status.className}`}>· {status.label}</span>
+                            <span className={`text-xs ${STATUS_CLASS[row.status]}`}>
+                              · {t(`adminPages.salesPages.statuses.${row.status}`)}
+                            </span>
                           </td>
-                          <td className="px-4 py-2 sm:px-2">{row.hasStore ? "Yes" : "No"}</td>
+                          <td className="px-4 py-2 sm:px-2">
+                            {row.hasStore ? t("adminPages.common.yes") : t("adminPages.common.no")}
+                          </td>
                         </tr>
                       );
                     })}
@@ -316,7 +333,7 @@ function TrackedSignupsSection({ tracked }: { tracked: TrackedSignups }) {
               </div>
               {tracked.rows.length >= tracked.limit && (
                 <p className="text-muted-foreground mt-2 text-xs">
-                  Showing the latest {tracked.limit}. Pick a shorter range to see the rest.
+                  {R("showingLatest").replace("{limit}", String(tracked.limit))}
                 </p>
               )}
             </div>
@@ -336,12 +353,18 @@ export function SalesPageReportView({
   salesLeads?: SalesLead[];
   subscribers?: NewsletterSub[];
 }) {
+  const { t } = useI18n();
+  const rangeOptions = RANGES.map((value) => ({ value, label: t(`adminPages.salesPages.ranges.r${value}`) }));
+  const langOptions = LANGS.map((value) => ({
+    value,
+    label: value === "all" ? t("adminPages.salesPages.allLanguages") : value.toUpperCase(),
+  }));
   const tooEarly = report.pages.some((p) => p.visitors < EARLY_VISITORS);
   const leadingLabel = (page: string) => {
     if (report.leader?.page !== page) return null;
     return report.leader.metric === "signupRate"
-      ? "Leading on signups"
-      : "Leading on button clicks (no signups yet)";
+      ? t("adminPages.salesPages.leading.signups")
+      : t("adminPages.salesPages.leading.clicks");
   };
 
   return (
@@ -353,32 +376,32 @@ export function SalesPageReportView({
               <Megaphone className="h-5 w-5 text-amber-400" />
             </div>
             <div>
-              <h1 className="text-foreground text-lg font-bold">Sales Pages</h1>
+              <h1 className="text-foreground text-lg font-bold">{t("adminPages.salesPages.title")}</h1>
               <p className="text-muted-foreground text-xs">
-                Which landing page turns visitors into signups
+                {t("adminPages.salesPages.subtitle")}
               </p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <FilterTabs
-                options={LANGS}
+                options={langOptions}
                 active={report.lang}
                 href={(lang) => reportHref(report.range, lang, report.custom)}
               />
               <FilterTabs
-                options={RANGES}
+                options={rangeOptions}
                 active={report.range}
                 href={(range) => reportHref(range, report.lang)}
                 trailing={
                   <CustomRangePicker
                     value={report.custom}
-                    label="Custom"
+                    label={t("adminPages.salesPages.custom")}
                     path="/admin/sales-pages"
                     keep={{ lang: report.lang }}
                   />
                 }
               />
               <Button variant="outline" size="sm" asChild>
-                <Link href="/admin">← Back</Link>
+                <Link href="/admin">{t("adminPages.salesPages.back")}</Link>
               </Button>
             </div>
           </div>
@@ -389,11 +412,9 @@ export function SalesPageReportView({
         {tooEarly && (
           <Alert className="border-blue-500/20 bg-blue-500/10 text-blue-400">
             <Info className="h-4 w-4 text-blue-400" />
-            <AlertTitle>Too early to call a winner</AlertTitle>
+            <AlertTitle>{t("adminPages.salesPages.early.title")}</AlertTitle>
             <AlertDescription className="text-blue-400/80">
-              At least one page has fewer than {EARLY_VISITORS} visitors in this range. Send each
-              page the same kind of traffic and wait for a few hundred visitors and a few dozen
-              signups per page before deciding.
+              {t("adminPages.salesPages.early.body").replace("{n}", String(EARLY_VISITORS))}
             </AlertDescription>
           </Alert>
         )}
@@ -417,30 +438,19 @@ export function SalesPageReportView({
 
         <div className="text-muted-foreground space-y-1.5 text-xs">
           <p>
-            <strong>Visitors</strong> are counted once per day per device, without cookies (an
-            anonymous hash of IP and browser that changes daily), so one person on two days counts
-            twice. Bots and link previews are not counted.
+            <strong>{t("adminPages.salesPages.notes.visitorsLabel")}</strong> {t("adminPages.salesPages.notes.visitors")}
           </p>
           <p>
-            <strong>Signups</strong> are accounts created (email or Google) by a browser whose last
-            opened sales page, within 30 days, was this one. Signup rate = signups ÷ visitors.
+            <strong>{t("adminPages.salesPages.notes.signupsLabel")}</strong> {t("adminPages.salesPages.notes.signups")}
           </p>
           <p>
-            <strong>Tracked sign-ups</strong> start on 19 October 2026. &ldquo;Came from&rdquo; is
-            the last sales page or referral link the browser opened in the 30 days before signing
-            up; the account stays credited to it. Ad and campaign tags are those of the last visit
-            that had utm_* tags or an ad click id. A language filter keeps only sales-page sign-ups
-            in that language.
+            <strong>{t("adminPages.salesPages.notes.trackedLabel")}</strong> {t("adminPages.salesPages.notes.tracked")}
           </p>
           <p>
-            Rates use the same date range for both sides, so a signup near the start of a range can
-            belong to a visit just before it.
+            {t("adminPages.salesPages.notes.rates")}
           </p>
           <p>
-            <strong>Languages:</strong> each page exists in French (/sales-page-N), English
-            (/en/…) and Indonesian (/id/…). A language filter counts the visits, clicks and signups
-            made on that language&apos;s page; a visitor who switches language counts on both.
-            Compare pages within one language when the traffic differs by language.
+            <strong>{t("adminPages.salesPages.notes.languagesLabel")}</strong> {t("adminPages.salesPages.notes.languages")}
           </p>
         </div>
       </div>

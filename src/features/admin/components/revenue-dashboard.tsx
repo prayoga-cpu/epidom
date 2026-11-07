@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/lang/i18n-provider";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -80,8 +82,8 @@ function makeFmt(currency: string) {
   return (n: number | null | undefined) => f.format(n ?? 0);
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
+function fmtDate(iso: string, locale?: string) {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -109,6 +111,7 @@ const escapeHtml = (s: string) =>
   );
 
 export function RevenueDashboard() {
+  const { t, intlLocale } = useI18n();
   const router = useRouter();
   const { data, isLoading, error } = useQuery<{ data: RevenueData }>({
     queryKey: ["admin-revenue"],
@@ -116,7 +119,7 @@ export function RevenueDashboard() {
       const res = await fetch("/api/admin/revenue");
       const json = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(json?.detail || json?.error || "Failed to fetch revenue");
+        throw new Error(json?.detail || json?.error || t("adminPages.revenue.fetchFailed"));
       }
       return json;
     },
@@ -153,7 +156,9 @@ export function RevenueDashboard() {
   function handlePrint() {
     if (!revenue) return;
     const code = selected.toUpperCase();
-    const generated = new Date(revenue.generatedAt).toLocaleString();
+    const generated = new Date(revenue.generatedAt).toLocaleString(intlLocale);
+    const rates = t(revenue.ratesLive ? "adminPages.revenue.ratesLive" : "adminPages.revenue.ratesApprox");
+    const h = (key: string) => escapeHtml(t(`adminPages.revenue.${key}`));
     const fmtNative = (p: PaymentRow) => makeFmt(p.currency)(p.amount);
 
     const monthRows = months
@@ -168,7 +173,7 @@ export function RevenueDashboard() {
     const paymentRows = revenue.payments
       .map(
         (p) =>
-          `<tr><td>${escapeHtml(fmtDate(p.paidAt))}</td><td>${escapeHtml(
+          `<tr><td>${escapeHtml(fmtDate(p.paidAt, intlLocale))}</td><td>${escapeHtml(
             p.customerName || p.customerEmail || "—"
           )}</td><td>${escapeHtml(p.country ? p.country.toUpperCase() : "—")}</td><td>${escapeHtml(
             p.description || "—"
@@ -179,7 +184,7 @@ export function RevenueDashboard() {
       .join("");
 
     const html = `<!doctype html><html><head><meta charset="utf-8"/>
-<title>Epidom Revenue Recap — ${code}</title>
+<title>${h("pdf.docTitle").replace("{currency}", code)}</title>
 <style>
   *{box-sizing:border-box} body{font-family:ui-sans-serif,system-ui,Arial,sans-serif;color:#0f172a;margin:32px;font-size:12px}
   h1{font-size:20px;margin:0 0 4px} .muted{color:#64748b;font-size:11px;margin:0 0 18px}
@@ -195,31 +200,33 @@ export function RevenueDashboard() {
   tfoot td{font-weight:700;background:#f8fafc}
   @media print{body{margin:14mm}}
 </style></head><body>
-  <h1>Epidom — Revenue Split &amp; Payout Recap (${code})</h1>
-  <p class="muted">Generated ${escapeHtml(generated)} · Source: Live Stripe · Split: Evan 60% / Darwin 40%
-    · Totals converted to ${code} at ${revenue.ratesLive ? "live" : "approximate"} FX rates.</p>
+  <h1>${h("pdf.heading").replace("{currency}", code)}</h1>
+  <p class="muted">${h("pdf.meta")
+    .replace("{when}", escapeHtml(generated))
+    .replace(/\{currency\}/g, code)
+    .replace("{rates}", escapeHtml(rates))}</p>
   <div class="cards">
-    <div class="card"><div class="lbl">Current MRR</div><div class="val">${fmt(mrrTotal)}</div></div>
-    <div class="card"><div class="lbl">Evan · Founder (60%)</div><div class="val">${fmt(mrrTotal * evanPct)}</div></div>
-    <div class="card"><div class="lbl">Darwin · Co-Founder (40%)</div><div class="val">${fmt(mrrTotal * darwinPct)}</div></div>
+    <div class="card"><div class="lbl">${h("cards.currentMrr")}</div><div class="val">${fmt(mrrTotal)}</div></div>
+    <div class="card"><div class="lbl">${h("cards.evan")}</div><div class="val">${fmt(mrrTotal * evanPct)}</div></div>
+    <div class="card"><div class="lbl">${h("cards.darwin")}</div><div class="val">${fmt(mrrTotal * darwinPct)}</div></div>
   </div>
-  <h2>Monthly Recap — Cash Collected (last ${revenue.recap.historyMonths} months)</h2>
-  <table><thead><tr><th>Month</th><th class="r">Collected</th><th class="r">Evan (60%)</th><th class="r">Darwin (40%)</th><th class="r">Invoices</th></tr></thead>
-  <tbody>${monthRows || `<tr><td colspan="5">No payments collected yet.</td></tr>`}</tbody>
-  <tfoot><tr><td>Total</td><td class="r">${fmt(totalCollected)}</td><td class="r">${fmt(
+  <h2>${h("recap.pdfTitle").replace("{months}", String(revenue.recap.historyMonths))}</h2>
+  <table><thead><tr><th>${h("recap.month")}</th><th class="r">${h("recap.collected")}</th><th class="r">${h("recap.evanCol")}</th><th class="r">${h("recap.darwinCol")}</th><th class="r">${h("recap.invoices")}</th></tr></thead>
+  <tbody>${monthRows || `<tr><td colspan="5">${h("recap.noneShort")}</td></tr>`}</tbody>
+  <tfoot><tr><td>${h("recap.total")}</td><td class="r">${fmt(totalCollected)}</td><td class="r">${fmt(
     totalCollected * evanPct
   )}</td><td class="r">${fmt(totalCollected * darwinPct)}</td><td class="r">${months.reduce(
     (s, m) => s + m.invoices,
     0
   )}</td></tr></tfoot></table>
-  <h2>Payment Log (${revenue.payments.length})</h2>
-  <table><thead><tr><th>Date</th><th>Customer</th><th>Region</th><th>Plan / Description</th><th>Invoice</th><th class="r">Charged</th><th class="r">≈ ${code}</th></tr></thead>
-  <tbody>${paymentRows || `<tr><td colspan="7">No payments recorded yet.</td></tr>`}</tbody></table>
+  <h2>${h("log.title")} (${revenue.payments.length})</h2>
+  <table><thead><tr><th>${h("log.date")}</th><th>${h("log.customer")}</th><th>${h("log.region")}</th><th>${h("log.planDesc")}</th><th>${h("log.invoice")}</th><th class="r">${h("log.charged")}</th><th class="r">≈ ${code}</th></tr></thead>
+  <tbody>${paymentRows || `<tr><td colspan="7">${h("log.none")}</td></tr>`}</tbody></table>
 </body></html>`;
 
     const w = window.open("", "_blank", "width=1000,height=1200");
     if (!w) {
-      alert("Please allow pop-ups to export the PDF, then try again.");
+      alert(t("adminPages.revenue.popupBlocked"));
       return;
     }
     w.document.open();
@@ -234,9 +241,9 @@ export function RevenueDashboard() {
       <div className="p-8">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t("adminPages.revenue.error")}</AlertTitle>
           <AlertDescription>
-            {error instanceof Error ? error.message : "Failed to load revenue data."}
+            {error instanceof Error ? error.message : t("adminPages.revenue.loadFailed")}
           </AlertDescription>
         </Alert>
       </div>
@@ -255,10 +262,10 @@ export function RevenueDashboard() {
               <TrendingUp className="h-5 w-5 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-foreground text-lg font-bold">Revenue Split Report</h1>
+              <h1 className="text-foreground text-lg font-bold">{t("adminPages.revenue.title")}</h1>
               <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
                 <Radio className="h-3 w-3 text-emerald-400" />
-                Live Stripe data · Founder/Co-Founder split
+                {t("adminPages.revenue.subtitle")}
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
@@ -290,10 +297,10 @@ export function RevenueDashboard() {
                 disabled={isLoading || !revenue}
               >
                 <Printer className="mr-1.5 h-4 w-4" />
-                Export / Print PDF
+                {t("adminPages.revenue.export")}
               </Button>
               <Button variant="outline" size="sm" onClick={() => router.push("/admin")}>
-                ← Back
+                {t("adminPages.revenue.back")}
               </Button>
             </div>
           </div>
@@ -304,15 +311,11 @@ export function RevenueDashboard() {
         {/* Info Alert */}
         <Alert className="border-blue-500/20 bg-blue-500/10 text-blue-400">
           <ArrowRightLeft className="h-4 w-4 text-blue-400" />
-          <AlertTitle>Automatic Payout & Manual Recap</AlertTitle>
+          <AlertTitle>{t("adminPages.revenue.alertTitle")}</AlertTitle>
           <AlertDescription className="mt-1 text-blue-400/80">
-            All subscription payments are collected automatically by the Epidom Stripe account,
-            linked to <strong>Evan&apos;s</strong> bank account (France). Each month we reconcile
-            and transfer <strong>Darwin&apos;s</strong> 40% co-founder share to his bank account.
-            Only real production payments from live Stripe are counted. Totals are converted to{" "}
-            <strong>{selected.toUpperCase()}</strong> at{" "}
-            {revenue?.ratesLive ? "live" : "approximate"} FX rates — switch the display currency
-            above; the payment log shows each charge in its original currency.
+            {t("adminPages.revenue.alertBody")
+              .replace("{currency}", selected.toUpperCase())
+              .replace("{rates}", t(revenue?.ratesLive ? "adminPages.revenue.ratesLive" : "adminPages.revenue.ratesApprox"))}
           </AlertDescription>
         </Alert>
 
@@ -321,7 +324,8 @@ export function RevenueDashboard() {
           <Card className="border-emerald-500/20 bg-emerald-500/5 shadow-sm">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2 font-medium text-emerald-500/80">
-                <Coins className="h-4 w-4" /> Total MRR · {selected.toUpperCase()}
+                <Coins className="h-4 w-4" />{" "}
+                {t("adminPages.revenue.cards.totalMrr").replace("{currency}", selected.toUpperCase())}
               </CardDescription>
               <CardTitle className="text-4xl text-emerald-400">
                 {isLoading ? <Skeleton className="h-10 w-40" /> : fmt(mrrTotal)}
@@ -329,8 +333,7 @@ export function RevenueDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground text-xs">
-                Monthly recurring revenue from all active live subscriptions, in{" "}
-                {selected.toUpperCase()}.
+                {t("adminPages.revenue.cards.totalMrrNote").replace("{currency}", selected.toUpperCase())}
               </p>
             </CardContent>
           </Card>
@@ -338,7 +341,7 @@ export function RevenueDashboard() {
           <Card className="border-blue-500/20 shadow-sm">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2 font-medium">
-                <Building className="h-4 w-4 text-blue-500" /> Evan · Founder (60%)
+                <Building className="h-4 w-4 text-blue-500" /> {t("adminPages.revenue.cards.evan")}
               </CardDescription>
               <CardTitle className="text-3xl">
                 {isLoading ? <Skeleton className="h-8 w-28" /> : fmt(mrrTotal * evanPct)}
@@ -346,7 +349,7 @@ export function RevenueDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground text-xs">
-                Retained in the Epidom Stripe account (Evan&apos;s bank).
+                {t("adminPages.revenue.cards.evanNote")}
               </p>
             </CardContent>
           </Card>
@@ -354,7 +357,7 @@ export function RevenueDashboard() {
           <Card className="border-orange-500/20 shadow-sm">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2 font-medium">
-                <Wallet className="h-4 w-4 text-orange-500" /> Darwin · Co-Founder (40%)
+                <Wallet className="h-4 w-4 text-orange-500" /> {t("adminPages.revenue.cards.darwin")}
               </CardDescription>
               <CardTitle className="text-3xl">
                 {isLoading ? <Skeleton className="h-8 w-28" /> : fmt(mrrTotal * darwinPct)}
@@ -362,7 +365,7 @@ export function RevenueDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground text-xs">
-                Transferred to Darwin&apos;s bank account at month-end.
+                {t("adminPages.revenue.cards.darwinNote")}
               </p>
             </CardContent>
           </Card>
@@ -371,7 +374,7 @@ export function RevenueDashboard() {
         {/* Plan breakdown */}
         <div>
           <h2 className="mb-4 text-lg font-semibold tracking-tight">
-            Subscription Breakdown · Live MRR ({selected.toUpperCase()})
+            {t("adminPages.revenue.breakdown.title").replace("{currency}", selected.toUpperCase())}
           </h2>
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2">
@@ -393,7 +396,7 @@ export function RevenueDashboard() {
                               : "bg-slate-400"
                         }`}
                       />
-                      {p.name} Plan
+                      {t("adminPages.revenue.breakdown.planName").replace("{name}", p.name)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -401,11 +404,11 @@ export function RevenueDashboard() {
                       <div className="flex items-center gap-2 text-2xl font-bold">
                         {p.count}
                         <span className="text-muted-foreground text-sm font-normal">
-                          active {p.count === 1 ? "subscription" : "subscriptions"}
+                          {t(p.count === 1 ? "adminPages.revenue.breakdown.activeOne" : "adminPages.revenue.breakdown.activeMany")}
                         </span>
                       </div>
                       <div className="text-lg font-medium text-emerald-400">
-                        {fmt(toDisplay(p.monthlyEur))}/mo
+                        {fmt(toDisplay(p.monthlyEur))}{t("adminPages.revenue.breakdown.perMonth")}
                       </div>
                     </div>
                   </CardContent>
@@ -415,7 +418,7 @@ export function RevenueDashboard() {
           ) : (
             <Card>
               <CardContent className="text-muted-foreground py-8 text-center text-sm">
-                No active live subscriptions yet.
+                {t("adminPages.revenue.breakdown.none")}
               </CardContent>
             </Card>
           )}
@@ -425,10 +428,12 @@ export function RevenueDashboard() {
         <div>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold tracking-tight">
-              Monthly Recap — Cash Collected{" "}
+              {t("adminPages.revenue.recap.title")}{" "}
               {revenue ? (
                 <span className="text-muted-foreground text-sm font-normal">
-                  (last {revenue.recap.historyMonths} months · {selected.toUpperCase()})
+                  {t("adminPages.revenue.recap.lastMonths")
+                    .replace("{months}", String(revenue.recap.historyMonths))
+                    .replace("{currency}", selected.toUpperCase())}
                 </span>
               ) : null}
             </h2>
@@ -439,7 +444,7 @@ export function RevenueDashboard() {
               disabled={isLoading}
             >
               <ArrowUpDown className="mr-1.5 h-4 w-4" />
-              {sortDesc ? "Newest first" : "Oldest first"}
+              {sortDesc ? t("adminPages.revenue.recap.newest") : t("adminPages.revenue.recap.oldest")}
             </Button>
           </div>
 
@@ -455,15 +460,15 @@ export function RevenueDashboard() {
                   <table className="w-full min-w-[640px] text-sm">
                     <thead>
                       <tr className="border-border text-muted-foreground border-b text-xs tracking-wide uppercase">
-                        <th className="px-4 py-3 text-left font-medium">Month</th>
-                        <th className="px-4 py-3 text-right font-medium">Collected</th>
+                        <th className="px-4 py-3 text-left font-medium">{t("adminPages.revenue.recap.month")}</th>
+                        <th className="px-4 py-3 text-right font-medium">{t("adminPages.revenue.recap.collected")}</th>
                         <th className="px-4 py-3 text-right font-medium text-blue-400">
-                          Evan (60%)
+                          {t("adminPages.revenue.recap.evanCol")}
                         </th>
                         <th className="px-4 py-3 text-right font-medium text-orange-400">
-                          Darwin (40%)
+                          {t("adminPages.revenue.recap.darwinCol")}
                         </th>
-                        <th className="px-4 py-3 text-right font-medium">Invoices</th>
+                        <th className="px-4 py-3 text-right font-medium">{t("adminPages.revenue.recap.invoices")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -491,7 +496,7 @@ export function RevenueDashboard() {
                     {revenue && (
                       <tfoot>
                         <tr className="border-border bg-muted/30 border-t font-bold">
-                          <td className="px-4 py-3">Total</td>
+                          <td className="px-4 py-3">{t("adminPages.revenue.recap.total")}</td>
                           <td className="px-4 py-3 text-right text-emerald-400 tabular-nums">
                             {fmt(totalCollected)}
                           </td>
@@ -511,7 +516,7 @@ export function RevenueDashboard() {
                 </div>
               ) : (
                 <div className="text-muted-foreground py-10 text-center text-sm">
-                  No payments collected yet. Real Stripe revenue will appear here month by month.
+                  {t("adminPages.revenue.recap.none")}
                 </div>
               )}
             </CardContent>
@@ -522,7 +527,7 @@ export function RevenueDashboard() {
         <div>
           <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
             <ReceiptText className="text-muted-foreground h-5 w-5" />
-            Payment Log{" "}
+            {t("adminPages.revenue.log.title")}{" "}
             <span className="text-muted-foreground text-sm font-normal">
               ({revenue?.payments.length ?? 0})
             </span>
@@ -539,12 +544,12 @@ export function RevenueDashboard() {
                   <table className="w-full min-w-[860px] text-sm">
                     <thead>
                       <tr className="border-border text-muted-foreground border-b text-xs tracking-wide uppercase">
-                        <th className="px-4 py-3 text-left font-medium">Date</th>
-                        <th className="px-4 py-3 text-left font-medium">Customer</th>
-                        <th className="px-4 py-3 text-left font-medium">Region</th>
-                        <th className="px-4 py-3 text-left font-medium">Plan / Description</th>
-                        <th className="px-4 py-3 text-left font-medium">Invoice</th>
-                        <th className="px-4 py-3 text-right font-medium">Charged</th>
+                        <th className="px-4 py-3 text-left font-medium">{t("adminPages.revenue.log.date")}</th>
+                        <th className="px-4 py-3 text-left font-medium">{t("adminPages.revenue.log.customer")}</th>
+                        <th className="px-4 py-3 text-left font-medium">{t("adminPages.revenue.log.region")}</th>
+                        <th className="px-4 py-3 text-left font-medium">{t("adminPages.revenue.log.planDesc")}</th>
+                        <th className="px-4 py-3 text-left font-medium">{t("adminPages.revenue.log.invoice")}</th>
+                        <th className="px-4 py-3 text-right font-medium">{t("adminPages.revenue.log.charged")}</th>
                         <th className="px-4 py-3 text-right font-medium">
                           ≈ {selected.toUpperCase()}
                         </th>
@@ -554,7 +559,7 @@ export function RevenueDashboard() {
                       {revenue.payments.map((p) => (
                         <tr key={p.id} className="border-border/60 border-b last:border-0">
                           <td className="text-muted-foreground px-4 py-3 whitespace-nowrap">
-                            {fmtDate(p.paidAt)}
+                            {fmtDate(p.paidAt, intlLocale)}
                           </td>
                           <td className="text-foreground px-4 py-3">
                             <div className="font-medium">
@@ -589,17 +594,17 @@ export function RevenueDashboard() {
                   {(revenue.paymentLogCapped || hasMixedNative) && (
                     <p className="text-muted-foreground border-border border-t px-4 py-2 text-xs">
                       {revenue.paymentLogCapped &&
-                        "Showing the most recent payments (log capped). "}
+                        t("adminPages.revenue.log.capped")}
                       {hasMixedNative &&
-                        `Charges span multiple currencies (${revenue.nativeCurrencies
-                          .join(", ")
-                          .toUpperCase()}); the ≈ column converts each to ${selected.toUpperCase()}.`}
+                        t("adminPages.revenue.log.mixed")
+                          .replace("{list}", revenue.nativeCurrencies.join(", ").toUpperCase())
+                          .replace("{currency}", selected.toUpperCase())}
                     </p>
                   )}
                 </div>
               ) : (
                 <div className="text-muted-foreground py-10 text-center text-sm">
-                  No payments recorded yet.
+                  {t("adminPages.revenue.log.none")}
                 </div>
               )}
             </CardContent>

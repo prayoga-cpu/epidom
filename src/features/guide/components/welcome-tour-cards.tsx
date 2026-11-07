@@ -15,7 +15,7 @@ import {
   MonitorSmartphone,
   Navigation,
   QrCode,
-  Store,
+  Smartphone,
   Truck,
   UtensilsCrossed,
   Users,
@@ -91,7 +91,7 @@ function SpacesCard() {
   const { t } = useI18n();
   const spaces: { icon: LucideIcon; name: string; line: string }[] = [
     {
-      icon: Store,
+      icon: Smartphone,
       name: t("setupGuide.tour.storefront.title"),
       line: t("setupGuide.tour.spaces.storefront"),
     },
@@ -108,7 +108,7 @@ function SpacesCard() {
   ];
   return (
     <>
-      <GuideTrioIllustration icons={[Store, MonitorSmartphone, LayoutDashboard]} />
+      <GuideTrioIllustration icons={[Smartphone, MonitorSmartphone, LayoutDashboard]} />
       <CardHeading title={t("setupGuide.tour.spaces.title")} />
       <DialogDescription className="mt-1.5 text-sm">
         {t("setupGuide.tour.spaces.intro")}
@@ -134,7 +134,7 @@ function StorefrontCard() {
   const { t } = useI18n();
   return (
     <>
-      <GuideIllustration main={Store} satellites={[MenuSquare, QrCode, MessageCircle]} />
+      <GuideIllustration main={Smartphone} satellites={[MenuSquare, QrCode, MessageCircle]} />
       <CardHeading title={t("setupGuide.tour.storefront.title")} plan="FREE" />
       <DialogDescription className="text-foreground mt-1.5 text-sm leading-snug">
         {t("setupGuide.tour.storefront.line1")}

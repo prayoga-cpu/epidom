@@ -11,10 +11,10 @@ import {
 /**
  * Where Back Office opens when there is nothing to resume: the user's default
  * landing section, except that "pos" is not a Back Office page, so it falls
- * back to the dashboard.
+ * back to Home.
  */
 export function defaultBackOfficeHref(storeId: string, defaultLanding: string): string {
-  return `/store/${storeId}/${defaultLanding === "pos" ? "dashboard" : defaultLanding}`;
+  return `/store/${storeId}/${defaultLanding === "pos" ? "home" : defaultLanding}`;
 }
 
 interface Resumed {

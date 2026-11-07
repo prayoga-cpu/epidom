@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Check, ChevronDown, Copy, Lock, RotateCw, Sparkles, X } from "lucide-react";
+import { ClaudeMark } from "@/components/claude-mark";
+import { Check, ChevronDown, Copy, Lock, RotateCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -115,7 +116,7 @@ export function ClaudeConnectorCard() {
       <Card id="claude" className="scroll-mt-24 border-2">
         <CardHeader className="space-y-1 pb-4">
           <CardTitle className="flex items-center gap-2 text-xl font-bold">
-            <Sparkles className="h-5 w-5" aria-hidden />
+            <ClaudeMark className="size-5" />
             {t("claudeConnector.card.title")}
             <Badge variant="outline" className="text-xs font-semibold">
               {t("claudeConnector.beta.label")}

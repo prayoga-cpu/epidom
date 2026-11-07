@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { getAllAppNavItems } from "@/config/navigation.config";
+import { cn } from "@/lib/utils";
 
 interface AccountAccessDialogProps {
   open: boolean;
@@ -14,6 +15,8 @@ interface AccountAccessDialogProps {
   role: string | null;
   /** null = unrestricted (the real account owner) — every page is implicitly allowed. */
   allowedPages: string[] | null;
+  /** Opened from inside the phone menu drawer (a z-[70] Sheet): lifts the dialog above it. */
+  aboveSheet?: boolean;
 }
 
 /**
@@ -30,6 +33,7 @@ export function AccountAccessDialog({
   name,
   role,
   allowedPages,
+  aboveSheet = false,
 }: AccountAccessDialogProps) {
   const { t } = useI18n();
   // getAllAppNavItems (not getAllDashboardNavItems): a Cashier/Kitchen
@@ -41,7 +45,12 @@ export function AccountAccessDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(90dvh/var(--app-zoom,1))] max-w-sm overflow-y-auto">
+      <DialogContent
+        className={cn(
+          "max-h-[calc(90dvh/var(--app-zoom,1))] max-w-sm overflow-y-auto",
+          aboveSheet && "z-[80]"
+        )}
+      >
         <DialogHeader>
           <DialogTitle>{t("nav.accountAccess")}</DialogTitle>
           <DialogDescription>{t("pages.accountAccessDesc")}</DialogDescription>

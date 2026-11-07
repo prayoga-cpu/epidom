@@ -70,7 +70,7 @@ export function AcceptTransferClient({ token }: { token: string | null }) {
       toast.success(t("pages.storeTransferAccepted").replace("{store}", invite?.storeName ?? ""));
       // Full navigation, not a client transition: the session's ownership of
       // this store just changed underneath every cached server render.
-      window.location.href = `/store/${storeId}/dashboard`;
+      window.location.href = `/store/${storeId}/home`;
     } catch (err) {
       setAcceptError(err instanceof Error ? err.message : t("pages.storeTransferAcceptFailed"));
       setAccepting(false);

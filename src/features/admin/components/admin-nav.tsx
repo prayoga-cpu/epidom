@@ -14,6 +14,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ADMIN_SECTION_ICONS } from "./admin-section-icons";
+import { AdminPreferences } from "./admin-preferences";
+import { useI18n } from "@/components/lang/i18n-provider";
+import { adminGroupLabel, adminSectionLabel } from "./admin-section-labels";
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/admin") return pathname === "/admin";
@@ -47,6 +50,7 @@ function GroupDropdown({
   pathname: string;
   counts: { feedback: number | null; customDevelopment: number | null } | undefined;
 }) {
+  const { t } = useI18n();
   const groupSections = sections.filter((s) => s.group === groupKey);
   if (groupSections.length === 0) return null;
   const anyActive = groupSections.some((s) => isActive(s.href, pathname));
@@ -75,15 +79,13 @@ function GroupDropdown({
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-2 text-xs",
-                  active && "text-red-400 font-semibold"
+                  active && "font-semibold text-red-400"
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {s.label}
+                {adminSectionLabel(t, s.key, s.label)}
                 {s.key === "feedback" && <NavBadge count={counts?.feedback} />}
-                {s.key === "custom-development" && (
-                  <NavBadge count={counts?.customDevelopment} />
-                )}
+                {s.key === "custom-development" && <NavBadge count={counts?.customDevelopment} />}
               </Link>
             </DropdownMenuItem>
           );
@@ -93,11 +95,8 @@ function GroupDropdown({
   );
 }
 
-export function AdminNav({
-  sections,
-}: {
-  sections: SectionPick[];
-}) {
+export function AdminNav({ sections }: { sections: SectionPick[] }) {
+  const { t } = useI18n();
   const pathname = usePathname() ?? "";
   const hasCounted = sections.some((s) => s.key === "feedback" || s.key === "custom-development");
   const { data: counts } = useQuery<{ feedback: number | null; customDevelopment: number | null }>({
@@ -110,49 +109,56 @@ export function AdminNav({
   const ungrouped = sections.filter((s) => !s.group);
 
   return (
-    <nav aria-label="Admin pages" className="border-border bg-background border-b">
-      <div className="mx-auto flex max-w-7xl items-center gap-1.5 overflow-x-auto px-4 py-2 sm:px-6">
-        <Link
-          href="/stores"
-          className="text-muted-foreground hover:text-foreground inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Stores</span>
-        </Link>
+    <nav aria-label={t("adminNav.navLabel")} className="border-border bg-background border-b">
+      {/* The pages scroll sideways on a phone; the language / theme controls stay
+          pinned at the right, outside the scrolling part. */}
+      <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2 sm:px-6">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
+          <Link
+            href="/stores"
+            className="text-muted-foreground hover:text-foreground inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t("adminNav.stores")}</span>
+          </Link>
 
-        {/* Ungrouped sections (Users, Activity, my-referrals) as plain links */}
-        {ungrouped.map((s) => {
-          const Icon = ADMIN_SECTION_ICONS[s.icon];
-          const active = isActive(s.href, pathname);
-          return (
-            <Link
-              key={s.key}
-              href={s.href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-semibold whitespace-nowrap transition-colors",
-                active
-                  ? "bg-red-500/15 text-red-400"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {s.label}
-            </Link>
-          );
-        })}
+          {/* Ungrouped sections (Users, Activity, my-referrals) as plain links */}
+          {ungrouped.map((s) => {
+            const Icon = ADMIN_SECTION_ICONS[s.icon];
+            const active = isActive(s.href, pathname);
+            return (
+              <Link
+                key={s.key}
+                href={s.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-semibold whitespace-nowrap transition-colors",
+                  active
+                    ? "bg-red-500/15 text-red-400"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {adminSectionLabel(t, s.key, s.label)}
+              </Link>
+            );
+          })}
 
-        {/* Grouped dropdowns */}
-        {ADMIN_NAV_GROUPS.map((g) => (
-          <GroupDropdown
-            key={g.key}
-            groupKey={g.key}
-            label={g.label}
-            sections={sections}
-            pathname={pathname}
-            counts={counts}
-          />
-        ))}
+          {/* Grouped dropdowns */}
+          {ADMIN_NAV_GROUPS.map((g) => (
+            <GroupDropdown
+              key={g.key}
+              groupKey={g.key}
+              label={adminGroupLabel(t, g.key, g.label)}
+              sections={sections}
+              pathname={pathname}
+              counts={counts}
+            />
+          ))}
+        </div>
+
+        {/* Language and light / dark, at the far right of the top bar. */}
+        <AdminPreferences />
       </div>
     </nav>
   );

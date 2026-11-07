@@ -90,3 +90,26 @@ export function clearWizardRedirect(): void {
     // Nothing to clear when storage is unavailable.
   }
 }
+
+/**
+ * Setup is optional: "Skip setup" on the wizard's first screen leaves for Your
+ * Stores on the Free plan. This device remembers it so the `no-store` verdict
+ * doesn't send the owner straight back; Create a store works from there.
+ */
+const SETUP_SKIPPED_KEY = "epidom:onboarding:skipped";
+
+export function markSetupSkipped(): void {
+  try {
+    window.localStorage.setItem(SETUP_SKIPPED_KEY, "1");
+  } catch {
+    // Storage blocked: the gatekeeper may offer the wizard again, which is harmless.
+  }
+}
+
+export function setupSkipped(): boolean {
+  try {
+    return window.localStorage.getItem(SETUP_SKIPPED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}

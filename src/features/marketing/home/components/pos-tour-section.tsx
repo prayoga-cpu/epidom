@@ -10,15 +10,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import Image from "next/image";
-import {
-  ArrowRightLeft,
-  ChartColumn,
-  Clock3,
-  Link2,
-  ReceiptText,
-  Smartphone,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRightLeft, ChartColumn, Link2, Smartphone, type LucideIcon } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
 import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
@@ -30,7 +22,7 @@ import {
 import { aurora, SectionHeading } from "./landing-ui";
 
 /**
- * The six features owners pick a till for, in the order they matter (a demo
+ * The four features owners pick a till for, in the order they matter (a demo
  * shows the first within ten seconds; the last ones prove the till is complete
  * rather than sell it). Each has its own real screen.
  */
@@ -43,15 +35,13 @@ const FEATURES: readonly {
   { key: "f2", icon: ChartColumn, screens: ["backOfficeFinanceTabs"] }, // finance
   { key: "f3", icon: ArrowRightLeft, screens: ["backOfficeStock"] }, // switching from the old POS
   { key: "f4", icon: Link2, screens: ["posCashier"] }, // one link, no app store
-  { key: "f5", icon: Clock3, screens: ["posModes"] }, // clock in and out
-  { key: "f6", icon: ReceiptText, screens: ["posCustomerDisplay"] }, // receipts, customer screen
 ];
 
 /**
  * Where the section pins and scrolling drives it. MUST match the media query
  * of .epi-pin-section / .epi-pin-sticky in globals.css (the layout is CSS, so
  * it is right before the page is interactive; this only picks the behaviour).
- * Short screens are left out: six features and their heading need ~760px.
+ * Short screens are left out: the features and their heading need ~760px.
  */
 const PIN_QUERY = "(min-width: 1024px) and (min-height: 780px)";
 

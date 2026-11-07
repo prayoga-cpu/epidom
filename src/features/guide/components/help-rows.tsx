@@ -45,7 +45,9 @@ export function HelpRowGroup({ children, label }: { children: ReactNode; label?:
 }
 
 interface HelpActionRowProps {
-  icon: LucideIcon;
+  icon?: LucideIcon;
+  /** Replaces the icon in the tile (a country flag, a brand mark). */
+  leading?: ReactNode;
   label: string;
   description?: string;
   /** In-app path: rendered as a Link. */
@@ -63,6 +65,7 @@ interface HelpActionRowProps {
  */
 export function HelpActionRow({
   icon: Icon,
+  leading,
   label,
   description,
   href,
@@ -80,7 +83,7 @@ export function HelpActionRow({
         className="bg-muted text-foreground flex size-9 shrink-0 items-center justify-center rounded-lg"
         aria-hidden
       >
-        <Icon className="size-4" />
+        {leading ?? (Icon ? <Icon className="size-4" /> : null)}
       </span>
       <span className="min-w-0 flex-1">
         <span className="text-foreground block text-sm font-medium">{label}</span>

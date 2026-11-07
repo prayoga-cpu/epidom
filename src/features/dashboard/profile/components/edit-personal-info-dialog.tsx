@@ -32,6 +32,7 @@ import {
 import { useI18n } from "@/components/lang/i18n-provider";
 import { updateProfileSchema } from "@/lib/validation/auth.schemas";
 import { toast } from "sonner";
+import { normalizeDefaultLanding, DEFAULT_LANDING_SECTIONS } from "@/lib/last-visited";
 import { useUpdateProfile } from "../hooks/use-profile";
 
 interface EditPersonalInfoDialogProps {
@@ -45,6 +46,7 @@ interface EditPersonalInfoDialogProps {
     locale: "en" | "fr" | "id" | undefined;
     timezone: string;
     rememberLastVisited?: boolean;
+    defaultLanding?: string;
   };
   onUpdate?: () => void;
 }
@@ -73,6 +75,7 @@ export function EditPersonalInfoDialog({
       locale: user.locale,
       timezone: user.timezone,
       rememberLastVisited: user.rememberLastVisited ?? true,
+      defaultLanding: normalizeDefaultLanding(user.defaultLanding) as FormData["defaultLanding"],
     },
   });
 
@@ -85,6 +88,7 @@ export function EditPersonalInfoDialog({
         locale: user.locale,
         timezone: user.timezone,
         rememberLastVisited: user.rememberLastVisited ?? true,
+        defaultLanding: normalizeDefaultLanding(user.defaultLanding) as FormData["defaultLanding"],
       });
     }
   }, [open, user, form]);
@@ -206,6 +210,32 @@ export function EditPersonalInfoDialog({
                     onChange={field.onChange}
                     searchPlaceholder={t("profile.personal.timezoneSearchPlaceholder")}
                   />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="defaultLanding"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("profile.personal.defaultLanding")}</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {DEFAULT_LANDING_SECTIONS.map((section) => (
+                        <SelectItem key={section} value={section}>
+                          {t(`profile.personal.landingOptions.${section}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>{t("profile.personal.defaultLandingHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

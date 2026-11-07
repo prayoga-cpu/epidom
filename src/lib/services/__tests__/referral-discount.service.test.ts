@@ -71,6 +71,16 @@ describe("getCheckoutReferralDiscount", () => {
     mockStripe.coupons.retrieve.mockResolvedValue({ id: "epidom-ref-once-10" });
   });
 
+  it("a code typed during setup gets the same discount as the link", async () => {
+    mockPrisma.signupAttribution.findUnique.mockResolvedValue(
+      attribution({ source: "REFERRAL_CODE" })
+    );
+    expect(await getCheckoutReferralDiscount("u1", null)).toEqual({
+      couponId: "epidom-ref-once-10",
+      percent: 10,
+    });
+  });
+
   it("gives a referral-link customer's first checkout the discount", async () => {
     mockPrisma.signupAttribution.findUnique.mockResolvedValue(attribution());
     expect(await getCheckoutReferralDiscount("u1", null)).toEqual({

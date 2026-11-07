@@ -294,7 +294,7 @@ export function cookieFromHeader(
 
 /** The fields a SignupAttribution row is created with (string unions match the Prisma enums). */
 export interface SignupAttributionData {
-  source: "REFERRAL_LINK" | "SALES_PAGE" | null;
+  source: "REFERRAL_LINK" | "REFERRAL_CODE" | "SALES_PAGE" | null;
   sourceAt: Date | null;
   refCode: string | null;
   salesPage: string | null;

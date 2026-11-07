@@ -208,13 +208,13 @@ describe("PosModeOverflowMenu — account switcher", () => {
     expect(screen.getByText("nav.backOffice")).toBeInTheDocument();
   });
 
-  it("Back Office link defaults to /dashboard with no resume history", () => {
+  it("Back Office link defaults to Home with no resume history", () => {
     mockSwitcher.mockReturnValue(
       baseSwitcher({ posSession: { staffName: "Owner Test", staffRole: "OWNER" } })
     );
     renderMenu();
     const link = screen.getByText("nav.backOffice").closest("a");
-    expect(link?.getAttribute("href")).toBe("/store/store-001/dashboard");
+    expect(link?.getAttribute("href")).toBe("/store/store-001/home");
   });
 
   it("Back Office link resumes the last Back Office section visited in this store", async () => {
@@ -234,7 +234,7 @@ describe("PosModeOverflowMenu — account switcher", () => {
     );
     renderMenu();
     const link = await screen.findByText("nav.backOffice");
-    expect(link.closest("a")?.getAttribute("href")).toBe("/store/store-001/dashboard");
+    expect(link.closest("a")?.getAttribute("href")).toBe("/store/store-001/home");
   });
 
   it("Back to Stores shows when not acting as staff (real owner session)", () => {

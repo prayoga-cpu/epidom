@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { usePathname, useRouter } from "next/navigation";
 import LangSwitcher from "@/components/lang/lang-switcher";
+import { ThemeToggle } from "@/features/dashboard/shared/theme-toggle";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ChevronRight, ArrowLeft } from "lucide-react";
 import { EpidomLogo } from "./epidom-logo";
@@ -28,6 +29,8 @@ interface SiteHeaderProps {
   showNav?: boolean;
   variant?: "landing" | "authenticated";
   showLogout?: boolean;
+  /** A light / dark toggle after the language switcher. The marketing pages have one look, so only the signed-in pages (the store list) turn it on. */
+  showThemeToggle?: boolean;
   /** When set, renders an explicit back arrow before the logo, so a page
    * that's a dead end in the app's own parent/child structure (e.g. /stores,
    * whose only parent is the marketing homepage) always has a way out
@@ -39,6 +42,7 @@ export const SiteHeader = memo(function SiteHeader({
   showNav = true,
   variant: variantOverride,
   showLogout = false,
+  showThemeToggle = false,
   backHref,
 }: SiteHeaderProps = {}) {
   const pathname = usePathname();
@@ -235,6 +239,7 @@ export const SiteHeader = memo(function SiteHeader({
       <div className="flex items-center gap-3">
         <div className="hidden items-center gap-3 lg:flex">
           <LangSwitcher urlDriven />
+          {showThemeToggle && <ThemeToggle />}
           {mounted && <DesktopCTA />}
         </div>
 
@@ -349,6 +354,11 @@ export const SiteHeader = memo(function SiteHeader({
                   <div className="flex-shrink-0">
                     <LangSwitcher dropUp urlDriven />
                   </div>
+                  {showThemeToggle && (
+                    <div className="flex-shrink-0">
+                      <ThemeToggle />
+                    </div>
+                  )}
                 </div>
               </div>
             </SheetContent>

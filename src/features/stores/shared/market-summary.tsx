@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Sparkles } from "lucide-react";
+import { Settings, Sparkles } from "lucide-react";
 import type { PaymentMethod } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { useI18n, type Locale } from "@/components/lang/i18n-provider";
@@ -33,6 +33,12 @@ export interface MarketSummaryProps {
    */
   timezone?: string | null;
   className?: string;
+  /**
+   * One short line ("…later in ⚙ Settings") instead of the two that name the
+   * exact Settings pages. The setup flow uses it; the store dialogs keep the
+   * precise directions.
+   */
+  shortNote?: boolean;
   /** Form wiring for the "Other country" currency picker (id, aria-*, onBlur, ref). */
   currencySelectProps?: Pick<
     SearchSelectProps,
@@ -105,6 +111,7 @@ export function MarketSummary({
   timezone,
   className,
   currencySelectProps,
+  shortNote = false,
 }: MarketSummaryProps) {
   const { t, locale } = useI18n();
   const titleId = React.useId();
@@ -206,12 +213,32 @@ export function MarketSummary({
           </div>
         ) : null}
       </dl>
-      <p className="text-muted-foreground mt-3 text-xs">
-        {t("storeEssentials.marketSummary.changeLater")}
-      </p>
+      {shortNote ? (
+        <p data-testid="market-note" className="text-muted-foreground mt-3 text-xs">
+          {(() => {
+            const [before, after = ""] = t("storeEssentials.marketSummary.changeLaterShort").split(
+              "{settings}"
+            );
+            return (
+              <>
+                {before}
+                <span className="text-foreground inline-flex items-center gap-1 align-bottom font-medium whitespace-nowrap">
+                  <Settings aria-hidden="true" className="size-3.5" />
+                  {t("storeEssentials.marketSummary.settingsLabel")}
+                </span>
+                {after}
+              </>
+            );
+          })()}
+        </p>
+      ) : (
+        <p className="text-muted-foreground mt-3 text-xs">
+          {t("storeEssentials.marketSummary.changeLater")}
+        </p>
+      )}
       {/* The zone is the business's (Store has no timezone column): it is
           changed in Profile → Business info, not Fees & Taxes. */}
-      {shownTimezone ? (
+      {shownTimezone && !shortNote ? (
         <p className="text-muted-foreground mt-1 text-xs">
           {t("storeEssentials.marketSummary.changeTimezoneLater")}
         </p>

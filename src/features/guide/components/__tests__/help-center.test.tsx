@@ -199,11 +199,11 @@ describe("HelpCenter — getting started", () => {
   it("Replay the tour: navigates to the dashboard asking for the tour", () => {
     renderHelp();
     fireEvent.click(screen.getByRole("button", { name: /replayTour/ }));
-    expect(nav.push).toHaveBeenCalledWith("/store/s1/dashboard?tour=1");
+    expect(nav.push).toHaveBeenCalledWith("/store/s1/home?tour=1");
   });
 
   it("Replay the tour where a tour is mounted: it claims the event and opens in place, no navigation", () => {
-    nav.pathname = "/store/s1/dashboard";
+    nav.pathname = "/store/s1/home";
     // What the dashboard's WelcomeTourAutoOpen does with the event.
     const listener = vi.fn((event: Event) => event.preventDefault());
     window.addEventListener("epidom:open-tour", listener);
@@ -215,10 +215,10 @@ describe("HelpCenter — getting started", () => {
   });
 
   it("Replay the tour on the dashboard while no tour is mounted: falls back to ?tour=1", () => {
-    nav.pathname = "/store/s1/dashboard";
+    nav.pathname = "/store/s1/home";
     renderHelp();
     fireEvent.click(screen.getByRole("button", { name: /replayTour/ }));
-    expect(nav.push).toHaveBeenCalledWith("/store/s1/dashboard?tour=1");
+    expect(nav.push).toHaveBeenCalledWith("/store/s1/home?tour=1");
   });
 
   it("Show page tips again: restores the tips and says so", () => {
@@ -241,7 +241,7 @@ describe("HelpCenter — getting started", () => {
     guide.dismissedChecklists = ["s1"];
     renderHelp();
     const link = screen.getByRole("link", { name: /openChecklist/ });
-    expect(link).toHaveAttribute("href", "/store/s1/dashboard?checklist=1");
+    expect(link).toHaveAttribute("href", "/store/s1/analytics?checklist=1");
     link.addEventListener("click", (e) => e.preventDefault(), { once: true });
     fireEvent.click(link);
     expect(guide.restoreChecklist).toHaveBeenCalledWith("s1");
@@ -297,7 +297,7 @@ describe("HelpCenter — POS Mode sheet", () => {
     renderHelp({ context: "pos", releases: undefined, canManage: true, onNavigate });
     fireEvent.click(screen.getByRole("button", { name: /replayTour/ }));
     expect(onNavigate).toHaveBeenCalled();
-    expect(nav.push).toHaveBeenCalledWith("/store/s1/dashboard?tour=1");
+    expect(nav.push).toHaveBeenCalledWith("/store/s1/home?tour=1");
     await waitFor(() => expect(screen.getByRole("link", { name: /seeAll/ })).toBeInTheDocument());
   });
 

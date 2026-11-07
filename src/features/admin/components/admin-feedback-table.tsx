@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/components/lang/i18n-provider";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -76,13 +78,6 @@ const typeBadges: Record<
 
 const STATUS_OPTIONS: FeedbackStatus[] = ["OPEN", "IN_PROGRESS", "NEEDS_REVIEW", "RESOLVED", "ARCHIVED"];
 
-const statusLabels: Record<FeedbackStatus, string> = {
-  OPEN: "Open",
-  IN_PROGRESS: "In Progress",
-  NEEDS_REVIEW: "Review",
-  RESOLVED: "Resolved",
-  ARCHIVED: "Archived",
-};
 
 // Grouping priority: active items surface first, archived sink to the bottom.
 const STATUS_ORDER: Record<FeedbackStatus, number> = {
@@ -123,12 +118,6 @@ const statusColors: Record<FeedbackStatus, { row: string; select: string; ring: 
 
 const PRIORITY_OPTIONS: FeedbackPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
 
-const priorityLabels: Record<FeedbackPriority, string> = {
-  URGENT: "Urgent",
-  HIGH: "High",
-  MEDIUM: "Medium",
-  LOW: "Low",
-};
 
 // Higher-priority items sort first within a status group.
 const PRIORITY_ORDER: Record<FeedbackPriority, number> = {
@@ -221,8 +210,8 @@ function readStoredFilters(): StoredFilters {
 
 const DESCRIPTION_PREVIEW_LENGTH = 80;
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -242,6 +231,7 @@ function CopyableDescription({
   isExpanded,
   onToggleExpand,
 }: CopyableDescriptionProps) {
+  const { t, intlLocale } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e: React.MouseEvent) => {
@@ -249,11 +239,11 @@ function CopyableDescription({
     try {
       await navigator.clipboard.writeText(description);
       setCopied(true);
-      toast.success("Description copied to clipboard");
+      toast.success(t("adminPages.feedback.copy.descCopied"));
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy text", err);
-      toast.error("Failed to copy description");
+      toast.error(t("adminPages.feedback.copy.descFailed"));
     }
   };
 
@@ -286,12 +276,12 @@ function CopyableDescription({
             {copied ? (
               <>
                 <Check className="h-3 w-3 text-emerald-500" />
-                <span>Copied!</span>
+                <span>{t("adminPages.feedback.copy.copied")}</span>
               </>
             ) : (
               <>
                 <Copy className="h-3 w-3 text-muted-foreground" />
-                <span>Click to copy description</span>
+                <span>{t("adminPages.feedback.copy.hint")}</span>
               </>
             )}
           </span>
@@ -304,7 +294,7 @@ function CopyableDescription({
           onClick={onToggleExpand}
           className="text-xs font-semibold text-blue-400 hover:text-blue-300 hover:underline transition-colors py-1 mt-0.5"
         >
-          {isExpanded ? "Show less" : "Show more"}
+          {isExpanded ? t("adminPages.feedback.copy.showLess") : t("adminPages.feedback.copy.showMore")}
         </button>
       )}
     </div>
@@ -320,6 +310,7 @@ interface DevNoteEditorProps {
 }
 
 function DevNoteEditor({ feedbackId, currentNote, onSave, isSaving }: DevNoteEditorProps) {
+  const { t, intlLocale } = useI18n();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(currentNote ?? "");
 
@@ -339,7 +330,7 @@ function DevNoteEditor({ feedbackId, currentNote, onSave, isSaving }: DevNoteEdi
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Add a private dev note..."
+          placeholder={t("adminPages.feedback.note.placeholder")}
           rows={3}
           className="text-xs resize-none"
           autoFocus
@@ -351,14 +342,14 @@ function DevNoteEditor({ feedbackId, currentNote, onSave, isSaving }: DevNoteEdi
             disabled={isSaving}
             className="rounded-md bg-violet-500/20 px-2.5 py-1 text-[11px] font-semibold text-violet-300 hover:bg-violet-500/30 transition-colors disabled:opacity-50"
           >
-            Save note
+            {t("adminPages.feedback.note.save")}
           </button>
           <button
             type="button"
             onClick={handleCancel}
             className="rounded-md px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
           >
-            Cancel
+            {t("adminPages.common.cancel")}
           </button>
         </div>
       </div>
@@ -374,7 +365,7 @@ function DevNoteEditor({ feedbackId, currentNote, onSave, isSaving }: DevNoteEdi
           <button
             type="button"
             onClick={handleOpen}
-            title="Edit note"
+            title={t("adminPages.feedback.note.edit")}
             className="shrink-0 rounded p-0.5 text-violet-400 opacity-0 transition-opacity hover:text-violet-200 group-hover/note:opacity-100"
           >
             <Pencil className="h-3 w-3" />
@@ -387,7 +378,7 @@ function DevNoteEditor({ feedbackId, currentNote, onSave, isSaving }: DevNoteEdi
           className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-violet-400 transition-colors"
         >
           <Pencil className="h-3 w-3" />
-          Add dev note
+          {t("adminPages.feedback.note.add")}
         </button>
       )}
     </div>
@@ -419,6 +410,7 @@ function FeedbackCard({
   onOpenDetail,
   isSaving,
 }: FeedbackCardProps) {
+  const { t, intlLocale } = useI18n();
   const isLong = row.description.length > DESCRIPTION_PREVIEW_LENGTH;
 
   return (
@@ -434,12 +426,12 @@ function FeedbackCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="text-muted-foreground text-[8px] whitespace-nowrap sm:text-xs">
-            {formatDate(row.createdAt)}
+            {formatDate(row.createdAt, intlLocale)}
           </span>
           <button
             type="button"
             onClick={() => onOpenDetail(row.id)}
-            title="Open details"
+            title={t("adminPages.feedback.openDetails")}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <Maximize2 className="h-3.5 w-3.5" />
@@ -448,7 +440,7 @@ function FeedbackCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={typeBadges[row.type].variant}>{typeBadges[row.type].label}</Badge>
+        <Badge variant={typeBadges[row.type].variant}>{t(`adminPages.feedback.types.${row.type}`)}</Badge>
         <span className="text-muted-foreground text-xs break-all">{row.page}</span>
         <button
           type="button"
@@ -480,7 +472,7 @@ function FeedbackCard({
             onClick={() => onViewScreenshot(row.screenshotUrl!)}
             className="text-xs text-blue-400 hover:underline"
           >
-            View
+            {t("adminPages.feedback.view")}
           </button>
         ) : (
           <span className="text-muted-foreground text-xs">—</span>
@@ -497,7 +489,7 @@ function FeedbackCard({
             <SelectContent>
               {PRIORITY_OPTIONS.map((p) => (
                 <SelectItem key={p} value={p}>
-                  {priorityLabels[p]}
+                  {t(`adminPages.feedback.priorities.${p}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -513,7 +505,7 @@ function FeedbackCard({
             <SelectContent>
               {STATUS_OPTIONS.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {statusLabels[s]}
+                  {t(`adminPages.feedback.statuses.${s}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -525,6 +517,7 @@ function FeedbackCard({
 }
 
 function FeedbackBoardCard({ row, onOpen }: { row: FeedbackRow; onOpen: (id: string) => void }) {
+  const { t, intlLocale } = useI18n();
   return (
     <button
       type="button"
@@ -533,10 +526,10 @@ function FeedbackBoardCard({ row, onOpen }: { row: FeedbackRow; onOpen: (id: str
     >
       <div className="flex items-center justify-between gap-2">
         <Badge variant={typeBadges[row.type].variant} className="text-[10px]">
-          {typeBadges[row.type].label}
+          {t(`adminPages.feedback.types.${row.type}`)}
         </Badge>
         <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${priorityColors[row.priority]}`}>
-          {priorityLabels[row.priority]}
+          {t(`adminPages.feedback.priorities.${row.priority}`)}
         </span>
       </div>
       <p className="text-foreground line-clamp-2 text-xs leading-relaxed break-words">{row.description}</p>
@@ -544,7 +537,7 @@ function FeedbackBoardCard({ row, onOpen }: { row: FeedbackRow; onOpen: (id: str
         <span className="text-muted-foreground truncate text-[11px]">
           {row.user?.name ?? row.userName}
         </span>
-        <span className="text-muted-foreground shrink-0 text-[10px]">{formatDate(row.createdAt)}</span>
+        <span className="text-muted-foreground shrink-0 text-[10px]">{formatDate(row.createdAt, intlLocale)}</span>
       </div>
     </button>
   );
@@ -571,6 +564,7 @@ function FeedbackDetailDialog({
   onViewScreenshot,
   isSaving,
 }: FeedbackDetailDialogProps) {
+  const { t, intlLocale } = useI18n();
   return (
     <Dialog
       open={!!row}
@@ -583,11 +577,11 @@ function FeedbackDetailDialog({
           <>
             <DialogHeader>
               <div className="flex flex-wrap items-center gap-2 pr-6">
-                <Badge variant={typeBadges[row.type].variant}>{typeBadges[row.type].label}</Badge>
+                <Badge variant={typeBadges[row.type].variant}>{t(`adminPages.feedback.types.${row.type}`)}</Badge>
                 <span
                   className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusColors[row.status].select}`}
                 >
-                  {statusLabels[row.status]}
+                  {t(`adminPages.feedback.statuses.${row.status}`)}
                 </span>
                 <button
                   type="button"
@@ -612,7 +606,7 @@ function FeedbackDetailDialog({
                   Page: <span className="text-foreground">{row.page}</span>
                 </span>
                 <span>
-                  {new Date(row.createdAt).toLocaleString("en-GB", {
+                  {new Date(row.createdAt).toLocaleString(intlLocale, {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
@@ -636,7 +630,7 @@ function FeedbackDetailDialog({
                 >
                   <img
                     src={row.screenshotUrl}
-                    alt="Feedback screenshot"
+                    alt={t("adminPages.feedback.screenshotAlt")}
                     className="border-border max-h-64 rounded-md border object-contain"
                   />
                 </button>
@@ -644,7 +638,7 @@ function FeedbackDetailDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs font-medium">Priority</p>
+                  <p className="text-muted-foreground text-xs font-medium">{t("adminPages.feedback.priority")}</p>
                   <Select
                     value={row.priority}
                     onValueChange={(v) => onPriorityChange(row.id, v as FeedbackPriority)}
@@ -656,14 +650,14 @@ function FeedbackDetailDialog({
                     <SelectContent>
                       {PRIORITY_OPTIONS.map((p) => (
                         <SelectItem key={p} value={p}>
-                          {priorityLabels[p]}
+                          {t(`adminPages.feedback.priorities.${p}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs font-medium">Status</p>
+                  <p className="text-muted-foreground text-xs font-medium">{t("adminPages.feedback.status")}</p>
                   <Select
                     value={row.status}
                     onValueChange={(v) => onStatusChange(row.id, v as FeedbackStatus)}
@@ -675,7 +669,7 @@ function FeedbackDetailDialog({
                     <SelectContent>
                       {STATUS_OPTIONS.map((s) => (
                         <SelectItem key={s} value={s}>
-                          {statusLabels[s]}
+                          {t(`adminPages.feedback.statuses.${s}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -684,7 +678,7 @@ function FeedbackDetailDialog({
               </div>
 
               <div>
-                <p className="text-muted-foreground mb-1 text-xs font-medium">Dev note</p>
+                <p className="text-muted-foreground mb-1 text-xs font-medium">{t("adminPages.feedback.note.label")}</p>
                 <DevNoteEditor
                   feedbackId={row.id}
                   currentNote={row.devNote}
@@ -701,6 +695,7 @@ function FeedbackDetailDialog({
 }
 
 export function AdminFeedbackTable() {
+  const { t, intlLocale } = useI18n();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -757,7 +752,7 @@ export function AdminFeedbackTable() {
     queryFn: async () => {
       const res = await fetch("/api/admin/feedback");
       if (!res.ok) {
-        throw new Error("Failed to load feedback");
+        throw new Error(t("adminPages.feedback.loadFailed"));
       }
       return res.json();
     },
@@ -790,9 +785,9 @@ export function AdminFeedbackTable() {
       }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-feedback"] });
-      if (variables.devNote !== undefined) toast.success("Dev note saved");
-      else if (variables.priority) toast.success("Priority updated");
-      else toast.success("Status updated");
+      if (variables.devNote !== undefined) toast.success(t("adminPages.feedback.toasts.noteSaved"));
+      else if (variables.priority) toast.success(t("adminPages.feedback.toasts.priorityUpdated"));
+      else toast.success(t("adminPages.feedback.toasts.statusUpdated"));
     },
     onError: (e: Error) => toast.error(e.message || "Failed"),
   });
@@ -865,7 +860,7 @@ export function AdminFeedbackTable() {
 
   const copyId = (id: string) => {
     navigator.clipboard?.writeText(id);
-    toast.success("ID copied");
+    toast.success(t("adminPages.feedback.copy.idCopied"));
   };
 
   const stats = {
@@ -877,11 +872,11 @@ export function AdminFeedbackTable() {
   };
 
   const statItems: { status: FeedbackStatus; label: string; value: number; icon: LucideIcon; color: string }[] = [
-    { status: "OPEN", label: "Open", value: stats.open, icon: Inbox, color: "text-blue-400" },
-    { status: "IN_PROGRESS", label: "In Progress", value: stats.inProgress, icon: Clock, color: "text-amber-400" },
-    { status: "NEEDS_REVIEW", label: "Review", value: stats.needsReview, icon: Eye, color: "text-violet-400" },
-    { status: "RESOLVED", label: "Resolved", value: stats.resolved, icon: CheckCircle2, color: "text-emerald-400" },
-    { status: "ARCHIVED", label: "Archived", value: stats.archived, icon: Archive, color: "text-slate-400" },
+    { status: "OPEN", label: t("adminPages.feedback.statuses.OPEN"), value: stats.open, icon: Inbox, color: "text-blue-400" },
+    { status: "IN_PROGRESS", label: t("adminPages.feedback.statuses.IN_PROGRESS"), value: stats.inProgress, icon: Clock, color: "text-amber-400" },
+    { status: "NEEDS_REVIEW", label: t("adminPages.feedback.statuses.NEEDS_REVIEW"), value: stats.needsReview, icon: Eye, color: "text-violet-400" },
+    { status: "RESOLVED", label: t("adminPages.feedback.statuses.RESOLVED"), value: stats.resolved, icon: CheckCircle2, color: "text-emerald-400" },
+    { status: "ARCHIVED", label: t("adminPages.feedback.statuses.ARCHIVED"), value: stats.archived, icon: Archive, color: "text-slate-400" },
   ];
 
   const toggleExpanded = (id: string) => {
@@ -907,7 +902,7 @@ export function AdminFeedbackTable() {
 
   const detailRow = rows.find((r) => r.id === detailId) ?? null;
 
-  const emptyLabel = hasActiveFilters ? "No feedback matches your filters" : "No feedback yet";
+  const emptyLabel = hasActiveFilters ? t("adminPages.feedback.emptyFiltered") : t("adminPages.feedback.empty");
 
   return (
     <div className="bg-background min-h-[calc(100vh/var(--app-zoom,1))]">
@@ -919,14 +914,14 @@ export function AdminFeedbackTable() {
               <Bug className="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <h1 className="text-foreground text-lg font-bold">Feedback</h1>
+              <h1 className="text-foreground text-lg font-bold">{t("adminPages.feedback.title")}</h1>
               <p className="text-muted-foreground text-xs">
-                Bug reports and suggestions from users
+                {t("adminPages.feedback.subtitle")}
               </p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => router.push("/admin")}>
-                ← Back
+                {t("adminPages.feedback.back")}
               </Button>
             </div>
           </div>
@@ -966,7 +961,7 @@ export function AdminFeedbackTable() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search feedback..."
+                placeholder={t("adminPages.feedback.filters.search")}
                 className="border-border bg-card placeholder:text-muted-foreground text-foreground focus:border-ring w-full rounded-md border py-1.5 pr-2 pl-8 text-xs outline-none"
               />
             </div>
@@ -975,10 +970,10 @@ export function AdminFeedbackTable() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All types</SelectItem>
-                <SelectItem value="BUG">Bug</SelectItem>
-                <SelectItem value="FEATURE_SUGGESTION">Feature</SelectItem>
-                <SelectItem value="GENERAL_FEEDBACK">General</SelectItem>
+                <SelectItem value="ALL">{t("adminPages.feedback.filters.allTypes")}</SelectItem>
+                <SelectItem value="BUG">{t("adminPages.feedback.types.BUG")}</SelectItem>
+                <SelectItem value="FEATURE_SUGGESTION">{t("adminPages.feedback.types.FEATURE_SUGGESTION")}</SelectItem>
+                <SelectItem value="GENERAL_FEEDBACK">{t("adminPages.feedback.types.GENERAL_FEEDBACK")}</SelectItem>
               </SelectContent>
             </Select>
             <Select
@@ -989,10 +984,10 @@ export function AdminFeedbackTable() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All priorities</SelectItem>
+                <SelectItem value="ALL">{t("adminPages.feedback.filters.allPriorities")}</SelectItem>
                 {PRIORITY_OPTIONS.map((p) => (
                   <SelectItem key={p} value={p}>
-                    {priorityLabels[p]}
+                    {t(`adminPages.feedback.priorities.${p}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1005,7 +1000,7 @@ export function AdminFeedbackTable() {
               <SelectContent>
                 {SORT_OPTIONS.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
-                    {o.label}
+                    {t(`adminPages.feedback.sort.${o.value}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1022,7 +1017,7 @@ export function AdminFeedbackTable() {
           </div>
 
           <div className="bg-muted flex items-center gap-1 self-start rounded-lg p-1 sm:self-auto">
-            {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => (
+            {VIEW_OPTIONS.map(({ key, icon: Icon }) => (
               <button
                 key={key}
                 type="button"
@@ -1034,7 +1029,7 @@ export function AdminFeedbackTable() {
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {label}
+                {t(`adminPages.feedback.views.${key}`)}
               </button>
             ))}
           </div>
@@ -1045,11 +1040,11 @@ export function AdminFeedbackTable() {
           <>
             <div className="space-y-3 lg:hidden">
               {isLoading && (
-                <p className="text-muted-foreground py-12 text-center text-sm">Loading feedback...</p>
+                <p className="text-muted-foreground py-12 text-center text-sm">{t("adminPages.feedback.loading")}</p>
               )}
               {isError && (
                 <p className="text-destructive py-12 text-center text-sm">
-                  Failed to load feedback. Refresh the page or sign in again.
+                  {t("adminPages.feedback.loadError")}
                 </p>
               )}
               {!isLoading && !isError && filteredRows.length === 0 && (
@@ -1078,29 +1073,29 @@ export function AdminFeedbackTable() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border hover:bg-transparent">
-                        <TableHead className="text-muted-foreground">ID</TableHead>
-                        <TableHead className="text-muted-foreground">Date</TableHead>
-                        <TableHead className="text-muted-foreground">User</TableHead>
-                        <TableHead className="text-muted-foreground">Type</TableHead>
-                        <TableHead className="text-muted-foreground">Page</TableHead>
-                        <TableHead className="text-muted-foreground">Description / Dev Note</TableHead>
-                        <TableHead className="text-muted-foreground">Screenshot</TableHead>
-                        <TableHead className="text-muted-foreground">Priority</TableHead>
-                        <TableHead className="text-muted-foreground">Status</TableHead>
+                        <TableHead className="text-muted-foreground">{t("adminPages.feedback.head.id")}</TableHead>
+                        <TableHead className="text-muted-foreground">{t("adminPages.feedback.head.date")}</TableHead>
+                        <TableHead className="text-muted-foreground">{t("adminPages.feedback.head.user")}</TableHead>
+                        <TableHead className="text-muted-foreground">{t("adminPages.feedback.head.type")}</TableHead>
+                        <TableHead className="text-muted-foreground">{t("adminPages.feedback.head.page")}</TableHead>
+                        <TableHead className="text-muted-foreground">{t("adminPages.feedback.head.description")}</TableHead>
+                        <TableHead className="text-muted-foreground">{t("adminPages.feedback.head.screenshot")}</TableHead>
+                        <TableHead className="text-muted-foreground">{t("adminPages.feedback.head.priority")}</TableHead>
+                        <TableHead className="text-muted-foreground">{t("adminPages.feedback.head.status")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isLoading && (
                         <TableRow>
                           <TableCell colSpan={9} className="text-muted-foreground py-12 text-center">
-                            Loading feedback...
+                            {t("adminPages.feedback.loading")}
                           </TableCell>
                         </TableRow>
                       )}
                       {isError && (
                         <TableRow>
                           <TableCell colSpan={9} className="text-destructive py-12 text-center">
-                            Failed to load feedback. Refresh the page or sign in again.
+                            {t("adminPages.feedback.loadError")}
                           </TableCell>
                         </TableRow>
                       )}
@@ -1133,7 +1128,7 @@ export function AdminFeedbackTable() {
                                 <button
                                   type="button"
                                   onClick={() => setDetailId(row.id)}
-                                  title="Open details"
+                                  title={t("adminPages.feedback.openDetails")}
                                   className="text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                   <Maximize2 className="h-3 w-3" />
@@ -1141,7 +1136,7 @@ export function AdminFeedbackTable() {
                               </div>
                             </TableCell>
                             <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                              {formatDate(row.createdAt)}
+                              {formatDate(row.createdAt, intlLocale)}
                             </TableCell>
                             <TableCell>
                               <div>
@@ -1155,7 +1150,7 @@ export function AdminFeedbackTable() {
                             </TableCell>
                             <TableCell>
                               <Badge variant={typeBadges[row.type].variant}>
-                                {typeBadges[row.type].label}
+                                {t(`adminPages.feedback.types.${row.type}`)}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-muted-foreground max-w-[160px] truncate text-xs">
@@ -1182,7 +1177,7 @@ export function AdminFeedbackTable() {
                                   onClick={() => setSelectedScreenshot(row.screenshotUrl)}
                                   className="text-xs text-blue-400 hover:underline"
                                 >
-                                  View
+                                  {t("adminPages.feedback.view")}
                                 </button>
                               ) : (
                                 <span className="text-muted-foreground text-xs">—</span>
@@ -1203,7 +1198,7 @@ export function AdminFeedbackTable() {
                                 <SelectContent>
                                   {PRIORITY_OPTIONS.map((p) => (
                                     <SelectItem key={p} value={p}>
-                                      {priorityLabels[p]}
+                                      {t(`adminPages.feedback.priorities.${p}`)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -1224,7 +1219,7 @@ export function AdminFeedbackTable() {
                                 <SelectContent>
                                   {STATUS_OPTIONS.map((s) => (
                                     <SelectItem key={s} value={s}>
-                                      {statusLabels[s]}
+                                      {t(`adminPages.feedback.statuses.${s}`)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -1245,11 +1240,11 @@ export function AdminFeedbackTable() {
         {view === "feed" && (
           <div className="mx-auto max-w-2xl space-y-3">
             {isLoading && (
-              <p className="text-muted-foreground py-12 text-center text-sm">Loading feedback...</p>
+              <p className="text-muted-foreground py-12 text-center text-sm">{t("adminPages.feedback.loading")}</p>
             )}
             {isError && (
               <p className="text-destructive py-12 text-center text-sm">
-                Failed to load feedback. Refresh the page or sign in again.
+                {t("adminPages.feedback.loadError")}
               </p>
             )}
             {!isLoading && !isError && feedRows.length === 0 && (
@@ -1278,11 +1273,11 @@ export function AdminFeedbackTable() {
         {view === "board" && (
           <div>
             {isLoading && (
-              <p className="text-muted-foreground py-12 text-center text-sm">Loading feedback...</p>
+              <p className="text-muted-foreground py-12 text-center text-sm">{t("adminPages.feedback.loading")}</p>
             )}
             {isError && (
               <p className="text-destructive py-12 text-center text-sm">
-                Failed to load feedback. Refresh the page or sign in again.
+                {t("adminPages.feedback.loadError")}
               </p>
             )}
             {!isLoading && !isError && boardBaseRows.length === 0 && (
@@ -1301,12 +1296,12 @@ export function AdminFeedbackTable() {
                       <div
                         className={`flex items-center justify-between rounded-lg border px-3 py-2 ${statusColors[status].row}`}
                       >
-                        <span className="text-foreground text-sm font-semibold">{statusLabels[status]}</span>
+                        <span className="text-foreground text-sm font-semibold">{t(`adminPages.feedback.statuses.${status}`)}</span>
                         <span className="text-muted-foreground text-xs">{columnRows.length}</span>
                       </div>
                       <div className="min-h-[60px] space-y-2">
                         {columnRows.length === 0 && (
-                          <p className="text-muted-foreground py-6 text-center text-xs">No items</p>
+                          <p className="text-muted-foreground py-6 text-center text-xs">{t("adminPages.feedback.noItems")}</p>
                         )}
                         {columnRows.map((row) => (
                           <FeedbackBoardCard key={row.id} row={row} onOpen={setDetailId} />
@@ -1348,13 +1343,13 @@ export function AdminFeedbackTable() {
       >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Screenshot</DialogTitle>
+            <DialogTitle>{t("adminPages.feedback.screenshot")}</DialogTitle>
           </DialogHeader>
           {selectedScreenshot && (
             <>
               <img
                 src={selectedScreenshot}
-                alt="Feedback screenshot"
+                alt={t("adminPages.feedback.screenshotAlt")}
                 className="max-h-[calc(80vh/var(--app-zoom,1))] w-full rounded-md object-contain"
               />
               <a
@@ -1363,7 +1358,7 @@ export function AdminFeedbackTable() {
                 rel="noopener noreferrer"
                 className="mt-2 inline-block text-xs text-blue-400 hover:underline"
               >
-                Open in new tab
+                {t("adminPages.feedback.openNewTab")}
               </a>
             </>
           )}

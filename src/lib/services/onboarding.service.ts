@@ -8,7 +8,7 @@
  *   1. saveStoreStep      — business + first store + OWNER staff row + FREE
  *                           plan + finance settings + draft storefront
  *   2. saveStorefrontStep — logo / colour / tagline + up to 3 menu items
- *   3. completeOnboarding — goals, publish, User.hasOnboarded
+ *   then completeOnboarding — publish, optional partner code, User.hasOnboarded
  *
  * Every read and write here is keyed on the caller's own userId (the business
  * is `where: { userId }`, the store is the oldest store of that business, the
@@ -51,6 +51,7 @@ import type {
   OnboardingStorefrontStepInput,
 } from "@/lib/validation/onboarding.schemas";
 import { posTrialApplies } from "@/lib/plans/pos-trial";
+import { applyReferralCode, getCreditedReferral } from "./referral-code.service";
 import { getStorageAdapter } from "@/lib/storage";
 import { isOwnUpload } from "@/lib/utils/own-upload";
 import { getFinanceSettings } from "./finance-settings.service";
@@ -114,7 +115,7 @@ function isGoal(value: string): value is OnboardingGoal {
 function clampStep(step: number | null | undefined): OnboardingStepNumber {
   const value = Math.min(
     Math.max(step ?? ONBOARDING_STEP.store, ONBOARDING_STEP.store),
-    ONBOARDING_STEP.goals
+    ONBOARDING_STEP.storefront
   );
   return value as OnboardingStepNumber;
 }
@@ -454,6 +455,7 @@ export async function getOnboardingBilling(userId: string): Promise<OnboardingBi
   return {
     canCheckout: !paying && !subscription?.customPricePendingAt,
     posTrialEligible: posTrialApplies("POS", subscription),
+    referral: await getCreditedReferral(userId),
   };
 }
 
@@ -899,7 +901,7 @@ export async function saveStorefrontStep(
     await prisma.business.update({
       where: { userId },
       data: {
-        onboardingStep: Math.max(ctx.business.onboardingStep ?? 0, ONBOARDING_STEP.goals),
+        onboardingStep: Math.max(ctx.business.onboardingStep ?? 0, ONBOARDING_STEP.storefront),
       },
     });
   }
@@ -908,7 +910,7 @@ export async function saveStorefrontStep(
 }
 
 // ============================================================================
-// Step 3 — Your goals, then publish
+// Publish (end of step 2)
 // ============================================================================
 
 /**
@@ -951,6 +953,11 @@ export async function completeOnboarding(
       data: { hasOnboarded: true },
     }),
   ]);
+
+  // After the publish, so a code problem can never fail it.
+  if (input.referralCode) {
+    await applyReferralCode({ id: userId, email: ctx.user.email }, input.referralCode);
+  }
 
   return {
     storeId: ctx.store.id,

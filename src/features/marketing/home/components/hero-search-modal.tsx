@@ -3,16 +3,19 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { motion, useDragControls, type PanInfo } from "motion/react";
-import { ArrowUpRight, Loader2, Search, Store, X } from "lucide-react";
+import { ArrowUpRight, Check, CircleSlash, Loader2, Search, Store, X } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Dialog, DialogClose, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { useDebounce } from "@/hooks/use-debounce";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
-import { PRIMARY_BUTTON } from "./landing-ui";
+import { stashClaimedLink } from "../lib/claimed-link";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "./landing-ui";
 
 type Store = { slug: string; displayName: string };
+/** The store link the query would make, and whether it is still free (from the search route). */
+type LinkCheck = { slug: string; available: boolean };
 type Status = "idle" | "loading" | "done" | "error";
 
 const PHONE_QUERY = "(max-width: 639px)";
@@ -58,9 +61,12 @@ function keepHandlesWhole(text: string) {
 }
 
 /**
- * The hero's store search. Focused on open, it lists the existing stores
- * matching what is typed, live (debounced, and only the latest answer is
- * kept). Nothing found: say so and offer to register the store.
+ * The hero's "claim your link" search, for owners first and diners second. As
+ * the visitor types (debounced, only the latest answer kept) it says whether
+ * epidom.fr/@<what they typed> is still free: free -> "create my store with
+ * this link" (the link is handed to the setup wizard, see claimed-link.ts);
+ * taken -> try another name. Under it, the cafés already on Epidom that match,
+ * each opening its phone-orders page.
  *
  * Desktop: a centred modal that fades and scales in under the header. Phone: a
  * drawer that rises from the bottom; its handle and title bar can be dragged
@@ -82,6 +88,7 @@ export function HeroSearchModal({
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [stores, setStores] = useState<Store[]>([]);
+  const [link, setLink] = useState<LinkCheck | null>(null);
   const query = cleanQuery(value);
   const debounced = useDebounce(query, 200);
   const searched = useRef("");
@@ -91,6 +98,7 @@ export function HeroSearchModal({
     if (!open) {
       setValue("");
       setStores([]);
+      setLink(null);
       setStatus("idle");
       searched.current = "";
     }
@@ -100,6 +108,7 @@ export function HeroSearchModal({
     if (!open) return;
     if (debounced.length < 2) {
       setStores([]);
+      setLink(null);
       setStatus("idle");
       searched.current = "";
       return;
@@ -115,6 +124,7 @@ export function HeroSearchModal({
       })
       .then((json) => {
         setStores(json?.data?.stores ?? []);
+        setLink(json?.data?.link ?? null);
         setStatus("done");
         searched.current = debounced;
         trackEvent("hero_store_search", { cta: "search" });
@@ -128,7 +138,13 @@ export function HeroSearchModal({
   // The typed text is ahead of the answer for a moment: only call it "not
   // found" once the answer is for what is on screen.
   const settled = status === "done" && searched.current === query;
-  const notFound = settled && stores.length === 0;
+  // Nothing to claim (too short to be a link) and no café found.
+  const notFound = settled && stores.length === 0 && !link;
+
+  function claim(slug: string) {
+    stashClaimedLink(slug);
+    trackEvent("hero_store_search", { cta: "claim" });
+  }
 
   function onDragEnd(_: PointerEvent, info: PanInfo) {
     if (info.offset.y > 120 || info.velocity.y > 600) onOpenChange(false);
@@ -226,6 +242,55 @@ export function HeroSearchModal({
                 aria-live="polite"
                 className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[max(1rem,env(safe-area-inset-bottom))]"
               >
+                {/* The owner's question first: is this link still free? */}
+                {link && settled ? (
+                  <div
+                    className={cn(
+                      "mx-2 mb-3 flex flex-col gap-3 rounded-2xl border p-4",
+                      link.available
+                        ? "border-epi-gold-500/40 bg-epi-gold-500/[0.08]"
+                        : "border-white/10 bg-white/[0.03]"
+                    )}
+                  >
+                    <p className="text-epi-cream-50 m-0 flex items-center gap-2 text-[15px] font-medium">
+                      {link.available ? (
+                        <Check aria-hidden="true" className="text-epi-gold-300 size-5 shrink-0" />
+                      ) : (
+                        <CircleSlash aria-hidden="true" className="size-5 shrink-0 opacity-60" />
+                      )}
+                      <span className="min-w-0 break-all">
+                        {t(
+                          link.available
+                            ? "redesign.landing.hero.linkFree"
+                            : "redesign.landing.hero.linkTaken"
+                        ).replace("{slug}", link.slug)}
+                      </span>
+                    </p>
+                    {link.available ? (
+                      <>
+                        <Link
+                          href={registerHref}
+                          onClick={() => claim(link.slug)}
+                          className={cn(
+                            PRIMARY_BUTTON,
+                            "min-h-12 w-full px-6 sm:w-auto sm:self-start"
+                          )}
+                        >
+                          {t("redesign.landing.hero.linkClaim")}
+                        </Link>
+                        <p className="text-epi-cream-50/60 m-0 text-xs">
+                          {t("redesign.landing.hero.linkNote")}
+                        </p>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {stores.length > 0 && (settled || status === "loading") ? (
+                  <p className="text-epi-cream-50/55 m-0 px-3 pt-1 pb-1 text-[11px] tracking-[0.16em] uppercase">
+                    {t("redesign.landing.hero.storesHeading")}
+                  </p>
+                ) : null}
                 {stores.length > 0 && (settled || status === "loading") ? (
                   <ul role="listbox" className="m-0 list-none p-0">
                     {stores.map((store) => (
@@ -246,7 +311,7 @@ export function HeroSearchModal({
                           <a
                             href={`/@${store.slug}`}
                             onClick={() => trackEvent("hero_store_search", { cta: "open" })}
-                            className={cn(PRIMARY_BUTTON, "min-h-10 shrink-0 px-4 text-xs")}
+                            className={cn(SECONDARY_BUTTON, "min-h-10 shrink-0 px-4 text-xs")}
                           >
                             {t("redesign.landing.hero.searchOpen")}
                             <ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0" />

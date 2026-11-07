@@ -41,23 +41,51 @@ import {
 interface CustomerDisplayPaidState {
   orderNumber: string | null;
   total: number;
+  /** Cash change handed back; null for a non-cash sale or one with none. */
+  change: number | null;
   /** Epoch ms the order settled; 0 when there's nothing to show. */
   at: number;
-  markPaid: (orderNumber: string, total: number) => void;
+  markPaid: (orderNumber: string, total: number, change?: number | null) => void;
   clearPaid: () => void;
 }
 
 export const useCustomerDisplayPaid = create<CustomerDisplayPaidState>()((set) => ({
   orderNumber: null,
   total: 0,
+  change: null,
   at: 0,
-  markPaid: (orderNumber, total) => set({ orderNumber, total, at: Date.now() }),
-  clearPaid: () => set({ orderNumber: null, total: 0, at: 0 }),
+  markPaid: (orderNumber, total, change = null) =>
+    set({ orderNumber, total, change, at: Date.now() }),
+  clearPaid: () => set({ orderNumber: null, total: 0, change: null, at: 0 }),
 }));
 
 /** Call from checkout right before clearing the cart. */
-export function markCustomerDisplayPaid(orderNumber: string, total: number): void {
-  useCustomerDisplayPaid.getState().markPaid(orderNumber, total);
+export function markCustomerDisplayPaid(
+  orderNumber: string,
+  total: number,
+  change?: number | null
+): void {
+  useCustomerDisplayPaid.getState().markPaid(orderNumber, total, change ?? null);
+}
+
+/**
+ * What the cashier is about to take payment with, when the customer display has
+ * something to show for it — today only QRIS (the store's static QRIS, full
+ * size, so nobody leans over the counter to scan the sticker). Set by the
+ * checkout dialog while it is open; not persisted.
+ */
+interface CustomerDisplayPaymentState {
+  prompt: "QRIS" | null;
+}
+
+export const useCustomerDisplayPayment = create<CustomerDisplayPaymentState>()(() => ({
+  prompt: null,
+}));
+
+export function setCustomerDisplayPaymentPrompt(prompt: "QRIS" | null): void {
+  if (useCustomerDisplayPayment.getState().prompt !== prompt) {
+    useCustomerDisplayPayment.setState({ prompt });
+  }
 }
 
 /** The cashier window saving a new customer the display submitted. */
@@ -203,6 +231,8 @@ export function useCustomerDisplayPublisher(storeId: string): void {
   const paidAt = useCustomerDisplayPaid((state) => state.at);
   const paidOrderNumber = useCustomerDisplayPaid((state) => state.orderNumber);
   const paidTotal = useCustomerDisplayPaid((state) => state.total);
+  const paidChange = useCustomerDisplayPaid((state) => state.change);
+  const paymentPrompt = useCustomerDisplayPayment((state) => state.prompt);
   const clearPaid = useCustomerDisplayPaid((state) => state.clearPaid);
 
   const previousLinesRef = useRef<CustomerDisplayLine[]>([]);
@@ -358,6 +388,7 @@ export function useCustomerDisplayPublisher(storeId: string): void {
           phase: "paid",
           total: paidTotal,
           paidOrderNumber,
+          changeDue: paidChange != null && paidChange > 0 ? paidChange : null,
           updatedAt: Date.now(),
         }
       : buildCustomerDisplayBuildingSnapshot({
@@ -373,6 +404,7 @@ export function useCustomerDisplayPublisher(storeId: string): void {
             pointsDiscountAmount,
             total,
           },
+          paymentPrompt,
           updatedAt: Date.now(),
         });
 
@@ -394,6 +426,8 @@ export function useCustomerDisplayPublisher(storeId: string): void {
     paidAt,
     paidOrderNumber,
     paidTotal,
+    paidChange,
+    paymentPrompt,
   ]);
 }
 

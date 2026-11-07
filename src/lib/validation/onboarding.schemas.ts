@@ -98,6 +98,8 @@ export type OnboardingStorefrontStepInput = z.infer<typeof onboardingStorefrontS
 
 /** Step 3 — POST /api/onboarding/complete. Saves goals, publishes the storefront, marks onboarding done. */
 export const onboardingCompleteSchema = z.object({
+  /** A partner's code typed during setup; credited after publishing (never blocks it). */
+  referralCode: z.string().trim().max(32).optional(),
   goals: z
     .array(z.enum(ONBOARDING_GOALS))
     .max(ONBOARDING_GOALS.length)
@@ -109,4 +111,9 @@ export type OnboardingCompleteInput = z.infer<typeof onboardingCompleteSchema>;
 /** GET /api/onboarding/slug-check?slug=… */
 export const slugCheckQuerySchema = z.object({
   slug: z.string().trim().min(1).max(80),
+});
+
+/** GET /api/onboarding/referral-code?code=… */
+export const referralCodeQuerySchema = z.object({
+  code: z.string().trim().min(1).max(32),
 });

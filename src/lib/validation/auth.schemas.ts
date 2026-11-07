@@ -38,7 +38,7 @@ export const updateProfileSchema = z.object({
     .or(z.literal("")),
   locale: localeSchema.optional(),
   timezone: timezoneSchema.optional(),
-  defaultLanding: z.enum(["dashboard", "pos", "storefront", "data"]).optional(),
+  defaultLanding: z.enum(["home", "analytics", "pos", "storefront", "data"]).optional(),
   rememberLastVisited: z.boolean().optional(),
   image: z
     .string()

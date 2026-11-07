@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 type Status = "NEW" | "IN_REVIEW" | "QUOTED" | "IN_PROGRESS" | "COMPLETED" | "DECLINED";
 
@@ -51,14 +52,6 @@ const STATUS_OPTIONS: Status[] = [
   "DECLINED",
 ];
 
-const statusLabels: Record<Status, string> = {
-  NEW: "New",
-  IN_REVIEW: "In Review",
-  QUOTED: "Quoted",
-  IN_PROGRESS: "In Progress",
-  COMPLETED: "Completed",
-  DECLINED: "Declined",
-};
 
 const STATUS_ORDER: Record<Status, number> = {
   NEW: 0,
@@ -93,8 +86,8 @@ const statusColors: Record<Status, { row: string; badge: string }> = {
   },
 };
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -102,6 +95,7 @@ function formatDate(iso: string) {
 }
 
 export function AdminCustomDevelopmentTable() {
+  const { t, intlLocale } = useI18n();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<Status | "ALL">("ALL");
   const [search, setSearch] = useState("");
@@ -112,7 +106,7 @@ export function AdminCustomDevelopmentTable() {
     queryKey: ["admin-custom-development"],
     queryFn: async () => {
       const res = await fetch("/api/admin/custom-development");
-      if (!res.ok) throw new Error("Failed to load requests");
+      if (!res.ok) throw new Error(t("adminPages.customDev.loadFailed"));
       return res.json();
     },
   });
@@ -126,15 +120,17 @@ export function AdminCustomDevelopmentTable() {
       }).then(async (r) => {
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          throw new Error(err.error ?? "Request failed");
+          throw new Error(err.error ?? t("adminPages.common.requestFailed"));
         }
         return r.json();
       }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-custom-development"] });
-      toast.success(variables.devNote !== undefined ? "Dev note saved" : "Status updated");
+      toast.success(
+        t(variables.devNote !== undefined ? "adminPages.customDev.toasts.noteSaved" : "adminPages.customDev.toasts.statusUpdated")
+      );
     },
-    onError: (e: Error) => toast.error(e.message || "Failed"),
+    onError: (e: Error) => toast.error(e.message || t("adminPages.common.failed")),
   });
 
   const updateStatus = (id: string, status: Status) => mutation.mutate({ id, status });
@@ -176,14 +172,14 @@ export function AdminCustomDevelopmentTable() {
     <div className="space-y-4 p-4 sm:p-6">
       <div className="flex items-center gap-2">
         <Wrench className="h-5 w-5" />
-        <h1 className="text-xl font-bold tracking-tight">Custom Development Requests</h1>
+        <h1 className="text-xl font-bold tracking-tight">{t("adminPages.customDev.title")}</h1>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search className="text-muted-foreground absolute left-2.5 top-2.5 h-4 w-4" />
           <Input
-            placeholder="Search requester, company, description..."
+            placeholder={t("adminPages.customDev.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-72 pl-8"
@@ -194,10 +190,10 @@ export function AdminCustomDevelopmentTable() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All statuses</SelectItem>
+            <SelectItem value="ALL">{t("adminPages.customDev.allStatuses")}</SelectItem>
             {STATUS_OPTIONS.map((s) => (
               <SelectItem key={s} value={s}>
-                {statusLabels[s]}
+                {t(`adminPages.customDev.statuses.${s}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -209,25 +205,25 @@ export function AdminCustomDevelopmentTable() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Date</TableHead>
-                <TableHead className="text-muted-foreground">Requester</TableHead>
-                <TableHead className="text-muted-foreground">Company</TableHead>
-                <TableHead className="text-muted-foreground">Description</TableHead>
-                <TableHead className="text-muted-foreground">Status</TableHead>
+                <TableHead className="text-muted-foreground">{t("adminPages.customDev.head.date")}</TableHead>
+                <TableHead className="text-muted-foreground">{t("adminPages.customDev.head.requester")}</TableHead>
+                <TableHead className="text-muted-foreground">{t("adminPages.customDev.head.company")}</TableHead>
+                <TableHead className="text-muted-foreground">{t("adminPages.customDev.head.description")}</TableHead>
+                <TableHead className="text-muted-foreground">{t("adminPages.customDev.head.status")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-muted-foreground py-12 text-center">
-                    Loading requests...
+                    {t("adminPages.customDev.loading")}
                   </TableCell>
                 </TableRow>
               )}
               {isError && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-destructive py-12 text-center">
-                    Failed to load requests. Refresh the page or sign in again.
+                    {t("adminPages.customDev.loadError")}
                   </TableCell>
                 </TableRow>
               )}
@@ -235,7 +231,7 @@ export function AdminCustomDevelopmentTable() {
                 <TableRow>
                   <TableCell colSpan={5} className="text-muted-foreground py-12 text-center">
                     <Inbox className="mx-auto mb-2 h-6 w-6" />
-                    No custom development requests yet.
+                    {t("adminPages.customDev.empty")}
                   </TableCell>
                 </TableRow>
               )}
@@ -246,7 +242,7 @@ export function AdminCustomDevelopmentTable() {
                   onClick={() => openDetail(row)}
                 >
                   <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                    {formatDate(row.createdAt)}
+                    {formatDate(row.createdAt, intlLocale)}
                   </TableCell>
                   <TableCell>
                     <p className="text-sm font-medium">{row.user?.name ?? row.userName}</p>
@@ -265,7 +261,7 @@ export function AdminCustomDevelopmentTable() {
                       <SelectContent>
                         {STATUS_OPTIONS.map((s) => (
                           <SelectItem key={s} value={s}>
-                            {statusLabels[s]}
+                            {t(`adminPages.customDev.statuses.${s}`)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -281,60 +277,60 @@ export function AdminCustomDevelopmentTable() {
       <Dialog open={!!detailId} onOpenChange={(open) => !open && setDetailId(null)}>
         <DialogContent className="max-h-[calc(80dvh/var(--app-zoom,1))] overflow-y-auto sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Request details</DialogTitle>
+            <DialogTitle>{t("adminPages.customDev.detail.title")}</DialogTitle>
           </DialogHeader>
           {detailRow && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-muted-foreground text-xs">Requester</p>
+                  <p className="text-muted-foreground text-xs">{t("adminPages.customDev.detail.requester")}</p>
                   <p>{detailRow.user?.name ?? detailRow.userName}</p>
                   <p className="text-muted-foreground text-xs">
                     {detailRow.user?.email ?? detailRow.userEmail}
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Status</p>
+                  <p className="text-muted-foreground text-xs">{t("adminPages.customDev.detail.status")}</p>
                   <Badge variant="outline" className={statusColors[detailRow.status].badge}>
-                    {statusLabels[detailRow.status]}
+                    {t(`adminPages.customDev.statuses.${detailRow.status}`)}
                   </Badge>
                 </div>
                 {detailRow.company && (
                   <div>
-                    <p className="text-muted-foreground text-xs">Company</p>
+                    <p className="text-muted-foreground text-xs">{t("adminPages.customDev.detail.company")}</p>
                     <p>{detailRow.company}</p>
                   </div>
                 )}
                 {detailRow.phone && (
                   <div>
-                    <p className="text-muted-foreground text-xs">Phone</p>
+                    <p className="text-muted-foreground text-xs">{t("adminPages.customDev.detail.phone")}</p>
                     <p>{detailRow.phone}</p>
                   </div>
                 )}
                 {detailRow.budget && (
                   <div>
-                    <p className="text-muted-foreground text-xs">Budget</p>
+                    <p className="text-muted-foreground text-xs">{t("adminPages.customDev.detail.budget")}</p>
                     <p>{detailRow.budget}</p>
                   </div>
                 )}
                 {detailRow.timeline && (
                   <div>
-                    <p className="text-muted-foreground text-xs">Timeline</p>
+                    <p className="text-muted-foreground text-xs">{t("adminPages.customDev.detail.timeline")}</p>
                     <p>{detailRow.timeline}</p>
                   </div>
                 )}
               </div>
               <div>
-                <p className="text-muted-foreground mb-1 text-xs">Description</p>
+                <p className="text-muted-foreground mb-1 text-xs">{t("adminPages.customDev.detail.description")}</p>
                 <p className="text-sm whitespace-pre-wrap">{detailRow.description}</p>
               </div>
               <div>
-                <p className="text-muted-foreground mb-1 text-xs">Dev note (private)</p>
+                <p className="text-muted-foreground mb-1 text-xs">{t("adminPages.customDev.detail.devNote")}</p>
                 <Textarea
                   value={devNoteDraft}
                   onChange={(e) => setDevNoteDraft(e.target.value)}
                   rows={3}
-                  placeholder="Add a private dev note..."
+                  placeholder={t("adminPages.customDev.detail.devNotePlaceholder")}
                 />
                 <button
                   type="button"
@@ -342,7 +338,7 @@ export function AdminCustomDevelopmentTable() {
                   disabled={mutation.isPending}
                   className="mt-2 rounded-md bg-violet-500/20 px-2.5 py-1 text-xs font-semibold text-violet-300 transition-colors hover:bg-violet-500/30 disabled:opacity-50"
                 >
-                  Save note
+                  {t("adminPages.customDev.detail.saveNote")}
                 </button>
               </div>
             </div>

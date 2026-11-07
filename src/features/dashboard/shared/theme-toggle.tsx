@@ -19,12 +19,16 @@ export function ThemeToggle({ tone = "topbar" }: ThemeToggleProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className="h-9 w-9" />;
+  if (!mounted) return <div className={tone === "surface" ? "size-10 shrink-0" : "h-9 w-9"} />;
   return (
     <Button
       variant="ghost"
       size="icon"
-      className={cn("h-9 w-9 shrink-0", tone === "topbar" && "hover:bg-white/10")}
+      className={cn(
+        "h-9 w-9 shrink-0",
+        tone === "topbar" && "hover:bg-white/10",
+        tone === "surface" && "text-muted-foreground hover:text-foreground size-10"
+      )}
       style={tone === "topbar" ? { color: "var(--epi-cream-50)" } : undefined}
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       aria-label="Toggle theme"
