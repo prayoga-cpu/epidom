@@ -6,9 +6,9 @@ import { MarketFlag } from "@/components/market-flag";
 import { PlaceholderCta } from "@/features/marketing/shared/components/placeholder-page";
 import { trackConversion } from "@/lib/analytics";
 import {
-  SUPPORT_EMAIL_DISPLAY,
+  CONTACT_EMAIL_DISPLAY,
   getWhatsAppOptions,
-  supportMailto,
+  contactMailto,
   whatsappHref,
 } from "@/lib/constants/contact";
 import { cn } from "@/lib/utils";
@@ -137,7 +137,7 @@ export function SupplierApplication() {
           </PlaceholderCta>
         ))}
         <PlaceholderCta
-          href={supportMailto(t("partners.supplier.emailSubject"))}
+          href={contactMailto(t("partners.supplier.emailSubject"))}
           variant="secondary"
           onClick={() => trackConversion("contact_email", { event_label: "partners_supplier" })}
         >
@@ -146,7 +146,7 @@ export function SupplierApplication() {
       </div>
 
       <p className="mt-4 text-[13px] leading-relaxed text-[rgba(251,249,228,0.5)]">
-        {t("partners.emailFallback").replace("{emails}", SUPPORT_EMAIL_DISPLAY)}
+        {t("partners.emailFallback").replace("{emails}", CONTACT_EMAIL_DISPLAY)}
       </p>
     </section>
   );

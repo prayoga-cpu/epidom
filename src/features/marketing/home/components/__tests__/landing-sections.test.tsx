@@ -654,60 +654,44 @@ describe("PricingSection", () => {
 });
 
 describe("ThreeSpacesSection", () => {
-  it("fills in the live storefront link when the streamed slug arrives, and shows none for null", async () => {
-    // act() lets React settle the Suspense boundary once the promise resolves.
-    let view!: ReturnType<typeof render>;
-    await act(async () => {
-      view = render(
-        <ThreeSpacesSection exampleStorefrontSlug={Promise.resolve("le-petit-four")} />
-      );
-    });
-    expect(screen.getByRole("link", { name: /vraie vitrine/ })).toHaveAttribute(
-      "href",
-      "/@le-petit-four"
-    );
-    view.unmount();
-
-    await act(async () => {
-      render(<ThreeSpacesSection exampleStorefrontSlug={Promise.resolve(null)} />);
-    });
-    expect(
-      screen.getByText(text("fr", onlinePaymentCopyKey("redesign.landing.spaces.storefrontBody")))
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /vraie vitrine/ })).toBeNull();
+  it("opens a no-login demo for each card in a new tab: the café's page, the till, the dashboard", () => {
+    render(<ThreeSpacesSection exampleStorefrontSlug="le-petit-four" />);
+    const demos = screen.getAllByRole("link", { name: /démo en direct/ });
+    expect(demos.map((a) => a.getAttribute("href"))).toEqual([
+      "/demo/phone-orders",
+      "/demo/pos",
+      "/demo/dashboard",
+    ]);
+    for (const a of demos) {
+      expect(a).toHaveAttribute("target", "_blank");
+      expect(a.getAttribute("rel")).toContain("noopener");
+    }
+    // Step 1 says there is no login; steps 2 and 3 just offer the demo.
+    expect(demos.map((a) => a.textContent)).toEqual([
+      "Sans connexion, démo en direct →",
+      "Ouvrir la démo en direct →",
+      "Ouvrir la démo en direct →",
+    ]);
+    expect(analytics.trackEvent).not.toHaveBeenCalledWith("demo_open", expect.anything());
+    fireEvent.click(demos[1]);
+    expect(analytics.trackEvent).toHaveBeenCalledWith("demo_open", { target: "pos" });
   });
 
-  it("badges each space with the plan it needs, and links a real storefront when there is one", () => {
-    render(<ThreeSpacesSection exampleStorefrontSlug="le-petit-four" />);
+  it("badges each space with the plan it needs", () => {
+    render(<ThreeSpacesSection exampleStorefrontSlug={null} />);
     for (const badge of ["Free", "POS", "Opérations"]) {
       expect(screen.getByText(badge)).toBeInTheDocument();
     }
-    expect(screen.getByRole("link", { name: /vraie vitrine/ })).toHaveAttribute(
-      "href",
-      "/@le-petit-four"
-    );
-    expect(screen.getByRole("link", { name: "Voir comment ça marche" })).toHaveAttribute(
-      "href",
-      "/products"
-    );
+    expect(
+      screen.getByText(text("fr", "redesign.landing.spaces.storefrontShort"))
+    ).toBeInTheDocument();
   });
 
-  it("holds the live storefront link's place while its slug streams in, so the calculator below never moves", () => {
-    render(<ThreeSpacesSection exampleStorefrontSlug={new Promise<string | null>(() => {})} />);
-    expect(screen.queryByRole("link", { name: /vraie vitrine/ })).toBeNull();
-    expect(screen.getByTestId("live-example-slot")).toHaveClass("min-h-11");
-  });
-
-  it("shows a real screenshot in each card, described in the visitor's language", () => {
+  it("draws each card's picture in code (decorative, hidden from screen readers), not a screenshot", () => {
     mockLocale.value = "en";
-    render(<ThreeSpacesSection exampleStorefrontSlug={null} />);
-    for (const shot of [
-      PRODUCT_SCREENS.storefrontMenu,
-      PRODUCT_SCREENS.posOrderQueue,
-      PRODUCT_SCREENS.backOfficeStock,
-    ]) {
-      expect(screen.getByRole("img", { name: shot.alt.en })).toBeInTheDocument();
-    }
+    const { container } = render(<ThreeSpacesSection exampleStorefrontSlug={null} />);
+    expect(screen.queryAllByRole("img")).toHaveLength(0);
+    expect(container.querySelectorAll("ol > li > [aria-hidden='true']")).toHaveLength(3);
   });
 });
 
@@ -774,7 +758,7 @@ describe("PosTourSection", () => {
   it("desktop: pinned and scroll-driven, no timer; picking a feature scrolls to it", () => {
     mockLocale.value = "en";
     vi.stubGlobal("matchMedia", (query: string) => ({
-      matches: query.includes("min-height: 780px"),
+      matches: query.includes("min-height: 640px"),
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
@@ -895,14 +879,17 @@ describe("ThreeSpacesSection: one order in three steps", () => {
       expect(steps).toHaveLength(3);
       steps.forEach((step, i) => {
         expect(step).toHaveTextContent(
-          text(loc, "redesign.landing.spaces.stepLabel").replace("{n}", String(i + 1))
+          text(loc, "redesign.landing.spaces.stepLabel").replace(
+            "{n}",
+            String(i + 1).padStart(2, "0")
+          )
         );
       });
-      expect(steps[1]).toHaveTextContent(text(loc, "redesign.landing.spaces.posStep"));
+      expect(steps[1]).toHaveTextContent(text(loc, "redesign.landing.spaces.posShort"));
     }
   );
 
-  it("says 'ask Claude' in plain words and links to the connector page in the visitor's language", () => {
+  it("ends on 'All running · Connect Claude MCP', linking to the connector page in the visitor's language", () => {
     for (const [loc, href] of [
       ["en", "/en/claude-connector-pos"],
       ["fr", "/connecteur-claude-caisse"],
@@ -910,9 +897,11 @@ describe("ThreeSpacesSection: one order in three steps", () => {
     ] as const) {
       mockLocale.value = loc;
       const { container, unmount } = render(<ThreeSpacesSection exampleStorefrontSlug={null} />);
-      expect(container.textContent).not.toMatch(/MCP/);
+      expect(container.textContent).toContain(text(loc, "redesign.landing.spaces.allRunning"));
       expect(
-        screen.getByRole("link", { name: new RegExp(text(loc, "redesign.landing.spaces.claude")) })
+        screen.getByRole("link", {
+          name: new RegExp(text(loc, "redesign.landing.spaces.connectClaude")),
+        })
       ).toHaveAttribute("href", href);
       unmount();
     }

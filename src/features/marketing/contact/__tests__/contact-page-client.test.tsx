@@ -6,6 +6,8 @@ import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
 import {
+  CONTACT_EMAIL_DISPLAY,
+  CONTACT_MAILTO,
   SUPPORT_EMAIL_DISPLAY,
   SUPPORT_MAILTO,
   WHATSAPP_NUMBERS,
@@ -245,9 +247,13 @@ describe("ContactPageClient: secondary channels", () => {
     const { container } = renderPage("fr");
     const mailLinks = container.querySelectorAll<HTMLAnchorElement>('a[href^="mailto:"]');
 
-    expect(mailLinks).toHaveLength(1);
-    expect(mailLinks[0].getAttribute("href")).toBe(SUPPORT_MAILTO);
+    // Two inboxes, two jobs: support for customers, contact for partners, press and careers.
+    expect([...mailLinks].map((a) => a.getAttribute("href"))).toEqual([
+      SUPPORT_MAILTO,
+      CONTACT_MAILTO,
+    ]);
     expect(mailLinks[0]).toHaveTextContent(SUPPORT_EMAIL_DISPLAY);
+    expect(mailLinks[1]).toHaveTextContent(CONTACT_EMAIL_DISPLAY);
   });
 
   it("does not hardcode a support address in the component", () => {
@@ -271,12 +277,12 @@ describe("ContactPageClient: secondary channels", () => {
 
   it("keeps email, WhatsApp and docs, with one WhatsApp card per number", () => {
     const fr = renderPage("fr");
-    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(4);
     fr.unmount();
 
     renderPage("en");
-    // email + France + Indonesia + docs
-    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(4);
+    // support + contact + France + Indonesia + docs
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(5);
   });
 
   it("gives identical WhatsApp cards a distinguishing accessible name on en", () => {

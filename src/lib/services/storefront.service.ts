@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { DEMO_SLUG } from "@/lib/demo/demo-constants";
 import type {
   UpdateStorefrontInput,
   UpdateGoogleReviewInput,
@@ -191,7 +192,12 @@ export class StorefrontService {
    */
   async getPublishedSlugsForSitemap() {
     const storefronts = await prisma.storefront.findMany({
-      where: { isPublished: true, store: { business: { user: { deactivatedAt: null } } } },
+      // Not the public demo café (src/lib/demo/): sample data, not a page to index.
+      where: {
+        isPublished: true,
+        slug: { not: DEMO_SLUG },
+        store: { business: { user: { deactivatedAt: null } } },
+      },
       select: {
         slug: true,
         displayName: true,

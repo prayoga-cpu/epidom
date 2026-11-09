@@ -21,16 +21,16 @@ describe("reverseGeocode User-Agent", () => {
     vi.unstubAllGlobals();
   });
 
-  it("names the shared support inbox as the contact, the one that really receives mail", async () => {
+  it("names the support inbox as the contact", async () => {
     const headers = await sentHeaders();
 
     expect(headers["User-Agent"]).toContain(`contact: ${SUPPORT_EMAIL_PRIMARY})`);
   });
 
-  it("no longer names support@epidom.fr, a mailbox that does not exist", async () => {
+  it("names no Prionation address: that studio inbox is for new-development clients only", async () => {
     const headers = await sentHeaders();
 
-    expect(headers["User-Agent"]).not.toContain("epidom.fr");
+    expect(headers["User-Agent"]).not.toContain("prionation.io");
   });
 
   it("still identifies the app and the purpose, as Nominatim's usage policy asks", async () => {

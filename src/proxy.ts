@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { setRequestId } from "./lib/request-context";
 import { sessionCookieNames } from "./lib/auth/cookies";
+import { DEMO_READ_ONLY, DEMO_TOKEN_PREFIX, DEMO_WRITE_ALLOWLIST } from "./lib/demo/demo-constants";
 import {
   DEFAULT_LOCALE,
   LOCALES,
@@ -253,8 +254,65 @@ export default async function proxy(req: NextRequest) {
   return response;
 }
 
+/**
+ * The public demo account is read-only. A demo session is recognisable by its
+ * token prefix (the cookie IS the session, so a visitor cannot drop it and keep
+ * the account), and every write it attempts (an API call, or a server action,
+ * which posts to a page) is refused here before any handler runs.
+ */
+function hasDemoSession(req: NextRequest): boolean {
+  const [plain, secure] = sessionCookieNames(process.env.VERCEL_ENV);
+  const raw = req.cookies.get(plain)?.value ?? req.cookies.get(secure)?.value;
+  if (!raw) return false;
+  let token = raw;
+  try {
+    token = decodeURIComponent(raw);
+  } catch {
+    // Keep the raw value: it just will not match.
+  }
+  return token.startsWith(DEMO_TOKEN_PREFIX);
+}
+
+function isDemoWrite(req: NextRequest, path: string): boolean {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return false;
+  if (!path.startsWith("/api/") && !req.headers.has("next-action")) return false;
+  if (DEMO_WRITE_ALLOWLIST.includes(path)) return false;
+  return hasDemoSession(req);
+}
+
+/** Where a demo session lives: the demo café's till and dashboard, its storefront, receipts, and the API. */
+const DEMO_SCOPE = ["/store/", "/@", "/api/", "/demo", "/go/", "/r/"];
+
+/**
+ * A demo session that navigates anywhere else (register, login, the store list,
+ * the website) is over: the cookie is dropped and the same URL is served signed
+ * out, so "Start free" or a typed /register shows the real sign-up, never the
+ * demo account. Prefetches are skipped: the app warms links from inside the
+ * demo, and a warm-up must not end the visit.
+ */
+function leavesDemo(req: NextRequest, path: string): boolean {
+  if (req.method !== "GET" || req.headers.get(RSC_PREFETCH_HEADER) === "1") return false;
+  if (DEMO_SCOPE.some((prefix) => path === prefix.replace(/\/$/, "") || path.startsWith(prefix))) {
+    return false;
+  }
+  return hasDemoSession(req);
+}
+
 async function routeRequest(req: NextRequest): Promise<NextResponse> {
   const path = req.nextUrl.pathname;
+
+  if (isDemoWrite(req, path)) {
+    return NextResponse.json({ error: DEMO_READ_ONLY.message, ...DEMO_READ_ONLY }, { status: 403 });
+  }
+
+  if (leavesDemo(req, path)) {
+    const out = NextResponse.redirect(req.nextUrl, 307);
+    for (const name of sessionCookieNames(process.env.VERCEL_ENV)) {
+      out.cookies.set(name, "", { path: "/", maxAge: 0 });
+    }
+    out.headers.set("Cache-Control", "no-store");
+    return out;
+  }
 
   // Generate unique request ID for logging and tracing
   const requestId = crypto.randomUUID();
@@ -396,6 +454,7 @@ async function routeRequest(req: NextRequest): Promise<NextResponse> {
     "/products",
     "/pricing",
     "/contact",
+    "/demo", // the no-login demo's entry (src/app/demo/[target]/route.ts)
     "/about",
     "/partners",
     "/careers",
@@ -583,5 +642,28 @@ export const config = {
      * - public files (images, etc.)
      */
     "/((?!api|_next/static|_next/image|favicon.ico|sw.js|offline.html|manifest.webmanifest|sitemap.xml|robots.txt|llms.txt|\\.well-known|sales-pages/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|txt|xml)$).*)",
+    /*
+     * API calls are skipped above, EXCEPT those carrying a public-demo session
+     * (its token starts with "demo_", see src/lib/demo/): those come through
+     * so isDemoWrite() can refuse every write. One entry per cookie name the
+     * session can have (plain / __Secure-, production / preview prefix);
+     * matcher entries must be literals, so they cannot be generated.
+     */
+    {
+      source: "/api/:path*",
+      has: [{ type: "cookie", key: "better-auth.session_token", value: "demo_.*" }],
+    },
+    {
+      source: "/api/:path*",
+      has: [{ type: "cookie", key: "__Secure-better-auth.session_token", value: "demo_.*" }],
+    },
+    {
+      source: "/api/:path*",
+      has: [{ type: "cookie", key: "epidom-preview.session_token", value: "demo_.*" }],
+    },
+    {
+      source: "/api/:path*",
+      has: [{ type: "cookie", key: "__Secure-epidom-preview.session_token", value: "demo_.*" }],
+    },
   ],
 };

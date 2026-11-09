@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render } from "@testing-library/react";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { EagerI18nProvider } from "@/components/lang/i18n-provider-eager";
-import { SUPPORT_EMAIL_DISPLAY, supportMailto } from "@/lib/constants/contact";
+import { CONTACT_EMAIL_DISPLAY, contactMailto } from "@/lib/constants/contact";
 import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
@@ -41,7 +41,7 @@ describe("CareersClient", () => {
       const links = mailtoLinks(container);
       expect(links).toHaveLength(1);
       expect(links[0].textContent).toBe(dict.cta);
-      expect(links[0].getAttribute("href")).toBe(supportMailto(dict.emailSubject));
+      expect(links[0].getAttribute("href")).toBe(contactMailto(dict.emailSubject));
 
       const text = container.textContent ?? "";
       expect(text).toContain(dict.how.team);
@@ -53,7 +53,7 @@ describe("CareersClient", () => {
   it("still shows the addresses as plain text, taken from the shared constant", () => {
     const { container } = renderPage("fr");
     expect(container.textContent).toContain(
-      fr.careers.apply.send.replace("{emails}", SUPPORT_EMAIL_DISPLAY)
+      fr.careers.apply.send.replace("{emails}", CONTACT_EMAIL_DISPLAY)
     );
     expect(container.textContent).not.toContain("{emails}");
   });

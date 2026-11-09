@@ -145,6 +145,22 @@ const nextConfig: NextConfig = {
       ],
     },
     {
+      // The public demo (src/app/demo/view) shows the till, the dashboard and
+      // the café's page inside a frame of its own: so the SITE may frame these
+      // paths. Still no other origin (SAMEORIGIN), so clickjacking from another
+      // site stays impossible. Listed after the rule above so it wins.
+      source: "/store/:path*",
+      headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+    },
+    {
+      source: "/@:slug",
+      headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+    },
+    {
+      source: "/@:slug/:path*",
+      headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+    },
+    {
       // Stricter CSP for API routes
       source: "/api/:path*",
       headers: [

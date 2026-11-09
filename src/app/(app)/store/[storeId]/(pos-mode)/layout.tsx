@@ -1,4 +1,5 @@
 import type React from "react";
+import { isDemoSession } from "@/lib/demo/is-demo-session";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
@@ -71,9 +72,7 @@ export default async function PosModeLayout({
   if (access.accessType === "staff") {
     const persona = await getActiveStaffSession();
     personaReady =
-      !!persona &&
-      persona.storeId === storeId &&
-      persona.staffMemberId === access.staffMemberId;
+      !!persona && persona.storeId === storeId && persona.staffMemberId === access.staffMemberId;
   }
 
   // Same bypass rule (dashboard)/layout.tsx and the old pos/page.tsx each
@@ -81,9 +80,14 @@ export default async function PosModeLayout({
   // store with the feature but zero staff added yet has nobody but the owner
   // to pick from either way. Shared by both gates below. Never for a linked
   // staff account: its picker is the PIN step, not a convenience.
+  const demo = await isDemoSession();
   const bypassGate =
     !isLinkedStaff &&
-    (subscription?.plan === "FREE" || subscription?.plan === "POS" || staffCount === 0);
+    (subscription?.plan === "FREE" ||
+      subscription?.plan === "POS" ||
+      staffCount === 0 ||
+      // The public demo has no PIN to enter (src/lib/demo/).
+      demo);
 
   return (
     <div className={`font-sans ${GeistSans.variable} ${geistMono.variable}`}>

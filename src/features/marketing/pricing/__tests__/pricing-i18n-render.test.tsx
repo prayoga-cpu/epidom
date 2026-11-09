@@ -257,7 +257,7 @@ describe("FAQ sections", () => {
     state.locale = "en";
     render(<FaqSection items={sampleItems()} />);
     // One link, every address on its own line, read as "a, b, c".
-    const mail = screen.getByRole("link", { name: (name) => name.includes("prionation.io") });
+    const mail = screen.getByRole("link", { name: (name) => name.includes("epidom.fr") });
     expect(mail.getAttribute("href")).toBe(SUPPORT_MAILTO);
     expect(mail.textContent).toBe(SUPPORT_EMAIL_DISPLAY);
   });

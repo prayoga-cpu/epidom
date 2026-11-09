@@ -8,6 +8,7 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
+- **Phone Orders link in the POS menu.** Under the Customer display row, a **Phone Orders** row opens your public ordering page in a new tab (with the open-in-new-tab icon, and no switch). It shows once the page is published.
 
 ## [3.46.0] - 2026-11-07 · feat
 
@@ -18,6 +19,7 @@ Bump the version in `package.json` and `src/lib/version.ts` with every release.
 - **QRIS on the customer's screen.** Upload your QRIS once. While the cashier has QRIS selected at checkout for the whole bill, the customer display shows it large with the amount, so nobody leans over the counter to scan the sticker.
 - **A clearer home page.** It now says what Epidom is up front ("Online ordering + POS for cafés"), shows the 14-day POS trial and "no card needed" right away (and on a bar that follows you on phones), and lets you check whether the link you want, epidom.fr/@your-cafe, is still free before you sign up.
 - The home page tells one order's journey in three steps (from the customer's phone, to your till and kitchen, to your stock and profit) in place of the connection diagram, and the till tour is down to its four main features.
+- **Try Epidom with no login.** Each of the three cards on the home page opens a live demo in a new tab: the Phone Orders page of a sample café (epidom.fr/@your-cafe), its till, and its Store Dashboard, filled with a month of sample orders, stock, staff and customers. It is read-only, so nothing you tap can change it.
 - The site's header button now reads "Try free on macOS" (or your own device).
 
 ## [3.45.0] - 2026-11-06 · feat

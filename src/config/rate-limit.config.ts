@@ -416,6 +416,7 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
   },
 
   // Homepage "find your store" search (unauthenticated, IP-based; typed live, debounced)
+  "/demo": { limit: 20, window: 60 },
   "/api/public/storefront-search": {
     limit: 120,
     window: 60, // 120 searches per minute

@@ -7,7 +7,7 @@ import {
   PlaceholderSection,
 } from "@/features/marketing/shared/components/placeholder-page";
 import { trackConversion } from "@/lib/analytics";
-import { SUPPORT_EMAIL_DISPLAY, supportMailto } from "@/lib/constants/contact";
+import { CONTACT_EMAIL_DISPLAY, contactMailto } from "@/lib/constants/contact";
 
 export function CareersClient() {
   const { t } = useI18n();
@@ -19,7 +19,7 @@ export function CareersClient() {
       body={t("careers.body")}
       actions={
         <PlaceholderCta
-          href={supportMailto(t("careers.emailSubject"))}
+          href={contactMailto(t("careers.emailSubject"))}
           onClick={() => trackConversion("contact_email", { event_label: "careers" })}
         >
           {t("careers.cta")}
@@ -32,7 +32,7 @@ export function CareersClient() {
       />
       <PlaceholderSection
         title={t("careers.apply.title")}
-        items={[t("careers.apply.send").replace("{emails}", SUPPORT_EMAIL_DISPLAY)]}
+        items={[t("careers.apply.send").replace("{emails}", CONTACT_EMAIL_DISPLAY)]}
       />
     </PlaceholderPage>
   );

@@ -22,6 +22,7 @@ import { getFinanceSettings } from "@/lib/services";
 import { computeOrderCharges } from "@/lib/finance/order-charges";
 import { STOREFRONT_ONLINE_PAYMENTS_ENABLED } from "@/config/storefront-ordering.config";
 import { sendPushToStore } from "@/lib/push/send";
+import { DEMO_READ_ONLY, DEMO_SLUG } from "@/lib/demo/demo-constants";
 import { storefrontOrderPushPayload } from "@/lib/push/order-alert";
 
 function generateOrderNumber(): string {
@@ -79,6 +80,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         createErrorResponse(ApiErrorCode.NOT_FOUND, "Storefront not found or not accepting orders"),
         { status: 404 }
+      );
+    }
+
+    // The public demo café (epidom.fr/@your-cafe) shows the whole checkout but
+    // takes no real order: anonymous visitors must not write into a shared demo.
+    if (storefront.slug === DEMO_SLUG) {
+      return NextResponse.json(
+        createErrorResponse(ApiErrorCode.FORBIDDEN, DEMO_READ_ONLY.message),
+        { status: 403 }
       );
     }
 

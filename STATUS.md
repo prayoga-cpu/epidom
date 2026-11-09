@@ -24,6 +24,18 @@
 - [ ] Browser pass: phone (drawer, Home search, full-screen search), iPad landscape (sidebar minimized by default on first visit), desktop (collapse, drag, More popover), admin pages in FR/ID.
 - [ ] The `User.defaultLanding` column default is still `"dashboard"` (read as Home). Changing it needs a migration; not required.
 
+## Public demo (built 2026-11-07, **not committed**)
+
+Shared, read-only demo café "Your Café" (`epidom.fr/@your-cafe`) behind the home page's "No login, live demo" links (new tab). Code: `src/lib/demo/` (seed, session, constants), `src/app/demo/[target]/route.ts`, guard in `src/proxy.ts`.
+
+- [x] `/demo/phone-orders` -> the public storefront; `/demo/pos` and `/demo/dashboard` start a password-less session on the demo user (token prefix `demo_`, 3 h) and skip the staff PIN picker (`bypassGate`).
+- [x] Seeded on first visit and re-dated when the newest order is >10 h old (`ensureDemoCafe`): 12 menu items, 10 materials (2 low), 4 suppliers, 12 customers, 4 staff, 6 tables, 30 days of orders, shifts, OPERATIONS plan, tour dismissed. Currency EUR for every language.
+- [x] Read-only: every non-GET from a demo session is 403 (`DEMO_READ_ONLY`), API (cookie-filtered matcher) and server actions; allowlist = sign-out, tracking events, `/api/pusher/auth`. Public orders to `your-cafe` are refused. Excluded from the sitemap. Tests: `proxy-demo-readonly.test.ts`.
+- [ ] **Decide before main**: the demo user is a real row in production. It has an ACTIVE OPERATIONS plan (no Stripe), so check it is excluded from revenue/paying-customer counts, the newsletter audiences (its address `demo.your-cafe@epidom.fr` has no mailbox) and the admin users list; and decide whether `@your-cafe` should appear in the hero's store search.
+- [ ] **Decide**: a visitor already signed in is sent to their store list instead of the demo (switching would sign them out). A demo subdomain would fix that.
+- [ ] Not built: a per-visitor private copy; resetting a prankster's changes is moot (nothing can be written).
+- [ ] Not verified: production (cookie domain/`__Secure-` names), Safari, the Finance and Orders pages after first compile.
+
 ## Home page review fixes (built 2026-11-07, **not committed**: the tree also holds another session's onboarding/navigation work)
 
 From the 2026-11-06 review (proof first, trial visible, plain words, shorter page).

@@ -41,9 +41,9 @@ const FEATURES: readonly {
  * Where the section pins and scrolling drives it. MUST match the media query
  * of .epi-pin-section / .epi-pin-sticky in globals.css (the layout is CSS, so
  * it is right before the page is interactive; this only picks the behaviour).
- * Short screens are left out: the features and their heading need ~760px.
+ * Short screens are left out: the features and their heading need ~640px.
  */
-const PIN_QUERY = "(min-width: 1024px) and (min-height: 780px)";
+const PIN_QUERY = "(min-width: 1024px) and (min-height: 640px)";
 
 /** Unpinned (phones, short screens): how long a feature stays open before the next opens. */
 const AUTO_MS = 8000;

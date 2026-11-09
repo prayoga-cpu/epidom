@@ -54,6 +54,11 @@ vi.mock("@/lib/auth-client", () => ({
 vi.mock("@/features/dashboard/shared/hooks/use-current-store", () => ({
   useCurrentStore: () => ({ store: { name: "Tahoma Space" } }),
 }));
+// The public Phone Orders path: null = not published / unreadable (no row).
+const storefrontLink = vi.hoisted(() => ({ current: null as string | null }));
+vi.mock("@/features/storefront/hooks/use-storefront-link", () => ({
+  useStorefrontLink: () => storefrontLink.current,
+}));
 const mockSync = vi.fn(() => ({
   isOnline: true,
   isSyncing: false,
@@ -689,5 +694,32 @@ describe("PosModeOverflowMenu — the drawer", () => {
     });
     renderMenu();
     expect(screen.getByRole("status")).toHaveTextContent("pages.posOfflineMessageNoPending");
+  });
+});
+
+describe("PosModeOverflowMenu — Phone Orders link", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    storefrontLink.current = null;
+    mockSwitcher.mockReturnValue(baseSwitcher());
+  });
+
+  it("opens the public page in a new tab, right under the customer display row", () => {
+    storefrontLink.current = "/@tahoma";
+    renderMenu();
+    const link = screen.getByRole("link", { name: "nav.storefront" });
+    expect(link).toHaveAttribute("href", "/@tahoma");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+    // No switch of its own: it is a shortcut, not a setting.
+    expect(link.querySelector('[role="switch"]')).toBeNull();
+    const toggle = screen.getByRole("switch", { name: "pos.customerDisplay.enable" });
+    expect(toggle.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shows no row while there is no published page to open", () => {
+    storefrontLink.current = null;
+    renderMenu();
+    expect(screen.queryByRole("link", { name: "nav.storefront" })).toBeNull();
   });
 });

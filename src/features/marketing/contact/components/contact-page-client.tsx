@@ -6,6 +6,8 @@ import { useI18n } from "@/components/lang/i18n-provider";
 import { MarketFlag, marketName } from "@/components/market-flag";
 import { trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 import {
+  CONTACT_EMAIL_DISPLAY,
+  CONTACT_MAILTO,
   SUPPORT_EMAIL_DISPLAY,
   SUPPORT_MAILTO,
   getWhatsAppOptions,
@@ -63,6 +65,13 @@ export function ContactPageClient() {
       body: t("contact.page.channel1body"),
       cta: SUPPORT_EMAIL_DISPLAY,
       href: SUPPORT_MAILTO,
+    },
+    {
+      key: "contact-email",
+      title: t("contact.page.channel4title"),
+      body: t("contact.page.channel4body"),
+      cta: CONTACT_EMAIL_DISPLAY,
+      href: CONTACT_MAILTO,
     },
     ...waOptions.map((opt, i) => ({
       key: `whatsapp-${opt.number}`,

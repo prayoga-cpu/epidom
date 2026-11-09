@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   CircleHelp,
   Monitor,
+  Smartphone,
   MonitorSmartphone,
   ClipboardList,
   ExternalLink,
@@ -34,6 +35,7 @@ import { useUser } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useCustomerDisplaySettings } from "@/features/pos/hooks/use-customer-display-settings";
 import { openCustomerDisplay } from "@/features/pos/lib/open-customer-display";
+import { useStorefrontLink } from "@/features/storefront/hooks/use-storefront-link";
 import { HardwareSettingsDialog } from "@/features/pos/components/hardware-settings-dialog";
 import { OfflineQueueDialog } from "@/features/pos/components/offline-queue-review";
 import { FeedbackDialog } from "@/features/dashboard/feedback/components/feedback-dialog";
@@ -70,6 +72,8 @@ interface MenuRowProps {
   href?: string;
   onClick?: () => void;
   disabled?: boolean;
+  /** `href` is a page outside this app shell (the public storefront): opens in a new tab, with the open-in-new-tab icon instead of the chevron. */
+  external?: boolean;
   /** The page this row links to is the one on screen. */
   active?: boolean;
   tone?: "default" | "destructive";
@@ -86,6 +90,7 @@ function MenuRow({
   href,
   onClick,
   disabled = false,
+  external = false,
   active = false,
   tone = "default",
 }: MenuRowProps) {
@@ -110,12 +115,29 @@ function MenuRow({
         <Icon className="size-4" />
       </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {tone !== "destructive" && (
-        <ChevronRight className="text-muted-foreground size-4 shrink-0" aria-hidden />
+      {external ? (
+        <ExternalLink className="text-muted-foreground size-4 shrink-0" aria-hidden />
+      ) : (
+        tone !== "destructive" && (
+          <ChevronRight className="text-muted-foreground size-4 shrink-0" aria-hidden />
+        )
       )}
     </>
   );
 
+  if (href && external) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClick}
+        className={className}
+      >
+        {content}
+      </a>
+    );
+  }
   if (href) {
     return (
       <Link
@@ -234,6 +256,7 @@ export function PosModeOverflowMenu({
   const pathname = usePathname();
   const { user } = useUser();
   const { store } = useCurrentStore();
+  const phoneOrdersHref = useStorefrontLink(storeId);
   const {
     isOnline,
     isSyncing,
@@ -557,6 +580,16 @@ export function PosModeOverflowMenu({
                   />
                 </label>
               </div>
+              {/* The public Phone Orders page (the link customers order from),
+                  one tap to open it in a new tab; no switch: it is not a setting. */}
+              {phoneOrdersHref && (
+                <MenuRow
+                  icon={Smartphone}
+                  label={t("nav.storefront")}
+                  href={phoneOrdersHref}
+                  external
+                />
+              )}
               {/* Its banners and look are the owner's to edit (an owner-only
                   Store Dashboard page), so only the owner is offered the way there. */}
               {profileRole === "OWNER" && !linkedStaff && (

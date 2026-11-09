@@ -7,7 +7,7 @@ import {
   PlaceholderSection,
 } from "@/features/marketing/shared/components/placeholder-page";
 import { trackConversion } from "@/lib/analytics";
-import { SUPPORT_EMAIL_DISPLAY, supportMailto } from "@/lib/constants/contact";
+import { CONTACT_EMAIL_DISPLAY, contactMailto } from "@/lib/constants/contact";
 
 export function PressClient() {
   const { t } = useI18n();
@@ -19,7 +19,7 @@ export function PressClient() {
       body={t("press.body")}
       actions={
         <PlaceholderCta
-          href={supportMailto(t("press.emailSubject"))}
+          href={contactMailto(t("press.emailSubject"))}
           onClick={() => trackConversion("contact_email", { event_label: "press" })}
         >
           {t("press.cta")}
@@ -45,7 +45,7 @@ export function PressClient() {
       />
       <PlaceholderSection
         title={t("press.contact.title")}
-        items={[t("press.contact.reach").replace("{emails}", SUPPORT_EMAIL_DISPLAY)]}
+        items={[t("press.contact.reach").replace("{emails}", CONTACT_EMAIL_DISPLAY)]}
       />
     </PlaceholderPage>
   );

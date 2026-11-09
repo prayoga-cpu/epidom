@@ -85,6 +85,32 @@ input[type="button"],
 }
 
 /* ========================================
+   POINTER CURSOR ON EVERYTHING CLICKABLE
+   ========================================
+   Tailwind v4's preflight no longer gives <button> a pointer cursor, so a
+   button without an explicit `cursor-pointer` class showed the arrow. This
+   restores it for every button and button-like control, across the whole app.
+   Inside @layer base, so a utility (`cursor-default`, `cursor-not-allowed`,
+   `cursor-grab`...) on a specific element still wins; disabled controls keep
+   the default cursor. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  label[for] {
+    cursor: pointer;
+  }
+}
+
+/* ========================================
    ON-SCREEN KEYPADS — typing feedback
    ========================================
    Shared by every custom keypad and keyboard (PIN pads, the customer
@@ -921,12 +947,12 @@ html[data-app-zoomed] [data-radix-popper-content-wrapper] > * {
    As lovable.dev's "For building and beyond": on a desktop screen tall enough
    for the content, the section is several screens tall and its content sticks
    to the screen while the page's scroll walks through its steps (--pin-steps,
-   55% of a screen each). The query MUST match PIN_QUERY in pos-tour-section.tsx.
+   130% of a screen each, so no step can be flicked past). The query MUST match PIN_QUERY in pos-tour-section.tsx.
    Heights divide by --app-zoom like every viewport unit here. */
-@media (min-width: 1024px) and (min-height: 780px) {
+@media (min-width: 1024px) and (min-height: 640px) {
   .epi-pin-section {
     padding: 0;
-    height: calc((100svh + var(--pin-steps, 4) * 40svh) / var(--app-zoom, 1));
+    height: calc((100svh + var(--pin-steps, 4) * 130svh) / var(--app-zoom, 1));
   }
   .epi-pin-sticky {
     position: sticky;

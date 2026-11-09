@@ -4,10 +4,10 @@ import type { ReactElement } from "react";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { EagerI18nProvider } from "@/components/lang/i18n-provider-eager";
 import {
-  SUPPORT_EMAIL_ADDRESSES,
-  SUPPORT_EMAIL_DISPLAY,
+  CONTACT_EMAIL_ADDRESSES,
+  CONTACT_EMAIL_DISPLAY,
   WHATSAPP_NUMBERS,
-  supportMailto,
+  contactMailto,
   whatsappHref,
 } from "@/lib/constants/contact";
 import { en } from "@/locales/en";
@@ -118,11 +118,11 @@ describe("PartnersClient — supplier application path", () => {
       const hrefs = mailtoLinks(container).map((a) => a.getAttribute("href"));
 
       expect(hrefs).toEqual([
-        supportMailto(dict.supplier.emailSubject),
-        supportMailto(dict.types.emailSubject),
+        contactMailto(dict.supplier.emailSubject),
+        contactMailto(dict.types.emailSubject),
       ]);
       for (const href of hrefs) {
-        for (const address of SUPPORT_EMAIL_ADDRESSES) expect(href).toContain(address);
+        for (const address of CONTACT_EMAIL_ADDRESSES) expect(href).toContain(address);
         expect(href).toContain("?subject=");
       }
     }
@@ -138,7 +138,7 @@ describe("PartnersClient — supplier application path", () => {
 
   it("shows the support addresses as text, from the shared constant", () => {
     const { container } = renderPage("fr");
-    expect(container.textContent).toContain(SUPPORT_EMAIL_DISPLAY);
+    expect(container.textContent).toContain(CONTACT_EMAIL_DISPLAY);
     expect(container.textContent).not.toContain("{emails}");
   });
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render } from "@testing-library/react";
 import type { Locale } from "@/components/lang/i18n-provider";
 import { EagerI18nProvider } from "@/components/lang/i18n-provider-eager";
-import { SUPPORT_EMAIL_DISPLAY, supportMailto } from "@/lib/constants/contact";
+import { CONTACT_EMAIL_DISPLAY, contactMailto } from "@/lib/constants/contact";
 import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
@@ -36,12 +36,12 @@ describe("PressClient", () => {
       );
       expect(mailtos).toHaveLength(1);
       expect(mailtos[0].textContent).toBe(dict.cta);
-      expect(mailtos[0].getAttribute("href")).toBe(supportMailto(dict.emailSubject));
+      expect(mailtos[0].getAttribute("href")).toBe(contactMailto(dict.emailSubject));
 
       const text = container.textContent ?? "";
       expect(text).toContain(dict.about.builtBy);
       expect(text).toContain(dict.about.markets);
-      expect(text).toContain(dict.contact.reach.replace("{emails}", SUPPORT_EMAIL_DISPLAY));
+      expect(text).toContain(dict.contact.reach.replace("{emails}", CONTACT_EMAIL_DISPLAY));
       expect(text).not.toContain("{emails}");
       expect(text).not.toMatch(/\bpress\.[a-zA-Z]/);
     }
@@ -52,7 +52,7 @@ describe("PressClient", () => {
     const cta = Array.from(container.querySelectorAll("a")).find((a) =>
       a.getAttribute("href")?.startsWith("mailto:")
     )!;
-    expect(cta.getAttribute("href")).toBe(supportMailto("Media inquiry"));
+    expect(cta.getAttribute("href")).toBe(contactMailto("Media inquiry"));
     expect(cta.getAttribute("href")).toContain("?subject=Media%20inquiry");
   });
 

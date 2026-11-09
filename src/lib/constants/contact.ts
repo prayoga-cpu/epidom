@@ -28,32 +28,55 @@ export function getWhatsAppOptions(
 }
 
 /**
- * The public support inbox — the ONE place these addresses are written down.
- * Today it is the Prionation studio's shared inbox (a mailto with several
- * recipients). Pages, transactional emails and structured data all read it from
- * here, so moving to a branded address (support@epidom.fr, say) is a one-line
- * change once that mailbox and its sending domain actually exist — until then,
- * pointing the site at an address that bounces would lose every message.
+ * Epidom's public inboxes, the ONE place addresses are written down. Both are
+ * Cloudflare Email Routing rules on epidom.fr that forward to a real inbox,
+ * and each has its own job so mail lands with the person who can answer it:
+ *
+ *  - SUPPORT (support@epidom.fr): people already using Epidom, or about to pay:
+ *    help, billing, refunds, account and legal requests, failed checkout,
+ *    transactional emails, structured data.
+ *  - CONTACT (contact@epidom.fr): everyone else: partnerships and suppliers,
+ *    press, careers and general questions from visitors.
+ *  - BUILD (consult@prionation.io): Prionation, the studio behind Epidom, for
+ *    clients who want a NEW product built. Only "Build with us" uses it; never
+ *    use a prionation.io address for Epidom customers.
+ *
+ * Tests assert no other file spells out a prionation.io address
+ * (src/lib/constants/__tests__/support-email-guard.test.ts).
  */
-export const SUPPORT_EMAIL_ADDRESSES = [
-  "cro@prionation.io",
-  "ceo@prionation.io",
-  "consult@prionation.io",
-] as const;
+export const SUPPORT_EMAIL_ADDRESSES = ["support@epidom.fr"] as const;
+export const CONTACT_EMAIL_ADDRESSES = ["contact@epidom.fr"] as const;
+export const BUILD_EMAIL_ADDRESSES = ["consult@prionation.io"] as const;
 
 /** For places that accept exactly one address (JSON-LD contactPoint, headers). */
-export const SUPPORT_EMAIL_PRIMARY: (typeof SUPPORT_EMAIL_ADDRESSES)[number] = "consult@prionation.io";
+export const SUPPORT_EMAIL_PRIMARY: (typeof SUPPORT_EMAIL_ADDRESSES)[number] = "support@epidom.fr";
 
 /** "a, b, c" — for visible text. */
 export const SUPPORT_EMAIL_DISPLAY = SUPPORT_EMAIL_ADDRESSES.join(", ");
+export const CONTACT_EMAIL_DISPLAY = CONTACT_EMAIL_ADDRESSES.join(", ");
+export const BUILD_EMAIL_DISPLAY = BUILD_EMAIL_ADDRESSES.join(", ");
 
-/** `mailto:` href addressed to every support recipient, with an optional subject. */
-export function supportMailto(subject?: string): string {
-  const base = `mailto:${SUPPORT_EMAIL_ADDRESSES.join(",")}`;
+function mailtoFor(addresses: readonly string[], subject?: string): string {
+  const base = `mailto:${addresses.join(",")}`;
   return subject ? `${base}?subject=${encodeURIComponent(subject)}` : base;
 }
 
+/** `mailto:` href addressed to support, with an optional subject. */
+export function supportMailto(subject?: string): string {
+  return mailtoFor(SUPPORT_EMAIL_ADDRESSES, subject);
+}
+/** `mailto:` href for partnerships, press, careers and general questions. */
+export function contactMailto(subject?: string): string {
+  return mailtoFor(CONTACT_EMAIL_ADDRESSES, subject);
+}
+/** `mailto:` href for new-development clients (Prionation). */
+export function buildMailto(subject?: string): string {
+  return mailtoFor(BUILD_EMAIL_ADDRESSES, subject);
+}
+
 export const SUPPORT_MAILTO = supportMailto();
+export const CONTACT_MAILTO = contactMailto();
+export const BUILD_MAILTO = buildMailto();
 
 /**
  * Prionation's "Meet us" booking page. The calendar lives on prionation.io;

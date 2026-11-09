@@ -1,4 +1,5 @@
 import type React from "react";
+import { isDemoSession } from "@/lib/demo/is-demo-session";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { GeistSans } from "geist/font/sans";
@@ -75,8 +76,13 @@ export default async function Layout({
   if (access.accessType === "staff") {
     redirect(await linkedStaffHomePath(storeId, access.staffMemberId));
   }
+  const demo = await isDemoSession();
   const bypassAccessGate =
-    subscription?.plan === "FREE" || subscription?.plan === "POS" || staffCount === 0;
+    subscription?.plan === "FREE" ||
+    subscription?.plan === "POS" ||
+    staffCount === 0 ||
+    // The public demo has no PIN to enter (src/lib/demo/).
+    demo;
 
   return (
     <div className={`font-sans ${GeistSans.variable} ${geistMono.variable}`}>

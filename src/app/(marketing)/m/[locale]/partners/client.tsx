@@ -7,7 +7,7 @@ import {
   PlaceholderSection,
 } from "@/features/marketing/shared/components/placeholder-page";
 import { trackConversion } from "@/lib/analytics";
-import { SUPPORT_EMAIL_DISPLAY, supportMailto } from "@/lib/constants/contact";
+import { CONTACT_EMAIL_DISPLAY, contactMailto } from "@/lib/constants/contact";
 import { SupplierApplication } from "./supplier-application";
 
 export function PartnersClient() {
@@ -35,14 +35,14 @@ export function PartnersClient() {
               {t("partners.types.hint")}
             </p>
             <PlaceholderCta
-              href={supportMailto(t("partners.types.emailSubject"))}
+              href={contactMailto(t("partners.types.emailSubject"))}
               variant="secondary"
               onClick={() => trackConversion("contact_email", { event_label: "partners_other" })}
             >
               {t("partners.types.emailCta")}
             </PlaceholderCta>
             <p className="text-[13px] leading-relaxed text-[rgba(251,249,228,0.5)]">
-              {t("partners.emailFallback").replace("{emails}", SUPPORT_EMAIL_DISPLAY)}
+              {t("partners.emailFallback").replace("{emails}", CONTACT_EMAIL_DISPLAY)}
             </p>
           </div>
         }
