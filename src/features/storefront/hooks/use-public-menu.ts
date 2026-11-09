@@ -76,7 +76,7 @@ export function usePublicStorefrontMenu(slug: string, initialCategories?: Public
     initialData: initialCategories,
     enabled: !!slug,
     staleTime: 20 * 1000,
-    refetchInterval: 45 * 1000,
+    refetchInterval: 2 * 60 * 1000,
     // A customer's phone shouldn't keep polling in the background once they
     // switch apps/tabs — unlike staff-facing screens, battery/data cost here
     // is a real, direct concern.

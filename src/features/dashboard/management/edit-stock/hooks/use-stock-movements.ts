@@ -1,5 +1,6 @@
 "use client";
 
+import { safetyNetPollMs } from "@/lib/realtime/pusher-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StockMovement } from "@prisma/client";
 import { normalizeFilters } from "@/lib/utils/query-key-helpers";
@@ -102,7 +103,7 @@ export function useStockMovements(storeId: string, filters?: StockMovementFilter
     // net for when push misses an event, so it doesn't need safety-net-grade
     // CPU cost. Kept tighter than other hooks since stock is critical data.
     staleTime: 10 * 1000,
-    refetchInterval: 15 * 1000, // Safety-net poll — Pusher covers the instant case
+    refetchInterval: safetyNetPollMs(15 * 1000), // Safety-net poll — Pusher covers the instant case
     refetchIntervalInBackground: false, // Only poll when tab is active
     // See use-materials.ts — `false` suppressed the refetch even for a query a
     // mutation had just invalidated, so the movements ledger could disagree
@@ -110,7 +111,7 @@ export function useStockMovements(storeId: string, filters?: StockMovementFilter
     refetchOnMount: true,
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
-      refetchInterval: 15 * 1000, // Store in meta for smart polling
+      refetchInterval: safetyNetPollMs(15 * 1000), // Store in meta for smart polling
     },
   });
 }

@@ -32,3 +32,14 @@ export function getPusherClient(): PusherClient | null {
   });
   return cached;
 }
+
+/**
+ * Interval for a "safety net" poll on data Pusher already pushes. With Pusher
+ * configured the poll only has to catch a missed event, so it backs off to
+ * `backoffMs` (default 5 min) — every tick is a billed serverless invocation
+ * (Fluid Active CPU). Without Pusher the original, tighter interval is the only
+ * freshness source and is kept as is.
+ */
+export function safetyNetPollMs(pollMs: number, backoffMs = 5 * 60_000): number {
+  return isRealtimeConfiguredClient() ? Math.max(pollMs, backoffMs) : pollMs;
+}

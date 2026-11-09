@@ -36,7 +36,11 @@ export async function GET(
       );
     }
     
-    return NextResponse.json(createSuccessResponse(storefront));
+    // Same for every visitor, so let the CDN answer repeat hits (and the
+    // client's 2-min poll) instead of running the function + DB each time.
+    return NextResponse.json(createSuccessResponse(storefront), {
+      headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" },
+    });
   } catch (error: any) {
     console.error("[PUBLIC_STOREFRONT_GET_ERROR]", error);
     return NextResponse.json(

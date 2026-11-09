@@ -1,5 +1,6 @@
 "use client";
 
+import { safetyNetPollMs } from "@/lib/realtime/pusher-client";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -177,7 +178,7 @@ export function NotificationBell({ variant = "topbar" }: NotificationBellProps =
     enabled: !!storeId,
     // The till is where a new online order has to be noticed; the poll is only
     // the fallback for when realtime (below) isn't configured.
-    refetchInterval: isPos ? 15_000 : 30_000,
+    refetchInterval: safetyNetPollMs(isPos ? 15_000 : 30_000, 2 * 60_000),
   });
 
   // A new order chimes the moment it lands instead of on the next poll.

@@ -70,7 +70,7 @@ describe("dispatchDueNewsletters", () => {
     reclaimStalledCampaigns.mockResolvedValue([]);
     const { step, names } = fakeStep();
     await dispatch.handler({ step });
-    expect(names).toEqual(["claim-due", "reclaim-stalled"]);
+    expect(names).toEqual(["claim-due-and-stalled"]);
   });
 });
 

@@ -10,16 +10,21 @@ import {
 } from "@/lib/services/newsletter-campaign.service";
 
 /**
- * Every 5 minutes: claim the newsletters whose time has come (SCHEDULED →
+ * Every 10 minutes (was 5 — halves the idle invocations; a newsletter can start up to 10 min after its scheduled time): claim the newsletters whose time has come (SCHEDULED →
  * SENDING) and hand each to sendNewsletterCampaign. Cron runs in UTC; the
  * campaign's own scheduledAt is already a UTC instant.
  */
 export const dispatchDueNewsletters = inngest.createFunction(
-  { id: "dispatch-due-newsletters", retries: 2, triggers: [{ cron: "*/5 * * * *" }] },
+  { id: "dispatch-due-newsletters", retries: 2, triggers: [{ cron: "*/10 * * * *" }] },
   async ({ step }) => {
-    const due = await step.run("claim-due", () => claimDueCampaigns(new Date()));
-    const stalled = await step.run("reclaim-stalled", () => reclaimStalledCampaigns(new Date()));
-    const campaignIds = [...due, ...stalled];
+    // One step, not two: every step is its own /api/inngest invocation, and
+    // this cron fires all day with nothing to do. Both calls are idempotent.
+    const campaignIds = await step.run("claim-due-and-stalled", async () => {
+      const now = new Date();
+      const due = await claimDueCampaigns(now);
+      const stalled = await reclaimStalledCampaigns(now);
+      return [...due, ...stalled];
+    });
     if (campaignIds.length > 0) {
       await step.sendEvent(
         "send-campaigns",

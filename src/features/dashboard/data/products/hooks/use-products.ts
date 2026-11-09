@@ -1,3 +1,4 @@
+import { safetyNetPollMs } from "@/lib/realtime/pusher-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CreateProductInput,
@@ -296,7 +297,7 @@ export function useProducts(
     // primary update path; this poll is only a safety net for when push
     // misses an event, so it doesn't need safety-net-grade CPU cost.
     staleTime: 20 * 1000,
-    refetchInterval: 30 * 1000, // Safety-net poll — Pusher covers the instant case
+    refetchInterval: safetyNetPollMs(30 * 1000), // Safety-net poll — Pusher covers the instant case
     refetchIntervalInBackground: false, // Only poll when tab is active
     // See the same option in use-materials.ts — `false` also swallowed the
     // refetch for an invalidated query, so finished-goods stock went stale on
@@ -304,7 +305,7 @@ export function useProducts(
     refetchOnMount: true,
     refetchOnWindowFocus: true, // Refetch on window focus if stale
     meta: {
-      refetchInterval: 30 * 1000, // Store in meta for smart polling
+      refetchInterval: safetyNetPollMs(30 * 1000), // Store in meta for smart polling
     },
   });
 }
