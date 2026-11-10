@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "build": "prisma migrate deploy && tsx scripts/sync-changelog.ts && next build",
+    "build": "node scripts/migrate-deploy.mjs && tsx scripts/sync-changelog.ts && next build",
     "sync:changelog": "tsx scripts/sync-changelog.ts",
     "restore:backup": "tsx scripts/restore-from-backup.ts",
     "start": "next start",
