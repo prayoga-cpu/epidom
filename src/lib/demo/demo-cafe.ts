@@ -2,6 +2,7 @@ import { Prisma, SubscriptionPlan } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { subscriptionService } from "@/lib/services";
 import { PAGE_INTRO_IDS } from "@/lib/guide/contracts";
+import { getExchangeRate } from "@/lib/services/exchange-rate.service";
 import { DEMO_SLUG } from "./demo-constants";
 
 /**
@@ -221,9 +222,18 @@ export async function ensureDemoCafe(): Promise<{ userId: string; storeId: strin
     where: { slug: DEMO_SLUG },
     select: { openingHours: true },
   });
+  // Rebuilt when the costs are not in the base currency (an earlier seed stored euros).
+  const sample = storeId
+    ? await prisma.product.findFirst({
+        where: { storeId, sku: "DEMO-00" },
+        select: { costPrice: true },
+      })
+    : null;
+  const costsInBase = sample ? Number(sample.costPrice) > 50 : false;
   if (
     existing &&
     storeId &&
+    costsInBase &&
     existing.name === DEMO_OWNER &&
     existing.guideState &&
     shell?.openingHours
@@ -243,6 +253,11 @@ export async function ensureDemoCafe(): Promise<{ userId: string; storeId: strin
 /** (Re)builds the whole demo account. Safe to call again: it replaces its own data. */
 export async function seedDemoCafe(): Promise<{ userId: string; storeId: string }> {
   const now = new Date();
+  // Product and material costs and selling prices are stored in the platform
+  // base currency (IDR) and converted for display; menu and order amounts are
+  // literal euros. Without this, the café's costs read as fractions of a cent.
+  const { rate } = await getExchangeRate("IDR", "EUR");
+  const toBase = (eur: number) => (rate > 0 ? eur / rate : eur);
   const { userId, storeId, storefrontId } = await prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('epidom-demo-cafe'))`;
@@ -368,9 +383,9 @@ export async function seedDemoCafe(): Promise<{ userId: string; storeId: string 
               name: item.name,
               category: group.category,
               department: item.dept,
-              costPrice: item.cost,
+              costPrice: toBase(item.cost),
               costPriceManual: true,
-              sellingPrice: item.price,
+              sellingPrice: toBase(item.price),
               unit: "piece",
               stockMode: stocked ? "BATCH_PRODUCED" : "MADE_TO_ORDER",
               currentStock: item.stock ?? 0,
@@ -402,7 +417,7 @@ export async function seedDemoCafe(): Promise<{ userId: string; storeId: string 
           sku: `DEMO-M${i}`,
           name,
           unit,
-          unitCost,
+          unitCost: toBase(unitCost),
           currentStock: stock,
           minStock: min,
           maxStock: max,
@@ -459,10 +474,10 @@ async function seedOrders(storeId: string, storefrontId: string, now: Date): Pro
       select: {
         id: true,
         name: true,
-        sellingPrice: true,
         costPrice: true,
         department: true,
-        menuItems: { select: { id: true }, take: 1 },
+        // The literal euro price the customer paid (Product prices are IDR base).
+        menuItems: { select: { id: true, price: true }, take: 1 },
       },
     }),
     prisma.customer.findMany({ where: { storeId }, select: { id: true, name: true } }),
@@ -500,7 +515,7 @@ async function seedOrders(storeId: string, storefrontId: string, now: Date): Pro
     for (let l = 0; l < lines; l++) {
       const product = pick();
       const quantity = rand() < 0.2 ? 2 : 1;
-      const price = Number(product.sellingPrice);
+      const price = Number(product.menuItems[0]?.price ?? 0);
       const total = Math.round(price * quantity * 100) / 100;
       subtotal += total;
       items.push({
@@ -569,11 +584,22 @@ async function seedOrders(storeId: string, storefrontId: string, now: Date): Pro
   for (let n = 0; n < 9; n++) {
     addOrder(new Date(now.getTime() - (60 + rand() * 240) * 60_000), "DELIVERED", n + 1);
   }
-  (["IN_PRODUCTION", "IN_PRODUCTION", "CONFIRMED", "CONFIRMED", "READY"] as const).forEach(
-    (status, i) => {
-      addOrder(new Date(now.getTime() - (4 + i * 5) * 60_000), status, 10 + i);
-    }
-  );
+  (
+    [
+      "IN_PRODUCTION",
+      "IN_PRODUCTION",
+      "IN_PRODUCTION",
+      "CONFIRMED",
+      "CONFIRMED",
+      "CONFIRMED",
+      "CONFIRMED",
+      "READY",
+      "READY",
+      "READY",
+    ] as const
+  ).forEach((status, i) => {
+    addOrder(new Date(now.getTime() - (3 + i * 4) * 60_000), status, 10 + i);
+  });
 
   for (let i = 0; i < orders.length; i += 500) {
     await prisma.order.createMany({ data: orders.slice(i, i + 500) });

@@ -9,19 +9,20 @@ import posCustomerDisplay from "../../../../../public/images/screens/pos-custome
 import storefrontMenu from "../../../../../public/images/screens/storefront-menu.png";
 import storefrontCheckout from "../../../../../public/images/screens/storefront-checkout.png";
 import backOfficeStock from "../../../../../public/images/screens/back-office-stock.png";
-import backOfficeFinance from "../../../../../public/images/screens/back-office-finance.png";
+import backOfficeFinanceTabs from "../../../../../public/images/screens/back-office-finance-tabs.png";
 
 /**
- * Real Epidom screens (captured 13.10.2026 on v3.11.0, dark theme), shown on
- * the home page, /products and the sign-in / sign-up pages. Not mockups.
+ * Real Epidom screens (captured 2026-11-11 on v3.46.0, dark theme, 1440x900
+ * at 1.5x, phone captures 390 wide at 2.5x) from the public demo café ("Your
+ * Café", src/lib/demo/): every figure is its sample data, so no real customer
+ * or account shows. Shown on the home page, /products and the sign-in / sign-up
+ * pages. Not mockups.
  *
- * public/images/screens/ also holds captures that are NOT shown whole:
- * back-office-finance.png (the test store's P&L reads €62 million, retake it
- * on realistic numbers before showing any figure from it) appears only as a
- * CROP (`crop`) of the part with no figures: the report tabs.
- * pos-menu-drawer.png (it carries the owner's account block) is not used.
- * website-home.png is the source of
- * public/images/og-image.png. A customer's phone in the order queue is blurred.
+ * public/images/screens/ also holds analytics.png and kds.png (the dashboard
+ * and the kitchen screen), captured for the "who it's for" cards and not wired
+ * yet, and back-office-finance.png (the full P&L), of which only the report
+ * tabs strip (back-office-finance-tabs.png) is shown. website-home.png is the
+ * source of public/images/og-image.png.
  */
 export interface ProductScreen {
   src: StaticImageData;
@@ -37,61 +38,62 @@ export const PRODUCT_SCREENS = {
     src: posCashier,
     device: "desktop",
     alt: {
-      fr: "L'écran de caisse d'Epidom : une catégorie du menu à gauche et, à droite, l'addition en cours (sur place) avec un pain au chocolat et un croissant, un total de 7,00 €, et les boutons Enregistrer, Imprimer et Encaisser.",
-      en: "Epidom's POS cashier: a menu category on the left and, on the right, the current dine-in bill with a pain au chocolat and a croissant, a €7.00 total, and Save Bill, Print Bill and Charge buttons.",
-      id: "Layar kasir POS Epidom: kategori menu di kiri dan, di kanan, tagihan makan di tempat yang sedang berjalan berisi pain au chocolat dan croissant, total €7,00, serta tombol Simpan, Cetak, dan Tagih.",
+      fr: "L'écran de caisse d'Epidom : la catégorie Café à gauche et, à droite, l'addition en cours (sur place) avec un flat white et un iced latte, un total de 8,30 €, et les boutons Enregistrer, Imprimer et Encaisser.",
+      en: "Epidom's POS cashier: the Coffee category on the left and, on the right, the current dine-in bill with a flat white and an iced latte, an €8.30 total, and Save Bill, Print Bill and Charge buttons.",
+      id: "Layar kasir POS Epidom: kategori Kopi di kiri dan, di kanan, tagihan makan di tempat dengan flat white dan iced latte, total €8,30, serta tombol Simpan, Cetak, dan Bayar.",
     },
   },
   posOrderQueue: {
     src: posOrderQueue,
     device: "desktop",
     alt: {
-      fr: "La file des commandes : les commandes de la caisse par numéro et par heure, des filtres Confirmées, En préparation, Prêtes et Enregistrées, et le détail d'une commande à droite.",
-      en: "The order queue: till orders by number and time, filters for confirmed, in production, ready and saved orders, and one order's details on the right.",
-      id: "Antrian pesanan: pesanan kasir menurut nomor dan jam, filter dikonfirmasi, diproses, siap, dan disimpan, serta detail satu pesanan di kanan.",
+      fr: "La file des commandes : onglets Caisse, Commande en ligne et Historique, les commandes par numéro et par heure, et les filtres Confirmées, En préparation, Prêtes et Enregistrées.",
+      en: "The order queue: POS, Online ordering and Log tabs, orders by number and time, and filters for confirmed, in production, ready and saved orders.",
+      id: "Antrian pesanan: tab Kasir, Pesanan online, dan Riwayat, pesanan menurut nomor dan jam, serta filter dikonfirmasi, diproses, siap, dan disimpan.",
     },
   },
   posCustomerDisplay: {
     src: posCustomerDisplay,
     device: "desktop",
     alt: {
-      fr: "L'écran client : l'article qui vient d'être ajouté (un croissant, 3,00 €), la commande avec son total de 7,00 €, et un bouton pour recevoir le ticket sur WhatsApp.",
-      en: "The customer screen: the item just added (a croissant, €3.00), the order with its €7.00 total, and a button to get the receipt on WhatsApp.",
-      id: "Layar pelanggan: item yang baru ditambahkan (croissant, €3,00), pesanan dengan total €7,00, dan tombol untuk menerima struk lewat WhatsApp.",
+      fr: "L'écran client : l'article qui vient d'être ajouté (un iced latte, 4,50 €), la commande avec son total de 8,30 €, et un bouton pour recevoir le ticket sur WhatsApp.",
+      en: "The customer screen: the item just added (an iced latte, €4.50), the order with its €8.30 total, and a button to get the receipt on WhatsApp.",
+      id: "Layar pelanggan: item yang baru ditambahkan (iced latte, €4,50), pesanan dengan total €8,30, dan tombol untuk menerima struk lewat WhatsApp.",
     },
   },
   storefrontMenu: {
     src: storefrontMenu,
     device: "phone",
     alt: {
-      fr: "Le menu d'une vitrine sur téléphone : les catégories, les articles avec leur prix et un bouton d'ajout, et le panier en bas.",
-      en: "A storefront menu on a phone: categories, items with their prices and an add button, and the cart at the bottom.",
-      id: "Menu etalase di ponsel: kategori, item dengan harga dan tombol tambah, serta keranjang di bagian bawah.",
+      fr: "La page de commande mobile d'un café sur téléphone : les catégories Café, Viennoiserie et Brunch, des articles avec leurs prix et un bouton d'ajout.",
+      en: "A café's Phone Orders page on a phone: Coffee, Pastry and Brunch categories, items with their prices and an add button.",
+      id: "Halaman pesan lewat HP sebuah kafe di ponsel: kategori Kopi, Roti, dan Brunch, item dengan harganya dan tombol tambah.",
     },
   },
   storefrontCheckout: {
     src: storefrontCheckout,
     device: "phone",
     alt: {
-      fr: "Une commande passée depuis un téléphone : nom, numéro WhatsApp, sur place, à emporter ou livraison, paiement à la caisse, et le bouton pour commander.",
-      en: "Ordering from a phone: name, WhatsApp number, dine in, takeaway or delivery, pay at the cashier, and the button to place the order.",
-      id: "Memesan dari ponsel: nama, nomor WhatsApp, makan di tempat, bawa pulang, atau antar, bayar di kasir, dan tombol untuk memesan.",
+      fr: "Le panier d'une commande depuis un téléphone : l'article choisi, sa quantité, le sous-total et le bouton pour passer aux détails de la commande.",
+      en: "The cart when ordering from a phone: the chosen item, its quantity, the subtotal and the button to continue to the order details.",
+      id: "Keranjang saat memesan dari ponsel: item yang dipilih, jumlahnya, subtotal, dan tombol untuk lanjut ke detail pesanan.",
     },
   },
   backOfficeStock: {
     src: backOfficeStock,
     device: "desktop",
     alt: {
-      fr: "Le tableau de bord : le stock des matières premières, les fournisseurs avec leurs contacts, et les derniers mouvements de stock, chacun créé par une vente en caisse.",
-      en: "The Store Dashboard: raw-material stock levels, suppliers with their contacts, and the latest stock movements, each one made by a POS sale.",
-      id: "Dasbor Toko: level stok bahan baku, pemasok beserta kontaknya, dan pergerakan stok terbaru, masing-masing dibuat oleh penjualan POS.",
+      fr: "Le tableau de bord : la gestion des stocks, 14 articles avec leur niveau en barre, dont deux en rouge sous leur seuil (poudre de matcha, lait d'avoine).",
+      en: "The Store Dashboard stock page: 14 items with their level as a bar, two in red below their minimum (matcha powder, oat milk).",
+      id: "Halaman stok Dasbor Toko: 14 item dengan level berupa bar, dua berwarna merah di bawah batas minimum (bubuk matcha, susu oat).",
     },
   },
-  // Only the report tabs of the Finance page: no figure of the test store shows.
+  // The report tabs of the Finance page, as a strip.
   backOfficeFinanceTabs: {
-    src: backOfficeFinance,
+    src: backOfficeFinanceTabs,
     device: "desktop",
-    crop: { x: 450, y: 300, w: 870, h: 102 },
+    // The strip's right edge carries a dev-tools badge in the capture: cropped off.
+    crop: { x: 0, y: 0, w: 1560, h: 108 },
     alt: {
       fr: "Les rapports financiers du tableau de bord : bilan, quotidien, dépenses, par canal, par moyen de paiement et tendances de vente, chacun dans son onglet.",
       en: "The Store Dashboard finance reports: P&L statement, daily, expenses, by channel, payment method and sales patterns, each on its own tab.",

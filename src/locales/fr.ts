@@ -1240,6 +1240,14 @@ export const fr = {
     },
   },
   home: {
+    ai: {
+      badge: "Réponse de l'IA",
+      thinking: "Recherche en cours…",
+      ask: "Demander à l'IA",
+      askAbout: "Demander à l'IA\u00a0:",
+      error: "L'assistant est injoignable. Essayez d'autres mots, ou ouvrez le Centre d'aide.",
+      disclaimer: "Les réponses viennent du guide d'Epidom sur ses propres pages. Vérifiez ce qui est important.",
+    },
     tileGroups: {
       sell: "Vendre",
       manage: "Gérer",

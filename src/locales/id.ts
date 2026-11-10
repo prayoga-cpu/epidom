@@ -1240,6 +1240,14 @@ export const id = {
     },
   },
   home: {
+    ai: {
+      badge: "Jawaban AI",
+      thinking: "Sedang mencari…",
+      ask: "Tanya AI",
+      askAbout: "Tanya AI tentang",
+      error: "Asisten tidak dapat dihubungi. Coba kata lain, atau buka Pusat bantuan.",
+      disclaimer: "Jawaban berasal dari panduan halaman Epidom sendiri. Periksa kembali hal yang penting.",
+    },
     tileGroups: {
       sell: "Jual",
       manage: "Kelola",

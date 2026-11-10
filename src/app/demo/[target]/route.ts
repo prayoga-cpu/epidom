@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sessionCookieNames } from "@/lib/auth/cookies";
+import { expireSessionCookies, sessionCookieNames } from "@/lib/auth/cookies";
 import { DEMO_TOKEN_PREFIX } from "@/lib/demo/demo-constants";
 import { ensureDemoCafe } from "@/lib/demo/demo-cafe";
 import { createDemoSession } from "@/lib/demo/demo-session";
@@ -42,7 +42,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ targ
     // Only ever a demo session: a real visitor's session is left alone.
     if (token.startsWith(DEMO_TOKEN_PREFIX)) {
       await prisma.session.deleteMany({ where: { token } });
-      for (const name of [plain, secure]) response.cookies.set(name, "", { path: "/", maxAge: 0 });
+      expireSessionCookies(response.cookies, {
+        vercelEnv: process.env.VERCEL_ENV,
+        appUrl: process.env.NEXT_PUBLIC_APP_URL,
+        nodeEnv: process.env.NODE_ENV,
+      });
     }
     response.headers.set("Cache-Control", "no-store");
     return response;

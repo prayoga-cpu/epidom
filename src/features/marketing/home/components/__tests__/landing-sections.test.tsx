@@ -745,14 +745,13 @@ describe("PosTourSection", () => {
     );
   });
 
-  it("finance shows a crop, never the whole capture", () => {
+  it("finance shows just the report-tab strip, cropped so the capture's edge badge stays out", () => {
     mockLocale.value = "en";
     render(<PosTourSection />);
     fireEvent.click(tabs()[1]);
     const shot = screen.getByRole("img", { name: PRODUCT_SCREENS.backOfficeFinanceTabs.alt.en });
-    // The card is as wide as the cropped strip is, so the capture is scaled up and shifted.
-    expect(shot.getAttribute("style")).toMatch(/left:\s*-/);
-    expect(shot.getAttribute("style")).toMatch(/width:\s*2\d\d(\.\d+)?%/);
+    // The crop box is a bit narrower than the file, so the image is drawn slightly wider than its card.
+    expect(shot.getAttribute("style")).toMatch(/width:\s*1\d\d(\.\d+)?%/);
   });
 
   it("desktop: pinned and scroll-driven, no timer; picking a feature scrolls to it", () => {
@@ -836,14 +835,15 @@ describe("Figures without the Sources list", () => {
 // ── What is Epidom used for ─────────────────────────────────────────────────
 
 describe("UsesSection", () => {
-  it("opens on Cafés, shows four cards, and switching the tab swaps them", () => {
+  it("opens on Cafés with ONE card (a headline and three ticks), and switching the tab swaps it", () => {
     mockLocale.value = "en";
     render(<UsesSection />);
     expect(screen.getByRole("tab", { name: "Cafés" })).toHaveAttribute("aria-selected", "true");
-    expect(within(screen.getByRole("tabpanel")).getAllByRole("heading", { level: 3 })).toHaveLength(
-      4
-    );
+    const panel = screen.getByRole("tabpanel");
+    expect(within(panel).getAllByRole("heading", { level: 3 })).toHaveLength(1);
+    expect(within(panel).getAllByRole("listitem")).toHaveLength(3);
     expect(screen.getByText(en.redesign.landing.uses.cafe.card1)).toBeInTheDocument();
+    expect(screen.getByText(en.redesign.landing.uses.cafe.card2)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "Bakeries" }));
     expect(screen.getByRole("tab", { name: "Bakeries" })).toHaveAttribute("aria-selected", "true");
@@ -851,18 +851,34 @@ describe("UsesSection", () => {
     expect(screen.queryByText(en.redesign.landing.uses.cafe.card1)).toBeNull();
   });
 
-  it("links to a landing page of the visitor's language, or to /products when there is none", () => {
+  it("offers the live demo in a new tab, and a link to the page of the visitor's language (or /products)", () => {
     mockLocale.value = "en";
-    render(<UsesSection />);
-    const links = within(screen.getByRole("tabpanel")).getAllByRole("link");
-    // Café: online ordering and the café page exist in English.
-    expect(links[0]).toHaveAttribute("href", "/en/commission-free-online-ordering");
-    expect(links[1]).toHaveAttribute("href", "/en/cafe-pos-system");
+    const { unmount } = render(<UsesSection />);
+    const panel = within(screen.getByRole("tabpanel"));
+    const demo = panel.getByRole("link", { name: /Open live demo/ });
+    expect(demo).toHaveAttribute("href", "/demo/phone-orders");
+    expect(demo).toHaveAttribute("target", "_blank");
+    expect(panel.getByRole("link", { name: /See Phone Orders/ })).toHaveAttribute(
+      "href",
+      "/en/commission-free-online-ordering"
+    );
+    unmount();
 
+    // French has no page for this group yet: it falls back to /products.
     mockLocale.value = "fr";
     render(<UsesSection />);
-    const fr = within(screen.getAllByRole("tabpanel")[1]).getAllByRole("link");
-    expect(fr[1]).toHaveAttribute("href", "/products"); // no French café page yet
+    expect(
+      within(screen.getByRole("tabpanel")).getByRole("link", { name: /Voir la commande mobile/ })
+    ).toHaveAttribute("href", expect.stringMatching(/^\/(products|[a-z-]+)$/));
+  });
+
+  it("falls back to the gradient when a kind's photo file is missing, and never leaves a broken image", () => {
+    mockLocale.value = "en";
+    render(<UsesSection />);
+    const photo = document.querySelector<HTMLImageElement>("img[src='/images/uses/cafe.jpg']")!;
+    expect(photo).not.toBeNull();
+    fireEvent.error(photo);
+    expect(photo.style.display).toBe("none");
   });
 });
 

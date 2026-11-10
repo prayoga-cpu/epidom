@@ -20,6 +20,8 @@ import {
   useSearchTargets,
   type SearchTarget,
 } from "@/features/dashboard/home/hooks/use-search-targets";
+import { useAiSearch } from "@/features/dashboard/home/hooks/use-ai-search";
+import { AiSearchAnswer } from "@/features/dashboard/home/components/ai-search-answer";
 import { PLAN_LABELS } from "@/lib/plans/entitlements";
 import { cn } from "@/lib/utils";
 import { useCurrentStore } from "./hooks/use-current-store";
@@ -51,6 +53,8 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
     visible,
     locked,
     search,
+    resolveAi,
+    locale,
     open: openTarget,
     recentCards,
     when,
@@ -95,6 +99,8 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
   };
 
   const results = asking ? null : search(query);
+  const noHits = !!results && results.actions.length + results.pages.length === 0;
+  const ai = useAiSearch(query, locale ?? "en", noHits);
   const claudeExamples = [
     t("claudeConnector.promo.exampleDashboard"),
     t("claudeConnector.promo.exampleStock"),
@@ -196,9 +202,16 @@ export function GlobalSearchDialog({ open, onOpenChange }: GlobalSearchDialogPro
               </>
             ) : results ? (
               results.actions.length + results.pages.length === 0 ? (
-                <p className="text-muted-foreground px-3 py-8 text-center text-sm">
-                  {t("home.noResults")}
-                </p>
+                <>
+                  <p className="text-muted-foreground px-3 py-4 text-center text-sm">
+                    {t("home.noResults")}
+                  </p>
+                  <AiSearchAnswer
+                    state={ai}
+                    targets={resolveAi(ai.matches)}
+                    onOpen={(x) => pick(x)}
+                  />
+                </>
               ) : (
                 (
                   [

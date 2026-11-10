@@ -21,6 +21,12 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     window: 60, // 10 requests per minute
   },
 
+  // In-app search assistant (one small LLM call per request)
+  "/api/ai/search": {
+    limit: 20,
+    window: 60, // 20 questions per minute
+  },
+
   // Subscription endpoints - strict limits (payment sensitive)
   "/api/subscriptions/checkout": {
     limit: 5,

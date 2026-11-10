@@ -16,6 +16,8 @@ import { Kbd } from "@/components/ui/kbd";
 import { useAlertsCount } from "@/features/dashboard/alerts/hooks/use-alerts-count";
 import { PLAN_LABELS } from "@/lib/plans/entitlements";
 import { useSearchTargets } from "../hooks/use-search-targets";
+import { useAiSearch } from "../hooks/use-ai-search";
+import { AiSearchAnswer } from "./ai-search-answer";
 import {
   ClaudeConnectCard,
   ClaudeConnectHint,
@@ -64,8 +66,19 @@ export function HomeClient({ storeId, showSetupGuide, isOwner, isNewStore }: Hom
   const { t, intlLocale } = useI18n();
   const { user } = useUser();
   const { store } = useCurrentStore();
-  const { staffAllowed, examples, actions, visible, locked, search, open, recentCards, when } =
-    useSearchTargets(storeId);
+  const {
+    staffAllowed,
+    examples,
+    actions,
+    visible,
+    locked,
+    search,
+    resolveAi,
+    locale,
+    open,
+    recentCards,
+    when,
+  } = useSearchTargets(storeId);
   const [query, setQuery] = useState("");
   const [hour, setHour] = useState<number | null>(null);
   const [showAllSetup, setShowAllSetup] = useState(false);
@@ -108,6 +121,8 @@ export function HomeClient({ storeId, showSetupGuide, isOwner, isNewStore }: Hom
   }, []);
 
   const results = search(query);
+  const noHits = !!results && results.actions.length + results.pages.length === 0;
+  const ai = useAiSearch(query, locale ?? "en", noHits);
   const newOrder = actions.find((a) => a.id === "newOrder");
   const alertsCount = useAlertsCount();
 
@@ -295,6 +310,7 @@ export function HomeClient({ storeId, showSetupGuide, isOwner, isNewStore }: Hom
                   {t("home.noResults")}
                 </p>
               )}
+              {noHits && <AiSearchAnswer state={ai} targets={resolveAi(ai.matches)} onOpen={open} />}
               {(
                 [
                   ["actions", results.actions],

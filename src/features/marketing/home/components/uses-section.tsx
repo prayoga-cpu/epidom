@@ -3,13 +3,13 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowRight,
   Beer,
+  Check,
   ChefHat,
   Coffee,
-  CookingPot,
   Croissant,
   Truck,
-  WifiOff,
   type LucideIcon,
 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -17,9 +17,7 @@ import { LANDING_GROUPS, type LandingGroup } from "@/features/marketing/landing/
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
-import { SPACE_SCREENSHOTS } from "../data/media";
 import { aurora, LIGHT_BUTTON, SectionHeading } from "./landing-ui";
-import { SpaceShot } from "./three-spaces-section";
 
 type Kind = "cafe" | "restaurant" | "bakery" | "bar" | "truck";
 
@@ -54,28 +52,21 @@ const KINDS: readonly {
 ];
 
 /**
- * The four slots of the bento grid: a wide and a narrow card, then a narrow and
- * a wide one. All four wear the site's one accent gradient (aurora), its glow
- * moved per card so the grid doesn't read as four copies.
- */
-const SLOTS = [
-  { span: "lg:col-span-8", glow: { x: 30, y: 110 }, icon: CookingPot, shot: "storefront" },
-  { span: "lg:col-span-4", glow: { x: 75, y: 110 }, icon: Coffee, shot: "pos" },
-  { span: "lg:col-span-4", glow: { x: 20, y: 105 }, icon: ChefHat, shot: null },
-  { span: "lg:col-span-8", glow: { x: 80, y: 108 }, icon: WifiOff, shot: null },
-] as const;
-
-/**
- * "What is Epidom used for?": a tab per kind of food and drink business, and
- * under it four cards, each one thing Epidom does for that business and where
- * to read more. F&B only. The first two cards show the real screens (the
- * Phone Orders page, the till), the other two stay plain.
+ * "What is Epidom used for?": a tab per kind of food and drink business and,
+ * under it, ONE card: a photo of that kind of place beside one headline, three
+ * short ticks and one action (the live demo, in a new tab). F&B only.
+ *
+ * The photos are files in public/images/uses/ (cafe, restaurant, bakery, bar,
+ * truck .jpg), chosen by the owner (a licensed stock photo or their own).
+ * Until a file exists the card shows the site's gradient and the kind's icon,
+ * so nothing is ever broken.
  */
 export function UsesSection() {
   const { t, locale } = useI18n();
   const [active, setActive] = useState<Kind>("cafe");
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const current = KINDS.find((k) => k.kind === active) ?? KINDS[0];
+  const Icon = current.icon;
 
   function hrefFor(group: LandingGroup | null) {
     const slug = group
@@ -151,48 +142,59 @@ export function UsesSection() {
           id="uses-panel"
           role="tabpanel"
           aria-labelledby={`uses-tab-${active}`}
-          className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 mt-8 grid gap-4 duration-300 lg:grid-cols-12"
+          className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 mt-8 grid overflow-hidden rounded-3xl border border-white/10 duration-300 md:grid-cols-2"
         >
-          {SLOTS.map((slot, i) => {
-            const shot = slot.shot ? SPACE_SCREENSHOTS[slot.shot] : null;
-            const Icon = i === 1 ? current.icon : slot.icon;
-            return (
-              <article
-                key={i}
-                data-reveal
-                style={{ backgroundImage: aurora(slot.glow) }}
-                className={cn(
-                  "relative flex min-h-64 flex-col justify-between gap-6 overflow-hidden rounded-3xl border border-white/10 p-6 text-white sm:p-8",
-                  slot.span
-                )}
+          <div className="order-2 flex flex-col justify-center gap-6 p-6 sm:p-10 md:order-1">
+            <h3 className="epi-display text-epi-cream-50 m-0 text-[clamp(28px,3.4vw,44px)] leading-[1.05] text-balance">
+              {t(`redesign.landing.uses.${active}.card1`)}
+            </h3>
+            <ul className="m-0 flex list-none flex-col gap-3 p-0">
+              {([2, 3, 4] as const).map((n) => (
+                <li key={n} className="text-epi-cream-50/85 flex items-start gap-3 text-base">
+                  <Check aria-hidden="true" className="text-epi-gold-300 mt-0.5 size-5 shrink-0" />
+                  {t(`redesign.landing.uses.${active}.card${n}`)}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <a
+                href="/demo/phone-orders"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent("uses_demo_click", { kind: active })}
+                className={cn(LIGHT_BUTTON, "gap-2")}
               >
-                <div className="relative z-10 flex flex-col items-start gap-5">
-                  <h3 className="m-0 max-w-[22ch] text-2xl leading-tight font-medium text-balance sm:text-[28px]">
-                    {t(`redesign.landing.uses.${active}.card${i + 1}`)}
-                  </h3>
-                  <Link
-                    href={hrefFor(current.links[i])}
-                    onClick={() => trackEvent("uses_card_click", { kind: active, card: i + 1 })}
-                    className={LIGHT_BUTTON}
-                  >
-                    {t(`redesign.landing.uses.cta${i + 1}`)}
-                  </Link>
-                </div>
+                {t("redesign.landing.spaces.demoOpen")}
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </a>
+              <Link
+                href={hrefFor(current.links[0])}
+                onClick={() => trackEvent("uses_card_click", { kind: active, card: 1 })}
+                className="text-epi-gold-300 hover:text-epi-cream-50 inline-flex min-h-11 items-center text-sm font-semibold underline-offset-4 hover:underline"
+              >
+                {t("redesign.landing.uses.cta1")} →
+              </Link>
+            </div>
+          </div>
 
-                {shot ? (
-                  <div className="relative z-10 -mb-2 sm:-mr-2">
-                    <SpaceShot shot={shot} alt={shot.alt[locale]} />
-                  </div>
-                ) : (
-                  <Icon
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -right-4 -bottom-6 size-40 text-white/15 sm:size-52"
-                    strokeWidth={1.25}
-                  />
-                )}
-              </article>
-            );
-          })}
+          <div
+            className="relative order-1 min-h-[240px] md:order-2 md:min-h-[420px]"
+            style={{ backgroundImage: aurora({ x: 70, y: 105 }) }}
+          >
+            <Icon
+              aria-hidden="true"
+              className="absolute top-1/2 left-1/2 size-28 -translate-x-1/2 -translate-y-1/2 text-white/15"
+              strokeWidth={1.25}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element -- an optional owner-supplied file: a missing one hides itself */}
+            <img
+              src={`/images/uses/${active}.jpg`}
+              alt=""
+              loading="lazy"
+              onError={(event) => (event.currentTarget.style.display = "none")}
+              className="absolute inset-0 size-full object-cover"
+            />
+          </div>
         </div>
       </div>
     </section>

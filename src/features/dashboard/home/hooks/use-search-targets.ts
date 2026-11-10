@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Smartphone,
   TicketPercent,
+  BookOpen,
   FileText,
   Upload,
   Users,
@@ -23,6 +24,9 @@ import { customerDisplayPath } from "@/features/pos/lib/customer-display";
 import { usePosSession } from "@/features/pos/hooks/use-pos-session";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { planRank, upgradeHrefFor } from "@/lib/plans/entitlements";
+import { SETTINGS_SECTIONS } from "../lib/settings-sections";
+import { FEATURE_INDEX } from "../lib/feature-index";
+import type { AiMatch } from "./use-ai-search";
 import { RECENT_VISITS_EVENT, readRecentVisits, type RecentVisit } from "@/lib/recent-visits";
 import { todayLocalISO } from "@/lib/utils/date-range";
 
@@ -58,7 +62,7 @@ const fold = (v: string) =>
  * disagree about what is locked or hidden.
  */
 export function useSearchTargets(storeId: string) {
-  const { t, intlLocale } = useI18n();
+  const { t, intlLocale, locale } = useI18n();
   const router = useRouter();
   const posSession = usePosSession();
   const { data: subData } = useSubscriptionStatus();
@@ -241,12 +245,31 @@ export function useSearchTargets(storeId: string) {
         gate: "/data",
         plan: "OPERATIONS" as PlanTier,
       },
+      // Every card on the Settings page, so "tax", "wifi" or "pajak" lands on the right one.
+      ...SETTINGS_SECTIONS.map((s) => ({
+        id: `settings-${s.id}`,
+        label: `${t("home.actions.settings.label")} · ${t(s.labelKey)}`,
+        keywords: s.keywords,
+        icon: s.icon,
+        href: `${base}/profile#${s.anchor}`,
+        gate: "/profile",
+      })),
+      // Tabs, buttons and how-tos that live inside a page ("import my menu", "split the bill").
+      ...FEATURE_INDEX.map((f) => ({
+        id: `feat-${f.id}`,
+        label: f.label[(locale as "en" | "id" | "fr") ?? "en"] ?? f.label.en,
+        keywords: `${f.label.en} ${f.label.id} ${f.label.fr} ${f.keywords}`,
+        icon: f.icon,
+        href: `${base}${f.href}`,
+        gate: f.gate,
+        plan: f.plan,
+      })),
     ],
-    [t, base]
+    [t, base, locale]
   );
 
   const visible = useCallback(
-    (x: SearchTarget) => !staffAllowed || staffAllowed.includes(x.gate),
+    (x: SearchTarget) => !staffAllowed || !x.gate || staffAllowed.includes(x.gate),
     [staffAllowed]
   );
   const locked = useCallback(
@@ -270,6 +293,27 @@ export function useSearchTargets(storeId: string) {
       };
     },
     [actions, examples, pages, visible]
+  );
+
+  /** The assistant's picks as targets: our own entry when it has one, else a guide link. Hidden/locked rules apply. */
+  const resolveAi = useCallback(
+    (matches: AiMatch[]): SearchTarget[] =>
+      matches
+        .map((m) => {
+          const own = pages.find((p) => p.id === m.id);
+          if (own) return own;
+          if (!m.id.startsWith("guide-")) return null;
+          return {
+            id: m.id,
+            label: m.label.replace(/^Guide:\s*/, ""),
+            keywords: "",
+            icon: BookOpen,
+            href: `${base}${m.href}`,
+            gate: "",
+          } satisfies SearchTarget;
+        })
+        .filter((x): x is SearchTarget => x !== null && visible(x)),
+    [pages, base, visible]
   );
 
   const open = useCallback(
@@ -315,6 +359,8 @@ export function useSearchTargets(storeId: string) {
     locked,
     hrefOf,
     search,
+    resolveAi,
+    locale,
     open,
     recentCards,
     when,

@@ -32,13 +32,15 @@ export async function generateStructuredResponse<T extends z.ZodType>(
     maxRetries?: number;
     /** Hard ceiling (ms) for the whole call incl. retries. Default 30s. */
     timeoutMs?: number;
+    /** Override the model (the in-app search uses a small, cheap one). */
+    model?: string;
   }
 ): Promise<{
   data: z.infer<T>;
   usage: TokenUsage;
 }> {
   const result = await generateObject({
-    model: openai(AI_IMPORT_MODEL),
+    model: openai(options?.model ?? AI_IMPORT_MODEL),
     schema,
     system: systemPrompt,
     prompt: userPrompt,

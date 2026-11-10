@@ -1240,6 +1240,14 @@ export const en = {
     },
   },
   home: {
+    ai: {
+      badge: "AI answer",
+      thinking: "Looking for it…",
+      ask: "Ask AI",
+      askAbout: "Ask AI about",
+      error: "The assistant could not be reached. Try different words, or open the Help centre.",
+      disclaimer: "Answers come from Epidom's own guide to its pages. Double-check anything important.",
+    },
     tileGroups: {
       sell: "Sell",
       manage: "Manage",

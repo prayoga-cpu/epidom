@@ -88,3 +88,28 @@ export function sharedCookieDomainForHost(host: string | undefined): string | un
   if (host !== root && host !== `www.${root}`) return undefined;
   return `.${root}`;
 }
+
+/**
+ * Expires both session cookie names the way the demo session set them. A
+ * `__Secure-` cookie is only overwritten by a Set-Cookie that also carries
+ * `Secure` (and the same Domain), so a bare `maxAge: 0` is ignored by the
+ * browser: the demo cookie survives "close the demo" and the proxy redirects
+ * the same URL forever ("redirected you too many times").
+ */
+export function expireSessionCookies(
+  jar: { set: (name: string, value: string, options: Record<string, unknown>) => unknown },
+  env: { vercelEnv?: string; appUrl?: string; nodeEnv?: string }
+): void {
+  const secure = env.nodeEnv === "production";
+  const crossSub = resolveCrossSubDomainCookies(env.appUrl, env.nodeEnv);
+  for (const name of sessionCookieNames(env.vercelEnv)) {
+    jar.set(name, "", {
+      path: "/",
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: secure || name.startsWith("__Secure-"),
+      ...(crossSub ? { domain: crossSub.domain } : {}),
+    });
+  }
+}

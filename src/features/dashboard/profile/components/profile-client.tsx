@@ -77,12 +77,12 @@ export function ProfileClient({
         />
       </div>
 
-      <div className="animate-slide-up-delayed grid gap-4 md:grid-cols-2 md:gap-6">
+      <div id="settings-personal" className="animate-slide-up-delayed scroll-mt-24 grid gap-4 md:grid-cols-2 md:gap-6">
         <PersonalInfoCard user={profileData} onUpdate={undefined} />
         <SubscriptionInfoCard subscription={profileData.subscription} />
       </div>
 
-      <div className="animate-slide-up-delayed-2">
+      <div id="settings-business" className="scroll-mt-24 animate-slide-up-delayed-2">
         <BusinessInfoCard
           business={profileData.business}
           userId={profileData.id}
@@ -91,7 +91,7 @@ export function ProfileClient({
       </div>
 
       {storeId && (
-        <div className="animate-slide-up-delayed-3">
+        <div id="settings-fees" className="scroll-mt-24 animate-slide-up-delayed-3">
           <FeesAndTaxesCard
             storeId={storeId}
             storeName={storeName}
@@ -102,13 +102,13 @@ export function ProfileClient({
       )}
 
       {storeId && (
-        <div className="animate-slide-up-delayed-3">
+        <div id="settings-receipt" className="scroll-mt-24 animate-slide-up-delayed-3">
           <ReceiptSettingsCard storeId={storeId} storeName={storeName} />
         </div>
       )}
 
       {storeId && (
-        <div className="animate-slide-up-delayed-3">
+        <div id="settings-customer-display" className="scroll-mt-24 animate-slide-up-delayed-3">
           <CustomerDisplayCard storeId={storeId} />
         </div>
       )}
@@ -119,15 +119,15 @@ export function ProfileClient({
         </div>
       )}
 
-      <div className="animate-slide-up-delayed-3">
+      <div id="settings-account" className="scroll-mt-24 animate-slide-up-delayed-3">
         <AccountSettingsCard userEmail={profileData.email} />
       </div>
 
-      <div className="animate-slide-up-delayed-3">
+      <div id="settings-claude" className="scroll-mt-24 animate-slide-up-delayed-3">
         <ClaudeConnectorCard />
       </div>
 
-      <div className="animate-slide-up-delayed-3">
+      <div id="settings-activity" className="scroll-mt-24 animate-slide-up-delayed-3">
         <ActivityLogCard />
       </div>
     </div>

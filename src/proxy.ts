@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { setRequestId } from "./lib/request-context";
-import { sessionCookieNames } from "./lib/auth/cookies";
+import { expireSessionCookies, sessionCookieNames } from "./lib/auth/cookies";
 import { DEMO_READ_ONLY, DEMO_TOKEN_PREFIX, DEMO_WRITE_ALLOWLIST } from "./lib/demo/demo-constants";
 import {
   DEFAULT_LOCALE,
@@ -307,9 +307,11 @@ async function routeRequest(req: NextRequest): Promise<NextResponse> {
 
   if (leavesDemo(req, path)) {
     const out = NextResponse.redirect(req.nextUrl, 307);
-    for (const name of sessionCookieNames(process.env.VERCEL_ENV)) {
-      out.cookies.set(name, "", { path: "/", maxAge: 0 });
-    }
+    expireSessionCookies(out.cookies, {
+      vercelEnv: process.env.VERCEL_ENV,
+      appUrl: process.env.NEXT_PUBLIC_APP_URL,
+      nodeEnv: process.env.NODE_ENV,
+    });
     out.headers.set("Cache-Control", "no-store");
     return out;
   }

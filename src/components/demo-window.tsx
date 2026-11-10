@@ -61,6 +61,18 @@ export function DemoWindow({ src, title }: { src: string; title: string }) {
         </a>
         <a
           href="/demo/exit"
+          onClick={(e) => {
+            // The demo opened in its own tab: end the session, close the tab and
+            // leave the original tab on the website. If the browser refuses to
+            // close it, fall back to the exit redirect (a plain link).
+            e.preventDefault();
+            fetch("/demo/exit", { redirect: "manual", cache: "no-store" })
+              .catch(() => undefined)
+              .finally(() => {
+                window.close();
+                window.setTimeout(() => window.location.replace("/"), 150);
+              });
+          }}
           aria-label={t("redesign.landing.demoBar.close")}
           title={t("redesign.landing.demoBar.close")}
           className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-black/10"
