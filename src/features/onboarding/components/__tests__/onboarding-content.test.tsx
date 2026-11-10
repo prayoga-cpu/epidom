@@ -565,6 +565,9 @@ describe("<OnboardingContent> one screen at a time", { timeout: RENDER_TEST_TIME
     });
 
     it("shows the detected market under the name", async () => {
+      // The market comes from the device time zone; pin it so a UTC runner
+      // (CI) detects a country like a laptop in Paris or Jakarta does.
+      mockBrowserTimezone("Europe/Paris");
       renderWizard(baseState());
       await answerPlan();
       expect(screen.getByTestId("detected-market")).toBeInTheDocument();
@@ -705,6 +708,9 @@ describe("<OnboardingContent> one screen at a time", { timeout: RENDER_TEST_TIME
 
     it("the currency can be changed: prices and the payment follow it", async () => {
       routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      // Pinned so the default currency is EUR everywhere; on a UTC runner (CI)
+      // nothing is detected, the default is USD, and "change to USD" is a no-op.
+      mockBrowserTimezone("Europe/Paris");
       renderWizard(baseState());
       press("Skip the trial and pay now");
       const before = screen.getByTestId("plan-pos-price").textContent;
