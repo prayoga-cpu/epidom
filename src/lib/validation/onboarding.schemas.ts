@@ -117,3 +117,8 @@ export const slugCheckQuerySchema = z.object({
 export const referralCodeQuerySchema = z.object({
   code: z.string().trim().min(1).max(32),
 });
+
+/** POST /api/onboarding/referral-code */
+export const referralCodeBodySchema = z.object({
+  code: z.string().trim().min(1).max(32),
+});

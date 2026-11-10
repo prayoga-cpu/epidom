@@ -55,6 +55,9 @@ export function navItemHref(item: NavItem, storeId: string | undefined): string 
   return storeId ? `/store/${storeId}${item.route ?? item.href}` : `/go${item.href}`;
 }
 
+/** The Settings page (formerly Profile) keeps its old "/profile" permission key. */
+export const SETTINGS_HREF = "/profile";
+
 /** One row of a section's list. Renders nothing for a page a staff persona may not open. */
 export function NavItemLink({ item, ctx }: { item: NavItem; ctx: NavContext }) {
   const { t } = useI18n();

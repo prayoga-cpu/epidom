@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { PlanBillingToggle } from "@/components/shared/plan-billing-toggle";
+import { usePriceCurrency } from "@/lib/hooks/use-price-currency";
 import { PricingCards } from "./pricing-cards";
 import { PricingClaudeStrip } from "./pricing-claude-strip";
 import { FeatureComparison } from "./feature-comparison";
@@ -10,8 +12,10 @@ import { PricingCta } from "./pricing-cta";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 
 export function PricingPageClient() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [yearly, setYearly] = useState(true);
+  // Quoted in the language's currency first, then the visitor's own (detected, or what they chose before).
+  const [currency, setCurrency] = usePriceCurrency(locale);
   const { data: subData } = useSubscriptionStatus();
   const currentPlan = subData?.hasSubscription ? subData.subscription?.plan : null;
 
@@ -74,59 +78,29 @@ export function PricingPageClient() {
           >
             {t("redesign.pricingPage.script")}
           </p>
-          <div
-            style={{
-              display: "inline-flex",
-              marginTop: 40,
-              padding: 4,
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.10)",
-            }}
-          >
-            <button
-              onClick={() => setYearly(false)}
-              className="cursor-pointer transition-all"
-              style={{
-                padding: "10px 22px",
-                borderRadius: 999,
-                background: !yearly ? "var(--epi-cream-50)" : "transparent",
-                color: !yearly ? "var(--epi-navy-900)" : "rgba(251,249,228,0.5)",
-                border: "none",
-                fontSize: 13,
-                letterSpacing: "0.06em",
-                fontFamily: "var(--epi-font-body)",
-                textTransform: "uppercase",
-                fontWeight: 500,
-              }}
-            >
-              {t("redesign.pricingPage.toggleMonthly")}
-            </button>
-            <button
-              onClick={() => setYearly(true)}
-              className="cursor-pointer transition-all"
-              style={{
-                padding: "10px 22px",
-                borderRadius: 999,
-                background: yearly ? "var(--epi-cream-50)" : "transparent",
-                color: yearly ? "var(--epi-navy-900)" : "rgba(251,249,228,0.5)",
-                border: "none",
-                fontSize: 13,
-                letterSpacing: "0.06em",
-                fontFamily: "var(--epi-font-body)",
-                textTransform: "uppercase",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t("redesign.pricingPage.toggleYearly")}
-            </button>
+          <div style={{ marginTop: 40 }}>
+            <PlanBillingToggle
+              tone="dark"
+              yearly={yearly}
+              onYearlyChange={setYearly}
+              currency={currency}
+              onCurrencyChange={setCurrency}
+              monthlyLabel={t("redesign.pricingPage.toggleMonthly")}
+              yearlyLabel={t("redesign.pricingPage.toggleYearly")}
+              groupLabel={t("redesign.pricingPage.toggleMonthly")}
+              currencyLabel={t("onboarding.flow.plan.currency")}
+            />
           </div>
         </div>
       </section>
 
       <PricingClaudeStrip />
-      <PricingCards yearly={yearly} currentPlan={currentPlan} onYearlyChange={setYearly} />
+      <PricingCards
+        yearly={yearly}
+        currency={currency}
+        currentPlan={currentPlan}
+        onYearlyChange={setYearly}
+      />
       <FeatureComparison />
       <PricingFaq />
       <PricingCta />

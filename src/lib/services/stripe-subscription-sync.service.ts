@@ -1,0 +1,449 @@
+/**
+ * @file lib/services/stripe-subscription-sync.service.ts
+ * @description What a Stripe event or a finished Checkout does to the stored
+ * subscription. The webhook route (api/webhooks/stripe) calls these for every
+ * event; the Checkout success page calls syncCheckoutSession too, so an account
+ * that just paid is recorded as paid straight away, even when the webhook is
+ * late or can't reach the app (local development). Every handler is safe to run
+ * twice for the same event.
+ */
+
+import { stripe } from "@/lib/stripe";
+import { subscriptionRepository } from "@/lib/repositories";
+import { subscriptionService } from "@/lib/services";
+import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
+import {
+  extractSubscriptionPeriod,
+  isSubscriptionCanceling,
+  getInvoiceSubscriptionId,
+} from "@/types/stripe";
+import Stripe from "stripe";
+import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import { sendTrialEndingEmail } from "@/lib/services/email.service";
+import { servingAppUrl } from "@/lib/app-url";
+
+/**
+ * Maps raw Stripe metadata plan names (including legacy ones) to the current SubscriptionPlan enum.
+ */
+export function mapStripePlanToEnum(rawPlan: string | undefined): SubscriptionPlan | undefined {
+  if (!rawPlan) return undefined;
+  switch (rawPlan) {
+    case "STARTER":
+    case "POS":
+      return SubscriptionPlan.POS;
+    case "PRO":
+    case "OPERATIONS":
+      return SubscriptionPlan.OPERATIONS;
+    case "ENTERPRISE":
+      return SubscriptionPlan.ENTERPRISE;
+    case "FREE":
+      return SubscriptionPlan.FREE;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Maps Stripe price IDs to the current SubscriptionPlan enum.
+ */
+export function mapPriceIdToEnum(priceId: string | undefined): SubscriptionPlan | undefined {
+  if (!priceId) return undefined;
+
+  const posMonthly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS_MONTHLY;
+  const posYearly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_POS_YEARLY;
+  const opsMonthly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_MONTHLY;
+  const opsYearly = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_OPERATIONS_YEARLY;
+
+  if (priceId === posMonthly || priceId === posYearly) return SubscriptionPlan.POS;
+  if (priceId === opsMonthly || priceId === opsYearly) return SubscriptionPlan.OPERATIONS;
+
+  return undefined;
+}
+
+/**
+ * Statuses in which a superseded subscription can still bill the customer.
+ * A re-subscribe cancels the old one in any of these, not only while active,
+ * or a past-due or trialing one would keep charging alongside the new one.
+ */
+export const BILLABLE_STATUSES: Stripe.Subscription.Status[] = [
+  "active",
+  "trialing",
+  "past_due",
+  "unpaid",
+  "incomplete",
+];
+
+/**
+ * Settles the subscription a row already points at before an incoming one
+ * replaces it. Returns "stale" when the stored subscription is newer and can
+ * still bill: the incoming event was retried or arrived out of order, and must
+ * neither cancel the customer's current subscription nor overwrite the row.
+ * Otherwise cancels the stored one if it can still bill, and returns "replace".
+ */
+export async function supersedeStoredSubscription(
+  storedId: string | null | undefined,
+  incoming: Stripe.Subscription
+): Promise<"stale" | "replace"> {
+  if (!storedId || storedId === incoming.id) return "replace";
+  try {
+    const stored = await stripe.subscriptions.retrieve(storedId);
+    if (BILLABLE_STATUSES.includes(stored.status)) {
+      if (stored.created > incoming.created) return "stale";
+      await stripe.subscriptions.cancel(storedId);
+    }
+  } catch {
+    // Already deleted, or from the previous Stripe account: nothing to cancel.
+  }
+  return "replace";
+}
+
+// ----------------------------------------------------------------------
+// Event Handlers
+// ----------------------------------------------------------------------
+
+/**
+ * Fields that lift an admin-quoted custom-price suspension, for a session or
+ * subscription that carries the `customPrice` marker. The quoted amount itself
+ * stays on the row — it's what the user is now paying — only the "awaiting
+ * payment" state is cleared. Empty for every other event, so ordinary Stripe
+ * traffic never touches these columns.
+ */
+export function customPriceSettlement(metadata: Stripe.Metadata | null | undefined) {
+  return metadata?.customPrice === "true"
+    ? { customPricePendingAt: null, customPricePrevStatus: null }
+    : {};
+}
+
+export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  const userId = session.metadata?.userId;
+  const plan = mapStripePlanToEnum(session.metadata?.plan);
+
+  if (!userId) return;
+
+  // SUBSCRIPTION MODE
+  if (!plan) return;
+
+  const subscriptionId = session.subscription as string;
+  if (!subscriptionId) return;
+
+  const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ["latest_invoice", "customer"],
+  });
+
+  const period = extractSubscriptionPeriod(stripeSubscription);
+  if (!period) return;
+
+  const { currentPeriodStart, currentPeriodEnd } = period;
+  const existingSubscription = await subscriptionRepository.findByUserId(userId);
+
+  if (existingSubscription) {
+    const outcome = await supersedeStoredSubscription(
+      existingSubscription.stripeSubscriptionId,
+      stripeSubscription
+    );
+    if (outcome === "stale") return;
+
+    await subscriptionRepository.update(userId, {
+      stripeSubscriptionId: subscriptionId,
+      stripePriceId: stripeSubscription.items.data[0].price.id,
+      plan: plan as SubscriptionPlan,
+      status: mapStripeStatus(stripeSubscription.status),
+      currentPeriodStart,
+      currentPeriodEnd,
+      trialEndsAt: extractTrialEnd(stripeSubscription),
+      cancelAtPeriodEnd: false,
+      ...customPriceSettlement(session.metadata),
+    });
+  } else {
+    await subscriptionRepository.create({
+      userId,
+      stripeCustomerId: session.customer as string,
+      stripeSubscriptionId: subscriptionId,
+      stripePriceId: stripeSubscription.items.data[0].price.id,
+      plan: plan as SubscriptionPlan,
+      status: mapStripeStatus(stripeSubscription.status),
+      currentPeriodStart,
+      currentPeriodEnd,
+      trialEndsAt: extractTrialEnd(stripeSubscription),
+    });
+  }
+
+  subscriptionService.invalidateUserCache(userId);
+
+  await applyDeferredReferralCoupon(session, stripeSubscription);
+}
+
+/**
+ * A trial checkout leaves a partner's referral coupon in the session metadata
+ * (src/lib/services/referral-discount.service.ts): put it on the subscription
+ * now that the trial's $0 invoice exists, so the first paid invoice gets it.
+ * A failure is logged, not thrown: the subscription itself is already stored.
+ */
+export async function applyDeferredReferralCoupon(
+  session: Stripe.Checkout.Session,
+  subscription: Stripe.Subscription
+) {
+  const coupon = session.metadata?.referralCoupon;
+  if (!coupon || subscription.status !== "trialing") return;
+  if ((subscription.discounts ?? []).length > 0) return;
+  try {
+    await stripe.subscriptions.update(subscription.id, { discounts: [{ coupon }] });
+  } catch (error) {
+    logger.error("Could not add the referral coupon to a trial subscription", {
+      subscriptionId: subscription.id,
+      coupon,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+export async function handleSubscriptionCreated(createdSubscription: Stripe.Subscription) {
+  const userId = createdSubscription.metadata?.userId;
+  const plan = mapStripePlanToEnum(createdSubscription.metadata?.plan);
+
+  if (!userId || !plan) return;
+
+  // The event carries the subscription as it was at creation, which for a
+  // Checkout card subscription is usually `incomplete`, and Stripe does not
+  // order events. Write Stripe's current state so a late `created` event can't
+  // overwrite the ACTIVE status checkout.session.completed already stored.
+  const subscription = await stripe.subscriptions.retrieve(createdSubscription.id);
+
+  const period = extractSubscriptionPeriod(subscription);
+  if (!period) return;
+
+  const { currentPeriodStart, currentPeriodEnd } = period;
+  const existingSubscription = await subscriptionRepository.findByUserId(userId);
+
+  if (existingSubscription) {
+    const outcome = await supersedeStoredSubscription(
+      existingSubscription.stripeSubscriptionId,
+      subscription
+    );
+    if (outcome === "stale") return;
+
+    await subscriptionRepository.update(userId, {
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: subscription.items.data[0].price.id,
+      plan: plan as SubscriptionPlan,
+      status: mapStripeStatus(subscription.status),
+      currentPeriodStart,
+      currentPeriodEnd,
+      trialEndsAt: extractTrialEnd(subscription),
+      cancelAtPeriodEnd: false,
+      ...customPriceSettlement(subscription.metadata),
+    });
+  } else {
+    await subscriptionRepository.create({
+      userId,
+      stripeCustomerId: subscription.customer as string,
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: subscription.items.data[0].price.id,
+      plan: plan as SubscriptionPlan,
+      status: mapStripeStatus(subscription.status),
+      currentPeriodStart,
+      currentPeriodEnd,
+      trialEndsAt: extractTrialEnd(subscription),
+    });
+  }
+
+  subscriptionService.invalidateUserCache(userId);
+}
+
+export async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const period = extractSubscriptionPeriod(subscription);
+  if (!period) return;
+
+  const { currentPeriodStart, currentPeriodEnd } = period;
+  const existingSubscription = await subscriptionRepository.findByStripeSubscriptionId(
+    subscription.id
+  );
+  if (!existingSubscription) return;
+
+  const status = mapStripeStatus(subscription.status);
+  const cancelAtPeriodEnd = isSubscriptionCanceling(subscription);
+
+  const priceId = subscription.items.data[0]?.price.id;
+  const newPlan = mapPriceIdToEnum(priceId) || mapStripePlanToEnum(subscription.metadata?.plan);
+
+  // An account suspended behind an unpaid custom-price offer keeps its
+  // INCOMPLETE status and quoted plan until that offer is paid — a late event
+  // from the superseded subscription must not hand access back.
+  const suspendedByOffer =
+    existingSubscription.customPricePendingAt != null &&
+    subscription.metadata?.customPrice !== "true";
+
+  await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
+    currentPeriodStart,
+    currentPeriodEnd,
+    trialEndsAt: extractTrialEnd(subscription),
+    cancelAtPeriodEnd,
+    ...(suspendedByOffer ? {} : { status, ...(newPlan ? { plan: newPlan } : {}) }),
+    ...(priceId ? { stripePriceId: priceId } : {}),
+    ...customPriceSettlement(subscription.metadata),
+  });
+
+  subscriptionService.invalidateUserCache(existingSubscription.userId);
+}
+
+export async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const existingSubscription = await subscriptionRepository.findByStripeSubscriptionId(
+    subscription.id
+  );
+  if (!existingSubscription) return;
+
+  await subscriptionRepository.updateByStripeSubscriptionId(subscription.id, {
+    status: SubscriptionStatus.CANCELED,
+    cancelAtPeriodEnd: true,
+    // A subscription that's truly deleted (not just canceled-at-period-end)
+    // will only ever come back via a fresh Checkout Session on the catalog
+    // price — clear any admin custom-price override so it doesn't linger
+    // and misdisplay against a future re-subscribe. The exception is a pending
+    // offer: setting one cancels the old subscription on purpose, and this
+    // event is that cancellation echoing back.
+    ...(existingSubscription.customPricePendingAt != null
+      ? {}
+      : {
+          customPriceAmount: null,
+          customPriceCurrency: null,
+          customPriceInterval: null,
+          customPricePlan: null,
+        }),
+  });
+
+  subscriptionService.invalidateUserCache(existingSubscription.userId);
+}
+
+/**
+ * Three days before a trial ends (Stripe's own timing). With no card to
+ * charge, the trial will simply end and the account go back to Free, so the
+ * owner gets one reminder with a link to Billing → Add a card. With a card on
+ * file nothing is sent: Stripe charges it and emails the receipt.
+ * A failed email is logged, never thrown, so Stripe doesn't retry the event.
+ */
+export async function handleTrialWillEnd(eventSubscription: Stripe.Subscription) {
+  const row = await subscriptionRepository.findByStripeSubscriptionId(eventSubscription.id);
+  if (!row) return;
+
+  const live = await stripe.subscriptions.retrieve(eventSubscription.id, { expand: ["customer"] });
+  if (live.status !== "trialing" || !live.trial_end) return;
+  const customer = live.customer;
+  const hasCard =
+    !!live.default_payment_method ||
+    (typeof customer === "object" &&
+      !customer.deleted &&
+      !!customer.invoice_settings?.default_payment_method);
+  if (hasCard) return;
+
+  const user = await prisma.user.findUnique({
+    where: { id: row.userId },
+    select: {
+      email: true,
+      name: true,
+      locale: true,
+      business: {
+        select: { stores: { select: { id: true }, orderBy: { createdAt: "asc" }, take: 1 } },
+      },
+    },
+  });
+  if (!user) return;
+  const storeId = user.business?.stores[0]?.id;
+  const result = await sendTrialEndingEmail({
+    email: user.email,
+    name: user.name,
+    locale: user.locale,
+    trialEndsAt: new Date(live.trial_end * 1000),
+    billingUrl: `${servingAppUrl()}${storeId ? `/store/${storeId}/billing` : "/stores"}`,
+  });
+  if (!result.success) {
+    logger.error("POS trial reminder email failed", {
+      userId: row.userId,
+      subscriptionId: live.id,
+      error: result.error,
+    });
+  }
+}
+
+export async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
+
+  const subscription = await subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
+  if (!subscription) return;
+
+  // Only a subscription waiting on a payment can come back: a late invoice
+  // for an ended (CANCELED) subscription must not reopen access. A paid
+  // invoice on the *superseded* subscription must not reactivate an account
+  // that is waiting to pay an admin-quoted custom price either.
+  if (
+    (subscription.status === SubscriptionStatus.PAST_DUE ||
+      subscription.status === SubscriptionStatus.INCOMPLETE) &&
+    subscription.customPricePendingAt == null
+  ) {
+    // Take the status from Stripe, not from the row: dunning can end a
+    // subscription while its last invoice is still payable, and events arrive
+    // in any order, so a paid invoice alone doesn't mean it is live again.
+    const live = await stripe.subscriptions.retrieve(subscriptionId);
+    const status = mapStripeStatus(live.status);
+    if (status !== subscription.status) {
+      await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, { status });
+      subscriptionService.invalidateUserCache(subscription.userId);
+    }
+  }
+}
+
+export async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
+
+  const subscription = await subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
+  // An ended subscription stays CANCELED: dunning sends the last failed
+  // payment and the deletion together, in either order.
+  if (!subscription || subscription.status === SubscriptionStatus.CANCELED) return;
+
+  await subscriptionRepository.updateByStripeSubscriptionId(subscriptionId, {
+    status: SubscriptionStatus.PAST_DUE,
+  });
+
+  subscriptionService.invalidateUserCache(subscription.userId);
+}
+
+export function mapStripeStatus(stripeStatus: Stripe.Subscription.Status): SubscriptionStatus {
+  switch (stripeStatus) {
+    case "active":
+    // A trialing subscription grants full access — all gates key on ACTIVE, so we
+    // map "trialing" → ACTIVE (the trial window is tracked separately via trialEndsAt).
+    case "trialing":
+      return SubscriptionStatus.ACTIVE;
+    case "canceled":
+      return SubscriptionStatus.CANCELED;
+    case "past_due":
+    case "unpaid":
+      return SubscriptionStatus.PAST_DUE;
+    default:
+      return SubscriptionStatus.INCOMPLETE;
+  }
+}
+
+/** Stripe trial_end (Unix seconds) → Date, or null when there is no trial. */
+export function extractTrialEnd(subscription: Stripe.Subscription): Date | null {
+  return subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
+}
+
+/**
+ * The signed-in owner's own Checkout, confirmed with Stripe: when the session
+ * is theirs and paid, it is recorded exactly as the webhook would. False when
+ * it isn't (another account's session, still open, the card-less trial's id).
+ */
+export async function syncCheckoutSession(userId: string, sessionId: string): Promise<boolean> {
+  if (!sessionId.startsWith("cs_")) return false;
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  if (session.metadata?.userId !== userId) return false;
+  if (session.status !== "complete") return false;
+  if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
+    return false;
+  }
+  await handleCheckoutSessionCompleted(session);
+  return true;
+}

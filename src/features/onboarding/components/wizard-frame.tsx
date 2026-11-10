@@ -81,9 +81,12 @@ export function FlowFrame({
   children,
   progress,
   notice,
+  wide = false,
 }: {
   children: React.ReactNode;
   progress: number;
+  /** Room for two cards side by side (the plan screen). */
+  wide?: boolean;
   /** Rendered above the question (e.g. the verification-link notice). */
   notice?: React.ReactNode;
 }) {
@@ -113,7 +116,12 @@ export function FlowFrame({
         />
       </div>
       <main className="flex min-h-0 flex-1 flex-col items-center px-4 sm:px-6">
-        <div className="flex min-h-0 w-full max-w-xl flex-1 flex-col py-6 sm:py-10">
+        <div
+          className={cn(
+            "flex min-h-0 w-full flex-1 flex-col py-6 sm:py-10",
+            wide ? "max-w-4xl" : "max-w-xl"
+          )}
+        >
           {notice ? <div className="pb-4">{notice}</div> : null}
           {children}
         </div>

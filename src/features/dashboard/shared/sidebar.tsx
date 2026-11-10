@@ -21,7 +21,7 @@ import { APP_VERSION } from "@/lib/version";
 import { PLAN_LABELS, upgradeHrefFor } from "@/lib/plans/entitlements";
 import { cn } from "@/lib/utils";
 import { DesktopSidebar } from "./desktop-sidebar";
-import { NavItemLink, useNavContext } from "./nav-item-link";
+import { NavItemLink, SETTINGS_HREF, navItemHref, useNavContext } from "./nav-item-link";
 import { NavUserDrawerSection } from "./nav-user";
 import { OfflineSyncTrigger, PwaInstallTrigger } from "./pwa-install-dialog";
 import { StoreSwitcher } from "./store-switcher";
@@ -82,6 +82,35 @@ function MobileSidebar({ navigation }: { navigation: NavSection[] }) {
         }));
   const showHome = matchesQuery(t(homeNavItem.labelKey));
   const showPos = matchesQuery(t("nav.pos"));
+  const searching = foldedQuery !== "";
+
+  // Same grouping as the desktop sidebar: one category at a time (General,
+  // Operations, Reports), following the open page, with Settings pinned under
+  // its list. Searching drops the grouping and lists every match.
+  const visibleSections = navigation.filter(
+    (section) =>
+      section.items.length > 0 &&
+      (staffAllowedPages === null ||
+        section.items.some((item) => staffAllowedPages.includes(item.href)))
+  );
+  const sectionOfPath = visibleSections.find((section) =>
+    section.items.some((item) => {
+      const href = navItemHref(item, storeId);
+      return pathname === href || pathname.startsWith(`${href}/`);
+    })
+  );
+  // A category the person tapped holds only for the page it was tapped on
+  // (adjusted while rendering, so the old list never flashes).
+  const [picked, setPicked] = useState<{ id: string; path: string } | null>(null);
+  if (picked && picked.path !== pathname) setPicked(null);
+  const activeSection =
+    visibleSections.find((section) => section.id === picked?.id) ??
+    sectionOfPath ??
+    visibleSections[0];
+  const settingsItem = navigation
+    .flatMap((section) => section.items)
+    .find((item) => item.href === SETTINGS_HREF);
+
   const nothingMatches =
     foldedQuery !== "" &&
     !showHome &&
@@ -160,7 +189,50 @@ function MobileSidebar({ navigation }: { navigation: NavSection[] }) {
               {t("search.noResults")}
             </p>
           )}
-          {filteredNavigation.map((section, sectionIndex) => {
+          {!searching && activeSection && (
+            <>
+              {visibleSections.length > 1 && (
+                <div className="mb-3 grid grid-cols-3 gap-1">
+                  {visibleSections.map((section) => {
+                    const SectionIcon = section.icon;
+                    const active = section.id === activeSection.id;
+                    return (
+                      <button
+                        key={section.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setPicked({ id: section.id, path: pathname })}
+                        className={cn(
+                          "flex min-h-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-center text-[11px] leading-tight font-medium transition active:scale-[0.97]",
+                          active
+                            ? "bg-muted/60 text-foreground shadow-inner"
+                            : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                        )}
+                      >
+                        <SectionIcon className="size-5 shrink-0" aria-hidden />
+                        <span className="w-full [overflow-wrap:anywhere]">
+                          {t(section.labelKey)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <ul className="space-y-1.5" aria-label={t(activeSection.labelKey)}>
+                {activeSection.items
+                  .filter((item) => item.href !== SETTINGS_HREF)
+                  .map((item) => (
+                    <NavItemLink key={item.href} item={item} ctx={ctx} />
+                  ))}
+              </ul>
+              {settingsItem && (
+                <ul className="mt-3 border-t pt-3">
+                  <NavItemLink item={settingsItem} ctx={ctx} />
+                </ul>
+              )}
+            </>
+          )}
+          {searching && filteredNavigation.map((section, sectionIndex) => {
             // A staff persona with none of this section's pages granted shouldn't
             // see a dangling title with nothing under it — nor should a section
             // the search filtered empty.

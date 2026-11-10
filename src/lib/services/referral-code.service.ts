@@ -29,10 +29,11 @@ export async function previewReferralCode(raw: string): Promise<ReferralCodePrev
 /** The partner this account is already credited to, with its discount: no code field then. */
 export async function getCreditedReferral(
   userId: string
-): Promise<{ displayName: string; discountPercent: number } | null> {
+): Promise<{ code: string; displayName: string; discountPercent: number } | null> {
   const row = await prisma.signupAttribution.findUnique({
     where: { userId },
     select: {
+      refCode: true,
       discountPercent: true,
       discountRedeemedAt: true,
       partner: { select: { displayName: true, status: true } },
@@ -40,7 +41,9 @@ export async function getCreditedReferral(
   });
   if (!row?.partner || row.partner.status === "ENDED" || row.discountRedeemedAt) return null;
   const percent = Number(row.discountPercent ?? 0);
-  return percent > 0 ? { displayName: row.partner.displayName, discountPercent: percent } : null;
+  return percent > 0
+    ? { code: row.refCode ?? "", displayName: row.partner.displayName, discountPercent: percent }
+    : null;
 }
 
 /**
@@ -96,4 +99,18 @@ export async function applyReferralCode(
     console.error("[referral-code] failed to apply the code:", err);
     return false;
   }
+}
+
+/**
+ * Credits the signed-in account to a code now, ahead of publishing: a plan
+ * paid for first (setup's plan screen opens Checkout before the store exists)
+ * reads the credit when it prices the first invoice. Same rules as
+ * applyReferralCode; false when it could not be credited.
+ */
+export async function claimReferralCode(userId: string, raw: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true },
+  });
+  return user ? applyReferralCode(user, raw) : false;
 }

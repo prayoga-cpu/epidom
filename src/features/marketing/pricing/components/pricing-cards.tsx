@@ -8,7 +8,12 @@ import { useToast } from "@/hooks/use-toast";
 import { trackEvent, trackConversion, trackMetaPixelEvent } from "@/lib/analytics";
 import { getWhatsAppOptions, whatsappHref } from "@/lib/constants/contact";
 import { getLocalizedPath } from "@/lib/i18n-routing";
-import { LOCALE_PRICE_CURRENCY, planChargeAmount } from "@/lib/constants/plan-pricing";
+import {
+  LOCALE_PRICE_CURRENCY,
+  formatPlanPrice,
+  planChargeAmount,
+  type PriceCurrency,
+} from "@/lib/constants/plan-pricing";
 import { parsePlanIntent, registerHrefFor } from "@/features/onboarding/lib/plan-intent";
 import { BoldText } from "./bold-text";
 
@@ -36,15 +41,20 @@ const FOCUSABLE =
 
 export function PricingCards({
   yearly,
+  currency: chosenCurrency,
   currentPlan,
   onYearlyChange,
 }: {
   yearly: boolean;
+  /** The currency the plans are quoted (and charged) in; the visitor can change it. */
+  currency?: PriceCurrency;
   currentPlan?: string | null;
   /** A `?plan=…&billing=…` deep link sets the page's Monthly / Yearly toggle to match. */
   onYearlyChange?: (yearly: boolean) => void;
 }) {
   const { t, locale } = useI18n();
+  // The language's currency unless the page passes the visitor's own.
+  const currency = chosenCurrency ?? LOCALE_PRICE_CURRENCY[locale];
   const { user, loading: userLoading } = useUser();
   const { toast } = useToast();
   const router = useRouter();
@@ -168,6 +178,14 @@ export function PricingCards({
   }
 
   function getPrice(tierKey: string) {
+    // POS and Operations are quoted from the price table in the chosen currency.
+    if (tierKey === "t2" || tierKey === "t3") {
+      return formatPlanPrice(
+        tierKey === "t2" ? "POS" : "OPERATIONS",
+        currency,
+        yearly ? "yearly" : "monthly"
+      );
+    }
     const mo = t(`redesign.pricingPage.${tierKey}price_mo` as const);
     const yr = t(`redesign.pricingPage.${tierKey}price_yr` as const);
     return yearly ? yr : mo;
@@ -239,7 +257,7 @@ export function PricingCards({
           yearly,
           // The currency this page quotes for the language. Without it Stripe
           // charges in the one it picks from the visitor's IP.
-          ...(isPaid ? { currency: LOCALE_PRICE_CURRENCY[locale] } : {}),
+          ...(isPaid ? { currency } : {}),
         }),
       });
 
@@ -279,7 +297,7 @@ export function PricingCards({
               content_category: dialogTrial ? "trial" : "paid",
               // The first charge in the currency this page quoted, so Meta can
               // report and optimise on value.
-              ...planChargeAmount(confirming.plan, LOCALE_PRICE_CURRENCY[locale], yearly),
+              ...planChargeAmount(confirming.plan, currency, yearly),
             });
             window.location.href = result.data.url;
             setConfirming(null);

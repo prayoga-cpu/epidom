@@ -20,6 +20,8 @@ vi.mock("better-auth/adapters/prisma", async () => {
 vi.mock("@/lib/services/email.service", () => ({
   sendVerificationEmail: h.sendVerificationEmail,
   sendPasswordResetEmail: vi.fn(async () => ({ success: true })),
+  // Sent after a browser sign-up (src/lib/auth.ts); not what this test is about.
+  sendWelcomeEmail: vi.fn(async () => ({ success: true })),
 }));
 vi.mock("@/lib/admin", () => ({ isAdminEmail: () => false }));
 vi.mock("@/lib/services/sales-page.service", () => ({ recordSalesPageSignup: vi.fn() }));

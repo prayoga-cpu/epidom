@@ -100,11 +100,16 @@ describe("applyReferralCode", () => {
 describe("getCreditedReferral", () => {
   it("returns the partner's offer while it is unused", async () => {
     h.findUnique.mockResolvedValue({
+      refCode: "BOB10",
       discountPercent: new Prisma.Decimal(10),
       discountRedeemedAt: null,
       partner: { displayName: "Bob", status: "ACTIVE" },
     });
-    expect(await getCreditedReferral("u1")).toEqual({ displayName: "Bob", discountPercent: 10 });
+    expect(await getCreditedReferral("u1")).toEqual({
+      code: "BOB10",
+      displayName: "Bob",
+      discountPercent: 10,
+    });
   });
   it("null with no partner, an ended one, or a used discount", async () => {
     h.findUnique.mockResolvedValue({ partner: null });

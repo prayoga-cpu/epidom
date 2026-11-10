@@ -31,6 +31,8 @@ function getResendClient(): Resend | null {
 
 // Email configuration
 const EMAIL_FROM = process.env.EMAIL_FROM || "EPIDOM <onboarding@resend.dev>";
+// Replies to the no-reply sender land with support instead of bouncing.
+const EMAIL_REPLY_TO = SUPPORT_EMAIL_ADDRESSES[0];
 const APP_NAME = "EPIDOM";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -69,6 +71,7 @@ export async function sendVerificationEmail(
     console.log(`[Email] Sending verification email to ${email}`);
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: email,
       // The code leads the subject so it can be read from the inbox list or
       // a phone notification, even when the email sits in spam with its
@@ -121,6 +124,7 @@ export async function sendPasswordResetEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: email,
       subject: `Reset your password for ${APP_NAME}`,
       html: generatePasswordResetEmailHtml(name, resetUrl),
@@ -360,6 +364,7 @@ export async function sendAccountDeactivatedEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: email,
       subject: `Your ${APP_NAME} account has been deactivated`,
       html: `
@@ -456,6 +461,7 @@ export async function sendStaffPinEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: email,
       subject: `Your ${APP_NAME} Staff PIN for ${storeName}`,
       html: `
@@ -509,6 +515,7 @@ export async function sendOwnerPinResetOtpEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: email,
       subject: `Your ${APP_NAME} PIN reset code`,
       html: `
@@ -567,6 +574,7 @@ export async function sendStoreOwnershipTransferEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: toEmail,
       subject: `${fromText} wants to transfer "${storeName}" to you on ${APP_NAME}`,
       html: `
@@ -630,6 +638,7 @@ export async function sendStaffAccountInviteEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: toEmail,
       subject: `Set up your ${APP_NAME} sign-in for ${storeName}`,
       html: `
@@ -779,6 +788,7 @@ export async function sendTrialEndingEmail(payload: {
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: payload.email,
       subject: copy.subject(date),
       html: `
@@ -828,6 +838,341 @@ export async function sendTrialEndingEmail(payload: {
 }
 
 /**
+ * The welcome email every new account gets, per locale: the 14-day POS trial
+ * (no card) and the one thing left to do, finish setup, which publishes the
+ * online store and gives the link to share.
+ */
+const WELCOME_EMAIL_COPY: Record<
+  "en" | "fr" | "id",
+  {
+    subject: string;
+    greeting: (name: string | null | undefined) => string;
+    heading: string;
+    intro: string;
+    trialTitle: string;
+    trialBody: string;
+    linkTitle: string;
+    linkBody: string;
+    cta: string;
+    skip: string;
+    footer: string;
+  }
+> = {
+  en: {
+    subject: "Welcome to Epidom: your 14-day POS trial is waiting",
+    greeting: (name) => greetingFor(name),
+    heading: "Welcome to Epidom",
+    intro: "Your account is ready. Finish setting up your store in a couple of minutes and you are live.",
+    trialTitle: "14 days of POS, free",
+    trialBody:
+      "Finish setup and your 14-day POS trial starts on its own: till, kitchen display and tables, no card needed. Skip setup and you stay on the Free plan.",
+    linkTitle: "Your online store link",
+    linkBody:
+      "Finishing setup publishes your online store and gives you its link to share with customers, on WhatsApp, Instagram or a QR code on your counter.",
+    cta: "Finish setting up my store",
+    skip: "You can also come back to it any time from Your Stores.",
+    footer: "You get this email because you created an Epidom account.",
+  },
+  fr: {
+    subject: "Bienvenue sur Epidom : votre essai POS de 14 jours vous attend",
+    greeting: (name) => (name?.trim() ? `Bonjour ${escapeHtml(name.trim())},` : "Bonjour,"),
+    heading: "Bienvenue sur Epidom",
+    intro:
+      "Votre compte est prêt. Terminez la configuration de votre boutique en quelques minutes et vous êtes en ligne.",
+    trialTitle: "14 jours de POS offerts",
+    trialBody:
+      "Terminez la configuration et votre essai POS de 14 jours démarre tout seul : caisse, écran cuisine et tables, sans carte bancaire. Si vous passez la configuration, vous restez sur l'offre Gratuite.",
+    linkTitle: "Le lien de votre boutique en ligne",
+    linkBody:
+      "Terminer la configuration publie votre boutique en ligne et vous donne son lien à partager avec vos clients, sur WhatsApp, Instagram ou en QR code sur votre comptoir.",
+    cta: "Terminer la configuration",
+    skip: "Vous pouvez aussi y revenir à tout moment depuis Vos boutiques.",
+    footer: "Vous recevez cet e-mail parce que vous avez créé un compte Epidom.",
+  },
+  id: {
+    subject: "Selamat datang di Epidom: uji coba POS 14 hari menunggu Anda",
+    greeting: (name) => (name?.trim() ? `Halo ${escapeHtml(name.trim())},` : "Halo,"),
+    heading: "Selamat datang di Epidom",
+    intro:
+      "Akun Anda sudah siap. Selesaikan pengaturan toko dalam beberapa menit dan toko Anda langsung tayang.",
+    trialTitle: "POS gratis 14 hari",
+    trialBody:
+      "Selesaikan pengaturan dan uji coba POS 14 hari Anda dimulai otomatis: kasir, layar dapur, dan meja, tanpa kartu. Jika pengaturan dilewati, Anda tetap di paket Gratis.",
+    linkTitle: "Tautan toko online Anda",
+    linkBody:
+      "Menyelesaikan pengaturan menayangkan toko online Anda dan memberi tautan untuk dibagikan ke pelanggan lewat WhatsApp, Instagram, atau kode QR di kasir.",
+    cta: "Selesaikan pengaturan toko",
+    skip: "Anda juga bisa kembali kapan saja dari Toko Anda.",
+    footer: "Anda menerima email ini karena membuat akun Epidom.",
+  },
+};
+
+export async function sendWelcomeEmail(payload: {
+  email: string;
+  name: string | null;
+  locale?: string | null;
+  onboardingUrl: string;
+}): Promise<SendEmailResult> {
+  const lang = payload.locale === "fr" || payload.locale === "en" ? payload.locale : "id";
+  const copy = WELCOME_EMAIL_COPY[lang];
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n👋 [DEV] Welcome Email");
+    console.log("To:", payload.email, "|", payload.onboardingUrl, "\n");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const href = escapeHtml(payload.onboardingUrl);
+  const block = (title: string, body: string) =>
+    `<div style="background: #faf7ea; border: 1px solid #efe6c4; border-radius: 10px; padding: 16px 18px; margin: 16px 0;"><p style="margin: 0 0 6px; color: #111111; font-size: 16px; font-weight: 700;">${title}</p><p style="margin: 0; color: #555555; font-size: 14px;">${body}</p></div>`;
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
+      to: payload.email,
+      subject: copy.subject,
+      html: `
+<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(copy.heading)}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+  <div style="background-color: #444444; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 32px; letter-spacing: 2px; font-weight: 800;">${APP_NAME}</h1>
+  </div>
+
+  <div style="background: #ffffff; padding: 40px 35px; border: 1px solid #eeeeee; border-top: none; border-radius: 0 0 12px 12px;">
+    <h2 style="color: #111111; margin-top: 0; font-size: 24px; font-weight: 700;">${copy.heading}</h2>
+    <p style="color: #555555; font-size: 16px;">${copy.greeting(payload.name)}</p>
+    <p style="color: #555555; font-size: 16px;">${copy.intro}</p>
+
+    ${block(copy.trialTitle, copy.trialBody)}
+    ${block(copy.linkTitle, copy.linkBody)}
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${href}" style="display: inline-block; background-color: #111111; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">${copy.cta}</a>
+    </div>
+
+    <p style="color: #777777; font-size: 13px; text-align: center;">${copy.skip}</p>
+
+    <hr style="border: none; border-top: 1px solid #eeeeee; margin: 32px 0;">
+    <p style="color: #999999; font-size: 12px; margin: 0; text-align: center;">${copy.footer}</p>
+  </div>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send welcome email:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("[Email] Welcome email error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * The receipt for a subscription payment (Stripe's invoice.payment_succeeded),
+ * per locale. Sent by Epidom itself the moment a payment goes through, so the
+ * owner has it in their inbox whatever Stripe's own receipt emails are set to
+ * (they are off in test mode and optional in the Dashboard).
+ */
+const SUBSCRIPTION_RECEIPT_EMAIL_COPY: Record<
+  "en" | "fr" | "id",
+  {
+    subject: (plan: string) => string;
+    greeting: (name: string | null | undefined) => string;
+    heading: string;
+    intro: (plan: string) => string;
+    labels: { plan: string; amount: string; date: string; period: string; invoice: string };
+    view: string;
+    pdf: string;
+    note: string;
+    footer: string;
+    dateLocale: string;
+  }
+> = {
+  en: {
+    subject: (plan) => `Your Epidom receipt: ${plan}`,
+    greeting: (name) => greetingFor(name),
+    heading: "Payment received, thank you",
+    intro: (plan) => `We received your payment for the <strong>${plan}</strong> plan. Here is your receipt.`,
+    labels: {
+      plan: "Plan",
+      amount: "Amount paid",
+      date: "Date",
+      period: "Covers",
+      invoice: "Invoice",
+    },
+    view: "View invoice",
+    pdf: "Download PDF",
+    note: "Keep this email as your record. Prices are before tax unless the invoice says otherwise.",
+    footer: "You get this email because you paid for an Epidom plan.",
+    dateLocale: "en-GB",
+  },
+  fr: {
+    subject: (plan) => `Votre reçu Epidom : ${plan}`,
+    greeting: (name) => (name?.trim() ? `Bonjour ${escapeHtml(name.trim())},` : "Bonjour,"),
+    heading: "Paiement reçu, merci",
+    intro: (plan) => `Nous avons bien reçu votre paiement pour l'offre <strong>${plan}</strong>. Voici votre reçu.`,
+    labels: {
+      plan: "Offre",
+      amount: "Montant payé",
+      date: "Date",
+      period: "Période couverte",
+      invoice: "Facture",
+    },
+    view: "Voir la facture",
+    pdf: "Télécharger le PDF",
+    note: "Conservez cet e-mail comme justificatif. Les prix sont hors taxes sauf mention contraire sur la facture.",
+    footer: "Vous recevez cet e-mail parce que vous avez payé une offre Epidom.",
+    dateLocale: "fr-FR",
+  },
+  id: {
+    subject: (plan) => `Tanda terima Epidom Anda: ${plan}`,
+    greeting: (name) => (name?.trim() ? `Halo ${escapeHtml(name.trim())},` : "Halo,"),
+    heading: "Pembayaran diterima, terima kasih",
+    intro: (plan) => `Kami menerima pembayaran Anda untuk paket <strong>${plan}</strong>. Ini tanda terimanya.`,
+    labels: {
+      plan: "Paket",
+      amount: "Jumlah dibayar",
+      date: "Tanggal",
+      period: "Mencakup",
+      invoice: "Faktur",
+    },
+    view: "Lihat faktur",
+    pdf: "Unduh PDF",
+    note: "Simpan email ini sebagai bukti. Harga belum termasuk pajak kecuali tertulis lain di faktur.",
+    footer: "Anda menerima email ini karena membayar paket Epidom.",
+    dateLocale: "id-ID",
+  },
+};
+
+/** What a subscription receipt shows (the webhook builds it from the paid invoice). */
+export interface SubscriptionReceiptPayload {
+  email: string;
+  name: string | null;
+  locale?: string | null;
+  /** "POS", "Operations"… as the owner knows it. */
+  planName: string;
+  /** Already formatted in the invoice's currency: "€137.88". */
+  amountLabel: string;
+  paidAt: Date;
+  /** The billing period the payment covers, when the invoice says. */
+  period: { start: Date; end: Date } | null;
+  invoiceNumber: string | null;
+  /** Stripe's hosted invoice page and PDF. */
+  invoiceUrl: string | null;
+  pdfUrl: string | null;
+}
+
+export async function sendSubscriptionReceiptEmail(
+  payload: SubscriptionReceiptPayload
+): Promise<SendEmailResult> {
+  const lang = payload.locale === "fr" || payload.locale === "en" ? payload.locale : "id";
+  const copy = SUBSCRIPTION_RECEIPT_EMAIL_COPY[lang];
+  const fmt = (date: Date) =>
+    date.toLocaleDateString(copy.dateLocale, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  const plan = escapeHtml(payload.planName);
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("\n🧾 [DEV] Subscription Receipt Email");
+    console.log("To:", payload.email, "|", payload.planName, payload.amountLabel);
+    console.log("Invoice:", payload.invoiceUrl ?? "-", "\n");
+  }
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: true, messageId: "dev-mode" };
+  }
+
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding: 10px 0; color: #777777; font-size: 14px; border-bottom: 1px solid #eeeeee;">${label}</td><td style="padding: 10px 0; color: #111111; font-size: 14px; font-weight: 600; text-align: right; border-bottom: 1px solid #eeeeee;">${value}</td></tr>`;
+  const rows = [
+    row(copy.labels.plan, plan),
+    row(copy.labels.amount, escapeHtml(payload.amountLabel)),
+    row(copy.labels.date, fmt(payload.paidAt)),
+    payload.period ? row(copy.labels.period, `${fmt(payload.period.start)} → ${fmt(payload.period.end)}`) : "",
+    payload.invoiceNumber ? row(copy.labels.invoice, escapeHtml(payload.invoiceNumber)) : "",
+  ].join("");
+  const button = (href: string, label: string, primary: boolean) =>
+    `<a href="${escapeHtml(href)}" style="display: inline-block; margin: 4px; ${primary ? "background-color: #111111; color: #ffffff;" : "background-color: #ffffff; color: #111111; border: 1px solid #111111;"} padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px;">${label}</a>`;
+  const buttons = [
+    payload.invoiceUrl ? button(payload.invoiceUrl, copy.view, true) : "",
+    payload.pdfUrl ? button(payload.pdfUrl, copy.pdf, false) : "",
+  ].join("");
+
+  try {
+    const resend = getResendClient()!;
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
+      to: payload.email,
+      subject: copy.subject(payload.planName),
+      html: `
+<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(copy.heading)}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+  <div style="background-color: #444444; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 32px; letter-spacing: 2px; font-weight: 800;">${APP_NAME}</h1>
+  </div>
+
+  <div style="background: #ffffff; padding: 40px 35px; border: 1px solid #eeeeee; border-top: none; border-radius: 0 0 12px 12px;">
+    <h2 style="color: #111111; margin-top: 0; font-size: 24px; font-weight: 700;">${copy.heading}</h2>
+    <p style="color: #555555; font-size: 16px;">${copy.greeting(payload.name)}</p>
+    <p style="color: #555555; font-size: 16px;">${copy.intro(plan)}</p>
+
+    <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 24px 0;">${rows}</table>
+
+    <div style="text-align: center; margin: 28px 0;">${buttons}</div>
+
+    <p style="color: #555555; font-size: 13px;">${copy.note}</p>
+
+    <hr style="border: none; border-top: 1px solid #eeeeee; margin: 32px 0;">
+    <p style="color: #999999; font-size: 12px; margin: 0; text-align: center;">${copy.footer}</p>
+  </div>
+</body>
+</html>
+      `.trim(),
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send subscription receipt email:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("[Email] Subscription receipt email error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
  * Send feedback notification email to the team
  */
 export async function sendFeedbackNotificationEmail(
@@ -852,6 +1197,7 @@ export async function sendFeedbackNotificationEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: FEEDBACK_NOTIFICATION_RECIPIENTS,
       subject,
       html: generateFeedbackNotificationEmailHtml(payload, reference),
@@ -984,6 +1330,7 @@ export async function sendCustomDevelopmentNotificationEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: FEEDBACK_NOTIFICATION_RECIPIENTS,
       subject,
       html: generateCustomDevelopmentNotificationEmailHtml(payload, reference),
@@ -1112,6 +1459,7 @@ export async function sendSupplierOrderEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to,
       subject: `Purchase Order ${orderNumber} from ${storeName}`,
       html: `
@@ -1255,6 +1603,7 @@ export async function sendReceiptEmail(payload: {
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: payload.to,
       subject,
       html,
@@ -1300,6 +1649,7 @@ export async function sendBackupAlertEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: FEEDBACK_NOTIFICATION_RECIPIENTS,
       subject,
       html: `
@@ -1383,6 +1733,7 @@ export async function sendAuditCriticalEmail(payload: {
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: FEEDBACK_NOTIFICATION_RECIPIENTS,
       subject,
       html,
@@ -1464,6 +1815,7 @@ export async function sendAccountChangedEmail(payload: {
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: payload.userEmail,
       subject,
       html,
@@ -1502,6 +1854,7 @@ export async function sendPartnerInviteEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: toEmail,
       subject: `You're invited to be an ${APP_NAME} referral partner`,
       html: `
@@ -1548,6 +1901,7 @@ export async function sendPartnerAccessEmail(
     const resend = getResendClient()!;
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
+      replyTo: EMAIL_REPLY_TO,
       to: toEmail,
       subject: `Your ${APP_NAME} partner page is ready`,
       html: `

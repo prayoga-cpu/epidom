@@ -7,7 +7,11 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { createHmac, timingSafeEqual } from "crypto";
-import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/services/email.service";
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+} from "@/lib/services/email.service";
 import { isAdminEmail } from "@/lib/admin";
 import { recordSalesPageSignup } from "@/lib/services/sales-page.service";
 import { recordSignupAttribution, requestIp } from "@/lib/services/signup-attribution.service";
@@ -22,7 +26,7 @@ import {
   EMAIL_CODE_LENGTH,
   EMAIL_VERIFICATION_EXPIRES_IN,
 } from "@/lib/auth/email-verification-code";
-import { authBaseUrl, configuredAppUrl } from "@/lib/app-url";
+import { authBaseUrl, configuredAppUrl, servingAppUrl } from "@/lib/app-url";
 import {
   OAUTH_CONSENT_PAGE,
   OAUTH_PROVIDER_SCOPES,
@@ -238,6 +242,27 @@ export const auth = betterAuth({
               cookieHeader,
               requestIp(requestHeaders)
             );
+          }
+          // The welcome email: the 14-day POS trial and the link to finish
+          // setup. Only for someone who signed up from a browser (email or
+          // Google): an account the server creates itself (a staff login, an
+          // invited partner) has no request and isn't starting a store. It
+          // must never get in the way of the signup.
+          if (requestHeaders) {
+            const language =
+              requestHeaders.get("x-epidom-locale") ?? (user as { locale?: string }).locale;
+            const welcome = await sendWelcomeEmail({
+              email: user.email,
+              name: user.name ?? null,
+              locale: language,
+              onboardingUrl: `${servingAppUrl()}/onboarding`,
+            }).catch((error) => ({
+              success: false as const,
+              error: error instanceof Error ? error.message : String(error),
+            }));
+            if (!welcome.success) {
+              console.error("[auth] welcome email failed:", welcome.error);
+            }
           }
         },
       },

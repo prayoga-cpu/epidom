@@ -11,7 +11,7 @@ import {
   registerHrefFor,
 } from "../plan-intent";
 
-const FREE_NEW: OnboardingBilling = { canCheckout: true, posTrialEligible: true, referral: null };
+const FREE_NEW: OnboardingBilling = { canCheckout: true, posTrialEligible: true, paidPlan: null, referral: null };
 
 describe("parsePlanIntent", () => {
   it("reads a paid plan and its billing interval", () => {

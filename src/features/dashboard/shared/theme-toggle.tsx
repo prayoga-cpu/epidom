@@ -32,6 +32,7 @@ export function ThemeToggle({ tone = "topbar" }: ThemeToggleProps) {
       style={tone === "topbar" ? { color: "var(--epi-cream-50)" } : undefined}
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       aria-label="Toggle theme"
+      title="Toggle theme"
     >
       {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </Button>

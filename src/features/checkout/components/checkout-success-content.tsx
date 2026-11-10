@@ -129,6 +129,29 @@ export function CheckoutSuccessContent() {
     refetch?.();
   }, [queryClient, refetch]);
 
+  // Confirm the payment with Stripe right away instead of waiting for its
+  // webhook (which can be late, or never reach a local server): the plan is
+  // recorded as active before this page sends the owner back into the app.
+  const [confirming, setConfirming] = useState(!!sessionId?.startsWith("cs_") && !isTrial);
+  useEffect(() => {
+    if (!sessionId?.startsWith("cs_") || isTrial) return;
+    let cancelled = false;
+    fetch("/api/subscriptions/sync-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+    })
+      .catch(() => null)
+      .finally(() => {
+        if (cancelled) return;
+        queryClient.invalidateQueries({ queryKey: ["subscription-status"], exact: false });
+        setConfirming(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, isTrial, queryClient]);
+
   const handleContinue = () => {
     setIsLoading(true);
     router.push(next ?? "/profile");
@@ -211,15 +234,17 @@ export function CheckoutSuccessContent() {
           <div className="space-y-3 pt-4">
             <Button
               onClick={handleContinue}
-              disabled={isLoading}
+              disabled={isLoading || confirming}
               className="h-12 w-full rounded-xl text-base"
               size="lg"
             >
-              {isLoading
+              {isLoading || confirming
                 ? t("common.loading")
-                : next
-                  ? t("checkout.success.continueToStore")
-                  : t("checkout.success.continueToProfile")}
+                : next?.startsWith("/onboarding")
+                  ? t("checkout.success.continueSetup")
+                  : next
+                    ? t("checkout.success.continueToStore")
+                    : t("checkout.success.continueToProfile")}
             </Button>
           </div>
 

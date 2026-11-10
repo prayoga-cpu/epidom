@@ -455,6 +455,7 @@ export async function getOnboardingBilling(userId: string): Promise<OnboardingBi
   return {
     canCheckout: !paying && !subscription?.customPricePendingAt,
     posTrialEligible: posTrialApplies("POS", subscription),
+    paidPlan: paying ? (subscription?.plan ?? null) : null,
     referral: await getCreditedReferral(userId),
   };
 }

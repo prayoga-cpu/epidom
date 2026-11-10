@@ -24,6 +24,8 @@ import type { Locale } from "@/components/lang/i18n-provider";
  */
 export type PaidPlan = "POS" | "OPERATIONS";
 export type PriceCurrency = "IDR" | "EUR" | "USD";
+/** The currencies a plan is quoted and charged in: a Stripe Price exists for each. */
+export const PRICE_CURRENCIES: PriceCurrency[] = ["EUR", "USD", "IDR"];
 export type BillingInterval = "monthly" | "yearly";
 
 export const PLAN_PRICING: Record<

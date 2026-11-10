@@ -224,3 +224,46 @@ export function ClaudeConnectHint({
     </Link>
   );
 }
+
+/**
+ * Wide screens: the Claude MCP invitation as a small card in Home's side
+ * column (phones have the line under the greeting, and the button inside the
+ * search bar). Only while Claude is not connected and the plan includes it.
+ */
+export function ClaudeConnectCard({
+  claude,
+  className,
+}: {
+  claude: ReturnType<typeof useHomeClaude>;
+  className?: string;
+}) {
+  const { t } = useI18n();
+  if (claude.state !== "connect") return null;
+  return (
+    <Link
+      href={claude.connectHref}
+      onClick={() =>
+        trackEvent("home_claude_connect_click", {
+          event_category: "claude_connector",
+          state: claude.state,
+          surface: "side_card",
+        })
+      }
+      className={cn(
+        "bg-card hover:bg-muted/50 group flex flex-col gap-2 rounded-xl border p-4 transition",
+        className
+      )}
+    >
+      <span className="flex items-center gap-2 text-sm font-semibold">
+        <ClaudeMark className="size-5" />
+        {t("home.claude.label")}
+        <span className="text-muted-foreground ml-auto text-xs font-medium transition-transform group-hover:translate-x-0.5">
+          {t("home.claude.connect")}
+        </span>
+      </span>
+      <span className="text-muted-foreground text-xs leading-snug">
+        {t("home.claude.hintRead")}
+      </span>
+    </Link>
+  );
+}

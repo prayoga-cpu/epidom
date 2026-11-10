@@ -143,6 +143,16 @@ describe("PricingCards", () => {
     expect(screen.getAllByText("Enterprise").length).toBeGreaterThan(0);
   });
 
+  it("quotes POS and Operations in the currency the page passes, whatever the language", () => {
+    state.locale = "fr";
+    const { container, rerender } = render(<PricingCards yearly={false} currency="USD" />);
+    expect(container.textContent).toContain("$14.99");
+    expect(container.textContent).toContain("$29.99");
+    rerender(<PricingCards yearly currency="EUR" />);
+    expect(container.textContent).toContain("11,49");
+    expect(container.textContent).toContain("23,49");
+  });
+
   it("clicking Free CTA opens confirmation dialog", () => {
     render(<PricingCards yearly={false} />);
     fireEvent.click(screen.getByText("Get Started"));

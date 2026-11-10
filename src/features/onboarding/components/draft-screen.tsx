@@ -19,7 +19,12 @@ import { useSlugCheck } from "../hooks/use-slug-check";
 import { useStepErrorHandler } from "../hooks/use-step-error-handler";
 import { ONBOARDING_CONFLICT, conflictReason, conflictSuggestion } from "../lib/onboarding-api";
 import { trackOnboardingCompleted, trackStepCompleted } from "../lib/onboarding-analytics";
-import { pickRandomThemeColor, sampleMenuItems } from "../lib/onboarding-flow";
+import {
+  pickRandomThemeColor,
+  planChoiceLabel,
+  sampleMenuItems,
+  type PlanChoice,
+} from "../lib/onboarding-flow";
 import {
   ONBOARDING_MENU_ROWS,
   menuItemsPayload,
@@ -71,8 +76,11 @@ export interface DraftScreenProps {
   state: OnboardingState;
   onStateChange: (next: OnboardingState) => void;
   /** The plan the store launches on, as a line of text ("POS, 14-day free trial (no card)"); null hides it. */
-  planLabel: string | null;
-  onChangePlan?: () => void;
+  plan: {
+    choice: PlanChoice;
+    /** Back to the plan screen (a paid pick goes to payment from there). */
+    onChange: () => void;
+  } | null;
   /** The partner code claimed on the plan screen, credited when publishing. */
   referralCode?: string;
   draft: DraftValues;
@@ -93,8 +101,7 @@ export interface DraftScreenProps {
 export function DraftScreen({
   state,
   onStateChange,
-  planLabel,
-  onChangePlan,
+  plan,
   referralCode,
   draft,
   onDraftChange,
@@ -513,25 +520,23 @@ export function DraftScreen({
           />
         ) : null}
 
-        {planLabel ? (
+        {plan ? (
           <div className="flex items-center justify-between gap-3 border-t pt-3 text-sm">
             <div className="min-w-0">
               <p className="text-muted-foreground text-xs">{t("onboarding.flow.draft.plan")}</p>
               <p data-testid="draft-plan" className="font-medium">
-                {planLabel}
+                {planChoiceLabel(plan.choice, t)}
               </p>
             </div>
-            {onChangePlan ? (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onChangePlan}
-                disabled={busy}
-                className="h-10 shrink-0 rounded-lg px-3"
-              >
-                {t("onboarding.flow.change")}
-              </Button>
-            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={plan.onChange}
+              disabled={busy}
+              className="h-10 shrink-0 rounded-lg px-3"
+            >
+              {t("onboarding.flow.change")}
+            </Button>
           </div>
         ) : null}
       </section>

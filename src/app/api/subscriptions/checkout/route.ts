@@ -30,7 +30,8 @@ export const POST = withApiHandler(
   async (request, { userId }) => {
     // Parse and validate request body
     const body = await request.json();
-    const { plan, successUrl, cancelUrl, yearly, currency, next } = checkoutSchema.parse(body);
+    const { plan, successUrl, cancelUrl, yearly, currency, next, skipTrial } =
+      checkoutSchema.parse(body);
 
     // Get origin for building absolute URLs
     const origin =
@@ -42,7 +43,7 @@ export const POST = withApiHandler(
     // The 14-day free trial is POS-only and first-time-only. We derive it server-side
     // (ignoring any client-sent flag) so the trial can't be applied to other plans or
     // claimed twice — a returning subscriber already has a stripeSubscriptionId.
-    const applyTrial = posTrialApplies(plan, subscription);
+    const applyTrial = posTrialApplies(plan, subscription) && !skipTrial;
 
     // Build success and cancel URLs. `trial` lets the success page fire a
     // distinct "trial started" conversion (GA4 trial_started, Meta

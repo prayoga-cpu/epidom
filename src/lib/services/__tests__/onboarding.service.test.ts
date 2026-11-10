@@ -1426,12 +1426,14 @@ describe("getOnboardingBilling", () => {
     expect(await getOnboardingBilling(USER_ID)).toEqual({
       canCheckout: true,
       posTrialEligible: true,
+      paidPlan: null,
       referral: null,
     });
     h.db.subscription = sub({});
     expect(await getOnboardingBilling(USER_ID)).toEqual({
       canCheckout: true,
       posTrialEligible: true,
+      paidPlan: null,
       referral: null,
     });
   });
@@ -1441,6 +1443,7 @@ describe("getOnboardingBilling", () => {
     expect(await getOnboardingBilling(USER_ID)).toEqual({
       canCheckout: true,
       posTrialEligible: false,
+      paidPlan: null,
       referral: null,
     });
   });
@@ -1448,6 +1451,7 @@ describe("getOnboardingBilling", () => {
   it("an owner already paying for a plan is not sent to Checkout", async () => {
     h.db.subscription = sub({ plan: "POS", stripeSubscriptionId: "sub_1" });
     expect((await getOnboardingBilling(USER_ID)).canCheckout).toBe(false);
+    expect((await getOnboardingBilling(USER_ID)).paidPlan).toBe("POS");
   });
 
   it("an admin-quoted price waiting to be paid blocks a self-serve Checkout", async () => {

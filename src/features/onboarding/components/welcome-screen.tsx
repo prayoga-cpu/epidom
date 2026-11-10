@@ -41,16 +41,22 @@ interface CommonProps {
  */
 export function NameStep({
   user,
+  greet = true,
   value,
   onChange,
   onPrefill,
   countryCode,
   onSubmit,
+  onBack,
   onSkip,
   skipping = false,
   direction,
 }: CommonProps & {
   user: { name: string | null; email: string };
+  /** First screen of the flow: "Welcome, Sam!" above the question. Off when the plan screen already greeted. */
+  greet?: boolean;
+  /** Back to the plan screen (absent when this is the first screen). */
+  onBack?: () => void;
   value: string;
   onChange: (name: string) => void;
   onPrefill: (prefill: InstagramPrefill) => void;
@@ -72,18 +78,18 @@ export function NameStep({
     <>
       <QuestionShell
         direction={direction}
-        eyebrow={t("onboarding.flow.welcome.registered").replace("{email}", user.email)}
-        title={t("onboarding.flow.welcome.greeting").replace(
-          "{name}",
-          firstNameOf(user.name, user.email)
-        )}
-        subtitle={
-          <>
-            {t("onboarding.store.planNote")}
-            {/* Phones: the Skip setup link below says it already. */}
-            <span className="hidden sm:inline"> {t("onboarding.store.planNoteSkip")}</span>
-          </>
+        eyebrow={
+          greet ? t("onboarding.flow.welcome.registered").replace("{email}", user.email) : undefined
         }
+        title={
+          greet
+            ? t("onboarding.flow.welcome.greeting").replace(
+                "{name}",
+                firstNameOf(user.name, user.email)
+              )
+            : t("onboarding.flow.welcome.question")
+        }
+        onBack={onBack}
         onSubmit={() => {
           setTouched(true);
           if (!invalid) onSubmit();
@@ -106,11 +112,14 @@ export function NameStep({
           </div>
         }
       >
-        <label htmlFor="store-name" className="text-foreground block text-lg font-medium">
-          {t("onboarding.flow.welcome.question")}
-        </label>
+        {greet ? (
+          <label htmlFor="store-name" className="text-foreground block text-lg font-medium">
+            {t("onboarding.flow.welcome.question")}
+          </label>
+        ) : null}
         <Input
           id="store-name"
+          aria-label={greet ? undefined : t("onboarding.flow.welcome.question")}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={t("onboarding.flow.welcome.placeholder")}

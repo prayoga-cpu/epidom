@@ -1,6 +1,7 @@
 import { Resend, type CreateEmailOptions } from "resend";
 import type { NewsletterCampaign, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { CONTACT_EMAIL_ADDRESSES } from "@/lib/constants/contact";
 import { inngest } from "@/lib/inngest/client";
 import {
   EDITABLE_CAMPAIGN_STATUSES,
@@ -49,6 +50,7 @@ type CampaignContent = Pick<
 function buildEmail(campaign: CampaignContent, to: string, locale: string): CreateEmailOptions {
   return {
     from: fromAddress(),
+    replyTo: CONTACT_EMAIL_ADDRESSES[0],
     to,
     subject: campaign.subject,
     html: renderNewsletterEmail({

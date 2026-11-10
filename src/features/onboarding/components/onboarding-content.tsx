@@ -16,7 +16,13 @@ import { OTHER_COUNTRY_CODE, resolveMarketDefaults } from "@/lib/onboarding/mark
 import { useSaveStoreStep, useSaveStorefrontStep } from "../hooks/use-onboarding-steps";
 import { useOnboardingLanding } from "../hooks/use-onboarding-landing";
 import { useStepErrorHandler } from "../hooks/use-step-error-handler";
-import { ONBOARDING_CONFLICT, conflictReason, conflictSuggestion } from "../lib/onboarding-api";
+import {
+  ONBOARDING_CONFLICT,
+  conflictReason,
+  conflictSuggestion,
+  onboardingApi,
+} from "../lib/onboarding-api";
+import { resolvePriceCurrency } from "@/features/dashboard/billing/lib/plan-price";
 import { trackOnboardingSkipped, trackStepViewed } from "../lib/onboarding-analytics";
 import {
   checkoutForChoice,
@@ -38,7 +44,8 @@ import {
 } from "../lib/plan-intent";
 import { DraftScreen, draftFromState, type DraftValues } from "./draft-screen";
 import { LaunchScreen } from "./launch-screen";
-import { PlanStep, ReferralStep, type ClaimedReferral } from "./plan-screen";
+import type { PriceCurrency } from "@/lib/constants/plan-pricing";
+import { PlanStep, type ClaimedReferral } from "./plan-screen";
 import { VerificationNotice } from "./verification-notice";
 import { NameStep, TypeStep } from "./welcome-screen";
 import { FlowFrame, WizardFrame } from "./wizard-frame";
@@ -111,17 +118,18 @@ export function OnboardingContent({
   user,
 }: OnboardingContentProps) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const detectedCountry = useDefaultCountryCode();
   const saveStore = useSaveStoreStep();
   const saveStorefront = useSaveStorefrontStep();
 
   const [state, setState] = useState(initialState);
-  const showPlan = !initialState.completed && billing.canCheckout;
+  // The plan screen: pick one, or (after paying on Stripe first) see the paid plan marked as paid.
+  const showPlan = !initialState.completed && (billing.canCheckout || !!billing.paidPlan);
   const steps = flowSteps(showPlan);
   // A store saved earlier (a skipped setup, another device): straight to the draft and its Confirm.
   const resumed = initialState.storeId !== null && !initialState.completed;
-  const [step, setStep] = useState<FlowStep>(resumed ? "draft" : "name");
+  const [step, setStep] = useState<FlowStep>(resumed ? "draft" : showPlan ? "plan" : "name");
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [answers, setAnswers] = useState<StoreAnswers>({
     name: initialState.business?.name ?? "",
@@ -133,6 +141,7 @@ export function OnboardingContent({
   const [draft, setDraft] = useState<DraftValues>(() => draftFromState(initialState, false));
   const [settingUp, setSettingUp] = useState(false);
   const [skipping, setSkipping] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [launch, setLaunch] = useState<OnboardingCompleteResult | null>(null);
   const [checkout, setCheckout] = useState<PlanCheckout | null>(null);
 
@@ -142,7 +151,7 @@ export function OnboardingContent({
 
   useEffect(() => {
     if (launch) return;
-    if (step === "name") trackStepViewed(1);
+    if (step === "plan" || step === "name") trackStepViewed(1);
     if (step === "draft") trackStepViewed(2);
   }, [step, launch]);
 
@@ -154,6 +163,8 @@ export function OnboardingContent({
 
   const index = steps.indexOf(step);
   const next = () => {
+    // The plan changed from the draft: the store is already set up, so straight back to it.
+    if (step === "plan" && state.storeId) return go("draft");
     const following = steps[index + 1];
     if (following) go(following);
   };
@@ -166,7 +177,9 @@ export function OnboardingContent({
 
   const countryCode = state.business?.countryCode ?? detectedCountry ?? undefined;
   const market = resolveMarketDefaults({ countryCode: countryCode ?? OTHER_COUNTRY_CODE });
-  const planCurrency = state.business ? state.currency : market.currency;
+  // Plans are quoted in the store's currency (or the device's market), unless the owner picked another.
+  const [currencyOverride, setCurrencyOverride] = useState<PriceCurrency | null>(null);
+  const planCurrency = currencyOverride ?? (state.business ? state.currency : market.currency);
 
   /**
    * Saves the store (step 1) and, when it has no menu yet, a draft storefront:
@@ -257,22 +270,49 @@ export function OnboardingContent({
     await leaveForFree();
   };
 
+  /**
+   * Continue on the plan screen. The free trial just goes on with setup. A
+   * paid pick goes to Stripe first (the partner code is credited before it, so
+   * the first invoice gets the discount) and comes back to /onboarding, where
+   * the account already has its plan, so the plan screen is gone and the
+   * store questions follow.
+   */
+  const onPlanSubmit = async () => {
+    const wanted = checkoutForChoice(choice, billing);
+    if (!wanted || wanted.trial) {
+      next();
+      return;
+    }
+    setPaying(true);
+    try {
+      if (referral && !billing.referral) {
+        await onboardingApi.claimReferralCode(referral.code).catch(() => null);
+      }
+      const res = await fetch("/api/subscriptions/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan: wanted.plan,
+          yearly: wanted.yearly,
+          currency: resolvePriceCurrency(planCurrency, locale),
+          next: "/onboarding",
+          skipTrial: true,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      const url: unknown = data?.data?.url;
+      if (!res.ok || typeof url !== "string") throw new Error("checkout");
+      window.location.assign(url);
+    } catch {
+      setPaying(false);
+      toast.error(t("onboarding.launch.plan.failed"));
+    }
+  };
+
   // The last answer before the draft: set the store up, then show what we made.
   const setUpAndShowDraft = async () => {
     if (await setUpStore()) go("draft");
   };
-
-  const planLabel = showPlan
-    ? t(
-        choice === "trial"
-          ? "onboarding.flow.draft.planTrial"
-          : choice === "monthly"
-            ? "onboarding.flow.draft.planMonthly"
-            : choice === "yearly"
-              ? "onboarding.flow.draft.planYearly"
-              : "onboarding.flow.plan.opsName"
-      )
-    : null;
 
   const notice = verificationError ? (
     <VerificationNotice onDismiss={dismissVerificationError} />
@@ -284,7 +324,7 @@ export function OnboardingContent({
         <LaunchScreen
           result={launch}
           storeName={state.business?.name ?? ""}
-          storeCurrency={state.currency}
+          storeCurrency={currencyOverride ?? state.currency}
           checkout={checkout}
           autoCheckout
         />
@@ -293,29 +333,37 @@ export function OnboardingContent({
   }
 
   const canSkip = !state.completed;
-  const planProps = {
-    billing,
-    intent: planIntent,
-    currency: planCurrency,
-    choice,
-    referral,
-    onBack: back,
-    onSkip: () => void skipKeepingDraft(),
-    skipping,
-    direction,
-  };
-
   return (
-    <FlowFrame progress={(index + 1) / (steps.length + 1)} notice={notice}>
-      {step === "name" ? (
+    <FlowFrame progress={(index + 1) / (steps.length + 1)} notice={notice} wide={step === "plan"}>
+      {step === "plan" ? (
+        <PlanStep
+          key="plan"
+          user={user}
+          billing={billing}
+          currency={planCurrency}
+          onCurrency={setCurrencyOverride}
+          choice={choice}
+          onChoice={setChoice}
+          referral={referral}
+          onReferral={setReferral}
+          onSubmit={() => void onPlanSubmit()}
+          pending={paying}
+          onBack={state.storeId ? () => go("draft", "back") : undefined}
+          onSkip={() => void skipEarly()}
+          skipping={skipping}
+          direction={direction}
+        />
+      ) : step === "name" ? (
         <NameStep
           key="name"
           user={user}
+          greet={!showPlan}
           value={answers.name}
           onChange={(name) => setAnswers((a) => ({ ...a, name }))}
           onPrefill={(prefill) => setAnswers((a) => ({ ...a, prefill }))}
           countryCode={countryCode}
           onSubmit={next}
+          onBack={showPlan ? back : undefined}
           onSkip={canSkip ? () => void skipEarly() : undefined}
           skipping={skipping}
           direction={direction}
@@ -326,29 +374,20 @@ export function OnboardingContent({
           value={answers.businessType}
           onChange={(businessType) => setAnswers((a) => ({ ...a, businessType }))}
           storeName={answers.name.trim()}
-          onSubmit={showPlan ? next : () => void setUpAndShowDraft()}
-          onBack={back}
-          onSkip={canSkip ? () => void skipEarly() : undefined}
-          skipping={skipping}
-          pending={settingUp}
-          direction={direction}
-        />
-      ) : step === "plan" ? (
-        <PlanStep key="plan" {...planProps} onChoice={setChoice} onSubmit={next} />
-      ) : step === "referral" ? (
-        <ReferralStep
-          key="referral"
-          {...planProps}
-          onReferral={setReferral}
           onSubmit={() => void setUpAndShowDraft()}
+          onBack={back}
+          onSkip={canSkip ? () => void skipKeepingDraft() : undefined}
+          skipping={skipping}
           pending={settingUp && !skipping}
+          direction={direction}
         />
       ) : (
         <DraftScreen
           state={state}
           onStateChange={setState}
-          planLabel={planLabel}
-          onChangePlan={showPlan ? () => go("plan", "back") : undefined}
+          plan={
+            showPlan && !billing.paidPlan ? { choice, onChange: () => go("plan", "back") } : null
+          }
           referralCode={billing.referral ? undefined : referral?.code}
           draft={draft}
           onDraftChange={setDraft}

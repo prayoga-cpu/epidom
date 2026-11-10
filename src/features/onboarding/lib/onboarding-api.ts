@@ -128,6 +128,13 @@ export const onboardingApi = {
       { signal }
     ),
 
+  /** Credits the account to a partner code now (ahead of a plan paid for first). */
+  claimReferralCode: (code: string) =>
+    request<{ credited: boolean }>("/api/onboarding/referral-code", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+
   checkSlug: (slug: string, signal?: AbortSignal) =>
     request<SlugCheckResult>(`/api/onboarding/slug-check?slug=${encodeURIComponent(slug)}`, {
       signal,

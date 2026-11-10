@@ -158,7 +158,7 @@ export function Topbar({ onSearch }: TopbarProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 shrink-0 hover:bg-white/10"
+              className="size-10 shrink-0 rounded-full bg-white/10 hover:bg-white/15"
               style={{ color: "var(--epi-cream-50)" }}
               onClick={onSearch}
             >
@@ -200,7 +200,7 @@ export function Topbar({ onSearch }: TopbarProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 shrink-0 hover:bg-white/10"
+                  className="size-10 shrink-0 rounded-full bg-white/10 hover:bg-white/15"
                   style={{ color: "var(--epi-cream-50)" }}
                 >
                   <Menu className="size-5" />

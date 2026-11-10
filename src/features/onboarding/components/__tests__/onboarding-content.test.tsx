@@ -247,7 +247,12 @@ const bodyOf = (method: string, path: string, index = 0) =>
   JSON.parse(String((callsTo(method, path)[index][1] as RequestInit).body));
 
 /** A new account: on Free, never subscribed, so a POS Checkout is the trial. */
-const FREE_NEW: OnboardingBilling = { canCheckout: true, posTrialEligible: true, referral: null };
+const FREE_NEW: OnboardingBilling = {
+  canCheckout: true,
+  posTrialEligible: true,
+  paidPlan: null,
+  referral: null,
+};
 
 function renderWizard(
   state: OnboardingState,
@@ -352,29 +357,29 @@ function routeSetup() {
 const heading = (name: string | RegExp) => screen.findByRole("heading", { name });
 const press = (name: string | RegExp) => fireEvent.click(screen.getByRole("button", { name }));
 
-/** Question 1 → question 2. */
+/** The plan screen is the first screen; Continue goes on to the name. */
+async function answerPlan() {
+  press("Continue");
+  await heading("What's your store called?");
+}
+
+/** Plan → name → kind of place. */
 async function answerName(name = "Le Petit Four") {
+  await answerPlan();
   fireEvent.change(screen.getByLabelText("What's your store called?"), { target: { value: name } });
   press("Continue");
   await heading("What kind of place is it?");
 }
 
-/** Questions 1-2 → the plan question. */
-async function toPlan() {
+/** Plan, name and kind of place answered; the store is set up and the draft is on screen. */
+async function toDraft() {
   await answerName();
   press("Continue");
-  await heading("How do you want to start?");
-}
-
-/** Through the plan question → the referral question. */
-async function toReferral() {
-  await toPlan();
-  press("Continue");
-  await heading("Have a partner referral code?");
+  await heading(DRAFT);
 }
 
 async function claim(code: string) {
-  fireEvent.change(screen.getByLabelText(/Have a partner referral code/), {
+  fireEvent.change(screen.getByLabelText(/Partner code/), {
     target: { value: code },
   });
   press("Claim");
@@ -384,96 +389,88 @@ async function claim(code: string) {
 const DRAFT = "Here's your store, ready to go";
 const LAUNCH = "Looks good, launch my store";
 
-describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TIMEOUT }, () => {
-  describe("the store questions", () => {
-    it("greets the owner by first name and shows the registered email", () => {
+describe("<OnboardingContent> one screen at a time", { timeout: RENDER_TEST_TIMEOUT }, () => {
+  describe("plan and referral: the first screen", () => {
+    it("greets the owner and offers POS and Operations, the free trial already picked", () => {
       renderWizard(baseState());
       expect(screen.getByRole("heading", { name: "Welcome, Sam!" })).toBeInTheDocument();
       expect(screen.getByText("Registered as sam@example.com")).toBeInTheDocument();
-      expect(screen.getByTestId("detected-market")).toBeInTheDocument();
-    });
-
-    it("hides the stay-on-Free sentence on phones (the Skip setup link says it)", () => {
-      renderWizard(baseState());
-      const skip = screen.getByText("Skip it and you stay on the Free plan.");
-      expect(skip).toHaveClass("hidden", "sm:inline");
-      expect(
-        screen.getByText(/Finish setup and your 14-day POS trial starts automatically/)
-      ).toBeVisible();
-    });
-
-    it("asks one thing at a time: the kind of place only after the name", async () => {
-      renderWizard(baseState());
-      expect(screen.queryByRole("combobox")).toBeNull();
-      await answerName();
+      expect(screen.getByTestId("plan-pos-select")).toHaveAttribute("aria-checked", "true");
+      expect(screen.getByTestId("plan-pos-select")).toHaveTextContent("Start free trial");
+      expect(screen.getByTestId("plan-operations-select")).toHaveAttribute("aria-checked", "false");
+      expect(screen.getByText("14-day free trial")).toBeInTheDocument();
+      // The referral code sits on the same screen, under the cards.
+      expect(screen.getByLabelText(/Partner code/)).toBeInTheDocument();
       expect(screen.queryByLabelText("What's your store called?")).toBeNull();
-      expect(
-        screen.getByRole("combobox", { name: "What kind of place is it?" })
-      ).toBeInTheDocument();
     });
 
-    it("needs a store name, and saves nothing while the questions are answered", async () => {
-      renderWizard(baseState());
-      press("Continue");
-      expect(await screen.findByRole("alert")).toHaveTextContent("Enter your store's name.");
-      await toPlan();
-      expect(callsTo("POST", "/api/onboarding/store")).toHaveLength(0);
-    });
-
-    it("Back returns to the name with the answer kept", async () => {
-      renderWizard(baseState());
-      await answerName("Chez Sam");
-      press("Back");
-      await heading("Welcome, Sam!");
-      expect(screen.getByLabelText("What's your store called?")).toHaveValue("Chez Sam");
-    });
-
-    it("skips to the Free plan from the very first question", async () => {
-      routeSetup();
-      renderWizard(baseState());
-      press("Skip setup");
-      await waitFor(() => expect(nav.router.replace).toHaveBeenCalledWith("/stores"));
-      expect(callsTo("POST", "/api/subscriptions/activate-free")).toHaveLength(1);
-      expect(callsTo("POST", "/api/onboarding/store")).toHaveLength(0);
-    });
-  });
-
-  describe("plan and referral", () => {
-    it("starts with the 14-day POS trial picked", async () => {
-      renderWizard(baseState());
-      await toPlan();
-      expect(screen.getByTestId("plan-trial")).toHaveAttribute("aria-checked", "true");
-      expect(screen.getByTestId("plan-monthly")).toHaveAttribute("aria-checked", "false");
-      expect(screen.getByTestId("plan-yearly")).toBeInTheDocument();
-      // The referral code is its own question, after this one.
-      expect(screen.queryByLabelText(/Have a partner referral code/)).toBeNull();
-    });
-
-    it("leaves out the trial when it was already used", async () => {
+    it("leaves out the trial when it was already used", () => {
       renderWizard(baseState(), "en", {
-        billing: { canCheckout: true, posTrialEligible: false, referral: null },
+        billing: { canCheckout: true, posTrialEligible: false, paidPlan: null, referral: null },
       });
-      await toPlan();
-      expect(screen.queryByTestId("plan-trial")).toBeNull();
-      expect(screen.getByTestId("plan-monthly")).toHaveAttribute("aria-checked", "true");
+      expect(screen.queryByTestId("trial-toggle")).toBeNull();
+      expect(screen.queryByText("14-day free trial")).toBeNull();
+      expect(screen.getByTestId("plan-pos-select")).toHaveTextContent("Choose POS");
+      expect(screen.getByTestId("plan-pos-select")).toHaveAttribute("aria-checked", "true");
     });
 
-    it("shows the discount as soon as a code is claimed, and on the plan cards after it", async () => {
+    it("an Operations link from the pricing page starts on Operations, billed yearly", () => {
+      renderWizard(baseState(), "en", { planIntent: { plan: "OPERATIONS", yearly: true } });
+      expect(screen.getByTestId("plan-operations-select")).toHaveAttribute("aria-checked", "true");
+      expect(screen.getByTestId("interval-yearly")).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("a yearly POS link from the pricing page starts on paid yearly POS, not the trial", () => {
+      renderWizard(baseState(), "en", { planIntent: { plan: "POS", yearly: true } });
+      expect(screen.getByTestId("plan-pos-select")).toHaveTextContent("Choose POS");
+      expect(screen.getByTestId("interval-yearly")).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("the home page's trial button keeps the free trial picked", () => {
+      renderWizard(baseState(), "en", { planIntent: { plan: "POS", yearly: false } });
+      expect(screen.getByTestId("plan-pos-select")).toHaveTextContent("Start free trial");
+    });
+
+    it("the free trial shows FREE with the price crossed out in red and no card needed", () => {
+      renderWizard(baseState());
+      fireEvent.change(screen.getByTestId("plan-currency"), { target: { value: "USD" } });
+      expect(screen.getByTestId("plan-pos-price")).toHaveTextContent("Free");
+      expect(screen.getByTestId("plan-pos-was")).toHaveClass("text-red-500");
+      expect(screen.getByTestId("plan-pos-was")).toHaveTextContent("$14.99");
+      expect(screen.getByTestId("plan-pos-nocard")).toHaveTextContent("No card needed");
+    });
+
+    it("skipping the trial shows the real price, and the yearly toggle changes it", () => {
+      renderWizard(baseState());
+      fireEvent.change(screen.getByTestId("plan-currency"), { target: { value: "USD" } });
+      fireEvent.click(screen.getByTestId("interval-yearly"));
+      // The trial stays picked, and the crossed-out price is the yearly one: that is the discount.
+      expect(screen.getByTestId("plan-pos-select")).toHaveTextContent("Start free trial");
+      expect(screen.getByTestId("plan-pos-price")).toHaveTextContent("Free");
+      expect(screen.getByTestId("plan-pos-was")).toHaveTextContent("$12.49");
+      expect(screen.getByTestId("plan-pos-save")).toHaveTextContent("Save");
+      press("Skip the trial and pay now");
+      expect(screen.getByTestId("plan-pos-select")).toHaveTextContent("Choose POS");
+      expect(screen.getByTestId("plan-pos-price")).toHaveTextContent("$12.49");
+      expect(screen.queryByTestId("plan-pos-nocard")).toBeNull();
+      press("Start with the free trial instead");
+      expect(screen.getByTestId("plan-pos-price")).toHaveTextContent("Free");
+    });
+
+    it("shows who referred you and the new prices as soon as a code is claimed", async () => {
       routes["GET /api/onboarding/referral-code"] = () =>
         ok({ code: "BOB10", displayName: "Bob", discountPercent: 10 });
       renderWizard(baseState());
-      await toReferral();
-      expect(screen.queryByTestId("referral-price")).toBeNull();
+      press("Skip the trial and pay now");
+      expect(screen.queryByTestId("plan-pos-deal")).toBeNull();
       await claim("bob10");
       expect(await screen.findByTestId("referral-discount")).toHaveTextContent(
         "Bob's code: 10% off your first payment."
       );
-      expect(screen.getByTestId("referral-price")).toHaveTextContent("on your first payment");
-
-      press("Back");
-      await heading("How do you want to start?");
-      expect(screen.getByTestId("plan-trial-deal")).toBeInTheDocument();
-      expect(screen.getByTestId("plan-monthly-deal")).toBeInTheDocument();
+      expect(screen.getByTestId("plan-pos-deal")).toBeInTheDocument();
+      expect(screen.getByTestId("plan-operations-deal")).toBeInTheDocument();
+      press("Remove");
+      expect(screen.queryByTestId("plan-pos-deal")).toBeNull();
     });
 
     it("says so for an unknown code and gives no discount", async () => {
@@ -482,17 +479,120 @@ describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TI
         body: { success: false, error: { code: "NOT_FOUND", message: "no" } },
       });
       renderWizard(baseState());
-      await toReferral();
       await claim("NOPE");
-      expect(await screen.findByText(/We don't know this code/)).toBeInTheDocument();
-      expect(screen.queryByTestId("referral-price")).toBeNull();
+      expect(await screen.findByText(/we can't use this code/i)).toBeInTheDocument();
+      expect(screen.queryByTestId("plan-pos-deal")).toBeNull();
     });
 
-    it("skipping keeps the Free plan but saves the store and its draft, so one Confirm is left", async () => {
+    it("Enter in the code box claims it and doesn't leave the screen", async () => {
+      routes["GET /api/onboarding/referral-code"] = () =>
+        ok({ code: "BOB10", displayName: "Bob", discountPercent: 10 });
+      renderWizard(baseState());
+      const input = screen.getByLabelText(/Partner code/);
+      fireEvent.change(input, { target: { value: "BOB10" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      await screen.findByTestId("referral-discount");
+      expect(screen.getByRole("heading", { name: "Welcome, Sam!" })).toBeInTheDocument();
+    });
+
+    it("an account that signed up with a partner link has the code filled in, locked, and the discount on", async () => {
+      renderWizard(baseState(), "en", {
+        billing: {
+          canCheckout: true,
+          posTrialEligible: true,
+          paidPlan: null,
+          referral: { code: "DINDA", displayName: "Dinda", discountPercent: 10 },
+        },
+      });
+      const input = screen.getByLabelText(/Partner code/);
+      expect(input).toHaveValue("DINDA");
+      expect(input).toBeDisabled();
+      expect(screen.queryByRole("button", { name: "Claim" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
+      expect(screen.getByTestId("referral-credited")).toHaveTextContent("referred by Dinda");
+      press("Skip the trial and pay now");
+      expect(screen.getByTestId("plan-pos-deal")).toHaveTextContent("-10%");
+      expect(screen.getByTestId("plan-operations-deal")).toHaveTextContent("-10%");
+    });
+
+    it("back from payment: the first screen shows the paid plan, and Continue goes on with setup", async () => {
+      renderWizard(baseState(), "en", {
+        billing: {
+          canCheckout: false,
+          posTrialEligible: false,
+          paidPlan: "OPERATIONS",
+          referral: null,
+        },
+      });
+      expect(screen.getByRole("heading", { name: "Welcome, Sam!" })).toBeInTheDocument();
+      expect(screen.getByText(/Payment received/)).toBeInTheDocument();
+      expect(screen.getByTestId("plan-operations-paid")).toHaveTextContent("Paid");
+      expect(screen.getByTestId("plan-operations-select")).toBeDisabled();
+      expect(screen.getByTestId("plan-operations-select")).toHaveAttribute("aria-checked", "true");
+      // The other card is out of the way, and there is nothing to claim or skip the trial for.
+      expect(screen.getByTestId("plan-pos-select")).toBeDisabled();
+      expect(screen.queryByTestId("trial-toggle")).toBeNull();
+      expect(screen.queryByLabelText(/Partner code/)).toBeNull();
+      press("Continue");
+      await heading("What's your store called?");
+      expect(callsTo("POST", "/api/subscriptions/checkout")).toHaveLength(0);
+    });
+
+    it("skips to the Free plan from the very first screen, saving nothing", async () => {
       routeSetup();
       renderWizard(baseState());
-      await toPlan();
       press("Skip setup, stay on Free");
+      await waitFor(() => expect(nav.router.replace).toHaveBeenCalledWith("/stores"));
+      expect(callsTo("POST", "/api/subscriptions/activate-free")).toHaveLength(1);
+      expect(callsTo("POST", "/api/onboarding/store")).toHaveLength(0);
+    });
+  });
+
+  describe("the store questions", () => {
+    it("asks one thing at a time: the kind of place only after the name", async () => {
+      renderWizard(baseState());
+      await answerPlan();
+      expect(screen.queryByRole("combobox")).toBeNull();
+      fireEvent.change(screen.getByLabelText("What's your store called?"), {
+        target: { value: "Le Petit Four" },
+      });
+      press("Continue");
+      await heading("What kind of place is it?");
+      expect(screen.queryByLabelText("What's your store called?")).toBeNull();
+      expect(
+        screen.getByRole("combobox", { name: "What kind of place is it?" })
+      ).toBeInTheDocument();
+    });
+
+    it("shows the detected market under the name", async () => {
+      renderWizard(baseState());
+      await answerPlan();
+      expect(screen.getByTestId("detected-market")).toBeInTheDocument();
+    });
+
+    it("needs a store name, and saves nothing while the questions are answered", async () => {
+      renderWizard(baseState());
+      await answerPlan();
+      press("Continue");
+      expect(await screen.findByRole("alert")).toHaveTextContent("Enter your store's name.");
+      expect(callsTo("POST", "/api/onboarding/store")).toHaveLength(0);
+    });
+
+    it("Back returns to the plan screen with the pick kept", async () => {
+      renderWizard(baseState());
+      fireEvent.change(screen.getByTestId("plan-currency"), { target: { value: "USD" } });
+      await answerPlan();
+      press("Back");
+      await heading("Welcome, Sam!");
+      expect(screen.getByTestId("plan-currency")).toHaveValue("USD");
+      expect(screen.getByTestId("plan-pos-select")).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("skipping on the kind of place keeps the store and its draft for one Confirm later", async () => {
+      routeSetup();
+      renderWizard(baseState());
+      await answerName();
+      press("Skip setup");
       await waitFor(() => expect(nav.router.replace).toHaveBeenCalledWith("/stores"));
       expect(callsTo("POST", "/api/onboarding/store")).toHaveLength(1);
       expect(callsTo("POST", "/api/onboarding/storefront")).toHaveLength(1);
@@ -506,9 +606,7 @@ describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TI
       routeSetup();
       mockBrowserTimezone("Europe/Paris");
       renderWizard(baseState());
-      await toReferral();
-      press("I don't have a code");
-      await heading(DRAFT);
+      await toDraft();
 
       expect(bodyOf("POST", "/api/onboarding/store")).toMatchObject({
         name: "Le Petit Four",
@@ -534,9 +632,7 @@ describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TI
     it("Enter in a dish field doesn't launch the store", async () => {
       routeSetup();
       renderWizard(baseState());
-      await toReferral();
-      press("I don't have a code");
-      await heading(DRAFT);
+      await toDraft();
       press("Edit menu items");
       fireEvent.keyDown(screen.getByLabelText("Item name 1"), { key: "Enter" });
       await new Promise((r) => setTimeout(r, 20));
@@ -547,9 +643,7 @@ describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TI
       routeSetup();
       routes["POST /api/subscriptions/checkout"] = trialOk;
       renderWizard(baseState());
-      await toReferral();
-      press("I don't have a code");
-      await heading(DRAFT);
+      await toDraft();
       press("Edit link");
       fireEvent.change(screen.getByLabelText("Store link"), { target: { value: "chez-sam" } });
       await waitFor(() => expect(screen.getByRole("button", { name: LAUNCH })).toBeEnabled(), {
@@ -563,29 +657,99 @@ describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TI
       });
     });
 
-    it("keeps a renamed dish when going back to the plan and on again", async () => {
+    it("Change on the draft returns to the plan screen and comes straight back, edits kept", async () => {
       routeSetup();
       renderWizard(baseState());
-      await toReferral();
-      press("I don't have a code");
-      await heading(DRAFT);
+      await toDraft();
       press("Edit menu items");
       fireEvent.change(screen.getByLabelText("Item name 1"), { target: { value: "Pain perdu" } });
 
       // The plan row's Change (the market has one too).
       const changes = screen.getAllByRole("button", { name: "Change" });
       fireEvent.click(changes[changes.length - 1]);
-      await heading("How do you want to start?");
-      fireEvent.click(screen.getByTestId("plan-monthly"));
+      await heading("Welcome, Sam!");
       press("Continue");
-      await heading("Have a partner referral code?");
-      press("I don't have a code");
       await heading(DRAFT);
-      expect(screen.getByTestId("draft-plan")).toHaveTextContent("billed monthly");
       press(LAUNCH);
       await heading("Your store is live");
       const saved = bodyOf("POST", "/api/onboarding/storefront", 1);
       expect(saved.menuItems[0]).toMatchObject({ id: "m1", name: "Pain perdu" });
+    });
+
+    it("phones: tapping a card opens its details; Choose selects it and closes, the red X just closes", async () => {
+      renderWizard(baseState());
+      fireEvent.click(screen.getByTestId("plan-operations-open"));
+      const sheet = await screen.findByTestId("plan-operations-sheet");
+      expect(sheet).toHaveTextContent("Stock, recipes and suppliers");
+      // No second card frame around it: the dialog itself has no border or background.
+      expect(screen.getByRole("dialog")).toHaveClass("border-0", "bg-transparent");
+      fireEvent.click(screen.getByTestId("plan-operations-select-sheet"));
+      await waitFor(() => expect(screen.queryByTestId("plan-operations-sheet")).toBeNull());
+      expect(screen.getByTestId("plan-operations-select")).toHaveAttribute("aria-checked", "true");
+
+      fireEvent.click(screen.getByTestId("plan-pos-open"));
+      await screen.findByTestId("plan-pos-sheet");
+      fireEvent.click(screen.getByTestId("plan-sheet-close"));
+      await waitFor(() => expect(screen.queryByTestId("plan-pos-sheet")).toBeNull());
+      // Closing changed nothing.
+      expect(screen.getByTestId("plan-operations-select")).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("the card that is picked takes the gold highlight", () => {
+      renderWizard(baseState());
+      expect(screen.getByTestId("plan-pos")).toHaveClass("border-[var(--epi-gold-500)]");
+      fireEvent.click(screen.getByTestId("plan-operations-select"));
+      expect(screen.getByTestId("plan-operations")).toHaveClass("border-[var(--epi-gold-500)]");
+      expect(screen.getByTestId("plan-pos")).not.toHaveClass("border-[var(--epi-gold-500)]");
+    });
+
+    it("the currency can be changed: prices and the payment follow it", async () => {
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      renderWizard(baseState());
+      press("Skip the trial and pay now");
+      const before = screen.getByTestId("plan-pos-price").textContent;
+      fireEvent.change(screen.getByTestId("plan-currency"), { target: { value: "USD" } });
+      expect(screen.getByTestId("plan-currency")).toHaveValue("USD");
+      expect(screen.getByTestId("plan-pos-price").textContent).not.toBe(before);
+      expect(screen.getByTestId("plan-pos-price")).toHaveTextContent("$14.99");
+      press("Continue to payment");
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      expect(bodyOf("POST", "/api/subscriptions/checkout")).toMatchObject({ currency: "USD" });
+    });
+
+    it("a discount shows the old price crossed out in red, the new one, and a -10% label", async () => {
+      routes["GET /api/onboarding/referral-code"] = () =>
+        ok({ code: "BOB10", displayName: "Bob", discountPercent: 10 });
+      renderWizard(baseState());
+      fireEvent.change(screen.getByTestId("plan-currency"), { target: { value: "EUR" } });
+      press("Skip the trial and pay now");
+      await claim("BOB10");
+      const deal = await screen.findByTestId("plan-pos-deal");
+      expect(deal.querySelector("s")).toHaveTextContent("€13.99");
+      expect(deal.querySelector("s")).toHaveClass("text-red-500");
+      expect(deal).toHaveTextContent("-10%");
+      expect(screen.getByTestId("plan-pos-price")).toHaveTextContent("€12.59");
+    });
+
+    it("a paid pick pays on Stripe first: the code is credited, the trial is skipped, nothing is set up yet", async () => {
+      routes["GET /api/onboarding/referral-code"] = () =>
+        ok({ code: "BOB10", displayName: "Bob", discountPercent: 10 });
+      routes["POST /api/onboarding/referral-code"] = () => ok({ credited: true });
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      renderWizard(baseState());
+      await claim("BOB10");
+      await screen.findByTestId("referral-discount");
+      fireEvent.click(screen.getByTestId("plan-operations-select"));
+      press("Continue to payment");
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      expect(bodyOf("POST", "/api/onboarding/referral-code")).toEqual({ code: "BOB10" });
+      expect(bodyOf("POST", "/api/subscriptions/checkout")).toMatchObject({
+        plan: "OPERATIONS",
+        yearly: false,
+        next: "/onboarding",
+        skipTrial: true,
+      });
+      expect(callsTo("POST", "/api/onboarding/store")).toHaveLength(0);
     });
 
     it("confirm publishes with the claimed code and starts the trial", async () => {
@@ -594,11 +758,9 @@ describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TI
         ok({ code: "BOB10", displayName: "Bob", discountPercent: 10 });
       routes["POST /api/subscriptions/checkout"] = trialOk;
       renderWizard(baseState());
-      await toReferral();
       await claim("BOB10");
       await screen.findByTestId("referral-discount");
-      press("Continue");
-      await heading(DRAFT);
+      await toDraft();
       press(LAUNCH);
 
       await heading("Your store is live");
@@ -610,22 +772,59 @@ describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TI
       });
     });
 
-    it("a yearly pick goes on to the paid Checkout, not the trial", async () => {
+    it("a yearly free trial is started yearly: billed yearly after the 14 days", async () => {
       routeSetup();
-      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      routes["POST /api/subscriptions/checkout"] = trialOk;
       renderWizard(baseState());
-      await toPlan();
-      fireEvent.click(screen.getByTestId("plan-yearly"));
-      press("Continue");
-      await heading("Have a partner referral code?");
-      press("I don't have a code");
-      await heading(DRAFT);
+      fireEvent.click(screen.getByTestId("interval-yearly"));
+      await toDraft();
+      expect(screen.getByTestId("draft-plan")).toHaveTextContent("then yearly");
       press(LAUNCH);
-      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      await heading("Your store is live");
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(TRIAL_URL));
       expect(bodyOf("POST", "/api/subscriptions/checkout")).toMatchObject({
         plan: "POS",
         yearly: true,
       });
+    });
+
+    it("a yearly pick pays on Stripe right from the plan screen", async () => {
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      renderWizard(baseState());
+      fireEvent.click(screen.getByTestId("interval-yearly"));
+      press("Skip the trial and pay now");
+      press("Continue to payment");
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      expect(bodyOf("POST", "/api/subscriptions/checkout")).toMatchObject({
+        plan: "POS",
+        yearly: true,
+        skipTrial: true,
+      });
+    });
+
+    it("an Operations yearly pick goes to the Operations payment", async () => {
+      routes["POST /api/subscriptions/checkout"] = checkoutOk;
+      renderWizard(baseState());
+      fireEvent.click(screen.getByTestId("interval-yearly"));
+      fireEvent.click(screen.getByTestId("plan-operations-select"));
+      press("Continue to payment");
+      await waitFor(() => expect(assign).toHaveBeenCalledWith(STRIPE_URL));
+      expect(bodyOf("POST", "/api/subscriptions/checkout")).toMatchObject({
+        plan: "OPERATIONS",
+        yearly: true,
+      });
+    });
+
+    it("a failed payment start stays on the plan screen with a message", async () => {
+      routes["POST /api/subscriptions/checkout"] = () => ({
+        status: 500,
+        body: { success: false, error: { code: "INTERNAL_ERROR", message: "x" } },
+      });
+      renderWizard(baseState());
+      fireEvent.click(screen.getByTestId("plan-operations-select"));
+      press("Continue to payment");
+      await waitFor(() => expect(toasts.error).toHaveBeenCalled());
+      expect(screen.getByRole("heading", { name: "Welcome, Sam!" })).toBeInTheDocument();
     });
 
     it("a skipped setup resumes on the draft: one Confirm starts the trial", async () => {
@@ -639,15 +838,20 @@ describe("<OnboardingContent> one question at a time", { timeout: RENDER_TEST_TI
       await waitFor(() => expect(assign).toHaveBeenCalledWith(TRIAL_URL));
     });
 
-    it("an account already on a plan has no plan questions", async () => {
+    it("an account already on a plan has no plan screen: it starts at the name", async () => {
       routeSetup();
       renderWizard(baseState(), "en", {
-        billing: { canCheckout: false, posTrialEligible: false, referral: null },
+        billing: { canCheckout: false, posTrialEligible: false, paidPlan: null, referral: null },
       });
-      await answerName();
+      expect(screen.getByRole("heading", { name: "Welcome, Sam!" })).toBeInTheDocument();
+      expect(screen.queryByTestId("plan-pos")).toBeNull();
+      fireEvent.change(screen.getByLabelText("What's your store called?"), {
+        target: { value: "Le Petit Four" },
+      });
+      press("Continue");
+      await heading("What kind of place is it?");
       press("Continue");
       await heading(DRAFT);
-      expect(screen.queryByTestId("plan-trial")).toBeNull();
       expect(screen.queryByTestId("draft-plan")).toBeNull();
     });
   });

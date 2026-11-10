@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const h = vi.hoisted(() => ({ push: vi.fn(), search: new URLSearchParams() }));
@@ -69,6 +69,39 @@ describe("CheckoutSuccessContent", () => {
     expect(
       screen.getByRole("heading", { name: "checkout.success.congratsTitle" })
     ).toBeInTheDocument();
+  });
+
+  it("confirms a paid Checkout with Stripe before sending the owner back, instead of waiting for the webhook", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ data: { synced: true } }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderPage("plan=OPERATIONS&trial=false&session_id=cs_test_sync&next=%2Fonboarding");
+
+    // Held until Stripe has been asked, so the app never reads a stale plan.
+    expect(screen.getByRole("button", { name: "common.loading" })).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "checkout.success.continueSetup" })).toBeEnabled()
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/subscriptions/sync-checkout",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ sessionId: "cs_test_sync" }),
+      })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "checkout.success.continueSetup" }));
+    expect(h.push).toHaveBeenCalledWith("/onboarding");
+    vi.unstubAllGlobals();
+  });
+
+  it("a trial has nothing to confirm with Stripe", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    renderPage("plan=POS&trial=true&session_id=sub_trial_1");
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   it("goes on to the new store when setup opened Checkout", () => {

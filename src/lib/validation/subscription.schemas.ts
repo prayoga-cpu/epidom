@@ -12,6 +12,10 @@ export const checkoutSchema = z.object({
   successUrl: z.string().url("Invalid success URL").optional(),
   cancelUrl: z.string().url("Invalid cancel URL").optional(),
   trial: z.boolean().optional(),
+  // The page offered the free trial and the owner chose to pay instead: no
+  // trial, a normal Checkout. Opting out is always allowed; the trial itself
+  // is still only ever decided on the server (posTrialApplies).
+  skipTrial: z.boolean().optional(),
   yearly: z.boolean().optional().default(false),
   // The currency the page quoted the price in. Every catalog Price has an exact
   // EUR, USD and IDR amount, so this picks which one Stripe charges. Left out,

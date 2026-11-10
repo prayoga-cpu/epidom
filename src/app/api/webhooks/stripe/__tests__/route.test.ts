@@ -5,10 +5,7 @@ import { subscriptionRepository } from "@/lib/repositories";
 import { subscriptionService } from "@/lib/services";
 import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 import { NextRequest } from "next/server";
-import {
-  recordInvoiceCommission,
-  recordRefund,
-} from "@/lib/services/partner-commission.service";
+import { recordInvoiceCommission, recordRefund } from "@/lib/services/partner-commission.service";
 
 // Mock dependencies
 vi.mock("@/lib/stripe", () => ({
@@ -30,6 +27,13 @@ vi.mock("@/lib/services/partner-commission.service", () => ({
   recordInvoiceCommission: vi.fn().mockResolvedValue({ status: "no-attribution" }),
   recordRefund: vi.fn().mockResolvedValue("no-commission"),
 }));
+
+// The receipt email is tested on its own (subscription-receipt.service.test.ts);
+// here only that a paid invoice hands it the invoice.
+vi.mock("@/lib/services/subscription-receipt.service", () => ({
+  sendSubscriptionReceipt: vi.fn().mockResolvedValue(undefined),
+}));
+import { sendSubscriptionReceipt } from "@/lib/services/subscription-receipt.service";
 
 // The trial reminder's email (its copy is tested with the email service).
 vi.mock("@/lib/services/email.service", () => ({
@@ -404,6 +408,22 @@ describe("Stripe Webhook Handler", () => {
       const [, data] = (subscriptionRepository.updateByStripeSubscriptionId as any).mock.calls[0];
       expect(data).not.toHaveProperty("status");
       expect(data).not.toHaveProperty("plan");
+    });
+
+    it("sends the owner a receipt for a paid invoice", async () => {
+      const invoice = { id: "in_paid", amount_paid: 13799, subscription: "sub_123" };
+      const mockEvent = { type: "invoice.payment_succeeded", data: { object: invoice } };
+      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+      (subscriptionRepository.findByStripeSubscriptionId as any).mockResolvedValue({
+        userId: "user-123",
+        status: SubscriptionStatus.ACTIVE,
+        customPricePendingAt: null,
+      });
+
+      const res = await POST(createRequest(mockEvent));
+
+      expect(res.status).toBe(200);
+      expect(sendSubscriptionReceipt).toHaveBeenCalledWith(invoice);
     });
 
     it("does not reactivate a suspended account from a paid invoice", async () => {
@@ -812,17 +832,24 @@ describe("Stripe Webhook Handler", () => {
       expect(res.status).toBeGreaterThanOrEqual(500);
     });
 
-    it.each(["refund.created", "refund.updated"])("hands %s to the refund adjustment", async (type) => {
-      const mockEvent = { type, data: { object: { id: "re_1" } } };
-      (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
+    it.each(["refund.created", "refund.updated"])(
+      "hands %s to the refund adjustment",
+      async (type) => {
+        const mockEvent = { type, data: { object: { id: "re_1" } } };
+        (stripe.webhooks.constructEvent as any).mockReturnValue(mockEvent);
 
-      const res = await POST(createRequest(mockEvent));
+        const res = await POST(createRequest(mockEvent));
 
-      expect(res.status).toBe(200);
-      expect(recordRefund).toHaveBeenCalledWith("re_1");
-    });
+        expect(res.status).toBe(200);
+        expect(recordRefund).toHaveBeenCalledWith("re_1");
+      }
+    );
 
-    const trialCheckout = (metadata: Record<string, string>, status = "trialing", discounts: unknown[] = []) => {
+    const trialCheckout = (
+      metadata: Record<string, string>,
+      status = "trialing",
+      discounts: unknown[] = []
+    ) => {
       const mockEvent = {
         type: "checkout.session.completed",
         data: {

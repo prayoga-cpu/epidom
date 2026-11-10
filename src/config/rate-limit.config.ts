@@ -368,6 +368,10 @@ export const rateLimitConfig: Record<string, RateLimitConfig> = {
     limit: 30,
     window: 60, // 30 lookups per minute (debounced as the code is typed)
   },
+  "/api/subscriptions/sync-checkout": {
+    limit: 20,
+    window: 60, // one call per Checkout success page load (a reload repeats it)
+  },
   "/api/onboarding/complete": {
     limit: 10,
     window: 60, // 10 publish attempts per minute

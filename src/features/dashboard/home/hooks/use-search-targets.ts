@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   BarChart3,
+  ChartNoAxesCombined,
   MonitorSmartphone,
   Package,
   Settings,
@@ -150,6 +152,24 @@ export function useSearchTargets(storeId: string) {
         gate: "/pos",
         plan: "POS",
         newWindow: true,
+      },
+      {
+        id: "analytics",
+        label: t("nav.dashboard"),
+        keywords: A("analytics", "keywords"),
+        icon: ChartNoAxesCombined,
+        // The page is /analytics; its permission key is still "/dashboard".
+        href: `${base}/analytics`,
+        gate: "/dashboard",
+      },
+      {
+        id: "alerts",
+        label: t("nav.alerts"),
+        keywords: A("alerts", "keywords"),
+        icon: AlertTriangle,
+        href: `${base}/alerts`,
+        gate: "/alerts",
+        plan: "OPERATIONS",
       },
       {
         id: "settings",

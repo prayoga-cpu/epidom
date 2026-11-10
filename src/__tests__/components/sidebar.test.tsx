@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render as rtlRender, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render as rtlRender, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 
@@ -52,6 +52,28 @@ function renderSidebar(plan: string | null) {
   return render(<Sidebar mode="mobile" />);
 }
 
+/**
+ * The phone drawer shows one category at a time (General, Operations, Reports),
+ * like the desktop sidebar. Visit each category and collect every link seen: a
+ * link element keeps its attributes after the category it belongs to is swapped
+ * out, so the union is "everything reachable from the drawer".
+ */
+function allLinks(): HTMLAnchorElement[] {
+  const seen = new Map<string, HTMLAnchorElement>();
+  const categories = screen.getAllByRole("button").filter((b) => b.hasAttribute("aria-pressed"));
+  for (const category of categories) {
+    fireEvent.click(category);
+    for (const link of screen.getAllByRole("link")) {
+      seen.set(`${link.getAttribute("href")}|${link.textContent}`, link as HTMLAnchorElement);
+    }
+  }
+  return [...seen.values()];
+}
+
+/** Opens one category by its (mocked, key-shaped) label. */
+const openCategory = (key: "general" | "operations" | "reports") =>
+  fireEvent.click(screen.getByRole("button", { name: `nav.sections.${key}` }));
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Sidebar plan gating", () => {
@@ -65,7 +87,7 @@ describe("Sidebar plan gating", () => {
   it("never renders /pos/orders, /pos/kds, /tables or /menu, at any plan tier", () => {
     for (const plan of ["FREE", "POS", "OPERATIONS", "ENTERPRISE"]) {
       renderSidebar(plan);
-      const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
+      const hrefs = allLinks().map((l) => l.getAttribute("href"));
       for (const removed of [
         "/store/store-1/pos/orders",
         "/store/store-1/pos/kds",
@@ -74,6 +96,8 @@ describe("Sidebar plan gating", () => {
       ]) {
         expect(hrefs).not.toContain(removed);
       }
+      // One sidebar at a time: visiting every category of four at once is slow.
+      cleanup();
     }
   });
 
@@ -103,6 +127,7 @@ describe("Sidebar plan gating", () => {
   describe("FREE plan", () => {
     it("shows an event-framed locked hint, not just the generic plan badge", () => {
       renderSidebar("FREE");
+      openCategory("operations");
       // Data is OPERATIONS-gated with lockedHintKey "nav.lockedHint.data" —
       // the mock i18n passes keys through verbatim.
       expect(screen.getByText("nav.lockedHint.data")).toBeInTheDocument();
@@ -110,7 +135,7 @@ describe("Sidebar plan gating", () => {
 
     it("shows Operations items as locked", () => {
       renderSidebar("FREE");
-      const links = screen.getAllByRole("link");
+      const links = allLinks();
       const pricingLinks = links.filter((l) => l.getAttribute("href")?.startsWith("/pricing"));
       // Multiple locked items should point to /pricing#plans
       expect(pricingLinks.length).toBeGreaterThan(3);
@@ -124,7 +149,7 @@ describe("Sidebar plan gating", () => {
 
     it("Finance (OPERATIONS) and Custom Development (POS) are locked", () => {
       renderSidebar("FREE");
-      const links = screen.getAllByRole("link");
+      const links = allLinks();
       const financeLink = links.find((l) => l.getAttribute("href") === "/store/store-1/finance");
       const customDevLink = links.find(
         (l) => l.getAttribute("href") === "/store/store-1/custom-development"
@@ -139,7 +164,7 @@ describe("Sidebar plan gating", () => {
       renderSidebar("POS");
       // /menu has no rail entry anymore at any tier — it's grantable-only,
       // reached via Storefront's Menu tab instead.
-      const links = screen.getAllByRole("link");
+      const links = allLinks();
       const menuLink = links.find((l) => l.getAttribute("href") === "/store/store-1/menu");
       expect(menuLink).toBeUndefined();
     });
@@ -147,7 +172,7 @@ describe("Sidebar plan gating", () => {
     it("shows Operations items as locked", () => {
       renderSidebar("POS");
       // /management should point to /pricing (locked)
-      const links = screen.getAllByRole("link");
+      const links = allLinks();
       const mgmtLink = links.find((l) => l.getAttribute("href") === "/store/store-1/management");
       expect(mgmtLink).toBeUndefined();
       const pricingLinks = links.filter((l) => l.getAttribute("href")?.startsWith("/pricing"));
@@ -158,7 +183,7 @@ describe("Sidebar plan gating", () => {
   describe("OPERATIONS plan", () => {
     it("shows /management as a normal link", () => {
       renderSidebar("OPERATIONS");
-      const links = screen.getAllByRole("link");
+      const links = allLinks();
       const mgmtLink = links.find((l) => l.getAttribute("href") === "/store/store-1/management");
       expect(mgmtLink).toBeTruthy();
     });
@@ -167,7 +192,7 @@ describe("Sidebar plan gating", () => {
     // Operations is the top of the self-serve ladder: nothing is locked.
     it("shows Finance unlocked and nothing locked", () => {
       renderSidebar("OPERATIONS");
-      const links = screen.getAllByRole("link");
+      const links = allLinks();
       const financeLink = links.find((l) => l.getAttribute("href") === "/store/store-1/finance");
       expect(financeLink).toBeTruthy();
       const pricingLinks = links.filter((l) => l.getAttribute("href")?.startsWith("/pricing"));
@@ -176,7 +201,7 @@ describe("Sidebar plan gating", () => {
 
     it("has no Owner item — the roll-up is inside Finance", () => {
       renderSidebar("OPERATIONS");
-      const links = screen.getAllByRole("link");
+      const links = allLinks();
       expect(links.find((l) => l.getAttribute("href") === "/store/store-1/owner")).toBeUndefined();
     });
   });
@@ -184,7 +209,7 @@ describe("Sidebar plan gating", () => {
   describe("ENTERPRISE plan", () => {
     it("shows all items unlocked including Finance and Custom Development", () => {
       renderSidebar("ENTERPRISE");
-      const links = screen.getAllByRole("link");
+      const links = allLinks();
       const financeLink = links.find((l) => l.getAttribute("href") === "/store/store-1/finance");
       const customDevLink = links.find(
         (l) => l.getAttribute("href") === "/store/store-1/custom-development"
@@ -204,6 +229,52 @@ describe("Sidebar plan gating", () => {
       const pricingLinks = links.filter((l) => l.getAttribute("href")?.startsWith("/pricing"));
       expect(pricingLinks.length).toBeGreaterThan(0);
     });
+  });
+});
+
+// The drawer is grouped like the desktop sidebar: a category strip and one
+// category's pages at a time, Settings under the list.
+describe("Sidebar grouping (phone drawer)", () => {
+  const hrefs = () => screen.getAllByRole("link").map((l) => l.getAttribute("href"));
+
+  it("offers General, Operations and Reports, and starts on General", () => {
+    renderSidebar("ENTERPRISE");
+    for (const key of ["general", "operations", "reports"]) {
+      expect(screen.getByRole("button", { name: `nav.sections.${key}` })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("button", { name: "nav.sections.general" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(hrefs()).toContain("/store/store-1/customers");
+    expect(hrefs()).not.toContain("/store/store-1/management");
+  });
+
+  it("shows only the chosen category's pages", () => {
+    renderSidebar("ENTERPRISE");
+    openCategory("operations");
+    expect(hrefs()).toContain("/store/store-1/management");
+    expect(hrefs()).not.toContain("/store/store-1/customers");
+    openCategory("reports");
+    expect(hrefs()).toContain("/store/store-1/finance");
+    expect(hrefs()).not.toContain("/store/store-1/management");
+  });
+
+  it("keeps Settings under the list whichever category is open", () => {
+    renderSidebar("ENTERPRISE");
+    expect(hrefs()).toContain("/store/store-1/profile");
+    openCategory("operations");
+    // Settings belongs to General's list on the desktop too: it is pinned
+    // there, not repeated under every category.
+    expect(hrefs().filter((h) => h === "/store/store-1/profile").length).toBeLessThanOrEqual(1);
+  });
+
+  it("searching lists matches from every category, whatever is open", () => {
+    renderSidebar("ENTERPRISE");
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "management" } });
+    expect(hrefs()).toContain("/store/store-1/management");
+    // The category strip steps aside while searching.
+    expect(screen.queryByRole("button", { name: "nav.sections.general" })).toBeNull();
   });
 });
 

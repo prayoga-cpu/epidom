@@ -71,8 +71,10 @@ export interface OnboardingBilling {
   canCheckout: boolean;
   /** A POS Checkout would include the 14-day trial (first subscription only). */
   posTrialEligible: boolean;
+  /** The paid plan the account is on ("POS", "OPERATIONS"…): setup shows it as paid, with no plan to pick. */
+  paidPlan: string | null;
   /** A partner this account is already credited to (their link, or a code typed earlier): no code field then. */
-  referral: { displayName: string; discountPercent: number } | null;
+  referral: { code: string; displayName: string; discountPercent: number } | null;
 }
 
 /** GET /api/onboarding/referral-code?code=… response: a valid partner code. */

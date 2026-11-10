@@ -30,7 +30,7 @@ import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { PLAN_LABELS, upgradeHrefFor } from "@/lib/plans/entitlements";
 import { cn } from "@/lib/utils";
 import { FullscreenToggle } from "./fullscreen-toggle";
-import { NavItemLink, navItemHref, useNavContext } from "./nav-item-link";
+import { NavItemLink, SETTINGS_HREF, navItemHref, useNavContext } from "./nav-item-link";
 import { NavUser } from "./nav-user";
 import { NotificationBell } from "./notification-bell";
 import { OfflineSyncTrigger, PwaInstallTrigger } from "./pwa-install-dialog";
@@ -45,9 +45,6 @@ const PANEL_PX = 208;
 const EXPANDED_PX = RAIL_PX + PANEL_PX;
 /** Released past the midpoint, the sidebar snaps to the nearer width. */
 const SNAP_PX = (EXPANDED_PX + RAIL_PX) / 2;
-
-/** The Settings page (formerly Profile) keeps its old "/profile" permission key. */
-const SETTINGS_HREF = "/profile";
 
 const RAIL_ITEM_WIDE =
   "flex w-full flex-row items-center justify-start gap-3 rounded-lg px-3 py-2 text-sm font-medium transition active:scale-[0.98]";
@@ -368,16 +365,33 @@ export function DesktopSidebar({
               ))}
 
             <div className="my-1 border-t border-white/10" />
-            {sections.map((section) => (
-              <RailItem
-                key={section.id}
-                icon={section.icon}
-                label={t(section.labelKey)}
-                active={!onHome && section.id === activeSection?.id}
-                onClick={() => onCategory(section)}
-                wide={onHome}
-              />
-            ))}
+            {onHome
+              ? // Home: the pages panel is closed, so the wide strip carries the
+                // whole tree (every page one click away) rather than three
+                // category buttons that only open a group's first page.
+                sections.map((section) => (
+                  <div key={section.id} className="mb-2">
+                    <h2 className="text-muted-foreground mb-1 px-3 text-[11px] font-semibold tracking-wider uppercase">
+                      {t(section.labelKey)}
+                    </h2>
+                    <ul className="space-y-0.5">
+                      {section.items
+                        .filter((item) => item.href !== SETTINGS_HREF)
+                        .map((item) => (
+                          <NavItemLink key={item.href} item={item} ctx={ctx} />
+                        ))}
+                    </ul>
+                  </div>
+                ))
+              : sections.map((section) => (
+                  <RailItem
+                    key={section.id}
+                    icon={section.icon}
+                    label={t(section.labelKey)}
+                    active={section.id === activeSection?.id}
+                    onClick={() => onCategory(section)}
+                  />
+                ))}
           </div>
 
           <div

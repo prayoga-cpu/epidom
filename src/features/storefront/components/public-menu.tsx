@@ -916,7 +916,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
 
       {/* Cart Drawer — mobile only (desktop uses sidebar) */}
       {isCartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 md:hidden">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm md:hidden">
           <div className="bg-card animate-in slide-in-from-bottom flex max-h-[calc(85dvh/var(--app-zoom,1))] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
             {/* Header */}
             <div className="bg-muted flex items-center justify-between border-b p-4">
@@ -1012,7 +1012,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
 
       {/* Checkout Drawer */}
       {isCheckoutOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-card animate-in slide-in-from-bottom flex max-h-[calc(90dvh/var(--app-zoom,1))] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
             {/* Header */}
             <div className="bg-muted flex items-center justify-between border-b p-4">
@@ -1319,7 +1319,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
 
       {/* Item Detail / Modifier Selection Drawer */}
       {activeItem && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-card animate-in slide-in-from-bottom flex max-h-[calc(90dvh/var(--app-zoom,1))] w-full max-w-md flex-col overflow-hidden rounded-t-3xl duration-200">
             {/* Image (if exists) */}
             <div className="bg-muted relative h-44 w-full shrink-0">
