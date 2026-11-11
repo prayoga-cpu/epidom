@@ -24,6 +24,12 @@ import {
 } from "@/lib/inngest/functions/newsletter-dispatch";
 import { fiscalMaintenance } from "@/lib/inngest/functions/fiscal-maintenance";
 
+// Inngest runs every step of every job (nightly backup, newsletters, audit
+// retention…) as one call to this route. Fluid bills active CPU, not the
+// timeout, so a generous ceiling costs nothing, but the project-wide default
+// is 60s and a heavy step (one big table in the backup) must not be cut off.
+export const maxDuration = 300;
+
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [

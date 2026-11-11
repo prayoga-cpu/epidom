@@ -28,6 +28,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const encoder = new TextEncoder();
 
+  // Set by start(); cancel() calls it so a client that disconnects stops both
+  // timers at once instead of leaving them ticking until the function ends.
+  let stopStream: (() => void) | null = null;
+  let cancelled = false;
+
   const stream = new ReadableStream({
     async start(controller) {
       let isClosed = false;
@@ -100,6 +105,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
       await poll();
 
+      // The client may have left while the first poll was in flight.
+      if (cancelled) {
+        safeClose();
+        return;
+      }
+
       const interval = setInterval(() => {
         poll().catch(() => {
           clearInterval(interval);
@@ -128,10 +139,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
       }, 25000);
 
-      return cleanup;
+      stopStream = cleanup;
     },
     cancel() {
       // Stream canceled by client
+      cancelled = true;
+      stopStream?.();
     },
   });
 

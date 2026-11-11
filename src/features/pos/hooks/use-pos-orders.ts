@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PosOrderDisplay, OrdersSSEMessage } from "../types/pos.types";
 import { apiClient } from "@/lib/api/client";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
-import { isRealtimeConfiguredClient } from "@/lib/realtime/pusher-client";
+import { isRealtimeConfiguredClient, safetyNetPollMs } from "@/lib/realtime/pusher-client";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 export function usePosOrders(storeId: string) {
@@ -16,7 +16,11 @@ export function usePosOrders(storeId: string) {
       return apiClient.get<PosOrderDisplay[]>(`/stores/${storeId}/pos/orders`);
     },
     enabled: !!storeId,
-    refetchInterval: 10000, // Fallback polling every 10s in case push fails
+    // Without Pusher this is the live-update path (10s). With Pusher the push
+    // events below do the work, so this is only a safety net: 30s rather than
+    // the 5 min default because a few order writes don't publish an event yet
+    // (customer attach, hold, the Xendit webhook, the aggregator-email parser).
+    refetchInterval: safetyNetPollMs(10_000, 30_000),
   });
 
   // Preferred path: Pusher push. Invalidate-and-refetch rather than patching

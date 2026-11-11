@@ -9,6 +9,11 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.48.0] - 2026-11-11 · infra
+
+- **Epidom now runs on its own Pro hosting account.** The app and its addresses moved to the Epidom team with no downtime; sign-in, payments and your data are unchanged.
+- **Lighter on the server, same speed.** The POS order list refreshes by live push and only double-checks every 30 seconds (it was every 10), supplier orders refresh every 30 seconds (was 10), and the server's region is now fixed next to the database so it can't drift. Background jobs (nightly backup, newsletters) keep their 5-minute ceiling.
+
 ## [3.47.0] - 2026-11-11 · feat
 
 - **A navigation bar with menus.** **Products** opens Phone Orders (Free), POS Mode (POS), Store Dashboard (Operations) and the Claude connector, each with its one-line pitch; **Resources** opens the free tools (delivery commission calculator, recipe cost calculator, QR code menu), Blog, Docs & Help, Compare, Changelog and Contact. Pricing stays a link. Home and Contact left the bar (the logo is Home), the links are easier to read, and **Log in** now sits beside the button (and in the phone menu, where Products and Resources expand as rows). Menus open on hover or click and close with Escape. The device button ("Try free on macOS") is unchanged.

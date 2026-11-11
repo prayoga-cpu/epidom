@@ -1,5 +1,21 @@
 # STATUS.md
 
+## 3.48.0 — Hosting moved to the Epidom Pro team + Fluid efficiency (2026-11-11)
+
+The Vercel project `epidom` (`prj_9RQNfl3WynvjHEYdVHQOgkXwMZ4a`, same id) was transferred from the founder's Hobby team to the Pro team `team_40PBrj63RhVgsHLIEXvDNYjb` (zero downtime: domains, 62 env records, git link, deploy hook, sin1 region all carried over; verified one by one). The old project there is paused as `epidom-legacy-hobby-oct2026` (backup only; its env is stale: fix it before unpausing).
+
+- Project settings now: Fluid on, region sin1, build machine Standard (fixed), default function timeout 60s, Standard memory.
+- Code: `vercel.json` pins `regions: ["sin1"]` (the last move silently reset it to iad1); `/api/inngest` gets `maxDuration = 300` (every Inngest step runs through it, and the 60s default must not cut a backup step); the SSE order stream clears its timers on disconnect (test: `stream-cancel.test.ts`); POS orders poll every 30s as a Pusher safety net (was 10s), supplier orders every 30s (was 10s).
+- Not changed on purpose: the tables page polls every 10s (no push event, double-seat risk).
+
+### Operator to-do (3.48.0)
+
+- Remove `founder-8602` from the Pro team (pending invite; only the team owner can).
+- Optional: add `VERCEL_API_TOKEN` to the Production env if the admin capacity dashboard should show Vercel data (it was never set).
+- Check Spend Management / budget alert in the Pro team's Billing (owner only).
+- In 5-7 days: Observability → Functions, sort by Active CPU, and tune from real numbers (usage reset on transfer, so there is no baseline).
+- Follow-up: four order writes publish no Pusher event (customer attach, hold, the Xendit webhook, the aggregator-email parser); add `publishStoreEvent(..., ORDER_UPDATED)` there, then the POS safety-net poll can go to 5 min.
+
 ## 3.46.0 — Customer display: promo banners, look, thank-you extras, QRIS (built 2026-11-07, **not committed**: the tree also holds another session's 3.44.0–3.45.0 work)
 
 - [x] **Store-wide settings** in `CustomerDisplaySettings` (one row per store, migration `20261106120000_customer_display_settings`); banners are a JSON list on the row (max 20), validated by `customerDisplaySettingsSchema`. The on/off switch stays per device (localStorage), unchanged.

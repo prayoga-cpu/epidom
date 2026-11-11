@@ -159,7 +159,7 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
       if (query.state.error && (query.state.error as SubscriptionError)?.status === 403) {
         return false; // Disable polling for 403 errors
       }
-      return 10 * 1000; // Poll every 10 seconds for successful responses
+      return 30 * 1000; // Poll every 30 seconds (same as the other dashboard lists; no push event exists for these)
     },
     refetchIntervalInBackground: false, // Only poll when tab is active
     // Don't refetch on mount if we have a 403 error
@@ -184,7 +184,7 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
       return failureCount < 3;
     },
     meta: {
-      refetchInterval: 10 * 1000, // Store in meta for smart polling
+      refetchInterval: 30 * 1000, // Store in meta for smart polling
     },
   });
 }
