@@ -10,6 +10,7 @@ import { trackEvent, trackMetaPixelEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { cn } from "@/lib/utils";
 import { APP_RELEASE_DATE } from "@/lib/version";
+import { PRODUCT_SCREENS } from "@/features/marketing/shared/content/product-screens";
 import { HERO_PHOTO } from "../data/media";
 import { NF525_SETTLED } from "../lib/migration";
 import { usePosTrialHref } from "../lib/use-pos-trial-href";
@@ -257,7 +258,7 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
               sizes="100vw"
               // The build always provides blurDataURL for a static import; tests don't.
               placeholder={HERO_PHOTO.src.blurDataURL ? "blur" : "empty"}
-              className="epi-hero-photo object-cover object-[50%_40%]"
+              className="epi-hero-photo object-cover object-[50%_40%] max-sm:contrast-110 max-sm:grayscale"
             />
           </div>
         ) : null}
@@ -265,6 +266,12 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
             sits right there), a gold glow in the corner, and a dark foot for the
             facts: cream text stays at WCAG AA over any part of the photo. */}
         <div aria-hidden="true" className="bg-epi-navy-950/35 absolute inset-0 -z-10" />
+        {/* Phone only: the text sits on faces, so the whole card is washed navy, deepest
+            at the foot where the facts and the phone are. */}
+        <div
+          aria-hidden="true"
+          className="from-epi-navy-950/50 via-epi-navy-950/58 to-epi-navy-950/88 absolute inset-0 -z-10 bg-gradient-to-b sm:hidden"
+        />
         <div
           aria-hidden="true"
           className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_62%_58%_at_50%_44%,rgba(4,8,15,0.74),rgba(4,8,15,0.22)_70%,transparent)]"
@@ -307,7 +314,7 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
               <div className="[container-type:inline-size] w-0 min-w-full">
                 <p
                   style={{ "--tagline-em": taglineEm } as React.CSSProperties}
-                  className="epi-display-light text-epi-cream-50/85 mt-3 text-[length:clamp(14px,2vw,28px)] supports-[width:1cqi]:text-[length:calc(100cqi/var(--tagline-em))] supports-[width:1cqi]:whitespace-nowrap sm:mt-[clamp(0.5rem,1.5svh,1rem)]"
+                  className="epi-display-light text-epi-cream-50/85 max-sm:text-epi-cream-50 mt-3 text-[length:clamp(14px,2vw,28px)] supports-[width:1cqi]:text-[length:calc(100cqi/var(--tagline-em))] supports-[width:1cqi]:whitespace-nowrap max-sm:[text-shadow:0_1px_16px_rgba(4,8,15,0.85)] sm:mt-[clamp(0.5rem,1.5svh,1rem)]"
                 >
                   {/* A gold light passes across the tagline once (not the h1: the h1 paints as is). */}
                   <span ref={taglineRef} className="epi-sweep">
@@ -322,6 +329,10 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
             <div className="epi-rise flex w-full justify-center">
               <HeroStoreSearch registerHref="/register" />
             </div>
+            {/* Phone only: what the "@ your-cafe" field is, in one line. */}
+            <p className="epi-rise text-epi-cream-50/85 m-0 mt-3 text-sm sm:hidden">
+              {t("redesign.landing.hero.claimHint")}
+            </p>
             <div className="epi-rise mt-4 flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
               <Link
                 href={trialHref}
@@ -331,7 +342,11 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
                     event_label: "hero_trial",
                   })
                 }
-                className={cn(SECONDARY_BUTTON, "min-h-11 px-5 text-sm backdrop-blur")}
+                // On a phone the claim field is the one button; the trial is a quiet text link.
+                className={cn(
+                  SECONDARY_BUTTON,
+                  "min-h-11 px-5 text-sm backdrop-blur max-sm:border-0 max-sm:bg-transparent max-sm:px-2 max-sm:underline max-sm:decoration-white/35 max-sm:underline-offset-4 max-sm:backdrop-blur-none"
+                )}
               >
                 {t("redesign.landing.hero.trialCta")}
               </Link>
@@ -342,7 +357,8 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
             </div>
 
             <p className="epi-rise-late text-epi-cream-50/75 mt-6 max-w-xl text-sm leading-snug text-balance">
-              {t("redesign.landing.hero.sub")}
+              <span className="sm:hidden">{t("redesign.landing.hero.subShort")}</span>
+              <span className="max-sm:hidden">{t("redesign.landing.hero.sub")}</span>
             </p>
           </div>
 
@@ -364,7 +380,11 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
               {facts.map((fact) => (
                 <div
                   key={fact.key}
-                  className="flex items-baseline justify-between gap-6 border-t border-white/10 pt-3 lg:justify-end lg:border-0 lg:pt-0"
+                  className={cn(
+                    "flex items-baseline justify-between gap-6 border-t border-white/10 pt-3 lg:justify-end lg:border-0 lg:pt-0",
+                    // The build date is footer material, not a first-screen fact, on a phone.
+                    fact.key === "release" && "max-sm:hidden"
+                  )}
                 >
                   <dt className="text-epi-cream-50/55 text-[11px] tracking-[0.16em] uppercase">
                     {fact.key === "support" ? <OnlineDot className="mr-2" /> : null}
@@ -374,6 +394,20 @@ export function HeroSection({ onOpenMigration }: { onOpenMigration: () => void }
                 </div>
               ))}
             </dl>
+          </div>
+
+          {/* Phone only: the real Phone Orders page rising from the foot of the card, the
+              product the headline sells. Bleeds into the card's bottom padding. */}
+          <div aria-hidden="true" className="mt-10 -mb-6 flex justify-center sm:hidden">
+            <div className="relative h-[190px] w-[200px] overflow-hidden rounded-t-[22px] border border-b-0 border-white/25 shadow-[0_-12px_50px_rgba(0,0,0,0.5)]">
+              <Image
+                src={PRODUCT_SCREENS.storefrontMenu.src}
+                alt=""
+                fill
+                sizes="200px"
+                className="object-cover object-top"
+              />
+            </div>
           </div>
         </div>
       </div>

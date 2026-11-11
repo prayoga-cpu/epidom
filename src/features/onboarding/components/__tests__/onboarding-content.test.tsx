@@ -660,6 +660,19 @@ describe("<OnboardingContent> one screen at a time", { timeout: RENDER_TEST_TIME
       });
     });
 
+    it("creates the store with the link claimed on the home page, read once", async () => {
+      window.localStorage.setItem(
+        "epidom:claimed-link",
+        JSON.stringify({ slug: "my-claimed-cafe", at: Date.now() })
+      );
+      routeSetup();
+      renderWizard(baseState());
+      await toDraft();
+      expect(bodyOf("POST", "/api/onboarding/store", 0)).toMatchObject({ slug: "my-claimed-cafe" });
+      // Taken from storage: a later visit starts clean.
+      expect(window.localStorage.getItem("epidom:claimed-link")).toBeNull();
+    });
+
     it("Change on the draft returns to the plan screen and comes straight back, edits kept", async () => {
       routeSetup();
       renderWizard(baseState());

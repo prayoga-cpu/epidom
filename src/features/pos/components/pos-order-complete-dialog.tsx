@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { cn } from "@/lib/utils";
+import { haptic } from "../lib/haptics";
 import type { ReceiptData } from "@/lib/pwa/thermal-printer";
 import type { SendReceiptBody } from "@/types/api/cashier";
 import { usePrintReceipt } from "../hooks/use-print-receipt";
@@ -97,6 +98,10 @@ export function PosOrderCompleteDialog({
   newSaleLabel,
 }: PosOrderCompleteDialogProps) {
   const { t } = useI18n();
+  // A short double pulse when the sale is done.
+  useEffect(() => {
+    if (open) haptic("success");
+  }, [open]);
   const { print, isPrinting } = usePrintReceipt();
   const { printOrder, isPrinting: isPrintingTickets } = usePrintOrder(storeId);
   const hasOrderPrinters = useHasOrderPrinters();

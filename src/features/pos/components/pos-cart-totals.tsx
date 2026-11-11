@@ -97,7 +97,9 @@ export function PosCartTotals({ taxLabel }: PosCartTotalsProps) {
       )}
       <div className="mt-1.5 flex items-baseline justify-between gap-2 border-t pt-1.5 text-lg font-bold">
         <span>{t("cashierCart.bill.total")}</span>
-        <span className="text-primary tabular-nums">{formatPrice(total)}</span>
+        <span key={total} className="text-primary pos-bump tabular-nums">
+          {formatPrice(total)}
+        </span>
       </div>
     </div>
   );

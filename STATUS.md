@@ -24,6 +24,19 @@
 - [ ] Browser pass: phone (drawer, Home search, full-screen search), iPad landscape (sidebar minimized by default on first visit), desktop (collapse, drag, More popover), admin pages in FR/ID.
 - [ ] The `User.defaultLanding` column default is still `"dashboard"` (read as Home). Changing it needs a migration; not required.
 
+## Landing finish (2026-11-11, **not committed**)
+- Order: Hero, logos, Uses, Three steps, POS tour, calculator, stories, plans, compliance, FAQ, final CTA.
+- Uses section: one card per kind, photos in public/images/uses (CC0/PD, CREDITS.md). Screenshots in public/images/screens retaken from the demo; analytics.png and kds.png captured but not wired.
+- Claimed link wired into onboarding (takeClaimedLink); demo user excluded from newsletter audiences.
+- Uses card: carousel (3-4 CC0/PD photos per kind, portrait ones shown whole), CTAs = trial + blog guide. 15 guides in posts.industries.{en,fr,id}.ts (slugs in home/lib/industry-guides.ts); blog list has category chips.
+- Done: hero search no longer lists the demo café; the demo user is out of newsletters; no revenue/paying-customer query counts it (only /api/admin/capacity counts users/stores, which is accurate).
+- Demo menu now has 12 CC0/PD photos (public/images/demo, CREDITS.md); the seed rebuilds itself when they are missing.
+- Pos tour has 5 features (f5 = staff schedule, screen back-office-schedule.png, demo seeds roster + attendance via seedRoster). Step cards animate (.spc-* in globals.css, CountUp in three-spaces-section.tsx).
+- Tour f5 also shows pos-clock-in.png (phone, Operational > Clock In / Out selfie step; camera = a CC0 bartender photo injected in Playwright) over the schedule; background tour-staff-selfie.jpg. Storefront screenshots retaken with menu photos. Uses carousel is landscape only now.
+- Trusted-by strip: 12 client logos (white SVGs in public/images/clients, black + colour kept in home/assets/clients), marquee from 8 logos (CSS .epi-marquee), count in the label comes from the data; the owner supplied the list and its consent, the client-logos folder was removed after moving.
+- Testimonials: two DRAFT stories (Dinda/Abenz, Angelia/Casacosa) in data/case-studies.ts, dev-only until Dinda and Angelia approve the wording; photos go in public/images/people/{dinda,angelia}.jpg; CaseStudy got `logo` + `photo`.
+- Open: Safari/phone/`next build` check of the demo window, analytics.png and kds.png not wired.
+
 ## Public demo (built 2026-11-07, **not committed**)
 
 Shared, read-only demo café "Your Café" (`epidom.fr/@your-cafe`) behind the home page's "No login, live demo" links (new tab). Code: `src/lib/demo/` (seed, session, constants), `src/app/demo/[target]/route.ts`, guard in `src/proxy.ts`.

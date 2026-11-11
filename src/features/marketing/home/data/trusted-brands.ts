@@ -1,52 +1,67 @@
-// Customer logos for the home page trust bar.
+// Client logos for the home page's "trusted by" strip (components/trust-bar.tsx).
 //
-// This list ships EMPTY on purpose. Nothing in this repo shows that any brand
-// below is an Epidom customer or agreed to appear on the site, and a logo
-// implies an endorsement (Laura Todd is a registered trademark). A static
-// `import` of a logo file is bundled into the client whether or not the entry is
-// rendered, so a brand that has not confirmed must not even be imported: its
-// mark would be emitted to /_next/static/media and its name into the client JS.
+// Each entry is a brand the owner confirmed as a client and agreed to show
+// (`consented: true`). A brand that has not confirmed must not be listed at all
+// (or stays `consented: false`): a logo implies an endorsement. The strip counts
+// and shows only consented brands, and renders nothing when there are none.
 //
-// To show a brand: uncomment ONLY that brand's import line and its entry in
-// TRUSTED_BRANDS, and only after the brand confirms in writing (keep that
-// confirmation on file). Leave every other brand commented out. The logo files
-// stay in ../assets/brands so nothing has to be re-added later.
-import type { StaticImageData } from "next/image";
+// Files: the WHITE single-ink versions are served from public/images/clients/
+// (the site is dark). The black and full-colour versions are kept, unused, in
+// ../assets/clients/{black,color}/ for a light layout later.
 
-// Uncomment ONLY after the brand confirms in writing:
-// import holyCookie from "../assets/brands/holy-cookie.jpg";
-// import laFabrique from "../assets/brands/lafabrique.jpg";
-// import lauraTodd from "../assets/brands/laura-todd.jpg";
-// import mommaCookies from "../assets/brands/momma-cookies.jpg";
-// import pepiteCookie from "../assets/brands/pepite-cookie.jpg";
+export type BrandGroup = "cafe" | "bakery" | "restaurant";
 
 export interface TrustedBrand {
   slug: string;
   /** Used verbatim as the image alt text. */
   name: string;
-  logo: StaticImageData;
+  group: BrandGroup;
+  /** Site-relative path of the white SVG. */
+  logo: string;
+  /** width / height of the SVG's viewBox: sizes every mark by its visual weight. */
+  aspect: number;
   consented: boolean;
-  /**
-   * Scale applied inside the circular crop, only to trim a stray border in the
-   * source file (1 = untouched). Keep it small: 1.04 is enough.
-   */
-  zoom?: number;
 }
 
+const brand = (
+  slug: string,
+  name: string,
+  group: BrandGroup,
+  aspect: number
+): TrustedBrand => ({
+  slug,
+  name,
+  group,
+  aspect,
+  logo: `/images/clients/${slug}.svg`,
+  consented: true,
+});
+
+// Ordered so neighbours differ in shape and kind of business.
 export const TRUSTED_BRANDS: readonly TrustedBrand[] = [
-  // Uncomment ONLY after the brand confirms in writing (and its import above):
-  // { slug: "holy-cookie", name: "Holy Cookie", logo: holyCookie, consented: true },
-  // { slug: "la-fabrique-cookies", name: "La Fabrique Cookies", logo: laFabrique, consented: true },
-  // // The source JPEG has black corners around the circular mark; the zoom trims
-  // // the sliver of black the circular crop would otherwise leave at the rim.
-  // { slug: "laura-todd", name: "Laura Todd", logo: lauraTodd, consented: true, zoom: 1.05 },
-  // { slug: "momma-cookies", name: "Momma Cookies Bali", logo: mommaCookies, consented: true },
-  // { slug: "pepite-cookie", name: "Pépite Cookie", logo: pepiteCookie, consented: true },
+  brand("abenz", "Abenz Coffee & Eatery", "cafe", 1.139),
+  brand("lorette", "Lorette", "bakery", 1.833),
+  brand("kalve", "Kalve", "cafe", 4.838),
+  brand("tahoma", "Tahoma", "restaurant", 0.787),
+  brand("hygge-caffe", "Hygge Caffe", "cafe", 7.682),
+  brand("utopie", "Utopie", "bakery", 0.999),
+  brand("stradina", "Stradina", "restaurant", 5.183),
+  brand("cuvee-noire", "Cuvée Noire", "cafe", 6.287),
+  brand("casacosa", "Casacosa", "restaurant", 3.909),
+  brand("roberta-caffe", "Roberta Caffè", "cafe", 3.362),
+  brand("mian-fan", "Mian Fan", "restaurant", 3.375),
+  brand("la-pause-libanaise", "La Pause Libanaise", "restaurant", 3.607),
 ];
 
-/** Only the brands that have confirmed in writing (`consented === true`). */
+/** Only the brands that have confirmed (`consented === true`). */
 export function getConsentedBrands(
   brands: readonly TrustedBrand[] = TRUSTED_BRANDS
 ): TrustedBrand[] {
   return brands.filter((brand) => brand.consented === true);
+}
+
+/** Display height (px) of a logo: equal visual weight, tall marks capped. */
+export function logoHeight(aspect: number): number {
+  const height = Math.sqrt(5200 / aspect);
+  return Math.round(Math.min(Math.max(height, 24), 46));
 }

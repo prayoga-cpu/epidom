@@ -1,26 +1,32 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import type { Locale } from "@/components/lang/i18n-provider";
 import type { Article } from "@/features/marketing/shared/content/article-types";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 
-const COPY: Record<Locale, { eyebrow: string; title: string; body: string; readLabel: (m: number) => string }> = {
+const COPY: Record<Locale, { eyebrow: string; title: string; body: string; readLabel: (m: number) => string; all: string }> = {
   fr: {
     eyebrow: "Journal",
     title: "Notes de terrain, pas de vent marketing.",
     body: "Guides pratiques pour gérants de café et de restaurant — mise en place, commande directe, opérations.",
     readLabel: (m) => `${m} min de lecture`,
+    all: "Tous",
   },
   id: {
     eyebrow: "Blog",
     title: "Panduan dari lapangan, bukan basa-basi.",
     body: "Panduan praktis buat pemilik warung dan kafe — setup, jualan langsung, operasional harian.",
     readLabel: (m) => `${m} menit baca`,
+    all: "Semua",
   },
   en: {
     eyebrow: "Journal",
     title: "Field notes, not marketing fluff.",
     body: "Practical guides for café and restaurant owners — setup, direct ordering, day-to-day operations.",
     readLabel: (m) => `${m} min read`,
+    all: "All",
   },
 };
 
@@ -35,6 +41,9 @@ function formatDate(iso: string, locale: Locale): string {
 
 export function BlogList({ locale, posts }: { locale: Locale; posts: Article[] }) {
   const copy = COPY[locale];
+  const [category, setCategory] = useState<string | null>(null);
+  const categories = Array.from(new Set(posts.map((p) => p.category)));
+  const shown = category ? posts.filter((p) => p.category === category) : posts;
 
   return (
     <div style={{ fontFamily: "var(--epi-font-body)" }}>
@@ -70,8 +79,28 @@ export function BlogList({ locale, posts }: { locale: Locale; posts: Article[] }
 
       <section className="epi-section" style={{ paddingTop: 0 }}>
         <div className="epi-container" style={{ maxWidth: 780 }}>
+          <div role="group" aria-label={copy.eyebrow} className="mb-8 flex flex-wrap gap-2">
+            {[null, ...categories].map((c) => {
+              const selected = c === category;
+              return (
+                <button
+                  key={c ?? "all"}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setCategory(c)}
+                  className={`min-h-11 cursor-pointer rounded-full border px-4 text-sm font-medium transition-colors ${
+                    selected
+                      ? "border-transparent bg-[linear-gradient(180deg,#f4dc90,#d7b54b_55%,#a97c1c)] text-[#151004]"
+                      : "border-white/15 text-[rgba(251,249,228,0.75)] hover:bg-white/[0.06]"
+                  }`}
+                >
+                  {c ?? copy.all}
+                </button>
+              );
+            })}
+          </div>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            {posts.map((post) => (
+            {shown.map((post) => (
               <Link
                 key={post.slug}
                 href={getLocalizedPath(`/blog/${post.slug}`, locale)}

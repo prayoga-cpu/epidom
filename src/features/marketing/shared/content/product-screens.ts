@@ -9,6 +9,9 @@ import posCustomerDisplay from "../../../../../public/images/screens/pos-custome
 import storefrontMenu from "../../../../../public/images/screens/storefront-menu.png";
 import storefrontCheckout from "../../../../../public/images/screens/storefront-checkout.png";
 import backOfficeStock from "../../../../../public/images/screens/back-office-stock.png";
+import backOfficeFinance from "../../../../../public/images/screens/back-office-finance.png";
+import backOfficeSchedule from "../../../../../public/images/screens/back-office-schedule.png";
+import posClockIn from "../../../../../public/images/screens/pos-clock-in.png";
 import backOfficeFinanceTabs from "../../../../../public/images/screens/back-office-finance-tabs.png";
 
 /**
@@ -20,8 +23,8 @@ import backOfficeFinanceTabs from "../../../../../public/images/screens/back-off
  *
  * public/images/screens/ also holds analytics.png and kds.png (the dashboard
  * and the kitchen screen), captured for the "who it's for" cards and not wired
- * yet, and back-office-finance.png (the full P&L), of which only the report
- * tabs strip (back-office-finance-tabs.png) is shown. website-home.png is the
+ * yet, and back-office-finance.png (the Finance page), shown cropped to its
+ * figures; back-office-finance-tabs.png (just the report tabs strip) is no longer shown. website-home.png is the
  * source of public/images/og-image.png.
  */
 export interface ProductScreen {
@@ -88,6 +91,18 @@ export const PRODUCT_SCREENS = {
       id: "Halaman stok Dasbor Toko: 14 item dengan level berupa bar, dua berwarna merah di bawah batas minimum (bubuk matcha, susu oat).",
     },
   },
+  // The Finance page's header, filters and eight figures (revenue to waste), without the
+  // sidebars (2160x1350 capture; the dev-tools badge sits outside this rectangle).
+  backOfficeFinance: {
+    src: backOfficeFinance,
+    device: "desktop",
+    crop: { x: 445, y: 20, w: 1690, h: 940 },
+    alt: {
+      fr: "Les rapports financiers du tableau de bord : chiffre d'affaires de 2 584,30 € sur 230 commandes, ventes nettes, marge brute de 75,9 %, bénéfice net, coût des marchandises, taxes, frais et pertes.",
+      en: "The Store Dashboard finance reports: €2,584.30 revenue from 230 orders, net sales, a 75.9% gross margin, net profit, cost of goods, tax, fees and waste.",
+      id: "Laporan keuangan Dasbor Toko: pendapatan €2.584,30 dari 230 pesanan, penjualan bersih, margin kotor 75,9%, laba bersih, harga pokok, pajak, biaya, dan limbah.",
+    },
+  },
   // The report tabs of the Finance page, as a strip.
   backOfficeFinanceTabs: {
     src: backOfficeFinanceTabs,
@@ -98,6 +113,29 @@ export const PRODUCT_SCREENS = {
       fr: "Les rapports financiers du tableau de bord : bilan, quotidien, dépenses, par canal, par moyen de paiement et tendances de vente, chacun dans son onglet.",
       en: "The Store Dashboard finance reports: P&L statement, daily, expenses, by channel, payment method and sales patterns, each on its own tab.",
       id: "Laporan keuangan Dasbor Toko: laba rugi, harian, pengeluaran, per kanal, metode pembayaran, dan pola penjualan, masing-masing di tabnya sendiri.",
+    },
+  },
+  // The Work Schedule page: the week's roster by staff and shift block, days off included
+  // (2400x1600 capture; the dev-tools badges sit below the crop and the sidebar left of it).
+  backOfficeSchedule: {
+    src: backOfficeSchedule,
+    device: "desktop",
+    crop: { x: 170, y: 40, w: 2190, h: 1300 },
+    alt: {
+      fr: "Le planning du personnel dans le tableau de bord : la semaine du 9 au 15 novembre par personne, avec les blocs Matin et Après-midi publiés et les jours de repos.",
+      en: "The Store Dashboard work schedule: the week of 9 to 15 November by person, with published Morning and Afternoon shift blocks and days off.",
+      id: "Jadwal kerja di Dasbor Toko: pekan 9 sampai 15 November per orang, dengan blok shift Pagi dan Siang yang dipublikasikan serta hari libur.",
+    },
+  },
+  // POS Mode, Clock In / Out: a staff member's selfie step on a phone (the camera shows a
+  // stock photo of a bartender, the demo has no staff camera).
+  posClockIn: {
+    src: posClockIn,
+    device: "phone",
+    alt: {
+      fr: "L'écran de pointage de la caisse sur téléphone : « Clock In » avec l'aperçu de la caméra et le bouton Prendre la photo, pour le selfie d'arrivée.",
+      en: "The POS Clock In screen on a phone: the camera preview and a Take Photo button for the arrival selfie.",
+      id: "Layar absen masuk POS di ponsel: pratinjau kamera dan tombol Ambil Foto untuk selfie kehadiran.",
     },
   },
 } as const satisfies Record<string, ProductScreen>;

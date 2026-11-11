@@ -50,6 +50,9 @@ export function SpacesSection() {
           {SPACES.map((key, i) => (
             <div
               key={key}
+              // /products#storefront | #pos | #dashboard: the Products menu links here.
+              id={["storefront", "pos", "dashboard"][i]}
+              className="scroll-mt-28"
               style={{
                 padding: 28,
                 borderRadius: 22,

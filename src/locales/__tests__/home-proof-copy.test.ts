@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { en } from "../en";
 import { fr } from "../fr";
 import { id } from "../id";
+import { TRUSTED_BRANDS, getConsentedBrands } from "@/features/marketing/home/data/trusted-brands";
 
 /**
  * The home page and About page used to carry invented proof: customer counts,
@@ -224,10 +225,16 @@ describe.each(Object.entries(LOCALES))("home + about copy (%s)", (_name, dict) =
     }
   });
 
-  it("no longer says the trust bar is 'trusted by' customers", () => {
+  // The strip once said "already running on Epidom" because no client had agreed to be shown. It now
+  // says "trusted by {count} ...", which is only true while each counted logo is a brand that
+  // confirmed it is a client and agreed to appear (trusted-brands.ts: `consented`). So the claim is
+  // allowed, but its number must come from those brands, never be typed into the copy.
+  it("says the strip is 'trusted by' customers only with a count taken from consented brands", () => {
     const label = dig(dict, "redesign.landing.trust.label") as string;
     expect(label).toEqual(expect.any(String));
-    expect(label.toLowerCase()).not.toMatch(/trusted|adopté|dipercaya/);
+    expect(label).toContain("{count}");
+    expect(label).not.toMatch(/\d/);
+    expect(getConsentedBrands(TRUSTED_BRANDS).length).toBeGreaterThan(0);
   });
   it("makes none of the false feature, delivery, hosting or timing claims", () => {
     for (const subtree of OWNED_SUBTREES) {

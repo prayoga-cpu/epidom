@@ -2,6 +2,7 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { Button } from "@/components/ui/button";
+import { haptic } from "../lib/haptics";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { Info, Loader2, Menu, Pause, ReceiptText, Save, ShoppingBag } from "lucide-react";
 import { MAX_HELD_SALES, usePosCart } from "../hooks/use-pos-cart";
@@ -169,6 +170,7 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
       });
       if (!ok) return;
     }
+    haptic("remove");
     cart.clearCart();
   };
 
@@ -393,10 +395,14 @@ export function PosCart({ storeId, storeName, onRequestCheckout, onClose }: PosC
             // lets a large total's text wrap onto a second line instead of
             // being cropped; min-w-0 lets it shrink below its content's
             // natural (nowrap) width so wrapping can happen at all.
-            className="h-auto min-h-12 min-w-0 flex-1 touch-manipulation py-3"
+            className="pos-3d h-auto min-h-12 min-w-0 flex-1 touch-manipulation py-3"
             size="lg"
             disabled={!hasItems}
-            onClick={() => (onRequestCheckout ? onRequestCheckout() : setIsCheckoutOpen(true))}
+            onClick={() => {
+              haptic("charge");
+              if (onRequestCheckout) onRequestCheckout();
+              else setIsCheckoutOpen(true);
+            }}
           >
             <span className="flex min-w-0 flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-base whitespace-normal">
               <span>{t("cashierCart.footer.charge")}</span>

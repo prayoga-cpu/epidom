@@ -21,8 +21,9 @@ export const SECONDARY_BUTTON =
 
 /**
  * The marketing site's palette is navy, gold and this ONE accent gradient,
- * nothing else (owner's rule, 2026-11-06; the footer's sunset illustration is
- * the one exception they kept): deep navy rising into violet, lit
+ * nothing else (owner's rule, 2026-11-06; the footer's sunset illustration was
+ * the one exception until it became a navy-and-gold photo scene, 2026-11-11):
+ * deep navy rising into violet, lit
  * from below by a pink-violet glow with a blue one just above it. It first
  * appeared as the POS tour's stage. `x`/`y` move the glow (percent of the box)
  * so cards side by side don't look stamped out; the defaults are the stage's.

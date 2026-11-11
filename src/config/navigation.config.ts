@@ -10,7 +10,6 @@ import {
   Home,
   Briefcase,
   CreditCard,
-  Mail,
   Store,
   Smartphone,
   Monitor,
@@ -26,10 +25,11 @@ import {
   CalendarClock,
   ContactRound,
   Wallet,
-  Scale,
+  BookOpen,
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
+import type { LandingGroup } from "@/features/marketing/landing/registry";
 
 /**
  * Navigation Configuration
@@ -140,7 +140,6 @@ export const dashboardNavigation: NavSection[] = [
         icon: Settings,
         showBadge: false,
       },
-
     ],
   },
   {
@@ -239,7 +238,6 @@ export const dashboardNavigation: NavSection[] = [
       },
     ],
   },
-
 ];
 
 /**
@@ -261,33 +259,116 @@ export const homeNavItem: NavItem = {
 };
 
 /**
- * Landing page navigation items (for marketing/public pages)
+ * One link inside a marketing dropdown. A landing page is named by its group
+ * (src/features/marketing/landing/registry.ts) because its slug depends on the
+ * language: the link is the page in the visitor's language, and is left out
+ * where the page has no version in it.
  */
-export const landingNavigation: NavItem[] = [
+export interface LandingMenuLink {
+  /** A site path ("/blog", "/products#pos"); omitted when `landing` names the page. */
+  href?: string;
+  landing?: LandingGroup;
+  labelKey: string;
+  /** A second line under the label (the Products menu). */
+  descKey?: string;
+  /** The plan that includes it, shown as a small badge. */
+  plan?: "FREE" | "POS" | "OPERATIONS";
+}
+
+export interface LandingMenu {
+  /** One or more groups of links; a group may have a small heading. */
+  sections: { headingKey?: string; links: LandingMenuLink[] }[];
+  /** A closing link, e.g. "See all products". */
+  footer?: { href: string; labelKey: string };
+}
+
+/** A top-level entry of the marketing header: a plain link, or a dropdown (with or without a page of its own). */
+export interface LandingNavEntry {
+  id: string;
+  /** The entry's own page. A dropdown without one is just a button that opens its menu. */
+  href?: string;
+  labelKey: string;
+  icon: LucideIcon;
+  menu?: LandingMenu;
+}
+
+/**
+ * The marketing header (for marketing/public pages): Products and Resources
+ * open a menu, Pricing is a plain link. There is no "Home" (the logo is it) and
+ * no "Contact" (it lives under Resources, with Compare). Products' three spaces
+ * link to their cards on /products; the Claude connector to its own page.
+ */
+export const landingNavigation: LandingNavEntry[] = [
   {
-    href: "/",
-    labelKey: "common.nav.home",
-    icon: Home,
-  },
-  {
+    id: "products",
     href: "/products",
     labelKey: "common.nav.products",
     icon: Briefcase,
+    menu: {
+      sections: [
+        {
+          links: [
+            {
+              href: "/products#storefront",
+              labelKey: "redesign.landing.spaces.storefrontName",
+              descKey: "redesign.landing.spaces.storefrontShort",
+              plan: "FREE",
+            },
+            {
+              href: "/products#pos",
+              labelKey: "redesign.landing.spaces.posName",
+              descKey: "redesign.landing.spaces.posShort",
+              plan: "POS",
+            },
+            {
+              href: "/products#dashboard",
+              labelKey: "redesign.landing.spaces.backOfficeName",
+              descKey: "redesign.landing.spaces.backOfficeShort",
+              plan: "OPERATIONS",
+            },
+            {
+              landing: "claude-connector",
+              labelKey: "common.nav.claudeConnector",
+              descKey: "common.nav.claudeConnectorDesc",
+            },
+          ],
+        },
+      ],
+      footer: { href: "/products", labelKey: "common.nav.viewAllProducts" },
+    },
   },
   {
+    id: "pricing",
     href: "/pricing",
     labelKey: "common.nav.pricing",
     icon: CreditCard,
   },
   {
-    href: "/compare",
-    labelKey: "common.nav.compare",
-    icon: Scale,
-  },
-  {
-    href: "/contact",
-    labelKey: "common.nav.contact",
-    icon: Mail,
+    id: "resources",
+    labelKey: "common.nav.resources",
+    icon: BookOpen,
+    menu: {
+      sections: [
+        {
+          headingKey: "common.nav.toolsHeading",
+          links: [
+            { landing: "commission", labelKey: "common.nav.toolCommission" },
+            { landing: "recipe-cost", labelKey: "common.nav.toolRecipeCost" },
+            { landing: "qr-menu", labelKey: "common.nav.toolQrMenu" },
+          ],
+        },
+        {
+          headingKey: "common.nav.learnHeading",
+          links: [
+            { href: "/blog", labelKey: "footer.linkBlog" },
+            { href: "/docs", labelKey: "footer.linkDocs" },
+            { href: "/compare", labelKey: "footer.linkCompare" },
+            { href: "/changelog", labelKey: "footer.linkChangelog" },
+            { href: "/contact", labelKey: "footer.linkContact" },
+          ],
+        },
+      ],
+    },
   },
 ];
 
@@ -366,8 +447,16 @@ export const posModeNavItems: NavItem[] = [
 ];
 
 /**
- * Get navigation items by variant
+ * The header's top-level entries for a variant. The in-app shell's flat items
+ * become plain-link entries, so the header renders both the same way.
  */
-export function getNavigationByVariant(variant: "landing" | "authenticated"): NavItem[] {
-  return variant === "landing" ? landingNavigation : authenticatedNavigation;
+export function getNavigationByVariant(variant: "landing" | "authenticated"): LandingNavEntry[] {
+  return variant === "landing"
+    ? landingNavigation
+    : authenticatedNavigation.map((item) => ({
+        id: item.href,
+        href: item.href,
+        labelKey: item.labelKey,
+        icon: item.icon,
+      }));
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -34,6 +34,7 @@ import {
   type PlanChoice,
 } from "../lib/onboarding-flow";
 import type { InstagramPrefill } from "../lib/instagram-prefill";
+import { takeClaimedLink } from "@/features/marketing/home/lib/claimed-link";
 import { extrasFromInstagram, slugFromInstagram } from "../lib/instagram-prefill";
 import {
   BILLING_PARAM,
@@ -186,11 +187,16 @@ export function OnboardingContent({
    * a random colour and three example dishes for its kind of place. Returns
    * false (after a toast) when something failed.
    */
+  const claimedLink = useRef<string | null | undefined>(undefined);
   const setUpStore = async (): Promise<boolean> => {
     setSettingUp(true);
     try {
       const browserTimezone = getBrowserTimezone();
-      const slugFromPrefill = slugFromInstagram(answers.prefill);
+      // The link the visitor claimed on the home page ("epidom.fr/@x is free"),
+      // read once (a retry after a failed save must not lose it), wins over one
+      // derived from an Instagram link. Taken since: the catch below suggests a free one.
+      if (claimedLink.current === undefined) claimedLink.current = takeClaimedLink();
+      const slugFromPrefill = claimedLink.current ?? slugFromInstagram(answers.prefill);
       const base = {
         name: answers.name.trim(),
         countryCode: countryCode ?? OTHER_COUNTRY_CODE,

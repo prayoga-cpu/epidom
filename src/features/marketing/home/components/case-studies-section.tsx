@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { MarketFlag } from "@/components/market-flag";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { cn } from "@/lib/utils";
 import {
@@ -127,14 +128,24 @@ export function CaseStudiesSection({ studies = CASE_STUDIES }: { studies?: reado
                 >
                   <div className="flex flex-col gap-8 md:flex-row md:gap-10">
                     <div className="flex min-w-0 flex-1 flex-col gap-6">
-                      {/* The shop's mark: its initial and its name, until it supplies a logo. */}
+                      {/* The shop's mark: its white logo on a navy tile (its initial until it has one), and its name. */}
                       <div className="flex items-center gap-3 text-[var(--epi-navy-900)]">
-                        <span
-                          aria-hidden="true"
-                          className="epi-display inline-flex size-12 items-center justify-center rounded-2xl bg-[var(--epi-navy-900)] text-2xl text-[var(--epi-cream-50)]"
-                        >
-                          {study.shopName.trim().charAt(0).toUpperCase()}
-                        </span>
+                        {study.logo ? (
+                          <span
+                            aria-hidden="true"
+                            className="inline-flex h-12 min-w-12 items-center justify-center rounded-2xl bg-[var(--epi-navy-900)] px-3"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element -- small static SVG */}
+                            <img src={study.logo} alt="" className="h-7 w-auto max-w-24" />
+                          </span>
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            className="epi-display inline-flex size-12 items-center justify-center rounded-2xl bg-[var(--epi-navy-900)] text-2xl text-[var(--epi-cream-50)]"
+                          >
+                            {study.shopName.trim().charAt(0).toUpperCase()}
+                          </span>
+                        )}
                         <span className="epi-display text-2xl leading-none">{study.shopName}</span>
                       </div>
                       {summary ? (
@@ -171,12 +182,7 @@ export function CaseStudiesSection({ studies = CASE_STUDIES }: { studies?: reado
 
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <span
-                        aria-hidden="true"
-                        className="inline-flex size-12 items-center justify-center rounded-xl bg-[var(--epi-gold-500)]/25 text-lg font-medium text-[var(--epi-navy-900)]"
-                      >
-                        {study.ownerName.trim().charAt(0).toUpperCase()}
-                      </span>
+                      <SpeakerPhoto name={study.ownerName} src={study.photo} />
                       <div>
                         <div className="text-sm font-medium text-[var(--epi-navy-900)]">
                           {study.ownerName}
@@ -184,6 +190,7 @@ export function CaseStudiesSection({ studies = CASE_STUDIES }: { studies?: reado
                         <div className="text-xs text-[var(--epi-navy-700)] opacity-80">
                           {role ? `${role} · ` : ""}
                           {study.shopName} · {study.location}
+                          {study.flag ? <MarketFlag market={study.flag} className="ml-1.5" /> : null}
                         </div>
                       </div>
                     </div>
@@ -228,5 +235,29 @@ export function CaseStudiesSection({ studies = CASE_STUDIES }: { studies?: reado
         </div>
       </div>
     </section>
+  );
+}
+
+/** The speaker's photo; their initial in a gold square until the file exists. */
+function SpeakerPhoto({ name, src }: { name: string; src?: string }) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- owner-supplied file: a missing one falls back to the initial
+      <img
+        src={src}
+        alt=""
+        onError={() => setFailed(true)}
+        className="size-12 shrink-0 rounded-xl object-cover"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-[var(--epi-gold-500)]/25 text-lg font-medium text-[var(--epi-navy-900)]"
+    >
+      {name.trim().charAt(0).toUpperCase()}
+    </span>
   );
 }

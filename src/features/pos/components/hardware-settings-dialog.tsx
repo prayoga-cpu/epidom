@@ -10,8 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageIntro } from "@/features/guide/components/page-intro";
+import { haptic, setHapticsEnabled, useHapticsEnabled } from "../lib/haptics";
 import type { PosMenuCategory } from "../types/pos.types";
 import { PrinterSettingsPanel } from "./printer-settings-dialog";
 import { ScannerSettingsPanel } from "./pos-scanner-menu";
@@ -58,6 +60,8 @@ function HardwareSettingsBody({ storeId }: { storeId: string }) {
     queryClient.getQueryData<{ categories: PosMenuCategory[] }>(["pos", "menu", storeId])
       ?.categories ?? null;
 
+  const hapticsOn = useHapticsEnabled();
+
   return (
     <>
       <DialogHeader className="shrink-0 border-b px-5 py-4 text-left">
@@ -65,12 +69,22 @@ function HardwareSettingsBody({ storeId }: { storeId: string }) {
         <DialogDescription>{t("pos.hardware.dialogDesc")}</DialogDescription>
       </DialogHeader>
 
-      <PageIntro
-        id="hardware"
-        variant="compact"
-        storeId={storeId}
-        className="mx-5 mt-3 shrink-0"
-      />
+      <PageIntro id="hardware" variant="compact" storeId={storeId} className="mx-5 mt-3 shrink-0" />
+
+      <div className="mx-5 mt-3 flex shrink-0 items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{t("pos.hardware.haptics")}</p>
+          <p className="text-muted-foreground text-xs">{t("pos.hardware.hapticsDesc")}</p>
+        </div>
+        <Switch
+          checked={hapticsOn}
+          onCheckedChange={(on) => {
+            setHapticsEnabled(on);
+            if (on) haptic("tap");
+          }}
+          aria-label={t("pos.hardware.haptics")}
+        />
+      </div>
 
       <Tabs defaultValue="printers" className="min-h-0 flex-1 gap-0">
         <div className="shrink-0 px-5 pt-3">

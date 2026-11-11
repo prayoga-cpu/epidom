@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useI18n } from "@/components/lang/i18n-provider";
 import type { CartItem } from "../types/pos.types";
+import { haptic } from "../lib/haptics";
 
 interface PosCartItemProps {
   item: CartItem;
@@ -48,10 +49,12 @@ export const PosCartItem = memo(function PosCartItem({
       : null;
 
   return (
-    <div className="border-b border-dashed px-3 py-2 last:border-0 sm:px-4">
+    <div className="pos-row-in border-b border-dashed px-3 py-2 last:border-0 sm:px-4">
       <div className="flex items-start gap-2">
         <span className="text-muted-foreground w-7 shrink-0 pt-px text-sm font-medium tabular-nums">
-          {item.quantity}×
+          <span key={item.quantity} className="pos-bump">
+            {item.quantity}×
+          </span>
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
@@ -97,8 +100,11 @@ export const PosCartItem = memo(function PosCartItem({
           <Button
             variant="ghost"
             size="icon"
-            className="h-11 w-11 touch-manipulation rounded-sm"
-            onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+            className="pos-press h-11 w-11 touch-manipulation rounded-sm"
+            onClick={() => {
+              haptic(item.quantity === 1 ? "remove" : "tap");
+              onUpdateQuantity(item.id, item.quantity - 1);
+            }}
           >
             {item.quantity === 1 ? (
               <Trash2 className="text-destructive h-4 w-4" />
@@ -111,8 +117,11 @@ export const PosCartItem = memo(function PosCartItem({
           <Button
             variant="ghost"
             size="icon"
-            className="h-11 w-11 touch-manipulation rounded-sm"
-            onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+            className="pos-press h-11 w-11 touch-manipulation rounded-sm"
+            onClick={() => {
+              haptic("tap");
+              onUpdateQuantity(item.id, item.quantity + 1);
+            }}
           >
             <Plus className="h-4 w-4" />
             <span className="sr-only">{t("cashierCart.item.increase")}</span>
@@ -136,7 +145,10 @@ export const PosCartItem = memo(function PosCartItem({
             variant="ghost"
             size="icon"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive h-11 w-11 touch-manipulation"
-            onClick={() => onRemove(item.id)}
+            onClick={() => {
+              haptic("remove");
+              onRemove(item.id);
+            }}
           >
             <X className="h-4 w-4" />
             <span className="sr-only">{t("common.actions.remove")}</span>

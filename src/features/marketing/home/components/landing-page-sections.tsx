@@ -20,7 +20,7 @@ import { UsesSection } from "./uses-section";
 /**
  * The home page (order from the 2026-11-06 review): proof and the product
  * first, the numbers after. Hero (claim your link, or start the trial with no
- * card) -> customer logos -> one order in three steps -> who it is for -> the
+ * card) -> customer logos -> who it is for -> one order in three steps -> the
  * till up close -> the calculator -> customer stories -> plans -> compliance
  * -> switching FAQ -> the closing call to action. Logos, stories and
  * compliance render nothing until they have real content. A sticky trial bar
@@ -67,12 +67,12 @@ export function LandingPageSections({
         <TrustBar />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary sectionName="Three Steps">
-        <ThreeSpacesSection exampleStorefrontSlug={exampleStorefrontSlug} />
-      </SectionErrorBoundary>
-
       <SectionErrorBoundary sectionName="Uses">
         <UsesSection />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary sectionName="Three Steps">
+        <ThreeSpacesSection exampleStorefrontSlug={exampleStorefrontSlug} />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary sectionName="POS Tour">

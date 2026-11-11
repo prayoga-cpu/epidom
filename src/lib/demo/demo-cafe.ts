@@ -29,6 +29,10 @@ const STALE_AFTER_MS = 10 * 60 * 60 * 1000;
 const DAYS = 30;
 
 type Dept = "BAR" | "KITCHEN";
+/** Photo file (public/images/demo, CC0/public domain) for a menu item, by name. */
+const photoFor = (name: string) =>
+  `/images/demo/${name.toLowerCase().replace(/[^a-z]+/g, "-")}.jpg`;
+
 const MENU: ReadonlyArray<{
   category: string;
   items: ReadonlyArray<{
@@ -206,6 +210,91 @@ function rng(seed: number) {
   };
 }
 
+/**
+ * The weekly roster (this week and last, published) and the clock-ins and
+ * clock-outs that went with it, so the Schedule and Attendance pages have a
+ * month's worth of believable days. Times are Paris-ish (UTC+1); the day's
+ * clock-ins stop at "now", so today shows people currently on shift.
+ */
+const BLOCKS = [
+  { name: "Morning", startTime: "07:00", endTime: "15:00", color: "#d9ae3b" },
+  { name: "Afternoon", startTime: "11:00", endTime: "19:00", color: "#6a79d8" },
+] as const;
+// Weekday 0 = Monday ... 6 = Sunday; null = day off.
+const ROSTER: Record<string, ReadonlyArray<0 | 1 | null>> = {
+  "Léa Martin": [0, 0, 0, 0, 0, null, null],
+  "Tom Bernard": [null, 1, 1, 1, 1, 1, null],
+  "Sam Okafor": [null, null, 0, 0, 0, 0, 0],
+};
+
+async function seedRoster(
+  tx: Pick<typeof prisma, "staffMember" | "scheduleShift" | "staffSchedule" | "attendanceRecord">,
+  storeId: string,
+  now: Date
+) {
+  const blocks = new Map<string, string>();
+  for (const b of BLOCKS) {
+    const row = await tx.scheduleShift.create({ data: { storeId, ...b }, select: { id: true } });
+    blocks.set(b.name, row.id);
+  }
+  const staff = await tx.staffMember.findMany({
+    where: { storeId },
+    select: { id: true, name: true },
+  });
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+  const at = (day: Date, hhmm: string, jitterMin: number) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return new Date(
+      Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), h - 1, m + jitterMin)
+    );
+  };
+  let n = 0;
+  for (const weekOffset of [-14, -7, 0]) {
+    for (const member of staff) {
+      const week = ROSTER[member.name];
+      if (!week) continue;
+      for (let d = 0; d < 7; d++) {
+        const date = new Date(monday);
+        date.setUTCDate(monday.getUTCDate() + weekOffset + d);
+        const slot = week[d];
+        if (slot === null) {
+          await tx.staffSchedule.create({
+            data: { storeId, staffMemberId: member.id, date, isDayOff: true, status: "PUBLISHED", publishedAt: now },
+          });
+          continue;
+        }
+        const block = BLOCKS[slot];
+        const schedule = await tx.staffSchedule.create({
+          data: {
+            storeId,
+            staffMemberId: member.id,
+            date,
+            scheduleShiftId: blocks.get(block.name),
+            status: "PUBLISHED",
+            publishedAt: now,
+          },
+          select: { id: true },
+        });
+        n++;
+        const clockIn = at(date, block.startTime, ((n * 7) % 14) - 4);
+        const clockOut = at(date, block.endTime, ((n * 5) % 12) - 3);
+        const base = { storeId, staffMemberId: member.id, staffScheduleId: schedule.id };
+        if (clockIn.getTime() <= now.getTime()) {
+          await tx.attendanceRecord.create({
+            data: { ...base, type: "CLOCK_IN", timestamp: clockIn, locationLabel: "Your Café, Lyon" },
+          });
+        }
+        if (clockOut.getTime() <= now.getTime()) {
+          await tx.attendanceRecord.create({
+            data: { ...base, type: "CLOCK_OUT", timestamp: clockOut, locationLabel: "Your Café, Lyon" },
+          });
+        }
+      }
+    }
+  }
+}
+
 export async function ensureDemoCafe(): Promise<{ userId: string; storeId: string }> {
   const existing = await prisma.user.findUnique({
     where: { email: DEMO_EMAIL },
@@ -230,10 +319,19 @@ export async function ensureDemoCafe(): Promise<{ userId: string; storeId: strin
       })
     : null;
   const costsInBase = sample ? Number(sample.costPrice) > 50 : false;
+  // Rebuilt when the menu has no photos yet (an earlier seed showed placeholders).
+  const hasRoster = storeId ? await prisma.staffSchedule.count({ where: { storeId } }) : 0;
+  const withPhoto = storeId
+    ? await prisma.menuItem.count({
+        where: { storefront: { slug: DEMO_SLUG }, imageUrl: { not: null } },
+      })
+    : 0;
   if (
     existing &&
     storeId &&
     costsInBase &&
+    withPhoto > 0 &&
+    hasRoster > 0 &&
     existing.name === DEMO_OWNER &&
     existing.guideState &&
     shell?.openingHours
@@ -313,6 +411,9 @@ export async function seedDemoCafe(): Promise<{ userId: string; storeId: string 
       await tx.product.deleteMany({ where: { storeId: sid } });
       await tx.material.deleteMany({ where: { storeId: sid } });
       await tx.table.deleteMany({ where: { storeId: sid } });
+      await tx.attendanceRecord.deleteMany({ where: { storeId: sid } });
+      await tx.staffSchedule.deleteMany({ where: { storeId: sid } });
+      await tx.scheduleShift.deleteMany({ where: { storeId: sid } });
       await tx.staffMember.deleteMany({ where: { storeId: sid } });
 
       await tx.storeFinanceSettings.upsert({
@@ -341,6 +442,7 @@ export async function seedDemoCafe(): Promise<{ userId: string; storeId: string 
           ...(s.rate ? { payType: "HOURLY" as const, payRate: s.rate } : {}),
         })),
       });
+      await seedRoster(tx, sid, now);
       await tx.table.createMany({
         data: ["T1", "T2", "T3", "T4", "T5", "Terrace"].map((label, i) => ({
           storeId: sid,
@@ -402,6 +504,7 @@ export async function seedDemoCafe(): Promise<{ userId: string; storeId: string 
               department: item.dept,
               name: item.name,
               description: item.description,
+              imageUrl: photoFor(item.name),
               price: item.price,
               currency: "EUR",
               isFeatured: ii === 0,

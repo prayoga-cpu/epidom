@@ -1,8 +1,7 @@
-import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import type { StaticImageData } from "next/image";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
@@ -63,8 +62,8 @@ import { CaseStudiesSection } from "@/features/marketing/home/components/case-st
 import { PhoneKDS } from "@/features/marketing/shared/components/phone-kds";
 import { FeaturesShowcaseSection } from "@/features/marketing/services/components/features-showcase-section";
 import {
-  TRUSTED_BRANDS,
   getConsentedBrands,
+  logoHeight,
   type TrustedBrand,
 } from "@/features/marketing/home/data/trusted-brands";
 import {
@@ -92,12 +91,16 @@ function text(locale: Loc, path: string): string {
 /** testing-library collapses whitespace (incl. the no-break space fr puts before ":") in the DOM text only. */
 const norm = (value: string) => value.replace(/\s+/g, " ").trim();
 
-const logo = (name: string): StaticImageData => ({ src: `/${name}.jpg`, width: 200, height: 200 });
-
 function brand(
   overrides: Partial<TrustedBrand> & Pick<TrustedBrand, "slug" | "name">
 ): TrustedBrand {
-  return { logo: logo(overrides.slug), consented: false, ...overrides };
+  return {
+    group: "cafe",
+    aspect: 3,
+    logo: `/images/clients/${overrides.slug}.svg`,
+    consented: false,
+    ...overrides,
+  };
 }
 
 function study(overrides: Partial<CaseStudy> = {}): CaseStudy {
@@ -135,67 +138,65 @@ beforeEach(() => {
 // ── TrustBar ─────────────────────────────────────────────────────────────────
 
 describe("TrustBar", () => {
-  it("ships with an empty brand list, so no customer logo can render", () => {
-    // Was five entries all flagged consented:false. The list is now empty and the
-    // five entries live in a commented template, so an unconsented logo is not
-    // even imported into the client bundle.
-    expect(TRUSTED_BRANDS).toEqual([]);
-    expect(getConsentedBrands()).toEqual([]);
-  });
-
-  it("imports no brand logo and names no brand in code, only in the commented template", () => {
-    const source = readFileSync(
-      resolve(__dirname, "../../features/marketing/home/data/trusted-brands.ts"),
-      "utf8"
-    );
-    const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-
-    expect(code).not.toMatch(/assets\/brands/);
-    expect(code).not.toMatch(/\.jpg/);
-    for (const brand of ["Holy Cookie", "La Fabrique", "Laura Todd", "Momma Cookies", "Pépite"]) {
-      expect(code, `${brand} must only appear in the commented template`).not.toContain(brand);
+  it("ships the twelve confirmed clients, as white SVGs served from public/images/clients", () => {
+    const shown = getConsentedBrands();
+    expect(shown).toHaveLength(12);
+    expect(new Set(shown.map((b) => b.slug)).size).toBe(12);
+    for (const b of shown) {
+      expect(b.logo).toBe(`/images/clients/${b.slug}.svg`);
+      expect(existsSync(resolve(__dirname, "../../../public", b.logo.slice(1))), b.slug).toBe(true);
+      expect(b.aspect).toBeGreaterThan(0);
     }
-    // The template is still there, with its instruction.
-    expect(source).toContain("../assets/brands/laura-todd.jpg");
-    expect(source).toMatch(/ONLY after the brand confirms in writing/);
+    expect(new Set(shown.map((b) => b.group))).toEqual(new Set(["cafe", "bakery", "restaurant"]));
   });
 
-  it("shipped state: renders nothing at all, not a label over an empty row", () => {
-    const { container } = render(<TrustBar />);
+  it("sizes marks by visual weight: wide wordmarks shorter than stacked ones, tall ones capped", () => {
+    expect(logoHeight(7.7)).toBeLessThan(logoHeight(1));
+    expect(logoHeight(0.787)).toBe(46);
+    expect(logoHeight(20)).toBe(24);
+  });
+
+  it("renders nothing at all with no consented brand, not a label over an empty row", () => {
+    const { container } = render(<TrustBar brands={[]} />);
     expect(container).toBeEmptyDOMElement();
-    for (const fictional of ["Warung Sari", "Café Bretonne", "Maison Lacroix", "Kopi Tujuh"]) {
-      expect(screen.queryByText(fictional)).toBeNull();
-    }
+    const sloppy = { slug: "x", name: "X", logo: "/x.svg", aspect: 1 } as unknown as TrustedBrand;
+    const second = render(<TrustBar brands={[sloppy, brand({ slug: "n", name: "N" })]} />);
+    expect(second.container).toBeEmptyDOMElement();
   });
 
-  it.each(LOCALES)("%s: the label comes from the locale", (loc) => {
+  it.each(LOCALES)("%s: the label comes from the locale, with the real count", (loc) => {
     mockLocale.value = loc;
-    render(<TrustBar brands={[brand({ slug: "yes", name: "Yes", consented: true })]} />);
-    expect(screen.getByText(text(loc, "redesign.landing.trust.label"))).toBeInTheDocument();
+    render(<TrustBar />);
+    const label = text(loc, "redesign.landing.trust.label").replace("{count}", "12");
+    expect(norm(screen.getByText(label).textContent ?? "")).toBe(norm(label));
   });
 
-  it("consented state: renders only the consented logos, with the brand name as alt text", () => {
+  it("twelve logos scroll: each shown once to assistive technology, the repeat is hidden", () => {
+    render(<TrustBar />);
+    const strip = screen.getByTestId("trusted-brands");
+    expect(strip.className).toMatch(/epi-marquee/);
+    expect(within(strip).getAllByRole("img")).toHaveLength(12);
+    const copy = strip.querySelector(".epi-marquee-copy");
+    expect(copy).toHaveAttribute("aria-hidden", "true");
+    expect(copy?.querySelectorAll("img[alt='']")).toHaveLength(12);
+    expect(screen.getByAltText("Kalve")).toHaveAttribute("src", "/images/clients/kalve.svg");
+  });
+
+  it("a few logos stay still: a centred row, no repeat, only consented ones", () => {
     const brands = [
       brand({ slug: "yes-one", name: "Yes One", consented: true }),
       brand({ slug: "no-one", name: "No One", consented: false }),
-      brand({ slug: "yes-two", name: "Yes Two", consented: true, zoom: 1.05 }),
+      brand({ slug: "yes-two", name: "Yes Two", consented: true }),
     ];
     render(<TrustBar brands={brands} />);
     const strip = screen.getByTestId("trusted-brands");
-    expect(within(strip).getByText("Already running on Epidom")).toBeInTheDocument();
-    const images = within(strip).getAllByRole("img");
-    expect(images.map((img) => img.getAttribute("alt"))).toEqual(["Yes One", "Yes Two"]);
-    for (const img of images) {
-      expect(img).toHaveAttribute("width", "56");
-      expect(img).toHaveAttribute("height", "56");
-    }
-    expect(screen.queryByAltText("No One")).toBeNull();
-  });
-
-  it("treats a missing or non-true consent flag as not consented", () => {
-    const sloppy = { slug: "x", name: "X", logo: logo("x") } as unknown as TrustedBrand;
-    const { container } = render(<TrustBar brands={[sloppy]} />);
-    expect(container).toBeEmptyDOMElement();
+    expect(strip.className).not.toMatch(/epi-marquee/);
+    expect(strip.querySelector(".epi-marquee-copy")).toBeNull();
+    expect(within(strip).getAllByRole("img").map((img) => img.getAttribute("alt"))).toEqual([
+      "Yes One",
+      "Yes Two",
+    ]);
+    expect(screen.getByText("Trusted by 2 cafés, bakeries & restaurants")).toBeInTheDocument();
   });
 });
 
@@ -302,6 +303,26 @@ describe("CaseStudiesSection", () => {
     expect(screen.getByRole("button", { name: "Previous story" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Next story" })).toBeDisabled();
     expect(screen.getAllByRole("listitem")[1].className).toMatch(/opacity-100/);
+  });
+
+  it("shows the shop's logo and the speaker's photo, and falls back to initials when the photo is missing", () => {
+    const { container } = render(
+      <CaseStudiesSection
+        studies={[
+          study({
+            logo: "/images/clients/abenz.svg",
+            photo: "/images/people/dinda.jpg",
+            ownerName: "Dinda",
+          }),
+        ]}
+      />
+    );
+    expect(container.querySelector("img[src='/images/clients/abenz.svg']")).not.toBeNull();
+    const photo = container.querySelector<HTMLImageElement>("img[src='/images/people/dinda.jpg']")!;
+    expect(photo).not.toBeNull();
+    fireEvent.error(photo);
+    expect(container.querySelector("img[src='/images/people/dinda.jpg']")).toBeNull();
+    expect(screen.getByText("D")).toBeInTheDocument();
   });
 
   it("keeps the valid entries and drops only the invalid one", () => {

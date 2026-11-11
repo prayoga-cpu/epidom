@@ -3,13 +3,16 @@ import type { BlogPost } from "./types";
 import { frPosts } from "./posts.fr";
 import { idPosts } from "./posts.id";
 import { enPosts } from "./posts.en";
+import { enIndustryPosts } from "./posts.industries.en";
+import { frIndustryPosts } from "./posts.industries.fr";
+import { idIndustryPosts } from "./posts.industries.id";
 
 export type { BlogAuthor, BlogPost } from "./types";
 
 const POSTS_BY_LOCALE: Record<Locale, BlogPost[]> = {
-  fr: frPosts,
-  id: idPosts,
-  en: enPosts,
+  fr: [...frPosts, ...frIndustryPosts],
+  id: [...idPosts, ...idIndustryPosts],
+  en: [...enPosts, ...enIndustryPosts],
 };
 
 /** Posts for `locale`, newest first — each locale has its own post set (not translated 1:1; see posts.*.ts). */

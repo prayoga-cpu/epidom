@@ -1,10 +1,14 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { MarketFlag } from "@/components/market-flag";
 import { FaqStructuredData } from "@/components/seo/structured-data";
+import { OnlineDot } from "@/features/marketing/shared/components/whatsapp-support-menu";
+import { trackEvent } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
 import { MailIcon, WhatsAppIcon } from "@/features/marketing/shared/components/contact-icons";
 import {
   SUPPORT_EMAIL_ADDRESSES,
@@ -12,12 +16,50 @@ import {
   getWhatsAppOptions,
   whatsappHref,
 } from "@/lib/constants/contact";
+import { usePosTrialHref } from "../lib/use-pos-trial-href";
+import { PRIMARY_BUTTON } from "./landing-ui";
 
 export interface FaqItem {
+  /** Makes the question linkable: /#faq-<id> opens it and scrolls to it. */
+  id?: string;
   q: string;
   a: string;
   /** Optional link shown under the answer (already localised by the caller). */
   link?: { href: string; label: string };
+}
+
+/**
+ * An answer's verdict ("No.", "Yes, it's your data.", "Free to start.") when it opens
+ * the answer in a few words: shown in bold, the rest in the body colour. A long first
+ * sentence is not a verdict, so it is left alone; so is a price like "$14.99" (a full
+ * stop must be followed by a space).
+ */
+function splitVerdict(answer: string): { lead: string | null; rest: string } {
+  const match = /^(.{1,50}?[.!])\s+([\s\S]+)$/.exec(answer);
+  return match ? { lead: match[1], rest: match[2] } : { lead: null, rest: answer };
+}
+
+/** The way on, under the answers: the 14-day POS trial, no card. Same link as the hero's. */
+function FaqTrialCta() {
+  const { t } = useI18n();
+  const trialHref = usePosTrialHref();
+  return (
+    <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+      <Link
+        href={trialHref}
+        onClick={() =>
+          trackEvent("cta_click", { event_category: "engagement", event_label: "faq_trial" })
+        }
+        className={cn(PRIMARY_BUTTON, "min-h-12 px-6")}
+      >
+        {t("redesign.landing.hero.trialCta")}
+      </Link>
+      <span className="text-epi-cream-50/80 inline-flex items-center gap-1.5 text-sm">
+        <Check aria-hidden="true" className="text-epi-gold-300 size-4 shrink-0" />
+        {t("redesign.landing.hero.noCard")}
+      </span>
+    </div>
+  );
 }
 
 /**
@@ -65,13 +107,38 @@ function ContactLink({
  * Each page passes its own questions: the home page's switcher FAQ, /pricing's
  * buyer questions.
  */
-export function FaqSection({ items }: { items: FaqItem[] }) {
+export function FaqSection({
+  items,
+  trialCta = false,
+}: {
+  items: FaqItem[];
+  /** Ends the list with the 14-day trial button (the home page does; /pricing has its own). */
+  trialCta?: boolean;
+}) {
   const { t, locale } = useI18n();
   const [open, setOpen] = useState<number>(0);
   // Per-instance prefix: two FaqSections on one page must not share element ids.
   const uid = useId();
   const waOptions = getWhatsAppOptions(locale);
   const faqs = items;
+
+  // /#faq-offline opens that question and scrolls it into view (also when the hash changes
+  // on the page, e.g. a link clicked inside the answers).
+  useEffect(() => {
+    const openFromHash = () => {
+      const id = window.location.hash.replace(/^#faq-/, "");
+      if (!id || id === window.location.hash.slice(1)) return;
+      const index = faqs.findIndex((faq) => faq.id === id);
+      if (index < 0) return;
+      setOpen(index);
+      document.getElementById(`faq-${id}`)?.scrollIntoView({ block: "start" });
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+    // The ids are fixed per page; re-running on every render would re-scroll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <section className="epi-section">
@@ -132,9 +199,13 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
                   >
                     {t("redesign.faq.helpWa")}
                     {waOptions.length > 1 ? (
-                      <span style={{ opacity: 0.55 }}>
+                      <span style={{ opacity: 0.7 }}>
                         {" "}
-                        · <MarketFlag market={opt.market} />
+                        ·{" "}
+                        {opt.market === "id"
+                          ? t("redesign.landing.hero.supportIndonesia")
+                          : t("redesign.landing.hero.supportFrance")}{" "}
+                        <MarketFlag market={opt.market} />
                       </span>
                     ) : null}
                   </ContactLink>
@@ -158,23 +229,34 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
                 </ContactLink>
               </li>
             </ul>
+            <p className="text-epi-cream-50/60 m-0 mt-3 flex items-center gap-2 text-[13px]">
+              <OnlineDot />
+              {t("redesign.landing.hero.supportLabel")} · {t("redesign.landing.hero.supportValue")}
+            </p>
           </div>
 
           {/* Right — accordion */}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
             {faqs.map((faq, i) => (
-              <div key={i} data-reveal style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+              <div
+                key={i}
+                id={faq.id ? `faq-${faq.id}` : undefined}
+                data-reveal
+                className="scroll-mt-28"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+              >
                 <button
                   type="button"
                   aria-expanded={open === i}
                   aria-controls={`${uid}-a-${i}`}
                   onClick={() => setOpen(open === i ? -1 : i)}
-                  className="cursor-pointer"
+                  className="group cursor-pointer"
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    padding: "24px 0",
+                    // The open question sits closer to its answer.
+                    padding: open === i ? "24px 0 12px" : "24px 0",
                     gap: 24,
                     width: "100%",
                     minHeight: 44,
@@ -185,13 +267,13 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
                   }}
                 >
                   <span
-                    className="epi-display"
-                    style={{
-                      fontSize: 22,
-                      letterSpacing: "0.04em",
-                      color: open === i ? "var(--epi-cream-50)" : "rgba(251,249,228,0.5)",
-                      transition: "color 0.2s",
-                    }}
+                    className={cn(
+                      "epi-display transition-colors duration-200",
+                      open === i
+                        ? "text-epi-cream-50"
+                        : "text-epi-cream-50/75 group-hover:text-epi-cream-50"
+                    )}
+                    style={{ fontSize: 22, letterSpacing: "0.04em" }}
                   >
                     {faq.q}
                   </span>
@@ -204,7 +286,7 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
                       border: "1px solid rgba(255,255,255,0.12)",
                       display: "grid",
                       placeItems: "center",
-                      color: open === i ? "var(--epi-gold-400)" : "rgba(251,249,228,0.4)",
+                      color: open === i ? "var(--epi-gold-400)" : "rgba(251,249,228,0.6)",
                       transition: "transform 0.2s, color 0.2s",
                       transform: open === i ? "rotate(45deg)" : "rotate(0)",
                       flexShrink: 0,
@@ -233,18 +315,29 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
                     paddingBottom: open === i ? 24 : 0,
                   }}
                 >
-                  <p
-                    style={{
-                      color: "var(--epi-cream-50)",
-                      opacity: 0.65,
-                      fontSize: 15,
-                      lineHeight: 1.6,
-                      margin: 0,
-                      maxWidth: 580,
-                    }}
-                  >
-                    {faq.a}
-                  </p>
+                  {(() => {
+                    const { lead, rest } = splitVerdict(faq.a);
+                    return (
+                      <p
+                        style={{
+                          color: "rgba(251,249,228,0.8)",
+                          fontSize: 15,
+                          lineHeight: 1.6,
+                          margin: 0,
+                          maxWidth: 580,
+                        }}
+                      >
+                        {lead ? (
+                          <>
+                            <strong style={{ color: "var(--epi-cream-50)", fontWeight: 600 }}>
+                              {lead}
+                            </strong>{" "}
+                          </>
+                        ) : null}
+                        {rest}
+                      </p>
+                    );
+                  })()}
                   {faq.link && (
                     <Link
                       href={faq.link.href}
@@ -263,6 +356,7 @@ export function FaqSection({ items }: { items: FaqItem[] }) {
                 </div>
               </div>
             ))}
+            {trialCta ? <FaqTrialCta /> : null}
           </div>
         </div>
       </div>

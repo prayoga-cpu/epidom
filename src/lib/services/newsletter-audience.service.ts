@@ -2,6 +2,7 @@ import type { NewsletterAudience } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { NEWSLETTER_AUDIENCES, type NewsletterLanguage } from "@/lib/newsletter/constants";
 import { newsletterLocale } from "@/lib/newsletter/render";
+import { DEMO_EMAIL } from "@/lib/demo/demo-cafe";
 import { signupPlanStatus } from "@/lib/services/sales-page.service";
 
 /**
@@ -114,7 +115,7 @@ export function countByAudience(
 export async function loadNewsletterContacts(now: Date = new Date()): Promise<NewsletterContact[]> {
   const [users, subscribers, leads, unsubscribes] = await Promise.all([
     prisma.user.findMany({
-      where: { emailVerified: true, deactivatedAt: null },
+      where: { emailVerified: true, deactivatedAt: null, email: { not: DEMO_EMAIL } },
       select: {
         email: true,
         locale: true,

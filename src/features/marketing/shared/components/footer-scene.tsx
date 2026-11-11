@@ -1,261 +1,129 @@
-import { Banknote, ChefHat, Smartphone, Wine, type LucideIcon } from "lucide-react";
+"use client";
+
+import Image from "next/image";
+import { Banknote, ChefHat, Smartphone, type LucideIcon } from "lucide-react";
+import { useI18n } from "@/components/lang/i18n-provider";
 import { EpidomWordmark } from "./epidom-logo";
 
-/** One frond of a palm leaf, drawn from its stem at the origin. */
-const FROND = "M0 0 Q 90 -46 196 14 Q 104 -12 0 0Z";
-const FROND_ANGLES = [-62, -32, -2, 28, 58] as const;
+/** The three spaces, recapped: the same names and one-liners as the home page's step cards. */
+const SPACES: readonly { key: "storefront" | "pos" | "backOffice"; icon: LucideIcon }[] = [
+  { key: "storefront", icon: Smartphone },
+  { key: "pos", icon: ChefHat },
+  { key: "backOffice", icon: Banknote },
+];
 
-/** A floating glass card: an icon and two grey lines, like a slide in the Gamma footer. */
-function GlassCard({ icon: Icon, className }: { icon: LucideIcon; className: string }) {
-  return (
-    <div
-      className={`absolute w-[26%] max-w-[210px] min-w-[104px] rounded-xl border border-white/25 bg-white/[0.14] p-3 shadow-[0_12px_40px_rgba(10,16,32,0.35)] backdrop-blur-md ${className}`}
-    >
-      <Icon className="size-5 text-white/90" strokeWidth={1.6} />
-      <div className="mt-3 h-1.5 w-4/5 rounded-full bg-white/35" />
-      <div className="mt-1.5 h-1.5 w-3/5 rounded-full bg-white/22" />
-    </div>
-  );
-}
+/** The three star tiles (white dots at set offsets), seamless when the tile is repeated. */
+const dots = (list: readonly [number, number, number, number][]) =>
+  list
+    .map(
+      ([r, x, y, a]) =>
+        `radial-gradient(${r}px ${r}px at ${x}px ${y}px, rgba(255,255,255,${a}), transparent)`
+    )
+    .join(", ");
+const STARS_NEAR = dots([
+  [1.5, 20, 30, 0.8],
+  [1, 90, 84, 0.6],
+  [1, 156, 22, 0.7],
+  [1.5, 62, 152, 0.55],
+  [1, 174, 128, 0.65],
+]);
+const STARS_FAR = dots([
+  [1, 14, 20, 0.5],
+  [1, 70, 96, 0.45],
+  [1, 112, 44, 0.5],
+  [1, 40, 118, 0.4],
+]);
+const STARS_BRIGHT = dots([
+  [2, 60, 70, 0.95],
+  [2, 190, 150, 0.9],
+  [2, 240, 40, 0.85],
+  [2, 120, 230, 0.9],
+]);
 
-function Palm({ mirrored }: { mirrored?: boolean }) {
-  return (
-    <g transform={mirrored ? "translate(1210 -14) scale(-1 1)" : "translate(-10 -14)"}>
-      {FROND_ANGLES.map((angle, i) => (
-        <path
-          key={angle}
-          d={FROND}
-          transform={`rotate(${angle + 40})`}
-          fill={`url(#leaf${i % 2})`}
-          opacity={0.96}
-        />
-      ))}
-    </g>
-  );
-}
+/** One turn of the phone orbit, in seconds (the CSS keyframes in globals.css run 26s too). */
+const ORBIT_SECONDS = 26;
 
 /**
- * The footer's illustration, after the Gamma reference: a dusk sky over the sea
- * (Epidom is from Canggu), palm leaves in the corners and, on a counter, the
- * things the product runs: coffee, a croissant, a cocktail and cash, with
- * glass cards floating behind them. Under it, the wordmark set large on a
- * night sky, as the reference's, with the tagline under it. The drawing and
- * the wordmark are decoration, hidden from assistive tech and drawn in code (no
- * image to download); the tagline is real text.
- *
- * Its colours are the one exception to the site's navy / gold / aurora palette
- * (see `aurora` in home/components/landing-ui.tsx): the owner kept the sunset.
+ * The footer's illustration: closing time. A real photo of an empty café, in the
+ * morning and in the evening, cross-fading on a slow loop (grayscale CC0 files, see
+ * public/images/spaces/CREDITS.md), is laid
+ * as a faint texture on the navy night, warmed by one gold glow, with the three
+ * spaces Epidom runs (Phone Orders, POS Mode, Store Dashboard) as small glass
+ * chips on top: a row from the sm breakpoint up and, on a phone, three small
+ * chips orbiting a tilted ring like Saturn's (CSS 3D, see ".epi-orbit" in
+ * globals.css; each chip stays facing the screen; reduced motion keeps the
+ * static stack). Under it, the wordmark set large on the night sky with the
+ * tagline under it. The picture, chips and wordmark are decoration (the chips
+ * repeat what the page already says), hidden from assistive tech; the tagline
+ * is real text. It replaced the sunset scene (2026-11-11): the palette is the
+ * site's own, navy and gold, again.
  */
 export function FooterScene({ tagline }: { tagline: string }) {
+  const { t } = useI18n();
   return (
     <div className="relative mt-12 overflow-hidden select-none">
-      <div aria-hidden="true" className="relative aspect-[12/5] min-h-[250px] w-full">
-        <svg
-          viewBox="0 0 1200 400"
-          preserveAspectRatio="xMidYMax slice"
-          className="absolute inset-0 size-full"
-          focusable="false"
-        >
-          <defs>
-            <linearGradient id="fs-sky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#17214d" />
-              <stop offset="0.35" stopColor="#4b3a8f" />
-              <stop offset="0.62" stopColor="#c8559d" />
-              <stop offset="0.86" stopColor="#f2706b" />
-              <stop offset="1" stopColor="#ffa05c" />
-            </linearGradient>
-            <radialGradient id="fs-sun" cx="0.5" cy="0.5" r="0.5">
-              <stop offset="0" stopColor="#fff0b8" />
-              <stop offset="0.45" stopColor="#ffb347" stopOpacity="0.85" />
-              <stop offset="1" stopColor="#ff7a59" stopOpacity="0" />
-            </radialGradient>
-            <linearGradient id="fs-sea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#ff9a62" />
-              <stop offset="1" stopColor="#d9467f" />
-            </linearGradient>
-            <linearGradient id="fs-counter" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#1a2547" />
-              <stop offset="1" stopColor="#0a1020" />
-            </linearGradient>
-            <linearGradient id="leaf0" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#0d4d2e" />
-              <stop offset="1" stopColor="#2aa05c" />
-            </linearGradient>
-            <linearGradient id="leaf1" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#0a3b25" />
-              <stop offset="1" stopColor="#1f8a4c" />
-            </linearGradient>
-            <linearGradient id="fs-cup" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#e9e4d6" />
-              <stop offset="0.5" stopColor="#ffffff" />
-              <stop offset="1" stopColor="#d8d2c2" />
-            </linearGradient>
-            <linearGradient id="fs-croissant" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#ffd77a" />
-              <stop offset="1" stopColor="#c9822b" />
-            </linearGradient>
-            <linearGradient id="fs-drink" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#ff6fa8" />
-              <stop offset="1" stopColor="#ff9d5c" />
-            </linearGradient>
-            <linearGradient id="fs-bill" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#4fbf80" />
-              <stop offset="1" stopColor="#1f6f4a" />
-            </linearGradient>
-            <linearGradient id="fs-coin" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#ffe08a" />
-              <stop offset="1" stopColor="#c8932a" />
-            </linearGradient>
-          </defs>
-
-          <rect width="1200" height="400" fill="url(#fs-sky)" />
-          {/* A few stars high up, a few soft clouds low down */}
-          {[
-            [90, 40],
-            [210, 70],
-            [340, 28],
-            [470, 62],
-            [760, 34],
-            [880, 76],
-            [1010, 30],
-            [1120, 66],
-          ].map(([x, y]) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" fill="#fff" opacity="0.7" />
-          ))}
-          <ellipse cx="250" cy="230" rx="150" ry="14" fill="#fff" opacity="0.14" />
-          <ellipse cx="960" cy="214" rx="180" ry="16" fill="#fff" opacity="0.12" />
-
-          {/* The sun on the horizon, and the sea under it */}
-          <circle cx="600" cy="300" r="170" fill="url(#fs-sun)" />
-          <rect y="296" width="1200" height="60" fill="url(#fs-sea)" />
-          {[310, 322, 334].map((y, i) => (
-            <rect
-              key={y}
-              x={380 + i * 30}
-              y={y}
-              width={440 - i * 60}
-              height="2"
-              rx="1"
-              fill="#fff"
-              opacity={0.28 - i * 0.06}
-            />
-          ))}
-
-          <Palm />
-          <Palm mirrored />
-
-          {/* The counter */}
-          <rect y="338" width="1200" height="62" fill="url(#fs-counter)" />
-          <rect y="338" width="1200" height="1.5" fill="#fff" opacity="0.14" />
-
-          {/* Croissant */}
-          <g transform="translate(404 336) scale(1.15)">
-            <path
-              d="M-58 0 C-72 -14 -66 -40 -44 -52 C-30 -60 -14 -52 0 -54 C14 -52 30 -60 44 -52 C66 -40 72 -14 58 0 C40 -8 20 -12 0 -12 C-20 -12 -40 -8 -58 0Z"
-              fill="url(#fs-croissant)"
-            />
-            <path
-              d="M-22 -50 C-18 -34 -20 -22 -24 -10"
-              stroke="#a8641c"
-              strokeWidth="2"
-              fill="none"
-              opacity="0.7"
-            />
-            <path
-              d="M0 -54 C2 -36 2 -22 0 -12"
-              stroke="#a8641c"
-              strokeWidth="2"
-              fill="none"
-              opacity="0.7"
-            />
-            <path
-              d="M22 -50 C18 -34 20 -22 24 -10"
-              stroke="#a8641c"
-              strokeWidth="2"
-              fill="none"
-              opacity="0.7"
-            />
-          </g>
-
-          {/* Coffee cup */}
-          <g>
-            <ellipse cx="528" cy="338" rx="54" ry="8" fill="#e9e4d6" />
-            <path
-              d="M493 284 L563 284 C563 320 546 336 528 336 C510 336 493 320 493 284Z"
-              fill="url(#fs-cup)"
-            />
-            <path
-              d="M563 294 C592 294 592 322 558 322"
-              stroke="#f3efe3"
-              strokeWidth="6"
-              fill="none"
-              strokeLinecap="round"
-            />
-            <ellipse cx="528" cy="284" rx="35" ry="7" fill="#6b3f22" />
-            <ellipse cx="528" cy="283" rx="26" ry="4" fill="#9a6338" opacity="0.7" />
-            {[512, 528, 544].map((x, i) => (
-              <path
-                key={x}
-                d={`M${x} 270 C${x - 8} 258 ${x + 8} 250 ${x} 238`}
-                stroke="#fff"
-                strokeWidth="3"
-                strokeLinecap="round"
-                fill="none"
-                opacity={0.5 - i * 0.08}
-              />
+      <div
+        aria-hidden="true"
+        // z-10: the orbiting chips may swell past this box (perspective), and must paint over the wordmark section below, not under it.
+        className="relative z-10 flex min-h-[clamp(300px,30vw,460px)] items-center justify-center bg-[#0b1330] px-4 py-14 md:py-16"
+      >
+        {/* Morning and evening, cross-fading on a slow loop (see ".epi-daynight-*" in
+            globals.css); with reduced motion only the evening photo shows. */}
+        <Image
+          src="/images/spaces/morning-time.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="epi-daynight-day object-cover mix-blend-screen"
+        />
+        <Image
+          src="/images/spaces/closing-time.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="epi-daynight-night object-cover mix-blend-screen"
+        />
+        {/* One warm gold glow where the lamps hang, then fades into the sections above and below */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "radial-gradient(ellipse 55% 70% at 50% 62%, rgba(217,174,59,0.34), transparent 70%), linear-gradient(180deg, var(--epi-navy-950, #070b14) 0%, rgba(11,19,48,0) 38%, rgba(11,19,48,0) 62%, #121c42 100%)",
+          }}
+        />
+        {/* A phone: the chips orbit on a tilted ring (rules in globals.css, ".epi-orbit").
+            From sm up, and with reduced motion, it is a plain row/stack of chips. */}
+        <div className="epi-orbit relative w-full max-w-5xl">
+          <ul className="epi-orbit-spin relative m-0 flex w-full list-none flex-col gap-3 p-0 sm:flex-row sm:gap-4">
+            {SPACES.map(({ key, icon: Icon }, i) => (
+              <li
+                key={key}
+                className="epi-orbit-item flex flex-1"
+                style={
+                  {
+                    "--a": `${(i * 360) / SPACES.length}deg`,
+                    // Each chip peaks as it passes the front: start its fade part-way round.
+                    "--d": `${-(i / SPACES.length) * ORBIT_SECONDS}s`,
+                  } as React.CSSProperties
+                }
+              >
+                <div className="epi-orbit-face flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-white/[0.1] px-4 py-3.5 shadow-[0_12px_40px_rgba(10,16,32,0.45)] backdrop-blur-md">
+                  <span className="epi-orbit-icon bg-epi-gold-500 flex size-10 shrink-0 items-center justify-center rounded-full text-[#1a2547]">
+                    <Icon className="size-5" strokeWidth={1.75} />
+                  </span>
+                  <span className="min-w-0 leading-snug">
+                    <span className="epi-orbit-name text-epi-cream-50 block text-[15px] font-semibold">
+                      {t(`redesign.landing.spaces.${key}Name`)}
+                    </span>
+                    <span className="epi-orbit-short text-epi-cream-50/75 block text-[13px]">
+                      {t(`redesign.landing.spaces.${key}Short`)}
+                    </span>
+                  </span>
+                </div>
+              </li>
             ))}
-          </g>
-
-          {/* Cocktail */}
-          <g>
-            <path
-              d="M608 252 L692 252 L650 306Z"
-              fill="#ffffff"
-              fillOpacity="0.16"
-              stroke="#fff"
-              strokeOpacity="0.7"
-              strokeWidth="2"
-              strokeLinejoin="round"
-            />
-            <path d="M619 262 L681 262 L650 300Z" fill="url(#fs-drink)" />
-            <path d="M650 306 L650 334" stroke="#fff" strokeOpacity="0.75" strokeWidth="3" />
-            <ellipse cx="650" cy="337" rx="26" ry="5" fill="#fff" fillOpacity="0.5" />
-            <path d="M638 240 L670 276" stroke="#e9e4d6" strokeWidth="2.5" strokeLinecap="round" />
-            <circle cx="666" cy="272" r="6" fill="#86b84a" />
-            <circle cx="667" cy="271" r="2" fill="#d24b4b" />
-          </g>
-
-          {/* Banknote and a stack of coins */}
-          <g transform="rotate(-8 776 326)">
-            <rect x="730" y="302" width="92" height="46" rx="5" fill="url(#fs-bill)" />
-            <rect
-              x="737"
-              y="309"
-              width="78"
-              height="32"
-              rx="3"
-              fill="none"
-              stroke="#fff"
-              strokeOpacity="0.5"
-              strokeWidth="1.5"
-            />
-            <circle cx="776" cy="325" r="10" fill="#fff" fillOpacity="0.55" />
-            <rect x="744" y="320" width="14" height="3" rx="1.5" fill="#fff" fillOpacity="0.6" />
-            <rect x="794" y="327" width="14" height="3" rx="1.5" fill="#fff" fillOpacity="0.6" />
-          </g>
-          {[0, 1, 2, 3].map((i) => (
-            <g key={i}>
-              <rect x="842" y={324 - i * 9} width="48" height="11" fill="#b9801f" />
-              <ellipse cx="866" cy={335 - i * 9} rx="24" ry="6" fill="#b9801f" />
-              <ellipse cx="866" cy={329 - i * 9} rx="24" ry="6" fill="url(#fs-coin)" />
-            </g>
-          ))}
-        </svg>
-
-        <GlassCard icon={Smartphone} className="top-[10%] left-[5%]" />
-        <GlassCard icon={ChefHat} className="top-[42%] left-[17%] hidden opacity-70 sm:block" />
-        <GlassCard icon={Banknote} className="top-[8%] right-[6%]" />
-        <GlassCard icon={Wine} className="top-[40%] right-[16%] hidden opacity-70 sm:block" />
+          </ul>
+        </div>
       </div>
 
       {/* The wordmark, large, on a night sky, and the tagline under it */}
@@ -266,14 +134,60 @@ export function FooterScene({ tagline }: { tagline: string }) {
             "linear-gradient(180deg, #121c42 0%, #0b1330 55%, var(--epi-navy-950, #070b14) 100%)",
         }}
       >
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage:
-              "radial-gradient(1.5px 1.5px at 20px 30px, rgba(255,255,255,0.8), transparent), radial-gradient(1px 1px at 90px 84px, rgba(255,255,255,0.6), transparent), radial-gradient(1px 1px at 156px 22px, rgba(255,255,255,0.7), transparent), radial-gradient(1.5px 1.5px at 62px 152px, rgba(255,255,255,0.55), transparent), radial-gradient(1px 1px at 174px 128px, rgba(255,255,255,0.65), transparent)",
-            backgroundSize: "200px 200px",
-          }}
-        />
+        {/* The sky: three star layers drifting at different speeds, one twinkling, and a
+            shooting star every so often (rules in globals.css). */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            className="epi-stars-drift absolute inset-0"
+            style={{
+              backgroundImage: STARS_NEAR,
+              backgroundSize: "200px 200px",
+              ["--tx" as string]: "200px",
+              ["--ty" as string]: "120px",
+              ["--dur" as string]: "90s",
+            }}
+          />
+          <div
+            className="epi-stars-drift absolute inset-0 opacity-70"
+            style={{
+              backgroundImage: STARS_FAR,
+              backgroundSize: "130px 130px",
+              ["--tx" as string]: "-130px",
+              ["--ty" as string]: "40px",
+              ["--dur" as string]: "150s",
+            }}
+          />
+          <div
+            className="epi-stars-twinkle absolute inset-0"
+            style={{
+              backgroundImage: STARS_BRIGHT,
+              backgroundSize: "280px 280px",
+              ["--tx" as string]: "280px",
+              ["--ty" as string]: "80px",
+              ["--dur" as string]: "200s",
+            }}
+          />
+          <span
+            className="epi-shooting"
+            style={{
+              top: "8%",
+              left: "12%",
+              ["--dur" as string]: "13s",
+              ["--delay" as string]: "3s",
+            }}
+          />
+          <span
+            className="epi-shooting"
+            style={{
+              top: "22%",
+              left: "56%",
+              ["--dx" as string]: "300px",
+              ["--dy" as string]: "134px",
+              ["--dur" as string]: "21s",
+              ["--delay" as string]: "10s",
+            }}
+          />
+        </div>
         <div
           aria-hidden="true"
           className="relative"

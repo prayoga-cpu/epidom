@@ -140,7 +140,7 @@ describe("loadNewsletterContacts", () => {
     const contacts = await loadNewsletterContacts(NOW);
 
     expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { emailVerified: true, deactivatedAt: null } })
+      expect.objectContaining({ where: { emailVerified: true, deactivatedAt: null, email: { not: "demo.your-cafe@epidom.fr" } } })
     );
     expect(contacts.map((c) => c.email)).toEqual(["owner@cafe.fr"]);
   });

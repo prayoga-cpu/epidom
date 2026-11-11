@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { storefrontService } from "@/lib/services";
 import { createSuccessResponse, createErrorResponse, ApiErrorCode } from "@/types/api/responses";
 import { rateLimitMiddleware } from "@/lib/middleware/rate-limit";
+import { DEMO_SLUG } from "@/lib/demo/demo-constants";
 import { isValidStoreSlug, slugifyStoreLink } from "@/features/onboarding/lib/store-link";
 
 /**
@@ -46,7 +47,11 @@ export async function GET(request: Request) {
       isValidStoreSlug(slug) ? storefrontService.isSlugTaken(slug) : Promise.resolve(null),
     ]);
     const link = taken === null ? null : { slug, available: !taken };
-    return NextResponse.json(createSuccessResponse({ stores, link }));
+    // The public demo café is not a business a visitor is looking for; its link
+    // stays "taken" so nobody can claim it.
+    return NextResponse.json(
+      createSuccessResponse({ stores: stores.filter((s) => s.slug !== DEMO_SLUG), link })
+    );
   } catch (error) {
     console.error("[PUBLIC_STOREFRONT_SEARCH_ERROR]", error);
     return NextResponse.json(

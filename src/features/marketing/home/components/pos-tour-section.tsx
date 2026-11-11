@@ -10,7 +10,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import Image from "next/image";
-import { ArrowRightLeft, ChartColumn, Link2, Smartphone, type LucideIcon } from "lucide-react";
+import { ArrowRightLeft, CalendarClock, ChartColumn, Link2, Smartphone, type LucideIcon } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
 import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
@@ -22,7 +22,7 @@ import {
 import { aurora, SectionHeading } from "./landing-ui";
 
 /**
- * The four features owners pick a till for, in the order they matter (a demo
+ * The five features owners pick a till for, in the order they matter (a demo
  * shows the first within ten seconds; the last ones prove the till is complete
  * rather than sell it). Each has its own real screen.
  */
@@ -30,11 +30,29 @@ const FEATURES: readonly {
   key: string;
   icon: LucideIcon;
   screens: readonly ProductScreenKey[];
+  /** The photo laid under the stage while this feature is open (public/images/spaces/tour-*.jpg). */
+  photo: string;
 }[] = [
-  { key: "f1", icon: Smartphone, screens: ["storefrontMenu", "storefrontCheckout"] }, // phone orders
-  { key: "f2", icon: ChartColumn, screens: ["backOfficeFinanceTabs"] }, // finance
-  { key: "f3", icon: ArrowRightLeft, screens: ["backOfficeStock"] }, // switching from the old POS
-  { key: "f4", icon: Link2, screens: ["posCashier"] }, // one link, no app store
+  // phone orders
+  {
+    key: "f1",
+    icon: Smartphone,
+    screens: ["storefrontMenu", "storefrontCheckout"],
+    photo: "tour-phone-orders",
+  },
+  // finance
+  { key: "f2", icon: ChartColumn, screens: ["backOfficeFinance"], photo: "tour-finance" },
+  // switching from the old POS
+  { key: "f3", icon: ArrowRightLeft, screens: ["backOfficeStock"], photo: "tour-stock" },
+  // one link, no app store
+  { key: "f4", icon: Link2, screens: ["posCashier"], photo: "tour-link" },
+  // staff schedule, clock-in and clock-out
+  {
+    key: "f5",
+    icon: CalendarClock,
+    screens: ["backOfficeSchedule", "posClockIn"],
+    photo: "tour-staff-selfie",
+  },
 ];
 
 /**
@@ -68,8 +86,8 @@ function useMediaQuery(query: string) {
 /**
  * POS Mode up close, as an accordion beside one large picture: the title and
  * the list of features on the left (the open one shows its pitch and a
- * progress line), a gradient stage with that feature's real screen on the
- * right. Shown on the home page and on /products.
+ * progress line), a stage on the right: the aurora gradient with a faint
+ * photo of the place under that feature's real screen. Shown on the home page and on /products.
  *
  * On a desktop screen it is scroll-driven, as lovable.dev's: the section pins
  * to the screen and the page's scroll walks through the features one by one,
@@ -309,6 +327,23 @@ export function PosTourSection() {
               style={{ backgroundImage: aurora() }}
               className="epi-pin-stage relative isolate min-h-[340px] min-w-0 overflow-hidden rounded-3xl border border-white/10 sm:min-h-[460px] lg:min-h-[560px]"
             >
+              {/* A real photo under each feature's screen, as a faint texture: grayscale
+                  file, blended with `luminosity` so the aurora keeps its colours. Its own
+                  layer (not inside the screen's, whose opacity would cut the blend off)
+                  and cross-faded with it. CC0, see public/images/spaces/CREDITS.md. */}
+              {FEATURES.map(({ key, photo }, index) => (
+                <Image
+                  key={`${key}-photo`}
+                  src={`/images/spaces/${photo}.jpg`}
+                  alt=""
+                  fill
+                  sizes="(min-width: 1240px) 700px, (min-width: 1024px) 58vw, 100vw"
+                  className={cn(
+                    "pointer-events-none object-cover mix-blend-luminosity transition-opacity duration-500 motion-reduce:transition-none",
+                    index === active ? "opacity-45" : "opacity-0"
+                  )}
+                />
+              ))}
               {FEATURES.map(({ key, screens }, index) => (
                 <div
                   key={key}
@@ -369,7 +404,7 @@ function Stage({
     const width = first.src.width ?? 2400;
     const height = first.src.height ?? 1605;
     return (
-      <div className="flex h-full items-center justify-center px-[5%]">
+      <div className="relative flex h-full items-center justify-center px-[5%]">
         <div
           className="bg-epi-navy-900 relative w-full overflow-hidden rounded-2xl border border-white/20 shadow-2xl"
           style={{ aspectRatio: `${w} / ${h}` }}
@@ -390,6 +425,19 @@ function Stage({
             }}
           />
         </div>
+        {/* A second capture that is a phone stands over the window's corner. */}
+        {shots[1]?.device === "phone" ? (
+          <div className="absolute right-[3%] bottom-[6%] aspect-[514/1106] w-[21%] overflow-hidden rounded-[14px] border border-white/25 shadow-[0_24px_60px_-10px_rgba(0,0,0,0.8)]">
+            <Image
+              src={shots[1].src}
+              alt={shots[1].alt[locale]}
+              fill
+              sizes="(min-width: 1024px) 150px, 25vw"
+              placeholder={shots[1].src.blurDataURL ? "blur" : "empty"}
+              className="object-cover object-top"
+            />
+          </div>
+        ) : null}
       </div>
     );
   }

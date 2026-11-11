@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState, useEffect } from "react";
+import { memo, useCallback, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from "@/components/ui/sheet";
@@ -8,15 +8,18 @@ import { usePathname, useRouter } from "next/navigation";
 import LangSwitcher from "@/components/lang/lang-switcher";
 import { ThemeToggle } from "@/features/dashboard/shared/theme-toggle";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronRight, ChevronDown, ArrowLeft, LogIn } from "lucide-react";
 import { EpidomLogo } from "./epidom-logo";
 import { useSession, signOut } from "@/lib/auth-client";
-import { getNavigationByVariant, type NavItem } from "@/config/navigation.config";
+import { getNavigationByVariant, type LandingNavEntry } from "@/config/navigation.config";
 import { trackEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { PLATFORM_NAME } from "@/lib/device-platform";
 import { useDevicePlatform } from "@/hooks/use-device-platform";
 import { PlatformIcon } from "@/components/platform-icon";
+import { cn } from "@/lib/utils";
+import { resolveMenu, type ResolvedMenu } from "../lib/landing-nav";
+import { DesktopNavMenu, navTextClass, navTextStyle } from "./site-nav-menu";
 
 const GOLD_BUTTON_STYLE: React.CSSProperties = {
   background: "linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c)",
@@ -50,10 +53,22 @@ export const SiteHeader = memo(function SiteHeader({
   const { t, locale } = useI18n();
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
+  // Which dropdown is open (desktop), and which accordion row is expanded (mobile menu).
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+  // Closes a dropdown only if it is still the open one (a delayed close must not shut the next).
+  const closeMenu = useCallback(
+    (id: string) => setOpenMenu((current) => (current === id ? null : current)),
+    []
+  );
+  // A page change (a menu link was followed) shuts any open menu.
+  useEffect(() => {
+    setOpenMenu(null);
+  }, [pathname]);
 
   // Lighter glass at the top of the page; once scrolled it settles darker
   // (and, on the home page, leaves the hero card). See .epi-floating-nav[data-scrolled].
@@ -82,10 +97,26 @@ export const SiteHeader = memo(function SiteHeader({
   // routing, "authenticated" (in-app shell) never does.
   const localizeHref = (href: string) =>
     variant === "landing" ? getLocalizedPath(href, locale) : href;
-  // A section's sub-pages count too (/compare/moka lights up Compare). The
-  // home link is exact-only, or it would match every page.
-  const isActiveHref = (item: NavItem, href: string) =>
+  // A section's sub-pages count too (/compare/moka lights up Compare).
+  const isPathActive = (href: string) => {
+    const base = href.split("#")[0];
+    return pathname === base || pathname.startsWith(`${base}/`);
+  };
+  const isActiveHref = (item: LandingNavEntry, href: string) =>
     pathname === href || (item.href !== "/" && pathname.startsWith(`${href}/`));
+  // A dropdown's links in the visitor's language (a landing page with no version in it is left out).
+  const menuFor = (item: LandingNavEntry): ResolvedMenu | null => {
+    const menu = item.menu ? resolveMenu(item.menu, locale) : null;
+    return menu && menu.sections.length > 0 ? menu : null;
+  };
+  // A dropdown is "current" on its own page or on any page it links to.
+  const isEntryActive = (
+    item: LandingNavEntry,
+    href: string | undefined,
+    menu: ResolvedMenu | null
+  ) =>
+    (href !== undefined && isActiveHref(item, href)) ||
+    (menu?.sections ?? []).some((section) => section.links.some((link) => isPathActive(link.href)));
 
   // "Start on macOS" / "Start on Android": the sign-up button names the
   // device the visitor is on (Epidom runs in its browser, nothing to install).
@@ -115,24 +146,33 @@ export const SiteHeader = memo(function SiteHeader({
     router.push("/");
   };
 
-  const renderDesktopNavLink = (item: NavItem) => {
-    const href = localizeHref(item.href);
+  const renderDesktopNavLink = (item: LandingNavEntry) => {
+    const href = item.href ? localizeHref(item.href) : undefined;
+    const menu = menuFor(item);
+    if (menu) {
+      return (
+        <DesktopNavMenu
+          key={item.id}
+          entry={item}
+          menu={menu}
+          href={href}
+          active={isEntryActive(item, href, menu)}
+          open={openMenu === item.id}
+          setOpen={setOpenMenu}
+          closeMenu={closeMenu}
+        />
+      );
+    }
+    if (!href) return null;
     const isActive = isActiveHref(item, href);
     return (
-      <li key={item.href}>
+      <li key={item.id}>
         <Link
           href={href}
           aria-current={isActive ? "page" : undefined}
-          className={`transition-colors ${
-            isActive
-              ? "font-semibold text-[var(--epi-cream-50)]"
-              : "text-[var(--epi-cream-50)]/60 hover:text-[var(--epi-cream-50)]/90"
-          }`}
+          className={navTextClass(isActive)}
           style={{
-            fontFamily: "var(--epi-font-body)",
-            fontSize: 13,
-            fontWeight: isActive ? 600 : 400,
-            letterSpacing: "0.01em",
+            ...navTextStyle(isActive),
             background: isActive ? "rgba(255,255,255,0.08)" : "transparent",
             padding: "4px 12px",
             borderRadius: 999,
@@ -144,29 +184,141 @@ export const SiteHeader = memo(function SiteHeader({
     );
   };
 
-  const renderMobileNavLink = (item: NavItem) => {
-    const href = localizeHref(item.href);
-    const isActive = isActiveHref(item, href);
+  const mobileRow = (active: boolean) =>
+    cn(
+      "flex h-11 min-w-0 flex-1 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+      active
+        ? "bg-white/5 text-[var(--epi-gold-400)]"
+        : "text-[var(--epi-cream-50)]/60 hover:bg-white/5 hover:text-[var(--epi-cream-50)]"
+    );
+
+  const renderMobileNavLink = (item: LandingNavEntry) => {
+    const href = item.href ? localizeHref(item.href) : undefined;
+    const menu = menuFor(item);
     const Icon = item.icon;
+    if (!menu) {
+      if (!href) return null;
+      const isActive = isActiveHref(item, href);
+      return (
+        <li key={item.id}>
+          <SheetClose asChild>
+            <Link
+              href={href}
+              aria-current={isActive ? "page" : undefined}
+              className={mobileRow(isActive)}
+            >
+              <Icon className="mr-3 h-5 w-5" />
+              {t(item.labelKey)}
+            </Link>
+          </SheetClose>
+        </li>
+      );
+    }
+
+    // A dropdown becomes an accordion row: its own page (if it has one) and a chevron that expands the links.
+    const isActive = isEntryActive(item, href, menu);
+    const expanded = mobileOpen === item.id;
+    const toggle = () => setMobileOpen(expanded ? null : item.id);
+    const label = t(item.labelKey);
+    const chevron = (
+      <ChevronDown
+        aria-hidden="true"
+        className={cn(
+          "h-4 w-4 shrink-0 transition-transform duration-200",
+          expanded && "rotate-180"
+        )}
+      />
+    );
     return (
-      <li key={item.href}>
-        <SheetClose asChild>
-          <Link
-            href={href}
-            aria-current={isActive ? "page" : undefined}
-            className={`flex h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive
-                ? "bg-white/5 text-[var(--epi-gold-400)]"
-                : "text-[var(--epi-cream-50)]/60 hover:bg-white/5 hover:text-[var(--epi-cream-50)]"
-            }`}
-          >
-            <Icon className="mr-3 h-5 w-5" />
-            {t(item.labelKey)}
-          </Link>
-        </SheetClose>
+      <li key={item.id}>
+        <div className="flex items-center">
+          {href ? (
+            <>
+              <SheetClose asChild>
+                <Link
+                  href={href}
+                  aria-current={isActive ? "page" : undefined}
+                  className={mobileRow(isActive)}
+                >
+                  <Icon className="mr-3 h-5 w-5" />
+                  {label}
+                </Link>
+              </SheetClose>
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-label={t("common.nav.openSubmenu").replace("{name}", label)}
+                onClick={toggle}
+                className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--epi-cream-50)]/60 hover:bg-white/5 hover:text-[var(--epi-cream-50)]"
+              >
+                {chevron}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              aria-expanded={expanded}
+              onClick={toggle}
+              className={cn(mobileRow(isActive), "cursor-pointer text-left")}
+            >
+              <Icon className="mr-3 h-5 w-5" />
+              {label}
+              <span className="ml-auto">{chevron}</span>
+            </button>
+          )}
+        </div>
+        {expanded ? (
+          <ul className="mt-1 mb-2 ml-5 space-y-0.5 border-l border-white/10 pl-3">
+            {menu.sections.map((section, i) => (
+              <li key={i}>
+                {section.headingKey ? (
+                  <p className="m-0 px-3 pt-2 pb-1 text-[11px] tracking-[0.14em] text-[var(--epi-cream-50)]/40 uppercase">
+                    {t(section.headingKey)}
+                  </p>
+                ) : null}
+                <ul className="m-0 list-none space-y-0.5 p-0">
+                  {section.links.map((link) => (
+                    <li key={link.href}>
+                      <SheetClose asChild>
+                        <Link
+                          href={link.href}
+                          className="flex min-h-11 flex-col justify-center rounded-lg px-3 py-1.5 text-sm text-[var(--epi-cream-50)]/80 transition-colors hover:bg-white/5 hover:text-[var(--epi-cream-50)]"
+                        >
+                          {t(link.labelKey)}
+                          {link.descKey ? (
+                            <span className="text-xs text-[var(--epi-cream-50)]/50">
+                              {t(link.descKey)}
+                            </span>
+                          ) : null}
+                        </Link>
+                      </SheetClose>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+            {menu.footer ? (
+              <li>
+                <SheetClose asChild>
+                  <Link
+                    href={menu.footer.href}
+                    className="block rounded-lg px-3 py-2.5 text-[13px] font-medium text-[var(--epi-gold-300)]"
+                  >
+                    {t(menu.footer.labelKey)}
+                  </Link>
+                </SheetClose>
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
       </li>
     );
   };
+
+  /* ── "Log in" for someone who is not signed in: a quiet link beside the gold button ── */
+  const showLogin = variant === "landing" && !session?.user;
+  const trackLogin = () =>
+    trackEvent("cta_click", { event_category: "engagement", event_label: "header_login" });
 
   /* ── Desktop CTA button ── */
   const DesktopCTA = () => {
@@ -240,6 +392,16 @@ export const SiteHeader = memo(function SiteHeader({
         <div className="hidden items-center gap-3 lg:flex">
           <LangSwitcher urlDriven />
           {showThemeToggle && <ThemeToggle />}
+          {mounted && showLogin && (
+            <Link
+              href="/login"
+              onClick={trackLogin}
+              className={cn(navTextClass(false), "px-1")}
+              style={navTextStyle(false)}
+            >
+              {t("common.nav.login")}
+            </Link>
+          )}
           {mounted && <DesktopCTA />}
         </div>
 
@@ -313,7 +475,19 @@ export const SiteHeader = memo(function SiteHeader({
                     >
                       {t("common.nav.menu")}
                     </div>
-                    <ul className="space-y-1">{navigationItems.map(renderMobileNavLink)}</ul>
+                    <ul className="space-y-1">
+                      {navigationItems.map(renderMobileNavLink)}
+                      {showLogin && (
+                        <li>
+                          <SheetClose asChild>
+                            <Link href="/login" onClick={trackLogin} className={mobileRow(false)}>
+                              <LogIn className="mr-3 h-5 w-5" />
+                              {t("common.nav.login")}
+                            </Link>
+                          </SheetClose>
+                        </li>
+                      )}
+                    </ul>
                   </div>
                 )}
               </nav>

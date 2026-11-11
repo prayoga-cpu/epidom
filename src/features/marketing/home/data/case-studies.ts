@@ -1,3 +1,4 @@
+import type { Market } from "@/components/market-flag";
 import { hasLocalizedText, type LocalizedText } from "./localized-text";
 
 export interface CaseStudyMetric {
@@ -26,12 +27,18 @@ export interface CaseStudy {
   metrics?: readonly [CaseStudyMetric, CaseStudyMetric] | readonly [CaseStudyMetric, CaseStudyMetric, CaseStudyMetric];
   /** Optional long-form page: an internal path ("/blog/...") or an https URL. */
   storyHref?: string;
+  /** The country's flag shown after the location (the site's two markets). */
+  flag?: Market;
+  /** The shop's mark: a WHITE logo (shown on a navy tile), e.g. "/images/clients/abenz.svg". */
+  logo?: string;
+  /** The speaker's photo (public/images/people/<name>.jpg); their initial shows until it exists. */
+  photo?: string;
 }
 
 /**
  * Real customer case studies for the home page. Ships EMPTY on purpose: while
  * the list is empty the whole section renders nothing. (In local development
- * only, placeholders stand in so the layout can be seen: see below.)
+ * only, the drafts below stand in so the layout can be seen.)
  *
  * Authoring rules (an entry that breaks them is dropped, not shown):
  *  - Add an entry ONLY after interviewing the merchant and getting their
@@ -43,54 +50,58 @@ export interface CaseStudy {
  *  - Either no metrics at all (shop and quote only) or two or three.
  */
 /**
- * PLACEHOLDERS, to see the layout while the real stories are gathered. They
- * show ONLY in local development (NODE_ENV === "development"), never in a
- * production build or in tests, so invented names and figures cannot reach
- * visitors. Replace them with real entries in CASE_STUDIES below, then delete
- * this list.
+ * DRAFTS, for the two stories being gathered. They show ONLY in local
+ * development (NODE_ENV === "development"), never in a production build or in
+ * tests. The wording below is a PROPOSAL written for Dinda and Angelia to
+ * correct in their own words: send it to them, change it to what they say, get
+ * their written OK for the quote, name, role and shop, then move the entry
+ * into CASE_STUDIES (and delete it from here). No figures are claimed.
  */
-const PLACEHOLDER_CASE_STUDIES: readonly CaseStudy[] = [
+const DRAFT_CASE_STUDIES: readonly CaseStudy[] = [
   {
-    slug: "placeholder-cafe",
-    shopName: "Sample Café",
-    ownerName: "Sample Owner",
-    ownerRole: "Co-founder",
-    location: "Lyon",
-    summary: "PLACEHOLDER: a neighbourhood café with a queue every morning at nine.",
-    quote: "PLACEHOLDER: replace this with the owner's own words, exactly as they said them.",
-    metrics: [
-      { value: "-00%", label: "Placeholder figure one", source: "PLACEHOLDER, replace" },
-      { value: "00 min", label: "Placeholder figure two", source: "PLACEHOLDER, replace" },
-      { value: "0x", label: "Placeholder figure three", source: "PLACEHOLDER, replace" },
-    ],
-    storyHref: "/blog",
-  },
-  {
-    slug: "placeholder-bakery",
-    shopName: "Sample Bakery",
-    ownerName: "Sample Baker",
-    ownerRole: "Owner",
+    slug: "abenz",
+    shopName: "Abenz Coffee & Eatery",
+    ownerName: "Dinda",
+    ownerRole: { en: "Owner", fr: "Propriétaire", id: "Pemilik" },
     location: "Bali",
-    summary: "PLACEHOLDER: a bakery taking pre-orders by phone for cakes and the morning box.",
-    quote: "PLACEHOLDER: a second quote, in the owner's words.",
-    metrics: [
-      { value: "00%", label: "Placeholder figure one", source: "PLACEHOLDER, replace" },
-      { value: "000+", label: "Placeholder figure two", source: "PLACEHOLDER, replace" },
-    ],
+    flag: "id",
+    logo: "/images/clients/abenz.svg",
+    photo: "/images/people/dinda.jpg",
+    summary: {
+      en: "A coffee shop and eatery in Bali.",
+      fr: "Un coffee shop et restaurant à Bali.",
+      id: "Kedai kopi dan eatery di Bali.",
+    },
+    quote: {
+      en: "Orders used to reach us through chats and notes in five different places. Now customers order from one link, and I can see which drinks really make money.",
+      fr: "Avant, les commandes nous arrivaient par messages et par notes un peu partout. Maintenant les clients commandent depuis un seul lien, et je vois quelles boissons rapportent vraiment.",
+      id: "Dulu pesanan masuk lewat chat dan catatan di lima tempat berbeda. Sekarang pelanggan memesan lewat satu link, dan saya bisa melihat minuman mana yang benar-benar untung.",
+    },
   },
   {
-    slug: "placeholder-bar",
-    shopName: "Sample Bar",
-    ownerName: "Sample Manager",
-    ownerRole: "Manager",
+    slug: "casacosa",
+    shopName: "Casacosa",
+    ownerName: "Angelia",
+    ownerRole: { en: "General manager", fr: "Directrice générale", id: "General manager" },
     location: "Paris",
-    summary: "PLACEHOLDER: a bar where drinks print at the right station.",
-    quote: "PLACEHOLDER: a third quote, a story with no figures at all.",
+    flag: "fr",
+    logo: "/images/clients/casacosa.svg",
+    photo: "/images/people/angelia.jpg",
+    summary: {
+      en: "A restaurant in Paris.",
+      fr: "Un restaurant à Paris.",
+      id: "Restoran di Paris.",
+    },
+    quote: {
+      en: "Service is calmer: orders reach the kitchen without anyone retyping them, and the team's schedule lives in the same place as the till.",
+      fr: "Le service est plus calme : les commandes arrivent en cuisine sans que personne ne les ressaisisse, et le planning de l'équipe est au même endroit que la caisse.",
+      id: "Layanan jadi lebih tenang: pesanan sampai ke dapur tanpa ada yang mengetik ulang, dan jadwal tim ada di tempat yang sama dengan kasir.",
+    },
   },
 ];
 
 export const CASE_STUDIES: readonly CaseStudy[] =
-  process.env.NODE_ENV === "development" ? PLACEHOLDER_CASE_STUDIES : [];
+  process.env.NODE_ENV === "development" ? DRAFT_CASE_STUDIES : [];
 
 function filled(value: string | undefined): boolean {
   return typeof value === "string" && value.trim() !== "";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -13,67 +13,155 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { LANDING_GROUPS, type LandingGroup } from "@/features/marketing/landing/registry";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
-import { aurora, LIGHT_BUTTON, SectionHeading } from "./landing-ui";
+import { INDUSTRY_GUIDES } from "../lib/industry-guides";
+import { usePosTrialHref } from "../lib/use-pos-trial-href";
+import { aurora, PRIMARY_BUTTON, SectionHeading } from "./landing-ui";
 
 type Kind = "cafe" | "restaurant" | "bakery" | "bar" | "truck";
 
-/**
- * Where each card of a business type goes: a landing page group, or null for
- * the services page. A group with no page in the visitor's language also falls
- * back to /products, so a card never links to a page that does not exist.
- */
-const KINDS: readonly {
-  kind: Kind;
-  icon: LucideIcon;
-  links: readonly [
-    LandingGroup | null,
-    LandingGroup | null,
-    LandingGroup | null,
-    LandingGroup | null,
-  ];
-}[] = [
-  { kind: "cafe", icon: Coffee, links: ["online-ordering", "cafe", "recipe-cost", "offline"] },
-  {
-    kind: "restaurant",
-    icon: ChefHat,
-    links: ["online-ordering", "restaurant", "kitchen-display", "stock-recipes"],
-  },
-  {
-    kind: "bakery",
-    icon: Croissant,
-    links: ["online-ordering", "bakery", "stock-recipes", "recipe-cost"],
-  },
-  { kind: "bar", icon: Beer, links: ["online-ordering", null, "receipt-printer", "recipe-cost"] },
-  { kind: "truck", icon: Truck, links: ["qr-menu", null, "offline", null] },
+const KINDS: readonly { kind: Kind; icon: LucideIcon }[] = [
+  { kind: "cafe", icon: Coffee },
+  { kind: "restaurant", icon: ChefHat },
+  { kind: "bakery", icon: Croissant },
+  { kind: "bar", icon: Beer },
+  { kind: "truck", icon: Truck },
 ];
 
 /**
  * "What is Epidom used for?": a tab per kind of food and drink business and,
- * under it, ONE card: a photo of that kind of place beside one headline, three
- * short ticks and one action (the live demo, in a new tab). F&B only.
+ * under it, ONE card: a photo carousel of that kind of place beside one
+ * headline, three short ticks and two actions: start the free trial, or read
+ * that business's guide on the blog. F&B only.
  *
- * The photos are files in public/images/uses/ (cafe, restaurant, bakery, bar,
- * truck .jpg), chosen by the owner (a licensed stock photo or their own).
- * Until a file exists the card shows the site's gradient and the kind's icon,
- * so nothing is ever broken.
+ * The photos are files in public/images/uses/{kind}-{n}.jpg (CC0 or public
+ * domain, credits in CREDITS.md). A photo that fails to load hides itself, so
+ * the gradient and the kind's icon behind it are what shows, never a broken
+ * image. A portrait photo is shown whole over a blurred copy of itself rather
+ * than cropped.
  */
+const SLIDES: Record<Kind, readonly { n: number; portrait?: boolean }[]> = {
+  cafe: [{ n: 1 }, { n: 2 }, { n: 3 }],
+  restaurant: [{ n: 1 }, { n: 2 }, { n: 3 }],
+  bakery: [{ n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }],
+  bar: [{ n: 1 }, { n: 2 }, { n: 3 }],
+  truck: [{ n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }],
+};
+
+const AUTOPLAY_MS = 5000;
+
+function UsesCarousel({ kind, Icon, label }: { kind: Kind; Icon: LucideIcon; label: string }) {
+  const slides = SLIDES[kind];
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [failed, setFailed] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    const reduced =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (paused || reduced || slides.length < 2) return;
+    const id = window.setInterval(() => setIndex((i) => (i + 1) % slides.length), AUTOPLAY_MS);
+    return () => window.clearInterval(id);
+  }, [paused, slides.length]);
+
+  const go = (to: number) => setIndex((to + slides.length) % slides.length);
+
+  return (
+    <div
+      role="group"
+      aria-roledescription="carousel"
+      aria-label={label}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+      className="group relative order-1 min-h-[260px] overflow-hidden md:order-2 md:min-h-[460px]"
+      style={{ backgroundImage: aurora({ x: 70, y: 105 }) }}
+    >
+      <Icon
+        aria-hidden="true"
+        className="absolute top-1/2 left-1/2 size-28 -translate-x-1/2 -translate-y-1/2 text-white/15"
+        strokeWidth={1.25}
+      />
+      {slides.map((slide, i) => {
+        const src = `/images/uses/${kind}-${slide.n}.jpg`;
+        const active = i === index;
+        return (
+          <div
+            key={src}
+            aria-hidden={!active}
+            className={cn(
+              "absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none",
+              active ? "opacity-100" : "pointer-events-none opacity-0"
+            )}
+          >
+            {!failed[slide.n] && (
+              <>
+                {slide.portrait && (
+                  /* eslint-disable-next-line @next/next/no-img-element -- decorative blurred backdrop */
+                  <img
+                    src={src}
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    className="absolute inset-0 size-full scale-110 object-cover opacity-70 blur-2xl"
+                  />
+                )}
+                {/* eslint-disable-next-line @next/next/no-img-element -- owner-supplied files: a missing one hides itself */}
+                <img
+                  src={src}
+                  alt=""
+                  loading={i === 0 ? "eager" : "lazy"}
+                  onError={() => setFailed((f) => ({ ...f, [slide.n]: true }))}
+                  className={cn(
+                    "absolute inset-0 size-full",
+                    slide.portrait ? "object-contain" : "object-cover"
+                  )}
+                />
+              </>
+            )}
+          </div>
+        );
+      })}
+
+      {slides.length > 1 && (
+        <>
+          <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1">
+            {slides.map((slide, i) => (
+              <button
+                key={slide.n}
+                type="button"
+                aria-label={`Photo ${i + 1} of ${slides.length}`}
+                aria-current={i === index}
+                onClick={() => go(i)}
+                className="inline-flex size-6 cursor-pointer items-center justify-center"
+              >
+                <span
+                  className={cn(
+                    "block h-2 rounded-full transition-all",
+                    i === index ? "w-6 bg-white" : "w-2 bg-white/50"
+                  )}
+                />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function UsesSection() {
   const { t, locale } = useI18n();
   const [active, setActive] = useState<Kind>("cafe");
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const current = KINDS.find((k) => k.kind === active) ?? KINDS[0];
   const Icon = current.icon;
-
-  function hrefFor(group: LandingGroup | null) {
-    const slug = group
-      ? (LANDING_GROUPS[group] as Partial<Record<typeof locale, string>>)[locale]
-      : undefined;
-    return getLocalizedPath(slug ? `/${slug}` : "/products", locale);
-  }
+  const trialHref = usePosTrialHref();
 
   // Arrow keys move between the tabs, as a tablist is expected to.
   function onKeyDown(event: React.KeyboardEvent, index: number) {
@@ -157,44 +245,30 @@ export function UsesSection() {
               ))}
             </ul>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <a
-                href="/demo/phone-orders"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackEvent("uses_demo_click", { kind: active })}
-                className={cn(LIGHT_BUTTON, "gap-2")}
-              >
-                {t("redesign.landing.spaces.demoOpen")}
-                <ArrowRight aria-hidden="true" className="size-4" />
-              </a>
               <Link
-                href={hrefFor(current.links[0])}
-                onClick={() => trackEvent("uses_card_click", { kind: active, card: 1 })}
+                href={trialHref}
+                onClick={() => trackEvent("cta_click", { event_label: `uses_trial_${active}` })}
+                className={cn(PRIMARY_BUTTON, "gap-2")}
+              >
+                {t("redesign.landing.uses.start")}
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+              <Link
+                href={getLocalizedPath(`/blog/${INDUSTRY_GUIDES[locale][active]}`, locale)}
+                onClick={() => trackEvent("uses_guide_click", { kind: active })}
                 className="text-epi-gold-300 hover:text-epi-cream-50 inline-flex min-h-11 items-center text-sm font-semibold underline-offset-4 hover:underline"
               >
-                {t("redesign.landing.uses.cta1")} →
+                {t(`redesign.landing.uses.${active}.guide`)} →
               </Link>
             </div>
           </div>
 
-          <div
-            className="relative order-1 min-h-[240px] md:order-2 md:min-h-[420px]"
-            style={{ backgroundImage: aurora({ x: 70, y: 105 }) }}
-          >
-            <Icon
-              aria-hidden="true"
-              className="absolute top-1/2 left-1/2 size-28 -translate-x-1/2 -translate-y-1/2 text-white/15"
-              strokeWidth={1.25}
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element -- an optional owner-supplied file: a missing one hides itself */}
-            <img
-              src={`/images/uses/${active}.jpg`}
-              alt=""
-              loading="lazy"
-              onError={(event) => (event.currentTarget.style.display = "none")}
-              className="absolute inset-0 size-full object-cover"
-            />
-          </div>
+          <UsesCarousel
+            key={active}
+            kind={active}
+            Icon={Icon}
+            label={t(`redesign.landing.uses.${active}.tab`)}
+          />
         </div>
       </div>
     </section>

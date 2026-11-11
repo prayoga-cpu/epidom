@@ -435,6 +435,13 @@ describe("home pricing section navigation", () => {
   });
 });
 
+/**
+ * An answer's paragraph, found by its whole text: a short verdict ("No.", "Yes, it's your
+ * data.") is its own bold element, so the text is no longer one text node.
+ */
+const answerText = (answer: string) =>
+  screen.getByText((_, element) => element?.tagName === "P" && element.textContent === answer);
+
 describe("FAQ accordion accessibility", () => {
   const answerPanel = (button: HTMLElement) =>
     document.getElementById(button.getAttribute("aria-controls")!)!;
@@ -448,23 +455,23 @@ describe("FAQ accordion accessibility", () => {
     // The first question starts open.
     expect(q1.getAttribute("aria-expanded")).toBe("true");
     expect(answerPanel(q1)).toBeVisible();
-    expect(isInaccessible(screen.getByText(faq(en).a1))).toBe(false);
+    expect(isInaccessible(answerText(faq(en).a1))).toBe(false);
 
     expect(q2.getAttribute("aria-expanded")).toBe("false");
     expect(answerPanel(q2)).not.toBeVisible();
     expect(isInaccessible(answerPanel(q2))).toBe(true);
-    expect(isInaccessible(screen.getByText(faq(en).a3))).toBe(true);
+    expect(isInaccessible(answerText(faq(en).a3))).toBe(true);
 
     fireEvent.click(q2);
     expect(q2.getAttribute("aria-expanded")).toBe("true");
-    expect(isInaccessible(screen.getByText(faq(en).a3))).toBe(false);
+    expect(isInaccessible(answerText(faq(en).a3))).toBe(false);
     // Opening one closes the other, and that one leaves the tree too.
     expect(q1.getAttribute("aria-expanded")).toBe("false");
-    expect(isInaccessible(screen.getByText(faq(en).a1))).toBe(true);
+    expect(isInaccessible(answerText(faq(en).a1))).toBe(true);
 
     fireEvent.click(q2);
     expect(q2.getAttribute("aria-expanded")).toBe("false");
-    expect(isInaccessible(screen.getByText(faq(en).a3))).toBe(true);
+    expect(isInaccessible(answerText(faq(en).a3))).toBe(true);
   });
 
   it("keeps the collapse animation: the height still transitions, visibility flips last", () => {

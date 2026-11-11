@@ -687,11 +687,16 @@ describe("ThreeSpacesSection", () => {
     ).toBeInTheDocument();
   });
 
-  it("draws each card's picture in code (decorative, hidden from screen readers), not a screenshot", () => {
+  it("lays a real photo under each card's picture (decorative, hidden from screen readers), not a screenshot", () => {
     mockLocale.value = "en";
     const { container } = render(<ThreeSpacesSection exampleStorefrontSlug={null} />);
     expect(screen.queryAllByRole("img")).toHaveLength(0);
-    expect(container.querySelectorAll("ol > li > [aria-hidden='true']")).toHaveLength(3);
+    const pictures = container.querySelectorAll("ol > li > [aria-hidden='true']");
+    expect(pictures).toHaveLength(3);
+    const photos = [...pictures].map((p) => p.querySelector("img")?.getAttribute("src") ?? "");
+    for (const [i, name] of ["phone-orders", "pos", "dashboard"].entries()) {
+      expect(photos[i]).toContain(encodeURIComponent(`/images/spaces/${name}.jpg`));
+    }
   });
 });
 
@@ -702,7 +707,7 @@ describe("PosTourSection", () => {
     mockLocale.value = loc;
     const { container } = render(<PosTourSection />);
     expect(container.textContent).not.toContain("redesign.");
-    expect(tabs()).toHaveLength(4);
+    expect(tabs()).toHaveLength(5);
   });
 
   it("opens on phone orders: its pitch is shown and only the visible screens are announced", () => {
@@ -719,6 +724,17 @@ describe("PosTourSection", () => {
     // The other features' screens stay mounted for an instant switch, hidden from screen readers.
     expect(screen.queryByRole("img", { name: PRODUCT_SCREENS.posCashier.alt.en })).toBeNull();
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", tabs()[0].id);
+  });
+
+  it("has a staff schedule and clock-in feature with its own screen", () => {
+    mockLocale.value = "en";
+    render(<PosTourSection />);
+    fireEvent.click(screen.getByRole("tab", { name: /Staff schedule and clock-in/ }));
+    expect(tabs()[4]).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByRole("img", { name: PRODUCT_SCREENS.backOfficeSchedule.alt.en })
+    ).toBeInTheDocument();
+    expect(screen.getByText(text("en", "redesign.posTour.f5Body"))).toBeInTheDocument();
   });
 
   it("a tap opens that feature: its pitch and its screen, and stops the autoplay", () => {
@@ -745,13 +761,37 @@ describe("PosTourSection", () => {
     );
   });
 
-  it("finance shows just the report-tab strip, cropped so the capture's edge badge stays out", () => {
+  it("finance shows the Finance page's figures, cropped to its content (no sidebars, no edge badge)", () => {
     mockLocale.value = "en";
     render(<PosTourSection />);
     fireEvent.click(tabs()[1]);
-    const shot = screen.getByRole("img", { name: PRODUCT_SCREENS.backOfficeFinanceTabs.alt.en });
-    // The crop box is a bit narrower than the file, so the image is drawn slightly wider than its card.
+    const shot = screen.getByRole("img", { name: PRODUCT_SCREENS.backOfficeFinance.alt.en });
+    // The crop box is narrower than the file, so the image is drawn wider than its card.
     expect(shot.getAttribute("style")).toMatch(/width:\s*1\d\d(\.\d+)?%/);
+  });
+
+  it("lays a faint photo under every feature's screen, only the open one visible", () => {
+    mockLocale.value = "en";
+    const { container } = render(<PosTourSection />);
+    const photos = [...container.querySelectorAll<HTMLImageElement>("img[alt='']")].filter((img) =>
+      decodeURIComponent(img.getAttribute("src") ?? "").includes("/images/spaces/tour-")
+    );
+    expect(photos).toHaveLength(5);
+    expect(photos.map((p) => p.className.includes("opacity-45"))).toEqual([
+      true,
+      false,
+      false,
+      false,
+      false,
+    ]);
+    fireEvent.click(tabs()[1]);
+    expect(photos.map((p) => p.className.includes("opacity-45"))).toEqual([
+      false,
+      true,
+      false,
+      false,
+      false,
+    ]);
   });
 
   it("desktop: pinned and scroll-driven, no timer; picking a feature scrolls to it", () => {
@@ -775,15 +815,15 @@ describe("PosTourSection", () => {
 
   it("arrow keys, Home and End move between features (roving focus)", () => {
     render(<PosTourSection />);
-    expect(tabs().map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1]);
+    expect(tabs().map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1, -1]);
     fireEvent.keyDown(tabs()[0], { key: "ArrowUp" });
-    expect(tabs()[3]).toHaveAttribute("aria-selected", "true");
-    expect(tabs()[3]).toHaveFocus();
-    fireEvent.keyDown(tabs()[3], { key: "ArrowDown" });
+    expect(tabs()[4]).toHaveAttribute("aria-selected", "true");
+    expect(tabs()[4]).toHaveFocus();
+    fireEvent.keyDown(tabs()[4], { key: "ArrowDown" });
     expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(tabs()[0], { key: "End" });
-    expect(tabs()[3]).toHaveAttribute("aria-selected", "true");
-    fireEvent.keyDown(tabs()[3], { key: "Home" });
+    expect(tabs()[4]).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(tabs()[4], { key: "Home" });
     expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
     expect(tabs()[0]).toHaveFocus();
   });
@@ -851,34 +891,59 @@ describe("UsesSection", () => {
     expect(screen.queryByText(en.redesign.landing.uses.cafe.card1)).toBeNull();
   });
 
-  it("offers the live demo in a new tab, and a link to the page of the visitor's language (or /products)", () => {
+  it("has two calls to action: start the free trial, and that business's guide on the blog", () => {
     mockLocale.value = "en";
     const { unmount } = render(<UsesSection />);
-    const panel = within(screen.getByRole("tabpanel"));
-    const demo = panel.getByRole("link", { name: /Open live demo/ });
-    expect(demo).toHaveAttribute("href", "/demo/phone-orders");
-    expect(demo).toHaveAttribute("target", "_blank");
-    expect(panel.getByRole("link", { name: /See Phone Orders/ })).toHaveAttribute(
+    let panel = within(screen.getByRole("tabpanel"));
+    expect(panel.getByRole("link", { name: /Start free trial/ })).toHaveAttribute("href");
+    expect(panel.getByRole("link", { name: /Read the café guide/ })).toHaveAttribute(
       "href",
-      "/en/commission-free-online-ordering"
+      expect.stringMatching(/\/blog\/run-a-cafe-orders-margin-stock$/)
+    );
+    expect(panel.queryByRole("link", { name: /live demo/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Bars" }));
+    panel = within(screen.getByRole("tabpanel"));
+    expect(panel.getByRole("link", { name: /Read the bar guide/ })).toHaveAttribute(
+      "href",
+      expect.stringMatching(/\/blog\/bar-pour-cost-rounds-closing$/)
     );
     unmount();
 
-    // French has no page for this group yet: it falls back to /products.
     mockLocale.value = "fr";
     render(<UsesSection />);
     expect(
-      within(screen.getByRole("tabpanel")).getByRole("link", { name: /Voir la commande mobile/ })
-    ).toHaveAttribute("href", expect.stringMatching(/^\/(products|[a-z-]+)$/));
+      within(screen.getByRole("tabpanel")).getByRole("link", { name: /Lire le guide café/ })
+    ).toHaveAttribute("href", expect.stringMatching(/\/blog\/gerer-un-cafe-commandes-marge-stock$/));
   });
 
-  it("falls back to the gradient when a kind's photo file is missing, and never leaves a broken image", () => {
+  it("shows a photo carousel per kind, moved by its dots only (no arrows)", () => {
     mockLocale.value = "en";
     render(<UsesSection />);
-    const photo = document.querySelector<HTMLImageElement>("img[src='/images/uses/cafe.jpg']")!;
+    const carousel = screen.getByRole("group", { name: "Cafés" });
+    expect(carousel.querySelectorAll("img[src^='/images/uses/cafe-']").length).toBe(3);
+    const dots = within(carousel).getAllByRole("button", { name: /Photo \d of 3/ });
+    expect(dots).toHaveLength(3);
+    expect(dots[0]).toHaveAttribute("aria-current", "true");
+    expect(within(carousel).queryByRole("button", { name: /Previous photo|Next photo/ })).toBeNull();
+    fireEvent.click(dots[1]);
+    expect(within(carousel).getAllByRole("button", { name: /Photo \d of 3/ })[1]).toHaveAttribute(
+      "aria-current",
+      "true"
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Bakeries" }));
+    expect(
+      screen.getByRole("group", { name: "Bakeries" }).querySelectorAll("img").length
+    ).toBe(4);
+  });
+
+  it("drops a photo that fails to load, so the gradient shows and no image is ever broken", () => {
+    mockLocale.value = "en";
+    render(<UsesSection />);
+    const photo = document.querySelector<HTMLImageElement>("img[src='/images/uses/cafe-1.jpg']")!;
     expect(photo).not.toBeNull();
     fireEvent.error(photo);
-    expect(photo.style.display).toBe("none");
+    expect(document.querySelector("img[src='/images/uses/cafe-1.jpg']")).toBeNull();
   });
 });
 

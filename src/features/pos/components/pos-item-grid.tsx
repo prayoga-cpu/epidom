@@ -34,6 +34,8 @@ interface PosItemGridProps {
   /** Where this viewer adds the menu (see resolveMenuSetupHref), or null when
    * they can't: an empty menu then says who can. */
   menuSetupHref?: string | null;
+  /** The item just added to the bill (n changes on every add), so its tile can flash. */
+  justAdded?: { id: string; n: number } | null;
 }
 
 /**
@@ -54,6 +56,7 @@ export function PosItemGrid({
   viewMode = "grid",
   toolbar,
   menuSetupHref = null,
+  justAdded = null,
 }: PosItemGridProps) {
   const { t } = useI18n();
   // The counted-stock chip is suppressed offline: the POS menu IS mirrored to
@@ -211,6 +214,18 @@ export function PosItemGrid({
   // The three layouts share everything but the tile itself. All of them are one
   // <button> per item, at least 48px tall in list view and 72px in columns — well
   // clear of the 40px touch floor.
+  // Gold ring + a floating "+1" on the tile just tapped. Keyed on the add counter so a second
+  // tap on the same item replays it; pointer-events off so it never eats the next tap.
+  const addedFx = (item: PosMenuItem) =>
+    justAdded?.id === item.id ? (
+      <span key={justAdded.n} aria-hidden className="pointer-events-none absolute inset-0 z-10">
+        <span className="pos-added-ring ring-primary absolute inset-0 rounded-[inherit] ring-2 ring-inset" />
+        <span className="pos-added-badge bg-primary text-primary-foreground absolute top-1.5 right-1.5 rounded-full px-2 py-0.5 text-xs font-bold shadow-md">
+          +1
+        </span>
+      </span>
+    ) : null;
+
   const renderTile = (item: PosMenuItem) => {
     if (viewMode === "list") {
       return (
@@ -219,7 +234,7 @@ export function PosItemGrid({
           disabled={!item.isAvailable}
           onClick={() => onItemClick(item)}
           className={cn(
-            "group bg-card hover:border-primary/50 focus-visible:ring-primary flex min-h-14 touch-manipulation items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
+            "pos-press group bg-card hover:border-primary/50 focus-visible:ring-primary relative flex min-h-14 touch-manipulation items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
             !item.isAvailable && "opacity-50 grayscale"
           )}
         >
@@ -241,6 +256,7 @@ export function PosItemGrid({
           <div className="text-primary shrink-0 text-sm font-semibold tabular-nums">
             {formatPrice(item.price)}
           </div>
+          {addedFx(item)}
         </button>
       );
     }
@@ -252,7 +268,7 @@ export function PosItemGrid({
           disabled={!item.isAvailable}
           onClick={() => onItemClick(item)}
           className={cn(
-            "group bg-card hover:border-primary/50 focus-visible:ring-primary flex min-h-[72px] touch-manipulation flex-col justify-between gap-1.5 rounded-lg border p-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
+            "pos-press group bg-card hover:border-primary/50 focus-visible:ring-primary relative flex min-h-[72px] touch-manipulation flex-col justify-between gap-1.5 rounded-lg border p-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
             !item.isAvailable && "opacity-50 grayscale"
           )}
         >
@@ -265,6 +281,7 @@ export function PosItemGrid({
             {countedChip(item)}
             {!item.isAvailable && unavailablePill}
           </div>
+          {addedFx(item)}
         </button>
       );
     }
@@ -315,6 +332,7 @@ export function PosItemGrid({
             {countedChip(item)}
           </div>
         </div>
+        {addedFx(item)}
         {!item.isAvailable && (
           <div className="bg-background/50 absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
             <span className="bg-destructive text-destructive-foreground rounded-md px-2 py-1 text-xs font-bold">

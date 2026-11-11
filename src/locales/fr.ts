@@ -1384,6 +1384,17 @@ export const fr = {
       startFree: "Démarrer gratuitement",
       mainHeader: "En-tête principal",
       mobileMenu: "Menu mobile",
+      login: "Se connecter",
+      resources: "Ressources",
+      openSubmenu: "Ouvrir le menu {name}",
+      viewAllProducts: "Voir tous les produits →",
+      claudeConnector: "Connecteur Claude",
+      claudeConnectorDesc: "Interrogez Claude sur vos chiffres (bêta)",
+      toolsHeading: "Outils gratuits",
+      learnHeading: "Apprendre et être aidé",
+      toolCommission: "Commission des apps de livraison",
+      toolRecipeCost: "Calculateur de coût de revient",
+      toolQrMenu: "Menu QR code gratuit",
     },
     pwa: {
       installApp: "Installer l'app",
@@ -4130,6 +4141,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       goToOrderHistory: "Historique des commandes",
     },
     hardware: {
+      hapticsDesc: "Une légère vibration à l'ajout, à la suppression ou à l'encaissement. Uniquement sur les appareils compatibles.",
+      haptics: "Retour par vibration",
       title: "Réglages du matériel",
       dialogDesc:
         "Les imprimantes et le lecteur de codes-barres associés à cet appareil. Les réglages restent sur cet appareil.",
@@ -8015,6 +8028,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         storesHeading: "Déjà sur Epidom",
         trialCta: "Démarrer l'essai POS de 14 jours",
         noCard: "Sans carte bancaire",
+        subShort: "Lien en bio, commandes, stock, équipe et finance dans un seul lien.",
+        claimHint: "Votre lien gratuit\u00a0: epidom.fr/@votre-cafe",
         searchError: "La recherche est indisponible pour le moment. Réessayez dans un instant.",
         sub:
           "Le système de prise de commande de bout en bout pour cafés, restaurants et boulangeries : lien en bio, commandes, stock, équipe et finance dans un seul lien web (epidom.fr).",
@@ -8180,18 +8195,19 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         disclaimer: "Estimation à partir de vos chiffres. Résultats réels variables.",
       },
       trust: {
-        label: "Ils utilisent déjà Epidom",
+        label: "{count} cafés, boulangeries et restaurants nous font confiance",
       },
       uses: {
         eyebrow: "Pensé pour la restauration",
         title: "À quoi sert Epidom ?",
         sub: "Un lien, une caisse et un tableau de bord, réglés pour la façon dont travaille votre type d’établissement.",
-        cta1: "Voir la commande mobile",
+        start: "Démarrer l'essai gratuit",
         cta2: "Voir la caisse",
         cta3: "Voir comment",
         cta4: "Voir comment",
         cafe: {
           tab: "Cafés",
+          guide: "Lire le guide café",
           card1: "Vos habitués commandent sur leur téléphone, sans file d’attente",
           card2: "Une caisse rapide pour le coup de feu du matin",
           card3: "Connaissez votre coût par tasse, lait compris",
@@ -8199,6 +8215,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         },
         restaurant: {
           tab: "Restaurants",
+          guide: "Lire le guide restaurant",
           card1: "Les commandes partent du téléphone de la table jusqu’en cuisine",
           card2: "Une seule caisse pour la salle, la vente à emporter et la livraison",
           card3: "Un écran cuisine : chaque ticket dans l’ordre, sans crier",
@@ -8206,6 +8223,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         },
         bakery: {
           tab: "Boulangeries",
+          guide: "Lire le guide boulangerie",
           card1: "Précommandes par téléphone pour les gâteaux et la boîte du matin",
           card2: "Vendez à la pièce, à la plaque ou en boîte",
           card3: "Cuisez la bonne quantité : suivez stock et pertes",
@@ -8213,6 +8231,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         },
         bar: {
           tab: "Bars",
+          guide: "Lire le guide bar",
           card1: "Commandez depuis la table, sans attendre au comptoir",
           card2: "Une caisse rapide pour les tournées, en espèces ou par carte",
           card3: "Boissons et plats s’impriment au bon poste",
@@ -8220,6 +8239,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         },
         truck: {
           tab: "Food trucks",
+          guide: "Lire le guide food truck",
           card1: "Un QR code sur la vitre : les clients commandent avant d’arriver",
           card2: "Une caisse sur votre téléphone ou tablette, où que vous soyez garé",
           card3: "Ça continue de marcher quand le réseau lâche",
@@ -8269,6 +8289,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
         vPrinted: "Imprimé en cuisine",
         vOffline: "Hors ligne, on vend encore",
         vProfit: "Vrai bénéfice · aujourd'hui",
+        vStock: "Lait d'avoine · stock bas",
         demoOpen: "Ouvrir la démo en direct",
       },
       switch: {
@@ -8325,7 +8346,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
           "Oui, ce sont vos données. Depuis le Tableau de bord, vos clients s'exportent dès le forfait POS ; vos produits, ingrédients, recettes, fournisseurs et rapports financiers avec le forfait Opérations, en CSV ou Excel, quand vous voulez.",
         q3: "Et si internet coupe ?",
         a3:
-          "Le mode Caisse continue d'enregistrer les nouvelles ventes et les envoie dès que la connexion revient. Seules les commandes mises en attente doivent attendre le retour du réseau pour être reprises.",
+          "Vous continuez à vendre. Le mode Caisse enregistre les nouvelles ventes sur l'appareil et les envoie dès que la connexion revient. Chaque vente garde l'heure de son encaissement\u00a0: elle tombe sur la bonne journée et la bonne session de caisse. Quelques actions, comme la recherche d'un client ou les remboursements, demandent la connexion.",
         q4: "Faut-il du nouveau matériel ?",
         a4:
           "Non. Une tablette, un téléphone ou un ordinateur avec un navigateur suffit. Les imprimantes de tickets Bluetooth fonctionnent sur Android et sur ordinateur ; sur iPad, l'impression passe par le navigateur.",
@@ -8334,6 +8355,26 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
           "L'essai porte sur le forfait POS, pour le premier abonnement d'un compte, et ne demande pas de carte. Pour garder le POS après les 14 jours, ajoutez une carte dans Facturation : elle est débitée pour la première fois à la fin de l'essai. Sans carte, votre compte repasse au plan Gratuit, et votre carte de menu, vos commandes et votre équipe restent là.",
         q6: "Epidom est-il certifié NF525 ?",
         a6: "Epidom respecte les quatre conditions de la loi anti-fraude TVA (inaltérabilité, sécurisation, conservation, archivage) et vous remet l'attestation individuelle de l'éditeur. Depuis le 21 février 2026, la loi de finances pour 2026 l'accepte comme preuve, au même titre qu'un certificat. Epidom n'a pas de certification NF525 délivrée par un organisme accrédité. L'attestation se télécharge depuis le Journal fiscal de votre espace.",
+        q7: "Combien coûte Epidom\u00a0?",
+        a7:
+          "Gratuit pour commencer. La page de menu et son QR code sont gratuits pour toujours. Le forfait POS coûte {pos} par mois ({posYear} par mois en facturation annuelle), le forfait Opérations {ops} ({opsYear}), hors taxes. Opérations couvre jusqu'à 3 points de vente\u00a0; à partir de 4, c'est Entreprise, chiffré avec vous. Le POS est gratuit 14 jours, sans carte.",
+        q8: "Puis-je importer mon menu depuis mon ancienne caisse\u00a0?",
+        a8:
+          "Oui. Importez un tableur ou un CSV de votre ancienne caisse\u00a0: Epidom lit le fichier et range chaque ligne lui-même, il n'y a rien à ressaisir. Votre lien et votre QR code sont en ligne dès que vous publiez, et la démo en direct ne demande aucune connexion.",
+        q9: "Comment mes clients paient-ils\u00a0?",
+        a9:
+          "En ligne ou au comptoir. Le client commande depuis son téléphone et paie en ligne (QRIS, portefeuilles électroniques ou carte) ou à votre comptoir. La caisse enregistre espèces, carte, virement et QRIS, et l'écran client affiche votre QRIS avec le montant.",
+        a9PayAtCounter:
+          "Au comptoir. Le client commande depuis son téléphone et la commande arrive sur votre caisse et votre écran cuisine, non payée\u00a0; votre caissier encaisse puis touche «\u00a0Marquer comme payé\u00a0». La caisse enregistre espèces, carte, virement et QRIS, et l'écran client affiche votre QRIS avec le montant.",
+        q10: "Puis-je interroger Claude sur mes chiffres\u00a0?",
+        a10:
+          "Oui, avec le forfait Opérations (bêta). Connectez Epidom à Claude et posez vos questions en langage courant\u00a0: les ventes d'hier, ce qui bientôt manque, la marge de la semaine, qui est au planning. Claude lit vos données\u00a0; avec Entreprise, il peut aussi faire des modifications, toujours avec votre accord.",
+        q11: "Mon équipe peut-elle pointer avec un selfie\u00a0?",
+        a11:
+          "Oui, avec le forfait Opérations. Chacun a un rôle et un code PIN, vous publiez le planning de la semaine et l'équipe pointe avec un selfie et sa position. Vous validez les heures supplémentaires, et les heures alimentent la paie face au planning.",
+        linkPricing: "Comparer tous les forfaits →",
+        linkClaude: "Comment fonctionne le connecteur Claude →",
+        linkOffline: "Comment fonctionne le mode hors ligne →",
       },
       compliance: {
         eyebrow: "Conformité",
@@ -8481,7 +8522,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     posTour: {
       eyebrow: "Le Mode Caisse, de près",
       title: "La caisse de votre équipe",
-      sub: "De vrais écrans d'Epidom, pas des maquettes. Quatre raisons de changer de caisse, par ordre d'importance.",
+      sub: "De vrais écrans d'Epidom, pas des maquettes. Cinq raisons de changer de caisse, par ordre d'importance.",
       tabsLabel: "Fonctions de la caisse",
       f1Tab: "Commandes par téléphone, intégrées à la caisse",
       f1Body: "Vos clients commandent depuis votre lien et paient en ligne ou à la caisse. La commande arrive dans la même file que la caisse : plus d'appels manqués, de double saisie ni d'erreurs de commande.",
@@ -8492,6 +8533,8 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
       f3Body: "Importez votre menu et vos données de votre ancienne caisse. Epidom lit le fichier et classe chaque ligne lui-même : rien à ressaisir, pas une journée perdue.",
       f4Tab: "Un lien, pas d'app store",
       f4Body: "Ouvrez Epidom dans n'importe quel navigateur, ajoutez-le à l'écran d'accueil et il s'ouvre en plein écran, avec une seule connexion sur téléphone, tablette ou ordinateur. Rien à télécharger, rien à mettre à jour.",
+      f5Tab: "Planning et pointage du personnel",
+      f5Body: "Composez le planning de la semaine avec des blocs horaires\u00a0; l'équipe pointe son arrivée et son départ avec un selfie. Voyez qui est en service, les heures faites face au planning, et validez les heures supplémentaires.",
     },
     servicesPage: {
       title1: "Caisse, écran cuisine et tableau de bord",

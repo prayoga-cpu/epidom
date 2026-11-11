@@ -1,5 +1,6 @@
 "use client";
 
+import { haptic } from "../lib/haptics";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { Store } from "@prisma/client";
@@ -102,10 +103,20 @@ export function PosShell({ store, menuSetupHref = null }: PosShellProps) {
     setSelectedCategory(null);
   };
 
+  const [justAdded, setJustAdded] = useState<{ id: string; n: number } | null>(null);
+  const flashAdded = (id: string) => setJustAdded((prev) => ({ id, n: (prev?.n ?? 0) + 1 }));
+  useEffect(() => {
+    if (!justAdded) return;
+    const timer = setTimeout(() => setJustAdded(null), 900);
+    return () => clearTimeout(timer);
+  }, [justAdded]);
+
   const handleItemClick = (item: PosMenuItem) => {
+    haptic("tap");
     const groups = getMergedOptionGroups(item, item.product);
     if (groups.length === 0) {
       addItem(item.id, item.name, item.price, 1, [], item.imageUrl);
+      flashAdded(item.id);
       return;
     }
     setConfiguringItem(item);
@@ -290,6 +301,7 @@ export function PosShell({ store, menuSetupHref = null }: PosShellProps) {
                 viewMode={viewMode}
                 toolbar={<PosViewToggle />}
                 menuSetupHref={menuSetupHref}
+                justAdded={justAdded}
                 customDepartmentLabel={
                   menuData?.customProductsEnabled ? menuData.customProductsLabel : null
                 }
@@ -329,6 +341,7 @@ export function PosShell({ store, menuSetupHref = null }: PosShellProps) {
                 configuringItem.imageUrl,
                 notes
               );
+              flashAdded(configuringItem.id);
               setConfiguringItem(null);
             }}
           />

@@ -176,23 +176,39 @@ describe("SiteHeader navigation", () => {
     ["fr", "/compare"],
     ["id", "/id/compare"],
     ["en", "/en/compare"],
-  ] as const)("%s: links to the Compare section (%s)", (locale, href) => {
-    h.locale = locale;
-    render(<SiteHeader />);
-    expect(screen.getByRole("link", { name: "common.nav.compare" }).getAttribute("href")).toBe(
-      href
-    );
-  });
+  ] as const)(
+    "%s: Compare is in the Resources menu, and links to the section (%s)",
+    (locale, href) => {
+      h.locale = locale;
+      render(<SiteHeader />);
+      // The panel is shut (hidden), but its links are in the page.
+      expect(
+        screen.getByRole("link", { name: "footer.linkCompare", hidden: true }).getAttribute("href")
+      ).toBe(href);
+      // And it is no longer a top-level link.
+      expect(screen.queryByRole("link", { name: "footer.linkCompare" })).toBeNull();
+    }
+  );
 
-  it("marks Compare as the current section on a comparison sub-page, and not Home", () => {
+  it("marks Resources as the current section on a comparison sub-page, and Pricing as not", () => {
     h.path = "/compare/moka";
     render(<SiteHeader />);
+    const resources = screen.getByRole("button", { name: "common.nav.resources" });
+    expect(resources.closest("[data-current]")).not.toBeNull();
     expect(
-      screen.getByRole("link", { name: "common.nav.compare" }).getAttribute("aria-current")
-    ).toBe("page");
-    expect(
-      screen.getByRole("link", { name: "common.nav.home" }).getAttribute("aria-current")
+      screen.getByRole("link", { name: "common.nav.pricing" }).getAttribute("aria-current")
     ).toBeNull();
+  });
+
+  it("has no Home link (the logo is Home) and no top-level Contact", () => {
+    render(<SiteHeader />);
+    expect(screen.queryByRole("link", { name: "common.nav.home" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "common.nav.contact" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "footer.linkContact" })).toBeNull();
+    // Contact is under Resources.
+    expect(
+      screen.getByRole("link", { name: "footer.linkContact", hidden: true }).getAttribute("href")
+    ).toBe("/contact");
   });
 
   it("never links to the retired /payments page", () => {
@@ -212,5 +228,169 @@ describe("SiteHeader navigation", () => {
 
     rerender(<SiteHeader backHref="/stores" />);
     expect(screen.getByLabelText("common.actions.back").getAttribute("href")).toBe("/stores");
+  });
+});
+
+describe("SiteHeader log in", () => {
+  it("signed out: a Log in link to /login on desktop and in the mobile menu", () => {
+    render(<SiteHeader />);
+    const desktop = screen.getByRole("link", { name: "common.nav.login" });
+    expect(desktop.getAttribute("href")).toBe("/login");
+    fireEvent.click(desktop);
+    expect(h.trackEvent).toHaveBeenCalledWith("cta_click", {
+      event_category: "engagement",
+      event_label: "header_login",
+    });
+    const sheet = within(openMobileMenu());
+    expect(sheet.getByRole("link", { name: "common.nav.login" }).getAttribute("href")).toBe(
+      "/login"
+    );
+  });
+
+  it("signed in: no Log in link anywhere", () => {
+    h.session = SIGNED_IN;
+    render(<SiteHeader />);
+    expect(screen.queryByRole("link", { name: "common.nav.login" })).toBeNull();
+    const sheet = within(openMobileMenu());
+    expect(sheet.queryByRole("link", { name: "common.nav.login" })).toBeNull();
+  });
+});
+
+describe("SiteHeader dropdown menus", () => {
+  const productsChevron = () => screen.getByRole("button", { name: "common.nav.openSubmenu" });
+  const resourcesButton = () => screen.getByRole("button", { name: "common.nav.resources" });
+
+  it("Products: its label links to /products, and the chevron opens a menu of its spaces", () => {
+    h.locale = "en";
+    render(<SiteHeader />);
+    expect(screen.getByRole("link", { name: "common.nav.products" }).getAttribute("href")).toBe(
+      "/en/products"
+    );
+    expect(productsChevron().getAttribute("aria-expanded")).toBe("false");
+    // Shut: the links are in the page but not shown.
+    expect(screen.queryByRole("link", { name: "redesign.landing.spaces.posName" })).toBeNull();
+
+    fireEvent.click(productsChevron());
+    expect(productsChevron().getAttribute("aria-expanded")).toBe("true");
+    const hrefOf = (name: RegExp | string) =>
+      screen.getByRole("link", { name }).getAttribute("href");
+    expect(hrefOf(/^redesign\.landing\.spaces\.storefrontName/)).toBe("/en/products#storefront");
+    expect(hrefOf(/^redesign\.landing\.spaces\.posName/)).toBe("/en/products#pos");
+    expect(hrefOf(/^redesign\.landing\.spaces\.backOfficeName/)).toBe("/en/products#dashboard");
+    // The Claude connector page is the one in the visitor's language.
+    expect(hrefOf(/^common\.nav\.claudeConnector/)).toBe("/en/claude-connector-pos");
+    expect(hrefOf("common.nav.viewAllProducts")).toBe("/en/products");
+  });
+
+  it.each([
+    ["fr", "/connecteur-claude-caisse"],
+    ["id", "/id/konektor-claude-kasir"],
+  ] as const)("%s: the Claude connector link is that language's page (%s)", (locale, href) => {
+    h.locale = locale;
+    render(<SiteHeader />);
+    expect(
+      screen
+        .getByRole("link", { name: /^common\.nav\.claudeConnector/, hidden: true })
+        .getAttribute("href")
+    ).toBe(href);
+  });
+
+  it("Resources: one button opens the tools and the learn-and-help links", () => {
+    h.locale = "en";
+    render(<SiteHeader />);
+    expect(resourcesButton().getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(resourcesButton());
+    expect(resourcesButton().getAttribute("aria-expanded")).toBe("true");
+    const hrefOf = (name: string) => screen.getByRole("link", { name }).getAttribute("href");
+    expect(hrefOf("common.nav.toolCommission")).toBe("/en/delivery-app-commission-calculator");
+    expect(hrefOf("common.nav.toolRecipeCost")).toBe("/en/recipe-cost-calculator");
+    expect(hrefOf("common.nav.toolQrMenu")).toBe("/en/free-qr-code-menu");
+    expect(hrefOf("footer.linkBlog")).toBe("/en/blog");
+    expect(hrefOf("footer.linkDocs")).toBe("/en/docs");
+    expect(hrefOf("footer.linkChangelog")).toBe("/en/changelog");
+  });
+
+  it("only one menu is open at a time", () => {
+    render(<SiteHeader />);
+    fireEvent.click(productsChevron());
+    expect(productsChevron().getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(resourcesButton());
+    expect(resourcesButton().getAttribute("aria-expanded")).toBe("true");
+    expect(productsChevron().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("Escape closes the open menu and puts focus back on its button", () => {
+    render(<SiteHeader />);
+    fireEvent.click(resourcesButton());
+    expect(resourcesButton().getAttribute("aria-expanded")).toBe("true");
+    fireEvent.keyDown(resourcesButton(), { key: "Escape" });
+    expect(resourcesButton().getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(resourcesButton());
+  });
+
+  it("a click outside closes it", () => {
+    render(<SiteHeader />);
+    fireEvent.click(resourcesButton());
+    fireEvent.mouseDown(document.body);
+    expect(resourcesButton().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("choosing a link closes the menu", () => {
+    render(<SiteHeader />);
+    fireEvent.click(resourcesButton());
+    fireEvent.click(screen.getByRole("link", { name: "footer.linkBlog" }));
+    expect(resourcesButton().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("mobile menu: Products and Resources are accordion rows; a row expands its links", () => {
+    h.locale = "en";
+    render(<SiteHeader />);
+    const sheet = within(openMobileMenu());
+    // Pricing stays a plain link; Products keeps its own page link; Contact is not a row.
+    expect(sheet.getByRole("link", { name: "common.nav.pricing" })).toBeInTheDocument();
+    expect(sheet.getByRole("link", { name: "common.nav.products" }).getAttribute("href")).toBe(
+      "/en/products"
+    );
+    expect(sheet.queryByRole("link", { name: "footer.linkBlog" })).toBeNull();
+
+    const resources = sheet.getByRole("button", { name: "common.nav.resources" });
+    expect(resources.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(resources);
+    expect(resources.getAttribute("aria-expanded")).toBe("true");
+    expect(sheet.getByRole("link", { name: "footer.linkBlog" }).getAttribute("href")).toBe(
+      "/en/blog"
+    );
+
+    fireEvent.click(sheet.getByRole("button", { name: "common.nav.openSubmenu" }));
+    expect(
+      sheet.getByRole("link", { name: /redesign\.landing\.spaces\.posName/ })
+    ).toBeInTheDocument();
+  });
+});
+
+describe("resolveMenu", () => {
+  it("leaves out a landing page that has no version in the visitor's language, and an emptied section", async () => {
+    const { resolveMenu } = await import("../../lib/landing-nav");
+    const menu = {
+      sections: [
+        { links: [{ landing: "cafe" as const, labelKey: "a" }] },
+        {
+          links: [
+            { landing: "cafe" as const, labelKey: "b" },
+            { href: "/blog#x", labelKey: "c" },
+          ],
+        },
+      ],
+      footer: { href: "/products", labelKey: "f" },
+    };
+    // "cafe" exists in English and Indonesian only.
+    const fr = resolveMenu(menu, "fr");
+    expect(fr.sections).toHaveLength(1);
+    expect(fr.sections[0].links.map((l) => l.href)).toEqual(["/blog#x"]);
+    const en = resolveMenu(menu, "en");
+    expect(en.sections).toHaveLength(2);
+    expect(en.sections[0].links[0].href).toBe("/en/cafe-pos-system");
+    expect(en.sections[1].links[1].href).toBe("/en/blog#x");
+    expect(en.footer?.href).toBe("/en/products");
   });
 });
