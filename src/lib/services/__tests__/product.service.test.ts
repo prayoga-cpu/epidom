@@ -239,12 +239,22 @@ describe("ProductService", () => {
         sellingPrice: 30,
       });
 
-      // price comes back as a converted plain number (+ its currency), not
-      // the raw Decimal — see storefrontService.convertBaseCurrencyToOwner.
-      expect(prisma.menuItem.updateMany).toHaveBeenCalledWith({
-        where: { productId: "prod-1" },
-        data: { name: "Updated Product", price: 30, currency: "IDR" },
-      });
+      // The mirror is a nested write of the product update itself, so the product
+      // and its menu items change atomically. The price is a converted plain
+      // number (+ its currency), not the raw Decimal — see
+      // storefrontService.convertBaseCurrencyToOwner.
+      expect(mockedProductRepo.update).toHaveBeenCalledWith(
+        "prod-1",
+        expect.objectContaining({
+          menuItems: {
+            updateMany: {
+              where: {},
+              data: { name: "Updated Product", price: 30, currency: "IDR" },
+            },
+          },
+        })
+      );
+      expect(prisma.menuItem.updateMany).not.toHaveBeenCalled();
     });
 
     it("should not touch MenuItem sync when name/price are unchanged", async () => {
@@ -257,6 +267,7 @@ describe("ProductService", () => {
       await service.updateProduct("prod-1", "store-1", { currentStock: 5 });
 
       expect(prisma.menuItem.updateMany).not.toHaveBeenCalled();
+      expect(mockedProductRepo.update.mock.calls[0][1]).not.toHaveProperty("menuItems");
     });
 
     it("should sync department to any linked storefront MenuItem", async () => {
@@ -266,10 +277,12 @@ describe("ProductService", () => {
 
       await service.updateProduct("prod-1", "store-1", { department: "KITCHEN" as any });
 
-      expect(prisma.menuItem.updateMany).toHaveBeenCalledWith({
-        where: { productId: "prod-1" },
-        data: { department: "KITCHEN" },
-      });
+      expect(mockedProductRepo.update).toHaveBeenCalledWith(
+        "prod-1",
+        expect.objectContaining({
+          menuItems: { updateMany: { where: {}, data: { department: "KITCHEN" } } },
+        })
+      );
     });
   });
 

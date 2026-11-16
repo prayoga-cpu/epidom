@@ -127,6 +127,62 @@ describe("menu item undo", () => {
   });
 });
 
+// A menu price change also moves the linked product's price; undo puts both back.
+describe("menu item undo with a linked product price", () => {
+  const before = state({ price: "30000.00", productId: "p1" });
+  const after = state({ price: "45000.00", productId: "p1" });
+  const change = {
+    ...itemsChange(before, after),
+    products: [
+      { id: "p1", name: "Earl grey", sku: "EARL-GREY", before: "30000.00", after: "45000.00" },
+    ],
+  };
+  const db = (productPrice: string | null) => ({
+    menuItem: { findMany: vi.fn(async () => [liveRow(after)]) },
+    menuCategory: { count: vi.fn(async () => 1) },
+    product: {
+      count: vi.fn(async () => 1),
+      findFirst: vi.fn(async () =>
+        productPrice === null ? null : { sellingPrice: new Prisma.Decimal(productPrice) }
+      ),
+    },
+  });
+
+  it("is allowed while the product is still at the price the change gave it", async () => {
+    expect(await precheckMenuItems(change, db("45000") as never)).toBeNull();
+  });
+
+  it("refuses when the product's price was changed afterwards", async () => {
+    const refusal = await precheckMenuItems(change, db("50000") as never);
+    expect(refusal?.code).toBe("SUPERSEDED");
+    expect(refusal?.message).toMatch(/price of the product "Earl grey" has been changed since/);
+  });
+
+  it("refuses when the product is gone", async () => {
+    expect((await precheckMenuItems(change, db(null) as never))?.code).toBe("TARGET_MISSING");
+  });
+
+  it("restores the product's price together with the menu item", async () => {
+    const tx = { menuItem: { update: vi.fn(), deleteMany: vi.fn() }, product: { update: vi.fn() } };
+    await reverseMenuItems(change, tx as never);
+    expect(tx.menuItem.update.mock.calls[0][0].data.price.toString()).toBe("30000");
+    expect(tx.product.update).toHaveBeenCalledWith({
+      where: { id: "p1" },
+      data: { sellingPrice: new Prisma.Decimal("30000.00") },
+    });
+  });
+
+  it("still undoes a change recorded before products were kept in step (no products field)", async () => {
+    const old = itemsChange(before, after);
+    const live = db("45000");
+    expect(await precheckMenuItems(old, live as never)).toBeNull();
+    expect(live.product.findFirst).not.toHaveBeenCalled();
+    const tx = { menuItem: { update: vi.fn(), deleteMany: vi.fn() }, product: { update: vi.fn() } };
+    await reverseMenuItems(old, tx as never);
+    expect(tx.product.update).not.toHaveBeenCalled();
+  });
+});
+
 describe("menu category undo", () => {
   const change = {
     storeId: "s1",

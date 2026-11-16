@@ -13,6 +13,7 @@ export async function baseCurrency(storeId: string) {
   const { currency, rate } = await storefrontService.getOwnerCurrencyAndRate(storeId);
   return {
     currency,
+    rate,
     convert: (amount: unknown) =>
       money(storefrontService.convertBaseToOwnerSync(num(amount), rate)),
     toBase: (amountInStoreCurrency: number) =>

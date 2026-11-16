@@ -24,6 +24,8 @@ const storefrontService = vi.hoisted(() => ({
   getStorefrontByStoreId: vi.fn(),
   resolveMenuCategoryId: vi.fn(),
   createMenuItem: vi.fn(),
+  // IDR → the store's currency; IDR stores use rate 1.
+  getOwnerCurrencyAndRate: vi.fn(async () => ({ currency: "IDR", rate: 1 })),
 }));
 const productRepository = vi.hoisted(() => ({ updateOptionGroups: vi.fn() }));
 const authorizeMcpStore = vi.hoisted(() => vi.fn());
@@ -141,6 +143,10 @@ describe("menu tools", () => {
       },
     });
     storefrontService.getStorefrontByStoreId.mockResolvedValue(SF);
+    storefrontService.getOwnerCurrencyAndRate.mockResolvedValue({ currency: "IDR", rate: 1 });
+    prisma.product.findFirst.mockResolvedValue(null);
+    prisma.product.update.mockResolvedValue({});
+    prisma.menuItem.updateMany.mockResolvedValue({ count: 0 });
     prisma.storefront.findUnique.mockResolvedValue(SF);
     prisma.product.findMany.mockResolvedValue([]);
     prisma.menuCategory.findMany.mockResolvedValue([]);
@@ -351,6 +357,262 @@ describe("menu tools", () => {
       });
       expect(storefrontService.resolveMenuCategoryId).not.toHaveBeenCalled();
       expect(json.newCategories).toEqual(["BUILD YOUR OWN"]);
+    });
+  });
+
+  // One price per product: a linked menu item and its inventory product are the
+  // same thing on sale, so a price change reaches both in one transaction.
+  describe("linked product price", () => {
+    const earlGrey = (overrides: Record<string, unknown> = {}) =>
+      row("a", {
+        name: "Earl grey",
+        price: new Prisma.Decimal(30000),
+        productId: "p1",
+        product: { name: "Earl grey", buildYourOwn: false, optionGroups: [] },
+        ...overrides,
+      });
+    const product = (price: number) => ({
+      id: "p1",
+      name: "Earl grey",
+      sku: "EARL-GREY",
+      sellingPrice: new Prisma.Decimal(price),
+      costPrice: new Prisma.Decimal(0),
+    });
+    /** menuItem.findMany: the call's own rows by id, other items by productId. */
+    const menuRows = (own: unknown[], linked: unknown[] = []) =>
+      prisma.menuItem.findMany.mockImplementation(
+        async (args: { where: { productId?: string } }) => (args.where.productId ? linked : own)
+      );
+
+    it("sets the product's price in the same transaction as the menu item", async () => {
+      menuRows([earlGrey()]);
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+      const { json } = await run(updateMenuItem, { itemId: "a", price: 45000 });
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: "p1" },
+        data: { sellingPrice: new Prisma.Decimal("45000.00") },
+      });
+      expect(json.updated[0].price).toBe("45000.00");
+      expect(json.linkedProducts).toEqual([
+        expect.objectContaining({
+          productId: "p1",
+          name: "Earl grey",
+          sku: "EARL-GREY",
+          sellingPrice: { from: "30000.00", to: "45000.00" },
+        }),
+      ]);
+      // The change history names the product too, and holds its before/after for undo.
+      const change = menuItemsChangeSchema.parse(recordAction.mock.calls[0][0].payload);
+      // (the mocked update returns the default row, hence "Item a")
+      expect(change.summary).toBe(
+        "Changed 1 menu item: Item a; also set linked product Earl grey (EARL-GREY) to 45000.00"
+      );
+      expect(change.products).toEqual([
+        { id: "p1", name: "Earl grey", sku: "EARL-GREY", before: "30000.00", after: "45000.00" },
+      ]);
+    });
+
+    it("also moves the other menu items linked to the product", async () => {
+      const sibling = earlGrey({ id: "b", name: "Earl grey (iced)" });
+      prisma.menuItem.findMany.mockImplementation(
+        async (args: { where: { productId?: string; id?: { in: string[] } } }) => {
+          if (args.where.productId) return [sibling];
+          const ids = args.where.id?.in ?? [];
+          if (ids.includes("b") && !ids.includes("a")) {
+            return [{ ...sibling, price: new Prisma.Decimal(45000) }];
+          }
+          return [earlGrey()];
+        }
+      );
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+      const { json } = await run(updateMenuItem, { itemId: "a", price: 45000 });
+
+      expect(prisma.menuItem.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ["b"] } },
+        data: { price: new Prisma.Decimal(45000), currency: "IDR" },
+      });
+      expect(json.linkedProducts[0].alsoUpdatesMenuItems).toEqual([
+        { itemId: "b", name: "Earl grey (iced)" },
+      ]);
+      const change = menuItemsChangeSchema.parse(recordAction.mock.calls[0][0].payload);
+      expect(change.updated.map((u) => u.before.id)).toEqual(["a", "b"]);
+      expect(change.updated[1].before.price).toBe("30000.00");
+      expect(change.updated[1].after.price).toBe("45000.00");
+      expect(change.summary).toMatch(/and 1 other menu item/);
+    });
+
+    it("repairs a product that drifted even when the menu price is already right", async () => {
+      menuRows([earlGrey({ price: new Prisma.Decimal(45000) })]);
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+      const { json } = await run(updateMenuItem, { itemId: "a", price: 45000 });
+
+      expect(prisma.product.update).toHaveBeenCalledTimes(1);
+      expect(json.updated[0].changes).toEqual({});
+      expect(json.linkedProducts).toHaveLength(1);
+    });
+
+    it("leaves a product that is already at the price alone", async () => {
+      menuRows([earlGrey()]);
+      prisma.product.findFirst.mockResolvedValue(product(45000));
+      const { json } = await run(updateMenuItem, { itemId: "a", price: 45000 });
+
+      expect(prisma.product.update).not.toHaveBeenCalled();
+      expect(json.linkedProducts).toBeUndefined();
+      expect(
+        menuItemsChangeSchema.parse(recordAction.mock.calls[0][0].payload).products
+      ).toBeUndefined();
+    });
+
+    it("touches no product when the item isn't linked or no price is given", async () => {
+      menuRows([row("a")]);
+      await run(updateMenuItem, { itemId: "a", price: 45000 });
+      menuRows([earlGrey()]);
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+      await run(updateMenuItem, { itemId: "a", available: false });
+
+      expect(prisma.product.update).not.toHaveBeenCalled();
+    });
+
+    it("shows the product price change in a preview and writes nothing", async () => {
+      menuRows([earlGrey()]);
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+      const { json } = await run(updateMenuItem, { itemId: "a", price: 45000, mode: "preview" });
+
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.product.update).not.toHaveBeenCalled();
+      expect(json.changes[0].linkedProduct).toMatchObject({
+        name: "Earl grey",
+        sellingPrice: { from: "30000.00", to: "45000.00" },
+      });
+    });
+
+    it("works the same in update_menu_items, and refuses two prices for one product", async () => {
+      const other = earlGrey({ id: "b", name: "Earl grey (iced)" });
+      menuRows([earlGrey(), other]);
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+
+      const ok = await run(updateMenuItems, {
+        updates: [
+          { itemId: "a", price: 45000 },
+          { itemId: "b", price: 45000 },
+        ],
+      });
+      expect(ok.isError).toBe(false);
+      expect(prisma.product.update).toHaveBeenCalledTimes(1);
+
+      prisma.$transaction.mockClear();
+      const clash = await run(updateMenuItems, {
+        updates: [
+          { itemId: "a", price: 45000 },
+          { itemId: "b", price: 40000 },
+        ],
+      });
+      expect(clash.isError).toBe(true);
+      expect(clash.text).toMatch(/same inventory product but get different prices/);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("converts a non-IDR price to the product's base currency", async () => {
+      // 1 IDR = 0.0001 EUR: a €4.50 item is a 45,000 IDR product.
+      storefrontService.getOwnerCurrencyAndRate.mockResolvedValue({
+        currency: "EUR",
+        rate: 0.0001,
+      });
+      menuRows([earlGrey({ price: new Prisma.Decimal(3) })]);
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+      const { json } = await run(updateMenuItem, { itemId: "a", price: 4.5 });
+
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: "p1" },
+        data: { sellingPrice: new Prisma.Decimal("45000.00") },
+      });
+      expect(json.linkedProducts[0].sellingPrice).toEqual({ from: "3.00", to: "4.50" });
+    });
+
+    it("does not treat a rate-only difference as a price change", async () => {
+      // The product converts to €3.00 today, so a €3.00 item is already in step.
+      storefrontService.getOwnerCurrencyAndRate.mockResolvedValue({
+        currency: "EUR",
+        rate: 0.0001,
+      });
+      menuRows([earlGrey({ price: new Prisma.Decimal(3) })]);
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+      await run(updateMenuItem, { itemId: "a", price: 3 });
+      expect(prisma.product.update).not.toHaveBeenCalled();
+    });
+
+    it("leaves the product alone for a composable item priced 0", async () => {
+      menuRows([earlGrey({ buildYourOwn: true, price: new Prisma.Decimal(0) })]);
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+      const { json } = await run(updateMenuItem, { itemId: "a", price: 0 });
+
+      expect(prisma.product.update).not.toHaveBeenCalled();
+      expect(json.warnings).toEqual([expect.stringMatching(/composable at price 0/)]);
+    });
+
+    it("takes the product's price when linked without one", async () => {
+      menuRows([row("a")]);
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: "p1",
+          name: "Earl grey",
+          department: "KITCHEN",
+          buildYourOwn: false,
+          sellingPrice: new Prisma.Decimal(30000),
+          optionGroups: [],
+        },
+      ]);
+      const { json } = await run(updateMenuItem, { itemId: "a", linkedProductId: "p1" });
+
+      expect(prisma.menuItem.update).toHaveBeenCalledWith({
+        where: { id: "a" },
+        data: expect.objectContaining({ productId: "p1", price: new Prisma.Decimal(30000) }),
+      });
+      expect(json.updated[0].changes.price).toEqual({ from: "20000.00", to: "30000.00" });
+      expect(prisma.product.update).not.toHaveBeenCalled();
+      expect(json.warnings[0]).toMatch(/takes the price of the product Earl grey/);
+    });
+
+    it("create_menu_items sets the linked product's price too", async () => {
+      prisma.product.findMany.mockResolvedValue([
+        {
+          id: "p1",
+          name: "Earl grey",
+          department: "KITCHEN",
+          buildYourOwn: false,
+          sellingPrice: new Prisma.Decimal(30000),
+          optionGroups: [],
+        },
+      ]);
+      prisma.menuItem.findMany.mockResolvedValue([]);
+      prisma.product.findFirst.mockResolvedValue(product(30000));
+      storefrontService.resolveMenuCategoryId.mockResolvedValue(null);
+      storefrontService.createMenuItem.mockResolvedValue(
+        row("new-1", { name: "Earl grey", price: new Prisma.Decimal(45000), productId: "p1" })
+      );
+
+      const preview = await run(createMenuItems, {
+        mode: "preview",
+        items: [{ name: "Earl grey", price: 45000, linkedProductId: "p1" }],
+      });
+      expect(preview.json.wouldCreate[0].linkedProduct.sellingPrice).toEqual({
+        from: "30000.00",
+        to: "45000.00",
+      });
+      expect(prisma.product.update).not.toHaveBeenCalled();
+
+      const { json } = await run(createMenuItems, {
+        items: [{ name: "Earl grey", price: 45000, linkedProductId: "p1" }],
+      });
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: "p1" },
+        data: { sellingPrice: new Prisma.Decimal("45000.00") },
+      });
+      expect(json.linkedProducts[0].sellingPrice.to).toBe("45000.00");
+      const change = menuItemsChangeSchema.parse(recordAction.mock.calls[0][0].payload);
+      expect(change.products?.[0]).toMatchObject({ before: "30000.00", after: "45000.00" });
     });
   });
 

@@ -329,3 +329,50 @@ describe("Smart Import: recipes", () => {
     expect(cake.costPerBatch).toBe(20 * 17000);
   });
 });
+
+// Re-importing a partial row (a name and a new price) must change only what the
+// row carries, and a changed price must reach the product's menu items.
+describe("Smart Import: updating an existing product", () => {
+  it("leaves cost, reorder level and unit alone when the row doesn't carry them", async () => {
+    db.productFindFirst.mockResolvedValue({
+      id: "prod-1",
+      currentStock: 30,
+      unit: "cup",
+      sellingPrice: 30000,
+    });
+
+    await importRows([{ name: "Earl grey", category: "products", sellingPrice: 45000 }]);
+
+    const { data } = db.productUpdate.mock.calls[0][0];
+    expect(data.sellingPrice).toBe(45000);
+    expect(data).not.toHaveProperty("costPrice");
+    expect(data).not.toHaveProperty("minStock");
+    expect(data).not.toHaveProperty("unit");
+  });
+
+  it("writes the new price to the product's linked menu items in the same update", async () => {
+    db.productFindFirst.mockResolvedValue({ id: "prod-1", currentStock: 30, unit: "cup" });
+
+    await importRows([{ name: "Earl grey", category: "products", sellingPrice: 45000 }]);
+
+    const { data } = db.productUpdate.mock.calls[0][0];
+    expect(data.menuItems.updateMany.where).toEqual({});
+    expect(data.menuItems.updateMany.data.price.toString()).toBe("45000");
+    expect(data.menuItems.updateMany.data.currency).toBe("IDR");
+  });
+
+  it("doesn't touch menu items when the row has no price", async () => {
+    db.productFindFirst.mockResolvedValue({ id: "prod-1", currentStock: 30, unit: "cup" });
+
+    await importRows([{ name: "Earl grey", category: "products", unit: "cup" }]);
+
+    expect(db.productUpdate.mock.calls[0][0].data).not.toHaveProperty("menuItems");
+  });
+
+  it("starts a NEW product from the defaults", async () => {
+    await importRows([{ name: "Matcha", category: "products", sellingPrice: 30000 }]);
+
+    const { data } = db.productCreate.mock.calls[0][0];
+    expect(data).toMatchObject({ costPrice: 0, minStock: 0, unit: "pcs", sellingPrice: 30000 });
+  });
+});

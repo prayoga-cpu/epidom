@@ -7,6 +7,7 @@ import {
   listInventory,
   listStockMovements,
   recordWaste,
+  updateProduct,
 } from "./inventory";
 import {
   cancelSupplierOrder,
@@ -67,6 +68,7 @@ export const MCP_TOOLS: readonly McpTool[] = [
   listStockMovements,
   adjustStock,
   recordWaste,
+  updateProduct,
   // Suppliers
   listSuppliers,
   listSupplierOrders,

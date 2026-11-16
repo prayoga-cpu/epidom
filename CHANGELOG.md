@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.48.1] - 2026-11-16 · fix
+
+- **A menu item and its inventory product now always show the same price.** Changing the price of a menu item that is linked to an inventory product (from Claude, or any other path) used to update only the menu, so the Inventory page kept the old price. The price now goes to the product, and to any other menu item linked to it, in one step, and the other way round (changing a product's price, including through an import, updates its menu items). Undoing a menu price change from Claude puts both prices back, and Claude's answer and the change history say that the product was updated too.
+- **Claude can now change one product without re-importing it.** The new `update_product` tool sets a product's selling price, cost, SKU or name. The import preview now says, for each row, whether a commit would update the product, skip it or create it; re-importing a row with only a name and a price no longer resets that product's cost, reorder level and unit.
+- **Linking a product to an existing menu item (Data → Add product) now sets that menu item to the product's selling price.**
+- **Ops:** a new "Reconcile linked prices" workflow lists, and on request fixes, every menu item whose price differs from its product's.
+
 ## [3.48.0] - 2026-11-11 · infra
 
 - **Epidom now runs on its own Pro hosting account.** The app and its addresses moved to the Epidom team with no downtime; sign-in, payments and your data are unchanged.

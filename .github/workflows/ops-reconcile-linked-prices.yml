@@ -1,0 +1,59 @@
+name: Ops — Reconcile linked prices
+
+# Audits menu items whose price differs from the inventory product they are
+# linked to, and (only when "apply" is ticked) makes them agree.
+# Default is a dry run: it lists the mismatches and changes nothing.
+# Read the list first, then re-run with apply + the side that is right.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Fix the mismatches (unticked = list only)"
+        type: boolean
+        default: false
+      prefer:
+        description: "When applying: which price wins (menu = product takes the menu price, product = menu takes the product price)"
+        type: choice
+        options: [menu, product]
+        default: menu
+      store_id:
+        description: "Limit to one store id (blank = every store)"
+        type: string
+        default: ""
+
+jobs:
+  reconcile:
+    name: Reconcile linked prices
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: node node_modules/prisma/build/index.js generate
+
+      - name: Run the reconcile script
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APPLY: ${{ inputs.apply }}
+          PREFER: ${{ inputs.prefer }}
+          STORE_ID: ${{ inputs.store_id }}
+        run: |
+          ARGS=""
+          if [ -n "$STORE_ID" ]; then ARGS="$ARGS --store $STORE_ID"; fi
+          if [ "$APPLY" = "true" ]; then ARGS="$ARGS --apply --prefer=$PREFER"; fi
+          pnpm tsx scripts/reconcile-linked-prices.ts $ARGS

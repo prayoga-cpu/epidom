@@ -174,9 +174,20 @@ export class ProductService {
 
     // If user selected an existing menu item, link it instead of creating a new one
     if (data.linkedMenuItemId && data.linkedMenuItemId !== "none") {
+      // The product is the source of truth for the price, so the item it is
+      // linked to starts at the product's price (the form's selling price).
+      const linkedPrice = await storefrontService.convertBaseCurrencyToOwner(
+        data.storeId,
+        Number(product.sellingPrice)
+      );
       await prisma.menuItem.update({
         where: { id: data.linkedMenuItemId },
-        data: { productId: product.id, department: product.department },
+        data: {
+          productId: product.id,
+          department: product.department,
+          price: linkedPrice.price,
+          currency: linkedPrice.currency,
+        },
       });
     } else {
       // Auto-add the new product to the store's POS/storefront menu by default —
@@ -309,6 +320,50 @@ export class ProductService {
     const stockDelta =
       data.currentStock !== undefined ? data.currentStock - Number(currentProduct.currentStock) : 0;
 
+    // Keep any storefront menu item(s) linked to this product (MenuItem.productId)
+    // in sync automatically — a linked MenuItem is what customers/POS actually see,
+    // so its name/price/department/category should never drift from the Product
+    // it's backed by. Written as a nested update of the product itself, so the
+    // product and its menu items change in one atomic statement: a failure can
+    // never leave the Inventory page and the till showing different prices.
+    const menuFieldChanged =
+      data.name !== undefined ||
+      data.sellingPrice !== undefined ||
+      data.department !== undefined ||
+      data.category !== undefined;
+
+    let menuSync: Prisma.MenuItemUpdateManyMutationInput | null = null;
+    if (menuFieldChanged) {
+      // data.sellingPrice is in IDR (the platform base currency); MenuItem.price
+      // must be a literal value in the owner's own currency, so it needs
+      // converting before it overwrites the linked menu item(s) — copying it
+      // raw silently mis-prices every non-IDR store's menu by the full
+      // exchange-rate factor.
+      const priceUpdate =
+        data.sellingPrice !== undefined
+          ? await storefrontService.convertBaseCurrencyToOwner(storeId, data.sellingPrice)
+          : null;
+
+      // MenuItem groups by a relational MenuCategory, not the Product's own
+      // free-text `category` string — so a category change has to be resolved
+      // to (or create) a real MenuCategory row, otherwise the linked item
+      // stays filed under its old heading everywhere it's displayed (POS
+      // Cashier and the public storefront both group by this).
+      const categoryUpdate =
+        data.category !== undefined
+          ? {
+              categoryId: await storefrontService.resolveMenuCategoryId(storeId, data.category),
+            }
+          : null;
+
+      menuSync = {
+        ...(data.name !== undefined && { name: data.name || currentProduct.name }),
+        ...(priceUpdate && { price: priceUpdate.price, currency: priceUpdate.currency }),
+        ...(data.department !== undefined && { department: data.department }),
+        ...(categoryUpdate ?? {}),
+      };
+    }
+
     // Update basic product fields
     let updatedProduct: ProductWithRelations;
     try {
@@ -331,6 +386,10 @@ export class ProductService {
         ...(data.maxStock !== undefined && { maxStock: data.maxStock }),
         ...(data.productionTime !== undefined && { productionTime: data.productionTime }),
         ...(data.shelfLife !== undefined && { shelfLife: data.shelfLife }),
+        ...(menuSync &&
+          Object.keys(menuSync).length > 0 && {
+            menuItems: { updateMany: { where: {}, data: menuSync } },
+          }),
       });
     } catch (error) {
       if (data.barcode && isBarcodeUniqueViolation(error)) throw barcodeTakenError(data.barcode);
@@ -351,56 +410,6 @@ export class ProductService {
       publishStoreEvent(storeId, REALTIME_EVENTS.STOCK_CHANGED, {
         action: "updated",
         entityId: productId,
-      });
-    }
-
-    // Keep any storefront menu item(s) linked to this product (MenuItem.productId)
-    // in sync automatically — a linked MenuItem is what customers/POS actually see,
-    // so its name/price/department/category should never drift from the Product
-    // it's backed by.
-    const menuFieldChanged =
-      data.name !== undefined ||
-      data.sellingPrice !== undefined ||
-      data.department !== undefined ||
-      data.category !== undefined;
-
-    if (menuFieldChanged) {
-      // updatedProduct.sellingPrice is stored in IDR (the platform base
-      // currency); MenuItem.price must be a literal value in the owner's
-      // own currency, so it needs converting before it overwrites the
-      // linked menu item(s) — copying it raw silently mis-prices every
-      // non-IDR store's menu by the full exchange-rate factor.
-      const priceUpdate =
-        data.sellingPrice !== undefined
-          ? await storefrontService.convertBaseCurrencyToOwner(
-              storeId,
-              Number(updatedProduct.sellingPrice)
-            )
-          : null;
-
-      // MenuItem groups by a relational MenuCategory, not the Product's own
-      // free-text `category` string — so a category change has to be resolved
-      // to (or create) a real MenuCategory row, otherwise the linked item
-      // stays filed under its old heading everywhere it's displayed (POS
-      // Cashier and the public storefront both group by this).
-      const categoryUpdate =
-        data.category !== undefined
-          ? {
-              categoryId: await storefrontService.resolveMenuCategoryId(
-                storeId,
-                updatedProduct.category
-              ),
-            }
-          : null;
-
-      await prisma.menuItem.updateMany({
-        where: { productId },
-        data: {
-          ...(data.name !== undefined && { name: updatedProduct.name }),
-          ...(priceUpdate && { price: priceUpdate.price, currency: priceUpdate.currency }),
-          ...(data.department !== undefined && { department: updatedProduct.department }),
-          ...(categoryUpdate ?? {}),
-        },
       });
     }
 

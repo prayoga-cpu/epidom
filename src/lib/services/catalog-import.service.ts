@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { MovementType } from "@prisma/client";
+import { MovementType, Prisma } from "@prisma/client";
 import { ENTITY_UNIQUE_FIELDS } from "@/lib/ai/import-schema";
 import { storefrontService } from "@/lib/services/storefront.service";
 import { parseImportedBarcode } from "@/lib/utils/barcode";
@@ -312,14 +312,14 @@ export async function importProducts(data: any[], storeId: string): Promise<Impo
             storeId,
             name: { equals: name, mode: "insensitive" },
           },
-          select: { id: true, currentStock: true },
+          select: { id: true, currentStock: true, unit: true, sellingPrice: true },
         });
 
         // If not found by name, try finding by SKU if provided
         if (!existingProduct && sku) {
           existingProduct = await prisma.product.findFirst({
             where: { storeId, sku },
-            select: { id: true, currentStock: true },
+            select: { id: true, currentStock: true, unit: true, sellingPrice: true },
           });
         }
 
@@ -344,6 +344,19 @@ export async function importProducts(data: any[], storeId: string): Promise<Impo
           String(item.currentStock).trim() !== "";
         const importedStock = hasStock ? parseGlobalNumber(item.currentStock) || 0 : undefined;
 
+        // A column the sheet doesn't give (or a blank cell) is "leave it", never
+        // "set it to zero": re-importing a partial row such as just a name and a
+        // new price used to zero the cost and the reorder level and reset the
+        // unit of the product it matched. A NEW product gets the defaults below.
+        const given = (value: unknown) =>
+          value !== undefined && value !== null && String(value).trim() !== "";
+        const costOwner = given(item.costPrice)
+          ? parseImportedMoney(item.costPrice, moneyDecimals) || 0
+          : undefined;
+        const sellingOwner = given(item.sellingPrice)
+          ? parseImportedMoney(item.sellingPrice, moneyDecimals) || 0
+          : undefined;
+
         const productData = {
           name,
           sku,
@@ -352,19 +365,17 @@ export async function importProducts(data: any[], storeId: string): Promise<Impo
           ...(barcode && { barcode }),
           description: item.description || undefined,
           category: item.category || undefined,
-          unit: item.unit || "pcs",
-          costPrice: storefrontService.convertOwnerToBaseSync(
-            parseImportedMoney(item.costPrice, moneyDecimals) || 0,
-            importRate
-          ),
-          sellingPrice: storefrontService.convertOwnerToBaseSync(
-            parseImportedMoney(item.sellingPrice, moneyDecimals) || 0,
-            importRate
-          ),
+          ...(item.unit && { unit: String(item.unit) }),
+          ...(costOwner !== undefined && {
+            costPrice: storefrontService.convertOwnerToBaseSync(costOwner, importRate),
+          }),
+          ...(sellingOwner !== undefined && {
+            sellingPrice: storefrontService.convertOwnerToBaseSync(sellingOwner, importRate),
+          }),
           // Left out when the sheet has no stock (column or cell), like the
           // barcode above: re-importing without it used to zero every product.
           ...(importedStock !== undefined && { currentStock: importedStock }),
-          minStock: parseGlobalNumber(item.minStock) || 0,
+          ...(given(item.minStock) && { minStock: parseGlobalNumber(item.minStock) || 0 }),
           maxStock: item.maxStock ? parseGlobalNumber(item.maxStock) : undefined,
           updatedAt: new Date(), // Always update timestamp
         };
@@ -384,9 +395,19 @@ export async function importProducts(data: any[], storeId: string): Promise<Impo
                   create: {
                     type: MovementType.ADJUSTMENT,
                     quantity: stockDelta,
-                    unit: productData.unit,
+                    unit: productData.unit ?? existingProduct.unit,
                     balanceAfter: importedStock!,
                     notes: `Stock ${stockDelta > 0 ? "increase" : "decrease"} - Import`,
+                  },
+                },
+              }),
+              // The menu items linked to this product take the new price in the
+              // same write, so the till and the Inventory page can't disagree.
+              ...(sellingOwner !== undefined && {
+                menuItems: {
+                  updateMany: {
+                    where: {},
+                    data: { price: new Prisma.Decimal(sellingOwner), currency: importCurrency },
                   },
                 },
               }),
@@ -396,15 +417,20 @@ export async function importProducts(data: any[], storeId: string): Promise<Impo
         } else {
           // CREATE new product
           const openingStock = importedStock ?? 0;
+          const unit = productData.unit ?? "pcs";
           const created = await prisma.product.create({
             data: {
+              costPrice: 0,
+              sellingPrice: 0,
+              minStock: 0,
               ...productData,
+              unit,
               sku: sku ?? (await nextSku(name)),
               currentStock: openingStock,
               storeId,
               createdAt: item.createdAt || new Date(),
               ...(openingStock !== 0 && {
-                stockMovements: { create: openingStockMovement(openingStock, productData.unit) },
+                stockMovements: { create: openingStockMovement(openingStock, unit) },
               }),
             },
           });
@@ -416,7 +442,7 @@ export async function importProducts(data: any[], storeId: string): Promise<Impo
         await storefrontService.autoLinkProductToMenu(storeId, {
           id: productId,
           name: productData.name,
-          sellingPrice: productData.sellingPrice,
+          sellingPrice: productData.sellingPrice ?? Number(existingProduct?.sellingPrice ?? 0),
           category: productData.category ?? null,
         });
 

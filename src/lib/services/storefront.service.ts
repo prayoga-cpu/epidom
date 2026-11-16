@@ -13,6 +13,9 @@ import { Prisma, Department } from "@prisma/client";
 import { parseGoogleReviewInput, type GoogleLinkFailure } from "@/lib/utils/google-review";
 import { getExchangeRate } from "./exchange-rate.service";
 import { getFinanceSettings } from "./finance-settings.service";
+import { applyLinkedPrice } from "./linked-price";
+import { publishStoreEvent } from "@/lib/realtime/publish";
+import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 
 /**
  * The pasted Google link couldn't be turned into a review link. `reason`
@@ -647,28 +650,72 @@ export class StorefrontService {
       throw new Error("Menu item not found or does not belong to this storefront");
     }
 
-    return prisma.menuItem.update({
-      where: { id: itemId },
-      data: {
-        categoryId: input.categoryId !== undefined ? input.categoryId : item.categoryId,
-        productId: input.productId !== undefined ? input.productId : item.productId,
-        department: input.department !== undefined ? input.department : item.department,
-        name: input.name !== undefined ? input.name : item.name,
-        description: input.description !== undefined ? input.description : item.description,
-        price: input.price !== undefined ? new Prisma.Decimal(input.price) : item.price,
-        currency: input.currency !== undefined ? input.currency : item.currency,
-        imageUrl: input.imageUrl !== undefined ? input.imageUrl : item.imageUrl,
-        isAvailable: input.isAvailable !== undefined ? input.isAvailable : item.isAvailable,
-        showOnCashier: input.showOnCashier !== undefined ? input.showOnCashier : item.showOnCashier,
-        isFeatured: input.isFeatured !== undefined ? input.isFeatured : item.isFeatured,
-        displayOrder: input.displayOrder !== undefined ? input.displayOrder : item.displayOrder,
-        modifiers:
-          input.modifiers !== undefined
-            ? (input.modifiers as Prisma.InputJsonValue)
-            : (item.modifiers as Prisma.InputJsonValue),
-        buildYourOwn: input.buildYourOwn !== undefined ? input.buildYourOwn : item.buildYourOwn,
-      },
+    const data = {
+      categoryId: input.categoryId !== undefined ? input.categoryId : item.categoryId,
+      productId: input.productId !== undefined ? input.productId : item.productId,
+      department: input.department !== undefined ? input.department : item.department,
+      name: input.name !== undefined ? input.name : item.name,
+      description: input.description !== undefined ? input.description : item.description,
+      price: input.price !== undefined ? new Prisma.Decimal(input.price) : item.price,
+      currency: input.currency !== undefined ? input.currency : item.currency,
+      imageUrl: input.imageUrl !== undefined ? input.imageUrl : item.imageUrl,
+      isAvailable: input.isAvailable !== undefined ? input.isAvailable : item.isAvailable,
+      showOnCashier: input.showOnCashier !== undefined ? input.showOnCashier : item.showOnCashier,
+      isFeatured: input.isFeatured !== undefined ? input.isFeatured : item.isFeatured,
+      displayOrder: input.displayOrder !== undefined ? input.displayOrder : item.displayOrder,
+      modifiers:
+        input.modifiers !== undefined
+          ? (input.modifiers as Prisma.InputJsonValue)
+          : (item.modifiers as Prisma.InputJsonValue),
+      buildYourOwn: input.buildYourOwn !== undefined ? input.buildYourOwn : item.buildYourOwn,
+    };
+
+    // A linked item's price is its product's price: a changed price here also
+    // reaches the product and every other menu item linked to it, in the same
+    // transaction. Only an actual change counts: the editor re-sends the price
+    // it loaded on every save, and that must not overwrite a product price that
+    // was changed elsewhere in the meantime.
+    const linkedProductId = data.productId;
+    const priceChanged =
+      input.price !== undefined && !new Prisma.Decimal(input.price).equals(item.price);
+    // Not for a composable item priced 0: its price is its choices.
+    const priceIsChoices = input.price === 0 && data.buildYourOwn;
+    if (!linkedProductId || !priceChanged || priceIsChoices) {
+      return prisma.menuItem.update({ where: { id: itemId }, data });
+    }
+
+    const storefront = await prisma.storefront.findUnique({
+      where: { id: storefrontId },
+      select: { storeId: true },
     });
+    if (!storefront) throw new Error("Menu item not found or does not belong to this storefront");
+    const { currency, rate } = await this.getOwnerCurrencyAndRate(storefront.storeId);
+
+    const { updated, applied } = await prisma.$transaction(async (tx) => {
+      const applied = await applyLinkedPrice(tx, {
+        storeId: storefront.storeId,
+        productId: linkedProductId,
+        ownerPrice: Number(input.price),
+        currency,
+        rate,
+        excludeItemIds: [itemId],
+      });
+      const updated = await tx.menuItem.update({ where: { id: itemId }, data });
+      return { updated, applied };
+    });
+    if (applied.productChanged) {
+      publishStoreEvent(storefront.storeId, REALTIME_EVENTS.PRODUCT_CHANGED, {
+        action: "updated",
+        entityId: applied.productId,
+      });
+    }
+    for (const sibling of applied.siblings) {
+      publishStoreEvent(storefront.storeId, REALTIME_EVENTS.MENU_CHANGED, {
+        action: "updated",
+        entityId: sibling.id,
+      });
+    }
+    return updated;
   }
 
   async deleteMenuItem(itemId: string, storefrontId: string) {

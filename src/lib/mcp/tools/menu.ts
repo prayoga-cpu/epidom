@@ -15,6 +15,15 @@ import {
 import { publishStoreEvent } from "@/lib/realtime/publish";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 import { getFinanceSettings } from "@/lib/services/finance-settings.service";
+import {
+  applyLinkedPrice,
+  baseForOwnerPrice,
+  baseToOwner,
+  inspectLinkedPrice,
+  samePrice,
+  type LinkedPriceInspection,
+} from "@/lib/services/linked-price";
+import type { LinkedProductPrice } from "@/lib/audit/menu-undo";
 import type { McpStoreContext } from "../authorize";
 import { defineStoreTool } from "../define-tool";
 import { McpToolError, relayKnownError } from "../errors";
@@ -104,6 +113,9 @@ interface ProductView {
   name: string;
   department: Department;
   hasOptionGroups: boolean;
+  buildYourOwn: boolean;
+  /** Product.sellingPrice as stored (base currency); undefined when unknown. */
+  sellingPrice?: number;
 }
 
 /** This store's products among `ids`; a foreign or unknown id is simply absent. */
@@ -111,7 +123,14 @@ async function loadProducts(storeId: string, ids: string[]): Promise<Map<string,
   if (ids.length === 0) return new Map();
   const rows = await prisma.product.findMany({
     where: { id: { in: [...new Set(ids)] }, storeId },
-    select: { id: true, name: true, department: true, optionGroups: { select: { id: true } } },
+    select: {
+      id: true,
+      name: true,
+      department: true,
+      buildYourOwn: true,
+      sellingPrice: true,
+      optionGroups: { select: { id: true } },
+    },
   });
   return new Map(
     rows.map((row) => [
@@ -121,9 +140,47 @@ async function loadProducts(storeId: string, ids: string[]): Promise<Map<string,
         name: row.name,
         department: row.department,
         hasOptionGroups: row.optionGroups.length > 0,
+        buildYourOwn: row.buildYourOwn === true,
+        sellingPrice: row.sellingPrice === undefined ? undefined : Number(row.sellingPrice),
       },
     ])
   );
+}
+
+/** The store's currency and the IDR → currency rate, for converting a product's price. */
+async function ownerMoney(storeId: string): Promise<{ currency: string; rate: number }> {
+  return storefrontService.getOwnerCurrencyAndRate(storeId);
+}
+
+/** How a linked product's price change reads in a preview and in the result. */
+function describeLinked(found: LinkedPriceInspection) {
+  return {
+    productId: found.productId,
+    name: found.productName,
+    sku: found.productSku,
+    sellingPrice: { from: found.beforeOwner, to: found.afterOwner },
+    alsoUpdatesMenuItems:
+      found.siblings.length > 0
+        ? found.siblings.map((item) => ({ itemId: item.id, name: item.name }))
+        : undefined,
+    warning: found.belowCost ? "The new price is below the product's cost price." : undefined,
+  };
+}
+
+/** True when the inspection would change anything beyond the item the caller edits. */
+const linkedWouldChange = (found: LinkedPriceInspection) =>
+  found.productChanged || found.siblings.length > 0;
+
+/** The sentence the change history shows for the linked products a change also moved. */
+function linkedSummary(applied: LinkedPriceInspection[]): string {
+  const parts = applied.filter(linkedWouldChange).map((found) => {
+    const others = found.siblings.length;
+    const extra = others > 0 ? ` and ${others} other menu item${others === 1 ? "" : "s"}` : "";
+    return found.productChanged
+      ? `linked product ${found.productName} (${found.productSku}) to ${found.afterOwner}${extra}`
+      : `${others} other menu item${others === 1 ? "" : "s"} linked to ${found.productName} to ${found.afterOwner}`;
+  });
+  return parts.length > 0 ? `; also set ${parts.join("; ")}` : "";
 }
 
 const OPTION_GROUPS_DESCRIPTION =
@@ -304,8 +361,9 @@ export const createMenuItems = defineStoreTool({
     "one go, copying choices from existing items with fromMenuItemId. Items whose name already exists " +
     "on the menu are skipped unless allowDuplicates is true. An item is standalone (selling it does not " +
     "touch stock) unless you pass linkedProductId, an inventory product id from list_inventory " +
-    "(type: products); to create new products, use import_catalog (kind: product), which also puts " +
-    "them on the menu. Use mode: preview first, then commit.",
+    "(type: products); a linked item's price (when above 0 and not composable) also becomes that " +
+    "product's selling price, so the menu and Inventory agree. To create new products, use " +
+    "import_catalog (kind: product), which also puts them on the menu. Use mode: preview first, then commit.",
   input: z.object({
     ...storeIdInput,
     items: z.array(newItem).min(1).max(50),
@@ -335,6 +393,12 @@ export const createMenuItems = defineStoreTool({
       ctx.storeId,
       input.items.flatMap((item) => (item.linkedProductId ? [item.linkedProductId] : []))
     );
+
+    // A priced item that sells a product also sets that product's price (one
+    // price per product); needs the store's currency to convert it.
+    const owner = products.size > 0 ? await ownerMoney(ctx.storeId) : null;
+    const pricedProducts = new Map<string, number>();
+    const linkedApplied: Awaited<ReturnType<typeof applyLinkedPrice>>[] = [];
 
     const created: Array<{ itemId: string; name: string; price: string; category: string | null }> =
       [];
@@ -382,7 +446,38 @@ export const createMenuItems = defineStoreTool({
       const department =
         item.department ?? (product ? menuDepartment(product.department) : "KITCHEN");
 
+      // The price reaches the product unless it is a composable item, whose
+      // price is its choices.
+      const cascades =
+        product !== undefined &&
+        owner !== null &&
+        item.price > 0 &&
+        !item.composable &&
+        !product.buildYourOwn;
+      if (cascades) {
+        const given = pricedProducts.get(product.id);
+        if (given !== undefined && !samePrice(given, item.price)) {
+          skipped.push({
+            name: item.name,
+            reason: `another item in this call sells the same product at ${given}; a product has one price`,
+          });
+          continue;
+        }
+        baseForOwnerPrice(item.price, owner.rate); // refuses a price the product can't store
+        pricedProducts.set(product.id, item.price);
+      }
+      const linkedInput = (createdId: string) => ({
+        storeId: ctx.storeId,
+        productId: product!.id,
+        ownerPrice: item.price,
+        currency: owner!.currency,
+        rate: owner!.rate,
+        excludeItemIds: [createdId],
+      });
+
       if (preview) {
+        const found = cascades ? await inspectLinkedPrice(prisma, linkedInput("")) : null;
+        const shown = found && linkedWouldChange(found) ? describeLinked(found) : null;
         wouldCreate.push({
           name: item.name.trim(),
           price: money(item.price),
@@ -390,7 +485,14 @@ export const createMenuItems = defineStoreTool({
             ? { name: categoryName, exists: knownCategories.has(categoryKey) }
             : null,
           department,
-          linkedProduct: product ? { id: product.id, name: product.name } : undefined,
+          linkedProduct: product
+            ? {
+                id: product.id,
+                name: product.name,
+                sellingPrice: shown?.sellingPrice,
+                alsoUpdatesMenuItems: shown?.alsoUpdatesMenuItems,
+              }
+            : undefined,
           composable: item.composable || undefined,
           optionGroups: resolved ? previewGroups(resolved.modifiers) : undefined,
         });
@@ -429,6 +531,23 @@ export const createMenuItems = defineStoreTool({
       createdStates.push(toItemState(row));
       existing.add(key);
       menuChanged(ctx.storeId, "created", row.id);
+      if (cascades) {
+        // The product and its other menu items take the price in one transaction.
+        const applied = await prisma.$transaction((tx) =>
+          applyLinkedPrice(tx, linkedInput(row.id))
+        );
+        linkedApplied.push(applied);
+        if (applied.productChanged) {
+          publishStoreEvent(ctx.storeId, REALTIME_EVENTS.PRODUCT_CHANGED, {
+            action: "updated",
+            entityId: applied.productId,
+          });
+        }
+        for (const sibling of applied.siblings) menuChanged(ctx.storeId, "updated", sibling.id);
+        if (applied.belowCost) {
+          warnings.push(`${applied.productName}: the new price is below its cost price.`);
+        }
+      }
       created.push({
         itemId: row.id,
         name: row.name,
@@ -449,22 +568,47 @@ export const createMenuItems = defineStoreTool({
     }
     let changeId: string | null = null;
     if (createdStates.length > 0) {
+      // Other menu items that moved to a product's new price, and the products themselves.
+      const siblingStates = linkedApplied.flatMap((applied) =>
+        applied.siblings.map((item) => ({
+          before: toItemState(item),
+          after: toItemState(applied.siblingsAfter.find((s) => s.id === item.id) ?? item),
+        }))
+      );
+      const movedProducts: LinkedProductPrice[] = linkedApplied
+        .filter((applied) => applied.productChanged)
+        .map((applied) => ({
+          id: applied.productId,
+          name: applied.productName,
+          sku: applied.productSku,
+          before: applied.before,
+          after: applied.after,
+        }));
       changeId = await recordAction({
         actionType: "menu.items.change",
         storeId: ctx.storeId,
         payload: {
           storeId: ctx.storeId,
           storefrontId: storefront!.id,
-          summary: itemsSummary(
-            "Added",
-            createdStates.map((state) => state.name)
-          ),
-          updated: [],
+          summary:
+            itemsSummary(
+              "Added",
+              createdStates.map((state) => state.name)
+            ) + linkedSummary(linkedApplied),
+          updated: siblingStates,
           created: createdStates,
+          ...(movedProducts.length > 0 && { products: movedProducts }),
         },
       });
     }
-    return { created, skipped, warnings: uniqueWarnings, changeId: changeId ?? undefined };
+    const linkedProducts = linkedApplied.filter(linkedWouldChange).map(describeLinked);
+    return {
+      created,
+      skipped,
+      warnings: uniqueWarnings,
+      linkedProducts: linkedProducts.length > 0 ? linkedProducts : undefined,
+      changeId: changeId ?? undefined,
+    };
   },
 });
 
@@ -474,7 +618,15 @@ export const createMenuItems = defineStoreTool({
 
 const patchFields = {
   name: z.string().min(1).max(100).optional(),
-  price: z.number().min(0).optional(),
+  price: z
+    .number()
+    .min(0)
+    .optional()
+    .describe(
+      "In the store's currency. On an item linked to an inventory product this also sets the " +
+        "product's selling price and the price of any other menu item linked to it (a product has " +
+        "one price), in the same step."
+    ),
   description: z.string().max(300).optional(),
   category: z
     .string()
@@ -551,6 +703,11 @@ interface PlannedUpdate {
   /** A category to create at commit (preview never creates one). */
   newCategory: string | null;
   changes: Record<string, { from: unknown; to: unknown }>;
+  /**
+   * Set when the price given must also reach the product this item sells (and
+   * the other menu items linked to it): a product has one price.
+   */
+  linked: { productId: string; ownerPrice: number } | null;
 }
 
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -561,7 +718,8 @@ async function planUpdate(
   row: ItemRow,
   fields: PatchFields,
   products: Map<string, ProductView>,
-  warnings: string[]
+  warnings: string[],
+  owner: { currency: string; rate: number } | null
 ): Promise<PlannedUpdate> {
   const given = Object.entries(fields).filter(([, value]) => value !== undefined);
   if (given.length === 0) {
@@ -678,7 +836,45 @@ async function planUpdate(
     note("composable", row.buildYourOwn, fields.composable);
   }
 
-  return { itemId: row.id, name: row.name, data, newCategory, changes };
+  // One price per product. A price given for an item that sells a product also
+  // goes to the product and to any other menu item linked to it. A composable
+  // item priced 0 is the exception: its price is its choices, not the product's.
+  const targetProductId =
+    fields.linkedProductId === undefined ? row.productId : fields.linkedProductId;
+  const newlyLinked = fields.linkedProductId ? products.get(fields.linkedProductId) : undefined;
+  const composableAfter =
+    fields.composable ??
+    (row.buildYourOwn || row.product?.buildYourOwn === true || newlyLinked?.buildYourOwn === true);
+  let linked: PlannedUpdate["linked"] = null;
+  if (targetProductId) {
+    if (fields.price !== undefined) {
+      if (fields.price === 0 && composableAfter) {
+        warnings.push(
+          `"${row.name}" is composable at price 0, so the price of its linked product was left as it is.`
+        );
+      } else {
+        linked = { productId: targetProductId, ownerPrice: fields.price };
+      }
+    } else if (
+      fields.linkedProductId &&
+      fields.linkedProductId !== row.productId &&
+      newlyLinked?.sellingPrice !== undefined &&
+      owner &&
+      !composableAfter
+    ) {
+      // Linked without a price: the item takes the product's, so the two start in step.
+      const adopted = baseToOwner(newlyLinked.sellingPrice, owner.rate);
+      if (!samePrice(adopted, Number(row.price))) {
+        data.price = new Prisma.Decimal(adopted);
+        note("price", money(row.price), money(adopted));
+        warnings.push(
+          `"${row.name}" now takes the price of the product ${newlyLinked.name} (${money(adopted)}). Give a price to set both instead.`
+        );
+      }
+    }
+  }
+
+  return { itemId: row.id, name: row.name, data, newCategory, changes, linked };
 }
 
 /**
@@ -719,17 +915,66 @@ async function changeItems(
     updates.flatMap((u) => (typeof u.linkedProductId === "string" ? [u.linkedProductId] : []))
   );
 
+  // The store's currency is only needed to move a product's price (stored in
+  // the base currency) in step with a menu item's.
+  const owner = updates.some((u) => u.price !== undefined || typeof u.linkedProductId === "string")
+    ? await ownerMoney(ctx.storeId)
+    : null;
+
   const warnings: string[] = [];
   const plans: PlannedUpdate[] = [];
   for (const { itemId, ...fields } of updates) {
-    plans.push(await planUpdate(storefront, byId.get(itemId)!, fields, products, warnings));
+    plans.push(await planUpdate(storefront, byId.get(itemId)!, fields, products, warnings, owner));
   }
   const newCategories = [...new Set(plans.flatMap((p) => (p.newCategory ? [p.newCategory] : [])))];
 
+  // A product has one price: two items in this call that sell the same product
+  // can't be given different ones.
+  const priceByProduct = new Map<string, number>();
+  for (const plan of plans) {
+    if (!plan.linked) continue;
+    const given = priceByProduct.get(plan.linked.productId);
+    if (given !== undefined && !samePrice(given, plan.linked.ownerPrice)) {
+      throw new McpToolError(
+        "INVALID_INPUT",
+        `"${plan.name}" and another item in this call sell the same inventory product but get different prices (${given} and ${plan.linked.ownerPrice}). A product has one price: give them the same price, or unlink one with linkedProductId: null.`
+      );
+    }
+    priceByProduct.set(plan.linked.productId, plan.linked.ownerPrice);
+    baseForOwnerPrice(plan.linked.ownerPrice, owner!.rate); // refuses a price the product can't store
+  }
+  // Items in this call that carry the price themselves; the rest of a product's
+  // menu items are moved by applyLinkedPrice.
+  const priced = (productId: string) =>
+    plans.filter((p) => p.linked?.productId === productId).map((p) => p.itemId);
+  const linkedInput = (productId: string, ownerPrice: number) => ({
+    storeId: ctx.storeId,
+    productId,
+    ownerPrice,
+    currency: owner!.currency,
+    rate: owner!.rate,
+    excludeItemIds: priced(productId),
+  });
+
   if (mode === "preview") {
+    const inspected = new Map<string, LinkedPriceInspection>();
+    for (const [productId, ownerPrice] of priceByProduct) {
+      const found = await inspectLinkedPrice(prisma, linkedInput(productId, ownerPrice));
+      if (found) inspected.set(productId, found);
+      if (found?.belowCost)
+        warnings.push(`${found.productName}: the new price is below its cost price.`);
+    }
     return {
       mode: "preview" as const,
-      changes: plans.map((p) => ({ itemId: p.itemId, name: p.name, changes: p.changes })),
+      changes: plans.map((p) => {
+        const found = p.linked ? inspected.get(p.linked.productId) : undefined;
+        return {
+          itemId: p.itemId,
+          name: p.name,
+          changes: p.changes,
+          linkedProduct: found && linkedWouldChange(found) ? describeLinked(found) : undefined,
+        };
+      }),
       newCategories: newCategories.length > 0 ? newCategories : undefined,
       warnings: [...new Set(warnings)],
       next: "Show the person what changes. If they confirm, call again with mode: commit and the same input.",
@@ -745,16 +990,46 @@ async function changeItems(
   }
 
   try {
-    const { updated, changeId } = await prisma.$transaction(async (tx) => {
+    const { updated, changeId, linkedApplied } = await prisma.$transaction(async (tx) => {
       const before = new Map(
         (
           await tx.menuItem.findMany({ where: { id: { in: ids }, storefrontId: storefront.id } })
         ).map((row) => [row.id, toItemState(row)])
       );
+
+      // The product's price (and its other menu items) first, in this same
+      // transaction: a failure anywhere leaves both sides as they were.
+      const linkedApplied: Awaited<ReturnType<typeof applyLinkedPrice>>[] = [];
+      for (const [productId, ownerPrice] of priceByProduct) {
+        linkedApplied.push(await applyLinkedPrice(tx, linkedInput(productId, ownerPrice)));
+      }
+
       const rows = [];
       for (const plan of plans) {
         rows.push(await tx.menuItem.update({ where: { id: plan.itemId }, data: plan.data }));
       }
+
+      // Items moved only because they share a product: the call's own items
+      // already carry their before and after above.
+      const own = new Set(ids);
+      const siblingStates = linkedApplied.flatMap((applied) =>
+        applied.siblings
+          .filter((item) => !own.has(item.id))
+          .map((item) => ({
+            before: toItemState(item),
+            after: toItemState(applied.siblingsAfter.find((s) => s.id === item.id) ?? item),
+          }))
+      );
+      const products: LinkedProductPrice[] = linkedApplied
+        .filter((applied) => applied.productChanged)
+        .map((applied) => ({
+          id: applied.productId,
+          name: applied.productName,
+          sku: applied.productSku,
+          before: applied.before,
+          after: applied.after,
+        }));
+
       const changeId = await recordAction(
         {
           actionType: "menu.items.change",
@@ -762,19 +1037,34 @@ async function changeItems(
           payload: {
             storeId: ctx.storeId,
             storefrontId: storefront.id,
-            summary: itemsSummary(
-              "Changed",
-              rows.map((row) => row.name)
-            ),
-            updated: rows.map((row) => ({ before: before.get(row.id)!, after: toItemState(row) })),
+            summary:
+              itemsSummary(
+                "Changed",
+                rows.map((row) => row.name)
+              ) + linkedSummary(linkedApplied),
+            updated: [
+              ...rows.map((row) => ({ before: before.get(row.id)!, after: toItemState(row) })),
+              ...siblingStates,
+            ],
             created: [],
+            ...(products.length > 0 && { products }),
           },
         },
         { tx }
       );
-      return { updated: rows, changeId };
+      return { updated: rows, changeId, linkedApplied };
     });
     for (const row of updated) menuChanged(ctx.storeId, "updated", row.id);
+    for (const applied of linkedApplied) {
+      if (applied.productChanged) {
+        publishStoreEvent(ctx.storeId, REALTIME_EVENTS.PRODUCT_CHANGED, {
+          action: "updated",
+          entityId: applied.productId,
+        });
+      }
+      for (const item of applied.siblings) menuChanged(ctx.storeId, "updated", item.id);
+    }
+    const linkedProducts = linkedApplied.filter(linkedWouldChange).map(describeLinked);
     return {
       mode: "commit" as const,
       updated: updated.map((row, index) => ({
@@ -788,7 +1078,17 @@ async function changeItems(
         composable: row.buildYourOwn || undefined,
         changes: plans[index].changes,
       })),
-      warnings: [...new Set(warnings)],
+      // The inventory products whose price moved with their menu items, so the
+      // Inventory page and the till show the same price.
+      linkedProducts: linkedProducts.length > 0 ? linkedProducts : undefined,
+      warnings: [
+        ...new Set([
+          ...warnings,
+          ...linkedApplied
+            .filter((a) => a.belowCost)
+            .map((a) => `${a.productName}: the new price is below its cost price.`),
+        ]),
+      ],
       changeId: changeId ?? undefined,
     };
   } catch (error) {
@@ -803,8 +1103,11 @@ export const updateMenuItem = defineStoreTool({
     "Change one menu item: name, price (store currency), description, category, availability (mark " +
     "sold out or back on sale), whether it shows on the till, featured, department (KITCHEN or BAR), " +
     "the inventory product it is linked to, and, for composable items, composable and optionGroups " +
-    "(which REPLACE the item's own groups). Only the fields given change. Use mode: preview to see " +
-    "the before and after, then commit. For several items at once use update_menu_items.",
+    "(which REPLACE the item's own groups). Only the fields given change. A price on an item linked to " +
+    "an inventory product also updates that product's selling price (and its other menu items) so the " +
+    "menu, the till and the Inventory page agree; the result lists them under linkedProducts, and " +
+    "undo_menu_change puts both back. Use mode: preview to see the before and after, then commit. For " +
+    "several items at once use update_menu_items.",
   input: z.object({ ...storeIdInput, itemId: z.string(), ...patchFields, ...modeInput }),
   kind: "write",
   access,
@@ -821,9 +1124,10 @@ export const updateMenuItems = defineStoreTool({
   description:
     "Change up to 50 menu items in one call, all or nothing: if any item is refused (unknown id, " +
     "bad option group, product not in this store) nothing is changed. Each entry has the same fields " +
-    "as update_menu_item. Use it to hide many items at once (available: false, onTill: false), move a " +
-    "batch to another category or fix departments. Hiding keeps past orders and stock links intact; " +
-    "prefer it to delete_menu_item. Use mode: preview first.",
+    "as update_menu_item, including a price that also updates the linked inventory product (two items " +
+    "linked to the same product must get the same price). Use it to hide many items at once " +
+    "(available: false, onTill: false), move a batch to another category or fix departments. Hiding " +
+    "keeps past orders and stock links intact; prefer it to delete_menu_item. Use mode: preview first.",
   input: z.object({
     ...storeIdInput,
     updates: z

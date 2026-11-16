@@ -81,6 +81,7 @@ call has no cookies.
 | Orders | `list_orders`, `get_order` | `/pos/orders` or `/dashboard` |
 | Inventory | `get_stock_alerts`, `list_inventory`, `list_stock_movements` | `/management`, `/data` or `/alerts` |
 | | `adjust_stock` (W), `record_waste` (W) | `/management` |
+| | `update_product` (W; selling price, cost, SKU, name; keeps linked menu items in step) | `/data` or `/management` |
 | Suppliers | `list_suppliers`, `list_supplier_orders`, `propose_supplier_order` | `/data` or `/management` |
 | | `create_supplier_order`, `receive_supplier_order`, `cancel_supplier_order` (W) | `/data` or `/management` |
 | Menu | `get_menu` | `/menu` or `/storefront` |
@@ -122,6 +123,43 @@ How Epidom stores them decides what the tools can do (see `tools/menu-options.ts
 - `get_order` returns each line's chosen options (group, option, price delta); `list_orders` shows them in
   the one-line item list.
 
+### One price for a linked item and its product
+
+A menu item linked to an inventory product (`MenuItem.productId`) and that product are the same thing
+on sale: the till and storefront read `MenuItem.price`, the Inventory page and margin reports read
+`Product.sellingPrice`. They must agree, so a price change reaches both **in one transaction**
+(`src/lib/services/linked-price.ts`). Product is the source of truth (the menu editor already locks a
+linked item's price); the menu price is its mirror.
+
+- `update_menu_item(s)` with a `price` on a linked item also sets the product's selling price and every
+  other menu item linked to it; `create_menu_items` does the same for a priced linked item. Previews show
+  `linkedProduct` (from → to, and the other items it moves), commits return `linkedProducts`, and the
+  change history line names the product. Re-sending a price the menu already has repairs a product that
+  drifted. Two items of one product in a single call can't get different prices.
+- Exceptions: a composable item priced 0 (its price is its choices) leaves the product alone; linking an
+  item to a product without giving a price makes the item take the product's price.
+- The app's own routes do the same: `PATCH /storefront/items/[itemId]` pushes a **changed** price to the
+  product (the editor re-sends an unchanged one on every save, which is ignored), and
+  `ProductService.updateProduct` mirrors name, price, department and category to linked items as a
+  nested write of the product update, so both change atomically. A catalogue import that changes an
+  existing product's price does the same.
+- **Currency**: `Product.sellingPrice` is IDR; `MenuItem.price` is literal in the store's currency. The
+  menu side always gets the amount the person typed; the product gets it converted at today's rate, and
+  "in step" means equal in the store's currency, so a moving rate alone never counts as a difference.
+- **Undo**: the `menu.items.change` image carries the products' before/after prices (`products`, optional
+  so older entries still undo). `undo_menu_change` restores both, and refuses with `SUPERSEDED` if the
+  product's price was changed since.
+- **Audit and repair**: `Ops — Reconcile linked prices` (GitHub Actions, dry run by default) or
+  `pnpm tsx scripts/reconcile-linked-prices.ts [--store <id>] [--apply --prefer=menu|product]` lists every
+  linked pair whose prices differ. Neither side is right in general, so a person picks which wins.
+
+### `import_catalog`: what a commit does
+
+The preview answers per row (`rowsInEpidom`, `commitWill`, `wouldCreate/Update/Skip`): products (matched by
+name, then SKU) and recipes are **updated**, columns the row doesn't carry stay as they are; materials and
+suppliers are only ever **created**, so a same-named row would add a second one (a taken material SKU is
+skipped). To change one product, use `update_product`.
+
 ### What is recorded, and what can be undone
 
 Three layers, from least to most detail:
@@ -139,7 +177,7 @@ Three layers, from least to most detail:
   when anything touched the same rows since (compared against the after-image), when a category,
   product or material the old state needs is gone, after 30 days, or if already undone. Items a change
   added are deleted; categories it removed are brought back with their items.
-- **Not undoable** (no before-image is stored): expenses, stock (`stock.adjust` is a ledger entry,
+- **Not undoable** (no before-image is stored): `update_product` (the result gives the previous values), expenses, stock (`stock.adjust` is a ledger entry,
   compensate with another adjustment), supplier orders (cancel), rosters, overtime decisions,
   customers, catalogue imports. The Activity log still says who did it and when.
 - The admin Activity log lists the same `ActionLog` rows (category `menu`).

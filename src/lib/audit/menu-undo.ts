@@ -39,12 +39,27 @@ export const menuItemStateSchema = z.object({
 });
 export type MenuItemState = z.infer<typeof menuItemStateSchema>;
 
+/**
+ * A linked product's selling price (Product.sellingPrice, base currency) that
+ * a menu change moved together with its menu items. Optional: changes recorded
+ * before products were kept in step carry none.
+ */
+export const linkedProductPriceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  sku: z.string().nullable().optional(),
+  before: decimalString,
+  after: decimalString,
+});
+export type LinkedProductPrice = z.infer<typeof linkedProductPriceSchema>;
+
 export const menuItemsChangeSchema = z.object({
   storeId: z.string(),
   storefrontId: z.string(),
   summary: z.string(),
   updated: z.array(z.object({ before: menuItemStateSchema, after: menuItemStateSchema })),
   created: z.array(menuItemStateSchema),
+  products: z.array(linkedProductPriceSchema).optional(),
 });
 export type MenuItemsChange = z.infer<typeof menuItemsChangeSchema>;
 
@@ -137,6 +152,27 @@ export async function precheckMenuItems(
     }
   }
 
+  // A product whose price moved with the items must still be at that price,
+  // or restoring the old one would overwrite a newer edit.
+  for (const product of payload.products ?? []) {
+    const live = await db.product.findFirst({
+      where: { id: product.id, storeId: payload.storeId },
+      select: { sellingPrice: true },
+    });
+    if (!live) {
+      return {
+        code: "TARGET_MISSING",
+        message: `The product "${product.name}" no longer exists, so its price can't be restored.`,
+      };
+    }
+    if (live.sellingPrice.toFixed(2) !== product.after) {
+      return {
+        code: "SUPERSEDED",
+        message: `The price of the product "${product.name}" has been changed since. Undoing would overwrite that newer edit: change it back by hand, or undo the newer change first.`,
+      };
+    }
+  }
+
   // Restoring needs the category and the product an item pointed at to still exist.
   const categoryIds = [
     ...new Set(payload.updated.flatMap((u) => (u.before.categoryId ? [u.before.categoryId] : []))),
@@ -173,6 +209,13 @@ export async function reverseMenuItems(payload: MenuItemsChange, tx: Db): Promis
   if (payload.created.length > 0) {
     await tx.menuItem.deleteMany({
       where: { id: { in: payload.created.map((c) => c.id) }, storefrontId: payload.storefrontId },
+    });
+  }
+  // The linked products' prices go back with their items, in the same transaction.
+  for (const product of payload.products ?? []) {
+    await tx.product.update({
+      where: { id: product.id },
+      data: { sellingPrice: new Prisma.Decimal(product.before) },
     });
   }
 }

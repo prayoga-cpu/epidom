@@ -4,8 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { loadStoreAlerts } from "@/lib/services/store-alerts.service";
 import { adjustStockRecorded } from "@/lib/services/stock-adjust.service";
 import { wasteService } from "@/lib/services/waste.service";
+import { productService } from "@/lib/services/product.service";
+import { baseForOwnerPrice } from "@/lib/services/linked-price";
 import { defineStoreTool } from "../define-tool";
-import { relayKnownError, STOCK_ITEM_ERRORS } from "../errors";
+import { McpToolError, relayKnownError, STOCK_ITEM_ERRORS } from "../errors";
 import { periodInput, resolveRange } from "../range";
 import {
   baseCurrency,
@@ -344,5 +346,148 @@ export const recordWaste = defineStoreTool({
         ...STOCK_ITEM_ERRORS,
       ]);
     }
+  },
+});
+
+const PRODUCT_ERRORS = [
+  [
+    /not found|does not belong/i,
+    "NOT_FOUND",
+    "No such product in this store. Use list_inventory (type: products).",
+  ],
+  [/sku .*already exists/i, "CONFLICT", "Another product in this store already uses that SKU."],
+  [/name .*already exists/i, "CONFLICT", "Another product in this store already has that name."],
+  [
+    /selling price cannot be less/i,
+    "INVALID_INPUT",
+    "The selling price can't be below the cost price.",
+  ],
+] as const;
+
+export const updateProduct = defineStoreTool({
+  name: "update_product",
+  title: "Change an inventory product",
+  description:
+    "Change one inventory product's selling price, cost price, SKU or name, in the store's currency, " +
+    "without re-importing it. A new selling price (or name) also updates the menu items linked to the " +
+    "product, so the Inventory page, the menu and the till agree. A cost price you set here stays put " +
+    "(it is not recalculated from the recipe). Use mode: preview to see the before and after, then " +
+    "commit. Product changes have no undo: the result gives the previous values, so put them back with " +
+    "another update_product. To change a menu item's price instead, use update_menu_item (it updates " +
+    "the linked product too).",
+  input: z.object({
+    ...storeIdInput,
+    productId: z
+      .string()
+      .describe("From list_inventory (type: products) or get_menu linkedProductId."),
+    sellingPrice: z.number().min(0).optional().describe("In the store's currency."),
+    costPrice: z.number().min(0).optional().describe("In the store's currency."),
+    sku: z.string().trim().min(1).max(50).optional(),
+    name: z.string().trim().min(1).max(100).optional(),
+    mode: z.enum(["preview", "commit"]).default("commit"),
+  }),
+  kind: "write",
+  access: { pages: PAGES.catalog },
+  hints: { destructiveHint: false, idempotentHint: true },
+  handler: async (input, ctx) => {
+    if (
+      input.sellingPrice === undefined &&
+      input.costPrice === undefined &&
+      input.sku === undefined &&
+      input.name === undefined
+    ) {
+      throw new McpToolError(
+        "INVALID_INPUT",
+        "Give at least one of sellingPrice, costPrice, sku or name."
+      );
+    }
+    const product = await prisma.product.findFirst({
+      where: { id: input.productId, storeId: ctx.storeId },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        costPrice: true,
+        sellingPrice: true,
+        _count: { select: { menuItems: true } },
+      },
+    });
+    if (!product) {
+      throw new McpToolError(
+        "NOT_FOUND",
+        "No such product in this store. Use list_inventory (type: products)."
+      );
+    }
+
+    const money$ = await baseToStore(ctx.storeId);
+    const sellingBase =
+      input.sellingPrice === undefined
+        ? undefined
+        : baseForOwnerPrice(input.sellingPrice, money$.rate);
+    const costBase = input.costPrice === undefined ? undefined : money$.toBase(input.costPrice);
+    const effectiveSelling = sellingBase ?? Number(product.sellingPrice);
+    const effectiveCost = costBase ?? Number(product.costPrice);
+    if (
+      (sellingBase !== undefined || costBase !== undefined) &&
+      effectiveCost > 0 &&
+      effectiveSelling < effectiveCost
+    ) {
+      throw new McpToolError("INVALID_INPUT", "The selling price can't be below the cost price.");
+    }
+
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    const note = (field: string, from: unknown, to: unknown) => {
+      if (from !== to) changes[field] = { from, to };
+    };
+    if (input.sellingPrice !== undefined) {
+      note("sellingPrice", money$.convert(product.sellingPrice), money(input.sellingPrice));
+    }
+    if (input.costPrice !== undefined) {
+      note("costPrice", money$.convert(product.costPrice), money(input.costPrice));
+    }
+    if (input.sku !== undefined) note("sku", product.sku, input.sku);
+    if (input.name !== undefined) note("name", product.name, input.name);
+
+    const linkedItems = product._count.menuItems;
+    const alsoUpdatesMenuItems =
+      linkedItems > 0 && (changes.sellingPrice || changes.name) ? linkedItems : undefined;
+
+    if (input.mode === "preview") {
+      return {
+        mode: "preview",
+        product: product.name,
+        currency: money$.currency,
+        changes,
+        alsoUpdatesMenuItems,
+        next: "Show the person. If they confirm, call again with mode: commit and the same input.",
+      };
+    }
+    if (Object.keys(changes).length === 0) {
+      return {
+        mode: "commit",
+        product: product.name,
+        currency: money$.currency,
+        changes,
+        unchanged: true,
+      };
+    }
+
+    try {
+      await productService.updateProduct(product.id, ctx.storeId, {
+        ...(input.sellingPrice !== undefined && { sellingPrice: sellingBase }),
+        ...(input.costPrice !== undefined && { costPrice: costBase, costPriceManual: true }),
+        ...(input.sku !== undefined && { sku: input.sku }),
+        ...(input.name !== undefined && { name: input.name }),
+      });
+    } catch (error) {
+      relayKnownError(error, PRODUCT_ERRORS);
+    }
+    return {
+      mode: "commit",
+      product: input.name ?? product.name,
+      currency: money$.currency,
+      changes,
+      alsoUpdatedMenuItems: alsoUpdatesMenuItems,
+    };
   },
 });
