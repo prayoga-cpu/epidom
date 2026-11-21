@@ -1,0 +1,67 @@
+name: Ops — Production uptime monitor
+
+# Why this exists: on 2026-11-21 the Neon plan quota ran out and EVERY database
+# query returned Postgres 53000. The homepage still answered 200, sign-in answered
+# 500 (shown to users as "Invalid email or password"), and nobody was told for
+# hours. This probes the two paths that actually need the database and FAILS the
+# run when either is broken, so GitHub emails the repo watchers.
+#
+#   1. GET /api/health            -> must be 200 and report status "healthy"
+#                                    (it runs SELECT 1; 503 when the DB is down)
+#   2. POST /api/auth/sign-in/email with a throwaway, non-existent account
+#                                    -> must be 401 (bad credentials). A 5xx means
+#                                    the auth/database path is down.
+#
+# Scheduled workflows only run from the default branch, and GitHub pauses them
+# after 60 days without repo activity.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-uptime-monitor
+  cancel-in-progress: true
+
+env:
+  BASE_URL: https://www.epidom.fr
+
+jobs:
+  probe:
+    name: Probe production
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Health endpoint (database reachable)
+        run: |
+          set -u
+          for attempt in 1 2 3; do
+            code=$(curl -s -o health.json -w '%{http_code}' --max-time 20 "$BASE_URL/api/health" || echo 000)
+            if [ "$code" = "200" ] && grep -q '"healthy"' health.json; then
+              echo "health OK (attempt $attempt)"; exit 0
+            fi
+            echo "attempt $attempt: HTTP $code"; head -c 400 health.json || true; echo
+            sleep 20
+          done
+          echo "::error::$BASE_URL/api/health is unhealthy (last HTTP $code) — the database is probably unreachable or over quota."
+          exit 1
+
+      - name: Sign-in path answers 401, not 5xx
+        run: |
+          set -u
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+              -X POST "$BASE_URL/api/auth/sign-in/email" \
+              -H 'content-type: application/json' -H "origin: $BASE_URL" \
+              -d '{"email":"uptime-monitor@invalid.example","password":"not-a-real-password-1"}' || echo 000)
+            # 401/400 = the auth stack ran and rejected the credentials (healthy).
+            # 429 = rate limited, which also proves the app is up.
+            case "$code" in 400|401|403|429) echo "sign-in OK (HTTP $code)"; exit 0;; esac
+            echo "attempt $attempt: HTTP $code"; sleep 20
+          done
+          echo "::error::Sign-in answered HTTP $code — users cannot log in (database/auth outage)."
+          exit 1

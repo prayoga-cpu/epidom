@@ -5300,6 +5300,7 @@ staffOwnerMasterHint: "Compte master — accès complet à toutes les fonctionna
     selectOrder: "Sélectionnez une commande pour voir les détails",
     selectDelivery: "Sélectionnez une livraison pour voir les détails",
     invalidCredentials: "Email ou mot de passe invalide",
+    serviceUnavailable: "La connexion est temporairement indisponible. Veuillez réessayer dans quelques minutes.",
     oauthStateMismatch: "Votre session de connexion a expiré. Veuillez réessayer.",
     oauthInternalError: "Échec de la connexion en raison d'une erreur serveur. Veuillez réessayer.",
     accountNotLinked:

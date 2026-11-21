@@ -4617,6 +4617,7 @@ staffOwnerMasterHint: "Akun master — akses penuh ke semua fitur, semua halaman
     selectOrder: "Pilih pesanan untuk melihat detail",
     selectDelivery: "Pilih pengiriman untuk melihat detail",
     invalidCredentials: "Email atau kata sandi tidak valid",
+    serviceUnavailable: "Masuk sedang tidak tersedia sementara. Silakan coba lagi dalam beberapa menit.",
     oauthStateMismatch: "Sesi masuk Anda kedaluwarsa. Silakan coba masuk lagi.",
     oauthInternalError: "Gagal masuk karena kesalahan server. Silakan coba lagi.",
     accountNotLinked:

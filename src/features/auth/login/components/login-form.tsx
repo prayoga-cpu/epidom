@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { trackEvent } from "@/lib/analytics";
 import { safeInternalPath } from "@/lib/safe-redirect";
+import { LOGIN_SERVICE_UNAVAILABLE } from "../../lib/login-errors";
 import {
   emailVerificationCallbackURL,
   googleSignupCallbackURL,
@@ -110,6 +111,12 @@ export function LoginForm() {
       },
       onError: (err) => {
         const msg = err?.message || "";
+        // Our outage (5xx / unreachable), not the visitor's credentials: say so
+        // instead of "Invalid email or password".
+        if (msg === LOGIN_SERVICE_UNAVAILABLE) {
+          toast.error(t("messages.serviceUnavailable"));
+          return;
+        }
         // Detect unverified email errors by message content
         if (/verify|verification|not verified/i.test(msg)) {
           // Capture email from form to allow resending

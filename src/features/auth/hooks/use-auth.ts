@@ -5,6 +5,7 @@ import { authClient } from "@/lib/auth-client";
 import { trackMetaPixelEvent, trackEvent, trackConversion } from "@/lib/analytics";
 import { emailVerificationCallbackURL } from "../register/lib/verification-landing";
 import { stashVerifyEmail } from "../register/lib/verify-email-handoff";
+import { LOGIN_SERVICE_UNAVAILABLE } from "../lib/login-errors";
 
 /**
  * Login mutation hook
@@ -20,6 +21,13 @@ export function useLogin() {
       });
 
       if (error) {
+        // A 5xx is OUR outage, not a wrong password. Without this the empty 500
+        // body fell through to "Invalid email or password" and hid a database
+        // outage behind a credentials message (2026-11-21). Only a numeric
+        // status counts: an error with no status keeps the old behaviour.
+        if (typeof error.status === "number" && error.status >= 500) {
+          throw new Error(LOGIN_SERVICE_UNAVAILABLE);
+        }
         throw new Error(error.message || "Invalid email or password");
       }
 

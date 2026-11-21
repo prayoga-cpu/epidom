@@ -36,7 +36,9 @@ vi.mock("@/lib/auth-client", () => ({
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
+import { toast } from "sonner";
 import { LoginForm } from "@/features/auth/login/components/login-form";
+import { LOGIN_SERVICE_UNAVAILABLE } from "@/features/auth/lib/login-errors";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -228,5 +230,51 @@ describe("LoginForm: the resent verification link lands where the signup email d
     const args = await resendAt(search);
 
     expect(args).toEqual({ email: "jane@bakery.com", callbackURL: expected });
+  });
+});
+
+describe("LoginForm: pressing Enter in the password field", () => {
+  // jsdom does not emulate the browser's implicit form submission (no user-event
+  // in this repo), so this pins the structure that makes it work: the password
+  // field sits inside the <form> and the login button is its ONLY submit control.
+  // A stray type="submit" earlier in the form (e.g. the Google button) or a
+  // type="button" login button would silently break "Enter to log in".
+  it("submits through the form's single submit button, so Enter logs in without a click", async () => {
+    const { container } = render(<LoginForm />);
+    const form = container.querySelector("form")!;
+    const password = screen.getByLabelText("auth.password");
+
+    expect(form.contains(password)).toBe(true);
+    const submitters = Array.from(form.querySelectorAll("button, input")).filter(
+      (el) => (el as HTMLButtonElement | HTMLInputElement).type === "submit"
+    );
+    expect(submitters).toHaveLength(1);
+    expect(submitters[0].textContent).toBe("auth.loginButton");
+
+    fireEvent.change(screen.getByLabelText("auth.email"), { target: { value: "jane@bakery.com" } });
+    fireEvent.change(password, { target: { value: "hunter22" } });
+    // A click on the lone submit button is exactly what the browser dispatches for Enter.
+    fireEvent.click(submitters[0]);
+
+    await waitFor(() =>
+      expect(h.mutate).toHaveBeenCalledWith(
+        { email: "jane@bakery.com", password: "hunter22" },
+        expect.any(Object)
+      )
+    );
+  });
+});
+
+describe("LoginForm: a server outage is not reported as bad credentials", () => {
+  it("shows the service-unavailable message when the sign-in call fails with a 5xx", async () => {
+    vi.mocked(toast.error).mockClear();
+    h.mutate.mockImplementation((_data: unknown, options: { onError?: (e: Error) => void }) => {
+      options.onError?.(new Error(LOGIN_SERVICE_UNAVAILABLE));
+    });
+
+    signInAt("");
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("messages.serviceUnavailable"));
+    expect(toast.error).not.toHaveBeenCalledWith("messages.invalidCredentials");
   });
 });

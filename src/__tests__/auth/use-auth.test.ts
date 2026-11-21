@@ -27,6 +27,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useLogin, useRegister } from "@/features/auth/hooks/use-auth";
+import { LOGIN_SERVICE_UNAVAILABLE } from "@/features/auth/lib/login-errors";
 import { VERIFY_EMAIL_STORAGE_KEY } from "@/features/auth/register/lib/verify-email-handoff";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,6 +85,38 @@ describe("useLogin", () => {
     const { result } = renderHook(() => useLogin(), { wrapper: makeWrapper() });
 
     result.current.mutate({ email: "a@b.com", password: "x" });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error?.message).toBe("Invalid email or password");
+  });
+
+  it.each([500, 502, 503])(
+    "reports a server outage (not bad credentials) when sign-in fails with HTTP %i",
+    async (status) => {
+      // The 2026-11-21 outage: Postgres 53000 -> 500 with an EMPTY body.
+      vi.mocked(authClient.signIn.email).mockResolvedValue({
+        data: null,
+        error: { status, statusText: "Internal Server Error" },
+      } as never);
+
+      const { result } = renderHook(() => useLogin(), { wrapper: makeWrapper() });
+
+      result.current.mutate({ email: "a@b.com", password: "x" });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      expect(result.current.error?.message).toBe(LOGIN_SERVICE_UNAVAILABLE);
+    }
+  );
+
+  it("keeps the credentials message for a 401", async () => {
+    vi.mocked(authClient.signIn.email).mockResolvedValue({
+      data: null,
+      error: { status: 401, message: "Invalid email or password" },
+    } as never);
+
+    const { result } = renderHook(() => useLogin(), { wrapper: makeWrapper() });
+
+    result.current.mutate({ email: "a@b.com", password: "wrong" });
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(result.current.error?.message).toBe("Invalid email or password");

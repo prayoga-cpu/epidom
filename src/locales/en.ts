@@ -4586,6 +4586,7 @@ staffOwnerMasterHint: "Master account — full access to every feature, every pa
     selectOrder: "Select an order to view details",
     selectDelivery: "Select a delivery to view details",
     invalidCredentials: "Invalid email or password",
+    serviceUnavailable: "Sign-in is temporarily unavailable. Please try again in a few minutes.",
     oauthStateMismatch: "Your sign-in session expired. Please try signing in again.",
     oauthInternalError: "Sign-in failed due to a server error. Please try again.",
     accountNotLinked:

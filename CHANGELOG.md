@@ -9,6 +9,11 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.48.2] - 2026-11-21 · fix
+
+- **Sign-in now says so when our servers are unavailable.** A server-side failure (a 5xx, or no reply at all) used to surface as "Invalid email or password", which hid a database outage behind a credentials message. The login form now shows "Sign-in is temporarily unavailable, please try again in a few minutes" in English, French and Indonesian, and keeps the wrong-password message for real credential errors. Pressing Enter in the password field already signed you in and is now covered by a test.
+- **A production uptime monitor now watches the database-backed paths.** A scheduled check (`.github/workflows/ops-uptime-monitor.yml`) calls `/api/health` and the sign-in endpoint every 15 minutes and fails, so GitHub emails the repo watchers, when either one breaks. Prompted by the 2026-11-21 outage, when the database plan's compute quota ran out while the homepage still answered 200.
+
 ## [3.48.1] - 2026-11-16 · fix
 
 - **A menu item and its inventory product now always show the same price.** Changing the price of a menu item that is linked to an inventory product (from Claude, or any other path) used to update only the menu, so the Inventory page kept the old price. The price now goes to the product, and to any other menu item linked to it, in one step, and the other way round (changing a product's price, including through an import, updates its menu items). Undoing a menu price change from Claude puts both prices back, and Claude's answer and the change history say that the product was updated too.
