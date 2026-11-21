@@ -116,7 +116,7 @@ docs/                  # READ THIS for context before non-trivial work
 - Use Prisma `Decimal` for money and quantities, never `Float`.
 - New tables get `@@map("snake_case_table_name")`.
 - Every schema change goes through a migration. Never use `db push` against any branch other than your local.
-- Local `.env` and Vercel Preview point at a separate Neon `dev` branch (`br-mute-unit-aofx79qn`, cut from `main` on 2026-11-04), never at production — safe to experiment against, reset nightly from prod (`main`). Production uses the Neon `main` branch; the old `development` branch is now `main`'s parent and must not be reset or deleted. Migrations you commit auto-apply to production via `prisma migrate deploy` in the build script; never run migrations by hand against prod. Details: `docs/DATABASE.md`.
+- Local `.env` and Vercel Preview point at a separate Neon `dev` branch (`br-withered-mouse-b3cr8mc4` on the Neon project `epidom-prod-db`, cut from `main` on 2026-11-21), never at production — safe to experiment against, reset nightly from prod (`main`). Production uses the Neon `main` branch; the OLD Neon project `epidom-southeast-asia` (`square-sound-94138774`, formerly on the prayoga-development Vercel team; production ran there until 2026-11-21) still holds the writes made between the 2026-11-20 02:01 UTC backup and 2026-11-21 01:10 UTC that were never copied across: never delete, reset or write to it until they are merged into production. Migrations you commit auto-apply to production via `prisma migrate deploy` in the build script; never run migrations by hand against prod. Details: `docs/DATABASE.md`.
 
 **Validation**
 

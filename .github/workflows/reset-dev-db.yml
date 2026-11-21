@@ -30,8 +30,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NEON_PROJECT_ID: square-sound-94138774
-  NEON_DEV_BRANCH_ID: br-mute-unit-aofx79qn
+  # 2026-11-21: production moved to the Epidom-team Neon resource `epidom-prod-db`
+  # (the old project square-sound-94138774 ran out of its Free-plan quota). `dev` is
+  # its child branch, cut from main the same day.
+  NEON_PROJECT_ID: red-thunder-74268331
+  NEON_DEV_BRANCH_ID: br-withered-mouse-b3cr8mc4
 
 jobs:
   reset:

@@ -9,9 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.48.3] - 2026-11-21 · infra
+
+- **Production's database now lives in the Epidom Vercel team, and the dev copy follows it.** The database moved to a paid Neon plan after the Free-plan compute quota ran out. The nightly dev-branch reset, Preview deployments and the local setup now point at the new project's `dev` branch, so previews stay isolated from production. The production database also autoscales between 0.25 and 1 CU instead of holding a fixed 1 CU, which keeps the idle cost down.
+
 ## [3.48.2] - 2026-11-21 · fix
 
-- **Sign-in now says so when our servers are unavailable.** A server-side failure (a 5xx, or no reply at all) used to surface as "Invalid email or password", which hid a database outage behind a credentials message. The login form now shows "Sign-in is temporarily unavailable, please try again in a few minutes" in English, French and Indonesian, and keeps the wrong-password message for real credential errors. Pressing Enter in the password field already signed you in and is now covered by a test.
+- **Sign-in now says so when our servers are unavailable.** A server-side failure (a 5xx) used to surface as "Invalid email or password", which hid a database outage behind a credentials message. The login form now shows "Sign-in is temporarily unavailable, please try again in a few minutes" in English, French and Indonesian, and keeps the wrong-password message for real credential errors. Pressing Enter in the password field already signed you in and is now covered by a test.
 - **A production uptime monitor now watches the database-backed paths.** A scheduled check (`.github/workflows/ops-uptime-monitor.yml`) calls `/api/health` and the sign-in endpoint every 15 minutes and fails, so GitHub emails the repo watchers, when either one breaks. Prompted by the 2026-11-21 outage, when the database plan's compute quota ran out while the homepage still answered 200.
 
 ## [3.48.1] - 2026-11-16 · fix

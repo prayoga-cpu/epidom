@@ -530,8 +530,11 @@ storage):
   A reset discards whatever the dev branch accumulated and pulls a fresh
   copy of prod data — don't rely on anything written to it surviving.
 
-> **Since 2026-11-04** production runs on the Neon `main` branch and the dev copy is the
-> `dev` branch (`br-mute-unit-aofx79qn`), a child of `main`. The redeploy hook below is
+> **Since 2026-11-21** production runs on the Neon `main` branch of the project `epidom-prod-db`
+> (Epidom Vercel team, Launch plan) and the dev copy is its `dev` branch
+> (`br-withered-mouse-b3cr8mc4`), a child of `main`. Before that (2026-11-04 → 11-21) production
+> ran on the Free-plan project `epidom-southeast-asia`, which ran out of its 100 CU-hour quota and
+> took sign-in down. The redeploy hook below is
 > OPTIONAL: with no `VERCEL_DEV_DEPLOY_HOOK_URL` secret the step is skipped, and a hook that
 > fails only warns, because the reset itself has already succeeded.
 
