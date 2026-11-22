@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -90,7 +91,7 @@ export function ScheduleShiftBlocksDialog({
       resetForm();
       invalidate();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("common.error"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("common.error")));
     }
   };
 

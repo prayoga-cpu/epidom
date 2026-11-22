@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,11 +49,9 @@ export function SubscriptionInfoCard({
       if (!response.ok) {
         // Show specific error for portal not configured
         if (response.status === 503) {
-          setPortalError(
-            "Billing portal is not yet configured. Please contact support or visit the Stripe dashboard to set it up."
-          );
+          setPortalError(t("profile.subscription.portalNotConfigured"));
         } else {
-          throw new Error(getApiErrorMessage(data, "Failed to open billing portal"));
+          throw new Error(getApiErrorMessage(data, t("profile.subscription.portalFailed")));
         }
         return;
       }
@@ -60,7 +59,7 @@ export function SubscriptionInfoCard({
       // Redirect to Stripe customer portal
       window.location.href = data.data.url;
     } catch (error: any) {
-      setPortalError(error.message || "Failed to open billing portal");
+      setPortalError(localizeServerMessage(error.message || t("profile.subscription.portalFailed")));
       setIsLoadingPortal(false);
     }
   };
@@ -181,7 +180,7 @@ export function SubscriptionInfoCard({
               <AlertCircle className="mt-0.5 h-5 w-5 text-yellow-600 dark:text-yellow-500" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                  Portal Configuration
+                  {t("profile.subscription.portalConfigTitle")}
                 </p>
                 <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-300">{portalError}</p>
                 <Link
@@ -189,7 +188,7 @@ export function SubscriptionInfoCard({
                   target="_blank"
                   className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-yellow-700 hover:text-yellow-900 dark:text-yellow-300 dark:hover:text-yellow-200"
                 >
-                  Go to Stripe Dashboard
+                  {t("profile.subscription.goToStripeDashboard")}
                   <ExternalLink className="h-3 w-3" />
                 </Link>
               </div>
@@ -207,7 +206,7 @@ export function SubscriptionInfoCard({
               asChild
               className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md transition-all duration-300 hover:scale-[1.02] hover:from-emerald-600 hover:to-emerald-700 active:scale-95 sm:flex-1"
             >
-              <Link href="/pricing#plans">Upgrade Plan</Link>
+              <Link href="/pricing#plans">{t("stores.upgradePlan")}</Link>
             </Button>
           ) : (
             <Button
@@ -219,8 +218,7 @@ export function SubscriptionInfoCard({
               {isLoadingPortal ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="hidden sm:inline">Loading...</span>
-                  <span className="sm:hidden">Loading</span>
+                  <span>{t("common.loading")}</span>
                 </>
               ) : (
                 <>
@@ -234,10 +232,10 @@ export function SubscriptionInfoCard({
                   ) : (
                     <div className="relative flex w-full overflow-hidden">
                       <span className="w-full transition-transform duration-300 group-hover:-translate-y-[150%]">
-                        Change Plan
+                        {t("profile.subscription.changePlan")}
                       </span>
                       <span className="absolute inset-0 w-full translate-y-[150%] font-medium text-emerald-600 transition-transform duration-300 group-hover:translate-y-0 dark:text-emerald-400">
-                        or Manage your Billing
+                        {t("profile.subscription.orManageBilling")}
                       </span>
                     </div>
                   )}

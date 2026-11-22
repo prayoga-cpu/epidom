@@ -589,7 +589,7 @@ export function EditProductDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <FormDialogLayout
         title={t("data.products.editTitle") || "Edit Product"}
-        description="Update product information. Changes will be saved to your inventory."
+        description={t("data.products.form.editDescription")}
         maxWidth="2xl"
         footer={
           <FormDialogFooter
@@ -829,17 +829,17 @@ export function EditProductDialog({
                     <p className="text-sm font-medium">
                       {currentLinked ? (
                         <>
-                          Linked to menu item:{" "}
+                          {t("data.products.form.linkedToMenuItem")}{" "}
                           <span className="font-bold">{currentLinked.name}</span>
                         </>
                       ) : (
-                        "Not linked to any menu item"
+                        t("data.products.form.notLinkedToMenuItem")
                       )}
                     </p>
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {currentLinked
-                        ? "Price/stock syncs automatically. You can re-associate or remove the link below."
-                        : "This product has no POS/storefront entry. You can link to an existing menu item below."}
+                        ? t("data.products.form.linkedSyncHint")
+                        : t("data.products.form.notLinkedHint")}
                     </p>
                   </div>
                 </div>
@@ -856,12 +856,16 @@ export function EditProductDialog({
                       </SelectItem>
                       {currentLinked && (
                         <SelectItem value="none">
-                          ✕ Remove link from &quot;{currentLinked.name}&quot;
+                          ✕{" "}
+                          {t("data.products.form.removeLinkFrom").replace(
+                            "{name}",
+                            currentLinked.name
+                          )}
                         </SelectItem>
                       )}
                       {unlinkedMenuItems.map((item) => (
                         <SelectItem key={item.id} value={item.id}>
-                          Link to &quot;{item.name}&quot;
+                          {t("data.products.form.linkTo").replace("{name}", item.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>

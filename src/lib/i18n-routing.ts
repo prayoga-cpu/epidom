@@ -50,6 +50,34 @@ export function getLocalizedPath(basePath: string, locale: Locale): string {
 export const LOCALE_PREF_COOKIE = "epidom_locale_pref";
 
 /**
+ * The language the signed-in app (dashboard, till, auth pages) is showing,
+ * mirrored into a cookie by I18nProvider.setLocale. The app's own preference
+ * lives in localStorage, which the server cannot read; this cookie is what lets
+ * server-sent text (the verification and password-reset e-mails) match the
+ * screen the person was looking at. It never drives a redirect.
+ */
+export const UI_LOCALE_COOKIE = "epidom_ui_locale";
+
+/**
+ * The language to write to someone the server knows only by their request:
+ * the app's UI language, else the language they picked on the marketing site,
+ * else their browser's when it is one we speak, else English.
+ */
+export function localeFromRequest(headers: Headers | null | undefined): Locale {
+  if (!headers) return "en";
+  const cookies = headers.get("cookie") ?? "";
+  for (const name of [UI_LOCALE_COOKIE, LOCALE_PREF_COOKIE]) {
+    const match = cookies.match(new RegExp(`(?:^|;\\s*)${name}=([a-z]{2})(?:;|$)`));
+    const found = LOCALES.find((l) => l === match?.[1]);
+    if (found) return found;
+  }
+  const accept = headers.get("accept-language");
+  if (!accept) return "en";
+  const first = accept.split(",")[0]?.trim().slice(0, 2).toLowerCase();
+  return LOCALES.find((l) => l === first) ?? "en";
+}
+
+/**
  * Best-guess locale from an Accept-Language header, e.g.
  * "en-US,en;q=0.9,fr;q=0.8" — re-evaluated on every visit to the unprefixed
  * (fr) site as long as no explicit LOCALE_PREF_COOKIE choice exists, so the

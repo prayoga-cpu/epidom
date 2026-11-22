@@ -91,7 +91,7 @@ export function MaterialDetailsDialog({
                 <DialogTitle className="text-xl break-words">{material.name}</DialogTitle>
                 {material.sku && (
                   <p className="text-muted-foreground mt-1 text-sm break-all">
-                    SKU: {material.sku}
+                    {t("common.sku")}: {material.sku}
                   </p>
                 )}
               </div>

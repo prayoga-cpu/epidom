@@ -191,7 +191,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
       if (yieldQuantity <= 0) {
         form.setError("yieldQuantity", {
           type: "manual",
-          message: "Yield quantity must be positive",
+          message: t("common.validation.yieldPositive"),
         });
         return;
       }
@@ -199,7 +199,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
       if (productionTimeMinutes <= 0) {
         form.setError("productionTimeMinutes", {
           type: "manual",
-          message: "Production time must be at least 1 minute",
+          message: t("common.validation.productionTimeMin"),
         });
         return;
       }
@@ -214,7 +214,7 @@ export default function EditRecipeDialog({ open, onOpenChange, recipe }: EditRec
       if (processedIngredients.length === 0) {
         form.setError("ingredients", {
           type: "manual",
-          message: "At least one ingredient is required",
+          message: t("common.validation.ingredientRequired"),
         });
         return;
       }

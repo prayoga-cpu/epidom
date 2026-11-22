@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -93,10 +94,10 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
     } catch (error) {
       sonnerToast.error(t("common.error") || "Error", {
         description:
-          error instanceof Error
+          localizeServerMessage(error instanceof Error
             ? error.message
             : t("management.recipeProduction.messages.completeError") ||
-              "Failed to complete production",
+              "Failed to complete production"),
       });
     }
   };
@@ -130,10 +131,10 @@ export function ProductionBatchCard({ batch }: ProductionBatchCardProps) {
     } catch (error) {
       sonnerToast.error(t("common.error") || "Error", {
         description:
-          error instanceof Error
+          localizeServerMessage(error instanceof Error
             ? error.message
             : t("management.recipeProduction.messages.cancelError") ||
-              "Failed to cancel production",
+              "Failed to cancel production"),
       });
     }
   };

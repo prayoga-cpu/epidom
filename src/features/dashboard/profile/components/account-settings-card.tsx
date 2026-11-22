@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,30 +89,32 @@ const PROVIDER_ICONS: Record<string, string> = {
   credential: "🔑",
 };
 
-async function fetchAccountSettings(): Promise<AccountData> {
+async function fetchAccountSettings(failedMessage: string): Promise<AccountData> {
   const res = await fetch("/api/user/account-settings");
-  if (!res.ok) throw new Error("Failed to load account settings");
+  if (!res.ok) throw new Error(failedMessage);
   const json = await res.json();
   return json.data;
 }
 
-async function postAccountAction(body: Record<string, unknown>) {
+async function postAccountAction(body: Record<string, unknown>, fallbackMessage: string) {
   const res = await fetch("/api/user/account-settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error?.message || json.error || "Request failed");
+  if (!res.ok) throw new Error(localizeServerMessage(json.error?.message || json.error || fallbackMessage));
   return json.data;
 }
 
 export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
   const { t, formatDate } = useI18n();
   const queryClient = useQueryClient();
+  const post = (body: Record<string, unknown>) =>
+    postAccountAction(body, t("common.requestFailed"));
   const { data, isLoading } = useQuery({
     queryKey: ["account-settings"],
-    queryFn: fetchAccountSettings,
+    queryFn: () => fetchAccountSettings(t("profile.accountSettings.failedToLoad")),
   });
   const { data: pinStatus } = useOwnerPinStatus();
   const { confirm, confirmDialog } = useConfirm();
@@ -140,7 +143,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
 
   const changePwMutation = useMutation({
     mutationFn: () =>
-      postAccountAction({
+      post({
         action: "change-password",
         currentPassword: currentPw,
         newPassword: newPw,
@@ -153,40 +156,40 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
       setConfirmPw("");
       queryClient.invalidateQueries({ queryKey: ["account-settings"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(localizeServerMessage(err.message)),
   });
 
   const deactivateAccountMutation = useMutation({
     mutationFn: () =>
-      postAccountAction({ action: "deactivate-account", confirmEmail: deactivateConfirmEmail }),
+      post({ action: "deactivate-account", confirmEmail: deactivateConfirmEmail }),
     onSuccess: async () => {
       toast.success(t("profile.accountSettings.accountDeactivated"));
       await signOut();
       window.location.href = "/";
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(localizeServerMessage(err.message)),
   });
 
   const reactivateAccountMutation = useMutation({
-    mutationFn: () => postAccountAction({ action: "reactivate-account" }),
+    mutationFn: () => post({ action: "reactivate-account" }),
     onSuccess: () => {
       toast.success(t("profile.accountSettings.reactivateSuccess"));
       queryClient.invalidateQueries({ queryKey: ["account-settings"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(localizeServerMessage(err.message)),
   });
 
   const revokeSessionMutation = useMutation({
-    mutationFn: (sessionId: string) => postAccountAction({ action: "revoke-session", sessionId }),
+    mutationFn: (sessionId: string) => post({ action: "revoke-session", sessionId }),
     onSuccess: () => {
       toast.success(t("profile.accountSettings.deviceSignedOut"));
       queryClient.invalidateQueries({ queryKey: ["account-settings"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(localizeServerMessage(err.message)),
   });
 
   const revokeOtherSessionsMutation = useMutation({
-    mutationFn: () => postAccountAction({ action: "revoke-other-sessions" }),
+    mutationFn: () => post({ action: "revoke-other-sessions" }),
     onSuccess: (result: { revokedCount: number }) => {
       toast.success(
         result.revokedCount > 0
@@ -199,7 +202,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
       );
       queryClient.invalidateQueries({ queryKey: ["account-settings"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(localizeServerMessage(err.message)),
   });
 
   const handleRevokeSession = async (sessionId: string, label: string) => {
@@ -360,8 +363,7 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                 </p>
                 {!data?.hasPasswordAccount && (
                   <p className="text-muted-foreground bg-muted/30 rounded-lg border px-3 py-2 text-xs">
-                    The password hasn&apos;t been set up for this account — you can only sign in
-                    via the linked account(s) below until you set one.
+                    {t("profile.accountSettings.noPasswordSet")}
                   </p>
                 )}
                 {data?.linkedAccounts.length === 0 ? (
@@ -435,7 +437,9 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                   <div className="space-y-2">
                     {data.sessions.map((s) => {
                       const DeviceIcon = DEVICE_ICONS[s.device] ?? Monitor;
-                      const label = `${s.browser} on ${s.os}`;
+                      const label = t("profile.accountSettings.browserOnOs")
+                        .replace("{browser}", s.browser)
+                        .replace("{os}", s.os);
                       const isRevoking =
                         revokeSessionMutation.isPending &&
                         revokeSessionMutation.variables === s.id;
@@ -450,7 +454,10 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium">
                               {label}
-                              <span className="text-muted-foreground font-normal"> · {s.device}</span>
+                              <span className="text-muted-foreground font-normal">
+                                {" "}
+                                · {t(`profile.accountSettings.device${s.device}`)}
+                              </span>
                             </p>
                             <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
                               <span>
@@ -470,14 +477,14 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                               variant="outline"
                               className="shrink-0 border-emerald-400 text-xs text-emerald-600"
                             >
-                              This device
+                              {t("profile.accountSettings.thisDevice")}
                             </Badge>
                           ) : (
                             <Button
                               variant="ghost"
                               size="icon"
                               className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 shrink-0"
-                              aria-label="Sign out this device"
+                              aria-label={t("profile.accountSettings.signOutThisDeviceAriaLabel")}
                               onClick={() => handleRevokeSession(s.id, label)}
                               disabled={isRevoking}
                             >
@@ -507,11 +514,13 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
                     <Key className="h-4 w-4" />
                     {data?.hasPasswordAccount
                       ? t("profile.accountSettings.changePassword")
-                      : "Set Password"}
+                      : t("profile.accountSettings.setPassword")}
                   </Button>
                   <Button variant="outline" className="gap-2" onClick={() => setPinDialog(true)}>
                     <KeyRound className="h-4 w-4" />
-                    {pinStatus?.hasPin ? "Change Owner PIN" : "Set Owner PIN"}
+                    {pinStatus?.hasPin
+                      ? t("profile.accountSettings.changeOwnerPin")
+                      : t("profile.accountSettings.setOwnerPin")}
                   </Button>
                   <Button
                     variant="outline"
@@ -532,12 +541,14 @@ export function AccountSettingsCard({ userEmail }: { userEmail: string }) {
       <Dialog open={pwDialog} onOpenChange={setPwDialog}>
         <FormDialogLayout
           title={
-            data?.hasPasswordAccount ? t("profile.accountSettings.changePassword") : "Set Password"
+            data?.hasPasswordAccount
+              ? t("profile.accountSettings.changePassword")
+              : t("profile.accountSettings.setPassword")
           }
           description={
             data?.hasPasswordAccount
               ? t("profile.accountSettings.changePasswordDescription")
-              : "Add a password so you can also sign in with email + password, not just your linked account."
+              : t("profile.accountSettings.setPasswordDescription")
           }
           footer={
             <>

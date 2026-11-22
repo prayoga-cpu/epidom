@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ export function PrepListPanel({ storeId }: PrepListPanelProps) {
       }
       setAmounts((prev) => ({ ...prev, [item.productId]: "" }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("production.prepList.logFailed"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("production.prepList.logFailed")));
     } finally {
       setPendingId(null);
     }

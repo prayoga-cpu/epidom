@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState, useMemo, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
@@ -213,7 +214,7 @@ export function MaterialsSection({
         params.append("skip", String(SUPPLIER_PREFETCH_FILTERS.skip));
         params.append("take", String(SUPPLIER_PREFETCH_FILTERS.take));
         const response = await fetch(`/api/stores/${storeId}/suppliers?${params.toString()}`);
-        if (!response.ok) throw new Error("Failed to prefetch suppliers");
+        if (!response.ok) throw new Error(localizeServerMessage("Failed to prefetch suppliers"));
         // Written straight into the key useSuppliers reads, so it has to be
         // the unwrapped payload — the envelope emptied the supplier dropdown
         // until this entry went stale.
@@ -280,7 +281,7 @@ export function MaterialsSection({
       toast.success(t("data.materials.manageCategories.deleted"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("data.materials.manageCategories.deleteFailed")
+        localizeServerMessage(error instanceof Error ? error.message : t("data.materials.manageCategories.deleteFailed"))
       );
     }
   };
@@ -410,7 +411,7 @@ export function MaterialsSection({
       setDeleteDialogOpen(false);
       setSelectedMaterial(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteMaterial"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("messages.failedToDeleteMaterial")));
     }
   };
 
@@ -427,7 +428,7 @@ export function MaterialsSection({
       );
       clearSelection();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteMaterials"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("messages.failedToDeleteMaterials")));
     }
   };
 
@@ -462,7 +463,7 @@ export function MaterialsSection({
     return (
       <SectionErrorState
         title={t("common.error")}
-        message={error.message || t("messages.errorLoadingMaterials")}
+        message={localizeServerMessage(error.message) || t("messages.errorLoadingMaterials")}
         onRetry={() => refetch()}
         retryLabel={t("common.actions.retry")}
       />

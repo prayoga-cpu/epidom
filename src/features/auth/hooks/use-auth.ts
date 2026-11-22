@@ -5,7 +5,11 @@ import { authClient } from "@/lib/auth-client";
 import { trackMetaPixelEvent, trackEvent, trackConversion } from "@/lib/analytics";
 import { emailVerificationCallbackURL } from "../register/lib/verification-landing";
 import { stashVerifyEmail } from "../register/lib/verify-email-handoff";
-import { LOGIN_SERVICE_UNAVAILABLE } from "../lib/login-errors";
+import {
+  AUTH_INVALID_CREDENTIALS_FALLBACK,
+  AUTH_REGISTRATION_FAILED_FALLBACK,
+  LOGIN_SERVICE_UNAVAILABLE,
+} from "../lib/login-errors";
 
 /**
  * Login mutation hook
@@ -28,7 +32,7 @@ export function useLogin() {
         if (typeof error.status === "number" && error.status >= 500) {
           throw new Error(LOGIN_SERVICE_UNAVAILABLE);
         }
-        throw new Error(error.message || "Invalid email or password");
+        throw new Error(error.message || AUTH_INVALID_CREDENTIALS_FALLBACK);
       }
 
       return session;
@@ -63,7 +67,7 @@ export function useRegister() {
       });
 
       if (error) {
-        throw new Error(error.message || "Registration failed");
+        throw new Error(error.message || AUTH_REGISTRATION_FAILED_FALLBACK);
       }
 
       // Return email for redirect

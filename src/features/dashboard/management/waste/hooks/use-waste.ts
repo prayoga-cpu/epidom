@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { WasteReason } from "@prisma/client";
 import {
@@ -82,7 +83,7 @@ export const wasteKeys = {
 async function parseOrThrow(response: Response) {
   const body = await response.json();
   if (!response.ok) {
-    throw new Error(body.error?.message || "Request failed");
+    throw new Error(localizeServerMessage(body.error?.message || "Request failed"));
   }
   return body.data;
 }

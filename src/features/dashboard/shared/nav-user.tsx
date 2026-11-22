@@ -94,9 +94,10 @@ function useNavUserModel() {
 }
 
 function RoleBadge({ actingAsStaff }: { actingAsStaff: boolean }) {
+  const { t } = useI18n();
   return actingAsStaff ? (
     <span className="shrink-0 rounded-full border border-amber-400/40 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-amber-600 uppercase">
-      Staff
+      {t("nav.staff")}
     </span>
   ) : (
     <span className="shrink-0 rounded-full border border-violet-400/40 bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-violet-600 uppercase">
@@ -155,7 +156,7 @@ export function NavUser({ variant = "topbar", compact = false }: NavUserProps = 
             style={{ color: "var(--epi-cream-50)" }}
           >
             <Avatar className="size-7 shrink-0">
-              {profile?.image && <AvatarImage src={profile.image} alt={user?.name ?? "User"} />}
+              {profile?.image && <AvatarImage src={profile.image} alt={user?.name ?? t("common.user")} />}
               <AvatarFallback
                 className="text-foreground bg-[var(--epi-navy-700)] text-xs"
                 style={{ color: "var(--epi-cream-50)" }}
@@ -246,7 +247,7 @@ export function NavUser({ variant = "topbar", compact = false }: NavUserProps = 
                   className="text-red-400 focus:bg-red-500/10 focus:text-red-400"
                 >
                   <Shield className="mr-2 h-3.5 w-3.5" />
-                  Admin Panel
+                  {t("nav.adminPanel")}
                 </DropdownMenuItem>
               )}
               {canSeeRevenue && (
@@ -255,7 +256,7 @@ export function NavUser({ variant = "topbar", compact = false }: NavUserProps = 
                   className="text-emerald-400 focus:bg-emerald-500/10 focus:text-emerald-400"
                 >
                   <TrendingUp className="mr-2 h-3.5 w-3.5" />
-                  Revenue Report
+                  {t("nav.revenueReport")}
                 </DropdownMenuItem>
               )}
               {isPartner && (
@@ -347,7 +348,7 @@ export function NavUserDrawerSection() {
       <span className="text-muted-foreground text-xs font-medium">{t("nav.account")}</span>
       <div className="flex min-w-0 items-center gap-2.5 px-2 py-1.5">
         <Avatar className="size-8 shrink-0">
-          {profile?.image && <AvatarImage src={profile.image} alt={user?.name ?? "User"} />}
+          {profile?.image && <AvatarImage src={profile.image} alt={user?.name ?? t("common.user")} />}
           <AvatarFallback className="bg-muted text-foreground text-xs">{initial}</AvatarFallback>
         </Avatar>
         <div className="flex min-w-0 flex-1 flex-col">
@@ -381,7 +382,7 @@ export function NavUserDrawerSection() {
       {!actingAsStaff && hasAdminPages && (
         <DrawerAction
           icon={Shield}
-          label="Admin Panel"
+          label={t("nav.adminPanel")}
           tone="admin"
           onClick={() => router.push("/admin")}
         />
@@ -389,7 +390,7 @@ export function NavUserDrawerSection() {
       {!actingAsStaff && canSeeRevenue && (
         <DrawerAction
           icon={TrendingUp}
-          label="Revenue Report"
+          label={t("nav.revenueReport")}
           tone="revenue"
           onClick={() => router.push("/admin/revenue")}
         />

@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateStoreInput } from "@/lib/validation/business.schemas";
 import { ApiSuccessResponse } from "@/types/api/responses";
@@ -53,7 +54,7 @@ export function useStores() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to fetch stores");
+        throw new Error(localizeServerMessage(errorData.error?.message || "Failed to fetch stores"));
       }
 
       const data: ApiSuccessResponse<Store[]> = await response.json();
@@ -75,7 +76,7 @@ export function useStore(id: string) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to fetch store");
+        throw new Error(localizeServerMessage(errorData.error?.message || "Failed to fetch store"));
       }
 
       const data: ApiSuccessResponse<Store> = await response.json();
@@ -103,7 +104,7 @@ export function useCreateStore() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to create store");
+        throw new Error(localizeServerMessage(errorData.error?.message || "Failed to create store"));
       }
 
       const data: ApiSuccessResponse<Store> = await response.json();
@@ -137,7 +138,7 @@ export function useUpdateStore(id: string) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to update store");
+        throw new Error(localizeServerMessage(errorData.error?.message || "Failed to update store"));
       }
 
       const data: ApiSuccessResponse<Store> = await response.json();
@@ -166,7 +167,7 @@ export function useDeleteStore() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to delete store");
+        throw new Error(localizeServerMessage(errorData.error?.message || "Failed to delete store"));
       }
 
       const data: ApiSuccessResponse<{ message: string }> = await response.json();

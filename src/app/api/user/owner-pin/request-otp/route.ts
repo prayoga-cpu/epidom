@@ -20,7 +20,11 @@ const OTP_TTL_MS = 10 * 60 * 1000;
 
 export const POST = withApiHandler(
   async (_request, { userId }) => {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      // The owner's language is the business language; User.locale is never written.
+      select: { email: true, name: true, business: { select: { locale: true } } },
+    });
     if (!user?.email) {
       return NextResponse.json(createErrorResponse(ApiErrorCode.NOT_FOUND, "Account not found"), {
         status: 404,
@@ -43,7 +47,7 @@ export const POST = withApiHandler(
       },
     });
 
-    await sendOwnerPinResetOtpEmail(user.email, user.name ?? null, otp);
+    await sendOwnerPinResetOtpEmail(user.email, user.name ?? null, otp, user.business?.locale);
 
     // Don't leak the address in the response beyond what the UI already
     // knows the user's own account email to be.

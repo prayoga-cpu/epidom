@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus, Tag, Trash2 } from "lucide-react";
@@ -52,7 +53,7 @@ export function DiscountPresetsCard({ storeId, query }: DiscountPresetsCardProps
       {
         onError: (error) =>
           toast.error(t("common.error"), {
-            description: error.message || t("promotions.toasts.updateFailed"),
+            description: localizeServerMessage(error.message || t("promotions.toasts.updateFailed")),
           }),
       }
     );
@@ -65,7 +66,7 @@ export function DiscountPresetsCard({ storeId, query }: DiscountPresetsCardProps
       toast.success(t("promotions.toasts.presetDeleted"));
     } catch (error) {
       toast.error(t("common.error"), {
-        description: error instanceof Error ? error.message : t("promotions.toasts.deleteFailed"),
+        description: localizeServerMessage(error instanceof Error ? error.message : t("promotions.toasts.deleteFailed")),
       });
     }
     setDeleteOpen(false);
@@ -90,7 +91,7 @@ export function DiscountPresetsCard({ storeId, query }: DiscountPresetsCardProps
         ) : query.isError ? (
           <PromotionBlockState>
             <p className="text-destructive text-sm">
-              {query.error.message || t("promotions.presets.loadFailed")}
+              {localizeServerMessage(query.error.message) || t("promotions.presets.loadFailed")}
             </p>
             <Button variant="outline" size="sm" className="h-10" onClick={() => query.refetch()}>
               {t("common.actions.retry")}

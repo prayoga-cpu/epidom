@@ -24,11 +24,12 @@ function isActive(href: string, pathname: string): boolean {
 }
 
 function NavBadge({ count }: { count: number | null | undefined }) {
+  const { t } = useI18n();
   if (!count) return null;
   return (
     <span
       className="flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-semibold text-white"
-      aria-label={`${count} pending`}
+      aria-label={t("adminNav.pendingAria").replace("{count}", String(count))}
     >
       {count > 99 ? "99+" : count}
     </span>

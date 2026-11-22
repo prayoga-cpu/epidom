@@ -5,6 +5,7 @@ import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface ThemeToggleProps {
   /**
@@ -17,6 +18,7 @@ interface ThemeToggleProps {
 
 export function ThemeToggle({ tone = "topbar" }: ThemeToggleProps) {
   const { resolvedTheme, setTheme } = useTheme();
+  const { t } = useI18n();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return <div className={tone === "surface" ? "size-10 shrink-0" : "h-9 w-9"} />;
@@ -31,8 +33,8 @@ export function ThemeToggle({ tone = "topbar" }: ThemeToggleProps) {
       )}
       style={tone === "topbar" ? { color: "var(--epi-cream-50)" } : undefined}
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-      aria-label="Toggle theme"
-      title="Toggle theme"
+      aria-label={t("common.theme.toggle")}
+      title={t("common.theme.toggle")}
     >
       {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </Button>

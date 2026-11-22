@@ -15,6 +15,7 @@ import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
 import { useServerSnapshot } from "@/hooks/use-server-snapshot";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 export interface LinkedMenuItem {
   id: string;
@@ -237,7 +238,7 @@ async function exportProducts(storeId: string, filters: ProductFilterInput): Pro
     if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
       const { createSubscriptionError } = await import("@/types/errors");
       const customError = createSubscriptionError(
-        error.message || "Export feature is only available in Pro and Enterprise plans",
+        error.message || localizeServerMessage("Export feature is only available in Pro and Enterprise plans"),
         true
       );
       (customError as any).status = 403;
@@ -738,7 +739,7 @@ export function useRemoveProductFromMenu(storeId: string) {
               ? error
               : {
                   success: false,
-                  error: { code: "INTERNAL_ERROR", message: "Failed to remove product from menu" },
+                  error: { code: "INTERNAL_ERROR", message: localizeServerMessage("Failed to remove product from menu") },
                 },
             res.status
           );
@@ -855,7 +856,7 @@ export function useBulkRemoveProductsFromMenu(storeId: string) {
                       success: false,
                       error: {
                         code: "INTERNAL_ERROR",
-                        message: "Failed to remove product from menu",
+                        message: localizeServerMessage("Failed to remove product from menu"),
                       },
                     },
                 res.status

@@ -57,9 +57,7 @@ export function SupplierDetailsDialog({
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <DialogTitle className="text-2xl">{supplier.name}</DialogTitle>
-              <DialogDescription>
-                Supplier details, performance metrics, and order history
-              </DialogDescription>
+              <DialogDescription>{t("data.suppliers.detailsDialogDescription")}</DialogDescription>
             </div>
             <div className="flex gap-2">
               {onEdit && (
@@ -86,21 +84,23 @@ export function SupplierDetailsDialog({
           <div>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
               <Store className="h-5 w-5" />
-              Contact Information
+              {t("alerts.contactInfo")}
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-3">
                 {supplier.contactPerson && (
                   <div>
                     <label className="text-muted-foreground text-sm font-medium">
-                      Contact Person
+                      {t("data.suppliers.form.contactPerson")}
                     </label>
                     <p className="text-sm">{supplier.contactPerson}</p>
                   </div>
                 )}
                 {supplier.email && (
                   <div>
-                    <label className="text-muted-foreground text-sm font-medium">Email</label>
+                    <label className="text-muted-foreground text-sm font-medium">
+                      {t("common.email")}
+                    </label>
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="text-muted-foreground h-4 w-4" />
                       <a href={`mailto:${supplier.email}`} className="hover:underline">
@@ -111,7 +111,9 @@ export function SupplierDetailsDialog({
                 )}
                 {supplier.phone && (
                   <div>
-                    <label className="text-muted-foreground text-sm font-medium">Phone</label>
+                    <label className="text-muted-foreground text-sm font-medium">
+                      {t("common.phone")}
+                    </label>
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="text-muted-foreground h-4 w-4" />
                       <a href={`tel:${supplier.phone}`} className="hover:underline">
@@ -124,7 +126,9 @@ export function SupplierDetailsDialog({
               <div className="space-y-3">
                 {(supplier.address || supplier.city || supplier.country) && (
                   <div>
-                    <label className="text-muted-foreground text-sm font-medium">Address</label>
+                    <label className="text-muted-foreground text-sm font-medium">
+                      {t("common.address")}
+                    </label>
                     <div className="flex items-start gap-2 text-sm">
                       <MapPin className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
                       <div>
@@ -147,7 +151,10 @@ export function SupplierDetailsDialog({
               <div>
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
                   <Package className="h-5 w-5" />
-                  Supplied Materials ({supplier.materialSuppliers.length})
+                  {t("data.suppliers.suppliedMaterials").replace(
+                    "{count}",
+                    String(supplier.materialSuppliers.length)
+                  )}
                 </h3>
                 <div className="space-y-3">
                   {supplier.materialSuppliers.map((ms, index) => {
@@ -167,7 +174,7 @@ export function SupplierDetailsDialog({
                               <p className="min-w-0 truncate font-medium">{material.name}</p>
                               {ms.isPreferred && (
                                 <Badge variant="default" className="shrink-0 text-xs">
-                                  Preferred
+                                  {t("data.materials.form.preferred")}
                                 </Badge>
                               )}
                             </div>
@@ -177,18 +184,21 @@ export function SupplierDetailsDialog({
                                   {material.category}
                                 </Badge>
                               )}
-                              {material.sku && <span className="text-xs">SKU: {material.sku}</span>}
+                              {material.sku && <span className="text-xs">
+                                  {t("common.sku")}: {material.sku}
+                                </span>}
                             </p>
                             <div className="mt-1 flex items-center gap-4 text-xs">
                               <span className="text-muted-foreground">
-                                Stock: {formatNumber(Number(material.currentStock))} {material.unit}
+                                {t("common.stock")}: {formatNumber(Number(material.currentStock))}{" "}
+                                {material.unit}
                               </span>
                               <span className="text-muted-foreground">
-                                Unit Cost: {getCurrencySymbol(currency)}
+                                {t("data.materials.details.unitCost")}: {getCurrencySymbol(currency)}
                                 {formatDerivedUnitCost(convertPrice(Number(material.unitCost)))}
                               </span>
                               <span className="font-medium text-green-600">
-                                Supplier Price: {getCurrencySymbol(currency)}
+                                {t("data.suppliers.supplierPrice")}: {getCurrencySymbol(currency)}
                                 {formatDerivedUnitCost(convertPrice(Number(ms.price)))}
                               </span>
                             </div>
@@ -220,8 +230,7 @@ export function SupplierDetailsDialog({
                 </div>
                 <div className="bg-muted/50 mt-4 rounded-lg p-3">
                   <p className="text-muted-foreground text-xs">
-                    💡 This supplier provides these materials. You can manage supplier-specific
-                    pricing and preferences in the materials section.
+                    💡 {t("data.suppliers.suppliedMaterialsHint")}
                   </p>
                 </div>
               </div>
@@ -235,7 +244,7 @@ export function SupplierDetailsDialog({
               <div>
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
                   <FileText className="h-5 w-5" />
-                  Notes
+                  {t("common.notes")}
                 </h3>
                 <Card className="bg-muted/50">
                   <CardContent className="pt-4">
@@ -251,11 +260,15 @@ export function SupplierDetailsDialog({
           <div className="text-muted-foreground flex items-center justify-between text-xs">
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              <span>Created: {formatDate(supplier.createdAt)}</span>
+              <span>
+                {t("data.materials.details.created")}: {formatDate(supplier.createdAt)}
+              </span>
             </div>
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              <span>Updated: {formatDate(supplier.updatedAt)}</span>
+              <span>
+                {t("management.delivery.details.updated")}: {formatDate(supplier.updatedAt)}
+              </span>
             </div>
           </div>
         </div>

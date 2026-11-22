@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface SKUDisplayProps {
   sku: string;
@@ -10,6 +11,7 @@ interface SKUDisplayProps {
 
 export function SKUDisplay({ sku, className }: SKUDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useI18n();
 
   return (
     <p
@@ -28,7 +30,7 @@ export function SKUDisplay({ sku, className }: SKUDisplayProps) {
       }}
       title={!isExpanded ? sku : undefined}
     >
-      SKU: {sku}
+      {t("common.sku")}: {sku}
     </p>
   );
 }

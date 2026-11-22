@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Activity, ShieldAlert, Flag } from "lucide-react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { toast } from "sonner";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 interface MineRow {
   id: string;
@@ -65,7 +66,7 @@ export function ActivityLogCard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ actionLogId }),
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) throw new Error(localizeServerMessage("Failed"));
       return res.json();
     },
     onSuccess: () => {

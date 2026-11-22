@@ -71,16 +71,11 @@ function PosLockBadge({ label = "POS" }: { label?: string }) {
   );
 }
 
-function PosUpgradeButton({
-  onClick,
-  label = "Upgrade to POS",
-}: {
-  onClick: () => void;
-  label?: string;
-}) {
+function PosUpgradeButton({ onClick, label }: { onClick: () => void; label?: string }) {
+  const { t } = useI18n();
   return (
     <Button type="button" size="sm" variant="outline" onClick={onClick} className="shrink-0">
-      {label}
+      {label ?? t("billing.planCards.upgradeTo").replace("{name}", "POS")}
     </Button>
   );
 }
@@ -98,15 +93,20 @@ function PosUpgradeButton({
 function CustomProductsSettingsRow({ storeId }: { storeId: string }) {
   const { data: settings } = useCustomProductsSettings(storeId);
   const updateSettings = useUpdateCustomProductsSettings(storeId);
+  const { t } = useI18n();
   const masterEnabled = settings?.customProductsEnabled ?? false;
   const showOnStorefront = settings?.customProductsShowOnStorefront ?? false;
 
   const handleToggle = async (checked: boolean) => {
     try {
       await updateSettings.mutateAsync({ customProductsShowOnStorefront: checked });
-      toast.success(checked ? "Now shown on your storefront" : "Hidden from your storefront");
+      toast.success(
+        checked
+          ? t("storefront.settings.customProductsShown")
+          : t("storefront.settings.customProductsHidden")
+      );
     } catch {
-      toast.error("Failed to update settings. Try again.");
+      toast.error(t("storefront.settings.updateFailedRetry"));
     }
   };
 
@@ -114,12 +114,15 @@ function CustomProductsSettingsRow({ storeId }: { storeId: string }) {
     <div className="flex items-center justify-between gap-3 py-3 last:pb-0 sm:gap-4 sm:rounded-lg sm:border sm:p-4 sm:last:pb-4">
       <div className="space-y-0.5">
         <p className="text-base font-semibold">
-          {settings?.customProductsLabel || "Custom Products"} on Storefront
+          {t("storefront.settings.customProductsOnStorefront").replace(
+            "{label}",
+            settings?.customProductsLabel || t("pages.customProductsList")
+          )}
         </p>
         <p className="text-muted-foreground text-sm">
           {masterEnabled
-            ? "Also show these items on your public storefront menu (the store link), not just POS Cashier."
-            : "Enable Custom Products from the Data page first — there's nothing to publish yet."}
+            ? t("storefront.settings.customProductsOnDesc")
+            : t("storefront.settings.customProductsOffDesc")}
         </p>
       </div>
       <Switch
@@ -133,6 +136,9 @@ function CustomProductsSettingsRow({ storeId }: { storeId: string }) {
 
 export function StorefrontSettings({ storeId, initialData, onSuccess }: StorefrontSettingsProps) {
   const { t } = useI18n();
+  const [reservationsDescBefore, reservationsDescAfter = ""] = t(
+    "storefront.settings.reservationsDesc"
+  ).split("{path}");
   const { data: subData } = useSubscriptionStatus();
   const { openUpgrade } = useUpgradeGate();
   const currentPlan = (subData?.subscription?.plan as PlanTier) ?? "FREE";
@@ -601,7 +607,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                   name="instagramUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Instagram URL</FormLabel>
+                      <FormLabel>{t("storefront.settings.instagramUrl")}</FormLabel>
                       <FormControl>
                         <Input placeholder="https://instagram.com/..." {...field} />
                       </FormControl>
@@ -614,7 +620,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                   name="googleMapsUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Google Maps URL</FormLabel>
+                      <FormLabel>{t("storefront.settings.googleMapsUrl")}</FormLabel>
                       <FormControl>
                         <Input placeholder="https://maps.app.goo.gl/..." {...field} />
                       </FormControl>
@@ -671,10 +677,8 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
           {/* Storefront Features */}
           <Card>
             <CardHeader>
-              <CardTitle>Storefront Features</CardTitle>
-              <CardDescription>
-                Control what customers can do on your public storefront page.
-              </CardDescription>
+              <CardTitle>{t("storefront.settings.featuresSection")}</CardTitle>
+              <CardDescription>{t("storefront.settings.featuresDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="divide-border space-y-0 divide-y sm:space-y-4 sm:divide-y-0">
               <FormField
@@ -684,19 +688,17 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                   <FormItem className="flex items-center justify-between gap-3 py-3 first:pt-0 sm:gap-4 sm:rounded-lg sm:border sm:p-4 sm:first:pt-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base font-semibold">
-                        Online Orders
+                        {t("storefront.settings.onlineOrders")}
                         {!hasPosFeatures && <PosLockBadge />}
                       </FormLabel>
-                      <FormDescription>
-                        Let customers place orders directly from your storefront.
-                      </FormDescription>
+                      <FormDescription>{t("storefront.settings.onlineOrdersDesc")}</FormDescription>
                     </div>
                     <FormControl>
                       {hasPosFeatures ? (
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
                       ) : (
                         <PosUpgradeButton
-                          onClick={() => openUpgrade("POS", "Online ordering is a POS feature.")}
+                          onClick={() => openUpgrade("POS", t("storefront.settings.onlineOrdersLocked"))}
                         />
                       )}
                     </FormControl>
@@ -710,12 +712,13 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                   <FormItem className="flex items-center justify-between gap-3 py-3 last:pb-0 sm:gap-4 sm:rounded-lg sm:border sm:p-4 sm:last:pb-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base font-semibold">
-                        Table Reservations
+                        {t("storefront.settings.reservations")}
                         {!hasPosFeatures && <PosLockBadge />}
                       </FormLabel>
                       <FormDescription>
-                        Let customers book a table from your storefront. Enable reservation
-                        per-table in <strong>Operations → Tables</strong>.
+                        {reservationsDescBefore}
+                        <strong>{t("storefront.settings.reservationsDescPath")}</strong>
+                        {reservationsDescAfter}
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -724,7 +727,7 @@ export function StorefrontSettings({ storeId, initialData, onSuccess }: Storefro
                       ) : (
                         <PosUpgradeButton
                           onClick={() =>
-                            openUpgrade("POS", "Table reservations are a POS feature.")
+                            openUpgrade("POS", t("storefront.settings.reservationsLocked"))
                           }
                         />
                       )}

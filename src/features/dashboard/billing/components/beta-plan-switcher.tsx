@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,10 +37,10 @@ export function BetaPlanSwitcher({ currentPlan }: { currentPlan: string }) {
         body: JSON.stringify({ plan }),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(getApiErrorMessage(data, "Failed to switch plan"));
+      if (!res.ok) throw new Error(getApiErrorMessage(data, t("billing.switchPlanFailed")));
       window.location.reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to switch plan");
+      setError(localizeServerMessage(e instanceof Error ? e.message : t("billing.switchPlanFailed")));
       setLoading(false);
     }
   };

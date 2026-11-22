@@ -78,7 +78,7 @@ interface OrderStatusClientProps {
 }
 
 export function OrderStatusClient({ storefront, order }: OrderStatusClientProps) {
-  const { t } = useI18n();
+  const { t, intlLocale } = useI18n();
   const [currentStatus, setCurrentStatus] = useState(order.status);
   const [currentPaymentStatus, setCurrentPaymentStatus] = useState(order.paymentStatus);
   const [isPolling, setIsPolling] = useState(true);
@@ -452,7 +452,7 @@ export function OrderStatusClient({ storefront, order }: OrderStatusClientProps)
 
         <p className="text-muted-foreground text-center text-xs" suppressHydrationWarning>
           {t("publicOrder.orderStatus.orderedOn")}{" "}
-          {new Intl.DateTimeFormat("id-ID", {
+          {new Intl.DateTimeFormat(intlLocale, {
             dateStyle: "medium",
             timeStyle: "short",
           }).format(new Date(order.createdAt))}

@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -125,7 +126,7 @@ export function OpenOrdersList({ storeId, onSend, onPrint, onEdit }: OpenOrdersL
         });
       },
       onError: (err) => {
-        toast.error(t("management.delivery.confirmReceived.failed"), { description: err.message });
+        toast.error(t("management.delivery.confirmReceived.failed"), { description: localizeServerMessage(err.message) });
       },
       // Closed either way: on a 409 (already received from another tap or
       // device) the refetch drops the row, and any other failure is retried
@@ -139,7 +140,7 @@ export function OpenOrdersList({ storeId, onSend, onPrint, onEdit }: OpenOrdersL
     cancel.mutate(toCancel.id, {
       onSuccess: () => toast.success(t("management.delivery.confirmCancel.success")),
       onError: (err) =>
-        toast.error(t("management.delivery.confirmCancel.failed"), { description: err.message }),
+        toast.error(t("management.delivery.confirmCancel.failed"), { description: localizeServerMessage(err.message) }),
     });
     setToCancel(null);
   };
@@ -171,7 +172,7 @@ export function OpenOrdersList({ storeId, onSend, onPrint, onEdit }: OpenOrdersL
     return (
       <SectionErrorState
         title={t("common.error")}
-        message={error.message || t("alerts.errorLoadingOrders")}
+        message={localizeServerMessage(error.message) || t("alerts.errorLoadingOrders")}
         onRetry={() => refetch()}
         retryLabel={t("common.actions.retry")}
       />

@@ -148,7 +148,9 @@ export function EntityPreviewCard({
               </Badge>
             </div>
             {data.sku !== undefined && data.sku !== null && data.sku !== "" && (
-              <p className="text-muted-foreground text-xs">SKU: {String(data.sku)}</p>
+              <p className="text-muted-foreground text-xs">
+                {t("common.sku")}: {String(data.sku)}
+              </p>
             )}
           </div>
           <div className="flex shrink-0 gap-1">

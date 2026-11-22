@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { SetupProgress } from "@/lib/guide/contracts";
 import type { ApiSuccessResponse } from "@/types/api/responses";
 import { UnauthorizedError, isUnauthorizedError } from "@/lib/api/unauthorized";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * The store's Getting-started checklist (GET /api/stores/[id]/setup-progress).
@@ -32,7 +33,7 @@ export function useSetupProgress(
       const response = await fetch(`/api/stores/${encodeURIComponent(storeId!)}/setup-progress`);
       if (response.status === 403) return null;
       if (response.status === 401) throw new UnauthorizedError();
-      if (!response.ok) throw new Error("Failed to load the setup checklist");
+      if (!response.ok) throw new Error(localizeServerMessage("Failed to load the setup checklist"));
       const body: ApiSuccessResponse<SetupProgress> = await response.json();
       return body.data;
     },

@@ -85,7 +85,7 @@ export const POST = withApiHandler(
 
     const store = await prisma.store.findUnique({
       where: { id: storeId! },
-      select: { name: true },
+      select: { name: true, business: { select: { locale: true } } },
     });
 
     // One live link per staff member: issuing a new one retires any earlier,
@@ -113,7 +113,8 @@ export const POST = withApiHandler(
       staff.email,
       staff.name,
       store?.name ?? "your store",
-      buildStaffInviteUrl(token)
+      buildStaffInviteUrl(token),
+      store?.business?.locale
     );
 
     if (!result.success) {

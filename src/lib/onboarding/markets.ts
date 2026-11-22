@@ -229,6 +229,14 @@ export const COUNTRIES: CountryDefinition[] = [
     locale: "fr",
   },
   {
+    code: "TH",
+    name: "Thailand",
+    currency: "THB",
+    market: "INTERNATIONAL",
+    timezones: ["Asia/Bangkok"],
+    locale: "th",
+  },
+  {
     code: "TN",
     name: "Tunisia",
     currency: "TND",
@@ -352,6 +360,7 @@ export function guessCountryCode(input: {
   }
   if (input.uiLocale === "fr") return "FR";
   if (input.uiLocale === "id") return "ID";
+  if (input.uiLocale === "th") return "TH";
   return OTHER_COUNTRY_CODE;
 }
 

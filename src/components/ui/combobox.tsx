@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useOptionalI18n } from "@/components/lang/optional-i18n";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -39,14 +40,21 @@ export function Combobox({
   options,
   value,
   onChange,
-  placeholder = "Select...",
-  searchPlaceholder = "Search...",
-  emptyText = "No results found.",
+  placeholder,
+  searchPlaceholder,
+  emptyText,
   className,
   disabled,
   creatable = false,
-  createLabel = (v) => `Create "${v}"`,
+  createLabel,
 }: ComboboxProps) {
+  // Optional: the combobox can render outside an I18nProvider (tests, error fallbacks).
+  const i18n = useOptionalI18n();
+  const tr = (key: string, fallback: string) => (i18n ? i18n.t(key) : fallback);
+  placeholder ??= tr("uiText.common.select", "Select...");
+  searchPlaceholder ??= tr("common.actions.searchPlaceholder", "Search...");
+  emptyText ??= tr("search.noResults", "No results found.");
+  createLabel ??= (v) => tr("uiText.common.createValue", 'Create "{value}"').replace("{value}", v);
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const selected = options.find((o) => o.value === value);

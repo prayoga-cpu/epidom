@@ -3214,7 +3214,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                 <ReportStatus
                   isError={cashReconciliation.isError}
                   onRetry={() => cashReconciliation.refetch()}
-                  loadingLabel="Loading..."
+                  loadingLabel={t("common.loading")}
                   errorLabel={t("pages.financeLoadError")}
                   retryLabel={t("common.actions.retry")}
                 />
@@ -3382,7 +3382,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                       isError={cashReconciliation.isError}
                       colSpan={13}
                       onRetry={() => cashReconciliation.refetch()}
-                      loadingLabel="Loading..."
+                      loadingLabel={t("common.loading")}
                       errorLabel={t("pages.financeLoadError")}
                       retryLabel={t("common.actions.retry")}
                     />
@@ -3704,7 +3704,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                 <ReportStatus
                   isError={wasteEntries.isError}
                   onRetry={() => wasteEntries.refetch()}
-                  loadingLabel="Loading..."
+                  loadingLabel={t("common.loading")}
                   errorLabel={t("pages.financeLoadError")}
                   retryLabel={t("common.actions.retry")}
                 />
@@ -3791,7 +3791,7 @@ export function FinanceClient({ storeId, staff, categories, scopeSwitch }: Finan
                       isError={wasteEntries.isError}
                       colSpan={7}
                       onRetry={() => wasteEntries.refetch()}
-                      loadingLabel="Loading..."
+                      loadingLabel={t("common.loading")}
                       errorLabel={t("pages.financeLoadError")}
                       retryLabel={t("common.actions.retry")}
                     />

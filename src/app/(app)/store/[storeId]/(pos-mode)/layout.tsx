@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePlan } from "@/lib/auth/require-plan";
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { I18nProvider } from "@/components/lang/i18n-provider";
+import { SkipToContent } from "@/components/shared/skip-to-content";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { RouteLoadingIndicator } from "@/components/navigation/route-loading-indicator";
 import { StoreAccessGate } from "@/features/dashboard/shared/store-access-gate";
@@ -91,17 +92,11 @@ export default async function PosModeLayout({
 
   return (
     <div className={`font-sans ${GeistSans.variable} ${geistMono.variable}`}>
-      <a
-        href="#main-content"
-        className="focus:bg-primary focus:text-primary-foreground focus:ring-ring sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:ring-2 focus:outline-none"
-      >
-        Skip to main content
-      </a>
-
       <RouteLoadingIndicator />
 
       <ErrorBoundary>
         <I18nProvider>
+          <SkipToContent />
           <StoreAccessGate
             storeId={storeId}
             bypassGate={bypassGate}

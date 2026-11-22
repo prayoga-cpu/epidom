@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState, type ComponentType } from "react";
 import { usePathname } from "next/navigation";
 import { Boxes, Building2, Check, Loader2, MonitorSmartphone } from "lucide-react";
@@ -178,11 +179,11 @@ export function PlanCards({
       window.location.href = data.data.url;
     } catch (err) {
       setDialogError(
-        err instanceof TypeError
+        localizeServerMessage(err instanceof TypeError
           ? t("billing.planCards.errorNetwork")
           : err instanceof Error
             ? err.message
-            : failed
+            : failed)
       );
       setSubmitting(false);
     }

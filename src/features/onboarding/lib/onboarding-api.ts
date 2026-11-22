@@ -13,6 +13,7 @@ import type {
   OnboardingStorefrontStepInput,
 } from "@/lib/validation/onboarding.schemas";
 import { ApiErrorCode, type ApiErrorResponse } from "@/types/api/responses";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * Browser calls to the setup wizard's API (src/app/api/onboarding/*). Every
@@ -63,7 +64,7 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
           success: false,
           error: {
             code: ApiErrorCode.INTERNAL_ERROR,
-            message: response.statusText || "Request failed",
+            message: response.statusText || localizeServerMessage("Request failed"),
           },
         };
     throw new ApiClientError(envelope, response.status);

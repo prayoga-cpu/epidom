@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { ClaudeConnectorPromo } from "@/features/claude-connector/components/claude-connector-promo";
@@ -69,13 +70,13 @@ export function BillingContainer() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(getApiErrorMessage(result, "Failed to open customer portal"));
+        throw new Error(getApiErrorMessage(result, localizeServerMessage("Failed to open customer portal")));
       }
 
       // Redirect to Stripe Customer Portal
       window.location.href = result.data.url;
     } catch (err: any) {
-      setError(err.message);
+      setError(localizeServerMessage(err.message));
       setActionLoading(false);
     }
   };
@@ -100,13 +101,13 @@ export function BillingContainer() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(getApiErrorMessage(result, "Failed to cancel subscription"));
+        throw new Error(getApiErrorMessage(result, localizeServerMessage("Failed to cancel subscription")));
       }
 
       // Refresh page to update subscription status
       window.location.reload();
     } catch (err: any) {
-      setError(err.message);
+      setError(localizeServerMessage(err.message));
       setActionLoading(false);
     }
   };
@@ -137,12 +138,12 @@ export function BillingContainer() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(getApiErrorMessage(result, "Failed to start checkout"));
+        throw new Error(getApiErrorMessage(result, localizeServerMessage("Failed to start checkout")));
       }
 
       window.location.href = result.data.url;
     } catch (err: any) {
-      setError(err.message);
+      setError(localizeServerMessage(err.message));
       setActionLoading(false);
     }
   };
@@ -171,7 +172,7 @@ export function BillingContainer() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error || subscriptionError?.message || "Failed to load subscription data"}
+            {error || localizeServerMessage(subscriptionError?.message) || t("billing.loadFailed")}
           </AlertDescription>
         </Alert>
       </div>
@@ -211,7 +212,7 @@ export function BillingContainer() {
 
   const labelForPlan = (value: string | null | undefined) =>
     value === "FREE"
-      ? "Free"
+      ? t("profile.subscription.plans.free_price")
       : value === "POS"
         ? t("profile.subscription.plans.starter")
         : value === "OPERATIONS"
@@ -348,7 +349,7 @@ export function BillingContainer() {
               <p className="text-muted-foreground text-sm">
                 {customPriceLabel ??
                   (currentPlan === "FREE"
-                    ? "Free forever"
+                    ? t("billing.freeForever")
                     : isPaidPlan(currentPlan)
                       ? `${formatCurrency(
                           PLAN_PRICING[currentPlan][priceCurrency].monthly,

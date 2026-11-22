@@ -1,3 +1,4 @@
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { invalidateMaterialRelatedQueries } from "@/lib/utils/cache-helpers";
@@ -53,7 +54,7 @@ async function adjustStock(
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error?.message || "Failed to adjust stock");
+    throw new Error(localizeServerMessage(errorData.error?.message || "Failed to adjust stock"));
   }
 
   const data = await response.json();

@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -115,7 +116,7 @@ export function StaffScheduleCellDialog({
       onSaved();
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("common.error"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("common.error")));
     } finally {
       setSaving(false);
     }

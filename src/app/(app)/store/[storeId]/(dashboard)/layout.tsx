@@ -8,6 +8,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ConditionalAnalytics } from "@/components/analytics/conditional-analytics";
 import { I18nProvider } from "@/components/lang/i18n-provider";
+import { SkipToContent } from "@/components/shared/skip-to-content";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { PageShell } from "@/features/dashboard/shared/page-shell";
 import { RouteLoadingIndicator } from "@/components/navigation/route-loading-indicator";
@@ -86,13 +87,6 @@ export default async function Layout({
 
   return (
     <div className={`font-sans ${GeistSans.variable} ${geistMono.variable}`}>
-      {/* Skip link for keyboard accessibility */}
-      <a
-        href="#main-content"
-        className="focus:bg-primary focus:text-primary-foreground focus:ring-ring sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:ring-2 focus:outline-none"
-      >
-        Skip to main content
-      </a>
 
       {/* Minimal top loading bar for visual feedback during navigation */}
       <RouteLoadingIndicator />
@@ -102,6 +96,8 @@ export default async function Layout({
         {/* PageShell (Sidebar + Topbar) persists across routes */}
         {/* Only page content changes, not the entire layout */}
         <I18nProvider>
+          {/* Skip link for keyboard accessibility */}
+          <SkipToContent />
           {/* Prefetch alerts data for sidebar badge */}
           <AlertsPrefetch />
           <StoreAccessGate storeId={storeId} bypassGate={bypassAccessGate}>

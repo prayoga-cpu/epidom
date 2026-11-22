@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -487,7 +488,7 @@ export function PosCheckoutDialog({
       if (splitMode && !isFree) {
         const check = normalizeTenders(total, tenders.map(toTenderInput));
         if (!check.ok) {
-          toast.error(check.error.message);
+          toast.error(localizeServerMessage(check.error.message));
           return;
         }
         payment = { kind: "split", tenders: check.tenders };

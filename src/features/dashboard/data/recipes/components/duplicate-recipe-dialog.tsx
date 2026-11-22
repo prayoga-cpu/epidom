@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -116,7 +117,7 @@ export default function DuplicateRecipeDialog({
         toast.error(fieldSummary);
         return;
       }
-      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingRecipes"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("messages.errorLoadingRecipes")));
     }
   };
 
@@ -350,7 +351,10 @@ export default function DuplicateRecipeDialog({
                           })}
                           {recipe.ingredients.length > 5 && (
                             <p className="text-muted-foreground text-xs italic">
-                              + {recipe.ingredients.length - 5} more ingredients
+                              {t("data.recipes.duplicateDialog.moreIngredients").replace(
+                                "{count}",
+                                String(recipe.ingredients.length - 5)
+                              )}
                             </p>
                           )}
                         </div>
@@ -361,11 +365,15 @@ export default function DuplicateRecipeDialog({
                       {/* Cost Summary */}
                       <div className="bg-muted/50 rounded-lg p-3">
                         <div className="mb-2 flex justify-between text-sm">
-                          <span className="text-muted-foreground">Total Batch Cost</span>
+                          <span className="text-muted-foreground">
+                            {t("data.recipes.duplicateDialog.totalBatchCost")}
+                          </span>
                           <span className="font-semibold">{formatPrice(totalCost)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Cost per {recipe.yieldUnit}</span>
+                          <span className="text-muted-foreground">
+                            {t("data.recipes.details.costPerUnit").replace("{unit}", recipe.yieldUnit)}
+                          </span>
                           <span className="font-semibold">{formatPrice(costPerUnit)}</span>
                         </div>
                       </div>

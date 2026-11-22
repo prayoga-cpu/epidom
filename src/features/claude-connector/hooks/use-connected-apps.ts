@@ -1,3 +1,4 @@
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface ConnectedAppRow {
@@ -24,7 +25,7 @@ const KEY = ["claude-connector", "connected-apps"] as const;
 
 async function parse<T>(response: Response, fallback: string): Promise<T> {
   const result = await response.json().catch(() => null);
-  if (!response.ok || !result?.success) throw new Error(result?.error?.message || fallback);
+  if (!response.ok || !result?.success) throw new Error(localizeServerMessage(result?.error?.message || fallback));
   return result.data as T;
 }
 
@@ -35,7 +36,7 @@ export function useConnectedApps({ enabled = true }: { enabled?: boolean } = {})
     queryFn: async () =>
       parse<ConnectorOverview>(
         await fetch("/api/user/connected-apps"),
-        "Failed to load connections"
+        localizeServerMessage("Failed to load connections")
       ),
   });
 }
@@ -50,7 +51,7 @@ export function useRevokeConnectedApp() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ clientId }),
         }),
-        "Failed to revoke"
+        localizeServerMessage("Failed to revoke")
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });

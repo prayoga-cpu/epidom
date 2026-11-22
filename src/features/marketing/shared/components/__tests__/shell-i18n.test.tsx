@@ -7,6 +7,7 @@ import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
 import { th } from "@/locales/th";
+import { seedLocale, type Lang } from "@/locales";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/some/missing/page",
@@ -35,6 +36,9 @@ const inLocale = (locale: Locale, ui: React.ReactNode) =>
   render(<EagerI18nProvider initialLocale={locale}>{ui}</EagerI18nProvider>);
 
 const LOCALES = ["fr", "id", "en"] as const;
+
+// EagerI18nProvider keeps fr and id resident; Thai is seeded here for the 404 rows.
+seedLocale("th" as Lang, th);
 
 describe("SiteFooter speaks the visitor's language", () => {
   it.each([
@@ -108,8 +112,16 @@ describe("NotFoundContent links stay in the visitor's language", () => {
     ["fr", "/contact", "/"],
     ["id", "/id/contact", "/id"],
     ["en", "/en/contact", "/en"],
+    ["th", "/th/contact", "/th"],
   ] as const)("%s: the contact link is %s and 'back to home' is %s", (locale, contact, home) => {
     inLocale(locale, <NotFoundContent />);
+
+    // The status screen: the code, and the translated title as the one <h1>.
+    expect(screen.getByText("404")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      lookup(locale, "notFound.title")
+    );
 
     expect(
       screen

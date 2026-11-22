@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * Product usage response type
@@ -39,7 +40,7 @@ export function useProductUsage(storeId: string, enabled: boolean = true) {
             canCreateMore: false,
           };
         }
-        throw new Error("Failed to fetch product usage");
+        throw new Error(localizeServerMessage("Failed to fetch product usage"));
       }
 
       const data = await response.json();

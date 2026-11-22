@@ -140,7 +140,7 @@ export function MovementsTab({ storeId }: MovementsTabProps) {
       const response = await fetch(`/api/stores/${storeId}/stock-movements?${params.toString()}`);
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(unwrapApiError(body).message || "Failed to load the stock log");
+        throw new Error(unwrapApiError(body).message || t("management.movementsLoadFailed"));
       }
       return unwrapApiData<MovementsPage>(body);
     },

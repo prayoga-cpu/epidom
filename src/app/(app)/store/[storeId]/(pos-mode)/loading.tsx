@@ -1,6 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 /**
  * Route-level loading fallback for every page under (pos-mode) — the same
@@ -12,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  * matching what /pos itself looks like while its data streams in.
  */
 export default function PosModeLoading() {
+  const { t } = useI18n();
   return (
     <div
       role="status"
@@ -19,7 +21,7 @@ export default function PosModeLoading() {
       aria-live="polite"
       className="flex min-h-0 w-full flex-1 overflow-hidden opacity-60"
     >
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("common.loading")}</span>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex items-center gap-3 border-b p-4">

@@ -248,7 +248,7 @@ export function EditStockCard() {
     if (item.currentStock <= item.minStock) {
       return { label: t("management.editStock.lowStock"), variant: "outline" as const, icon: AlertCircle, key: "low" as StatusFilter };
     } else if (item.currentStock > item.maxStock) {
-      return { label: "Overstock", variant: "outline" as const, icon: AlertCircle, key: "overstock" as StatusFilter };
+      return { label: t("common.stockStatus.overstocked"), variant: "outline" as const, icon: AlertCircle, key: "overstock" as StatusFilter };
     }
     return { label: t("management.editStock.inStock"), variant: "outline" as const, icon: CheckCircle, key: "in-stock" as StatusFilter };
   };
@@ -463,7 +463,7 @@ export function EditStockCard() {
                 </SelectItem>
                 <SelectItem value="low">{t("management.editStock.lowStock")}</SelectItem>
                 <SelectItem value="in-stock">{t("management.editStock.inStock")}</SelectItem>
-                <SelectItem value="overstock">Overstock</SelectItem>
+                <SelectItem value="overstock">{t("common.stockStatus.overstocked")}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -570,7 +570,7 @@ export function EditStockCard() {
               {filteredItems.length} {t("management.editStock.items")}
             </span>
             <div className="order-last flex w-full flex-wrap items-center gap-1 text-xs sm:order-none sm:w-auto">
-              <span className="text-muted-foreground">Sort:</span>
+              <span className="text-muted-foreground">{t("management.editStock.sortLabel")}</span>
               {(["name", "stock", "expiration"] as SortField[]).map((field) => (
                 <Button
                   key={field}
@@ -866,7 +866,7 @@ export function EditStockCard() {
                     </DialogTitle>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <DialogDescription className="break-all">
-                        SKU: {selectedItem.sku}
+                        {t("common.sku")}: {selectedItem.sku}
                       </DialogDescription>
                       <Badge variant="outline">
                         {selectedItem.type === "material"

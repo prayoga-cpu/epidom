@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 export interface LowStockAlert {
   id: string;
@@ -56,7 +57,7 @@ export function useAlerts(storeId: string, initialData?: AlertsResponse) {
     queryFn: async () => {
       const response = await fetch(`/api/stores/${storeId}/alerts`);
       if (!response.ok) {
-        throw new Error("Failed to fetch alerts");
+        throw new Error(localizeServerMessage("Failed to fetch alerts"));
       }
       const json = await response.json();
       // API returns { success: true, data: { alerts: [...] } }

@@ -50,6 +50,7 @@ export const sendAccountChangedNotice = inngest.createFunction(
       userName: event.data.userName,
       action: event.data.action,
       occurredAt: event.data.occurredAt,
+      locale: event.data.userLocale,
     });
 
     if (!result.success) {

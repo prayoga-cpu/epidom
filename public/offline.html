@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#18181b" />
+    <meta name="theme-color" content="#060f1b" />
+    <meta name="color-scheme" content="dark" />
     <meta name="robots" content="noindex" />
     <title>Hors ligne — Epidom</title>
     <!--
@@ -12,8 +13,18 @@
       completely self-contained: no fonts, no scripts, no images, no stylesheets
       fetched from anywhere. Everything below is inline on purpose.
 
-      There is no i18n runtime on a static file, so all three supported locales
-      are printed at once — fr (default) first, then id, then en.
+      The look is the app's status screen (src/components/shared/status-screen.tsx,
+      "brand" tone: navy, cream, gold), copied by hand. Change them together,
+      with desktop/offline.html and src/app/global-error.tsx.
+
+      There is no i18n runtime on a static file, so all four supported locales
+      (fr, en, id, th) are in the markup. Without JavaScript the page reads in
+      French (the default locale) with the other three underneath. With it, the
+      first script below promotes the visitor's language (saved preference, then
+      the browser's) to the headline and leaves the other three underneath.
+
+      Thai: never letter-spaced (tracking splits its vowel and tone marks). Only
+      the Latin brand line is tracked.
     -->
     <style>
       * {
@@ -27,122 +38,177 @@
       }
 
       body {
+        min-height: 100vh;
         min-height: 100dvh;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 24px;
-        background-color: #18181b;
-        color: #fafafa;
+        padding: max(32px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+          max(32px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+        background-color: #060f1b;
+        background-image:
+          radial-gradient(1200px 600px at 80% -10%, rgba(91, 136, 178, 0.18), transparent 60%),
+          radial-gradient(900px 500px at 10% 110%, rgba(217, 174, 59, 0.1), transparent 60%);
+        color: #fbf9e4;
         font-family:
           system-ui,
           -apple-system,
           "Segoe UI",
           Roboto,
           "Helvetica Neue",
+          "Noto Sans Thai",
+          Thonburi,
+          "Leelawadee UI",
           Arial,
           sans-serif;
         -webkit-font-smoothing: antialiased;
         line-height: 1.5;
+        overflow-x: hidden;
       }
 
-      .card {
+      main {
         width: 100%;
-        max-width: 26rem;
-        background-color: #27272a;
-        border: 1px solid #3f3f46;
-        border-radius: 1rem;
-        padding: 1.75rem 1.5rem;
+        max-width: 35rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
         text-align: center;
       }
 
+      /* The logo tile: the app icon's navy diagonal and pale-gold hairline. */
       .icon {
         width: 3.5rem;
         height: 3.5rem;
-        margin: 0 auto 1.25rem;
         display: grid;
         place-items: center;
-        border-radius: 0.875rem;
-        background-color: #3f3f46;
-        color: #d4d4d8;
+        border-radius: 23%;
+        border: 1px solid rgba(235, 212, 151, 0.85);
+        box-shadow: inset 0 0 0 1px rgba(217, 174, 59, 0.22);
+        background: linear-gradient(135deg, #122c4f, #060f1b);
+        color: #fbf9e4;
       }
 
       .icon svg {
-        width: 1.75rem;
-        height: 1.75rem;
+        width: 1.5rem;
+        height: 1.5rem;
       }
 
       h1 {
-        margin: 0 0 0.5rem;
-        font-size: 1.375rem;
+        margin: 0 0 0.75rem;
+        font-size: clamp(1.75rem, 6.5vw, 2.75rem);
         font-weight: 600;
-        letter-spacing: -0.01em;
+        line-height: 1.12;
+        letter-spacing: -0.025em;
+        overflow-wrap: anywhere;
       }
 
       p {
         margin: 0;
-        color: #a1a1aa;
-        font-size: 0.9375rem;
       }
 
-      .alt {
-        margin-top: 1.25rem;
-        padding-top: 1.25rem;
-        border-top: 1px solid #3f3f46;
-        display: grid;
-        gap: 0.875rem;
+      .lead {
+        font-size: clamp(0.9375rem, 2.8vw, 1.0625rem);
+        line-height: 1.6;
+        color: rgba(251, 249, 228, 0.75);
       }
 
-      .alt h2 {
-        margin: 0 0 0.125rem;
-        font-size: 0.9375rem;
-        font-weight: 600;
-        color: #e4e4e7;
+      /* Thai: no tracking, taller lines for the marks above and below. */
+      :lang(th) h1,
+      h1:lang(th) {
+        letter-spacing: normal;
+        line-height: 1.35;
       }
 
-      .alt p {
-        font-size: 0.875rem;
-        color: #8b8b93;
+      .lead:lang(th),
+      .alt p:lang(th) {
+        line-height: 1.75;
       }
 
       button {
-        /* >=40px touch target; this is the only control on the page and it is
+        /* >=44px touch target; this is the only control on the page and it is
            very often tapped one-handed on a counter-top phone. */
         min-height: 48px;
         width: 100%;
-        margin-top: 1.5rem;
-        padding: 0 1.25rem;
+        padding: 0.75rem 1.5rem;
         border: 0;
-        border-radius: 0.75rem;
-        background-color: #fafafa;
-        color: #18181b;
+        border-radius: 9999px;
+        background: linear-gradient(180deg, #f4dc90, #d7b54b 55%, #a97c1c);
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.28) inset,
+          0 8px 28px rgba(217, 174, 59, 0.35),
+          0 3px 0 rgba(139, 90, 10, 0.85);
+        color: #151004;
         font-family: inherit;
         font-size: 0.9375rem;
         font-weight: 600;
+        line-height: 1.25;
         cursor: pointer;
+        transition: transform 0.15s;
         -webkit-tap-highlight-color: transparent;
       }
 
       button:active {
-        background-color: #d4d4d8;
+        transform: scale(0.98);
       }
 
       button:focus-visible {
-        outline: 2px solid #fafafa;
+        outline: 2px solid #f4dc72;
         outline-offset: 2px;
       }
 
+      @media (min-width: 480px) {
+        button {
+          width: auto;
+          min-width: 12rem;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        button {
+          transition: none;
+        }
+
+        button:active {
+          transform: none;
+        }
+      }
+
+      /* The other languages: compact, under a gold hairline. */
+      .alt {
+        width: 100%;
+        padding-top: 1.25rem;
+        border-top: 1px solid rgba(217, 174, 59, 0.28);
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .alt p {
+        font-size: 0.8125rem;
+        line-height: 1.5;
+        color: rgba(251, 249, 228, 0.6);
+      }
+
+      .alt strong {
+        font-weight: 600;
+        color: rgba(251, 249, 228, 0.85);
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
       .brand {
-        margin-top: 1.25rem;
         font-size: 0.75rem;
-        letter-spacing: 0.08em;
+        font-weight: 500;
+        letter-spacing: 0.22em;
         text-transform: uppercase;
-        color: #71717a;
+        color: #d9ae3b;
       }
     </style>
   </head>
   <body>
-    <main class="card">
+    <main>
       <div class="icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 2l20 20" />
@@ -155,33 +221,107 @@
         </svg>
       </div>
 
-      <h1>Vous êtes hors ligne</h1>
-      <p>
-        Impossible de joindre Epidom. Vérifiez votre connexion&nbsp;: la page se
-        rechargera toute seule dès le retour du réseau.
-      </p>
-
-      <div class="alt">
-        <div lang="id">
-          <h2>Anda sedang offline</h2>
-          <p>
-            Epidom tidak dapat dijangkau. Periksa koneksi Anda — halaman akan
-            dimuat ulang otomatis begitu jaringan kembali.
-          </p>
-        </div>
-        <div lang="en">
-          <h2>You are offline</h2>
-          <p>
-            Epidom can’t be reached. Check your connection — this page reloads
-            itself as soon as the network is back.
-          </p>
-        </div>
+      <div id="lead">
+        <h1 id="title">Vous êtes hors ligne</h1>
+        <p class="lead" id="desc">
+          Impossible de joindre Epidom. Vérifiez votre connexion&nbsp;: la page se
+          rechargera toute seule dès le retour du réseau.
+        </p>
       </div>
 
-      <button type="button" id="retry">Réessayer · Coba lagi · Retry</button>
+      <button type="button" id="retry">Réessayer</button>
+
+      <!-- One line per language; the one shown in the headline is hidden. -->
+      <div class="alt">
+        <p lang="fr" data-lang="fr" hidden>
+          <strong>Vous êtes hors ligne</strong> · Impossible de joindre Epidom. Vérifiez votre
+          connexion&nbsp;: la page se rechargera toute seule dès le retour du réseau.
+        </p>
+        <p lang="en" data-lang="en">
+          <strong>You are offline</strong> · Epidom can’t be reached. Check your connection: this
+          page reloads itself as soon as the network is back.
+        </p>
+        <p lang="id" data-lang="id">
+          <strong>Anda sedang offline</strong> · Epidom tidak dapat dijangkau. Periksa koneksi Anda:
+          halaman akan dimuat ulang otomatis begitu jaringan kembali.
+        </p>
+        <p lang="th" data-lang="th">
+          <strong>คุณออฟไลน์อยู่</strong> · เชื่อมต่อ Epidom ไม่ได้ ตรวจสอบการเชื่อมต่อของคุณ
+          หน้านี้จะโหลดใหม่เองทันทีที่สัญญาณกลับมา
+        </p>
+      </div>
 
       <p class="brand">Epidom</p>
     </main>
+
+    <script>
+      // Language: promote the visitor's language to the headline. Runs on its
+      // own so a failure here can never take the retry logic below with it.
+      (function () {
+        var COPY = {
+          fr: {
+            doc: "Hors ligne — Epidom",
+            title: "Vous êtes hors ligne",
+            desc: "Impossible de joindre Epidom. Vérifiez votre connexion : la page se rechargera toute seule dès le retour du réseau.",
+            retry: "Réessayer",
+          },
+          en: {
+            doc: "Offline — Epidom",
+            title: "You are offline",
+            desc: "Epidom can’t be reached. Check your connection: this page reloads itself as soon as the network is back.",
+            retry: "Retry",
+          },
+          id: {
+            doc: "Offline — Epidom",
+            title: "Anda sedang offline",
+            desc: "Epidom tidak dapat dijangkau. Periksa koneksi Anda: halaman akan dimuat ulang otomatis begitu jaringan kembali.",
+            retry: "Coba lagi",
+          },
+          th: {
+            doc: "ออฟไลน์ — Epidom",
+            title: "คุณออฟไลน์อยู่",
+            desc: "เชื่อมต่อ Epidom ไม่ได้ ตรวจสอบการเชื่อมต่อของคุณ หน้านี้จะโหลดใหม่เองทันทีที่สัญญาณกลับมา",
+            retry: "ลองอีกครั้ง",
+          },
+        };
+
+        // The app's saved language first (the keys src/lib/cookie-consent.ts
+        // reads), then the browser's. Storage can throw in private mode.
+        function pick() {
+          var found = [];
+          try {
+            var saved = JSON.parse(localStorage.getItem("cookie-consent-preferences") || "null");
+            if (saved && saved.language) found.push(saved.language);
+          } catch (e) {}
+          try {
+            found.push(localStorage.getItem("locale"), localStorage.getItem("lang"));
+          } catch (e) {}
+          try {
+            found = found.concat(navigator.languages || [], [navigator.language]);
+          } catch (e) {}
+          for (var i = 0; i < found.length; i++) {
+            var code = String(found[i] || "").toLowerCase().slice(0, 2);
+            if (COPY[code]) return code;
+          }
+          return "en"; // Same default as the app for a language it has no copy in.
+        }
+
+        try {
+          var lang = pick();
+          var copy = COPY[lang];
+          document.documentElement.lang = lang;
+          document.title = copy.doc;
+          document.getElementById("lead").lang = lang;
+          document.getElementById("title").textContent = copy.title;
+          document.getElementById("desc").textContent = copy.desc;
+          document.getElementById("retry").textContent = copy.retry;
+          var lines = document.querySelectorAll(".alt [data-lang]");
+          for (var j = 0; j < lines.length; j++) {
+            lines[j].hidden = lines[j].getAttribute("data-lang") === lang;
+          }
+        } catch (e) {}
+      })();
+    </script>
 
     <script>
       // No framework here — the bundle is exactly what could not be downloaded.

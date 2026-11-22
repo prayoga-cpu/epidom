@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -78,7 +79,7 @@ export function AdjustPointsForm({ storeId, customerId, balance }: AdjustPointsF
       // "This customer only has N points…" comes back pinned to `points`.
       const fieldSummary = applyServerFieldErrors(form, error);
       if (!fieldSummary) {
-        toast.error(error instanceof Error ? error.message : t("customers.adjust.failed"));
+        toast.error(localizeServerMessage(error instanceof Error ? error.message : t("customers.adjust.failed")));
       }
     }
   }

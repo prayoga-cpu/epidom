@@ -175,7 +175,7 @@ export function ProductDetailsDialog({
             <div className="space-y-1">
               <DialogTitle className="text-2xl">{product.name}</DialogTitle>
               <DialogDescription>
-                {product.description || "Product details and information"}
+                {product.description || t("data.products.detailsFallbackDescription")}
               </DialogDescription>
             </div>
             <div className="flex gap-2">
@@ -331,7 +331,9 @@ export function ProductDetailsDialog({
             </h3>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label className="text-muted-foreground text-sm font-medium">SKU</label>
+                <label className="text-muted-foreground text-sm font-medium">
+                  {t("common.sku")}
+                </label>
                 <p className="text-sm">{product.sku || t("common.notAvailable")}</p>
               </div>
               <div>

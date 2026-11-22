@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useCallback, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,7 @@ export function VerifyOwnerPinDialog({ open, onOpenChange, onVerified }: VerifyO
       setOtpSentTo(result.email);
       setMode("otp");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("pages.ownerPinSendCodeFailed"));
+      toast.error(localizeServerMessage(err instanceof Error ? err.message : t("pages.ownerPinSendCodeFailed")));
     }
   };
 
@@ -109,7 +110,7 @@ export function VerifyOwnerPinDialog({ open, onOpenChange, onVerified }: VerifyO
       onOpenChange(false);
       onVerified();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("pages.ownerPinInvalidCode"));
+      toast.error(localizeServerMessage(err instanceof Error ? err.message : t("pages.ownerPinInvalidCode")));
     }
   };
 

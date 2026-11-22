@@ -13,6 +13,7 @@ import { unwrapApiData, unwrapApiError } from "@/lib/api/unwrap";
 import { useRealtimeChannel } from "@/hooks/use-realtime-channel";
 import { useServerSnapshot } from "@/hooks/use-server-snapshot";
 import { REALTIME_EVENTS } from "@/lib/realtime/channels";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 // Types
 
@@ -349,7 +350,7 @@ async function exportRecipes(storeId: string, filters: RecipeFilterInput): Promi
     if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
       const { createSubscriptionError } = await import("@/types/errors");
       const customError = createSubscriptionError(
-        error.message || "Export feature is only available in Pro and Enterprise plans",
+        error.message || localizeServerMessage("Export feature is only available in Pro and Enterprise plans"),
         true
       );
       (customError as any).status = 403;

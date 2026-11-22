@@ -105,7 +105,10 @@ export function CaseStudiesSection({ studies = CASE_STUDIES }: { studies?: reado
           />
         </div>
 
-        <div aria-roledescription="carousel" aria-label={t("redesign.caseStudies.title1")}>
+        <div
+          aria-roledescription={t("uiText.marketing.carousel")}
+          aria-label={t("redesign.caseStudies.title1")}
+        >
           <ul
             ref={track}
             onScroll={onScroll}
@@ -119,7 +122,7 @@ export function CaseStudiesSection({ studies = CASE_STUDIES }: { studies?: reado
               return (
                 <li
                   key={study.slug}
-                  aria-roledescription="slide"
+                  aria-roledescription={t("uiText.marketing.slide")}
                   aria-label={`${index + 1} / ${publishable.length}`}
                   className={cn(
                     "flex shrink-0 basis-[min(88vw,760px)] snap-center flex-col justify-between gap-8 rounded-[28px] bg-[rgba(6,15,27,0.05)] p-6 transition-[opacity,transform] duration-300 sm:p-9",

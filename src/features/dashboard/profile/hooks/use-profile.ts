@@ -1,3 +1,4 @@
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/lib/auth-client";
 import { useSession } from "@/lib/auth-client";
@@ -26,7 +27,7 @@ interface UpdateBusinessPayload {
 const fetchProfile = async (): Promise<ProfileData> => {
   const response = await fetch("/api/user/profile");
   if (!response.ok) {
-    throw new Error("Failed to fetch profile");
+    throw new Error(localizeServerMessage("Failed to fetch profile"));
   }
   const result = await response.json();
 
@@ -34,7 +35,7 @@ const fetchProfile = async (): Promise<ProfileData> => {
     return result.data;
   }
 
-  throw new Error(result.error?.message || "Failed to fetch profile");
+  throw new Error(localizeServerMessage(result.error?.message || "Failed to fetch profile"));
 };
 
 /**
@@ -50,7 +51,7 @@ const updateProfile = async (payload: UpdateProfilePayload): Promise<ProfileData
   });
 
   if (!response.ok) {
-    throw new Error("Failed to update profile");
+    throw new Error(localizeServerMessage("Failed to update profile"));
   }
 
   const result = await response.json();
@@ -59,7 +60,7 @@ const updateProfile = async (payload: UpdateProfilePayload): Promise<ProfileData
     return result.data;
   }
 
-  throw new Error(result.error?.message || "Failed to update profile");
+  throw new Error(localizeServerMessage(result.error?.message || "Failed to update profile"));
 };
 
 /**
@@ -75,7 +76,7 @@ const updateBusiness = async (payload: UpdateBusinessPayload): Promise<ProfileDa
   });
 
   if (!response.ok) {
-    throw new Error("Failed to update business");
+    throw new Error(localizeServerMessage("Failed to update business"));
   }
 
   const result = await response.json();
@@ -84,7 +85,7 @@ const updateBusiness = async (payload: UpdateBusinessPayload): Promise<ProfileDa
     return result.data;
   }
 
-  throw new Error(result.error?.message || "Failed to update business");
+  throw new Error(localizeServerMessage(result.error?.message || "Failed to update business"));
 };
 
 /**

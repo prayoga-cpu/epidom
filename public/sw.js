@@ -91,9 +91,10 @@ const LAST_RESORT_HTML =
   '<!doctype html><html lang="fr"><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1">' +
   "<title>Hors ligne — Epidom</title>" +
-  '<body style="margin:0;display:grid;place-items:center;min-height:100dvh;background:#18181b;color:#fafafa;' +
+  '<body style="margin:0;display:grid;place-items:center;min-height:100dvh;background:#060f1b;color:#fbf9e4;' +
   'font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;text-align:center;padding:24px">' +
-  "<div><p>Vous êtes hors ligne.</p><p>Anda sedang offline.</p><p>You are offline.</p></div>";
+  '<div><p>Vous êtes hors ligne.</p><p lang="id">Anda sedang offline.</p>' +
+  '<p lang="en">You are offline.</p><p lang="th">คุณออฟไลน์อยู่</p></div>';
 
 // ---------------------------------------------------------------------------
 // Offline launcher for /go/*.
@@ -133,7 +134,7 @@ const LAST_VISITED_KEY = "epidom:lastVisitedUrl";
 function goLauncherHtml(section, saved) {
   return `<!doctype html><html lang="fr"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Epidom</title><body style="margin:0;background:#18181b">
+<title>Epidom</title><body style="margin:0;background:#060f1b">
 <script>(function(){
   var saved = ${JSON.stringify(saved)};
   var section = ${JSON.stringify(section)};

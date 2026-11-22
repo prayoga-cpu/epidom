@@ -68,7 +68,7 @@ function RowCheckbox({
 // detail underneath that, not the other way around.
 const BACK_OFFICE_SECTIONS = dashboardNavigation
   .map((section) => ({
-    title: section.title,
+    titleKey: section.labelKey,
     items: section.items.filter((item) => !OWNER_ONLY_PAGES.has(item.href)),
   }))
   .filter((section) => section.items.length > 0)
@@ -76,14 +76,14 @@ const BACK_OFFICE_SECTIONS = dashboardNavigation
   // reachable through Storefront's tab, not its own rail entry — see that
   // export's doc comment) but it's still a Back Office page an owner can
   // grant/revoke independently of Storefront itself.
-  .concat([{ title: "Other", items: grantableOnlyNavItems }])
-  .map((section) => ({ title: section.title, rows: toRows(section.items) }));
+  .concat([{ titleKey: "common.other", items: grantableOnlyNavItems }])
+  .map((section) => ({ titleKey: section.titleKey, rows: toRows(section.items) }));
 
 // posModeNavItems isn't part of dashboardNavigation either (it renders in
 // the (pos-mode) shell's own tab bar — see that export's doc comment), so
 // it needs its own top-level group rather than folding into the Back
 // Office list above.
-const POS_SECTION = { title: null as string | null, rows: toRows(posModeNavItems) };
+const POS_SECTION = { titleKey: null as string | null, rows: toRows(posModeNavItems) };
 
 function sameSet(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
@@ -157,15 +157,15 @@ export function PageAccessChecklist({
   };
 
   const renderEditableGroup = (
-    sections: { title?: string | null; rows: AccessRow[] }[],
+    sections: { titleKey?: string | null; rows: AccessRow[] }[],
     locked = false
   ) => (
     <div className="grid gap-3 sm:grid-cols-2">
       {sections.map((section, i) => (
-        <div key={section.title ?? i} className="space-y-1.5">
-          {section.title && (
+        <div key={section.titleKey ?? i} className="space-y-1.5">
+          {section.titleKey && (
             <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-              {section.title}
+              {t(section.titleKey)}
             </p>
           )}
           {section.rows.map((row) => {
@@ -314,7 +314,7 @@ export function PageAccessChecklist({
                 section.rows.some((row) => row.pages.some((p) => templatePages.includes(p)))
               ) ? (
                 BACK_OFFICE_SECTIONS.map((section) => (
-                  <div key={section.title}>{renderSummaryGroup(section.rows)}</div>
+                  <div key={section.titleKey}>{renderSummaryGroup(section.rows)}</div>
                 ))
               ) : (
                 <p className="text-muted-foreground/60 text-xs">{t("pages.staffAccessNone")}</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -222,7 +223,7 @@ export function PublicProfile({ storefront }: PublicProfileProps) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={storefront.logoUrl}
-                    alt={`${storefront.displayName} Logo`}
+                    alt={t("uiText.storefront.logoAlt").replace("{name}", storefront.displayName)}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -541,10 +542,10 @@ function ReservationModal({ slug, tables, onClose }: ReservationModalProps) {
       });
       const json = await res.json();
       if (!res.ok)
-        throw new Error(json.error?.message || t("publicProfile.reservation.bookFailed"));
+        throw new Error(localizeServerMessage(json.error?.message || t("publicProfile.reservation.bookFailed")));
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("publicProfile.reservation.genericError"));
+      setError(localizeServerMessage(err instanceof Error ? err.message : t("publicProfile.reservation.genericError")));
     } finally {
       setLoading(false);
     }

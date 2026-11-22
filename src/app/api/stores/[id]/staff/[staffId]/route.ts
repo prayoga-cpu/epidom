@@ -97,7 +97,7 @@ export const PATCH = withApiHandler(
 
     const store = await prisma.store.findUnique({
       where: { id: storeId! },
-      select: { name: true },
+      select: { name: true, business: { select: { locale: true } } },
     });
 
     // Allowances are saved as a whole list (the Contract card edits them all at
@@ -161,7 +161,13 @@ export const PATCH = withApiHandler(
     if (sendPinEmail && pin) {
       const targetEmail = (updateData.email as string | null) ?? existing.email;
       if (targetEmail) {
-        sendStaffPinEmail(targetEmail, existing.name, store?.name ?? "your store", pin)
+        sendStaffPinEmail(
+          targetEmail,
+          existing.name,
+          store?.name ?? "your store",
+          pin,
+          store?.business?.locale
+        )
           .then(() =>
             prisma.staffMember.update({
               where: { id: staffId },

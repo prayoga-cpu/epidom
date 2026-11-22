@@ -153,6 +153,7 @@ const TIER_KEYS = [
 ] as const;
 
 function CheckIcon() {
+  const { t } = useI18n();
   return (
     <svg
       width="18"
@@ -160,7 +161,7 @@ function CheckIcon() {
       viewBox="0 0 18 18"
       style={{ margin: "0 auto", display: "block" }}
       fill="none"
-      aria-label="Included"
+      aria-label={t("uiText.marketing.included")}
     >
       <circle
         cx="9"
@@ -182,6 +183,7 @@ function CheckIcon() {
 }
 
 function DashIcon() {
+  const { t } = useI18n();
   return (
     <svg
       width="18"
@@ -189,7 +191,7 @@ function DashIcon() {
       viewBox="0 0 18 18"
       style={{ margin: "0 auto", display: "block" }}
       fill="none"
-      aria-label="Not included"
+      aria-label={t("uiText.marketing.notIncluded")}
     >
       <circle cx="9" cy="9" r="8.5" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" />
       <path d="M6 9h6" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeLinecap="round" />

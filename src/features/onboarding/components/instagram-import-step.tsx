@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils/image-compression";
 import type { InstagramPrefill } from "../lib/instagram-prefill";
 import { slugifyStoreLink, storeLinkLabel } from "../lib/store-link";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 export type { InstagramPrefill } from "../lib/instagram-prefill";
 
@@ -62,7 +63,7 @@ async function uploadImage(file: File): Promise<string> {
   const res = await fetch("/api/upload", { method: "POST", body: formData });
   const json = await res.json().catch(() => null);
   if (!res.ok || !json?.data?.url) {
-    throw new UploadError(json?.error?.message || "Upload failed");
+    throw new UploadError(json?.error?.message || localizeServerMessage("Upload failed"));
   }
   return json.data.url as string;
 }

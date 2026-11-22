@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { safetyNetPollMs } from "@/lib/realtime/pusher-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StockMovement } from "@prisma/client";
@@ -89,7 +90,7 @@ export function useStockMovements(storeId: string, filters?: StockMovementFilter
 
       if (!response.ok) {
         const error = unwrapApiError(await response.json().catch(() => ({})));
-        throw new Error(error.message || "Failed to fetch stock movements");
+        throw new Error(localizeServerMessage(error.message || "Failed to fetch stock movements"));
       }
 
       // The route answers `createSuccessResponse({ movements, total })`, so the

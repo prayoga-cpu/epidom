@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMemo, useState } from "react";
 import { AlertCircle, Download, Loader2, Plus, Search, Users, X } from "lucide-react";
 import { toast } from "sonner";
@@ -114,7 +115,7 @@ export function CustomersClient({ storeId, canManage }: CustomersClientProps) {
     exportCsv.mutate(debouncedSearch, {
       onSuccess: () => toast.success(t("customers.export.success")),
       onError: (error) =>
-        toast.error(error instanceof Error ? error.message : t("customers.export.failed")),
+        toast.error(localizeServerMessage(error instanceof Error ? error.message : t("customers.export.failed"))),
     });
   };
 

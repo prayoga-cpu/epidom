@@ -50,6 +50,7 @@ import {
   SupplierPackPriceFields,
 } from "./pack-price-fields";
 import { unwrapApiData } from "@/lib/api/unwrap";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 // Use the form schema (without storeId)
 const formSchema = createIngredientFormSchema;
@@ -100,7 +101,7 @@ export default function AddMaterialDialog({ trigger }: AddMaterialDialogProps) {
         params.append("skip", String(SUPPLIER_FILTERS.skip));
         params.append("take", String(SUPPLIER_FILTERS.take));
         const response = await fetch(`/api/stores/${storeId}/suppliers?${params.toString()}`);
-        if (!response.ok) throw new Error("Failed to prefetch suppliers");
+        if (!response.ok) throw new Error(localizeServerMessage("Failed to prefetch suppliers"));
         // Written straight into the key useSuppliers reads, so it has to be
         // the unwrapped payload — the envelope emptied the supplier dropdown
         // until this entry went stale.

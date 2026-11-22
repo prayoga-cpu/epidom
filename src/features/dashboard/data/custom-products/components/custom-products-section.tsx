@@ -173,10 +173,10 @@ export function CustomProductsSection({ storeId }: CustomProductsSectionProps) {
           ) : (
             <Button
               onClick={() =>
-                openUpgrade("OPERATIONS", "Custom Products is an Operations plan feature.")
+                openUpgrade("OPERATIONS", t("data.customProducts.upgradeFeatureMessage"))
               }
             >
-              Upgrade to Operations
+              {t("billing.upgradeToOperations")}
             </Button>
           )}
         </CardContent>

@@ -190,7 +190,8 @@ export const POST = withApiHandler(
       const { confirmEmail } = body;
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { email: true, name: true },
+        // The owner's language is the business language; User.locale is never written.
+        select: { email: true, name: true, business: { select: { locale: true } } },
       });
 
       if (!user || confirmEmail !== user.email) {
@@ -202,7 +203,12 @@ export const POST = withApiHandler(
 
       const { deactivatedAt } = await userService.deactivateAccount(userId);
       const reactivationDeadline = new Date(deactivatedAt.getTime() + REACTIVATION_WINDOW_MS);
-      await sendAccountDeactivatedEmail(user.email, user.name, reactivationDeadline);
+      await sendAccountDeactivatedEmail(
+        user.email,
+        user.name,
+        reactivationDeadline,
+        user.business?.locale
+      );
 
       return NextResponse.json(createSuccessResponse({ deactivated: true }));
     }

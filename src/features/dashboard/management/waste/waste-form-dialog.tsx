@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,23 +42,25 @@ import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
 
 const WASTE_REASONS = Object.values(WasteReason);
 
-const formSchema = z
-  .object({
-    itemType: z.enum(["material", "product"]),
-    itemId: z.string().min(1, "Please select an item"),
-    quantity: z.coerce.number().positive("Quantity must be positive"),
-    reason: z.nativeEnum(WasteReason),
-    customReason: z.string().max(200).optional(),
-    notes: z.string().max(500).optional(),
-    referenceId: z.string().max(100).optional(),
-    unitCostOverride: z.coerce.number().positive().optional(),
-  })
-  .refine((data) => data.reason !== WasteReason.OTHER || !!data.customReason?.trim(), {
-    message: "Please describe the reason",
-    path: ["customReason"],
-  });
+function createWasteFormSchema(t: (key: string) => string) {
+  return z
+    .object({
+      itemType: z.enum(["material", "product"]),
+      itemId: z.string().min(1, t("common.validation.selectItem")),
+      quantity: z.coerce.number().positive(t("common.validation.quantityPositive")),
+      reason: z.nativeEnum(WasteReason),
+      customReason: z.string().max(200).optional(),
+      notes: z.string().max(500).optional(),
+      referenceId: z.string().max(100).optional(),
+      unitCostOverride: z.coerce.number().positive().optional(),
+    })
+    .refine((data) => data.reason !== WasteReason.OTHER || !!data.customReason?.trim(), {
+      message: t("common.validation.describeReason"),
+      path: ["customReason"],
+    });
+}
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof createWasteFormSchema>>;
 
 interface WasteFormDialogProps {
   open: boolean;
@@ -92,8 +95,10 @@ export function WasteFormDialog({
   const updateWaste = useUpdateWasteEntry(storeId);
   const isSubmitting = recordWaste.isPending || updateWaste.isPending;
 
+  const schema = useMemo(() => createWasteFormSchema(t), [t]);
+
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       itemType,
       itemId: itemId || "",
@@ -192,7 +197,7 @@ export function WasteFormDialog({
         mode === "create"
           ? t("waste.toasts.recordError.title") || "Failed to record waste"
           : t("waste.toasts.updateError.title") || "Failed to update waste entry",
-        { description: error instanceof Error ? error.message : undefined }
+        { description: localizeServerMessage(error instanceof Error ? error.message : undefined) }
       );
     }
   };

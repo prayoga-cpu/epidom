@@ -1,3 +1,4 @@
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface ReceiptSettingsData {
@@ -34,7 +35,7 @@ async function parseReceiptSettingsResponse<T>(
 ): Promise<T> {
   const result = await response.json().catch(() => null);
   if (!response.ok || !result?.success) {
-    throw new Error(result?.error?.message || fallbackMessage);
+    throw new Error(localizeServerMessage(result?.error?.message || fallbackMessage));
   }
   return result.data as T;
 }
@@ -43,7 +44,7 @@ const fetchReceiptSettings = async (storeId: string): Promise<ReceiptSettingsDat
   const response = await fetch(`/api/stores/${storeId}/receipt-settings`);
   return parseReceiptSettingsResponse<ReceiptSettingsData>(
     response,
-    "Failed to fetch receipt settings"
+    localizeServerMessage("Failed to fetch receipt settings")
   );
 };
 
@@ -58,7 +59,7 @@ const updateReceiptSettingsRequest = async (
   });
   return parseReceiptSettingsResponse<ReceiptSettingsData>(
     response,
-    "Failed to update receipt settings"
+    localizeServerMessage("Failed to update receipt settings")
   );
 };
 

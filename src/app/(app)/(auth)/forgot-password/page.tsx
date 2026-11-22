@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,7 @@ export default function ForgotPasswordPage() {
       });
 
       if (error) {
-        toast.error(error.message);
+        toast.error(localizeServerMessage(error.message));
       } else {
         setIsSent(true);
         toast.success(t("pages.authForgotLinkSent"));

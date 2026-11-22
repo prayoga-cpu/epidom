@@ -1,6 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 /**
  * The Operational page's own loading shape — a tab strip over a panel — so the
@@ -8,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  * bar is already gone for this route.
  */
 export default function PosModeOperationalLoading() {
+  const { t } = useI18n();
   return (
     <div
       role="status"
@@ -15,7 +17,7 @@ export default function PosModeOperationalLoading() {
       aria-live="polite"
       className="flex min-h-0 w-full flex-1 flex-col overflow-hidden opacity-60"
     >
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("common.loading")}</span>
       <div className="shrink-0 border-b px-3 py-2 md:px-6">
         <Skeleton className="h-11 w-full rounded-lg sm:w-96" />
       </div>

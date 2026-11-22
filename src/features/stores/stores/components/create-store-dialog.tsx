@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -83,7 +84,7 @@ export function CreateStoreDialog({
       },
       onError: (error) => {
         // The server's reason (name taken, store limit…) when there is one.
-        toast.error(error.message || t("stores.createError"));
+        toast.error(localizeServerMessage(error.message || t("stores.createError")));
         isSubmittingRef.current = false;
       },
     });

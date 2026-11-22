@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { StoreCard } from "./store-card";
@@ -334,7 +335,7 @@ export function StoresContainer() {
                   {t("stores.errorLoading") || "Failed to load stores"}
                 </p>
                 <p className="text-muted-foreground mb-6 text-sm sm:text-base">
-                  {error.message || "An unexpected error occurred"}
+                  {localizeServerMessage(error.message) || t("common.validation.unexpectedError")}
                 </p>
                 <Button onClick={() => refetch()} variant="outline" className="w-full sm:w-auto">
                   {t("common.routeError.tryAgain")}

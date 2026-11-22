@@ -350,7 +350,7 @@ export function DesktopSidebar({
               ) : (
                 <Link
                   href={upgradeHrefFor("POS")}
-                  title={`Upgrade to ${PLAN_LABELS.POS}`}
+                  title={t("billing.planCards.upgradeTo").replace("{name}", PLAN_LABELS.POS)}
                   className={cn(
                     onHome ? RAIL_ITEM_WIDE : RAIL_ITEM,
                     "text-muted-foreground/50 my-1 border border-dashed hover:bg-amber-500/8 hover:text-amber-500/70"

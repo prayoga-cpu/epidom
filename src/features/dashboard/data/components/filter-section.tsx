@@ -12,6 +12,7 @@ import {
 import { Search, Filter, X } from "lucide-react";
 import { responsive } from "@/lib/utils/responsive";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 export interface FilterOption {
   value: string;
@@ -48,20 +49,23 @@ interface FilterSectionProps {
 export function FilterSection({
   searchValue,
   onSearchChange,
-  searchPlaceholder = "Search...",
+  searchPlaceholder,
   filters = [],
   hasActiveFilters = false,
   onClearFilters,
-  clearFiltersLabel = "Clear Filters",
+  clearFiltersLabel,
   className,
 }: FilterSectionProps) {
+  const { t } = useI18n();
+  const searchHint = searchPlaceholder ?? t("common.actions.searchPlaceholder");
+  const clearLabel = clearFiltersLabel ?? t("common.actions.clearFilters");
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       {/* Search */}
       <div className="relative w-full">
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
-          placeholder={searchPlaceholder}
+          placeholder={searchHint}
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full pl-9"
@@ -96,7 +100,7 @@ export function FilterSection({
               className={responsive.button}
             >
               <X className="mr-1 hidden h-4 w-4 sm:inline" />
-              {clearFiltersLabel}
+              {clearLabel}
             </Button>
           )}
         </div>

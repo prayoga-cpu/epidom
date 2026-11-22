@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -187,7 +188,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
       setDeleteDialogOpen(false);
       setSelectedSupplier(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteSupplier"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("messages.failedToDeleteSupplier")));
     }
   };
 
@@ -204,7 +205,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
       );
       clearSelection();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("messages.failedToDeleteSuppliers"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("messages.failedToDeleteSuppliers")));
     }
   };
 
@@ -213,7 +214,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
       await exportSuppliers.mutateAsync({ storeId, filters });
       toast.success(t("messages.exportSuccessful"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingSuppliers"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("messages.errorLoadingSuppliers")));
     }
   };
 
@@ -279,7 +280,7 @@ export function SuppliersSection({ initialSuppliers }: SuppliersSectionProps = {
     return (
       <SectionErrorState
         title={t("common.error")}
-        message={error.message || t("messages.errorLoadingSuppliers")}
+        message={localizeServerMessage(error.message) || t("messages.errorLoadingSuppliers")}
         onRetry={() => refetch()}
         retryLabel={t("common.actions.retry")}
       />

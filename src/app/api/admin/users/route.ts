@@ -208,6 +208,7 @@ export const PATCH = withAdminApiHandler(async (req, { admin }) => {
       deactivatedAt: true,
       purgeAt: true,
       adminSections: true,
+      business: { select: { locale: true } },
     },
   });
 

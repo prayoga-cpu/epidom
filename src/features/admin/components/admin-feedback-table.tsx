@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 type FeedbackType = "BUG" | "FEATURE_SUGGESTION" | "GENERAL_FEEDBACK";
 type FeedbackStatus = "OPEN" | "IN_PROGRESS" | "NEEDS_REVIEW" | "RESOLVED" | "ARCHIVED";
@@ -603,7 +604,8 @@ function FeedbackDetailDialog({
             <div className="space-y-4">
               <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                 <span>
-                  Page: <span className="text-foreground">{row.page}</span>
+                  {t("adminPages.feedback.head.page")}:{" "}
+                  <span className="text-foreground">{row.page}</span>
                 </span>
                 <span>
                   {new Date(row.createdAt).toLocaleString(intlLocale, {
@@ -779,7 +781,7 @@ export function AdminFeedbackTable() {
       }).then(async (r) => {
         if (!r.ok) {
           const err = await r.json().catch(() => ({}));
-          throw new Error(err.error ?? "Request failed");
+          throw new Error(err.error ?? localizeServerMessage("Request failed"));
         }
         return r.json();
       }),
@@ -789,7 +791,7 @@ export function AdminFeedbackTable() {
       else if (variables.priority) toast.success(t("adminPages.feedback.toasts.priorityUpdated"));
       else toast.success(t("adminPages.feedback.toasts.statusUpdated"));
     },
-    onError: (e: Error) => toast.error(e.message || "Failed"),
+    onError: (e: Error) => toast.error(e.message || localizeServerMessage("Failed")),
   });
 
   const saveDevNote = (id: string, note: string) => {
@@ -1011,7 +1013,7 @@ export function AdminFeedbackTable() {
                 onClick={clearFilters}
                 className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
               >
-                <X className="h-3 w-3" /> Clear filters
+                <X className="h-3 w-3" /> {t("pages.scheduleFilterClear")}
               </button>
             )}
           </div>
@@ -1317,8 +1319,14 @@ export function AdminFeedbackTable() {
 
         <p className="text-muted-foreground pb-4 text-center text-xs">
           {hasActiveFilters
-            ? `${filteredRows.length} of ${rows.length} feedback ${rows.length === 1 ? "entry" : "entries"}`
-            : `${rows.length} feedback ${rows.length === 1 ? "entry" : "entries"}`}
+            ? t("adminPages.feedback.countFiltered")
+                .replace("{shown}", String(filteredRows.length))
+                .replace("{total}", String(rows.length))
+            : t(
+                rows.length === 1
+                  ? "adminPages.feedback.countOne"
+                  : "adminPages.feedback.countMany"
+              ).replace("{count}", String(rows.length))}
         </p>
       </div>
 

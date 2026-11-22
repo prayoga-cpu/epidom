@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import {
   createContext,
   useCallback,
@@ -119,11 +120,11 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       const response = await fetch(`/api/exchange-rates?from=${BASE_CURRENCY}&to=${userCurrency}`);
       const result = await response.json();
       if (!response.ok || !result.success)
-        throw new Error(result.error || "Failed to fetch exchange rate");
+        throw new Error(localizeServerMessage(result.error || "Failed to fetch exchange rate"));
       const rateData: ExchangeRateData = result.data;
       setExchangeRate(rateData.rate);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch exchange rate");
+      setError(localizeServerMessage(err instanceof Error ? err.message : "Failed to fetch exchange rate"));
       setExchangeRate(1.0);
     } finally {
       setIsLoading(false);

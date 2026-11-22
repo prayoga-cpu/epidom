@@ -162,7 +162,7 @@ describe("EditStockCard — item cards + details dialog", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     const dialog = await openTile("Farine T55");
-    expect(within(dialog).getByText("SKU: MAT-1")).toBeInTheDocument();
+    expect(within(dialog).getByText("common.sku: MAT-1")).toBeInTheDocument();
     expect(within(dialog).getByText("management.editStock.stockInfo")).toBeInTheDocument();
     expect(within(dialog).getByText("€5.00")).toBeInTheDocument();
   });
@@ -278,7 +278,7 @@ describe("EditStockCard — Grid / Columns / List layouts", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
       const dialog = await openTile("Farine T55");
-      expect(within(dialog).getByText("SKU: MAT-1")).toBeInTheDocument();
+      expect(within(dialog).getByText("common.sku: MAT-1")).toBeInTheDocument();
     }
   );
 

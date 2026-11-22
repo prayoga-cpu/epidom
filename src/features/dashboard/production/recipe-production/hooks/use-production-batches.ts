@@ -1,3 +1,4 @@
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CreateProductionBatchFormInput,
@@ -126,7 +127,7 @@ async function fetchProductionBatches(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to fetch production batches");
+    throw new Error(localizeServerMessage(error.error || "Failed to fetch production batches"));
   }
 
   const result = await response.json();
@@ -142,7 +143,7 @@ async function fetchProductionBatchById(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to fetch production batch");
+    throw new Error(localizeServerMessage(error.error || "Failed to fetch production batch"));
   }
 
   const result = await response.json();
@@ -165,8 +166,8 @@ async function createProductionBatch(
     const errorMessage =
       typeof error.error === "string"
         ? error.error
-        : error.error?.message || JSON.stringify(error.error) || "Failed to start production";
-    throw new Error(errorMessage);
+        : error.error?.message || JSON.stringify(error.error) || localizeServerMessage("Failed to start production");
+    throw new Error(localizeServerMessage(errorMessage));
   }
 
   const result = await response.json();
@@ -187,7 +188,7 @@ async function updateProductionBatch(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to update production batch");
+    throw new Error(localizeServerMessage(error.error || "Failed to update production batch"));
   }
 
   const result = await response.json();
@@ -208,7 +209,7 @@ async function completeProduction(
 
   if (!response.ok) {
     const error = unwrapApiError(await response.json().catch(() => ({})));
-    throw new Error(error.message || "Failed to complete production");
+    throw new Error(localizeServerMessage(error.message || "Failed to complete production"));
   }
 
   // The comment here used to claim this route "returns batch directly (not
@@ -231,7 +232,7 @@ async function cancelProduction(
 
   if (!response.ok) {
     const error = unwrapApiError(await response.json().catch(() => ({})));
-    throw new Error(error.message || "Failed to cancel production");
+    throw new Error(localizeServerMessage(error.message || "Failed to cancel production"));
   }
 
   // The comment here used to claim this route "returns batch directly (not
@@ -248,7 +249,7 @@ async function deleteProductionBatch(storeId: string, batchId: string): Promise<
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "Failed to delete production batch");
+    throw new Error(localizeServerMessage(error.error || "Failed to delete production batch"));
   }
 }
 

@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 type ViewMode = "timeline" | "actors" | "entities" | "coverage";
 
@@ -183,7 +184,7 @@ export function AdminActivityLog() {
       // Without this a 403 or a 400 resolves happily to `{ error: … }` and the
       // table renders "No activity matches these filters" — an audit log
       // claiming nothing happened is the one lie it must never tell.
-      if (!res.ok) throw new Error(json.error ?? "Could not load the activity log");
+      if (!res.ok) throw new Error(json.error ?? localizeServerMessage("Could not load the activity log"));
       return json;
     },
     // The trail is append-only and grows continuously; a stale page here reads
@@ -225,7 +226,7 @@ export function AdminActivityLog() {
         body: JSON.stringify(body),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Request failed");
+      if (!res.ok) throw new Error(json.error ?? localizeServerMessage("Request failed"));
       return json;
     },
     // "plan" is a documented dry run that writes nothing, so refetching the
@@ -317,7 +318,7 @@ export function AdminActivityLog() {
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => router.push("/admin")}>
-                ← Back
+                {t("adminPages.feedback.back")}
               </Button>
             </div>
           </div>
@@ -1387,7 +1388,11 @@ function DetailSheet({
               variant="outline"
               size="icon"
               className="h-10 w-10"
-              aria-label={row.detail.lockedAt ? "Release legal hold" : "Place legal hold"}
+              aria-label={
+                row.detail.lockedAt
+                  ? t("adminPages.activity.detail.releaseHold")
+                  : t("adminPages.activity.detail.placeHold")
+              }
               onClick={() => act.mutate({ op: "lock", actionLogId, locked: !row.detail!.lockedAt })}
             >
               <Lock

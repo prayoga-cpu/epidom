@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -225,7 +226,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
       toast.success(t("data.recipes.manageCategories.deleted"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("data.recipes.manageCategories.deleteFailed")
+        localizeServerMessage(error instanceof Error ? error.message : t("data.recipes.manageCategories.deleteFailed"))
       );
     }
   };
@@ -278,7 +279,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
       setSelectedRecipe(null);
     } catch (error) {
       toast.error(t("common.error"), {
-        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
+        description: localizeServerMessage(error instanceof Error ? error.message : t("messages.registrationFailed")),
       });
     }
   };
@@ -298,7 +299,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
       clearSelection();
     } catch (error) {
       toast.error(t("common.error"), {
-        description: error instanceof Error ? error.message : t("messages.registrationFailed"),
+        description: localizeServerMessage(error instanceof Error ? error.message : t("messages.registrationFailed")),
       });
     }
   };
@@ -322,7 +323,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
       });
     } catch (error) {
       toast.error(t("messages.exportFailed"), {
-        description: error instanceof Error ? error.message : t("messages.errorLoadingRecipes"),
+        description: localizeServerMessage(error instanceof Error ? error.message : t("messages.errorLoadingRecipes")),
       });
     }
   };
@@ -345,7 +346,7 @@ export function RecipesSection({ initialRecipes }: RecipesSectionProps = {}) {
     return (
       <SectionErrorState
         title={t("common.error")}
-        message={error.message || t("messages.errorLoadingRecipes")}
+        message={localizeServerMessage(error.message) || t("messages.errorLoadingRecipes")}
         onRetry={() => refetch()}
         retryLabel={t("common.actions.retry")}
       />

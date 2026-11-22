@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus, Ticket } from "lucide-react";
@@ -68,7 +69,7 @@ export function CouponsCard({ storeId, query }: CouponsCardProps) {
       {
         onError: (error) =>
           toast.error(t("common.error"), {
-            description: error.message || t("promotions.toasts.updateFailed"),
+            description: localizeServerMessage(error.message || t("promotions.toasts.updateFailed")),
           }),
       }
     );
@@ -110,7 +111,7 @@ export function CouponsCard({ storeId, query }: CouponsCardProps) {
         ) : query.isError ? (
           <PromotionBlockState>
             <p className="text-destructive text-sm">
-              {query.error.message || t("promotions.coupons.loadFailed")}
+              {localizeServerMessage(query.error.message) || t("promotions.coupons.loadFailed")}
             </p>
             <Button variant="outline" size="sm" className="h-10" onClick={() => query.refetch()}>
               {t("common.actions.retry")}

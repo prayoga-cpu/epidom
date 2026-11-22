@@ -115,14 +115,14 @@ export function EditSupplierDialog({ supplier, open, onOpenChange }: EditSupplie
         success: () => {
           isSubmittingRef.current = false;
           savedFormDataRef.current = null;
-          return `${data.name} has been updated successfully.`;
+          return t("data.suppliers.updatedSuccess").replace("{name}", data.name);
         },
         error: (err) => {
           isSubmittingRef.current = false;
           onOpenChange(true);
           const fieldSummary = applyServerFieldErrors(form, err);
           if (fieldSummary) return fieldSummary;
-          return err instanceof Error ? err.message : "Failed to update supplier";
+          return err instanceof Error ? err.message : t("data.suppliers.updateFailed");
         },
       });
 
@@ -137,7 +137,7 @@ export function EditSupplierDialog({ supplier, open, onOpenChange }: EditSupplie
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <FormDialogLayout
         title={t("data.suppliers.editTitle") || "Edit Supplier"}
-        description="Update supplier information. Changes will be saved to your contacts."
+        description={t("data.suppliers.editDialogDescription")}
         maxWidth="2xl"
         footer={
           <FormDialogFooter

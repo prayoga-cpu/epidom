@@ -16,6 +16,7 @@
 
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -122,7 +123,9 @@ export function ImageUpload({
     [t]
   );
 
-  const showError = useCallback((message: string) => {
+  const showError = useCallback((raw: string) => {
+    // Upload failures arrive as the server's English sentence.
+    const message = localizeServerMessage(raw);
     setError(message);
     toast.error(message);
   }, []);

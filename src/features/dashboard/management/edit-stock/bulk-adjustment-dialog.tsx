@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -53,32 +54,34 @@ enum AdjustmentType {
 }
 
 // Zod validation schema
-const bulkAdjustmentSchema = z.object({
-  items: z
-    .array(
-      z.object({
-        itemId: z.string(),
-        itemName: z.string(),
-        itemType: z.enum(["material", "product"]),
-        quantity: z.coerce
-          .number()
-          .positive("Quantity must be positive")
-          .min(0.001, "Quantity must be at least 0.001"),
-        adjustmentType: z.nativeEnum(AdjustmentType),
-        reason: z.string().optional(),
-        currentStock: z.number(),
-        unit: z.string(),
-      })
-    )
-    .min(1, "At least one item is required"),
-  useSameReason: z.boolean(),
-  globalReason: z.string().optional(),
-  globalAdjustmentType: z.nativeEnum(AdjustmentType),
-  referenceId: z.string().optional(),
-  notes: z.string().optional(),
-});
+function createBulkAdjustmentSchema(t: (key: string) => string) {
+  return z.object({
+    items: z
+      .array(
+        z.object({
+          itemId: z.string(),
+          itemName: z.string(),
+          itemType: z.enum(["material", "product"]),
+          quantity: z.coerce
+            .number()
+            .positive(t("common.validation.quantityPositive"))
+            .min(0.001, t("common.validation.quantityMin")),
+          adjustmentType: z.nativeEnum(AdjustmentType),
+          reason: z.string().optional(),
+          currentStock: z.number(),
+          unit: z.string(),
+        })
+      )
+      .min(1, t("common.validation.atLeastOneItem")),
+    useSameReason: z.boolean(),
+    globalReason: z.string().optional(),
+    globalAdjustmentType: z.nativeEnum(AdjustmentType),
+    referenceId: z.string().optional(),
+    notes: z.string().optional(),
+  });
+}
 
-type BulkAdjustmentFormData = z.infer<typeof bulkAdjustmentSchema>;
+type BulkAdjustmentFormData = z.infer<ReturnType<typeof createBulkAdjustmentSchema>>;
 
 function bulkDefaultValues(selectedItems: StockItem[]): BulkAdjustmentFormData {
   return {
@@ -124,8 +127,10 @@ export function BulkAdjustmentDialog({
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
 
+  const schema = useMemo(() => createBulkAdjustmentSchema(t), [t]);
+
   const form = useForm<BulkAdjustmentFormData>({
-    resolver: zodResolver(bulkAdjustmentSchema),
+    resolver: zodResolver(schema),
     defaultValues: bulkDefaultValues(selectedItems),
   });
 
@@ -203,8 +208,8 @@ export function BulkAdjustmentDialog({
           )?.itemName;
 
           errors.push({
-            item: itemName || "Unknown",
-            error: error instanceof Error ? error.message : "Unknown error",
+            item: itemName || t("common.stockStatus.unknown"),
+            error: error instanceof Error ? error.message : t("common.unknownError"),
           });
         }
       }
@@ -221,13 +226,15 @@ export function BulkAdjustmentDialog({
         form.reset();
         setOpen(false);
       } else if (results.length > 0) {
-        sonnerToast.warning("Bulk Adjustment Partially Successful", {
-          description: `${results.length} succeeded, ${errors.length} failed`,
+        sonnerToast.warning(t("management.editStock.bulkAdjustToast.partialTitle"), {
+          description: t("management.editStock.bulkAdjustToast.partialDesc")
+            .replace("{success}", String(results.length))
+            .replace("{failed}", String(errors.length)),
         });
         // Show errors
         errors.forEach((err) => {
-          sonnerToast.error(`Failed: ${err.item}`, {
-            description: err.error,
+          sonnerToast.error(t("management.editStock.bulkAdjustToast.itemFailed").replace("{item}", err.item), {
+            description: localizeServerMessage(err.error),
           });
         });
       } else {
@@ -238,8 +245,8 @@ export function BulkAdjustmentDialog({
           description: t("management.editStock.toasts.bulkAdjustmentFailed.description"),
         });
         errors.forEach((err) => {
-          sonnerToast.error(`Failed: ${err.item}`, {
-            description: err.error,
+          sonnerToast.error(t("management.editStock.bulkAdjustToast.itemFailed").replace("{item}", err.item), {
+            description: localizeServerMessage(err.error),
           });
         });
       }
@@ -248,9 +255,9 @@ export function BulkAdjustmentDialog({
         variant: "destructive",
         title: t("common.error"),
         description:
-          error instanceof Error
+          localizeServerMessage(error instanceof Error
             ? error.message
-            : t("management.editStock.toasts.bulkAdjustmentFailed.description"),
+            : t("management.editStock.toasts.bulkAdjustmentFailed.description")),
       });
     }
   };

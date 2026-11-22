@@ -174,12 +174,17 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
                           <div>
                             <p className="text-sm font-medium">{result.sku}</p>
                             <p className="text-muted-foreground text-xs">
-                              {result.type} {result.message && `- ${result.message}`}
+                              {result.type === "material"
+                                ? t("management.editStock.material")
+                                : t("management.editStock.product")}{" "}
+                              {result.message && `- ${result.message}`}
                             </p>
                           </div>
                         </div>
                         <Badge variant={result.success ? "default" : "destructive"}>
-                          {result.success ? "Success" : "Failed"}
+                          {result.success
+                            ? t("management.editStock.importCSVDialog.resultSuccess")
+                            : t("management.editStock.importCSVDialog.resultFailed")}
                         </Badge>
                       </div>
                     ))}

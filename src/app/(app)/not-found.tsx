@@ -16,7 +16,9 @@ export const metadata = genMeta({
 export default function NotFound() {
   return (
     <I18nProvider>
-      <main className="bg-background text-foreground min-h-[calc(100vh/var(--app-zoom,1))]">
+      {/* NotFoundContent paints the navy surface and fills the viewport itself; the
+          navy here only covers an overscroll bounce. */}
+      <main className="bg-epi-navy-900">
         <NotFoundContent showDashboardButton={true} />
       </main>
     </I18nProvider>

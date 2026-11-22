@@ -56,7 +56,9 @@ export function AuthPage({ initialMode }: { initialMode: AuthMode }) {
   // /register send a live session to /stores before rendering.
   const langParam = searchParams.get("lang");
   useEffect(() => {
-    if (langParam === "fr" || langParam === "en" || langParam === "id") setLocale(langParam);
+    if (langParam === "fr" || langParam === "en" || langParam === "id" || langParam === "th") {
+      setLocale(langParam);
+    }
   }, [langParam, setLocale]);
 
   const switchMode = (next: AuthMode) => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -64,7 +65,7 @@ function VerifyEmailContent() {
       });
 
       if (error) {
-        toast.error(error.message || t("auth.verifyEmail.resendError"));
+        toast.error(localizeServerMessage(error.message || t("auth.verifyEmail.resendError")));
       } else {
         setResendSuccess(true);
         toast.success(t("auth.verifyEmail.resendSuccess"));

@@ -166,7 +166,7 @@ export function HomeClient({ storeId, showSetupGuide, isOwner, isNewStore }: Hom
         {badge !== null && !locked(x) && (
           <span
             className="absolute top-2 right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-semibold text-white shadow-sm"
-            aria-label={`${badge} alerts`}
+            aria-label={t("nav.badgeAlertsAria").replace("{count}", String(badge))}
           >
             {badge > 99 ? "99+" : badge}
           </span>

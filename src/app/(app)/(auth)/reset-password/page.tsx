@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ function ResetPasswordForm() {
         token, // Explicitly pass token
       });
       if (error) {
-        toast.error(error.message);
+        toast.error(localizeServerMessage(error.message));
       } else {
         toast.success(t("pages.authResetSuccess"));
         router.push("/login");

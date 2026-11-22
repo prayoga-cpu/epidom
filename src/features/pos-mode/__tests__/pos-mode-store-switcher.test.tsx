@@ -103,7 +103,7 @@ describe("PosModeStoreSwitcher", () => {
       const { onNavigate } = renderSwitcher();
       fireEvent.click(openList().getByRole("button", { name: /Beta/ }));
 
-      fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+      fireEvent.click(await screen.findByRole("button", { name: "common.actions.cancel" }));
 
       await waitFor(() => expect(screen.queryByText("pos.switchStore.confirmTitle")).toBeNull());
       expect(push).not.toHaveBeenCalled();

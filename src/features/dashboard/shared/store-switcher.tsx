@@ -90,7 +90,7 @@ export function StoreSwitcher() {
         <span className="hidden sm:inline lg:inline">
           {t("dashboard.storeSelector.createFirst")}
         </span>
-        <span className="sm:hidden">Store</span>
+        <span className="sm:hidden">{t("dashboard.storeSelector.storeShort")}</span>
       </Button>
     );
   }

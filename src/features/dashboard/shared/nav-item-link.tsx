@@ -78,7 +78,7 @@ export function NavItemLink({ item, ctx }: { item: NavItem; ctx: NavContext }) {
     // consistent with the requirePlan redirect and the upgrade modal.
     const lockedHref = item.requiredPlan ? upgradeHrefFor(item.requiredPlan) : "/pricing#plans";
     const upgradeLabel = item.requiredPlan
-      ? `Upgrade to ${PLAN_LABELS[item.requiredPlan]}`
+      ? t("billing.planCards.upgradeTo").replace("{name}", PLAN_LABELS[item.requiredPlan])
       : undefined;
     // Event/benefit-framed copy (STRATEGY.md §5: "upgrade prompts should explain
     // the event... rather than the feature"): an always-visible second line, not
@@ -136,7 +136,7 @@ export function NavItemLink({ item, ctx }: { item: NavItem; ctx: NavContext }) {
         {badge !== null && badge > 0 && (
           <span
             className="animate-in fade-in flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-semibold text-white shadow-sm"
-            aria-label={`${badge} ${item.badgeKey}`}
+            aria-label={t("nav.badgeAlertsAria").replace("{count}", String(badge))}
           >
             {badge > 99 ? "99+" : badge}
           </span>

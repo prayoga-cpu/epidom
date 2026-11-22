@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -297,7 +298,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
             // error) can return an HTML error page instead of JSON — don't
             // let that raw parse failure leak to the user as the toast text.
             const errorBody: ApiErrorResponse | null = await response.json().catch(() => null);
-            throw new Error(errorBody?.error?.message || "");
+            throw new Error(localizeServerMessage(errorBody?.error?.message || ""));
           }
 
           const uploadData: ApiSuccessResponse<{ url: string }> = await response.json();
@@ -539,7 +540,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                         <div className="relative overflow-hidden rounded-lg border">
                           <img
                             src={screenshotPreview}
-                            alt="Preview"
+                            alt={t("feedback.previewAlt")}
                             className="h-40 w-full object-cover"
                           />
                           <Button

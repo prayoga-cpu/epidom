@@ -397,11 +397,15 @@ describe("FeatureComparison", () => {
       for (const key of ["cmp_custom_dev", "cmp_integrations", "cmp_sla"] as const) {
         const row = screen.getByText(pricing(dict)[key]).closest("tr") as HTMLElement;
         const cells = within(row).getAllByRole("cell").slice(1);
+        // The tick/cross labels are read in the page's language, not always English.
+        const { included, notIncluded } = (
+          dict as unknown as { uiText: { marketing: { included: string; notIncluded: string } } }
+        ).uiText.marketing;
         expect(cells.map((c) => c.querySelector("svg")?.getAttribute("aria-label"))).toEqual([
-          "Not included",
-          "Not included",
-          "Not included",
-          "Included",
+          notIncluded,
+          notIncluded,
+          notIncluded,
+          included,
         ]);
       }
     }

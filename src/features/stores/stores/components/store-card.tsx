@@ -233,7 +233,7 @@ export function StoreCard({
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">{t("common.nav.openMenu")}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
@@ -242,7 +242,7 @@ export function StoreCard({
                 trigger={
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                     <Pencil className="mr-2 h-4 w-4" />
-                    <span>Edit</span>
+                    <span>{t("common.actions.edit")}</span>
                   </DropdownMenuItem>
                 }
               />
@@ -255,7 +255,7 @@ export function StoreCard({
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Delete</span>
+                    <span>{t("common.actions.delete")}</span>
                   </DropdownMenuItem>
                 }
               />

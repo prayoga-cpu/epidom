@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRightLeft, Loader2, Mail } from "lucide-react";
@@ -60,7 +61,7 @@ export function StoreOwnershipTransferCard({ storeId, storeName }: StoreOwnershi
       setEmail("");
       queryClient.invalidateQueries({ queryKey });
     },
-    onError: (err: Error) => toast.error(err.message || t("pages.storeTransferSendFailed")),
+    onError: (err: Error) => toast.error(localizeServerMessage(err.message || t("pages.storeTransferSendFailed"))),
   });
 
   const cancelMutation = useMutation({
@@ -69,7 +70,7 @@ export function StoreOwnershipTransferCard({ storeId, storeName }: StoreOwnershi
       toast.success(t("pages.storeTransferCanceled"));
       queryClient.invalidateQueries({ queryKey });
     },
-    onError: (err: Error) => toast.error(err.message || t("pages.storeTransferCancelFailed")),
+    onError: (err: Error) => toast.error(localizeServerMessage(err.message || t("pages.storeTransferCancelFailed"))),
   });
 
   return (

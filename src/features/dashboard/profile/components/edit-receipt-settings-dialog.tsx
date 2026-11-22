@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Dialog } from "@/components/ui/dialog";
@@ -92,7 +93,7 @@ export function EditReceiptSettingsDialog({
     } catch (error) {
       toast.error(t("common.error"), {
         description:
-          error instanceof Error ? error.message : t("profile.errors.receiptSettingsUpdateFailed"),
+          localizeServerMessage(error instanceof Error ? error.message : t("profile.errors.receiptSettingsUpdateFailed")),
       });
     }
   }

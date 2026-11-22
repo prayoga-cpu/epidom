@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -105,7 +106,7 @@ export function ClaudeConnectorCard() {
     if (!ok) return;
     revoke.mutate(clientId, {
       onSuccess: () => toast.success(t("claudeConnector.card.revoked")),
-      onError: (error) => toast.error(error.message),
+      onError: (error) => toast.error(localizeServerMessage(error.message)),
     });
   }
 

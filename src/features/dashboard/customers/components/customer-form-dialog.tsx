@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -100,7 +101,7 @@ export function CustomerFormDialog({
       // shown under the offending input. Anything else is a toast.
       const fieldSummary = applyServerFieldErrors(form, error);
       if (!fieldSummary) {
-        toast.error(error instanceof Error ? error.message : t("customers.form.toasts.failed"));
+        toast.error(localizeServerMessage(error instanceof Error ? error.message : t("customers.form.toasts.failed")));
       }
     }
   }

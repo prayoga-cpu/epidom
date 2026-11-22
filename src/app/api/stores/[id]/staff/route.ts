@@ -177,7 +177,7 @@ export const POST = withApiHandler(
 
     const store = await prisma.store.findUnique({
       where: { id: storeId! },
-      select: { name: true },
+      select: { name: true, business: { select: { locale: true } } },
     });
 
     const staff = await prisma.staffMember.create({
@@ -210,7 +210,7 @@ export const POST = withApiHandler(
 
     // Fire-and-forget: don't block the response on email delivery
     if (emailVal && sendInvite && pin && pin !== "") {
-      sendStaffPinEmail(emailVal, name, store?.name ?? "your store", pin)
+      sendStaffPinEmail(emailVal, name, store?.name ?? "your store", pin, store?.business?.locale)
         .then(() =>
           prisma.staffMember.update({
             where: { id: staff.id },

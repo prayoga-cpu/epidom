@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -138,8 +139,8 @@ export function DiscountPresetDialog({
       const fieldSummary = applyServerFieldErrors(form, error);
       toast.error(t("common.error"), {
         description:
-          fieldSummary ??
-          (error instanceof Error ? error.message : t("promotions.toasts.saveFailed")),
+          localizeServerMessage(fieldSummary ??
+          (error instanceof Error ? error.message : t("promotions.toasts.saveFailed"))),
       });
     }
   }

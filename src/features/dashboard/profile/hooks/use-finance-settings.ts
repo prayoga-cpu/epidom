@@ -1,3 +1,4 @@
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PaymentMethod, PaymentMarket } from "@prisma/client";
 import type { PaymentFeeRate } from "@/config/payment-fees.config";
@@ -56,7 +57,7 @@ async function parseFinanceSettingsResponse<T>(
 ): Promise<T> {
   const result = await response.json().catch(() => null);
   if (!response.ok || !result?.success) {
-    throw new Error(result?.error?.message || fallbackMessage);
+    throw new Error(localizeServerMessage(result?.error?.message || fallbackMessage));
   }
   return result.data as T;
 }
@@ -65,7 +66,7 @@ const fetchFinanceSettings = async (storeId: string): Promise<FinanceSettingsDat
   const response = await fetch(`/api/stores/${storeId}/finance/settings`);
   return parseFinanceSettingsResponse<FinanceSettingsData>(
     response,
-    "Failed to fetch finance settings"
+    localizeServerMessage("Failed to fetch finance settings")
   );
 };
 
@@ -73,7 +74,7 @@ const fetchBusinessFinanceSettings = async (): Promise<BusinessFinanceSettingsDa
   const response = await fetch("/api/user/business/finance-settings");
   return parseFinanceSettingsResponse<BusinessFinanceSettingsData>(
     response,
-    "Failed to fetch business finance settings"
+    localizeServerMessage("Failed to fetch business finance settings")
   );
 };
 
@@ -88,7 +89,7 @@ const updateFinanceSettingsRequest = async (
   });
   return parseFinanceSettingsResponse<FinanceSettingsData>(
     response,
-    "Failed to update finance settings"
+    localizeServerMessage("Failed to update finance settings")
   );
 };
 
@@ -102,7 +103,7 @@ const updateBusinessFinanceSettingsRequest = async (
   });
   return parseFinanceSettingsResponse<BusinessFinanceSettingsData>(
     response,
-    "Failed to update business finance settings"
+    localizeServerMessage("Failed to update business finance settings")
   );
 };
 

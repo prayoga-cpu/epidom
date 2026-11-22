@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Handshake, Loader2 } from "lucide-react";
@@ -73,7 +74,7 @@ export function PartnerInviteClient({ token }: { token: string | null }) {
       })
       .catch((err: unknown) => {
         accepting.current = false;
-        setAcceptError(err instanceof Error ? err.message : t("partnerInvite.acceptFailed"));
+        setAcceptError(localizeServerMessage(err instanceof Error ? err.message : t("partnerInvite.acceptFailed")));
       });
   }, [token, rightAccount, verified, t]);
 

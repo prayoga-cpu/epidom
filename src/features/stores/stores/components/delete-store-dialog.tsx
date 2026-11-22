@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -36,6 +37,8 @@ export function DeleteStoreDialog({ store, trigger }: DeleteStoreDialogProps) {
   const { t } = useI18n();
   const { mutate: deleteStore, isPending } = useDeleteStore();
 
+  const [descBefore, descAfter = ""] = t("stores.deleteDialog.description").split("{name}");
+
   const handleDelete = () => {
     deleteStore(store.id, {
       onSuccess: () => {
@@ -43,7 +46,7 @@ export function DeleteStoreDialog({ store, trigger }: DeleteStoreDialogProps) {
         setOpen(false);
       },
       onError: (error) => {
-        toast.error(error.message || t("stores.deleteError") || "Failed to delete store");
+        toast.error(localizeServerMessage(error.message || t("stores.deleteError") || "Failed to delete store"));
       },
     });
   };
@@ -54,27 +57,27 @@ export function DeleteStoreDialog({ store, trigger }: DeleteStoreDialogProps) {
         {trigger || (
           <Button variant="ghost" size="sm" className="text-destructive">
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {t("common.actions.delete")}
           </Button>
         )}
       </AlertDialogTrigger>
       <AlertDialogContent className="max-h-[calc(85dvh/var(--app-zoom,1))] overflow-y-auto">
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogTitle>{t("stores.deleteDialog.title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            This will deactivate <strong>{store.name}</strong>. This action can be reversed by
-            contacting support. All data associated with this store will be preserved but the store
-            will no longer be accessible.
+            {descBefore}
+            <strong>{store.name}</strong>
+            {descAfter}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>{t("common.actions.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
             disabled={isPending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isPending ? "Deleting..." : "Delete Store"}
+            {isPending ? t("stores.deleteDialog.deleting") : t("stores.deleteDialog.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

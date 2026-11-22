@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
@@ -54,7 +55,7 @@ export function SetOwnerPinDialog({
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("pages.ownerPinSetFailed"));
+      toast.error(localizeServerMessage(err instanceof Error ? err.message : t("pages.ownerPinSetFailed")));
     }
   };
 

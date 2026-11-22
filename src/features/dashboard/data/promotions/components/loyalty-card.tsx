@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Loader2, Pencil } from "lucide-react";
@@ -71,7 +72,7 @@ export function LoyaltyCard({ storeId, query }: LoyaltyCardProps) {
         ) : query.isError || !settings ? (
           <PromotionBlockState>
             <p className="text-destructive text-sm">
-              {query.error?.message || t("promotions.loyalty.loadFailed")}
+              {localizeServerMessage(query.error?.message) || t("promotions.loyalty.loadFailed")}
             </p>
             <Button variant="outline" size="sm" className="h-10" onClick={() => query.refetch()}>
               {t("common.actions.retry")}

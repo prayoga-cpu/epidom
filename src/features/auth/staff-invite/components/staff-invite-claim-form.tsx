@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Loader2, UserCheck } from "lucide-react";
@@ -133,7 +134,7 @@ export function StaffInviteClaimForm({ token }: { token: string | null }) {
       const { error } = await authClient.signIn.email({ email, password });
       if (error) {
         // The account exists and is linked; only the automatic sign-in failed.
-        toast.error(error.message || t("pages.staffInviteClaimFailed"));
+        toast.error(localizeServerMessage(error.message || t("pages.staffInviteClaimFailed")));
         window.location.href = "/login";
         return;
       }
@@ -149,7 +150,7 @@ export function StaffInviteClaimForm({ token }: { token: string | null }) {
       } else if (dead) {
         setLookup({ state: dead });
       } else {
-        setClaimError(err instanceof Error ? err.message : t("pages.staffInviteClaimFailed"));
+        setClaimError(localizeServerMessage(err instanceof Error ? err.message : t("pages.staffInviteClaimFailed")));
       }
       setBusy(null);
     }
@@ -172,7 +173,7 @@ export function StaffInviteClaimForm({ token }: { token: string | null }) {
       } else if (dead) {
         setLookup({ state: dead });
       } else {
-        setClaimError(err instanceof Error ? err.message : t("pages.staffInviteClaimFailed"));
+        setClaimError(localizeServerMessage(err instanceof Error ? err.message : t("pages.staffInviteClaimFailed")));
       }
       setBusy(null);
     }

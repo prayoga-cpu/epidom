@@ -5,6 +5,7 @@ import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { XIcon, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useOptionalI18n } from "@/components/lang/optional-i18n";
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -67,6 +68,9 @@ function SheetContent({
   /** Leave out the corner close button — for a sheet that draws its own. */
   hideClose?: boolean;
 }) {
+  // Optional: a sheet can render above/outside an I18nProvider (tests, error fallbacks).
+  const i18n = useOptionalI18n();
+  const tr = (key: string, fallback: string) => (i18n ? i18n.t(key) : fallback);
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -88,13 +92,19 @@ function SheetContent({
       >
         {/* Visually hidden title and description for accessibility */}
         <SheetPrimitive.Title className="sr-only">
-          {title ?? (navigation ? "Navigation Menu" : "Sheet")}
+          {title ??
+            (navigation
+              ? tr("uiText.common.navigationMenu", "Navigation Menu")
+              : tr("uiText.common.sheet", "Sheet"))}
         </SheetPrimitive.Title>
         <SheetPrimitive.Description className="sr-only">
           {description ??
             (navigation
-              ? "Navigation menu for accessing dashboard pages and features"
-              : "Sheet content")}
+              ? tr(
+                  "uiText.common.navigationMenuDesc",
+                  "Navigation menu for accessing dashboard pages and features"
+                )
+              : tr("uiText.common.sheetContent", "Sheet content"))}
         </SheetPrimitive.Description>
         {children}
         {!hideClose && (
@@ -116,7 +126,7 @@ function SheetContent({
             ) : (
               <XIcon className="size-4" />
             )}
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{tr("common.actions.close", "Close")}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Content>

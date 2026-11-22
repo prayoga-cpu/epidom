@@ -7,7 +7,7 @@ import { useI18n, type Locale } from "@/components/lang/i18n-provider";
 
 /**
  * Compact, theme-aware control cluster for the public storefront.
- * Lets a customer switch language (ID / EN / FR) and toggle light/dark mode.
+ * Lets a customer switch language (ID / EN / FR / TH) and toggle light/dark mode.
  * Renders against semantic tokens so it works on any storefront surface.
  */
 
@@ -15,6 +15,7 @@ const LANGS: { value: Locale; short: string }[] = [
   { value: "id", short: "ID" },
   { value: "en", short: "EN" },
   { value: "fr", short: "FR" },
+  { value: "th", short: "TH" },
 ];
 
 export function StorefrontControls({ className = "" }: { className?: string }) {

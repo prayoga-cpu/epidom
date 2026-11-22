@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { FormDialogLayout } from "@/components/ui/form-dialog-layout";
@@ -163,7 +164,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
       handleOpenChange(false);
     } catch (error) {
       toast.error(t("common.error"), {
-        description: error instanceof Error ? error.message : t("profile.errors.updateFailed"),
+        description: localizeServerMessage(error instanceof Error ? error.message : t("profile.errors.updateFailed")),
       });
     }
   };
@@ -190,7 +191,7 @@ export function EditAvatarDialog({ open, onOpenChange, user, onUpdate }: EditAva
       handleOpenChange(false);
     } catch (error) {
       toast.error(t("common.error"), {
-        description: error instanceof Error ? error.message : t("profile.errors.updateFailed"),
+        description: localizeServerMessage(error instanceof Error ? error.message : t("profile.errors.updateFailed")),
       });
     }
   };

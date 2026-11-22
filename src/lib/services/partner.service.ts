@@ -404,12 +404,24 @@ export async function createPartner(
   const user = input.userId
     ? await prisma.user.findUnique({
         where: { id: input.userId },
-        select: { id: true, email: true, partner: { select: { id: true } } },
+        select: {
+          id: true,
+          email: true,
+          partner: { select: { id: true } },
+          // The owner's language is the business language; User.locale is never written.
+          business: { select: { locale: true } },
+        },
       })
     : inviteEmail
       ? await prisma.user.findUnique({
           where: { email: inviteEmail },
-          select: { id: true, email: true, partner: { select: { id: true } } },
+          select: {
+          id: true,
+          email: true,
+          partner: { select: { id: true } },
+          // The owner's language is the business language; User.locale is never written.
+          business: { select: { locale: true } },
+        },
         })
       : null;
   if (input.userId && !user) throw new AppError("User not found", ApiErrorCode.USER_NOT_FOUND, 404);
@@ -476,7 +488,13 @@ export async function createPartner(
   if (user) {
     // Best effort: the partner exists either way, and the page is in their menu.
     try {
-      await sendPartnerAccessEmail(user.email, partner.displayName, summary, `${appUrl()}${PARTNER_PAGE_PATH}`);
+      await sendPartnerAccessEmail(
+        user.email,
+        partner.displayName,
+        summary,
+        `${appUrl()}${PARTNER_PAGE_PATH}`,
+        user.business?.locale
+      );
     } catch {
       // ignore
     }

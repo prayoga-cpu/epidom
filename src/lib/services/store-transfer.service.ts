@@ -100,7 +100,7 @@ export async function startStoreTransfer(params: {
 
   const store = await prisma.store.findUnique({
     where: { id: storeId },
-    select: { name: true },
+    select: { name: true, business: { select: { locale: true } } },
   });
   if (!store) {
     throw new AppError("Store not found", ApiErrorCode.NOT_FOUND, 404);
@@ -134,7 +134,8 @@ export async function startStoreTransfer(params: {
     toEmail,
     store.name,
     fromUser.name,
-    buildAcceptUrl(appUrl, token)
+    buildAcceptUrl(appUrl, token),
+    store.business?.locale
   );
   if (!sent.success) {
     // Nobody can act on a link they never received — don't leave it pending

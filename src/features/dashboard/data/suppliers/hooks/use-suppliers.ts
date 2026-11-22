@@ -7,6 +7,7 @@ import { normalizeFilters } from "@/lib/utils/query-key-helpers";
 import { trackEvent } from "@/lib/analytics";
 import { ApiClientError } from "@/lib/api/client";
 import { unwrapApiError } from "@/lib/api/unwrap";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 // Response interfaces
 export interface SuppliersResponse {
@@ -84,7 +85,7 @@ export function useSupplierAccessCheck(storeId: string) {
       }
 
       if (!response.ok) {
-        throw new Error("Failed to check supplier access");
+        throw new Error(localizeServerMessage("Failed to check supplier access"));
       }
 
       return true;
@@ -147,7 +148,7 @@ async function fetchSupplierById(
     if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
       const { createSubscriptionError } = await import("@/types/errors");
       const customError = createSubscriptionError(
-        error.message || "Supplier Management is only available in Pro and Enterprise plans",
+        error.message || localizeServerMessage("Supplier Management is only available in Pro and Enterprise plans"),
         true
       );
       // Add status for caching detection
@@ -256,7 +257,7 @@ async function exportSuppliers(storeId: string, filters: SupplierFilterInput): P
     if (response.status === 403 && error.code === "SUBSCRIPTION_FEATURE_LOCKED") {
       const { createSubscriptionError } = await import("@/types/errors");
       const customError = createSubscriptionError(
-        error.message || "Export feature is only available in Pro and Enterprise plans",
+        error.message || localizeServerMessage("Export feature is only available in Pro and Enterprise plans"),
         true
       );
       (customError as any).status = 403;
@@ -333,7 +334,7 @@ export function useSuppliers(
 
           const { createSubscriptionError } = await import("@/types/errors");
           const customError = createSubscriptionError(
-            error.message || "Supplier Management is only available in Pro and Enterprise plans",
+            error.message || localizeServerMessage("Supplier Management is only available in Pro and Enterprise plans"),
             true
           );
           // Add status for caching detection

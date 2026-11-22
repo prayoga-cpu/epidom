@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -141,16 +142,16 @@ function firstZodError(schema: ZodType<unknown>, value: string): string | null {
   return result.success ? null : (result.error.issues[0]?.message ?? null);
 }
 
-const STAFF_FIELD_LABELS: Record<string, string> = {
-  name: "Name",
-  username: "Username",
-  email: "Email",
-  whatsapp: "WhatsApp Number",
-  role: "Role",
-  customRoleLabel: "Custom role label",
-  pin: "PIN",
-  payRate: "Rate",
-  contractType: "Contract type",
+const STAFF_FIELD_LABEL_KEYS: Record<string, string> = {
+  name: "common.name",
+  username: "pages.staffUsername",
+  email: "common.email",
+  whatsapp: "pages.staffWhatsappNumber",
+  role: "pages.staffRole",
+  customRoleLabel: "pages.staffCustomRoleLabel",
+  pin: "pages.staffFieldPin",
+  payRate: "pages.staffPayRate",
+  contractType: "pages.staffContractType",
 };
 
 // The API's 400 response message is a generic "Validation failed" — the
@@ -158,7 +159,11 @@ const STAFF_FIELD_LABELS: Record<string, string> = {
 // (Zod's `.flatten()` shape) and was previously discarded, leaving the toast
 // unable to tell the owner which field broke (e.g. a leftover non-phone
 // value in WhatsApp Number).
-function describeStaffError(err: unknown, fallback: string): string {
+function describeStaffError(
+  err: unknown,
+  fallback: string,
+  t: (key: string) => string
+): string {
   if (err instanceof ApiClientError) {
     const fieldErrors = (
       err.response.error.details as { fieldErrors?: Record<string, string[]> } | undefined
@@ -166,7 +171,8 @@ function describeStaffError(err: unknown, fallback: string): string {
     const firstEntry = fieldErrors && Object.entries(fieldErrors).find(([, msgs]) => msgs?.length);
     if (firstEntry) {
       const [field, [message]] = firstEntry;
-      return `${STAFF_FIELD_LABELS[field] ?? field}: ${message}`;
+      const labelKey = STAFF_FIELD_LABEL_KEYS[field];
+      return `${labelKey ? t(labelKey) : field}: ${message}`;
     }
     return err.message || fallback;
   }
@@ -350,7 +356,7 @@ export function StaffClient({
       setAddCustomRoleActive(false);
       toast.success(t("pages.staffAdded"));
     },
-    onError: (err: Error) => toast.error(describeStaffError(err, t("pages.staffAddFailed"))),
+    onError: (err: Error) => toast.error(describeStaffError(err, t("pages.staffAddFailed"), t)),
   });
 
   // Owner-only, and it emails a link that grants a real sign-in to this
@@ -364,7 +370,7 @@ export function StaffClient({
       queryClient.invalidateQueries({ queryKey: ["staff-admin", storeId] });
       toast.success(t("pages.staffInviteSentToast"));
     },
-    onError: (err: Error) => toast.error(describeStaffError(err, t("pages.staffInviteFailedToast"))),
+    onError: (err: Error) => toast.error(describeStaffError(err, t("pages.staffInviteFailedToast"), t)),
   });
 
   const deactivateMutation = useMutation({
@@ -374,7 +380,7 @@ export function StaffClient({
       queryClient.invalidateQueries({ queryKey: ["staff-admin", storeId] });
       toast.success(t("pages.staffDeactivated"));
     },
-    onError: (err: Error) => toast.error(err.message || t("pages.staffDeactivateFailed")),
+    onError: (err: Error) => toast.error(localizeServerMessage(err.message || t("pages.staffDeactivateFailed"))),
   });
 
   const openEdit = (member: StaffMember) => {
@@ -505,7 +511,7 @@ export function StaffClient({
         toast.success(t("pages.staffPinSentToEmail"));
       }
     } catch (err) {
-      toast.error(describeStaffError(err, t("pages.staffUpdateFailed")));
+      toast.error(describeStaffError(err, t("pages.staffUpdateFailed"), t));
     } finally {
       setEditLoading(false);
     }

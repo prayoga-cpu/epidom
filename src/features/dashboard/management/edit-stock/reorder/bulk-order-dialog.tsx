@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -30,40 +31,43 @@ import { ShoppingCart, Loader2, Package, AlertCircle } from "lucide-react";
 import { useParams } from "next/navigation";
 import { tomorrowDateInput } from "./delivery-timing";
 
-// Schema for bulk order items
-const bulkOrderItemSchema = z.object({
-  materialId: z.string(),
-  materialName: z.string(),
-  materialSku: z.string(),
-  unit: z.string(),
-  currentStock: z.coerce.number(),
-  minStock: z.coerce.number(),
-  unitPrice: z.coerce.number().min(0, "Unit price must be non-negative"),
-  selected: z.boolean(),
-  quantity: z.coerce
-    .number()
-    .positive("Quantity must be positive")
-    .min(0.001, "Quantity must be at least 0.001"),
-});
-
-// Schema for the entire bulk order form
-const bulkOrderSchema = z
-  .object({
-    supplierId: z.string().min(1, "Supplier ID is required"),
-    supplierName: z.string().min(1, "Supplier name is required"),
-    items: z.array(bulkOrderItemSchema),
-    expectedDeliveryDate: z.string().min(1, "Please select an expected delivery date"),
-    // One DLC for the whole order — a single delivery from a single supplier
-    // is normally dated as one lot. Optional, like the single-item dialog.
-    expiryDate: z.string().optional(),
-    notes: z.string().optional(),
-  })
-  .refine((data) => data.items.some((item) => item.selected), {
-    message: "Please select at least one item to order",
-    path: ["items"],
+// Schemas for the bulk order form. Built from `t` so validation messages follow the language.
+function createBulkOrderSchema(t: (key: string) => string) {
+  // Schema for bulk order items
+  const bulkOrderItemSchema = z.object({
+    materialId: z.string(),
+    materialName: z.string(),
+    materialSku: z.string(),
+    unit: z.string(),
+    currentStock: z.coerce.number(),
+    minStock: z.coerce.number(),
+    unitPrice: z.coerce.number().min(0, t("common.validation.unitPriceNonNegative")),
+    selected: z.boolean(),
+    quantity: z.coerce
+      .number()
+      .positive(t("common.validation.quantityPositive"))
+      .min(0.001, t("common.validation.quantityMin")),
   });
 
-type BulkOrderFormData = z.infer<typeof bulkOrderSchema>;
+  // Schema for the entire bulk order form
+  return z
+    .object({
+      supplierId: z.string().min(1, t("common.validation.supplierIdRequired")),
+      supplierName: z.string().min(1, t("common.validation.supplierNameRequired")),
+      items: z.array(bulkOrderItemSchema),
+      expectedDeliveryDate: z.string().min(1, t("common.validation.selectDeliveryDate")),
+      // One DLC for the whole order — a single delivery from a single supplier
+      // is normally dated as one lot. Optional, like the single-item dialog.
+      expiryDate: z.string().optional(),
+      notes: z.string().optional(),
+    })
+    .refine((data) => data.items.some((item) => item.selected), {
+      message: t("common.validation.selectAtLeastOneItemToOrder"),
+      path: ["items"],
+    });
+}
+
+type BulkOrderFormData = z.infer<ReturnType<typeof createBulkOrderSchema>>;
 
 interface BulkOrderDialogProps {
   open: boolean;
@@ -90,8 +94,9 @@ export function BulkOrderDialog({
   const createOrder = useCreateSupplierOrder(storeId);
 
   // Initialize form with alerts data
+  const schema = useMemo(() => createBulkOrderSchema(t), [t]);
   const form = useForm<BulkOrderFormData>({
-    resolver: zodResolver(bulkOrderSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       supplierId,
       supplierName,
@@ -158,8 +163,8 @@ export function BulkOrderDialog({
 
       if (selectedItems.length === 0) {
         toast({
-          title: "No items selected",
-          description: "Please select at least one item to order",
+          title: t("management.editStock.bulkOrder.noItemsSelected"),
+          description: t("common.validation.selectAtLeastOneItemToOrder"),
           variant: "destructive",
         });
         return;
@@ -180,17 +185,19 @@ export function BulkOrderDialog({
       });
 
       toast({
-        title: "Bulk order created successfully",
-        description: `Created order with ${selectedItems.length} item(s) from ${data.supplierName}`,
+        title: t("management.editStock.bulkOrder.createdTitle"),
+        description: t("management.editStock.bulkOrder.createdDesc")
+          .replace("{count}", String(selectedItems.length))
+          .replace("{supplier}", data.supplierName),
       });
 
       form.reset();
       onOpenChange(false);
     } catch (error) {
       toast({
-        title: "Error",
+        title: t("common.error"),
         description:
-          error instanceof Error ? error.message : "Failed to create bulk order. Please try again.",
+          localizeServerMessage(error instanceof Error ? error.message : t("management.editStock.bulkOrder.createFailed")),
         variant: "destructive",
       });
     }
@@ -203,8 +210,8 @@ export function BulkOrderDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <FormDialogLayout
-        title={`Bulk Order - ${supplierName}`}
-        description="Select multiple items to create a bulk order. You can adjust quantities for each item."
+        title={t("management.editStock.bulkOrder.dialogTitle").replace("{supplier}", supplierName)}
+        description={t("management.editStock.bulkOrder.dialogDesc")}
         maxWidth="xl"
         footer={
           <>
@@ -214,14 +221,17 @@ export function BulkOrderDialog({
               onClick={() => onOpenChange(false)}
               disabled={createOrder.isPending}
             >
-              Cancel
+              {t("common.actions.cancel")}
             </Button>
             <Button type="submit" form="bulk-order-form" disabled={createOrder.isPending}>
               {createOrder.isPending && (
                 <Loader2 className="mr-1 hidden h-4 w-4 animate-spin sm:inline" />
               )}
               <ShoppingCart className="mr-1 hidden h-4 w-4 sm:inline" />
-              Create Bulk Order ({selectedItems.length})
+              {t("management.editStock.bulkOrder.createButton").replace(
+                "{count}",
+                String(selectedItems.length)
+              )}
             </Button>
           </>
         }

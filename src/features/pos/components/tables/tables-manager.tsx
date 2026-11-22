@@ -81,11 +81,11 @@ interface Reservation {
   table: { id: string; label: string; capacity: number } | null;
 }
 
-const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
-  PENDING: "Pending",
-  CONFIRMED: "Confirmed",
-  CANCELLED: "Cancelled",
-  COMPLETED: "Completed",
+const RESERVATION_STATUS_LABEL_KEYS: Record<ReservationStatus, string> = {
+  PENDING: "pages.reservationsStatusPending",
+  CONFIRMED: "pages.reservationsStatusConfirmed",
+  CANCELLED: "pages.reservationsStatusCancelled",
+  COMPLETED: "pages.reservationsStatusCompleted",
 };
 
 const RESERVATION_STATUS_COLORS: Record<ReservationStatus, string> = {
@@ -471,8 +471,7 @@ export function TablesManager({ storeId }: TablesManagerProps) {
               {t("pos.tables.confirmDelete")} {deleteTable?.label}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the table. Active orders or reservations will be
-              unlinked.
+              {t("pos.tables.deleteWarning")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -496,10 +495,10 @@ export function TablesManager({ storeId }: TablesManagerProps) {
           <SheetHeader className="mb-4">
             <SheetTitle className="flex items-center gap-2">
               <CalendarClock className="h-5 w-5" />
-              Reservations — {reservationsTable?.label}
+              {t("pages.reservationsTitle")} — {reservationsTable?.label}
             </SheetTitle>
             <SheetDescription>
-              Manage bookings for this table. Toggle status or remove entries.
+              {t("pos.tables.reservationsPanelDesc")}
             </SheetDescription>
           </SheetHeader>
 
@@ -510,10 +509,8 @@ export function TablesManager({ storeId }: TablesManagerProps) {
           ) : reservations.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center gap-2 py-12">
               <CalendarClock className="h-10 w-10 opacity-30" />
-              <p className="text-sm">No reservations for this table yet.</p>
-              <p className="text-xs">
-                Guests can book via the storefront when reservations are enabled.
-              </p>
+              <p className="text-sm">{t("pos.tables.reservationsEmpty")}</p>
+              <p className="text-xs">{t("pos.tables.reservationsEmptyHint")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -545,7 +542,7 @@ function ReservationCard({
   onDelete: () => void;
   isPending: boolean;
 }) {
-  const { intlLocale } = useI18n();
+  const { t, intlLocale } = useI18n();
   const dt = new Date(reservation.scheduledAt);
   const dateStr = dt.toLocaleDateString(intlLocale, {
     weekday: "short",
@@ -568,13 +565,13 @@ function ReservationCard({
           variant="outline"
           className={`shrink-0 text-[10px] ${RESERVATION_STATUS_COLORS[reservation.status]}`}
         >
-          {RESERVATION_STATUS_LABELS[reservation.status]}
+          {t(RESERVATION_STATUS_LABEL_KEYS[reservation.status])}
         </Badge>
       </div>
 
       <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
         <span className="flex items-center gap-1">
-          <Users className="h-3 w-3" /> {reservation.partySize} pax
+          <Users className="h-3 w-3" /> {reservation.partySize} {t("pages.reservationsPax")}
         </span>
         {reservation.guestPhone && (
           <span className="flex items-center gap-1">
@@ -603,17 +600,17 @@ function ReservationCard({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="PENDING">Pending</SelectItem>
-            <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-            <SelectItem value="COMPLETED">Completed</SelectItem>
-            <SelectItem value="CANCELLED">Cancelled</SelectItem>
+            <SelectItem value="PENDING">{t("pages.reservationsStatusPending")}</SelectItem>
+            <SelectItem value="CONFIRMED">{t("pages.reservationsStatusConfirmed")}</SelectItem>
+            <SelectItem value="COMPLETED">{t("pages.reservationsStatusCompleted")}</SelectItem>
+            <SelectItem value="CANCELLED">{t("pages.reservationsStatusCancelled")}</SelectItem>
           </SelectContent>
         </Select>
         <button
           onClick={onDelete}
           disabled={isPending}
           className="text-destructive hover:bg-destructive/10 rounded p-1.5 transition"
-          aria-label="Remove reservation"
+          aria-label={t("pos.tables.removeReservationAria")}
         >
           <XCircle className="h-4 w-4" />
         </button>

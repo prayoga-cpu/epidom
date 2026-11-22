@@ -169,7 +169,7 @@ function MobileSidebar({ navigation }: { navigation: NavSection[] }) {
               ) : (
                 <Link
                   href={upgradeHrefFor("POS")}
-                  title={`Upgrade to ${PLAN_LABELS.POS}`}
+                  title={t("billing.planCards.upgradeTo").replace("{name}", PLAN_LABELS.POS)}
                   className="group text-muted-foreground/40 flex items-center justify-between gap-2 rounded-md border border-dashed px-3 py-2.5 text-sm transition hover:bg-amber-500/8 hover:text-amber-500/70"
                 >
                   <span className="flex items-center gap-2">
@@ -245,7 +245,7 @@ function MobileSidebar({ navigation }: { navigation: NavSection[] }) {
               <div key={section.id} className={sectionIndex > 0 ? "mt-4" : ""}>
                 {section.title && (
                   <h3 className="text-muted-foreground mb-2 px-3 text-xs font-semibold tracking-wider uppercase">
-                    {section.title}
+                    {t(section.labelKey)}
                   </h3>
                 )}
                 <ul className="space-y-1.5">

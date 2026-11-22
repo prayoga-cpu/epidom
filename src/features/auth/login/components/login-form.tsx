@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "../../components/google-icon";
 import { VerifyEmailCodeForm } from "../../components/verify-email-code-form";
@@ -24,7 +25,10 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { trackEvent } from "@/lib/analytics";
 import { safeInternalPath } from "@/lib/safe-redirect";
-import { LOGIN_SERVICE_UNAVAILABLE } from "../../lib/login-errors";
+import {
+  AUTH_INVALID_CREDENTIALS_FALLBACK,
+  LOGIN_SERVICE_UNAVAILABLE,
+} from "../../lib/login-errors";
 import {
   emailVerificationCallbackURL,
   googleSignupCallbackURL,
@@ -110,7 +114,10 @@ export function LoginForm() {
         window.location.href = safeInternalPath(nextUrl) ?? "/stores";
       },
       onError: (err) => {
-        const msg = err?.message || "";
+        // The hook's English fallback (the server sent no message of its own) is
+        // shown in the visitor's language instead.
+        const rawMsg = err?.message || "";
+        const msg = rawMsg === AUTH_INVALID_CREDENTIALS_FALLBACK ? "" : rawMsg;
         // Our outage (5xx / unreachable), not the visitor's credentials: say so
         // instead of "Invalid email or password".
         if (msg === LOGIN_SERVICE_UNAVAILABLE) {
@@ -122,9 +129,9 @@ export function LoginForm() {
           // Capture email from form to allow resending
           const emailFromForm = form.getValues().email;
           setUnverifiedEmail(emailFromForm || null);
-          toast.error(msg || t("messages.invalidCredentials"));
+          toast.error(localizeServerMessage(msg) || t("messages.invalidCredentials"));
         } else {
-          toast.error(msg || t("messages.invalidCredentials"));
+          toast.error(localizeServerMessage(msg) || t("messages.invalidCredentials"));
         }
         // User stays on login page to retry
       },
@@ -273,7 +280,7 @@ export function LoginForm() {
                     });
 
                     if (error) {
-                      toast.error(error.message || t("auth.verifyEmail.resendError"));
+                      toast.error(localizeServerMessage(error.message || t("auth.verifyEmail.resendError")));
                     } else {
                       setResendSuccess(true);
                       toast.success(t("auth.verifyEmail.resendSuccess"));

@@ -330,7 +330,9 @@ describe("making someone a partner: picked user, or invitation", () => {
       "bob@x.com",
       "Bob",
       expect.stringContaining("30% of what each customer you bring pays during their first 3 months"),
-      expect.stringContaining("/admin/my-referrals")
+      expect.stringContaining("/admin/my-referrals"),
+      // The partner's business language when known; English otherwise.
+      undefined
     );
     expect(mockPrisma.verification.create).not.toHaveBeenCalled();
   });

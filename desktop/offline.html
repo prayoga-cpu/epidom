@@ -1,15 +1,115 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
 <title>Epidom POS</title>
+<!--
+  Shown by desktop/main.js when the very first launch has no network. Fully
+  self-contained (the CSP above allows nothing external). Same look as
+  public/offline.html and the app's status screen (navy, cream, gold): change
+  them together. Four languages (en, fr, id, th): English is the no-script
+  default, the script promotes the system language and the other three stay
+  underneath. Thai is never letter-spaced; only the Latin brand line is.
+-->
 <style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font:16px system-ui,sans-serif;background:#f6f6f6;color:#111}
-  main{max-width:480px;padding:32px;text-align:center}
-  a.btn{display:inline-block;line-height:48px;padding:0 28px;border-radius:10px;background:#111;color:#fff;text-decoration:none}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:max(32px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(32px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));
+    font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans Thai",Thonburi,"Leelawadee UI",Arial,sans-serif;
+    background-color:#060f1b;
+    background-image:radial-gradient(1200px 600px at 80% -10%,rgba(91,136,178,.18),transparent 60%),radial-gradient(900px 500px at 10% 110%,rgba(217,174,59,.1),transparent 60%);
+    color:#fbf9e4;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  main{width:100%;max-width:35rem;display:flex;flex-direction:column;align-items:center;gap:1.5rem;text-align:center}
+  .icon{width:3.5rem;height:3.5rem;display:grid;place-items:center;border-radius:23%;border:1px solid rgba(235,212,151,.85);box-shadow:inset 0 0 0 1px rgba(217,174,59,.22);background:linear-gradient(135deg,#122c4f,#060f1b);color:#fbf9e4}
+  .icon svg{width:1.5rem;height:1.5rem}
+  h1{margin:0 0 .75rem;font-size:clamp(1.75rem,6.5vw,2.75rem);font-weight:600;line-height:1.12;letter-spacing:-.025em;overflow-wrap:anywhere}
+  p{margin:0}
+  .lead{font-size:clamp(.9375rem,2.8vw,1.0625rem);line-height:1.6;color:rgba(251,249,228,.75)}
+  .lead + .lead{margin-top:.75rem}
+  h1:lang(th){letter-spacing:normal;line-height:1.35}
+  .lead:lang(th),.alt p:lang(th){line-height:1.75}
+  a.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;width:100%;padding:.75rem 1.75rem;border-radius:9999px;
+    background:linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c);box-shadow:0 0 0 1px rgba(255,255,255,.28) inset,0 8px 28px rgba(217,174,59,.35),0 3px 0 rgba(139,90,10,.85);
+    color:#151004;font-size:.9375rem;font-weight:600;line-height:1.25;text-decoration:none;transition:transform .15s}
+  a.btn:active{transform:scale(.98)}
+  a.btn:focus-visible{outline:2px solid #f4dc72;outline-offset:2px}
+  @media (min-width:480px){a.btn{width:auto;min-width:12rem}}
+  @media (prefers-reduced-motion:reduce){a.btn{transition:none}a.btn:active{transform:none}}
+  .alt{width:100%;padding-top:1.25rem;border-top:1px solid rgba(217,174,59,.28);display:grid;gap:.5rem}
+  .alt p{font-size:.8125rem;line-height:1.5;color:rgba(251,249,228,.6)}
+  .alt strong{font-weight:600;color:rgba(251,249,228,.85)}
+  [hidden]{display:none!important}
+  .brand{font-size:.75rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:#d9ae3b}
 </style></head><body><main>
-<h1>Internet needed once</h1>
-<p>The first time you open Epidom POS it needs an internet connection to download the app and sign in. After that it keeps working offline.</p>
-<p>Connect to the internet, then try again.</p>
-<a class="btn" href="epidom-retry://now">Retry</a>
-</main></body></html>
+<div class="icon" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 2l20 20"/><path d="M8.5 16.4a5 5 0 0 1 7 0"/><path d="M5 12.9a10 10 0 0 1 5.2-2.7"/><path d="M13.8 10.2A10 10 0 0 1 19 12.9"/><path d="M2 8.8a16 16 0 0 1 5-3.1"/><path d="M10.9 5.1A16 16 0 0 1 22 8.8"/><path d="M12 20h.01"/>
+  </svg>
+</div>
+<div id="lead">
+<h1 id="title">Internet needed once</h1>
+<p class="lead" id="desc">The first time you open Epidom POS it needs an internet connection to download the app and sign in. After that it keeps working offline.</p>
+<p class="lead" id="next">Connect to the internet, then try again.</p>
+</div>
+<a class="btn" id="retry" href="epidom-retry://now">Retry</a>
+<div class="alt">
+<p lang="en" data-lang="en" hidden><strong>Internet needed once</strong> · The first time you open Epidom POS it needs an internet connection to download the app and sign in. After that it keeps working offline. Connect to the internet, then try again.</p>
+<p lang="fr" data-lang="fr"><strong>Internet requis une première fois</strong> · À la première ouverture, Epidom POS a besoin d’une connexion Internet pour télécharger l’application et vous connecter. Ensuite, il fonctionne hors ligne. Connectez-vous à Internet, puis réessayez.</p>
+<p lang="id" data-lang="id"><strong>Perlu internet satu kali</strong> · Saat pertama kali dibuka, Epidom POS memerlukan koneksi internet untuk mengunduh aplikasi dan masuk. Setelah itu, aplikasi tetap berjalan secara offline. Sambungkan ke internet, lalu coba lagi.</p>
+<p lang="th" data-lang="th"><strong>ต้องใช้อินเทอร์เน็ตในครั้งแรก</strong> · การเปิด Epidom POS ครั้งแรกต้องเชื่อมต่ออินเทอร์เน็ตเพื่อดาวน์โหลดแอปและเข้าสู่ระบบ หลังจากนั้นจะใช้งานแบบออฟไลน์ได้ เชื่อมต่ออินเทอร์เน็ต แล้วลองอีกครั้ง</p>
+</div>
+<p class="brand">Epidom</p>
+</main>
+<script>
+// Promote the system language to the headline; the others stay underneath.
+(function () {
+  var COPY = {
+    en: {
+      title: "Internet needed once",
+      desc: "The first time you open Epidom POS it needs an internet connection to download the app and sign in. After that it keeps working offline.",
+      next: "Connect to the internet, then try again.",
+      retry: "Retry"
+    },
+    fr: {
+      title: "Internet requis une première fois",
+      desc: "À la première ouverture, Epidom POS a besoin d’une connexion Internet pour télécharger l’application et vous connecter. Ensuite, il fonctionne hors ligne.",
+      next: "Connectez-vous à Internet, puis réessayez.",
+      retry: "Réessayer"
+    },
+    id: {
+      title: "Perlu internet satu kali",
+      desc: "Saat pertama kali dibuka, Epidom POS memerlukan koneksi internet untuk mengunduh aplikasi dan masuk. Setelah itu, aplikasi tetap berjalan secara offline.",
+      next: "Sambungkan ke internet, lalu coba lagi.",
+      retry: "Coba lagi"
+    },
+    th: {
+      title: "ต้องใช้อินเทอร์เน็ตในครั้งแรก",
+      desc: "การเปิด Epidom POS ครั้งแรกต้องเชื่อมต่ออินเทอร์เน็ตเพื่อดาวน์โหลดแอปและเข้าสู่ระบบ หลังจากนั้นจะใช้งานแบบออฟไลน์ได้",
+      next: "เชื่อมต่ออินเทอร์เน็ต แล้วลองอีกครั้ง",
+      retry: "ลองอีกครั้ง"
+    }
+  };
+  try {
+    var found = (navigator.languages || []).concat([navigator.language]);
+    var lang = "en";
+    for (var i = 0; i < found.length; i++) {
+      var code = String(found[i] || "").toLowerCase().slice(0, 2);
+      if (COPY[code]) { lang = code; break; }
+    }
+    var copy = COPY[lang];
+    document.documentElement.lang = lang;
+    document.getElementById("lead").lang = lang;
+    document.getElementById("title").textContent = copy.title;
+    document.getElementById("desc").textContent = copy.desc;
+    document.getElementById("next").textContent = copy.next;
+    document.getElementById("retry").textContent = copy.retry;
+    var lines = document.querySelectorAll(".alt [data-lang]");
+    for (var j = 0; j < lines.length; j++) {
+      lines[j].hidden = lines[j].getAttribute("data-lang") === lang;
+    }
+  } catch (e) {}
+})();
+</script>
+</body></html>

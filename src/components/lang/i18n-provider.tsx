@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { enUS, fr, id as idLocale, th as thLocale, type Locale as DateFnsLocale } from "date-fns/locale";
 import { getLocaleMessages, isLocaleLoaded, loadLocale } from "@/locales";
 import { getLanguagePreference, setLanguagePreference } from "@/lib/cookie-consent";
+import { UI_LOCALE_COOKIE } from "@/lib/i18n-routing";
 import {
   formatDate as formatDateWithLocale,
   formatDateTime as formatDateTimeWithLocale,
@@ -176,6 +177,11 @@ export function I18nProvider({
 
     if (typeof document !== "undefined") {
       document.documentElement.lang = l;
+      // Mirror the choice for the server (see UI_LOCALE_COOKIE): e-mails it sends
+      // before it knows the account's language follow the screen's.
+      try {
+        document.cookie = `${UI_LOCALE_COOKIE}=${l}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+      } catch {}
     }
   }, []);
 
@@ -277,4 +283,13 @@ export function useI18n() {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error("useI18n must be used within I18nProvider");
   return ctx;
+}
+
+/**
+ * useI18n() that returns null outside an I18nProvider instead of throwing.
+ * Only for error fallbacks, which can render above the provider that failed
+ * (see src/components/shared/status-copy.ts). Everything else uses useI18n().
+ */
+export function useI18nContextOrNull() {
+  return useContext(I18nContext) ?? null;
 }

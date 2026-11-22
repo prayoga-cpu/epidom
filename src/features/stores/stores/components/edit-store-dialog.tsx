@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import {
   Dialog,
@@ -52,7 +53,7 @@ export function EditStoreDialog({ store, trigger }: EditStoreDialogProps) {
         setOpen(false);
       },
       onError: (error) => {
-        toast.error(error.message || t("stores.editError"));
+        toast.error(localizeServerMessage(error.message || t("stores.editError")));
       },
     });
   };

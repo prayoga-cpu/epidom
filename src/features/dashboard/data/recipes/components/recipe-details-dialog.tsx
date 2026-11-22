@@ -160,7 +160,7 @@ export function RecipeDetailsDialog({
                     <ChefHat className="text-primary h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Yield</p>
+                    <p className="text-muted-foreground text-xs">{t("data.recipes.cards.yield")}</p>
                     <p className="font-semibold">
                       {recipe.yieldQuantity} {recipe.yieldUnit}
                     </p>
@@ -235,7 +235,10 @@ export function RecipeDetailsDialog({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Package className="h-5 w-5" />
-                  Ingredients ({recipe.ingredients.length})
+                  {t("data.recipes.review.ingredientsCount").replace(
+                    "{count}",
+                    String(recipe.ingredients.length)
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -374,7 +377,11 @@ export function RecipeDetailsDialog({
                                     {product.category}
                                   </Badge>
                                 )}
-                                {product.sku && <span className="text-xs">SKU: {product.sku}</span>}
+                                {product.sku && (
+                                  <span className="text-xs">
+                                    {t("common.sku")}: {product.sku}
+                                  </span>
+                                )}
                               </p>
                               <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                                 {showsStock && (
@@ -524,7 +531,7 @@ export function RecipeDetailsDialog({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <FileText className="h-5 w-5" />
-                    Instructions
+                    {t("data.recipes.sections.instructions")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

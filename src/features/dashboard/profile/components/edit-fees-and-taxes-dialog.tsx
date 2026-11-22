@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import type { PaymentMethod, PaymentMarket } from "@prisma/client";
@@ -219,7 +220,7 @@ export function EditFeesAndTaxesDialog({
     } catch (error) {
       toast.error(t("common.error"), {
         description:
-          error instanceof Error ? error.message : t("profile.errors.feesAndTaxesUpdateFailed"),
+          localizeServerMessage(error instanceof Error ? error.message : t("profile.errors.feesAndTaxesUpdateFailed")),
       });
     }
   }

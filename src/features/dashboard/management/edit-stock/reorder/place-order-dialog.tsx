@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,20 +43,22 @@ import { useParams } from "next/navigation";
 import { tomorrowDateInput } from "./delivery-timing";
 
 // Zod validation schema
-const placeOrderSchema = z.object({
-  supplierId: z.string().min(1, "Please select a supplier"),
-  materialId: z.string().min(1, "Please select a material"),
-  quantity: z.coerce
-    .number()
-    .positive("Quantity must be positive")
-    .min(0.001, "Quantity must be at least 0.001"),
-  expectedDeliveryDate: z.string().min(1, "Please select an expected delivery date"),
-  // DLC — optional, since dry goods and non-perishables don't carry one.
-  expiryDate: z.string().optional(),
-  notes: z.string().optional(),
-});
+function createPlaceOrderSchema(t: (key: string) => string) {
+  return z.object({
+    supplierId: z.string().min(1, t("common.validation.selectSupplier")),
+    materialId: z.string().min(1, t("common.validation.selectMaterial")),
+    quantity: z.coerce
+      .number()
+      .positive(t("common.validation.quantityPositive"))
+      .min(0.001, t("common.validation.quantityMin")),
+    expectedDeliveryDate: z.string().min(1, t("common.validation.selectDeliveryDate")),
+    // DLC — optional, since dry goods and non-perishables don't carry one.
+    expiryDate: z.string().optional(),
+    notes: z.string().optional(),
+  });
+}
 
-type PlaceOrderFormData = z.infer<typeof placeOrderSchema>;
+type PlaceOrderFormData = z.infer<ReturnType<typeof createPlaceOrderSchema>>;
 
 /** What the dialog shows once the order exists — id/number drive the print link. */
 interface CreatedOrder {
@@ -108,8 +111,10 @@ export function PlaceOrderDialog({ open, onOpenChange, alert, onSend }: PlaceOrd
     ? Math.max(0, Number(alert.minStock) - Number(alert.currentStock))
     : 0;
 
+  const schema = useMemo(() => createPlaceOrderSchema(t), [t]);
+
   const form = useForm<PlaceOrderFormData>({
-    resolver: zodResolver(placeOrderSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       supplierId: suggestedSupplier,
       materialId: alert?.materialId || "",
@@ -241,7 +246,7 @@ export function PlaceOrderDialog({ open, onOpenChange, alert, onSend }: PlaceOrd
       toast({
         title: t("common.error"),
         description:
-          error instanceof Error ? error.message : "Failed to create order. Please try again.",
+          localizeServerMessage(error instanceof Error ? error.message : t("management.editStock.placeOrder.failed")),
         variant: "destructive",
       });
     }

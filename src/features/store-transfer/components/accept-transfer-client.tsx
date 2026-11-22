@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRightLeft, Loader2 } from "lucide-react";
@@ -72,7 +73,7 @@ export function AcceptTransferClient({ token }: { token: string | null }) {
       // this store just changed underneath every cached server render.
       window.location.href = `/store/${storeId}/home`;
     } catch (err) {
-      setAcceptError(err instanceof Error ? err.message : t("pages.storeTransferAcceptFailed"));
+      setAcceptError(localizeServerMessage(err instanceof Error ? err.message : t("pages.storeTransferAcceptFailed")));
       setAccepting(false);
     }
   };

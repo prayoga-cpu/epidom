@@ -217,7 +217,7 @@ describe("StorefrontReviews — connected", () => {
     fireEvent.click(screen.getByRole("button", { name: /storefront\.reviews\.disconnect$/ }));
 
     const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "common.actions.cancel" }));
 
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
     expect(updateGoogleReview).not.toHaveBeenCalled();

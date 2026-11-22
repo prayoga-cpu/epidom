@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
@@ -111,7 +112,7 @@ export function FinanceExpensesTab({
       setDraft(null);
     } catch (error) {
       toast.error(t("pages.financeExpenseSaveError"), {
-        description: error instanceof Error ? error.message : undefined,
+        description: localizeServerMessage(error instanceof Error ? error.message : undefined),
       });
     }
   };
@@ -124,7 +125,7 @@ export function FinanceExpensesTab({
       setDeleteTarget(null);
     } catch (error) {
       toast.error(t("pages.financeExpenseSaveError"), {
-        description: error instanceof Error ? error.message : undefined,
+        description: localizeServerMessage(error instanceof Error ? error.message : undefined),
       });
     }
   };

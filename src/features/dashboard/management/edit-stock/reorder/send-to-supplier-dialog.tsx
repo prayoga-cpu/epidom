@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
@@ -69,7 +70,7 @@ export function SendToSupplierDialog({ open, onOpenChange, orderId }: SendToSupp
       const json = await response.json();
 
       if (!response.ok) {
-        throw new Error(json.error || "Failed to send");
+        throw new Error(localizeServerMessage(json.error || t("management.delivery.sendFailed")));
       }
 
       const results = json.data as { email?: { success: boolean }; whatsapp?: { success: boolean } };

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { alertKeys, type AlertsResponse } from "@/features/dashboard/shared/hooks/use-alerts";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * AlertsPrefetch Component
@@ -31,7 +32,7 @@ export function AlertsPrefetch() {
         queryFn: async () => {
           const response = await fetch(`/api/stores/${storeId}/alerts`);
           if (!response.ok) {
-            throw new Error("Failed to fetch alerts");
+            throw new Error(localizeServerMessage("Failed to fetch alerts"));
           }
           const json = await response.json();
           // API returns { success: true, data: { alerts: [...] } }

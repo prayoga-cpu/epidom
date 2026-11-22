@@ -1,5 +1,7 @@
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useOptionalI18n } from "@/components/lang/optional-i18n";
 import { alertKeys } from "./use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
 import { materialKeys } from "@/features/dashboard/data/materials/hooks/use-materials";
@@ -104,6 +106,15 @@ export const supplierOrderKeys = {
  * quietly replaced it with the envelope, blanking the lists.
  */
 const unwrap = unwrapApiData;
+
+/**
+ * Translator for the messages these hooks raise. Outside an I18nProvider (a bare
+ * renderHook) it degrades to the key instead of throwing, as the page always has one.
+ */
+function useT() {
+  const i18n = useOptionalI18n();
+  return i18n?.t ?? ((key: string) => key);
+}
 const unwrapError = unwrapApiError;
 
 /**
@@ -112,6 +123,7 @@ const unwrapError = unwrapApiError;
  * Uses shared access check with suppliers to prevent duplicate 403 requests
  */
 export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersResponse) {
+  const t = useT();
   const queryClient = useQueryClient();
 
   // Use the shared access check hook to prevent race conditions
@@ -131,7 +143,7 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
           queryClient.setQueryData(supplierKeys.accessCheck(storeId), false);
 
           const customError = new Error(
-            errorData.message || "Supplier Management is only available in Pro and Enterprise plans"
+            localizeServerMessage(errorData.message || t("management.delivery.orderErrors.planLocked"))
           ) as SubscriptionError;
           customError.code = "SUBSCRIPTION_FEATURE_LOCKED";
           customError.status = 403;
@@ -139,7 +151,7 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
           throw customError;
         }
 
-        throw new Error(errorData.message || "Failed to fetch supplier orders");
+        throw new Error(localizeServerMessage(errorData.message || t("management.delivery.orderErrors.fetchList")));
       }
 
       // Mark access as granted
@@ -194,6 +206,7 @@ export function useSupplierOrders(storeId: string, initialData?: SupplierOrdersR
  * Caching: 403 responses are cached for 5 minutes to avoid repeated failed requests
  */
 export function useSupplierOrder(storeId: string, orderId: string) {
+  const t = useT();
   const { hasNoAccess, isCheckingAccess } = useSupplierAccessStatus(storeId);
 
   return useQuery<SupplierOrderResponse>({
@@ -206,7 +219,7 @@ export function useSupplierOrder(storeId: string, orderId: string) {
         // Check if it's a subscription feature locked error
         if (response.status === 403 && errorData.code === "SUBSCRIPTION_FEATURE_LOCKED") {
           const customError: any = new Error(
-            errorData.message || "Supplier Management is only available in Pro and Enterprise plans"
+            localizeServerMessage(errorData.message || t("management.delivery.orderErrors.planLocked"))
           );
           customError.code = "SUBSCRIPTION_FEATURE_LOCKED";
           customError.status = 403;
@@ -214,7 +227,7 @@ export function useSupplierOrder(storeId: string, orderId: string) {
           throw customError;
         }
 
-        throw new Error(errorData.message || "Failed to fetch supplier order");
+        throw new Error(localizeServerMessage(errorData.message || t("management.delivery.orderErrors.fetchOne")));
       }
       return unwrap<SupplierOrderResponse>(await response.json());
     },
@@ -248,6 +261,7 @@ export function useSupplierOrder(storeId: string, orderId: string) {
  * Hook to create a new supplier order
  */
 export function useCreateSupplierOrder(storeId: string) {
+  const t = useT();
   const queryClient = useQueryClient();
 
   return useMutation<SupplierOrder, Error, CreateSupplierOrderInput>({
@@ -266,7 +280,7 @@ export function useCreateSupplierOrder(storeId: string) {
         // Errors come back as { success: false, error: { code, message } }
         // (createErrorResponse) — reading `.error` alone yielded an object,
         // so callers surfaced "[object Object]" instead of the reason.
-        throw new Error(unwrapError(json).message || "Failed to create supplier order");
+        throw new Error(unwrapError(json).message || t("management.delivery.orderErrors.create"));
       }
 
       // Returned so the caller can act on the new order — the reorder dialog
@@ -282,10 +296,10 @@ export function useCreateSupplierOrder(storeId: string) {
       // later marked PLACED/RECEIVED.
       queryClient.invalidateQueries({ queryKey: alertKeys.lists(storeId) });
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
-      toast.success("Supplier order created successfully");
+      toast.success(t("management.delivery.orderToasts.created"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to create supplier order");
+      toast.error(localizeServerMessage(error.message || t("management.delivery.orderErrors.create")));
     },
   });
 }
@@ -295,6 +309,7 @@ export function useCreateSupplierOrder(storeId: string) {
  * Real-time: Updates UI immediately, syncs with server in background
  */
 export function useUpdateSupplierOrder(storeId: string, orderId: string) {
+  const t = useT();
   const queryClient = useQueryClient();
 
   return useMutation<
@@ -318,7 +333,7 @@ export function useUpdateSupplierOrder(storeId: string, orderId: string) {
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(unwrapError(json).message || "Failed to update supplier order");
+        throw new Error(unwrapError(json).message || t("management.delivery.orderErrors.update"));
       }
 
       // Without unwrapping, onSuccess wrote the envelope into the detail cache
@@ -373,7 +388,7 @@ export function useUpdateSupplierOrder(storeId: string, orderId: string) {
       if (context?.previousList) {
         queryClient.setQueryData(supplierOrderKeys.lists(storeId), context.previousList);
       }
-      toast.error(error.message || "Failed to update supplier order");
+      toast.error(localizeServerMessage(error.message || t("management.delivery.orderErrors.update")));
     },
     onSuccess: (updatedOrder) => {
       queryClient.setQueryData(supplierOrderKeys.detail(storeId, orderId), updatedOrder);
@@ -391,7 +406,7 @@ export function useUpdateSupplierOrder(storeId: string, orderId: string) {
       queryClient.invalidateQueries({ queryKey: materialKeys.lists(storeId) });
       queryClient.invalidateQueries({ queryKey: stockMovementKeys.all(storeId) });
 
-      toast.success("Supplier order updated successfully");
+      toast.success(t("management.delivery.orderToasts.updated"));
     },
   });
 }
@@ -406,6 +421,7 @@ export function useUpdateSupplierOrder(storeId: string, orderId: string) {
  * merchant's language.
  */
 export function useReceiveSupplierOrder(storeId: string) {
+  const t = useT();
   const queryClient = useQueryClient();
 
   return useMutation<SupplierOrder, Error, string>({
@@ -419,7 +435,7 @@ export function useReceiveSupplierOrder(storeId: string) {
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(unwrapError(json).message || "Failed to mark the order as received");
+        throw new Error(unwrapError(json).message || t("management.delivery.orderErrors.receive"));
       }
 
       return unwrap<SupplierOrderResponse>(json).order;
@@ -451,6 +467,7 @@ export function useReceiveSupplierOrder(storeId: string) {
  * left to the caller, like useReceiveSupplierOrder.
  */
 export function useCancelSupplierOrder(storeId: string) {
+  const t = useT();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -462,7 +479,7 @@ export function useCancelSupplierOrder(storeId: string) {
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(unwrapError(json).message || "Failed to cancel supplier order");
+        throw new Error(unwrapError(json).message || t("management.delivery.orderErrors.cancel"));
       }
 
       return unwrap<{ success: boolean }>(json);

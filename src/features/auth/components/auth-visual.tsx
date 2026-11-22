@@ -80,7 +80,7 @@ export function AuthVisual() {
       <div className="animate-in fade-in slide-in-from-top-4 absolute top-12 left-12 z-20 duration-700">
         <div className="flex items-center gap-2 text-white/90">
           <div className="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
-          <span className="text-sm font-medium tracking-wide uppercase">System Operational</span>
+          <span className="text-sm font-medium tracking-wide uppercase">{t("uiText.auth.systemOperational")}</span>
         </div>
       </div>
 

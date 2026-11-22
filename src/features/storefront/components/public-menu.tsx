@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -113,6 +114,17 @@ type PaymentMethod =
   | "BANK_TRANSFER"
   | "STRIPE_CARD";
 
+function BankTransferLogo() {
+  const { t } = useI18n();
+  return (
+    <img
+      src="/payment-logos/bank-transfer.svg"
+      alt={t("publicOrder.paymentMethods.BANK_TRANSFER")}
+      className="h-5 w-[50px] object-contain"
+    />
+  );
+}
+
 const PAYMENT_OPTIONS: {
   value: PaymentMethod;
   label: string;
@@ -161,13 +173,7 @@ const PAYMENT_OPTIONS: {
   {
     value: "BANK_TRANSFER",
     label: "Transfer Bank",
-    icon: (
-      <img
-        src="/payment-logos/bank-transfer.svg"
-        alt="Transfer Bank"
-        className="h-5 w-[50px] object-contain"
-      />
-    ),
+    icon: <BankTransferLogo />,
     isImage: true,
   },
   {
@@ -516,7 +522,7 @@ export function PublicMenu({ storefront, menuCategories: initialMenuCategories }
       const data = await res.json();
 
       if (!res.ok) {
-        setCheckoutError(data?.error?.message ?? t("publicOrder.checkoutForm.orderCreateFailed"));
+        setCheckoutError(localizeServerMessage(data?.error?.message ?? t("publicOrder.checkoutForm.orderCreateFailed")));
         setIsSubmitting(false);
         return;
       }

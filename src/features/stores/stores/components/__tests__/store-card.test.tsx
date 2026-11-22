@@ -203,7 +203,7 @@ describe("StoreCard — launch chooser (owner)", () => {
     [
       "the close button",
       (dialog: HTMLElement) =>
-        fireEvent.click(within(dialog).getByRole("button", { name: "Close" })),
+        fireEvent.click(within(dialog).getByRole("button", { name: "common.actions.close" })),
     ],
   ])("closing the chooser with %s puts the focus back on the card", async (_, close) => {
     render(<StoreCard store={store} currentPlan="POS" />);
@@ -258,7 +258,7 @@ describe("StoreCard — blocked (subscription not active)", () => {
 
     fireEvent.click(card());
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.queryByText("Open menu")).toBeNull();
+    expect(screen.queryByText("common.nav.openMenu")).toBeNull();
     expect(screen.getByText("stores.clickToSubscribe")).toBeInTheDocument();
   });
 
@@ -297,7 +297,7 @@ describe("StoreCard — a store the account works at as linked staff", () => {
 
   it("offers no owner actions (edit/delete menu)", () => {
     render(<StoreCard store={staffStore} isBlocked={false} currentPlan="ENTERPRISE" />);
-    expect(screen.queryByText("Open menu")).toBeNull();
+    expect(screen.queryByText("common.nav.openMenu")).toBeNull();
   });
 
   it("shows the branding and the slogan, market and currency — but never the totals", () => {
@@ -326,7 +326,7 @@ describe("StoreCard — a store the account works at as linked staff", () => {
     );
 
     expect(screen.queryByText("stores.staffBadge")).toBeNull();
-    expect(screen.getByText("Open menu")).toBeInTheDocument();
+    expect(screen.getByText("common.nav.openMenu")).toBeInTheDocument();
     expect(card().getAttribute("href")).toBe("/store/store-001/home");
   });
 

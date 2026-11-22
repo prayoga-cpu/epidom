@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMemo, useState } from "react";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { useParams } from "next/navigation";
@@ -159,9 +160,9 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
       onOpenChange(false); // Close detail dialog to refresh data
     } catch (error) {
       toast.error(
-        error instanceof Error
+        localizeServerMessage(error instanceof Error
           ? error.message
-          : t("common.actions.updateError") || "Failed to update production batch"
+          : t("common.actions.updateError") || "Failed to update production batch")
       );
     }
   };
@@ -182,10 +183,10 @@ export function BatchDetailsDialog({ open, onOpenChange, batch }: BatchDetailsDi
       onOpenChange(false); // Close detail dialog to refresh data
     } catch (error) {
       toast.error(
-        error instanceof Error
+        localizeServerMessage(error instanceof Error
           ? error.message
           : t("management.recipeProduction.messages.completeError") ||
-              "Failed to complete production batch"
+              "Failed to complete production batch")
       );
     }
   };

@@ -20,6 +20,8 @@
  * without first auditing the route, and they stay correct if a route changes.
  */
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
+
 /** Payload of a successful response, whether or not it arrived enveloped. */
 export function unwrapApiData<T>(payload: unknown): T {
   const body = payload as { success?: boolean; data?: T } | null | undefined;
@@ -44,11 +46,13 @@ export function unwrapApiError(payload: unknown): { code?: string; message?: str
 
   // Some older routes put a plain string in `error`.
   if (typeof body?.error === "string") {
-    return { code: body.code, message: body.error };
+    return { code: body.code, message: localizeServerMessage(body.error) };
   }
 
+  const message = body?.error?.message ?? body?.message;
   return {
     code: body?.error?.code ?? body?.code,
-    message: body?.error?.message ?? body?.message,
+    // Callers show this as-is, so it leaves here in the UI language.
+    message: typeof message === "string" ? localizeServerMessage(message) : message,
   };
 }

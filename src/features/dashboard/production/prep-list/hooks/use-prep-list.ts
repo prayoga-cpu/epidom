@@ -1,3 +1,4 @@
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertKeys } from "@/features/dashboard/shared/hooks/use-alerts";
 import { stockMovementKeys } from "@/features/dashboard/management/edit-stock/hooks/use-stock-movements";
@@ -42,7 +43,7 @@ export const prepListKeys = {
 async function unwrap<T>(response: Response, fallbackMessage: string): Promise<T> {
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || fallbackMessage);
+    throw new Error(localizeServerMessage(error.error || fallbackMessage));
   }
   const result = await response.json();
   return result.success === true ? result.data : result;
@@ -55,7 +56,7 @@ export function usePrepList(storeId: string) {
       const response = await fetch(`/api/stores/${storeId}/production/prep-list`);
       return unwrap<{ items: PrepListItem[]; total: number }>(
         response,
-        "Failed to fetch prep list"
+        localizeServerMessage("Failed to fetch prep list")
       );
     },
     enabled: Boolean(storeId),
@@ -76,7 +77,7 @@ export function useQuickLogProduction(storeId: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
-      return unwrap<QuickLogResult>(response, "Failed to log production");
+      return unwrap<QuickLogResult>(response, localizeServerMessage("Failed to log production"));
     },
     onSuccess: async (_data, variables) => {
       // Both sides of the ledger moved, so both sides' caches are stale:

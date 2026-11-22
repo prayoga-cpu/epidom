@@ -34,6 +34,8 @@ export function PersonalInfoCard({ user, onUpdate }: PersonalInfoCardProps) {
         return t("common.language.fr");
       case "id":
         return t("common.language.id");
+      case "th":
+        return t("common.language.th");
       default:
         return locale || t("common.notAvailable");
     }

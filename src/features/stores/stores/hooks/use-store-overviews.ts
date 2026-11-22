@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ApiSuccessResponse } from "@/types/api/responses";
 import type { StoreOverview } from "@/types/api/store-overview";
 import { UnauthorizedError, isUnauthorizedError } from "@/lib/api/unauthorized";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * Sits under storeKeys.lists() (["stores", "list"]), so every create, update
@@ -25,7 +26,7 @@ export function useStoreOverviews(enabled = true) {
     queryFn: async () => {
       const response = await fetch("/api/stores/overview");
       if (response.status === 401) throw new UnauthorizedError();
-      if (!response.ok) throw new Error("Failed to load store overview");
+      if (!response.ok) throw new Error(localizeServerMessage("Failed to load store overview"));
       const body: ApiSuccessResponse<StoreOverview[]> = await response.json();
       return body.data;
     },

@@ -565,7 +565,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
         buildYourOwn: newItemBuildYourOwn,
       } as any);
       refreshMenu();
-      toast.success(`"${newItemName}" added to menu`);
+      toast.success(t("storefront.menu.itemAddedToMenu").replace("{name}", newItemName));
       setAddItemDialog(null);
     } catch {
       toast.error(t("storefront.menu.itemAddFailed") || "Failed to add item");
@@ -734,7 +734,7 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
                 onClick={() => setAddItemDialog(null)}
                 className="transition-transform active:scale-[0.98]"
               >
-                Cancel
+                {t("common.actions.cancel")}
               </Button>
               <Button
                 disabled={!newItemName.trim() || newItemPrice === undefined || isSubmittingItem}
@@ -783,10 +783,10 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
             <div className="space-y-2">
               <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                Description (optional)
+                {t("storefront.menu.descriptionOptional")}
               </label>
               <Input
-                placeholder="e.g. orange, jasmine, espresso"
+                placeholder={t("storefront.menu.descriptionPlaceholder")}
                 value={newItemDescription}
                 onChange={(e) => setNewItemDescription(e.target.value)}
                 className="hover:border-foreground/30 focus-visible:ring-foreground/20 transition-all focus-visible:ring-1"
@@ -944,10 +944,10 @@ export function MenuEditor({ storeId, storefrontId, categories, onSuccess }: Men
 
             <div className="space-y-2">
               <label className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                Description (optional)
+                {t("storefront.menu.descriptionOptional")}
               </label>
               <Input
-                placeholder="e.g. orange, jasmine, espresso"
+                placeholder={t("storefront.menu.descriptionPlaceholder")}
                 value={editItemDescription}
                 onChange={(e) => setEditItemDescription(e.target.value)}
                 className="hover:border-foreground/30 focus-visible:ring-foreground/20 transition-all focus-visible:ring-1"

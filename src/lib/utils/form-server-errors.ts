@@ -1,5 +1,6 @@
 import type { UseFormReturn } from "react-hook-form";
 import { ApiClientError } from "@/lib/api/client";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * Applies server-reported field errors to a react-hook-form instance (so the
@@ -25,8 +26,9 @@ export function applyServerFieldErrors(form: UseFormReturn<any>, error: unknown)
   const summaries: string[] = [];
   for (const d of details) {
     if (d && typeof d.field === "string" && typeof d.message === "string") {
-      if (d.field) form.setError(d.field as any, { type: "server", message: d.message });
-      summaries.push(d.field ? `${d.field}: ${d.message}` : d.message);
+      const message = localizeServerMessage(d.message);
+      if (d.field) form.setError(d.field as any, { type: "server", message });
+      summaries.push(d.field ? `${d.field}: ${message}` : message);
     }
   }
   return summaries.length > 0 ? summaries.join(" · ") : null;

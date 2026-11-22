@@ -29,7 +29,7 @@ interface ServerOrderSummary {
 }
 
 export function MyOrdersClient({ storefront }: MyOrdersClientProps) {
-  const { t } = useI18n();
+  const { t, intlLocale } = useI18n();
   const [refs, setRefs] = useState<LocalOrderRef[]>([]);
   const [hasReadLocalRefs, setHasReadLocalRefs] = useState(false);
 
@@ -45,7 +45,7 @@ export function MyOrdersClient({ storefront }: MyOrdersClientProps) {
     }).format(amount);
 
   const formatDate = (iso: string) =>
-    new Intl.DateTimeFormat("id-ID", {
+    new Intl.DateTimeFormat(intlLocale, {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(new Date(iso));

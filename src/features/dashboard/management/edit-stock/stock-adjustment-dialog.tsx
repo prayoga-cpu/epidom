@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,22 +43,24 @@ enum AdjustmentType {
 }
 
 // Zod validation schema
-const stockAdjustmentSchema = z.object({
-  itemType: z.enum(["material", "product"]),
-  itemId: z.string().min(1, "Please select an item"),
-  adjustmentType: z.nativeEnum(AdjustmentType, {
-    required_error: "Please select an adjustment type",
-  }),
-  quantity: z.coerce
-    .number()
-    .positive("Quantity must be positive")
-    .min(0.001, "Quantity must be at least 0.001"),
-  reason: z.string().optional(),
-  notes: z.string().optional(),
-  referenceId: z.string().optional(),
-});
+function createStockAdjustmentSchema(t: (key: string) => string) {
+  return z.object({
+    itemType: z.enum(["material", "product"]),
+    itemId: z.string().min(1, t("common.validation.selectItem")),
+    adjustmentType: z.nativeEnum(AdjustmentType, {
+      required_error: t("common.validation.selectAdjustmentType"),
+    }),
+    quantity: z.coerce
+      .number()
+      .positive(t("common.validation.quantityPositive"))
+      .min(0.001, t("common.validation.quantityMin")),
+    reason: z.string().optional(),
+    notes: z.string().optional(),
+    referenceId: z.string().optional(),
+  });
+}
 
-type StockAdjustmentFormData = z.infer<typeof stockAdjustmentSchema>;
+type StockAdjustmentFormData = z.infer<ReturnType<typeof createStockAdjustmentSchema>>;
 
 interface StockAdjustmentDialogProps {
   itemId?: string;
@@ -97,8 +100,10 @@ export function StockAdjustmentDialog({
   });
   const adjustStockMutation = useStockAdjustment(storeId);
 
+  const schema = useMemo(() => createStockAdjustmentSchema(t), [t]);
+
   const form = useForm<StockAdjustmentFormData>({
-    resolver: zodResolver(stockAdjustmentSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       itemType: itemType,
       itemId: itemId || "",
@@ -173,7 +178,13 @@ export function StockAdjustmentDialog({
       sonnerToast.success(
         t("management.editStock.toasts.adjustmentRecorded.title") || "Stock Adjusted",
         {
-          description: `Stock ${isIncrease ? "increased" : "decreased"} by ${adjustmentQuantity} ${selectedItem.unit}`,
+          description: t(
+            isIncrease
+              ? "management.editStock.adjustment.increasedBy"
+              : "management.editStock.adjustment.decreasedBy"
+          )
+            .replace("{quantity}", String(adjustmentQuantity))
+            .replace("{unit}", selectedItem.unit),
         }
       );
 
@@ -182,7 +193,7 @@ export function StockAdjustmentDialog({
     } catch (error) {
       sonnerToast.error(t("management.editStock.toasts.adjustmentError.title") || "Error", {
         description:
-          error instanceof Error ? error.message : "Failed to adjust stock. Please try again.",
+          localizeServerMessage(error instanceof Error ? error.message : t("management.editStock.adjustment.failed")),
       });
     } finally {
       setIsSubmitting(false);

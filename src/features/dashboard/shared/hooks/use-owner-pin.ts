@@ -1,3 +1,4 @@
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -7,7 +8,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   });
   const json = await res.json().catch(() => null);
   if (!res.ok || !json?.success) {
-    throw new Error(json?.error?.message || "Request failed");
+    throw new Error(localizeServerMessage(json?.error?.message || "Request failed"));
   }
   return json.data as T;
 }

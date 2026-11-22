@@ -430,7 +430,7 @@ export function NewsletterEditor({ campaignId }: { campaignId?: string }) {
                     <Textarea
                       value={contentHtml}
                       onChange={(e) => setContentHtml(e.target.value)}
-                      placeholder="<html>…your designed email…</html>"
+                      placeholder={t("adminPages.newsletter.editor.htmlPlaceholder")}
                       rows={18}
                       className="font-mono text-xs"
                       disabled={disabled}

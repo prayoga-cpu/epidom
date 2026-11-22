@@ -4,6 +4,7 @@
  * Provides all mutations and queries for the Smart Import feature.
  */
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ImportAnalysisResult } from "@/lib/ai/import/types";
 
@@ -258,7 +259,7 @@ export function useSaveFeedback() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to save feedback");
+        throw new Error(localizeServerMessage(error.message || "Failed to save feedback"));
       }
 
       return response.json();
@@ -282,7 +283,7 @@ export function useImportSessions(storeId: string, options?: { limit?: number })
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to fetch sessions");
+        throw new Error(localizeServerMessage(error.message || "Failed to fetch sessions"));
       }
 
       return response.json();

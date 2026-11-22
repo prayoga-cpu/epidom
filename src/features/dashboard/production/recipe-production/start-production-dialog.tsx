@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -65,20 +66,22 @@ interface StartProductionDialogProps {
   availableIngredients: (IngredientAvailability | null)[];
 }
 
-const startProductionSchema = z.object({
-  productId: z.string().min(1, "Product is required"),
-  recipeId: z.string().min(1, "Recipe is required"),
-  numberOfBatches: z.coerce
-    .number()
-    .int("Number of batches must be a whole number")
-    .positive("Number of batches must be positive")
-    .min(1, "Number of batches must be at least 1")
-    .max(1000, "Number of batches cannot exceed 1000"),
-  scheduledDate: z.string().min(1, "Scheduled date is required"),
-  notes: z.string().optional(),
-});
+function createStartProductionSchema(t: (key: string) => string) {
+  return z.object({
+    productId: z.string().min(1, t("common.validation.productRequired")),
+    recipeId: z.string().min(1, t("common.validation.recipeRequired")),
+    numberOfBatches: z.coerce
+      .number()
+      .int(t("common.validation.batchesWhole"))
+      .positive(t("common.validation.batchesPositive"))
+      .min(1, t("common.validation.batchesMin"))
+      .max(1000, t("common.validation.batchesMax")),
+    scheduledDate: z.string().min(1, t("common.validation.scheduledDateRequired")),
+    notes: z.string().optional(),
+  });
+}
 
-type StartProductionFormData = z.infer<typeof startProductionSchema>;
+type StartProductionFormData = z.infer<ReturnType<typeof createStartProductionSchema>>;
 
 export function StartProductionDialog({
   open,
@@ -107,8 +110,9 @@ export function StartProductionDialog({
     (recipe?.recipeProducts?.length ?? 0) > 0 && linkedProducts.length === 0;
 
   // Initialize form
+  const schema = useMemo(() => createStartProductionSchema(t), [t]);
   const form = useForm<StartProductionFormData>({
-    resolver: zodResolver(startProductionSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       productId: defaultProductId,
       recipeId: recipe.id,
@@ -200,7 +204,7 @@ export function StartProductionDialog({
       // Validate recipe yield quantity
       const yieldQuantity = Number(recipe.yieldQuantity);
       if (!yieldQuantity || yieldQuantity <= 0) {
-        throw new Error("Recipe yield quantity is invalid. Please check the recipe configuration.");
+        throw new Error(t("management.recipeProduction.errors.invalidYield"));
       }
 
       // Convert number of batches to planned quantity (units)
@@ -209,9 +213,7 @@ export function StartProductionDialog({
 
       // Validate planned quantity is positive
       if (plannedQuantity <= 0) {
-        throw new Error(
-          "Calculated production quantity is invalid. Please check the recipe configuration."
-        );
+        throw new Error(t("management.recipeProduction.errors.invalidQuantity"));
       }
 
       const result = await startProduction.mutateAsync({
@@ -225,7 +227,10 @@ export function StartProductionDialog({
       sonnerToast.success(
         t("management.recipeProduction.toasts.productionStarted.title") || "Production Started",
         {
-          description: `Batch ${result.batchNumber} has been started`,
+          description: t("management.recipeProduction.toasts.batchStarted").replace(
+            "{batchNumber}",
+            result.batchNumber
+          ),
         }
       );
 
@@ -240,10 +245,10 @@ export function StartProductionDialog({
     } catch (error) {
       sonnerToast.error(t("management.recipeProduction.toasts.productionFailed.title") || "Error", {
         description:
-          error instanceof Error
+          localizeServerMessage(error instanceof Error
             ? error.message
             : t("management.recipeProduction.toasts.productionFailed.description") ||
-              "Failed to start production",
+              "Failed to start production"),
       });
     }
   };
@@ -472,7 +477,8 @@ export function StartProductionDialog({
                         {totalTime.toFixed(0)} {t("common.time.minutesShort") || "min"}
                         {totalTime >= 60 && (
                           <span className="text-muted-foreground ml-1 text-sm font-normal">
-                            ({(totalTime / 60).toFixed(1)}h)
+                            ({(totalTime / 60).toFixed(1)}
+                            {t("common.time.hoursShort")})
                           </span>
                         )}
                       </p>

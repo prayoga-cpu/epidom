@@ -127,12 +127,12 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
       login({
         storeId,
         staffId: "owner",
-        staffName: "Owner",
+        staffName: t("pages.staffRoleOwner"),
         staffRole: "OWNER",
         shiftId: null,
       });
     }
-  }, [bypassGate, isActive, sessionStoreId, storeId, login]);
+  }, [bypassGate, isActive, sessionStoreId, storeId, login, t]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["staff", storeId],
@@ -348,7 +348,7 @@ export function PosStaffGate({ storeId, bypassGate, children }: PosStaffGateProp
                   login({
                     storeId,
                     staffId: "owner",
-                    staffName: "Owner",
+                    staffName: t("pages.staffRoleOwner"),
                     staffRole: "OWNER",
                     shiftId: null,
                     allowedPages: null,

@@ -9,6 +9,15 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.50.0] - 2026-11-22 · feat
+
+- **Every language is now complete.** French was missing 380 texts, English 23 and Indonesian 20, which silently showed in English (or not at all). All four languages (French, Indonesian, Thai, English) now have every text, and a test stops any of them from falling behind again.
+- **Error messages in your language.** Messages that come back from the server ("Customer not found", "Insufficient stock", a field that is too long, a wrong password…) were always in English. About 580 of them now show in the language of your screen, in toasts and under form fields.
+- **No more stray English.** Around 220 labels, buttons, hints and notifications that were written in English only (the delete-store confirmation, stock-import and supplier-order notifications, table reservations, dialog close buttons, validation hints…) are now translated.
+- **E-mails in four languages.** The verification, password-reset, account, staff PIN, staff invitation, ownership-transfer, supplier purchase-order and partner e-mails are written in French, Indonesian, Thai and English. The verification and reset e-mails follow the language of the screen you were on.
+- **Thai can be chosen everywhere.** Settings → Language now offers ไทย and, for every language, also switches the screen and the language of your receipts and e-mails. Customers can pick TH on your ordering page, sign-in links accept `?lang=th`, and Thailand (THB, Bangkok time) is in the country list at setup.
+- **New error, "page not found" and offline screens.** They now match the rest of Epidom (navy and gold), are written in all four languages, and fit any screen from a small phone to a desktop.
+
 ## [3.49.0] - 2026-11-22 · feat
 
 - **Epidom now speaks Thai (ภาษาไทย).** Pick ไทย in the language menu on the website, in the dashboard, in the till and on the public ordering page; a visitor whose browser is set to Thai is taken to `/th` automatically (search engines still get the French site first). Every screen of the app is translated (more than 8,400 texts), and so are the home, pricing, products, about, contact and legal pages, the blog (9 articles, including the five kind-of-business guides) and the docs (10 guides).

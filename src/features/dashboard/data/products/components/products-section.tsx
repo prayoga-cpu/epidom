@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
@@ -412,7 +413,7 @@ export function ProductsSection({
       setDeleteDialogOpen(false);
       setSelectedProduct(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete product");
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("data.products.toasts.deleteFailed")));
     }
   };
 
@@ -429,7 +430,7 @@ export function ProductsSection({
       );
       clearSelection();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete products");
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("data.products.toasts.bulkDeleteFailed")));
     }
   };
 
@@ -462,7 +463,7 @@ export function ProductsSection({
       }
       clearSelection();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add products to menu");
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("data.products.toasts.bulkAddToMenuFailed")));
     }
   };
 
@@ -508,7 +509,7 @@ export function ProductsSection({
       }
       clearSelection();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove products from menu");
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("data.products.toasts.bulkRemoveFromMenuFailed")));
     }
   };
 
@@ -520,7 +521,7 @@ export function ProductsSection({
       });
       toast.success(t("messages.exportSuccessful"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("messages.errorLoadingProducts"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("messages.errorLoadingProducts")));
     }
   };
 
@@ -530,7 +531,7 @@ export function ProductsSection({
       toast.success(t("data.products.manageCategories.deleted"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("data.products.manageCategories.deleteFailed")
+        localizeServerMessage(error instanceof Error ? error.message : t("data.products.manageCategories.deleteFailed"))
       );
     }
   };
@@ -570,7 +571,7 @@ export function ProductsSection({
     return (
       <SectionErrorState
         title={t("common.error")}
-        message={error.message || t("messages.errorLoadingProducts")}
+        message={localizeServerMessage(error.message) || t("messages.errorLoadingProducts")}
         onRetry={() => refetch()}
         retryLabel={t("common.actions.retry")}
       />
@@ -1050,9 +1051,9 @@ export function ProductsSection({
                                   );
                                 } catch (err) {
                                   toast.error(
-                                    err instanceof Error
+                                    localizeServerMessage(err instanceof Error
                                       ? err.message
-                                      : "Failed to remove from menu"
+                                      : t("data.products.toasts.removeFromMenuFailed"))
                                   );
                                 }
                               }}
@@ -1084,7 +1085,7 @@ export function ProductsSection({
                                   );
                                 } catch (err) {
                                   toast.error(
-                                    err instanceof Error ? err.message : "Failed to add to menu"
+                                    localizeServerMessage(err instanceof Error ? err.message : t("data.products.toasts.addToMenuFailed"))
                                   );
                                 }
                               }}

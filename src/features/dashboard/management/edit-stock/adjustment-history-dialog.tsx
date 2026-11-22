@@ -319,9 +319,12 @@ export function AdjustmentHistoryDialog({
                                 {t("common.reference")}:{" "}
                                 {adj.referenceId ||
                                   (adj.productionBatchId
-                                    ? `Batch ${adj.productionBatchId}`
+                                    ? t("management.editStock.historyBatchRef").replace(
+                                        "{id}",
+                                        adj.productionBatchId
+                                      )
                                     : adj.orderId
-                                      ? `Order ${adj.orderId}`
+                                      ? t("management.editStock.historyOrderRef").replace("{id}", adj.orderId)
                                       : "-")}
                               </span>
                             </div>

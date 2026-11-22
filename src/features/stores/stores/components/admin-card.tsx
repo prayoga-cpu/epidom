@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { useI18n } from "@/components/lang/i18n-provider";
 import { Shield, ArrowRight } from "lucide-react";
 import {
   visibleSections,
@@ -19,6 +20,7 @@ const MAX_SHORTCUTS = 5;
  * The shortcuts are the pages this account may open.
  */
 export function AdminCard({ access }: { access: AdminAccessSummary }) {
+  const { t } = useI18n();
   const sections = visibleSections(access);
   const home = sections[0]?.href ?? "/admin";
   const shortcuts = sections.filter((s) => s.key !== "users").slice(0, MAX_SHORTCUTS);
@@ -39,7 +41,7 @@ export function AdminCard({ access }: { access: AdminAccessSummary }) {
         <CardContent className="flex flex-1 flex-col gap-2.5 p-4 sm:gap-3 sm:p-5 md:p-6">
           <div className="flex items-start justify-between gap-2 sm:gap-3">
             <h3 className="line-clamp-2 flex-1 text-base leading-tight font-semibold text-red-400 sm:text-lg md:text-xl">
-              {partnerOnly ? "Partner" : "Admin"}
+              {partnerOnly ? t("stores.adminCard.partner") : t("stores.adminCard.admin")}
             </h3>
             <ArrowRight
               className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-400/70 transition-all duration-300 group-hover:translate-x-1 sm:mt-1 sm:h-5 sm:w-5"
@@ -48,10 +50,10 @@ export function AdminCard({ access }: { access: AdminAccessSummary }) {
           </div>
           <p className="text-muted-foreground text-xs sm:text-sm">
             {partnerOnly
-              ? "Your referral links and commission"
+              ? t("stores.adminCard.partnerDesc")
               : access.full
-                ? "Platform-wide admin tools"
-                : "The admin pages you were given"}
+                ? t("stores.adminCard.fullDesc")
+                : t("stores.adminCard.partialDesc")}
           </p>
         </CardContent>
       </Link>

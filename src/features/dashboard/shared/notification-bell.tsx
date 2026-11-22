@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { safetyNetPollMs } from "@/lib/realtime/pusher-client";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -122,7 +123,7 @@ export function NotificationBell({ variant = "topbar" }: NotificationBellProps =
 
     const result = await validateAndSaveCustomSound(file);
     if ("error" in result) {
-      toast.error(result.error.message);
+      toast.error(localizeServerMessage(result.error.message));
       return;
     }
     setHasCustomSound(true);

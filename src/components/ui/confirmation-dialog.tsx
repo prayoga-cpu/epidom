@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useOptionalI18n } from "@/components/lang/optional-i18n";
 
 interface ConfirmationDialogProps {
   open: boolean;
@@ -35,14 +36,19 @@ export function ConfirmationDialog({
   onOpenChange,
   title,
   description,
-  confirmText = "Confirm",
-  cancelText = "Cancel",
+  confirmText,
+  cancelText,
   onConfirm,
   variant = "default",
   loading = false,
   layerClassName,
 }: ConfirmationDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  // Optional: the dialog can render outside an I18nProvider (tests, error fallbacks).
+  const i18n = useOptionalI18n();
+  const tr = (key: string, fallback: string) => (i18n ? i18n.t(key) : fallback);
+  const confirmLabel = confirmText ?? tr("uiText.common.confirm", "Confirm");
+  const cancelLabel = cancelText ?? tr("common.actions.cancel", "Cancel");
 
   const handleConfirm = async () => {
     try {
@@ -70,7 +76,7 @@ export function ConfirmationDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isBusy}>{cancelText}</AlertDialogCancel>
+          <AlertDialogCancel disabled={isBusy}>{cancelLabel}</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
@@ -84,10 +90,10 @@ export function ConfirmationDialog({
             {isBusy ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Please wait...
+                {tr("uiText.common.pleaseWait", "Please wait...")}
               </>
             ) : (
-              confirmText
+              confirmLabel
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

@@ -53,6 +53,7 @@ const SLIDES: Record<Kind, readonly { n: number; portrait?: boolean }[]> = {
 const AUTOPLAY_MS = 5000;
 
 function UsesCarousel({ kind, Icon, label }: { kind: Kind; Icon: LucideIcon; label: string }) {
+  const { t } = useI18n();
   const slides = SLIDES[kind];
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -73,7 +74,7 @@ function UsesCarousel({ kind, Icon, label }: { kind: Kind; Icon: LucideIcon; lab
   return (
     <div
       role="group"
-      aria-roledescription="carousel"
+      aria-roledescription={t("uiText.marketing.carousel")}
       aria-label={label}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -135,7 +136,9 @@ function UsesCarousel({ kind, Icon, label }: { kind: Kind; Icon: LucideIcon; lab
               <button
                 key={slide.n}
                 type="button"
-                aria-label={`Photo ${i + 1} of ${slides.length}`}
+                aria-label={t("uiText.marketing.photoOf")
+                  .replace("{n}", String(i + 1))
+                  .replace("{total}", String(slides.length))}
                 aria-current={i === index}
                 onClick={() => go(i)}
                 className="inline-flex size-6 cursor-pointer items-center justify-center"

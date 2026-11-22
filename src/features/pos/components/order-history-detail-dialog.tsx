@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -171,10 +172,10 @@ export function OrderHistoryDetailDialog({
       if (data?.sent) {
         toast.success(t("pos.history.receiptSendSuccess"));
       } else {
-        toast.error(data?.error || t("pos.history.receiptSendFailed"));
+        toast.error(localizeServerMessage(data?.error || t("pos.history.receiptSendFailed")));
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("pos.history.receiptSendFailed"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("pos.history.receiptSendFailed")));
     }
   };
 
@@ -186,7 +187,7 @@ export function OrderHistoryDetailDialog({
       await sendReceiptEmail.mutateAsync({ orderId: order.id, email });
       toast.success(t("cashierPayments.sendEmail.success"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("cashierPayments.sendEmail.failed"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("cashierPayments.sendEmail.failed")));
     }
   };
 
@@ -237,7 +238,7 @@ export function OrderHistoryDetailDialog({
       toast.success(t("pos.refund.success"));
       swap.close();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("pos.queue.updateFailed"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("pos.queue.updateFailed")));
     }
   };
 

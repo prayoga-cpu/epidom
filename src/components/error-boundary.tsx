@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/logger";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, RotateCw } from "lucide-react";
+import { StatusScreen } from "@/components/shared/status-screen";
+import { useStatusText } from "@/components/shared/status-copy";
 import { isStaleChunkError, reloadForStaleChunk } from "@/lib/utils/stale-chunk-reload";
 
 interface ErrorBoundaryState {
@@ -17,6 +17,53 @@ interface ErrorBoundaryProps {
   children: React.ReactNode;
   fallback?: React.ComponentType<{ error: Error; resetError: () => void }>;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+}
+
+/**
+ * The default fallback. A function component so it can translate, and it uses
+ * useStatusText() rather than useI18n(): this boundary usually wraps the
+ * I18nProvider (<ErrorBoundary><I18nProvider>…), so the fallback renders with
+ * no provider above it and useI18n() would throw inside the error screen.
+ *
+ * It replaces the whole tree it guards, so it is the navy full-page surface
+ * (its own background: readable in the app's light and dark themes and on the
+ * marketing site alike).
+ */
+function DefaultErrorFallback({ error, resetError }: { error?: Error; resetError: () => void }) {
+  const { t, locale } = useStatusText();
+
+  return (
+    <StatusScreen
+      tone="brand"
+      layout="page"
+      locale={locale}
+      announce
+      icon={<AlertTriangle />}
+      eyebrow={t("statusPages.error.eyebrow")}
+      title={t("statusPages.error.title")}
+      description={t("statusPages.error.description")}
+      details={
+        process.env.NODE_ENV === "development" && error ? (
+          <>
+            <p className="text-epi-gold-400 m-0 mb-2 text-xs font-medium">
+              {t("statusPages.error.details")}
+            </p>
+            <pre className="m-0 max-h-48 overflow-auto text-xs break-words whitespace-pre-wrap">
+              {error.toString()}
+            </pre>
+          </>
+        ) : undefined
+      }
+      actions={[
+        { label: t("statusPages.error.tryAgain"), icon: <RefreshCw />, onClick: resetError },
+        {
+          label: t("statusPages.error.reload"),
+          icon: <RotateCw />,
+          onClick: () => window.location.reload(),
+        },
+      ]}
+    />
+  );
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -66,45 +113,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
         return <FallbackComponent error={this.state.error!} resetError={this.resetError} />;
       }
 
-      // Default error UI
-      return (
-        <div className="flex min-h-[calc(100vh/var(--app-zoom,1))] items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <div className="bg-destructive/10 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-                <AlertTriangle className="text-destructive h-6 w-6" />
-              </div>
-              <CardTitle className="text-xl">Something went wrong</CardTitle>
-              <CardDescription>
-                We&apos;re sorry, but something unexpected happened. Please try again.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {process.env.NODE_ENV === "development" && this.state.error && (
-                <div className="bg-destructive/10 rounded-md p-3">
-                  <h4 className="text-destructive mb-2 text-sm font-medium">Error Details:</h4>
-                  <pre className="text-destructive/80 overflow-auto text-xs">
-                    {this.state.error.toString()}
-                  </pre>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Button onClick={this.resetError} className="flex-1">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Try Again
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => window.location.reload()}
-                  className="flex-1"
-                >
-                  Reload Page
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      );
+      return <DefaultErrorFallback error={this.state.error} resetError={this.resetError} />;
     }
 
     return this.props.children;

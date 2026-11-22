@@ -65,7 +65,7 @@ export async function notifyCriticalAction(
  * routes the event to. Production behaviour is unchanged.
  */
 export async function notifyAccountAction(
-  target: { id: string; email: string; name: string },
+  target: { id: string; email: string; name: string; business?: { locale: string } | null },
   action: AccountActionCode
 ): Promise<void> {
   if (process.env.VERCEL_ENV === "preview" && !isAdminEmail(target.email)) {
@@ -80,6 +80,8 @@ export async function notifyAccountAction(
         userId: target.id,
         userEmail: target.email,
         userName: target.name,
+        // Only when the target's business language is known; the e-mail falls back to English.
+        ...(target.business?.locale ? { userLocale: target.business.locale } : {}),
         action,
         occurredAt: new Date().toISOString(),
       },

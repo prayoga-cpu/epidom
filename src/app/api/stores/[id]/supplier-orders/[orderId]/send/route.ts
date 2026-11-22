@@ -55,7 +55,10 @@ export const POST = withApiHandler(
 
     const order = await prisma.supplierOrder.findFirst({
       where: { id: orderId, storeId },
-      include: { supplier: true, store: { select: { name: true } } },
+      include: {
+        supplier: true,
+        store: { select: { name: true, business: { select: { locale: true } } } },
+      },
     });
 
     if (!order) {
@@ -79,7 +82,8 @@ export const POST = withApiHandler(
       order.supplier.email,
       order.store.name,
       order.orderNumber,
-      pdfBuffer
+      pdfBuffer,
+      order.store.business?.locale
     );
     results.email = { success: emailResult.success, error: emailResult.error };
 

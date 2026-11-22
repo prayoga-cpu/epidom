@@ -15,6 +15,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 const Form = FormProvider;
 
@@ -128,7 +129,8 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
 
 function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField();
-  const body = error ? String(error?.message ?? "") : props.children;
+  // Shared zod schemas and server field errors both carry English sentences.
+  const body = error ? localizeServerMessage(String(error?.message ?? "")) : props.children;
 
   // Always render container to prevent layout shift
   // Use min-height to reserve space for error messages

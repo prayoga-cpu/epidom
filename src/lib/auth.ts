@@ -13,6 +13,7 @@ import {
   sendWelcomeEmail,
 } from "@/lib/services/email.service";
 import { isAdminEmail } from "@/lib/admin";
+import { localeFromRequest } from "@/lib/i18n-routing";
 import { recordSalesPageSignup } from "@/lib/services/sales-page.service";
 import { recordSignupAttribution, requestIp } from "@/lib/services/signup-attribution.service";
 import {
@@ -81,8 +82,13 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
-    sendResetPassword: async ({ user, url }) => {
-      const result = await sendPasswordResetEmail(user.email, user.name, url);
+    sendResetPassword: async ({ user, url }, request) => {
+      const result = await sendPasswordResetEmail(
+        user.email,
+        user.name,
+        url,
+        localeFromRequest(request?.headers)
+      );
       if (!result.success) {
         throw new Error(`Failed to send password reset email: ${result.error}`);
       }
@@ -93,14 +99,20 @@ export const auth = betterAuth({
     // Covers the code too: entering it signs the person in, like the link.
     autoSignInAfterVerification: true,
     expiresIn: EMAIL_VERIFICATION_EXPIRES_IN,
-    sendVerificationEmail: async ({ user, url }) => {
+    sendVerificationEmail: async ({ user, url }, request) => {
       // One email, two ways in: the link and a 6-digit code (see
       // src/lib/auth/email-verification-code.ts). Better Auth only sends this
       // for unverified accounts; the check keeps it that way should a future
       // flow (changing a verified address) reuse this hook, since the code
       // signs in whoever owns the address it was made for.
       const code = user.emailVerified ? null : await createEmailVerificationCode(user.email);
-      const result = await sendVerificationEmail(user.email, user.name, url, code);
+      const result = await sendVerificationEmail(
+        user.email,
+        user.name,
+        url,
+        code,
+        localeFromRequest(request?.headers)
+      );
       if (!result.success) {
         throw new Error(`Failed to send verification email: ${result.error}`);
       }

@@ -1,4 +1,5 @@
 import { ApiResponse, ApiErrorResponse, isApiError } from "@/types/api";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * API Client Configuration
@@ -18,7 +19,9 @@ export class ApiClientError extends Error {
     public readonly response: ApiErrorResponse,
     public readonly status: number
   ) {
-    super(response.error.message);
+    // Shown as-is in toasts: translate the server's English sentence here, once.
+    // The untouched original stays on `response.error.message`.
+    super(localizeServerMessage(response.error.message));
     this.name = "ApiClientError";
   }
 }

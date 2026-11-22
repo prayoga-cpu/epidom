@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "../../components/google-icon";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import { trackEvent } from "@/lib/analytics";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { safeInternalPath } from "@/lib/safe-redirect";
+import { AUTH_REGISTRATION_FAILED_FALLBACK } from "../../lib/login-errors";
 import { parsePrefillEmail } from "../lib/prefill-email";
 import { takeStashedPrefillEmail } from "../lib/prefill-handoff";
 import { googleSignupCallbackURL } from "../lib/verification-landing";
@@ -87,7 +89,11 @@ export function RegisterForm() {
   const onSubmit = (data: RegisterInput) => {
     register(next ? { ...data, callbackURL: next } : data, {
       onError: (err) => {
-        toast.error(err.message || t("messages.registrationFailed"));
+        toast.error(
+          localizeServerMessage(err.message && err.message !== AUTH_REGISTRATION_FAILED_FALLBACK
+            ? err.message
+            : t("messages.registrationFailed"))
+        );
       },
     });
   };

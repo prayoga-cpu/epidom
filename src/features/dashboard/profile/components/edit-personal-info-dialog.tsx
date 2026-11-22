@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +31,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { businessApi } from "@/lib/api/business.api";
 import { updateProfileSchema } from "@/lib/validation/auth.schemas";
 import { toast } from "sonner";
 import { normalizeDefaultLanding, DEFAULT_LANDING_SECTIONS } from "@/lib/last-visited";
@@ -64,7 +66,7 @@ export function EditPersonalInfoDialog({
   user,
   onUpdate,
 }: EditPersonalInfoDialogProps) {
-  const { t } = useI18n();
+  const { t, setLocale } = useI18n();
   const updateProfile = useUpdateProfile();
 
   const form = useForm<FormData>({
@@ -97,13 +99,21 @@ export function EditPersonalInfoDialog({
     try {
       await updateProfile.mutateAsync(data);
 
+      // One language setting for the whole account: the screen switches now, and
+      // the business language (receipts, e-mails, WhatsApp messages) follows. The
+      // business update is best-effort: staff accounts have no business to update.
+      if (data.locale && data.locale !== user.locale) {
+        setLocale(data.locale);
+        void businessApi.updateBusiness({ locale: data.locale }).catch(() => {});
+      }
+
       // Note: Toast notification is now handled in useUpdateProfile hook
       // to prevent duplicate notifications
       onUpdate?.();
       onOpenChange(false);
     } catch (error) {
       toast.error(t("common.error"), {
-        description: error instanceof Error ? error.message : t("profile.errors.updateFailed"),
+        description: localizeServerMessage(error instanceof Error ? error.message : t("profile.errors.updateFailed")),
       });
     }
   }
@@ -191,6 +201,7 @@ export function EditPersonalInfoDialog({
                       <SelectItem value="en">{t("common.language.en")}</SelectItem>
                       <SelectItem value="fr">{t("common.language.fr")}</SelectItem>
                       <SelectItem value="id">{t("common.language.id")}</SelectItem>
+                      <SelectItem value="th">{t("common.language.th")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 export const businessTimezoneKeys = {
   all: ["business-timezone"] as const,
@@ -20,7 +21,7 @@ export function useBusinessTimezone(businessId: string | undefined, enabled: boo
     queryKey: businessTimezoneKeys.detail(businessId ?? "none"),
     queryFn: async () => {
       const response = await fetch("/api/user/business");
-      if (!response.ok) throw new Error("Failed to load business");
+      if (!response.ok) throw new Error(localizeServerMessage("Failed to load business"));
       const result = await response.json();
       const timezone = result?.data?.timezone;
       return typeof timezone === "string" && timezone ? timezone : null;

@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { responsive } from "@/lib/utils/responsive";
+import { useI18n } from "@/components/lang/i18n-provider";
 
 interface SectionErrorStateProps {
   title?: string;
@@ -26,10 +27,11 @@ export function SectionErrorState({
   message,
   error,
   onRetry,
-  retryLabel = "Retry",
+  retryLabel,
   className,
 }: SectionErrorStateProps) {
-  const displayMessage = message || error?.message || "An error occurred";
+  const { t } = useI18n();
+  const displayMessage = message || error?.message || t("common.validation.unexpectedError");
 
   return (
     <Card className={`${responsive.cardWrapper} ${className || ""}`}>
@@ -41,7 +43,7 @@ export function SectionErrorState({
         <p className="text-muted-foreground text-sm">{displayMessage}</p>
         {onRetry && (
           <Button onClick={onRetry} variant="outline" size="sm" className="mt-4">
-            {retryLabel}
+            {retryLabel ?? t("common.actions.retry")}
           </Button>
         )}
       </CardContent>

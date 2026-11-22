@@ -172,7 +172,7 @@ export function AlertsTable({ alerts, storeId, onViewDetails }: AlertsTableProps
                   className="gap-2"
                 >
                   <Package2 className="h-4 w-4" />
-                  Bulk Order
+                  {t("alerts.bulkOrder.button")}
                 </Button>
                 <Button
                   variant="default"

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * Subscription plan type
@@ -79,7 +80,7 @@ export function useSubscriptionStatus() {
             storeUsage: null,
           };
         }
-        throw new Error("Failed to fetch subscription status");
+        throw new Error(localizeServerMessage("Failed to fetch subscription status"));
       }
 
       const responseData = await response.json();

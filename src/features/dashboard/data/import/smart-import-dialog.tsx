@@ -166,7 +166,7 @@ export function SmartImportDialog({
             ? t("import.upload.importTimeout")
             : error instanceof Error
               ? error.message
-              : "Import failed",
+              : t("import.results.failure"),
       });
       setStep("results");
     }
@@ -306,9 +306,9 @@ export function SmartImportDialog({
                   <Loader2 className="text-primary h-12 w-12 animate-spin" />
                 </div>
               </div>
-              <h3 className="mt-6 text-lg font-semibold">Importing Data...</h3>
+              <h3 className="mt-6 text-lg font-semibold">{t("import.importing.title")}</h3>
               <p className="text-muted-foreground mt-2">
-                Processing {editedData.length} rows. Please wait.
+                {t("import.importing.description").replace("{count}", String(editedData.length))}
               </p>
             </div>
           )}

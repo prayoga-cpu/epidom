@@ -732,8 +732,10 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                   render={({ field }) => (
                     <FormItem className="space-y-0.5">
                       <FormLabel className="text-sm">
-                        Link to existing menu item
-                        <span className="text-muted-foreground ml-1 font-normal">(optional)</span>
+                        {t("data.products.form.linkToMenuItem")}
+                        <span className="text-muted-foreground ml-1 font-normal">
+                          {t("pages.staffOptional")}
+                        </span>
                       </FormLabel>
                       <FormControl>
                         <Select
@@ -741,11 +743,11 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                           onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}
                         >
                           <SelectTrigger className="text-sm">
-                            <SelectValue placeholder="Don't link — create new menu entry" />
+                            <SelectValue placeholder={t("data.products.form.dontLinkCreateNew")} />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">
-                              Don&apos;t link — create new menu entry
+                              {t("data.products.form.dontLinkCreateNew")}
                             </SelectItem>
                             {unlinkedMenuItems.map((item) => (
                               <SelectItem key={item.id} value={item.id}>
@@ -756,7 +758,7 @@ export function AddProductDialog({ storeId, children }: AddProductDialogProps) {
                         </Select>
                       </FormControl>
                       <FormDescription className="text-xs">
-                        Connect this product to an existing POS/storefront item to avoid duplicates.
+                        {t("data.products.form.linkToMenuItemHint")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

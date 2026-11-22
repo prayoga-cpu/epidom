@@ -1,5 +1,6 @@
 "use client";
 
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/components/lang/i18n-provider";
@@ -92,7 +93,7 @@ export function CustomDevelopmentClient({ storeId }: CustomDevelopmentClientProp
       queryClient.invalidateQueries({ queryKey: ["custom-development-requests"] });
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : t("customDevelopment.form.submitError"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("customDevelopment.form.submitError")));
     },
   });
 
@@ -120,7 +121,7 @@ export function CustomDevelopmentClient({ storeId }: CustomDevelopmentClientProp
       queryClient.invalidateQueries({ queryKey: ["custom-development-requests"] });
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : t("customDevelopment.form.submitError"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("customDevelopment.form.submitError")));
     },
   });
 
@@ -132,7 +133,7 @@ export function CustomDevelopmentClient({ storeId }: CustomDevelopmentClientProp
       queryClient.invalidateQueries({ queryKey: ["custom-development-requests"] });
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : t("customDevelopment.form.submitError"));
+      toast.error(localizeServerMessage(error instanceof Error ? error.message : t("customDevelopment.form.submitError")));
     },
   });
 
