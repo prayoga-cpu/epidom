@@ -43,7 +43,7 @@ interface EditPersonalInfoDialogProps {
     name?: string | null;
     email: string;
     phone?: string | null;
-    locale: "en" | "fr" | "id" | undefined;
+    locale: "en" | "fr" | "id" | "th" | undefined;
     timezone: string;
     rememberLastVisited?: boolean;
     defaultLanding?: string;

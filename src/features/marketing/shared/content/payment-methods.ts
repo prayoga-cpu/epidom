@@ -38,5 +38,12 @@ export const PAYMENT_METHODS: Record<Locale, PaymentMethodTile[]> = {
     { n: "Visa", c: "#1F4373" },
     { n: "Mastercard", c: "#3A5B7A" },
     { n: "Cash", c: "#5A4A2A" },
+  ],  th: [
+    { n: "บัตร", c: "#0066B3" },
+    { n: "Apple Pay", c: "#2b2b2b" },
+    { n: "Google Pay", c: "#4C2A86" },
+    { n: "Visa", c: "#1F4373" },
+    { n: "Mastercard", c: "#3A5B7A" },
+    { n: "เงินสด", c: "#5A4A2A" },
   ],
 };

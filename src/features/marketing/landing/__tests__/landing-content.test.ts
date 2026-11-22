@@ -116,6 +116,7 @@ describe.each(LANDING_PAGES.map((p) => [p.slug, p] as const))("landing page %s",
       fr: [/\$\d/, /Rp\s?\d/],
       id: [/€/, /\$\d/],
       en: [/€/, /Rp\s?\d/],
+      th: [/€/, /Rp\s?\d/],
     }[page.locale];
     for (const pattern of foreign) expect(all, `${page.slug} ${pattern}`).not.toMatch(pattern);
   });

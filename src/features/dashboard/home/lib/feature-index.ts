@@ -40,19 +40,82 @@ import type { PlanTier } from "@/config/navigation.config";
 /**
  * Things people look for that are a tab, a button or a how-to inside a page rather than a page
  * of their own: "import my menu", "split the bill", "kitchen screen", "profit and loss".
- * Each opens the page (and tab) where the thing lives. Labels are written in all three
+ * Each opens the page (and tab) where the thing lives. Labels are written in all four
  * languages here; keywords mix en / id / fr so a search matches whichever language is typed.
  * `href` is relative to /store/{id}; `gate` is the staff grant the page needs.
  */
 export interface FeatureEntry {
   id: string;
-  label: { en: string; id: string; fr: string };
+  label: { en: string; id: string; fr: string; th: string };
   keywords: string;
   icon: LucideIcon;
   href: string;
   gate: string;
   plan?: PlanTier;
 }
+
+/** Thai labels, keyed by entry id (the f() rows below carry en / id / fr). */
+const FEATURE_LABELS_TH: Record<string, string> = {
+  "menu-editor": "ตัวแก้ไขเมนู",
+  "import-menu": "นำเข้าเมนู (CSV / Excel / รูปภาพ)",
+  "share-storefront": "แชร์ลิงก์ / QR code สั่งอาหารผ่านมือถือ",
+  "storefront-reviews": "รีวิวและรีวิว Google",
+  "storefront-analytics": "การวิเคราะห์การสั่งอาหารผ่านมือถือ",
+  "custom-products": "สินค้าแบบเลือกส่วนผสมเอง (Build-your-own)",
+  materials: "วัตถุดิบ (สต็อก)",
+  recipes: "สูตรและต้นทุนอาหาร",
+  suppliers: "ซัพพลายเออร์",
+  promotions: "โปรโมชันและโค้ดส่วนลด",
+  "stock-adjust": "ปรับสต็อก / บันทึกของเสีย",
+  "supplier-orders": "สั่งซื้อจากซัพพลายเออร์ / รับของ",
+  "stock-log": "ประวัติการเคลื่อนไหวสต็อก",
+  production: "การผลิตเป็นล็อต (ทำสูตรเป็นจำนวนมาก)",
+  "production-history": "ประวัติการผลิต",
+  "pos-till": "รับออเดอร์ (เครื่องคิดเงิน POS)",
+  "pos-hold": "พักบิลและเรียกกลับมา",
+  "pos-split": "แยกบิล",
+  "pos-discount": "ใช้ส่วนลดหรือโค้ดโปรโมชันที่เครื่องคิดเงิน",
+  "pos-payments": "รับชำระเงิน (เงินสด บัตร QRIS แยกชำระหลายวิธี)",
+  "pos-refund": "คืนเงินหรือยกเลิกออเดอร์",
+  "pos-orders": "คิวออเดอร์และประวัติออเดอร์",
+  "pos-daily-report": "รายงานยอดขายประจำวัน (ปิดวัน)",
+  "pos-kds": "จอแสดงออเดอร์ในครัว (KDS)",
+  "pos-tables": "โต๊ะและผังร้าน",
+  "pos-shift": "เปิด / ปิดกะเครื่องคิดเงิน (ลิ้นชักเงินสด)",
+  "pos-hardware": "เครื่องพิมพ์และเครื่องสแกนบาร์โค้ด",
+  "pos-scanner": "สแกนบาร์โค้ดที่เครื่องคิดเงิน",
+  "pos-customer-display": "จอแสดงผลลูกค้า (จอที่สอง)",
+  "pos-staff-pin": "สลับพนักงาน / เข้าสู่ระบบด้วย PIN ที่เครื่องคิดเงิน",
+  "pos-offline": "ใช้งานออฟไลน์ (แอปเดสก์ท็อป / Android)",
+  "staff-add": "เพิ่มพนักงานและเลือกหน้าที่เข้าถึงได้",
+  roster: "จัดและเผยแพร่ตารางงานรายสัปดาห์",
+  overtime: "ล่วงเวลา (OT) และการอนุมัติชั่วโมงงาน",
+  payroll: "เงินเดือน ค่าจ้าง และค่าคอมมิชชัน",
+  attendance: "การลงเวลาและเช็กอินด้วยเซลฟี่",
+  "shift-report": "รายงานกะและบันทึกเงินสด",
+  "fin-pl": "งบกำไรขาดทุน",
+  "fin-daily": "ยอดขายรายวัน",
+  "fin-expenses": "บันทึกและตรวจสอบค่าใช้จ่าย",
+  "fin-channels": "ยอดขายตามช่องทาง (ทานที่ร้าน กลับบ้าน เดลิเวอรี ออนไลน์)",
+  "fin-payment-methods": "ยอดขายตามวิธีชำระเงิน",
+  "fin-patterns": "รูปแบบยอดขาย (ช่วงเวลาและวันที่ขายดีที่สุด)",
+  "fin-items": "รายการขายดี",
+  "fin-margin": "อัตรากำไรและความสามารถทำกำไรของแต่ละรายการ",
+  "fin-category": "ยอดขายตามหมวดหมู่",
+  "fin-adjustments": "ส่วนลด การคืนเงิน และการยกเลิกรายการ",
+  "fin-tax": "รายงานภาษี (VAT)",
+  "fin-waste": "รายงานของเสีย",
+  "fin-cash": "การกระทบยอดเงินสด",
+  export: "ส่งออก / พิมพ์รายงาน (PDF, CSV)",
+  fiscal: "สมุดบันทึกทางการเงินและภาษี (NF525)",
+  customers: "ลูกค้าและสะสมแต้ม",
+  upgrade: "อัปเกรดแพ็กเกจ / เปรียบเทียบแพ็กเกจ",
+  billing: "การเรียกเก็บเงิน ใบแจ้งหนี้ และวิธีชำระเงิน",
+  outlets: "เพิ่มร้านหรือสาขาอีกแห่ง",
+  help: "ศูนย์ช่วยเหลือและคู่มือ",
+  changelog: "มีอะไรใหม่ (บันทึกการอัปเดต)",
+  "alerts-low-stock": "แจ้งเตือนสต็อกใกล้หมด",
+};
 
 const f = (
   id: string,
@@ -64,7 +127,15 @@ const f = (
   href: string,
   gate: string,
   plan?: PlanTier
-): FeatureEntry => ({ id, icon, label: { en, id: idn, fr }, keywords, href, gate, plan });
+): FeatureEntry => ({
+  id,
+  icon,
+  label: { en, id: idn, fr, th: FEATURE_LABELS_TH[id] ?? en },
+  keywords,
+  href,
+  gate,
+  plan,
+});
 
 export const FEATURE_INDEX: FeatureEntry[] = [
   // ── Menu, products, phone orders ────────────────────────────────────────────

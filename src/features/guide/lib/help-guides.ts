@@ -15,51 +15,69 @@ import type { PageIntroId } from "@/lib/guide/contracts";
  * No guide content is imported here, so a page intro can link to a guide
  * without shipping every article; help-guide-content.ts reads the articles.
  *
- * A new guide needs a row here in all three languages; the help-guides test
+ * A new guide needs a row here in all four languages; the help-guides test
  * fails until it has one.
  */
 export const HELP_GUIDE_SLUGS = {
-  "getting-started": { en: "getting-started", fr: "demarrage", id: "mulai" },
-  "setting-up-your-menu": { en: "setting-up-your-menu", fr: "configurer-le-menu", id: "atur-menu" },
+  "getting-started": {
+    en: "getting-started",
+    fr: "demarrage",
+    id: "mulai",
+    th: "getting-started-th",
+  },
+  "setting-up-your-menu": {
+    en: "setting-up-your-menu",
+    fr: "configurer-le-menu",
+    id: "atur-menu",
+    th: "setting-up-your-menu-th",
+  },
   "receiving-orders": {
     en: "receiving-orders",
     fr: "recevoir-des-commandes",
     id: "terima-pesanan",
+    th: "receiving-orders-th",
   },
   "sharing-your-storefront": {
     en: "sharing-your-storefront",
     fr: "partager-sa-vitrine",
     id: "bagikan-toko",
+    th: "sharing-your-storefront-th",
   },
   "upgrading-to-pos": {
     en: "upgrading-to-pos",
     fr: "passer-a-la-caisse-pos",
     id: "upgrade-ke-kasir-pos",
+    th: "upgrading-to-pos-th",
   },
   "pos-system-and-operational": {
     en: "pos-system-and-operational",
     fr: "caisse-et-operationnel",
     id: "sistem-kasir-dan-operasional",
+    th: "pos-system-and-operational-th",
   },
   "stock-and-supplier-orders": {
     en: "stock-and-supplier-orders",
     fr: "stock-et-commandes-fournisseurs",
     id: "stok-dan-pesanan-pemasok",
+    th: "stock-and-supplier-orders-th",
   },
   "staff-schedules-and-shifts": {
     en: "staff-schedules-and-shifts",
     fr: "equipe-plannings-et-quarts",
     id: "staf-jadwal-dan-sif",
+    th: "staff-schedules-and-shifts-th",
   },
   "hardware-printers-and-scanner": {
     en: "hardware-printers-and-scanner",
     fr: "materiel-imprimantes-et-scanner",
     id: "perangkat-printer-dan-scanner",
+    th: "hardware-printers-and-scanner-th",
   },
   "claude-connector": {
     en: "claude-connector",
     fr: "connecteur-claude",
     id: "konektor-claude",
+    th: "claude-connector-th",
   },
 } as const satisfies Record<string, Record<Locale, string>>;
 

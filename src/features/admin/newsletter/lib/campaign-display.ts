@@ -46,6 +46,7 @@ export const LANGUAGE_LABELS: Record<NewsletterLanguage, string> = {
   fr: "French",
   en: "English",
   id: "Indonesian",
+  th: "Thai",
 };
 
 const ZONE_LABELS: Record<string, string> = {

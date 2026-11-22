@@ -10,6 +10,7 @@ const PAGE_NAME = {
   fr: "Commissions des applis de livraison",
   id: "Komisi aplikasi pengantaran",
   en: "Delivery-app commission",
+  th: "ค่าคอมมิชชันแอปเดลิเวอรี",
 } as const;
 
 export default async function DeliveryCommissionComparePage({ params }: LocaleParams) {

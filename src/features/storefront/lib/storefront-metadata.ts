@@ -26,6 +26,7 @@ export function storefrontTitle({ displayName, city, acceptsOrders }: StoreFacts
   const what = {
     fr: acceptsOrders ? "Menu et commande en ligne" : "Menu et horaires",
     id: acceptsOrders ? "Menu & Pesan Online" : "Menu & Jam Buka",
+    th: acceptsOrders ? "เมนูและสั่งอาหารออนไลน์" : "เมนูและเวลาเปิด-ปิด",
     en: acceptsOrders ? "Menu & Online Ordering" : "Menu & Opening Hours",
   }[locale];
   return `${displayName} — ${what}${cityPart(city, ", ")}`;
@@ -50,6 +51,10 @@ export function storefrontDescription(
       return acceptsOrders
         ? `Lihat menu ${name}${cityPart(city, " di ")}, jam buka, dan pesan online.`
         : `Lihat menu ${name}${cityPart(city, " di ")} dan jam bukanya.`;
+    case "th":
+      return acceptsOrders
+        ? `ดูเมนูของ ${name}${cityPart(city, " ที่ ")} เวลาเปิดทำการ และสั่งอาหารออนไลน์`
+        : `ดูเมนูของ ${name}${cityPart(city, " ที่ ")} และเวลาเปิดทำการ`;
     default:
       return acceptsOrders
         ? `See ${name}'s menu${cityPart(city, " in ")}, opening hours, and order online.`
@@ -61,6 +66,7 @@ export function storefrontMenuTitle({ displayName, city }: StoreFacts, locale: L
   const base = {
     fr: `Menu — ${displayName}`,
     id: `Menu ${displayName}`,
+    th: `เมนู ${displayName}`,
     en: `${displayName} Menu`,
   }[locale];
   return `${base}${cityPart(city, ", ")}`;
@@ -85,6 +91,10 @@ export function storefrontMenuDescription(
       const head = list ? `Menu ${name}: ${list}` : `Menu ${name}.`;
       return acceptsOrders ? `${head} Pesan langsung secara online.` : head;
     }
+    case "th": {
+      const head = list ? `เมนูของ ${name}: ${list}` : `เมนูของ ${name}.`;
+      return acceptsOrders ? `${head} สั่งอาหารออนไลน์ได้เลย` : head;
+    }
     default: {
       const head = list ? `${name}'s menu: ${list}` : `${name}'s menu.`;
       return acceptsOrders ? `${head} Order online.` : head;
@@ -100,6 +110,7 @@ export function storefrontItemDescription(
   return {
     fr: `Commandez ${itemName} chez ${displayName}.`,
     id: `Pesan ${itemName} dari ${displayName}.`,
+    th: `สั่ง ${itemName} จาก ${displayName}`,
     en: `Order ${itemName} from ${displayName}.`,
   }[locale];
 }

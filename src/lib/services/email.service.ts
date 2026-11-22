@@ -706,7 +706,7 @@ export function greetingFor(name: string | null | undefined): string {
  * Free. Same server-side copy pattern as RECEIPT_EMAIL_COPY.
  */
 const TRIAL_ENDING_EMAIL_COPY: Record<
-  "en" | "fr" | "id",
+  "en" | "fr" | "id" | "th",
   {
     subject: (date: string) => string;
     greeting: (name: string | null | undefined) => string;
@@ -751,6 +751,17 @@ const TRIAL_ENDING_EMAIL_COPY: Record<
     footer: "Anda menerima email ini karena memulai uji coba POS di Epidom.",
     dateLocale: "id-ID",
   },
+  th: {
+    subject: (date) => `การทดลองใช้ POS ของคุณสิ้นสุดวันที่ ${date}`,
+    greeting: (name) => (name?.trim() ? `สวัสดี ${escapeHtml(name.trim())},` : "สวัสดี,"),
+    heading: "การทดลองใช้ POS ของคุณใกล้สิ้นสุดแล้ว",
+    body: (date) =>
+      `การทดลองใช้ POS 14 วันของคุณสิ้นสุดวันที่ <strong>${date}</strong> หากต้องการใช้เครื่องคิดเงิน จอแสดงออเดอร์ในครัว และโต๊ะต่อหลังจากนั้น ให้เพิ่มบัตรในหน้าการเรียกเก็บเงิน คุณจะไม่ถูกเรียกเก็บเงินก่อนวันที่ ${date}`,
+    keep: "ไม่มีบัตร? บัญชีของคุณจะกลับไปใช้แพ็กเกจ Free ในวันนั้น ไม่มีอะไรถูกลบ เมนู ออเดอร์ และพนักงานของคุณยังอยู่ และ POS จะกลับมาใช้งานได้ทันทีเมื่อคุณสมัครใช้งาน",
+    cta: "เพิ่มบัตร",
+    footer: "คุณได้รับอีเมลนี้เพราะคุณเริ่มทดลองใช้ POS บน Epidom",
+    dateLocale: "th-TH-u-ca-gregory",
+  },
 };
 
 /**
@@ -764,7 +775,12 @@ export async function sendTrialEndingEmail(payload: {
   trialEndsAt: Date;
   billingUrl: string;
 }): Promise<SendEmailResult> {
-  const lang = payload.locale === "fr" || payload.locale === "en" ? payload.locale : "id";
+  const lang =
+    payload.locale === "fr" ||
+    payload.locale === "en" ||
+    payload.locale === "th"
+      ? payload.locale
+      : "id";
   const copy = TRIAL_ENDING_EMAIL_COPY[lang];
   const date = payload.trialEndsAt.toLocaleDateString(copy.dateLocale, {
     day: "numeric",
@@ -843,7 +859,7 @@ export async function sendTrialEndingEmail(payload: {
  * online store and gives the link to share.
  */
 const WELCOME_EMAIL_COPY: Record<
-  "en" | "fr" | "id",
+  "en" | "fr" | "id" | "th",
   {
     subject: string;
     greeting: (name: string | null | undefined) => string;
@@ -905,6 +921,22 @@ const WELCOME_EMAIL_COPY: Record<
     skip: "Anda juga bisa kembali kapan saja dari Toko Anda.",
     footer: "Anda menerima email ini karena membuat akun Epidom.",
   },
+  th: {
+    subject: "ยินดีต้อนรับสู่ Epidom: ทดลองใช้ POS 14 วันรอคุณอยู่",
+    greeting: (name) => (name?.trim() ? `สวัสดี ${escapeHtml(name.trim())},` : "สวัสดี,"),
+    heading: "ยินดีต้อนรับสู่ Epidom",
+    intro:
+      "บัญชีของคุณพร้อมแล้ว ตั้งค่าร้านให้เสร็จในไม่กี่นาที แล้วร้านของคุณก็พร้อมเปิดใช้งาน",
+    trialTitle: "POS ฟรี 14 วัน",
+    trialBody:
+      "ตั้งค่าให้เสร็จแล้วการทดลองใช้ POS 14 วันของคุณจะเริ่มให้อัตโนมัติ ทั้งเครื่องคิดเงิน จอแสดงออเดอร์ในครัว และโต๊ะ โดยไม่ต้องใช้บัตร หากข้ามการตั้งค่า คุณจะยังอยู่ในแพ็กเกจ Free",
+    linkTitle: "ลิงก์หน้าร้านออนไลน์ของคุณ",
+    linkBody:
+      "เมื่อตั้งค่าเสร็จ หน้าร้านออนไลน์ของคุณจะเผยแพร่ และคุณจะได้ลิงก์ไปแชร์กับลูกค้าทาง WhatsApp, Instagram หรือ QR code ที่เคาน์เตอร์",
+    cta: "ตั้งค่าร้านให้เสร็จ",
+    skip: "คุณยังกลับมาตั้งค่าได้ทุกเมื่อจากหน้าร้านของคุณ",
+    footer: "คุณได้รับอีเมลนี้เพราะคุณสร้างบัญชี Epidom",
+  },
 };
 
 export async function sendWelcomeEmail(payload: {
@@ -913,7 +945,12 @@ export async function sendWelcomeEmail(payload: {
   locale?: string | null;
   onboardingUrl: string;
 }): Promise<SendEmailResult> {
-  const lang = payload.locale === "fr" || payload.locale === "en" ? payload.locale : "id";
+  const lang =
+    payload.locale === "fr" ||
+    payload.locale === "en" ||
+    payload.locale === "th"
+      ? payload.locale
+      : "id";
   const copy = WELCOME_EMAIL_COPY[lang];
 
   if (process.env.NODE_ENV === "development") {
@@ -991,7 +1028,7 @@ export async function sendWelcomeEmail(payload: {
  * (they are off in test mode and optional in the Dashboard).
  */
 const SUBSCRIPTION_RECEIPT_EMAIL_COPY: Record<
-  "en" | "fr" | "id",
+  "en" | "fr" | "id" | "th",
   {
     subject: (plan: string) => string;
     greeting: (name: string | null | undefined) => string;
@@ -1059,6 +1096,24 @@ const SUBSCRIPTION_RECEIPT_EMAIL_COPY: Record<
     footer: "Anda menerima email ini karena membayar paket Epidom.",
     dateLocale: "id-ID",
   },
+  th: {
+    subject: (plan) => `ใบเสร็จ Epidom ของคุณ: ${plan}`,
+    greeting: (name) => (name?.trim() ? `สวัสดี ${escapeHtml(name.trim())},` : "สวัสดี,"),
+    heading: "ได้รับการชำระเงินแล้ว ขอบคุณ",
+    intro: (plan) => `เราได้รับการชำระเงินของคุณสำหรับแพ็กเกจ <strong>${plan}</strong> แล้ว นี่คือใบเสร็จของคุณ`,
+    labels: {
+      plan: "แพ็กเกจ",
+      amount: "ยอดที่ชำระ",
+      date: "วันที่",
+      period: "ครอบคลุม",
+      invoice: "ใบแจ้งหนี้",
+    },
+    view: "ดูใบแจ้งหนี้",
+    pdf: "ดาวน์โหลด PDF",
+    note: "เก็บอีเมลนี้ไว้เป็นหลักฐาน ราคายังไม่รวมภาษี เว้นแต่ใบแจ้งหนี้ระบุไว้เป็นอย่างอื่น",
+    footer: "คุณได้รับอีเมลนี้เพราะคุณชำระเงินสำหรับแพ็กเกจ Epidom",
+    dateLocale: "th-TH-u-ca-gregory",
+  },
 };
 
 /** What a subscription receipt shows (the webhook builds it from the paid invoice). */
@@ -1082,7 +1137,12 @@ export interface SubscriptionReceiptPayload {
 export async function sendSubscriptionReceiptEmail(
   payload: SubscriptionReceiptPayload
 ): Promise<SendEmailResult> {
-  const lang = payload.locale === "fr" || payload.locale === "en" ? payload.locale : "id";
+  const lang =
+    payload.locale === "fr" ||
+    payload.locale === "en" ||
+    payload.locale === "th"
+      ? payload.locale
+      : "id";
   const copy = SUBSCRIPTION_RECEIPT_EMAIL_COPY[lang];
   const fmt = (date: Date) =>
     date.toLocaleDateString(copy.dateLocale, {
@@ -1503,7 +1563,7 @@ export async function sendSupplierOrderEmail(
  * on a 32-column till roll), so it is not shared with it.
  */
 const RECEIPT_EMAIL_COPY: Record<
-  "en" | "fr" | "id",
+  "en" | "fr" | "id" | "th",
   {
     subject: (orderNumber: string, storeName: string) => string;
     greeting: string;
@@ -1541,6 +1601,15 @@ const RECEIPT_EMAIL_COPY: Record<
     cta: "Lihat struk",
     footer: "Struk ini tetap bisa dibuka lewat tautan di atas.",
   },
+  th: {
+    subject: (orderNumber, storeName) => `ใบเสร็จ ${orderNumber} จาก ${storeName}`,
+    greeting: "สวัสดี,",
+    intro: (storeName) => `ขอบคุณที่มาใช้บริการ <strong>${storeName}</strong>`,
+    totalLabel: "ยอดรวม",
+    orderLabel: "ใบเสร็จ",
+    cta: "ดูใบเสร็จ",
+    footer: "คุณสามารถเปิดดูใบเสร็จนี้ได้ตลอดผ่านลิงก์ด้านบน",
+  },
 };
 
 /**
@@ -1561,7 +1630,7 @@ export async function sendReceiptEmail(payload: {
   /** Already formatted in the store's display currency — never converted here. */
   totalFormatted: string;
   receiptUrl: string;
-  locale?: "en" | "fr" | "id";
+  locale?: "en" | "fr" | "id" | "th";
 }): Promise<SendEmailResult> {
   const copy = RECEIPT_EMAIL_COPY[payload.locale ?? "id"] ?? RECEIPT_EMAIL_COPY.id;
   const subject = copy.subject(payload.orderNumber, payload.storeName);

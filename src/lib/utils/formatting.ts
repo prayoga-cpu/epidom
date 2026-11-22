@@ -3,18 +3,18 @@
  */
 
 import { format, formatDistanceToNow, parseISO } from "date-fns";
-import { enUS, fr, id } from "date-fns/locale";
+import { enUS, fr, id, th } from "date-fns/locale";
 
 // ============================================================================
 // DATE FORMATTING
 // ============================================================================
 
-const locales = { en: enUS, fr: fr, id: id };
+const locales = { en: enUS, fr: fr, id: id, th: th };
 
 /** `Intl` locale tags mirroring `INTL_LOCALES` in `i18n-provider.tsx` — kept
  * as a small local copy rather than importing from there, since that file
  * imports from this one (importing back would be circular). */
-const intlLocaleTags = { en: "en-US", fr: "fr-FR", id: "id-ID" };
+const intlLocaleTags = { en: "en-US", fr: "fr-FR", id: "id-ID", th: "th-TH-u-ca-gregory" };
 
 /**
  * Format a date to a readable string
@@ -22,7 +22,7 @@ const intlLocaleTags = { en: "en-US", fr: "fr-FR", id: "id-ID" };
 export function formatDate(
   date: Date | string | null | undefined,
   formatStr: string = "PP",
-  locale: "en" | "fr" | "id" = "en"
+  locale: "en" | "fr" | "id" | "th" = "en"
 ): string {
   if (!date) return "";
 
@@ -40,7 +40,7 @@ export function formatDate(
  */
 export function formatDateTime(
   date: Date | string | null | undefined,
-  locale: "en" | "fr" | "id" = "en"
+  locale: "en" | "fr" | "id" | "th" = "en"
 ): string {
   return formatDate(date, "PPp", locale);
 }
@@ -50,7 +50,7 @@ export function formatDateTime(
  */
 export function formatDateOnly(
   date: Date | string | null | undefined,
-  locale: "en" | "fr" | "id" = "en"
+  locale: "en" | "fr" | "id" | "th" = "en"
 ): string {
   return formatDate(date, "PP", locale);
 }
@@ -60,7 +60,7 @@ export function formatDateOnly(
  */
 export function formatTimeOnly(
   date: Date | string | null | undefined,
-  locale: "en" | "fr" | "id" = "en"
+  locale: "en" | "fr" | "id" | "th" = "en"
 ): string {
   return formatDate(date, "p", locale);
 }
@@ -70,7 +70,7 @@ export function formatTimeOnly(
  */
 export function formatRelativeTime(
   date: Date | string | null | undefined,
-  locale: "en" | "fr" | "id" = "en"
+  locale: "en" | "fr" | "id" | "th" = "en"
 ): string {
   if (!date) return "";
 
@@ -94,7 +94,7 @@ export function formatRelativeTime(
  */
 export function formatDayDate(
   date: Date | string | null | undefined,
-  locale: "en" | "fr" | "id" = "en"
+  locale: "en" | "fr" | "id" | "th" = "en"
 ): string {
   return formatDate(date, "EEEE, d MMMM", locale);
 }
@@ -109,7 +109,7 @@ export function formatDayDate(
  */
 export function formatDateTimeWithTimezone(
   date: Date | string | null | undefined,
-  locale: "en" | "fr" | "id" = "en"
+  locale: "en" | "fr" | "id" | "th" = "en"
 ): string {
   if (!date) return "";
 

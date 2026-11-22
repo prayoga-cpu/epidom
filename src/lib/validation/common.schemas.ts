@@ -51,8 +51,8 @@ export const optionalEmailSchema = z
 export const urlSchema = z.string().url("Invalid URL format").optional().or(z.literal(""));
 
 // Locale validation
-export const localeSchema = z.enum(["en", "fr", "id"], {
-  errorMap: () => ({ message: "Invalid locale. Must be en, fr, or id" }),
+export const localeSchema = z.enum(["en", "fr", "id", "th"], {
+  errorMap: () => ({ message: "Invalid locale. Must be en, fr, id, or th" }),
 });
 
 // Currency validation

@@ -185,4 +185,4 @@ export function planChoicePrice(choice: PlanChoice, currency: string, locale: Lo
   return `${perMonth}/${PER_MONTH[locale]}`;
 }
 
-const PER_MONTH: Record<Locale, string> = { en: "month", fr: "mois", id: "bulan" };
+const PER_MONTH: Record<Locale, string> = { en: "month", fr: "mois", id: "bulan", th: "เดือน" };

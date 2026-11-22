@@ -14,6 +14,7 @@ import { printReceipt, type ReceiptData } from "@/lib/pwa/thermal-printer";
 import {
   RECEIPT_INTL_LOCALE,
   TICKET_LABELS,
+  printerLocale,
   type ReceiptLocale,
 } from "@/lib/receipts/receipt-labels";
 
@@ -28,7 +29,7 @@ export interface TestPrintOptions {
 }
 
 function buildSampleReceipt({ locale, currency, width }: TestPrintOptions): ReceiptData {
-  const labels = TICKET_LABELS[locale];
+  const labels = TICKET_LABELS[printerLocale(locale)];
   // A rupiah-sized figure on a euro receipt would look like a bug.
   const unitPrice = currency === "IDR" ? 25000 : 4.5;
   const total = unitPrice * 2;

@@ -3,7 +3,7 @@ import type { Locale } from "@/components/lang/i18n-provider";
 /**
  * The blog guide each "What is Epidom used for?" card links to, by kind of
  * business. Slugs live in src/features/marketing/blog/content/posts.industries.*
- * (same topic in all three languages, written for each rather than translated).
+ * (same topic in every language, written for each rather than translated).
  */
 export type IndustryKind = "cafe" | "restaurant" | "bakery" | "bar" | "truck";
 
@@ -28,5 +28,13 @@ export const INDUSTRY_GUIDES: Record<Locale, Record<IndustryKind, string>> = {
     bakery: "toko-roti-hpp-stok-produksi",
     bar: "bar-biaya-bahan-ronde-tutup-kasir",
     truck: "food-truck-menu-singkat-antrean-cepat",
+  },
+  // Thai slugs are the English ones plus "-th": a slug may not exist in two languages.
+  th: {
+    cafe: "run-a-cafe-orders-margin-stock-th",
+    restaurant: "restaurant-table-ordering-kitchen-flow-th",
+    bakery: "bakery-costing-batch-stock-th",
+    bar: "bar-pour-cost-rounds-closing-th",
+    truck: "food-truck-short-menu-fast-line-th",
   },
 };

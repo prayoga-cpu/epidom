@@ -108,6 +108,15 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         ogDescription:
           "Kasir realtime, plus menu dan pesanan online dalam satu link. Halaman toko gratis selamanya.",
       },
+      th: {
+        title: "ระบบ POS สั่งอาหารออนไลน์ สำหรับคาเฟ่และร้านอาหาร — EPIDOM",
+        description: STOREFRONT_ONLINE_PAYMENTS_ENABLED
+          ? "ระบบ POS แบบเรียลไทม์ พร้อมเมนู ออเดอร์ออนไลน์ และการชำระเงินในลิงก์เดียว หน้าร้านออนไลน์ฟรีตลอดไป POS ทดลองใช้ฟรี 14 วัน"
+          : "ระบบ POS แบบเรียลไทม์ พร้อมเมนูและออเดอร์ออนไลน์ในลิงก์เดียว หน้าร้านออนไลน์ฟรีตลอดไป POS ทดลองใช้ฟรี 14 วัน สำหรับคาเฟ่และร้านอาหาร",
+        ogTitle: "Epidom — ระบบ POS เรียลไทม์และสั่งอาหารออนไลน์",
+        ogDescription:
+          "ระบบ POS แบบเรียลไทม์ พร้อมเมนูและออเดอร์ออนไลน์ในลิงก์เดียว หน้าร้านออนไลน์ฟรีตลอดไป",
+      },
     },
   },
 
@@ -148,6 +157,14 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         ogDescription:
           "Mulai gratis, berkembang sesuai kebutuhan. Paket Epidom untuk kafe, warung, dan restoran.",
       },
+      th: {
+        title: "ราคา: POS เริ่มต้น {price}/เดือน หน้าร้านฟรี — EPIDOM",
+        description:
+          "เริ่มฟรีแล้วค่อยขยายตามที่ต้องการ หน้าร้านออนไลน์ฟรีตลอดไป และ POS เริ่มต้น {price}/เดือนหลังทดลองใช้ฟรี 14 วัน แพ็กเกจสำหรับคาเฟ่ เบเกอรี่ และร้านอาหาร",
+        ogTitle: "ราคา Epidom — เริ่มต้นฟรี",
+        ogDescription:
+          "เริ่มฟรีแล้วค่อยขยายตามที่ต้องการ แพ็กเกจ Epidom สำหรับคาเฟ่ เบเกอรี่ และร้านอาหาร",
+      },
     },
   },
 
@@ -179,6 +196,14 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         ogDescription:
           "Dibuat oleh tim kecil Prionation dari Bali dan Paris. Satu link untuk menu, pesanan, dan pembayaran Anda.",
       },
+      th: {
+        title: "เกี่ยวกับ Epidom — หน้าร้านออนไลน์และ POS สำหรับร้านอาหาร",
+        description:
+          "Epidom สร้างโดยทีมผลิตภัณฑ์เล็กๆ ของ Prionation ที่ทำงานจากบาหลีและปารีสร่วมกับผู้ประกอบการร้านอาหารและเครื่องดื่ม ลิงก์เดียวสำหรับเมนู ออเดอร์ และการชำระเงิน",
+        ogTitle: "เกี่ยวกับ Epidom",
+        ogDescription:
+          "สร้างโดยทีมเล็กๆ ของ Prionation จากบาหลีและปารีส ลิงก์เดียวสำหรับเมนู ออเดอร์ และการชำระเงิน",
+      },
     },
   },
 
@@ -205,6 +230,13 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
           "Hubungi tim Epidom lewat WhatsApp atau email. Kami siap membantu bisnis F&B untuk memulai, upgrade paket, atau sekadar bertanya.",
         ogTitle: "Hubungi Epidom",
         ogDescription: "Hubungi tim Epidom lewat WhatsApp atau email.",
+      },
+      th: {
+        title: "ติดต่อเรา — EPIDOM",
+        description:
+          "ส่งข้อความถึงทีม Epidom ทาง WhatsApp หรืออีเมล เราพร้อมช่วยธุรกิจร้านอาหารและเครื่องดื่มเริ่มต้นใช้งาน อัปเกรดแพ็กเกจ หรือสอบถามข้อสงสัย",
+        ogTitle: "ติดต่อ Epidom",
+        ogDescription: "ติดต่อทีม Epidom ทาง WhatsApp หรืออีเมล",
       },
     },
   },
@@ -247,6 +279,14 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         ogDescription:
           "Dari halaman menu gratis hingga kasir POS, layar dapur, dan dasbor toko. Satu platform untuk kafe, warung, dan restoran.",
       },
+      th: {
+        title: "ผลิตภัณฑ์: POS จอครัว สต็อก และพนักงาน — EPIDOM",
+        description:
+          "ทุกอย่างที่ Epidom มีให้: หน้าเมนูฟรี POS จอแสดงออเดอร์ในครัว (KDS) สต็อกและต้นทุนสูตร ตารางงานพนักงาน รายงานการเงิน และหลายสาขา",
+        ogTitle: "ผลิตภัณฑ์ Epidom — POS ครัว และแดชบอร์ดร้าน",
+        ogDescription:
+          "ตั้งแต่หน้าเมนูฟรีไปจนถึง POS จอครัว และแดชบอร์ดร้าน แพลตฟอร์มเดียวสำหรับคาเฟ่ เบเกอรี่ และร้านอาหาร",
+      },
     },
   },
 
@@ -268,6 +308,11 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         title: "Mitra — EPIDOM",
         description:
           "Bermitra dengan Epidom. Kemitraan pemasok, integrasi, reseller, dan program white-label.",
+      },
+      th: {
+        title: "พาร์ตเนอร์ — EPIDOM",
+        description:
+          "ร่วมเป็นพาร์ตเนอร์กับ Epidom ทั้งความร่วมมือกับซัพพลายเออร์ การเชื่อมต่อระบบ ตัวแทนจำหน่าย และโปรแกรมไวท์เลเบล",
       },
     },
   },
@@ -291,6 +336,11 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         description:
           "Epidom dibuat oleh tim produk kecil dan fokus di Prionation. Belum ada lowongan saat ini, tetapi kami senang mendengar dari orang yang ingin bergabung.",
       },
+      th: {
+        title: "ร่วมงานกับเรา — EPIDOM",
+        description:
+          "Epidom สร้างโดยทีมผลิตภัณฑ์เล็กๆ ที่มุ่งมั่นของ Prionation ขณะนี้ยังไม่มีตำแหน่งงานว่าง แต่เรายินดีรับฟังทุกคนที่อยากร่วมทีม",
+      },
     },
   },
 
@@ -313,6 +363,11 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         description:
           "Media kit dan kontak pers untuk jurnalis yang meliput Epidom: fakta dasar, aset atas permintaan, dan cara menghubungi kami.",
       },
+      th: {
+        title: "ข่าวสื่อ — EPIDOM",
+        description:
+          "สื่อมวลชนและช่องทางติดต่อสำหรับนักข่าวที่เขียนถึง Epidom: ข้อมูลพื้นฐาน ไฟล์ภาพตามคำขอ และวิธีติดต่อเรา",
+      },
     },
   },
 
@@ -331,6 +386,10 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
       id: {
         title: "Pembaruan — EPIDOM",
         description: "Yang baru di Epidom: pembaruan produk, perbaikan, dan peningkatan.",
+      },
+      th: {
+        title: "มีอะไรใหม่ — EPIDOM",
+        description: "สิ่งใหม่ใน Epidom: อัปเดตผลิตภัณฑ์ การแก้ไข และการปรับปรุง",
       },
     },
   },
@@ -352,6 +411,11 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         title: "Alternatif Moka, Majoo, Pawoon, Qasir & ESB — EPIDOM",
         description:
           "Perbandingan faktual, bersumber dari situs resmi tiap aplikasi: Moka, Majoo, Pawoon, Qasir, Olsera, ESB, Kasir Pintar, dan Klikit.",
+      },
+      th: {
+        title: "Epidom เทียบกับ Moka, Zelty, Lightspeed และอื่นๆ — EPIDOM",
+        description:
+          "เปรียบเทียบตามข้อเท็จจริง อ้างอิงจากเว็บไซต์ของแต่ละระบบ: Moka, Majoo, Pawoon, Qasir, Olsera, ESB, Zelty, L'Addition, Lightspeed, Innovorder และอื่นๆ",
       },
     },
   },
@@ -384,6 +448,11 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         description:
           "Setiap pesanan lewat aplikasi pengantaran kena komisi; toko online milik Anda tidak. Bandingkan biaya GoFood, GrabFood, ShopeeFood dengan pemesanan Epidom.",
       },
+      th: {
+        title: "เปรียบเทียบค่าคอมมิชชันเดลิเวอรี GoFood, GrabFood — EPIDOM",
+        description:
+          "ทุกออเดอร์จากแอปเดลิเวอรีเสียค่าคอมมิชชัน แต่หน้าร้านของคุณไม่เสีย เทียบค่าธรรมเนียม GoFood, GrabFood, ShopeeFood กับระบบสั่งอาหารของ Epidom",
+      },
     },
   },
 
@@ -413,6 +482,13 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         ogTitle: "Bangun Epidom Versi Kamu",
         ogDescription: "Epidom dibangun oleh Prionation. Ngobrol sama tim yang bangun ini.",
       },
+      th: {
+        title: "สร้าง Epidom ของคุณเอง — EPIDOM × Prionation",
+        description:
+          "Epidom เป็นผลงานของ Prionation หากคุณกำลังสร้าง SaaS ที่ใช้งานจริง มาคุยกับทีมที่สร้างระบบนี้ ประจำที่ Canggu บาหลี",
+        ogTitle: "สร้าง Epidom ของคุณเอง",
+        ogDescription: "Epidom เป็นผลงานของ Prionation มาคุยกับทีมที่สร้างระบบนี้",
+      },
     },
   },
 
@@ -435,6 +511,11 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         description:
           "Panduan dan tips untuk pemilik warung, kafe, dan restoran: sistem kasir digital, menu QR code gratis, dan komisi GoFood serta GrabFood.",
       },
+      th: {
+        title: "บล็อก: คู่มือสำหรับคาเฟ่และร้านอาหาร — EPIDOM",
+        description:
+          "คู่มือสำหรับเจ้าของคาเฟ่และร้านอาหาร: เมนู QR ฟรี ค่าคอมมิชชันแอปเดลิเวอรี และการบริหารธุรกิจร้านอาหารให้ชาญฉลาดขึ้น",
+      },
     },
   },
 
@@ -455,6 +536,11 @@ export const PAGES: Record<MarketingMetaPage, PageDefinition> = {
         title: "Dokumentasi & Pusat Bantuan — EPIDOM",
         description:
           "Panduan langkah demi langkah untuk menyiapkan toko online, menu, pesanan, dan kasir POS Anda.",
+      },
+      th: {
+        title: "เอกสารและศูนย์ช่วยเหลือ — EPIDOM",
+        description:
+          "คู่มือทีละขั้นตอนสำหรับตั้งค่าหน้าร้านออนไลน์ เมนู ออเดอร์ และเครื่องคิดเงิน POS ของคุณ",
       },
     },
   },

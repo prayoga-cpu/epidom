@@ -39,7 +39,7 @@ export default async function ProfilePage() {
     email: profileDto.email,
     image: profileDto.image,
     phone: profileDto.phone,
-    locale: profileDto.locale as "en" | "fr" | "id" | undefined,
+    locale: profileDto.locale as "en" | "fr" | "id" | "th" | undefined,
     timezone: profileDto.timezone,
     defaultLanding: profileDto.defaultLanding,
     createdAt: profileDto.createdAt,

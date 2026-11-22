@@ -18,7 +18,7 @@ import type { Locale } from "@/components/lang/i18n-provider";
  * matching this table, so a price change is: edit here, then let the test list
  * every string that has to follow.
  *
- * Which currency each language shows (fr -> EUR, en -> USD, id -> IDR) is a
+ * Which currency each language shows (fr -> EUR, en -> USD, id -> IDR, th -> USD) is a
  * marketing decision, not a billing one: whatever Stripe Checkout charges is
  * set by the Stripe Price objects behind the STRIPE_PRICE_ID env vars.
  */
@@ -49,6 +49,9 @@ export const LOCALE_PRICE_CURRENCY: Record<Locale, PriceCurrency> = {
   fr: "EUR",
   en: "USD",
   id: "IDR",
+  // No THB Stripe Price exists, so Thai visitors are quoted the USD one
+  // (the same Price the English site charges).
+  th: "USD",
 };
 
 /** Monthly IDR price per plan: the base the billing dashboard converts from. */

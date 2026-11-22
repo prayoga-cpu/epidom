@@ -32,6 +32,13 @@ const COPY: Record<
     ctaBody: "No card. Your first link is free forever.",
     ctaButton: "Start free →",
   },
+  th: {
+    back: "← กลับไปหน้าบทความ",
+    related: "เครื่องมือและคู่มือ",
+    ctaTitle: "พร้อมลองใช้แล้วหรือยัง",
+    ctaBody: "ไม่ต้องใช้บัตร ลิงก์แรกของคุณใช้ฟรีตลอดไป",
+    ctaButton: "เริ่มใช้ฟรี →",
+  },
 };
 
 export function BlogPostView({ locale, post }: { locale: Locale; post: BlogPost }) {

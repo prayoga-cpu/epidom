@@ -38,7 +38,10 @@ export function resolveStorefrontLocale({
 }): Locale {
   if (currency === "IDR") return "id";
   if (currency === "EUR") return "fr";
-  return businessLocale === "fr" || businessLocale === "en" ? businessLocale : "en";
+  if (currency === "THB") return "th";
+  return businessLocale === "fr" || businessLocale === "en" || businessLocale === "th"
+    ? businessLocale
+    : "en";
 }
 
 /** The language for a storefront as getPublicStorefront returns it. */
@@ -52,7 +55,7 @@ export function storefrontLocaleOf(storefront: {
 }
 
 /** `Intl` tag for formatting a storefront's prices in its own language. */
-const PRICE_LOCALE: Record<Locale, string> = { fr: "fr-FR", id: "id-ID", en: "en-US" };
+const PRICE_LOCALE: Record<Locale, string> = { fr: "fr-FR", id: "id-ID", en: "en-US", th: "th-TH" };
 
 /**
  * Rupiah always reads "Rp 25.000", as on the menu page (formatCurrency's

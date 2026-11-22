@@ -102,7 +102,7 @@ function alreadyCompletedError(): AppError {
 // Small helpers
 // ============================================================================
 
-const LOCALES: readonly Locale[] = ["en", "fr", "id"];
+const LOCALES: readonly Locale[] = ["en", "fr", "id", "th"];
 
 function asLocale(value: string | null | undefined): Locale | null {
   return value && (LOCALES as readonly string[]).includes(value) ? (value as Locale) : null;
@@ -196,6 +196,7 @@ export function publicStorefrontUrl(slug: string): string {
 export const DEFAULT_MENU_CATEGORY_NAME: Record<Locale, string> = {
   fr: "Nos incontournables",
   id: "Rekomendasi",
+  th: "เมนูแนะนำ",
   en: "Recommendations",
 };
 

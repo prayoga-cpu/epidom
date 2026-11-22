@@ -60,6 +60,15 @@ export const LANDING_GROUPS = {
 
 export type LandingGroup = keyof typeof LANDING_GROUPS;
 
+/**
+ * The slug of `group`'s landing page in `locale`, or undefined when the group
+ * has no page in that language (Thai has none: these pages are per-market SEO
+ * content, not translations). Callers fall back to a page that exists.
+ */
+export function landingSlugIn(group: LandingGroup, locale: Locale): string | undefined {
+  return (LANDING_GROUPS[group] as Partial<Record<Locale, string>>)[locale];
+}
+
 /** slug → { locale, group } for every landing page. */
 export const LANDING_SLUGS: ReadonlyMap<string, { locale: Locale; group: LandingGroup }> = new Map(
   (

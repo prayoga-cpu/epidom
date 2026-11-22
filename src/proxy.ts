@@ -222,8 +222,8 @@ function isFromSignedOutOnlyPage(req: NextRequest): boolean {
 function preferredLocaleForUnprefixedVisit(req: NextRequest): Locale {
   if (isLikelyBot(req.headers.get("user-agent"))) return DEFAULT_LOCALE;
   const explicitChoice = req.cookies.get(LOCALE_PREF_COOKIE)?.value;
-  if (explicitChoice === "id" || explicitChoice === "en") return explicitChoice;
-  if (explicitChoice === DEFAULT_LOCALE) return DEFAULT_LOCALE;
+  const chosen = LOCALES.find((l) => l === explicitChoice);
+  if (chosen) return chosen;
   return detectLocaleFromAcceptLanguage(req.headers.get("accept-language"));
 }
 
@@ -354,7 +354,7 @@ async function routeRequest(req: NextRequest): Promise<NextResponse> {
   // Marketing pages are served from src/app/(marketing)/m/[locale]/ (static,
   // the language in the path). That internal address is never a public one:
   // a direct visit goes to the page's real URL.
-  const internal = /^\/m\/(fr|id|en)(\/.*)?$/.exec(path);
+  const internal = new RegExp(`^/m/(${LOCALES.join("|")})(/.*)?$`).exec(path);
   if (internal) {
     const target = getLocalizedPath(internal[2] || "/", internal[1] as Locale);
     return NextResponse.redirect(new URL(target, req.url), 308);

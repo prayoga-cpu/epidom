@@ -11,7 +11,7 @@ import { useGuideState } from "@/features/guide/hooks/use-guide-state";
 import { useSubscriptionStatus } from "@/features/stores/stores/hooks/use-subscription-status";
 import { trackEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
-import { LANDING_GROUPS } from "@/features/marketing/landing/registry";
+import { landingSlugIn } from "@/features/marketing/landing/registry";
 import { planHasFeature, upgradeHrefFor } from "@/lib/plans/entitlements";
 import { cn } from "@/lib/utils";
 import { useConnectedApps } from "../hooks/use-connected-apps";
@@ -93,7 +93,7 @@ function PromoCard({
 
   const example = t(EXAMPLE_KEYS[surface]);
   const body = t(canRead ? "claudeConnector.promo.bodyTry" : "claudeConnector.promo.bodyUpgrade");
-  const slug = LANDING_GROUPS["claude-connector"][locale];
+  const slug = landingSlugIn("claude-connector", locale);
   const ctaHref = canRead ? `/store/${storeId}/profile#claude` : upgradeHrefFor("OPERATIONS");
 
   return (

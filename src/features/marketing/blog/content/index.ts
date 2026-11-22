@@ -6,12 +6,15 @@ import { enPosts } from "./posts.en";
 import { enIndustryPosts } from "./posts.industries.en";
 import { frIndustryPosts } from "./posts.industries.fr";
 import { idIndustryPosts } from "./posts.industries.id";
+import { thPosts } from "./posts.th";
+import { thIndustryPosts } from "./posts.industries.th";
 
 export type { BlogAuthor, BlogPost } from "./types";
 
 const POSTS_BY_LOCALE: Record<Locale, BlogPost[]> = {
   fr: [...frPosts, ...frIndustryPosts],
   id: [...idPosts, ...idIndustryPosts],
+  th: [...thPosts, ...thIndustryPosts],
   en: [...enPosts, ...enIndustryPosts],
 };
 

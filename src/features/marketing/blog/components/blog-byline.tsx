@@ -6,11 +6,12 @@ const COPY: Record<Locale, { team: string; readLabel: (m: number) => string }> =
   fr: { team: "Équipe Epidom", readLabel: (m) => `${m} min de lecture` },
   id: { team: "Tim Epidom", readLabel: (m) => `${m} menit baca` },
   en: { team: "Epidom Team", readLabel: (m) => `${m} min read` },
+  th: { team: "ทีม Epidom", readLabel: (m) => `อ่าน ${m} นาที` },
 };
 
 function formatDate(iso: string, locale: Locale): string {
   const d = new Date(iso);
-  return d.toLocaleDateString(locale === "id" ? "id-ID" : locale === "fr" ? "fr-FR" : "en-US", {
+  return d.toLocaleDateString(locale === "id" ? "id-ID" : locale === "fr" ? "fr-FR" : locale === "th" ? "th-TH-u-ca-gregory" : "en-US", {
     // Post dates are date-only ISO strings (parsed as UTC midnight); formatting in UTC keeps the day stable in any server timezone.
     timeZone: "UTC",
     year: "numeric",

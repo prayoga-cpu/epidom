@@ -4,7 +4,7 @@ export interface ProfileData {
   email: string;
   image: string | null;
   phone: string | null;
-  locale: "en" | "fr" | "id" | undefined;
+  locale: "en" | "fr" | "id" | "th" | undefined;
   timezone: string;
   defaultLanding: string;
   createdAt: Date;

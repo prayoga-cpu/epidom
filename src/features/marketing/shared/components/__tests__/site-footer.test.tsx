@@ -8,7 +8,7 @@ import {
   whatsappHref,
 } from "@/lib/constants/contact";
 
-const h = vi.hoisted(() => ({ locale: "fr" as "fr" | "id" | "en" }));
+const h = vi.hoisted(() => ({ locale: "fr" as "fr" | "id" | "th" | "en" }));
 
 vi.mock("@/components/lang/i18n-provider", () => ({
   useI18n: () => ({ t: (key: string) => key, locale: h.locale }),
@@ -107,7 +107,7 @@ describe("SiteFooter Manage cookies control", () => {
 });
 
 describe("SiteFooter language links", () => {
-  it.each(["fr", "id", "en"] as const)(
+  it.each(["fr", "id", "th", "en"] as const)(
     "%s: links every language's home page with a plain, crawlable <a>",
     (locale) => {
       h.locale = locale;
@@ -117,6 +117,7 @@ describe("SiteFooter language links", () => {
       expect(links.map((a) => [a.getAttribute("href"), a.getAttribute("hreflang")])).toEqual([
         ["/", "fr"],
         ["/id", "id"],
+        ["/th", "th"],
         ["/en", "en"],
       ]);
       expect(nav.querySelector('[aria-current="true"]')?.getAttribute("hreflang")).toBe(locale);

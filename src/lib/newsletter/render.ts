@@ -16,7 +16,7 @@ export type NewsletterContentMode = "rich" | "html";
 /** Where pasted HTML wants the reader's unsubscribe link. */
 export const UNSUBSCRIBE_PLACEHOLDER = "{{unsubscribe_url}}";
 
-type FooterLocale = "fr" | "en" | "id";
+type FooterLocale = "fr" | "en" | "id" | "th";
 
 const FOOTER_COPY: Record<FooterLocale, { reason: string; unsubscribe: string }> = {
   fr: {
@@ -33,12 +33,16 @@ const FOOTER_COPY: Record<FooterLocale, { reason: string; unsubscribe: string }>
     reason: "Anda menerima email ini karena mendaftar di epidom.fr atau memiliki akun Epidom.",
     unsubscribe: "Berhenti berlangganan",
   },
+  th: {
+    reason: "คุณได้รับอีเมลนี้เพราะคุณสมัครไว้ที่ epidom.fr หรือมีบัญชี Epidom",
+    unsubscribe: "ยกเลิกการรับอีเมล",
+  },
 };
 
-/** The language a recipient's footer (and unsubscribe page) is in: fr, id, else en. */
+/** The language a recipient's footer (and unsubscribe page) is in: fr, id, th, else en. */
 export function newsletterLocale(locale: string | null | undefined): FooterLocale {
   const base = (locale ?? "").slice(0, 2).toLowerCase();
-  return base === "fr" || base === "id" ? base : "en";
+  return base === "fr" || base === "id" || base === "th" ? base : "en";
 }
 
 const FONT_STACK =

@@ -47,7 +47,7 @@ import { useCurrentStore } from "./hooks/use-current-store";
 import { apiClient } from "@/lib/api/client";
 import type { NotificationItem } from "@/app/api/stores/[id]/notifications/route";
 import { formatDistanceToNow } from "date-fns";
-import { id, enUS, fr } from "date-fns/locale";
+import { id, enUS, fr, th } from "date-fns/locale";
 import { useI18n } from "@/components/lang/i18n-provider";
 import { APP_VERSION } from "@/lib/version";
 import { getLastSeenVersion, setLastSeenVersion } from "@/lib/last-seen-version";
@@ -163,7 +163,7 @@ export function NotificationBell({ variant = "topbar" }: NotificationBellProps =
 
   const hasUnseen = seenVersion !== APP_VERSION;
 
-  const dateLocaleMap = { en: enUS, id, fr };
+  const dateLocaleMap = { en: enUS, id, fr, th };
   const dateLocale = dateLocaleMap[locale] ?? id;
 
   const { data } = useQuery({

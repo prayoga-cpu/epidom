@@ -6,19 +6,22 @@ const PAGES: LegalPage[] = ["privacy", "cookie-policy", "gdpr", "terms", "refund
 
 describe("legal page metadata", () => {
   it.each(PAGES)(
-    "%s: canonical points at the locale that is served, hreflang lists all three",
+    "%s: canonical points at the locale that is served, hreflang lists every language",
     (page) => {
       const fr = buildLegalMetadata(page, "fr");
       const id = buildLegalMetadata(page, "id");
       const en = buildLegalMetadata(page, "en");
+      const th = buildLegalMetadata(page, "th");
 
       expect(fr.alternates?.canonical).toBe(`https://epidom.fr/${page}`);
       expect(id.alternates?.canonical).toBe(`https://epidom.fr/id/${page}`);
       expect(en.alternates?.canonical).toBe(`https://epidom.fr/en/${page}`);
+      expect(th.alternates?.canonical).toBe(`https://epidom.fr/th/${page}`);
 
       expect(id.alternates?.languages).toEqual({
         fr: `https://epidom.fr/${page}`,
         id: `https://epidom.fr/id/${page}`,
+        th: `https://epidom.fr/th/${page}`,
         en: `https://epidom.fr/en/${page}`,
         "x-default": `https://epidom.fr/${page}`,
       });
@@ -26,7 +29,7 @@ describe("legal page metadata", () => {
   );
 
   it.each(PAGES)("%s: the title and description are in the visitor's language", (page) => {
-    const titles = (["fr", "id", "en"] as const).map((l) => {
+    const titles = (["fr", "id", "th", "en"] as const).map((l) => {
       const m = buildLegalMetadata(page, l);
       expect(m.description).toBeTruthy();
       return (m.title as { default: string }).default;

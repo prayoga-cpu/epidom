@@ -1,6 +1,6 @@
 import { en } from "./en";
 
-export type Lang = "en" | "fr" | "id";
+export type Lang = "en" | "fr" | "id" | "th";
 
 /**
  * Locale dictionaries are ~225KB of source EACH. Importing all three from one
@@ -15,7 +15,7 @@ export type Lang = "en" | "fr" | "id";
  * start at "en" and only switch after hydration — and it is the target of
  * t()'s missing-key fallback, so it must never be async.
  *
- * `fr` and `id` are code-split behind `loadLocale()` and fetched only by a
+ * `fr`, `id` and `th` are code-split behind `loadLocale()` and fetched only by a
  * visitor who actually reads them. Nothing is removed: every key in every
  * language is still shipped, just not to people who can't read it.
  *
@@ -43,6 +43,12 @@ export function isLocaleLoaded(locale: Lang): boolean {
   return registry.has(locale);
 }
 
+const LOADERS: Record<Exclude<Lang, "en">, () => Promise<unknown>> = {
+  fr: () => import("./fr").then((m) => m.fr),
+  id: () => import("./id").then((m) => m.id),
+  th: () => import("./th").then((m) => m.th),
+};
+
 /** In-flight loads, so N components asking at once share one network request. */
 const pending = new Map<Lang, Promise<unknown>>();
 
@@ -58,12 +64,14 @@ export function loadLocale(locale: Lang): Promise<unknown> {
   const inFlight = pending.get(locale);
   if (inFlight) return inFlight;
 
-  // Explicit per-locale branches, not `import(\`./${locale}\`)`: a template
+  // Explicit per-locale loaders, not `import(\`./${locale}\`)`: a template
   // literal makes the bundler emit a context module containing every file in
-  // the directory, which would defeat the whole point.
-  const load = (locale === "fr" ? import("./fr") : import("./id"))
-    .then((mod) => {
-      const messages = locale === "fr" ? (mod as { fr: unknown }).fr : (mod as { id: unknown }).id;
+  // the directory, which would defeat the whole point. A Record keyed by every
+  // non-English Lang (rather than a two-way ternary) makes adding a language
+  // without a loader a compile error instead of silently serving another
+  // language's dictionary.
+  const load = LOADERS[locale as Exclude<Lang, "en">]()
+    .then((messages) => {
       registry.set(locale, messages);
       return messages;
     })

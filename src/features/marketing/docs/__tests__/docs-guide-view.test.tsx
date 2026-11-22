@@ -9,7 +9,7 @@ import { DocsGuideView } from "@/features/marketing/docs/components/docs-guide-v
 import { DocsList } from "@/features/marketing/docs/components/docs-list";
 import { getDocsGuides, getDocsGuide, getAllDocsParams } from "@/features/marketing/docs/content";
 
-const LOCALES: Locale[] = ["fr", "id", "en"];
+const LOCALES: Locale[] = ["fr", "id", "th", "en"];
 
 // Matched with a plain space: testing-library normalises the nbsp in the fr title
 // (its exact character is asserted separately below).
@@ -17,11 +17,13 @@ const CTA_TITLE: Record<Locale, string> = {
   fr: "Prêt à essayer vous-même ?",
   id: "Siap mencoba sendiri?",
   en: "Ready to try this yourself?",
+  th: "พร้อมลองทำด้วยตัวเองแล้วหรือยัง",
 };
 const CTA_BUTTON: Record<Locale, string> = {
   fr: "Démarrer gratuitement →",
   id: "Mulai gratis →",
   en: "Start free →",
+  th: "เริ่มใช้ฟรี →",
 };
 
 /** Click an anchor without letting jsdom attempt (and log) a real navigation. */

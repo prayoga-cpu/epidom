@@ -2,7 +2,7 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { onlinePaymentCopyKey } from "@/config/storefront-ordering.config";
-import { LANDING_GROUPS } from "@/features/marketing/landing/registry";
+import { landingSlugIn } from "@/features/marketing/landing/registry";
 import {
   LOCALE_PRICE_CURRENCY,
   formatPlanPrice,
@@ -68,17 +68,17 @@ export function SwitcherFaqSection() {
   const links: Partial<Record<number, { href: string; label: string }>> = {
     7: { href: getLocalizedPath("/pricing", locale), label: t("redesign.landing.faq.linkPricing") },
     3: {
-      href: pageHref(LANDING_GROUPS.offline[locale]),
+      href: pageHref(landingSlugIn("offline", locale)),
       label: t("redesign.landing.faq.linkOffline"),
     },
     10: {
-      href: pageHref(LANDING_GROUPS["claude-connector"][locale]),
+      href: pageHref(landingSlugIn("claude-connector", locale)),
       label: t("redesign.landing.faq.linkClaude"),
     },
   };
 
   const rows: { n: number; id: string }[] = [...ORDER];
-  if (NF525_SETTLED && locale !== "id") rows.push({ n: 6, id: "nf525" });
+  if (NF525_SETTLED && (locale === "fr" || locale === "en")) rows.push({ n: 6, id: "nf525" });
 
   const items: FaqItem[] = rows.map(({ n, id }) => ({
     id,

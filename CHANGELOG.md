@@ -9,6 +9,16 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.49.0] - 2026-11-22 · feat
+
+- **Epidom now speaks Thai (ภาษาไทย).** Pick ไทย in the language menu on the website, in the dashboard, in the till and on the public ordering page; a visitor whose browser is set to Thai is taken to `/th` automatically (search engines still get the French site first). Every screen of the app is translated (more than 8,400 texts), and so are the home, pricing, products, about, contact and legal pages, the blog (9 articles, including the five kind-of-business guides) and the docs (10 guides).
+- **Thai receipts.** The on-screen, PDF, e-mailed and WhatsApp receipts, the shift report and the order tickets read in Thai. The paper receipt from a thermal printer keeps English labels for a Thai store, because those printers cannot print Thai letters yet.
+- **Thai e-mails and alerts.** The trial reminder, welcome, subscription and receipt e-mails, the newsletter footer and the new-order push alert are written in Thai, and the newsletter tool can send to Thai-speaking contacts.
+- **Dates and prices in Thai.** Dates use the usual calendar year (2026, not the Buddhist-era 2569). The Thai site quotes the USD plan prices, since there is no THB price in Stripe yet.
+- **Thai link previews.** Social-share images now carry Thai titles (the image font gained Thai letters).
+- Not in Thai yet, on purpose: the per-market landing pages, the competitor comparison pages and the sales pages. They are written for one market each, so a Thai set needs its own research and keywords. Thai visitors reach the equivalent shared pages instead.
+- A new test, `src/locales/__tests__/th-parity.test.ts`, fails the build when a text exists in English, French or Indonesian but not in Thai, or when a placeholder or number was lost in translation.
+
 ## [3.48.3] - 2026-11-21 · infra
 
 - **Production's database now lives in the Epidom Vercel team, and the dev copy follows it.** The database moved to a paid Neon plan after the Free-plan compute quota ran out. The nightly dev-branch reset, Preview deployments and the local setup now point at the new project's `dev` branch, so previews stay isolated from production. The production database also autoscales between 0.25 and 1 CU instead of holding a fixed 1 CU, which keeps the idle cost down.

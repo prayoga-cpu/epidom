@@ -69,6 +69,21 @@ const CONTENT: Record<
     payLabel: "Pay Card →",
     orderLabel: "Order →",
   },
+  th: {
+    shopName: "คาเฟ่ของคุณ",
+    tagline: "กาแฟพิเศษ · เมืองของคุณ",
+    categories: ["กาแฟ", "ชา", "เบเกอรี", "ของว่าง"],
+    items: [
+      { n: "ลาเต้วานิลลา", d: "ต้นกำเนิดเดียว · เลือกนมโอ๊ตได้", p: "฿85", c: "#7a4f2f" },
+      { n: "มัทฉะเย็น", d: "เกรดพิธีชงชา", p: "฿95", c: "#79925a" },
+      { n: "ครอฟเฟิลออริจินัล", d: "เนยสูตรร้าน · เมเปิล", p: "฿69", c: "#c69a5e" },
+      { n: "คุกกี้ช็อกโกแลต", d: "ดาร์กช็อกโกแลต 70%", p: "฿55", c: "#5a3a2a" },
+    ],
+    cartLabel: "2 รายการ",
+    cartTotal: "฿180",
+    payLabel: "ชำระ PromptPay →",
+    orderLabel: "สั่งเลย →",
+  },
 };
 
 export function PhoneMenu() {

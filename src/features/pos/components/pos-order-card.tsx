@@ -9,7 +9,7 @@ import type { PosOrderDisplay } from "../types/pos.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
-import { id, enUS, fr } from "date-fns/locale";
+import { id, enUS, fr, th } from "date-fns/locale";
 import { useOrderQueueActions } from "../hooks/use-order-queue-actions";
 import { PosOrderPrimaryAction } from "./pos-order-primary-action";
 import {
@@ -39,7 +39,7 @@ export function PosOrderCard({ order, storeId, onUpdateStatus }: PosOrderCardPro
     onUpdateStatus
   );
 
-  const dateLocaleMap = { en: enUS, id, fr };
+  const dateLocaleMap = { en: enUS, id, fr, th };
   const dateLocale = dateLocaleMap[locale] ?? id;
 
   const timeAgo = formatDistanceToNow(new Date(order.createdAt), {

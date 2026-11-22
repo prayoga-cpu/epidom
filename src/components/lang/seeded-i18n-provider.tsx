@@ -15,7 +15,7 @@ import type { Locale } from "./i18n-provider";
  * build put every language's chunk in the page's script tags.) Switching
  * language later still works: I18nProvider loads the other chunk on demand.
  *
- * - Marketing site: the URL decides the language (`/`, `/id/*`, `/en/*`), so
+ * - Marketing site: the URL decides the language (`/`, `/id/*`, `/th/*`, `/en/*`), so
  *   it is fixed (`initialLocale`).
  * - Public storefront: the server renders the store's own language, then the
  *   visitor's saved choice or browser language takes over after hydration,
@@ -26,6 +26,9 @@ const FrenchSeededI18nProvider = dynamic(() =>
 );
 const IndonesianSeededI18nProvider = dynamic(() =>
   import("./seeded-i18n-id").then((m) => m.IndonesianSeededI18nProvider)
+);
+const ThaiSeededI18nProvider = dynamic(() =>
+  import("./seeded-i18n-th").then((m) => m.ThaiSeededI18nProvider)
 );
 const EnglishSeededI18nProvider = dynamic(() =>
   import("./seeded-i18n-en").then((m) => m.EnglishSeededI18nProvider)
@@ -45,6 +48,8 @@ export function SeededI18nProvider({
       ? FrenchSeededI18nProvider
       : locale === "id"
         ? IndonesianSeededI18nProvider
-        : EnglishSeededI18nProvider;
+        : locale === "th"
+          ? ThaiSeededI18nProvider
+          : EnglishSeededI18nProvider;
   return <Provider followVisitorPreference={followVisitorPreference}>{children}</Provider>;
 }

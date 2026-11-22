@@ -22,6 +22,10 @@ const COPY: Record<LegalPage, Record<Locale, { title: string; description: strin
       title: "Kebijakan Privasi — EPIDOM",
       description: "Cara Epidom mengumpulkan, menggunakan, dan melindungi data Anda.",
     },
+    th: {
+      title: "นโยบายความเป็นส่วนตัว — EPIDOM",
+      description: "วิธีที่ Epidom เก็บรวบรวม ใช้ และปกป้องข้อมูลของคุณ",
+    },
   },
   "cookie-policy": {
     en: {
@@ -38,6 +42,11 @@ const COPY: Record<LegalPage, Record<Locale, { title: string; description: strin
       title: "Kebijakan Cookie — EPIDOM",
       description:
         "Apa yang disimpan Epidom di browser Anda, alat pihak ketiga yang dapat berjalan di situs, dan cara mengendalikannya.",
+    },
+    th: {
+      title: "นโยบายคุกกี้ — EPIDOM",
+      description:
+        "สิ่งที่ Epidom จัดเก็บในเบราว์เซอร์ของคุณ เครื่องมือของบุคคลที่สามที่อาจทำงานบนเว็บไซต์ และวิธีควบคุมการใช้งาน",
     },
   },
   gdpr: {
@@ -56,6 +65,11 @@ const COPY: Record<LegalPage, Record<Locale, { title: string; description: strin
       description:
         "Hak Anda berdasarkan GDPR, dasar hukum yang digunakan Epidom, dan cara menghubungi kami.",
     },
+    th: {
+      title: "GDPR — EPIDOM",
+      description:
+        "สิทธิของคุณภายใต้ GDPR ฐานทางกฎหมายที่ Epidom ใช้ และวิธีติดต่อเรา",
+    },
   },
   terms: {
     en: {
@@ -72,6 +86,11 @@ const COPY: Record<LegalPage, Record<Locale, { title: string; description: strin
       title: "Syarat dan Ketentuan — EPIDOM",
       description:
         "Baca Syarat dan Ketentuan EPIDOM: ketentuan layanan, tanggung jawab pengguna, dan perjanjian hukum.",
+    },
+    th: {
+      title: "ข้อกำหนดและเงื่อนไข — EPIDOM",
+      description:
+        "อ่านข้อกำหนดและเงื่อนไขของ EPIDOM: ข้อกำหนดการให้บริการ ความรับผิดชอบของผู้ใช้ และข้อตกลงทางกฎหมาย",
     },
   },
   "refund-policy": {
@@ -90,10 +109,15 @@ const COPY: Record<LegalPage, Record<Locale, { title: string; description: strin
       description:
         "Baca Kebijakan Pengembalian Dana EPIDOM: ketentuan pengembalian dana dan pembatalan, kriteria kelayakan, dan cara mengajukan pengembalian dana.",
     },
+    th: {
+      title: "นโยบายการคืนเงิน — EPIDOM",
+      description:
+        "อ่านนโยบายการคืนเงินของ EPIDOM: เงื่อนไขการคืนเงินและการยกเลิก เกณฑ์คุณสมบัติ และวิธีขอคืนเงิน",
+    },
   },
 };
 
-const OG_LOCALE: Record<Locale, string> = { en: "en_US", fr: "fr_FR", id: "id_ID" };
+const OG_LOCALE: Record<Locale, string> = { en: "en_US", fr: "fr_FR", id: "id_ID", th: "th_TH" };
 
 /** The site-wide share image, so overriding openGraph here doesn't drop it. */
 type SeoImages = NonNullable<NonNullable<SEOConfig["openGraph"]>["images"]>;

@@ -42,7 +42,12 @@ const ZERO_DECIMAL = new Set([
   "XPF",
 ]);
 
-const LOCALE_TAGS: Record<string, string> = { en: "en-US", fr: "fr-FR", id: "id-ID" };
+const LOCALE_TAGS: Record<string, string> = {
+  en: "en-US",
+  fr: "fr-FR",
+  id: "id-ID",
+  th: "th-TH-u-ca-gregory",
+};
 
 /** "€137.88" from Stripe's minor-unit amount. */
 export function formatInvoiceAmount(amount: number, currency: string, locale?: string | null) {

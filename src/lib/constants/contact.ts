@@ -23,7 +23,7 @@ export function getWhatsAppOptions(
   locale: Locale
 ): Array<{ market: "fr" | "id"; number: string; label: string }> {
   if (locale === "id") return [WHATSAPP_NUMBERS.id];
-  if (locale === "en") return [WHATSAPP_NUMBERS.fr, WHATSAPP_NUMBERS.id];
+  if (locale === "en" || locale === "th") return [WHATSAPP_NUMBERS.fr, WHATSAPP_NUMBERS.id];
   return [WHATSAPP_NUMBERS.fr];
 }
 

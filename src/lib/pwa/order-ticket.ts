@@ -16,6 +16,7 @@ import { createEscPosWriter, labelRow, wrapText } from "@/lib/pwa/thermal-printe
 import {
   RECEIPT_INTL_LOCALE,
   RECEIPT_LABELS,
+  printerLocale,
   SHIFT_REPORT_LABELS,
   TICKET_LABELS,
   resolveReceiptLocale,
@@ -85,7 +86,7 @@ function hanging(prefix: string, text: string, cols: number): string[] {
 export function buildOrderTicketEscPos(ticket: OrderTicketData): Uint8Array {
   const cols = ticket.width ?? 32;
   const divider = "-".repeat(cols);
-  const locale = resolveReceiptLocale(ticket.locale);
+  const locale = printerLocale(resolveReceiptLocale(ticket.locale));
   const labels = TICKET_LABELS[locale];
   const receiptLabels = RECEIPT_LABELS[locale];
   const typeLabels = SHIFT_REPORT_LABELS[locale];
@@ -197,7 +198,7 @@ export function buildSampleOrderTicket(input: {
   width: 32 | 48;
   now?: Date;
 }): OrderTicketData {
-  const labels = TICKET_LABELS[input.locale];
+  const labels = TICKET_LABELS[printerLocale(input.locale)];
   return {
     locale: input.locale,
     orderNumber: "TEST-0001",

@@ -83,7 +83,7 @@ export const campaignApi = {
     previewText: string | null;
     contentMode: "rich" | "html";
     contentHtml: string;
-    locale: "fr" | "en" | "id";
+    locale: "fr" | "en" | "id" | "th";
   }) =>
     call<unknown>("/api/admin/newsletter/test", { method: "POST", body: JSON.stringify(input) }),
   audience: (audiences: NewsletterAudience[], language: NewsletterLanguage) =>

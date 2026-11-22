@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { enUS, fr, id as idLocale, type Locale as DateFnsLocale } from "date-fns/locale";
+import { enUS, fr, id as idLocale, th as thLocale, type Locale as DateFnsLocale } from "date-fns/locale";
 import { getLocaleMessages, isLocaleLoaded, loadLocale } from "@/locales";
 import { getLanguagePreference, setLanguagePreference } from "@/lib/cookie-consent";
 import {
@@ -15,17 +15,25 @@ import {
   formatDateTimeWithTimezone as formatDateTimeWithTimezoneWithLocale,
 } from "@/lib/utils/formatting";
 
-export type Locale = "en" | "fr" | "id";
+export type Locale = "en" | "fr" | "id" | "th";
 
 /** date-fns `Locale` object for the given app locale — for call sites that
  * need to invoke `date-fns`'s `format()`/`formatDistanceToNow()` directly
  * (e.g. building a custom format string) rather than through the bound
  * helpers below. */
-export const DATE_FNS_LOCALES: Record<Locale, DateFnsLocale> = { en: enUS, fr, id: idLocale };
+export const DATE_FNS_LOCALES: Record<Locale, DateFnsLocale> = { en: enUS, fr, id: idLocale, th: thLocale };
 
 /** `Intl` locale tag for the given app locale — for `Intl.DateTimeFormat`/
  * `Intl.NumberFormat` call sites. */
-export const INTL_LOCALES: Record<Locale, string> = { en: "en-US", fr: "fr-FR", id: "id-ID" };
+/** Thai pins the Gregorian calendar: a bare `th-TH` makes `Intl` print Buddhist
+ * Era years (2569), while date-fns's `th` locale prints Gregorian (2026), so one
+ * screen would mix two years. Gregorian everywhere keeps every path consistent. */
+export const INTL_LOCALES: Record<Locale, string> = {
+  en: "en-US",
+  fr: "fr-FR",
+  id: "id-ID",
+  th: "th-TH-u-ca-gregory",
+};
 
 type I18nContextType = {
   locale: Locale;

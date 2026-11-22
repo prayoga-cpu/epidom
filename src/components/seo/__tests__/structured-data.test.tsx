@@ -49,7 +49,7 @@ const LOCALES: Locale[] = ["fr", "id", "en"];
 describe("JSON-LD speaks the page's language and only uses properties its type has", () => {
   it.each(LOCALES)("WebSite in %s: language set, no Organization-only fields", (locale) => {
     const data = jsonLdOf(<WebsiteStructuredData locale={locale} />);
-    expect(data.inLanguage).toBe({ fr: "fr-FR", id: "id-ID", en: "en" }[locale]);
+    expect(data.inLanguage).toBe({ fr: "fr-FR", id: "id-ID", en: "en", th: "th-TH" }[locale]);
     for (const field of ["logo", "contactPoint", "sameAs"]) expect(data).not.toHaveProperty(field);
   });
 

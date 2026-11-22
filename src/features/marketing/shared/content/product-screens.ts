@@ -44,6 +44,7 @@ export const PRODUCT_SCREENS = {
       fr: "L'écran de caisse d'Epidom : la catégorie Café à gauche et, à droite, l'addition en cours (sur place) avec un flat white et un iced latte, un total de 8,30 €, et les boutons Enregistrer, Imprimer et Encaisser.",
       en: "Epidom's POS cashier: the Coffee category on the left and, on the right, the current dine-in bill with a flat white and an iced latte, an €8.30 total, and Save Bill, Print Bill and Charge buttons.",
       id: "Layar kasir POS Epidom: kategori Kopi di kiri dan, di kanan, tagihan makan di tempat dengan flat white dan iced latte, total €8,30, serta tombol Simpan, Cetak, dan Bayar.",
+      th: "หน้าจอแคชเชียร์ POS ของ Epidom: หมวดกาแฟทางซ้าย และทางขวาคือบิลทานที่ร้านที่กำลังเปิดอยู่ มี flat white และ iced latte ยอดรวม €8.30 พร้อมปุ่มบันทึกบิล พิมพ์บิล และชำระเงิน",
     },
   },
   posOrderQueue: {
@@ -53,6 +54,7 @@ export const PRODUCT_SCREENS = {
       fr: "La file des commandes : onglets Caisse, Commande en ligne et Historique, les commandes par numéro et par heure, et les filtres Confirmées, En préparation, Prêtes et Enregistrées.",
       en: "The order queue: POS, Online ordering and Log tabs, orders by number and time, and filters for confirmed, in production, ready and saved orders.",
       id: "Antrian pesanan: tab Kasir, Pesanan online, dan Riwayat, pesanan menurut nomor dan jam, serta filter dikonfirmasi, diproses, siap, dan disimpan.",
+      th: "คิวออเดอร์: แท็บ POS ออเดอร์ออนไลน์ และบันทึก แสดงออเดอร์ตามหมายเลขและเวลา พร้อมตัวกรองออเดอร์ที่ยืนยันแล้ว กำลังทำ พร้อมเสิร์ฟ และบันทึกไว้",
     },
   },
   posCustomerDisplay: {
@@ -62,6 +64,7 @@ export const PRODUCT_SCREENS = {
       fr: "L'écran client : l'article qui vient d'être ajouté (un iced latte, 4,50 €), la commande avec son total de 8,30 €, et un bouton pour recevoir le ticket sur WhatsApp.",
       en: "The customer screen: the item just added (an iced latte, €4.50), the order with its €8.30 total, and a button to get the receipt on WhatsApp.",
       id: "Layar pelanggan: item yang baru ditambahkan (iced latte, €4,50), pesanan dengan total €8,30, dan tombol untuk menerima struk lewat WhatsApp.",
+      th: "จอแสดงผลลูกค้า: รายการที่เพิ่งเพิ่ม (iced latte €4.50) ออเดอร์พร้อมยอดรวม €8.30 และปุ่มรับใบเสร็จทาง WhatsApp",
     },
   },
   storefrontMenu: {
@@ -71,6 +74,7 @@ export const PRODUCT_SCREENS = {
       fr: "La page de commande mobile d'un café sur téléphone : les catégories Café, Viennoiserie et Brunch, des articles avec leurs prix et un bouton d'ajout.",
       en: "A café's Phone Orders page on a phone: Coffee, Pastry and Brunch categories, items with their prices and an add button.",
       id: "Halaman pesan lewat HP sebuah kafe di ponsel: kategori Kopi, Roti, dan Brunch, item dengan harganya dan tombol tambah.",
+      th: "หน้าสั่งอาหารผ่านมือถือของคาเฟ่บนโทรศัพท์: หมวดกาแฟ เบเกอรี และบรันช์ รายการเมนูพร้อมราคา และปุ่มเพิ่ม",
     },
   },
   storefrontCheckout: {
@@ -80,6 +84,7 @@ export const PRODUCT_SCREENS = {
       fr: "Le panier d'une commande depuis un téléphone : l'article choisi, sa quantité, le sous-total et le bouton pour passer aux détails de la commande.",
       en: "The cart when ordering from a phone: the chosen item, its quantity, the subtotal and the button to continue to the order details.",
       id: "Keranjang saat memesan dari ponsel: item yang dipilih, jumlahnya, subtotal, dan tombol untuk lanjut ke detail pesanan.",
+      th: "ตะกร้าเมื่อสั่งจากโทรศัพท์: รายการที่เลือก จำนวน ยอดรวมย่อย และปุ่มไปต่อที่รายละเอียดออเดอร์",
     },
   },
   backOfficeStock: {
@@ -89,6 +94,7 @@ export const PRODUCT_SCREENS = {
       fr: "Le tableau de bord : la gestion des stocks, 14 articles avec leur niveau en barre, dont deux en rouge sous leur seuil (poudre de matcha, lait d'avoine).",
       en: "The Store Dashboard stock page: 14 items with their level as a bar, two in red below their minimum (matcha powder, oat milk).",
       id: "Halaman stok Dasbor Toko: 14 item dengan level berupa bar, dua berwarna merah di bawah batas minimum (bubuk matcha, susu oat).",
+      th: "หน้าสต็อกของแดชบอร์ดร้าน: 14 รายการ แสดงระดับสต็อกเป็นแถบ โดยมี 2 รายการเป็นสีแดงเพราะต่ำกว่าขั้นต่ำ (ผงมัทฉะ นมโอ๊ต)",
     },
   },
   // The Finance page's header, filters and eight figures (revenue to waste), without the
@@ -101,6 +107,7 @@ export const PRODUCT_SCREENS = {
       fr: "Les rapports financiers du tableau de bord : chiffre d'affaires de 2 584,30 € sur 230 commandes, ventes nettes, marge brute de 75,9 %, bénéfice net, coût des marchandises, taxes, frais et pertes.",
       en: "The Store Dashboard finance reports: €2,584.30 revenue from 230 orders, net sales, a 75.9% gross margin, net profit, cost of goods, tax, fees and waste.",
       id: "Laporan keuangan Dasbor Toko: pendapatan €2.584,30 dari 230 pesanan, penjualan bersih, margin kotor 75,9%, laba bersih, harga pokok, pajak, biaya, dan limbah.",
+      th: "รายงานการเงินในแดชบอร์ดร้าน: รายได้ €2,584.30 จาก 230 ออเดอร์ ยอดขายสุทธิ กำไรขั้นต้น 75.9% กำไรสุทธิ ต้นทุนสินค้า ภาษี ค่าธรรมเนียม และของเสีย",
     },
   },
   // The report tabs of the Finance page, as a strip.
@@ -113,6 +120,7 @@ export const PRODUCT_SCREENS = {
       fr: "Les rapports financiers du tableau de bord : bilan, quotidien, dépenses, par canal, par moyen de paiement et tendances de vente, chacun dans son onglet.",
       en: "The Store Dashboard finance reports: P&L statement, daily, expenses, by channel, payment method and sales patterns, each on its own tab.",
       id: "Laporan keuangan Dasbor Toko: laba rugi, harian, pengeluaran, per kanal, metode pembayaran, dan pola penjualan, masing-masing di tabnya sendiri.",
+      th: "รายงานการเงินของแดชบอร์ดร้าน: งบกำไรขาดทุน รายวัน ค่าใช้จ่าย ตามช่องทาง วิธีชำระเงิน และรูปแบบยอดขาย แยกเป็นแท็บของแต่ละรายงาน",
     },
   },
   // The Work Schedule page: the week's roster by staff and shift block, days off included
@@ -125,6 +133,7 @@ export const PRODUCT_SCREENS = {
       fr: "Le planning du personnel dans le tableau de bord : la semaine du 9 au 15 novembre par personne, avec les blocs Matin et Après-midi publiés et les jours de repos.",
       en: "The Store Dashboard work schedule: the week of 9 to 15 November by person, with published Morning and Afternoon shift blocks and days off.",
       id: "Jadwal kerja di Dasbor Toko: pekan 9 sampai 15 November per orang, dengan blok shift Pagi dan Siang yang dipublikasikan serta hari libur.",
+      th: "ตารางงานพนักงานในแดชบอร์ดร้าน: สัปดาห์ที่ 9 ถึง 15 พฤศจิกายน แยกตามพนักงาน พร้อมกะเช้าและกะบ่ายที่เผยแพร่แล้ว และวันหยุด",
     },
   },
   // POS Mode, Clock In / Out: a staff member's selfie step on a phone (the camera shows a
@@ -136,6 +145,7 @@ export const PRODUCT_SCREENS = {
       fr: "L'écran de pointage de la caisse sur téléphone : « Clock In » avec l'aperçu de la caméra et le bouton Prendre la photo, pour le selfie d'arrivée.",
       en: "The POS Clock In screen on a phone: the camera preview and a Take Photo button for the arrival selfie.",
       id: "Layar absen masuk POS di ponsel: pratinjau kamera dan tombol Ambil Foto untuk selfie kehadiran.",
+      th: "หน้าจอลงเวลาเข้างานของ POS บนมือถือ: ภาพตัวอย่างจากกล้องและปุ่มถ่ายภาพ สำหรับเซลฟีเมื่อมาถึงงาน",
     },
   },
 } as const satisfies Record<string, ProductScreen>;

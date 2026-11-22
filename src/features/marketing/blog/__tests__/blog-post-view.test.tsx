@@ -13,7 +13,7 @@ import {
   type BlogPost,
 } from "@/features/marketing/blog/content";
 
-const LOCALES: Locale[] = ["fr", "id", "en"];
+const LOCALES: Locale[] = ["fr", "id", "th", "en"];
 
 const POST: BlogPost = {
   slug: "sample-post",
@@ -53,6 +53,11 @@ const LEGACY_CTA_COPY: Record<Locale, { title: string; body: string; button: str
     title: "Ready to try it?",
     body: "No card. Your first link is free forever.",
     button: "Start free →",
+  },
+  th: {
+    title: "พร้อมลองใช้แล้วหรือยัง",
+    body: "ไม่ต้องใช้บัตร ลิงก์แรกของคุณใช้ฟรีตลอดไป",
+    button: "เริ่มใช้ฟรี →",
   },
 };
 

@@ -99,6 +99,29 @@ const COPY: Record<
     statCommitmentVal: "Aucun",
     footerNote: "Un projet Prionation",
   },
+  th: {
+    eyebrow: "ร่วมงานกับเรา",
+    title1: "สร้าง Epidom",
+    title2: "ในแบบของคุณ",
+    subhead:
+      "Epidom สร้างโดย Prionation ถ้าคุณกำลังสร้าง SaaS ที่ใช้งานจริง ไม่ใช่แค่ต้นแบบ มาคุยกับทีมที่สร้างระบบนี้ได้เลย",
+    tabLabel: "นัดพบทีมงาน",
+    cardTitle: "จองคุยกัน 30 นาที",
+    cardBody:
+      "ไม่มีการเสนอขาย เราจะรับฟังสิ่งที่คุณกำลังสร้าง แล้วบอกตามตรงว่าเราเหมาะกับงานของคุณหรือไม่",
+    weekdays: ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."],
+    onlineLabel: "ออนไลน์",
+    location: "Canggu, บาหลี, อินโดนีเซีย",
+    ctaButton: "จองคอลบน Prionation",
+    ctaNote: "เปิด prionation.io ในแท็บใหม่",
+    statDurationLabel: "ระยะเวลา",
+    statDurationVal: "30 นาที",
+    statResponseLabel: "การตอบกลับ",
+    statResponseVal: "ภายใน 24 ชม.",
+    statCommitmentLabel: "ข้อผูกมัด",
+    statCommitmentVal: "ไม่มี",
+    footerNote: "โปรเจกต์ของ Prionation",
+  },
 };
 
 function buildCalendarDays(year: number, month: number) {
@@ -123,7 +146,7 @@ export function BuildWithUsClient({ locale }: { locale: Locale }) {
   const copy = COPY[locale];
   const now = new Date();
   const monthLabel = now.toLocaleDateString(
-    locale === "id" ? "id-ID" : locale === "fr" ? "fr-FR" : "en-US",
+    locale === "id" ? "id-ID" : locale === "fr" ? "fr-FR" : locale === "th" ? "th-TH-u-ca-gregory" : "en-US",
     { month: "long", year: "numeric" }
   );
   const cells = buildCalendarDays(now.getFullYear(), now.getMonth());

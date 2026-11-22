@@ -28,11 +28,18 @@ const COPY: Record<Locale, { eyebrow: string; title: string; body: string; readL
     readLabel: (m) => `${m} min read`,
     all: "All",
   },
+  th: {
+    eyebrow: "บทความ",
+    title: "บันทึกจากหน้างานจริง ไม่ใช่คำโฆษณาลอย ๆ",
+    body: "คู่มือเชิงปฏิบัติสำหรับเจ้าของคาเฟ่และร้านอาหาร ตั้งแต่การเริ่มต้นใช้งาน การรับออเดอร์โดยตรง ไปจนถึงงานประจำวัน",
+    readLabel: (m) => `อ่าน ${m} นาที`,
+    all: "ทั้งหมด",
+  },
 };
 
 function formatDate(iso: string, locale: Locale): string {
   const d = new Date(iso);
-  return d.toLocaleDateString(locale === "id" ? "id-ID" : locale === "fr" ? "fr-FR" : "en-US", {
+  return d.toLocaleDateString(locale === "id" ? "id-ID" : locale === "fr" ? "fr-FR" : locale === "th" ? "th-TH-u-ca-gregory" : "en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",

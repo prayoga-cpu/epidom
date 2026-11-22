@@ -15,7 +15,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { INTL_LOCALES, useI18n } from "@/components/lang/i18n-provider";
-import { LANDING_GROUPS } from "@/features/marketing/landing/registry";
+import { landingSlugIn } from "@/features/marketing/landing/registry";
 import { trackEvent } from "@/lib/analytics";
 import { LOCALE_PRICE_CURRENCY } from "@/lib/constants/plan-pricing";
 import { getLocalizedPath } from "@/lib/i18n-routing";
@@ -65,7 +65,7 @@ export function ThreeSpacesSection(
 ) {
   const { t, locale } = useI18n();
   // The Claude connector page, in the visitor's language (else the products page).
-  const connectorSlug = LANDING_GROUPS["claude-connector"][locale];
+  const connectorSlug = landingSlugIn("claude-connector", locale);
 
   // The sample figure in the visitor's currency (rupiah figures are written in thousands).
   const currency = LOCALE_PRICE_CURRENCY[locale];

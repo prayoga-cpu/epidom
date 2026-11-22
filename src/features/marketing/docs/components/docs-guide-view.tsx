@@ -25,6 +25,12 @@ const COPY: Record<Locale, { back: string; next: string; ctaTitle: string; ctaBu
     ctaTitle: "Ready to try this yourself?",
     ctaButton: "Start free →",
   },
+  th: {
+    back: "← คู่มือทั้งหมด",
+    next: "ถัดไป",
+    ctaTitle: "พร้อมลองทำด้วยตัวเองแล้วหรือยัง",
+    ctaButton: "เริ่มใช้ฟรี →",
+  },
 };
 
 export function DocsGuideView({

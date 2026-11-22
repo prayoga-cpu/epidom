@@ -117,11 +117,12 @@ describe("generateMetadata hreflang", () => {
     expect(languagesOf(md)).toEqual(languages);
   });
 
-  it("still lists all three locales, x-default on fr, for an unprefixed canonical", () => {
+  it("still lists every locale, x-default on fr, for an unprefixed canonical", () => {
     const md = generateMetadata({ canonical: "https://epidom.fr/pricing" });
     expect(languagesOf(md)).toEqual({
       fr: "https://epidom.fr/pricing",
       id: "https://epidom.fr/id/pricing",
+      th: "https://epidom.fr/th/pricing",
       en: "https://epidom.fr/en/pricing",
       "x-default": "https://epidom.fr/pricing",
     });

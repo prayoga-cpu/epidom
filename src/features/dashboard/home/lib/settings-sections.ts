@@ -13,7 +13,7 @@ import {
 
 /**
  * Every card on the Settings page, as something the search can jump to. The anchor is the
- * element id in profile-client.tsx. `keywords` deliberately mixes English, Indonesian and
+ * element id in profile-client.tsx. `keywords` deliberately mixes English, Indonesian, Thai and
  * French (and the things people actually type: "tax", "pajak", "TVA", "wifi", "qris"), so a
  * search finds the section whichever language the person writes in, whatever the app language.
  */
@@ -35,7 +35,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     keywords:
       "profile personal information name email phone photo avatar my details subscription plan billing invoice " +
       "profil informasi pribadi nama telepon foto langganan paket tagihan faktur " +
-      "profil informations personnelles nom téléphone abonnement forfait facturation facture",
+      "profil informations personnelles nom téléphone abonnement forfait facturation facture " +
+      "โปรไฟล์ ข้อมูลส่วนตัว ชื่อ อีเมล โทรศัพท์ รูปภาพ แพ็กเกจสมาชิก การเรียกเก็บเงิน ใบแจ้งหนี้",
   },
   {
     id: "business",
@@ -45,7 +46,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     keywords:
       "business information company legal name address city country logo time zone timezone language locale " +
       "informasi bisnis usaha perusahaan alamat kota negara logo zona waktu bahasa " +
-      "informations entreprise société adresse ville pays fuseau horaire langue",
+      "informations entreprise société adresse ville pays fuseau horaire langue " +
+      "ข้อมูลธุรกิจ บริษัท ที่อยู่ เมือง ประเทศ โลโก้ เขตเวลา ภาษา",
   },
   {
     id: "fees",
@@ -55,7 +57,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     keywords:
       "fees taxes tax rate vat service charge tip currency market pay later payment processing fee payment methods card cash qris " +
       "biaya pajak ppn tarif pajak biaya layanan servis mata uang pasar bayar nanti bayar kemudian biaya pemrosesan pembayaran metode pembayaran kartu tunai " +
-      "frais taxes taxe tva taux service pourboire devise marché payer plus tard frais de traitement paiement moyens de paiement carte espèces",
+      "frais taxes taxe tva taux service pourboire devise marché payer plus tard frais de traitement paiement moyens de paiement carte espèces " +
+      "ค่าธรรมเนียม ภาษี อัตราภาษี ภาษีมูลค่าเพิ่ม ค่าบริการ ทิป สกุลเงิน ตลาด จ่ายทีหลัง วิธีชำระเงิน บัตร เงินสด",
   },
   {
     id: "receipt",
@@ -65,7 +68,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     keywords:
       "receipt whatsapp auto send footer message thank you social handles instagram tiktok facebook guest wifi password print " +
       "struk nota kwitansi whatsapp kirim otomatis pesan penutup terima kasih sosial media wifi tamu kata sandi cetak " +
-      "reçu ticket de caisse whatsapp envoi automatique message de pied de page merci réseaux sociaux wifi invités mot de passe imprimer",
+      "reçu ticket de caisse whatsapp envoi automatique message de pied de page merci réseaux sociaux wifi invités mot de passe imprimer " +
+      "ใบเสร็จ ส่งอัตโนมัติ ข้อความท้ายใบเสร็จ ขอบคุณ โซเชียลมีเดีย รหัสผ่าน wifi ลูกค้า พิมพ์",
   },
   {
     id: "customer-display",
@@ -75,7 +79,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     keywords:
       "customer display screen customize promo banner background look thank you screen qris qr code second screen " +
       "layar pelanggan tampilan pelanggan spanduk promo latar belakang layar terima kasih kode qr layar kedua " +
-      "écran client affichage client bannière promo arrière-plan écran de remerciement code qr second écran",
+      "écran client affichage client bannière promo arrière-plan écran de remerciement code qr second écran " +
+      "จอแสดงผลลูกค้า ปรับแต่ง แบนเนอร์โปรโมชัน พื้นหลัง หน้าจอขอบคุณ คิวอาร์โค้ด จอที่สอง",
   },
   {
     id: "transfer",
@@ -85,7 +90,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     keywords:
       "transfer ownership owner sell store hand over new owner invite " +
       "transfer kepemilikan pemilik jual toko serahkan pemilik baru undang " +
-      "transférer propriété propriétaire vendre magasin céder nouveau propriétaire inviter",
+      "transférer propriété propriétaire vendre magasin céder nouveau propriétaire inviter " +
+      "โอนความเป็นเจ้าของ เจ้าของ ขายร้าน ส่งมอบ เจ้าของใหม่ เชิญ",
   },
   {
     id: "account",
@@ -95,7 +101,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     keywords:
       "account password change password sign out log out connected devices linked devices logged in devices other devices sessions security delete account deactivate close account two factor " +
       "akun kata sandi ganti kata sandi keluar perangkat terhubung perangkat tertaut perangkat lain sesi keamanan hapus akun nonaktifkan tutup akun " +
-      "compte mot de passe changer le mot de passe déconnexion appareils connectés autres appareils sessions sécurité supprimer le compte désactiver fermer le compte",
+      "compte mot de passe changer le mot de passe déconnexion appareils connectés autres appareils sessions sécurité supprimer le compte désactiver fermer le compte " +
+      "บัญชี รหัสผ่าน เปลี่ยนรหัสผ่าน ออกจากระบบ อุปกรณ์ที่เชื่อมต่อ เซสชัน ความปลอดภัย ลบบัญชี ปิดบัญชี",
   },
   {
     id: "claude",
@@ -105,7 +112,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     keywords:
       "claude mcp connector ai assistant chat connect integration token revoke " +
       "konektor asisten ai hubungkan integrasi cabut " +
-      "connecteur assistant ia connecter intégration révoquer",
+      "connecteur assistant ia connecter intégration révoquer " +
+      "ตัวเชื่อมต่อ ผู้ช่วย เอไอ เชื่อมต่อ การเชื่อมต่อ เพิกถอน",
   },
   {
     id: "activity",
@@ -115,6 +123,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     keywords:
       "activity log history audit changes who did what login events " +
       "log aktivitas riwayat audit perubahan siapa melakukan apa " +
-      "journal d'activité historique audit modifications qui a fait quoi connexions",
+      "journal d'activité historique audit modifications qui a fait quoi connexions " +
+      "บันทึกกิจกรรม ประวัติ ตรวจสอบ การเปลี่ยนแปลง ใครทำอะไร",
   },
 ];

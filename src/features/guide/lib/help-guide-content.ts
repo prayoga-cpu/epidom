@@ -6,7 +6,7 @@ import { HELP_GUIDE_SLUGS, POS_GUIDE_IDS, localizedGuideSlug } from "./help-guid
 /**
  * The guide articles themselves, for the Help centre's reader. Kept apart from
  * help-guides.ts (slugs and links only) so a page intro's "Learn more" doesn't
- * pull every article in all three languages into the page.
+ * pull every article in all four languages into the page.
  */
 
 /** The guide `slug` names (in any language, or its id), in the viewer's language. */

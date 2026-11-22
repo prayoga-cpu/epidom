@@ -33,6 +33,7 @@ export const HERO_PHOTO: LocalizedImage | null = {
     fr: "Trois membres d'une équipe de café rient derrière le comptoir : l'une tient un long ticket de caisse, un autre montre un téléphone et une petite imprimante de tickets.",
     en: "Three café staff laughing behind the counter: one holds a long printed receipt, another shows a phone and a small receipt printer.",
     id: "Tiga staf kafe tertawa di balik meja kasir: satu memegang struk panjang, yang lain menunjukkan ponsel dan printer struk kecil.",
+    th: "พนักงานคาเฟ่สามคนหัวเราะอยู่หลังเคาน์เตอร์ คนหนึ่งถือใบเสร็จยาวๆ อีกคนชูโทรศัพท์และเครื่องพิมพ์ใบเสร็จขนาดเล็ก",
   },
 };
 

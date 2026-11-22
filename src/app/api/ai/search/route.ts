@@ -17,12 +17,17 @@ import type { Locale } from "@/components/lang/i18n-provider";
 export const maxDuration = 30;
 export const dynamic = "force-dynamic";
 
-const LANGUAGES: Record<string, string> = { en: "English", id: "Indonesian", fr: "French" };
+const LANGUAGES: Record<string, string> = {
+  en: "English",
+  id: "Indonesian",
+  fr: "French",
+  th: "Thai",
+};
 const SEARCH_MODEL = "gpt-4o-mini";
 
 const bodySchema = z.object({
   query: z.string().trim().min(2).max(200),
-  locale: z.enum(["en", "id", "fr"]).default("en"),
+  locale: z.enum(["en", "id", "fr", "th"]).default("en"),
 });
 
 const answerSchema = z.object({

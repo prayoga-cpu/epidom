@@ -10,7 +10,7 @@ export const NEWSLETTER_AUDIENCES = [
   "PAID",
 ] as const satisfies readonly NewsletterAudience[];
 
-export const NEWSLETTER_LANGUAGES = ["all", "fr", "en", "id"] as const;
+export const NEWSLETTER_LANGUAGES = ["all", "fr", "en", "id", "th"] as const;
 export type NewsletterLanguage = (typeof NEWSLETTER_LANGUAGES)[number];
 
 /** A campaign can be changed, rescheduled or deleted only in these states. */

@@ -3,10 +3,12 @@ import type { Article } from "@/features/marketing/shared/content/article-types"
 import { frGuides } from "./guides.fr";
 import { idGuides } from "./guides.id";
 import { enGuides } from "./guides.en";
+import { thGuides } from "./guides.th";
 
 const GUIDES_BY_LOCALE: Record<Locale, Article[]> = {
   fr: frGuides,
   id: idGuides,
+  th: thGuides,
   en: enGuides,
 };
 

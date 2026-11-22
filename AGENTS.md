@@ -34,7 +34,7 @@ Full strategic context: see `/docs/STRATEGY.md`.
 | -------------------- | ------------------------------------------------------------------- |
 | Phase                | **Phase 5, Aggregator + Finance**                                   |
 | Primary market       | France (primary, re-prioritized 2026-08-10), Indonesia (secondary), Worldwide |
-| Primary language     | `fr`, then `id`, then `en`. `fr` was deprecated, reactivated and promoted to primary 2026-08-10 — new French strings are expected now. |
+| Primary language     | `fr`, then `id`, then `en` (`th` added 2026-11-22: app, shared marketing pages, blog, docs, receipts, e-mail; no Thai landing/compare/sales pages). `fr` was deprecated, reactivated and promoted to primary 2026-08-10 — new French strings are expected now. |
 | Active strategic doc | `/docs/roadmap.md` (Phase 5 section)                                |
 | Next phase           | None — Phase 5 is the final planned phase.                          |
 
@@ -93,7 +93,7 @@ src/
 ├── lib/               # core logic (auth, prisma, services, validation)
 ├── config/            # static config: nav, staff permissions, Stripe, rate limits, payment fees
 ├── hooks/             # shared client hooks (debounce, network status, realtime channel, ...)
-├── locales/           # fr.ts (primary), id.ts, en.ts
+├── locales/           # fr.ts (primary), id.ts, th.ts, en.ts
 └── types/
 prisma/
 └── schema.prisma
@@ -160,7 +160,10 @@ These five bug classes have each caused real, shipped breakage on iPad Safari. C
 **i18n**
 
 - Every user-facing string goes through `useI18n()`.
-- Add the string to all three locale files: `src/locales/fr.ts`, `src/locales/id.ts` and `src/locales/en.ts`, with real French in `fr.ts` (see §7.2).
+- Add the string to all four locale files: `src/locales/fr.ts`, `src/locales/id.ts`, `src/locales/th.ts` and `src/locales/en.ts`, with real French in `fr.ts` (see §7.2) and real Thai in `th.ts`.
+- `src/locales/__tests__/th-parity.test.ts` fails when `th.ts` lacks any key that exists in `en`/`fr`/`id`, drops a `{placeholder}` or number, or leaves a sentence in English. Thai is the one language whose completeness is machine-checked, so a new key without Thai breaks the build.
+- Thai specifics: no spaces between words, Arabic digits, polite neutral register (no ครับ/ค่ะ). Dates and numbers use `th-TH-u-ca-gregory` (never bare `th-TH`: it prints Buddhist-era years next to date-fns's Gregorian ones). Thai visitors are quoted USD prices (`LOCALE_PRICE_CURRENCY`). Thermal printers get English labels for Thai stores (`printerLocale()`; CP437 cannot print Thai) — the on-screen, PDF, e-mail and WhatsApp receipt are Thai.
+- Landing pages (`landing/registry.ts`) and competitor comparisons are per-market SEO content authored in one language each; Thai has none yet, so `landingSlugIn(group, "th")` is `undefined` and callers fall back to a page that exists.
 
 **Changelog & versioning**
 

@@ -19,6 +19,11 @@ const COPY: Record<Locale, { eyebrow: string; title: string; body: string }> = {
     title: "Everything to get you set up.",
     body: "Step-by-step guides for your storefront, your menu, and moving to the POS cashier when you're ready.",
   },
+  th: {
+    eyebrow: "ศูนย์ช่วยเหลือ",
+    title: "ทุกอย่างที่ต้องใช้ตั้งแต่เริ่มต้น",
+    body: "คู่มือทีละขั้นตอนสำหรับตั้งค่าหน้าร้านออนไลน์ เมนู และเปลี่ยนไปใช้ระบบ POS เมื่อคุณพร้อม",
+  },
 };
 
 export function DocsList({ locale, guides }: { locale: Locale; guides: Article[] }) {

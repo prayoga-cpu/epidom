@@ -307,7 +307,7 @@ export function generateMetadata(config: Partial<SEOConfig> = {}): Metadata {
 }
 
 /** `og:locale` value for each site language. */
-export const OG_LOCALE: Record<Locale, string> = { fr: "fr_FR", id: "id_ID", en: "en_US" };
+export const OG_LOCALE: Record<Locale, string> = { fr: "fr_FR", id: "id_ID", en: "en_US", th: "th_TH" };
 
 export interface LocalizedPageSEO {
   /** Unprefixed path of the page ("/pricing", "/" for home). */
@@ -390,6 +390,7 @@ export const BREADCRUMB_LABELS: Record<
 > = {
   fr: { home: "Accueil", blog: "Blog", docs: "Documentation", compare: "Comparatifs" },
   id: { home: "Beranda", blog: "Blog", docs: "Dokumentasi", compare: "Perbandingan" },
+  th: { home: "หน้าแรก", blog: "บล็อก", docs: "เอกสาร", compare: "เปรียบเทียบ" },
   en: { home: "Home", blog: "Blog", docs: "Docs", compare: "Compare" },
 };
 

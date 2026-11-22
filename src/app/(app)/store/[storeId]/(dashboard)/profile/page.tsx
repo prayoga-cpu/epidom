@@ -37,7 +37,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ storeI
     email: profileDto.email,
     image: profileDto.image,
     phone: profileDto.phone,
-    locale: profileDto.locale as "en" | "fr" | "id" | undefined,
+    locale: profileDto.locale as "en" | "fr" | "id" | "th" | undefined,
     timezone: profileDto.timezone,
     defaultLanding: profileDto.defaultLanding,
     createdAt: profileDto.createdAt,

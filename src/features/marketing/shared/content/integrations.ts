@@ -34,4 +34,14 @@ export const INTEGRATIONS: Record<Locale, string[]> = {
     "Google Reviews",
     "ESC/POS Printer",
   ],
+  th: [
+    "Stripe",
+    "Visa",
+    "Mastercard",
+    "Apple Pay",
+    "Google Pay",
+    "WhatsApp",
+    "Google Reviews",
+    "เครื่องพิมพ์ ESC/POS",
+  ],
 };

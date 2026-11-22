@@ -3,8 +3,8 @@ import type { Locale } from "@/components/lang/i18n-provider";
 /**
  * URL-prefix locale routing for the marketing site only (src/app/(marketing)).
  * `fr` is the default/primary market (docs/STRATEGY.md §3) and carries no
- * prefix — https://epidom.fr/pricing is French. `id` and `en` are prefixed
- * — /id/pricing, /en/pricing. The (app) dashboard and (public) storefront
+ * prefix — https://epidom.fr/pricing is French. `id`, `th` and `en` are prefixed
+ * — /id/pricing, /th/pricing, /en/pricing. The (app) dashboard and (public) storefront
  * routes are NOT part of this scheme; storefront language is the merchant's
  * own content, and the dashboard uses its own client-side cookie switch.
  *
@@ -12,13 +12,13 @@ import type { Locale } from "@/components/lang/i18n-provider";
  * the existing (marketing) route tree, and every Link/import into it,
  * doesn't have to move — see src/middleware.ts.
  */
-export const LOCALES: readonly Locale[] = ["fr", "id", "en"];
+export const LOCALES: readonly Locale[] = ["fr", "id", "th", "en"];
 export const DEFAULT_LOCALE: Locale = "fr";
 export const LOCALE_HEADER = "x-epidom-locale";
 
 const PREFIXED_LOCALES = LOCALES.filter((l) => l !== DEFAULT_LOCALE);
 
-/** Strip a leading /id or /en prefix, returning the unprefixed path. */
+/** Strip a leading /id, /th or /en prefix, returning the unprefixed path. */
 export function stripLocalePrefix(pathname: string): { locale: Locale; basePath: string } {
   for (const locale of PREFIXED_LOCALES) {
     if (pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)) {
@@ -70,6 +70,7 @@ export function detectLocaleFromAcceptLanguage(header: string | null): Locale {
 
   for (const { tag } of ranked) {
     if (tag.startsWith("id")) return "id";
+    if (tag.startsWith("th")) return "th";
     if (tag.startsWith("en")) return "en";
     if (tag.startsWith("fr")) return "fr";
   }

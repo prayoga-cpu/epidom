@@ -8,17 +8,30 @@
  */
 
 import { format, type Locale } from "date-fns";
-import { enUS, fr as frDateFns, id as idDateFns } from "date-fns/locale";
+import { enUS, fr as frDateFns, id as idDateFns, th as thDateFns } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils/formatting";
 import { isOnlinePlatformSource, ONLINE_PLATFORM_LABELS } from "@/config/aggregator.config";
 
-export type ReceiptLocale = "en" | "fr" | "id";
+export type ReceiptLocale = "en" | "fr" | "id" | "th";
+
+/**
+ * The locale whose labels go to a THERMAL printer. ESC/POS output is CP437
+ * ASCII only (`toPrinterAscii` turns every other glyph into "?"), so Thai
+ * labels would print as a row of question marks. Paper therefore keeps the
+ * English labels for Thai stores; the on-screen / PDF / e-mail receipt is
+ * fully Thai. Revisit when a Thai code page (CP874) is verified on hardware.
+ */
+export function printerLocale(locale: ReceiptLocale): Exclude<ReceiptLocale, "th"> {
+  return locale === "th" ? "en" : locale;
+}
 
 /** `Intl` locale tag for money/date formatting on the receipt. */
 export const RECEIPT_INTL_LOCALE: Record<ReceiptLocale, string> = {
   id: "id-ID",
   en: "en-US",
   fr: "fr-FR",
+  // Gregorian calendar pinned: bare th-TH prints Buddhist Era years (2569).
+  th: "th-TH-u-ca-gregory",
 };
 
 interface ReceiptLabels {
@@ -78,6 +91,29 @@ export const RECEIPT_LABELS: Record<ReceiptLocale, ReceiptLabels> = {
     poweredByTitle: "Cafe & Restaurant System",
     billTitle: "NOTA SEMENTARA",
     billNotice: "Ini bukan bukti pembayaran",
+  },
+  th: {
+    billNo: "เลขที่บิล",
+    date: "วันที่",
+    cashier: "แคชเชียร์",
+    table: "โต๊ะ",
+    item: "รายการ",
+    total: "รวมทั้งสิ้น",
+    subtotal: "รวมย่อย",
+    tax: "ภาษี",
+    service: "ค่าบริการ",
+    discount: "ส่วนลด",
+    paidVia: "ชำระผ่าน",
+    paid: "ชำระแล้ว",
+    cash: "เงินสด",
+    change: "เงินทอน",
+    notes: "หมายเหตุ",
+    wifi: "WiFi",
+    wifiPassword: "รหัสผ่าน",
+    defaultFooter: "ขอบคุณที่ใช้บริการ\nแล้วพบกันใหม่",
+    poweredByTitle: "Cafe & Restaurant System",
+    billTitle: "ใบแจ้งยอด",
+    billNotice: "นี่ไม่ใช่ใบเสร็จรับเงิน",
   },
   en: {
     billNo: "Bill No.",
@@ -254,6 +290,56 @@ export const SHIFT_REPORT_LABELS: Record<ReceiptLocale, ShiftReportLabels> = {
     otherPlatform: "Platform Lain",
     noData: "Tidak ada transaksi",
   },
+  th: {
+    title: "รายงานประจำวัน",
+    shiftReportTitle: "รายงานกะ",
+    period: "ช่วงเวลา",
+    cashier: "แคชเชียร์",
+    stillOpen: "ยังเปิดอยู่",
+    printedAt: "พิมพ์เมื่อ",
+    grossSales: "ยอดขาย",
+    discount: "ส่วนลด",
+    serviceCharge: "ค่าบริการ",
+    tax: "ภาษี",
+    processingFee: "ค่าธรรมเนียมดำเนินการ",
+    delivery: "ค่าจัดส่ง",
+    refund: "คืนเงิน",
+    total: "รวมทั้งสิ้น",
+    invoicesHeading: "บิล",
+    invoiceCount: "จำนวนบิล",
+    averagePerInvoice: "เฉลี่ยต่อบิล",
+    cancellationsHeading: "สรุปการยกเลิก",
+    cancelledItems: "จำนวนรายการ",
+    byOrderTypeHeading: "แยกตามประเภทการขาย",
+    byGuestHeading: "แยกตามจำนวนลูกค้า",
+    totalGuests: "ลูกค้าทั้งหมด",
+    invoicesWithGuests: "บิลที่มีข้อมูลลูกค้า",
+    averageGuestsPerDay: "ลูกค้าเฉลี่ยต่อวัน",
+    averageSalesPerGuest: "ยอดขายเฉลี่ยต่อลูกค้า",
+    byPaymentHeading: "แยกตามวิธีชำระเงิน",
+    byProductHeading: "แยกตามสินค้า (ก่อนหัก)",
+    uncategorized: "ไม่มีหมวดหมู่",
+    cashDrawerHeading: "ลิ้นชักเงินสด",
+    openingCash: "เงินสดเปิดกะ",
+    closingCash: "เงินสดปิดกะ",
+    expectedCash: "เงินสดที่ควรมี",
+    difference: "ส่วนต่าง",
+    cashSales: "ยอดขายเงินสด",
+    cashRefunds: "คืนเงิน",
+    tips: "ทิป",
+    cashIn: "เงินสดเข้า",
+    paidOut: "เงินสดจ่ายออก",
+    safeDrop: "นำเงินเข้าตู้เซฟ",
+    tipsOut: "จ่ายทิป",
+    allTills: "ทุกเครื่องคิดเงิน",
+    offTillCash: "เงินสดนอกเครื่อง",
+    provisional: "ชั่วคราว",
+    dineIn: "ทานที่ร้าน",
+    takeaway: "กลับบ้าน",
+    deliveryType: "เดลิเวอรี",
+    otherPlatform: "แพลตฟอร์มอื่น",
+    noData: "ไม่มีรายการ",
+  },
   en: {
     title: "DAILY REPORT",
     shiftReportTitle: "SHIFT REPORT",
@@ -410,6 +496,17 @@ export const TICKET_LABELS: Record<ReceiptLocale, TicketLabels> = {
     testTitle: "TES PRINTER",
     testBody: "Printer terhubung dengan baik.",
   },
+  th: {
+    orderTicket: "ออเดอร์",
+    kitchen: "ครัว",
+    bar: "บาร์",
+    orderNo: "ออเดอร์",
+    type: "ประเภท",
+    customer: "ลูกค้า",
+    reprint: "พิมพ์ซ้ำ",
+    testTitle: "ทดสอบเครื่องพิมพ์",
+    testBody: "เครื่องพิมพ์เชื่อมต่อและใช้งานได้",
+  },
   en: {
     orderTicket: "ORDER",
     kitchen: "KITCHEN",
@@ -438,13 +535,14 @@ export const TICKET_LABELS: Record<ReceiptLocale, TicketLabels> = {
 export const RECEIPT_POWERED_BY_URL = "www.epidom.fr";
 
 export function resolveReceiptLocale(value: string | null | undefined): ReceiptLocale {
-  return value === "en" || value === "fr" || value === "id" ? value : "id";
+  return value === "en" || value === "fr" || value === "id" || value === "th" ? value : "id";
 }
 
 const RECEIPT_DATE_FNS_LOCALE: Record<ReceiptLocale, Locale> = {
   id: idDateFns,
   en: enUS,
   fr: frDateFns,
+  th: thDateFns,
 };
 
 export interface ReceiptWhatsAppMessageInput {
@@ -473,6 +571,11 @@ const WHATSAPP_MESSAGE_TEMPLATE: Record<
     `Terima kasih ya kunjungannya di *${store}*.\n` +
     `Berikut total pesananmu sebesar *${amount}*, pada ${date}.\n\n` +
     `Detailnya kami cantumkan di sini ya ${url}`,
+  th: ({ name, store, amount, date, url }) =>
+    `สวัสดีคุณ ${name} 👋\n` +
+    `ขอบคุณที่มาใช้บริการ *${store}*\n` +
+    `ยอดรวมออเดอร์ของคุณคือ *${amount}* เมื่อ ${date}\n\n` +
+    `ดูใบเสร็จได้ที่นี่ ${url}`,
   en: ({ name, store, amount, date, url }) =>
     `Hi ${name} 👋\n` +
     `Thank you for visiting *${store}*.\n` +

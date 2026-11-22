@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export type Market = "fr" | "id";
 
-const INTL: Record<Locale, string> = { fr: "fr-FR", id: "id-ID", en: "en-US" };
+const INTL: Record<Locale, string> = { fr: "fr-FR", id: "id-ID", th: "th-TH", en: "en-US" };
 
 const REGION: Record<Market, string> = { fr: "FR", id: "ID" };
 

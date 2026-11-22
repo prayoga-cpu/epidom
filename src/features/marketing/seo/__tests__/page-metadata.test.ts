@@ -28,7 +28,7 @@ const PAGE_FILES: Record<MarketingMetaPage, string> = {
   docs: "docs/page.tsx",
 };
 
-/** "Blog" is the word in all three languages. */
+/** "Blog" is the word in every language. */
 const SHARED_TITLE: Partial<Record<MarketingMetaPage, Locale[][]>> = {
   blog: [
     ["fr", "en"],
@@ -57,9 +57,9 @@ describe.each(CASES)("%s in %s", (page, locale) => {
     expect(md.openGraph?.url).toBe(url);
   });
 
-  it("advertises fr, id and en plus x-default on fr", () => {
+  it("advertises fr, id, th and en plus x-default on fr", () => {
     const languages = languagesOf(md);
-    expect(Object.keys(languages).sort()).toEqual(["en", "fr", "id", "x-default"]);
+    expect(Object.keys(languages).sort()).toEqual(["en", "fr", "id", "th", "x-default"]);
     for (const l of LOCALES) {
       expect(languages[l]).toBe(`${SITE}${getLocalizedPath(PAGES[page].path, l)}`);
     }
@@ -181,7 +181,9 @@ describe("noindex", () => {
 
 describe("pricing description", () => {
   const otherPrices = (locale: Locale) =>
-    LOCALES.filter((l) => l !== locale).flatMap((l) =>
+    // Thai and English both quote USD (no THB Stripe Price), so a locale sharing
+    // this one's currency is not "another" price.
+    LOCALES.filter((l) => LOCALE_PRICE_CURRENCY[l] !== LOCALE_PRICE_CURRENCY[locale]).flatMap((l) =>
       (["POS", "OPERATIONS"] as const).flatMap((plan) =>
         (["monthly", "yearly"] as const).map((interval) =>
           formatPlanPrice(plan, LOCALE_PRICE_CURRENCY[l], interval)
@@ -253,8 +255,8 @@ describe("about description", () => {
     (locale) => {
       const text = snippets(locale);
       expect(text).toMatch(/Prionation/);
-      expect(text).toMatch(/Bali/);
-      expect(text).toMatch(/Paris/);
+      expect(text).toMatch(/Bali|บาหลี/);
+      expect(text).toMatch(/Paris|ปารีส/);
       expect(text).not.toMatch(
         /meet the team|d[ée]couvrez l'[ée]quipe|kenali tim|one caf[ée]|un caf[ée]|satu kafe|spreadsheet|tableur|real counter|vrai comptoir|meja kasir/i
       );

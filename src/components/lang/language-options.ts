@@ -4,6 +4,7 @@ import { LOCALE_PREF_COOKIE } from "@/lib/i18n-routing";
 export const LANGUAGE_OPTIONS = [
   { label: "Français", value: "fr", short: "FR", flag: "🇫🇷" },
   { label: "Indonesia", value: "id", short: "ID", flag: "🇮🇩" },
+  { label: "ไทย", value: "th", short: "TH", flag: "🇹🇭" },
   { label: "English", value: "en", short: "EN", flag: "🇺🇸" },
 ] as const;
 

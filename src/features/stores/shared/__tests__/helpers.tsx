@@ -6,6 +6,7 @@ import { EagerI18nProvider } from "@/components/lang/i18n-provider-eager";
 import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
+import { th } from "@/locales/th";
 
 /**
  * The real I18nProvider with every dictionary resident, so a test reads the
@@ -15,7 +16,7 @@ export function renderIn(locale: Locale, ui: React.ReactElement) {
   return render(<EagerI18nProvider initialLocale={locale}>{ui}</EagerI18nProvider>);
 }
 
-export const DICTS = { en, fr, id } as const;
+export const DICTS = { en, fr, id, th } as const;
 
 /**
  * Per-test timeout for the render suites. The popover tests render a cmdk list

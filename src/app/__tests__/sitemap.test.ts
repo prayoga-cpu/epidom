@@ -215,7 +215,7 @@ describe("sitemap vs the marketing PAGES table", () => {
 
   const pagePaths = Object.values(PAGES).map((page) => page.path);
 
-  it("lists every PAGES path in all three locales, unless it is on the exclusion list", () => {
+  it("lists every PAGES path in every locale, unless it is on the exclusion list", () => {
     for (const path of pagePaths) {
       if (path in NOT_IN_SITEMAP) continue;
       for (const locale of LOCALES) {
@@ -241,12 +241,13 @@ describe("sitemap vs the marketing PAGES table", () => {
 });
 
 describe("sitemap hreflang", () => {
-  it("gives every static route alternates for all three locales, x-default on fr", () => {
-    for (const locale of ["fr", "id", "en"] as Locale[]) {
+  it("gives every static route alternates for every locale, x-default on fr", () => {
+    for (const locale of ["fr", "id", "th", "en"] as Locale[]) {
       const languages = byUrl(urlOf("/pricing", locale))!.alternates?.languages;
       expect(languages).toEqual({
         fr: `${BASE}/pricing`,
         id: `${BASE}/id/pricing`,
+        th: `${BASE}/th/pricing`,
         en: `${BASE}/en/pricing`,
         "x-default": `${BASE}/pricing`,
       });

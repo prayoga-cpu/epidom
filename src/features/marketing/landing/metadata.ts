@@ -22,7 +22,7 @@ export function landingUrl(slug: string, locale: Locale): string {
 export function landingHreflang(group: LandingGroup): Record<string, string> {
   const siblings = landingAlternates(group);
   const languages: Record<string, string> = {};
-  for (const locale of ["fr", "id", "en"] as const) {
+  for (const locale of ["fr", "id", "en", "th"] as const) {
     const slug = siblings[locale];
     if (slug) languages[locale] = landingUrl(slug, locale);
   }

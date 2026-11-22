@@ -51,4 +51,5 @@ export const STOCK_GUIDE_SLUG = {
   fr: "stock-et-commandes-fournisseurs",
   en: "stock-and-supplier-orders",
   id: "stok-dan-pesanan-pemasok",
+  th: "stock-and-supplier-orders-th",
 } as const;

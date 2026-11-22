@@ -49,6 +49,16 @@ const EXAMPLE: Record<
     portions: 12,
     extra: 0.1,
   },
+  // Thai visitors are quoted USD (LOCALE_PRICE_CURRENCY), so the example reuses the English figures.
+  th: {
+    rows: [
+      { packPrice: 4, packSize: 2000, quantityUsed: 300 },
+      { packPrice: 5, packSize: 450, quantityUsed: 115 },
+      { packPrice: 4.5, packSize: 340, quantityUsed: 200 },
+    ],
+    portions: 12,
+    extra: 0.1,
+  },
 };
 
 interface Row {

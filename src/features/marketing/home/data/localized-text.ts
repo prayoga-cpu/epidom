@@ -7,9 +7,9 @@ import type { Locale } from "@/components/lang/i18n-provider";
  */
 export type LocalizedText = string | Partial<Record<Locale, string>>;
 
-const FALLBACK_ORDER: readonly Locale[] = ["fr", "en", "id"];
+const FALLBACK_ORDER: readonly Locale[] = ["fr", "en", "id", "th"];
 
-/** The text for `locale`, else the first available in fr, en, id order, else "". */
+/** The text for `locale`, else the first available in fr, en, id, th order, else "". */
 export function resolveLocalizedText(text: LocalizedText, locale: Locale): string {
   if (typeof text === "string") return text.trim();
   for (const l of [locale, ...FALLBACK_ORDER]) {

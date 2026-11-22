@@ -47,3 +47,44 @@ describe("proxy: unprefixed (French) marketing pages", () => {
     }
   });
 });
+
+describe("proxy: Thai marketing pages", () => {
+  it("sends a Thai browser to /th, and still serves Googlebot the French page", async () => {
+    const res = await proxy(request("/pricing", CHROME, "th-TH,th;q=0.9,en;q=0.8"));
+    expect(isRedirect(res.status)).toBe(true);
+    expect(new URL(res.headers.get("location") as string).pathname).toBe("/th/pricing");
+
+    const bot = await proxy(
+      request(
+        "/pricing",
+        "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+        "th-TH,th;q=0.9"
+      )
+    );
+    expect(isRedirect(bot.status)).toBe(false);
+  });
+
+  it("honours an explicit Thai language choice over the browser's language", async () => {
+    const req = new NextRequest(`${ORIGIN}/pricing`, {
+      headers: {
+        "user-agent": CHROME,
+        "accept-language": "en-US,en;q=0.9",
+        cookie: "epidom_locale_pref=th",
+      },
+    });
+    const res = await proxy(req);
+    expect(new URL(res.headers.get("location") as string).pathname).toBe("/th/pricing");
+  });
+
+  it("serves /th/pricing itself (rewritten to the internal /m/th segment), no redirect", async () => {
+    const res = await proxy(request("/th/pricing", CHROME));
+    expect(isRedirect(res.status)).toBe(false);
+    expect(res.headers.get("x-middleware-rewrite")).toContain("/m/th/pricing");
+  });
+
+  it("sends a direct visit to the internal /m/th address to the real URL", async () => {
+    const res = await proxy(request("/m/th/pricing", CHROME));
+    expect(isRedirect(res.status)).toBe(true);
+    expect(new URL(res.headers.get("location") as string).pathname).toBe("/th/pricing");
+  });
+});

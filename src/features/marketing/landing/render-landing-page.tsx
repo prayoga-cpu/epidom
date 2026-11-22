@@ -37,7 +37,7 @@ const CONNECTOR_FEATURES = {
     "Hanya baca mulai paket Operations; perubahan (Enterprise) hanya dengan persetujuan jelas",
     "Login OAuth 2.1 dengan PKCE; akses bisa dicabut kapan saja",
   ],
-} as const satisfies Record<Locale, readonly string[]>;
+} as const satisfies Partial<Record<Locale, readonly string[]>>;
 
 /** `export const generateMetadata = landingMetadata("kalkulator-hpp")` in a route file. */
 export function landingMetadata(slug: string) {
@@ -81,7 +81,7 @@ export function LandingRoute({ slug, locale }: { slug: string; locale: Locale })
         <ClaudeConnectorStructuredData
           url={url}
           inLanguage={page.locale}
-          featureList={CONNECTOR_FEATURES[page.locale]}
+          featureList={CONNECTOR_FEATURES[page.locale as keyof typeof CONNECTOR_FEATURES] ?? CONNECTOR_FEATURES.en}
         />
       )}
       <BreadcrumbStructuredData

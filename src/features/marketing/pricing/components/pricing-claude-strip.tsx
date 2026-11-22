@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useI18n } from "@/components/lang/i18n-provider";
-import { LANDING_GROUPS } from "@/features/marketing/landing/registry";
+import { landingSlugIn } from "@/features/marketing/landing/registry";
 import { trackEvent } from "@/lib/analytics";
 import { getLocalizedPath } from "@/lib/i18n-routing";
 
@@ -16,7 +16,7 @@ export function PricingClaudeStrip({
   surface?: "pricing" | "products" | "home";
 }) {
   const { t, locale } = useI18n();
-  const slug = LANDING_GROUPS["claude-connector"][locale];
+  const slug = landingSlugIn("claude-connector", locale);
   if (!slug) return null;
 
   return (

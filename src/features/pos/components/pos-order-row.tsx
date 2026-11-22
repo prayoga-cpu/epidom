@@ -2,7 +2,7 @@
 
 import { useI18n } from "@/components/lang/i18n-provider";
 import { formatDistanceToNow } from "date-fns";
-import { id, enUS, fr } from "date-fns/locale";
+import { id, enUS, fr, th } from "date-fns/locale";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { cn } from "@/lib/utils";
 import { orderSourceBadgeLabel, saleTypeText } from "../lib/order-channel";
@@ -39,7 +39,7 @@ export function PosOrderRow({ order, storeId, onUpdateStatus }: PosOrderRowProps
     onUpdateStatus
   );
 
-  const dateLocaleMap = { en: enUS, id, fr };
+  const dateLocaleMap = { en: enUS, id, fr, th };
   const dateLocale = dateLocaleMap[locale] ?? id;
 
   const timeAgo = formatDistanceToNow(new Date(order.createdAt), {

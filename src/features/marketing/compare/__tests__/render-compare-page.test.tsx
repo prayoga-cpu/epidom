@@ -184,7 +184,7 @@ describe("compare social card", () => {
   });
 
   it("gives every competitor, in every locale, an og:locale that matches its canonical URL", async () => {
-    const OG: Record<Locale, string> = { fr: "fr_FR", id: "id_ID", en: "en_US" };
+    const OG: Record<Locale, string> = { fr: "fr_FR", id: "id_ID", en: "en_US", th: "th_TH" };
     for (const map of [
       mokaComparison,
       majooComparison,

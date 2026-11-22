@@ -1,0 +1,6 @@
+Noto Sans Thai (Regular, Bold; the Thai subset served by Google Fonts)
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/thai)
+Licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org).
+
+Used only by the Open Graph image renderer (src/features/marketing/seo/og-image.tsx),
+because Geist has no Thai glyphs and a Thai title would otherwise render as empty boxes.

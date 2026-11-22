@@ -13,6 +13,7 @@ import { formatCurrency, getCurrencySymbol } from "@/lib/utils/formatting";
 import {
   RECEIPT_INTL_LOCALE,
   RECEIPT_LABELS,
+  printerLocale,
   RECEIPT_POWERED_BY_URL,
   SHIFT_REPORT_LABELS,
   saleTypeLabel,
@@ -287,7 +288,7 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   const cols = receipt.width ?? 32;
   const divider = "-".repeat(cols);
   const currency = receipt.currency ?? "IDR";
-  const locale = resolveReceiptLocale(receipt.locale);
+  const locale = printerLocale(resolveReceiptLocale(receipt.locale));
   const labels = RECEIPT_LABELS[locale];
   const money = (amount: number) => formatMoney(amount, currency, locale);
 
@@ -492,8 +493,8 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   const cols = input.width ?? 32;
   const divider = "-".repeat(cols);
   const thickDivider = "=".repeat(cols);
-  const locale = resolveReceiptLocale(
-    typeof input.locale === "string" ? input.locale : undefined
+  const locale = printerLocale(
+    resolveReceiptLocale(typeof input.locale === "string" ? input.locale : undefined)
   );
   const labels = SHIFT_REPORT_LABELS[locale];
   const intlLocale = RECEIPT_INTL_LOCALE[locale];

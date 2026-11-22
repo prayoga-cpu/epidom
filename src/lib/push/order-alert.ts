@@ -22,6 +22,11 @@ const COPY: Record<ReceiptLocale, { unpaid: string; paid: string; collect: strin
     paid: "Nouvelle commande en ligne",
     collect: "encaisser le paiement en caisse",
   },
+  th: {
+    unpaid: "ออเดอร์ออนไลน์ใหม่ · ยังไม่ชำระเงิน",
+    paid: "ออเดอร์ออนไลน์ใหม่",
+    collect: "รับชำระเงินที่แคชเชียร์",
+  },
 };
 
 export function storefrontOrderPushPayload(args: {

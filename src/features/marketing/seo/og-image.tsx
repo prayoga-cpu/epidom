@@ -57,6 +57,7 @@ export function findOgEntry(kind: string, locale: string, slug: string): OgEntry
 const FOOTER: Record<Locale, string> = {
   fr: "Caisse, commande en ligne et tableau de bord pour cafés",
   id: "Kasir, pesanan online, dan dasbor toko untuk kafe",
+  th: "ระบบ POS สั่งอาหารออนไลน์ และแดชบอร์ดร้านสำหรับคาเฟ่",
   en: "POS, online ordering and store dashboard for cafés",
 };
 
@@ -65,11 +66,14 @@ const GOLD = "#d9ae3b";
 const CREAM = "#fbf9e4";
 
 export async function renderOgImage(entry: OgEntry): Promise<ImageResponse> {
-  // Literal paths, so the build traces exactly these three files (a path built
-  // from variables makes it trace the whole project).
-  const [bold, regular, icon] = await Promise.all([
+  // Literal paths, so the build traces exactly these files (a path built
+  // from variables makes it trace the whole project). Geist has no Thai glyphs,
+  // so Noto Sans Thai rides along as the fallback family for Thai titles.
+  const [bold, regular, thaiBold, thaiRegular, icon] = await Promise.all([
     readFile(join(process.cwd(), "node_modules/geist/dist/fonts/geist-sans/Geist-Bold.ttf")),
     readFile(join(process.cwd(), "node_modules/geist/dist/fonts/geist-sans/Geist-Regular.ttf")),
+    readFile(join(process.cwd(), "src/assets/fonts/NotoSansThai-Bold.ttf")),
+    readFile(join(process.cwd(), "src/assets/fonts/NotoSansThai-Regular.ttf")),
     readFile(join(process.cwd(), "public/images/icon-192.png")),
   ]);
   const iconSrc = `data:image/png;base64,${icon.toString("base64")}`;
@@ -86,7 +90,7 @@ export async function renderOgImage(entry: OgEntry): Promise<ImageResponse> {
           justifyContent: "space-between",
           background: `linear-gradient(135deg, ${NAVY} 0%, #0d1f35 100%)`,
           padding: "64px 76px",
-          fontFamily: "Geist",
+          fontFamily: "Geist, Noto Sans Thai",
           borderBottom: `10px solid ${GOLD}`,
         }}
       >
@@ -103,7 +107,8 @@ export async function renderOgImage(entry: OgEntry): Promise<ImageResponse> {
               color: GOLD,
               fontSize: 26,
               fontWeight: 700,
-              letterSpacing: 4,
+              // Tracking would pull Thai vowel and tone marks away from their consonant.
+              letterSpacing: entry.locale === "th" ? 0 : 4,
               textTransform: "uppercase",
             }}
           >
@@ -140,6 +145,8 @@ export async function renderOgImage(entry: OgEntry): Promise<ImageResponse> {
       fonts: [
         { name: "Geist", data: bold, weight: 700, style: "normal" },
         { name: "Geist", data: regular, weight: 400, style: "normal" },
+        { name: "Noto Sans Thai", data: thaiBold, weight: 700, style: "normal" },
+        { name: "Noto Sans Thai", data: thaiRegular, weight: 400, style: "normal" },
       ],
     }
   );

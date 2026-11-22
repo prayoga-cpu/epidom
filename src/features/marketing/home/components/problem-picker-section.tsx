@@ -126,7 +126,7 @@ export function ProblemPickerSection() {
   );
 }
 
-function PainPanel({ pain, locale }: { pain: Pain; locale: "en" | "fr" | "id" }) {
+function PainPanel({ pain, locale }: { pain: Pain; locale: "en" | "fr" | "id" | "th" }) {
   const { t } = useI18n();
   const trialHref = usePosTrialHref();
   const k = (field: string) => t(`redesign.landing.picker.pains.${pain.id}.${field}`);

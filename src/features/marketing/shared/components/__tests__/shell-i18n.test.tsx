@@ -6,6 +6,7 @@ import type { Locale } from "@/components/lang/i18n-provider";
 import { en } from "@/locales/en";
 import { fr } from "@/locales/fr";
 import { id } from "@/locales/id";
+import { th } from "@/locales/th";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/some/missing/page",
@@ -22,7 +23,7 @@ import { NotFoundContent } from "../not-found-content";
 // The real provider and the real dictionaries on purpose: what matters is the language
 // the marketing shell actually prints, including for screen-reader users.
 
-const DICTS: Record<Locale, unknown> = { en, fr, id };
+const DICTS: Record<Locale, unknown> = { en, fr, id, th };
 const lookup = (locale: Locale, path: string) =>
   path.split(".").reduce<unknown>((acc, key) => {
     return acc && typeof acc === "object" ? (acc as Record<string, unknown>)[key] : undefined;

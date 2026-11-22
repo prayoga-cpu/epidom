@@ -370,7 +370,7 @@ function Stage({
   locale,
 }: {
   screens: readonly ProductScreenKey[];
-  locale: "fr" | "en" | "id";
+  locale: "fr" | "en" | "id" | "th";
 }) {
   const shots = screens.map((key) => PRODUCT_SCREENS[key] as ProductScreen);
   const first = shots[0];

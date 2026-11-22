@@ -11,7 +11,7 @@
  */
 
 export type CookieCategory = "essential" | "analytics" | "marketing";
-export type Locale = "en" | "fr" | "id";
+export type Locale = "en" | "fr" | "id" | "th";
 
 export interface CookiePreferences {
   essential: boolean; // Always true, cannot be disabled
@@ -54,7 +54,7 @@ export function getCookiePreferences(): CookiePreferences | null {
     }
 
     // Validate language
-    const validLanguages: Locale[] = ["en", "fr", "id"];
+    const validLanguages: Locale[] = ["en", "fr", "id", "th"];
     const language =
       preferences.language && validLanguages.includes(preferences.language)
         ? preferences.language
@@ -83,7 +83,7 @@ export function setCookiePreferences(preferences: Partial<CookiePreferences>): v
     const current = getCookiePreferences();
 
     // Validate language
-    const validLanguages: Locale[] = ["en", "fr", "id"];
+    const validLanguages: Locale[] = ["en", "fr", "id", "th"];
     const language =
       preferences.language && validLanguages.includes(preferences.language)
         ? preferences.language
@@ -189,7 +189,7 @@ export function getLanguagePreference(): Locale {
   // Fallback to legacy localStorage
   if (typeof window !== "undefined") {
     const legacyLocale = localStorage.getItem("locale") || localStorage.getItem("lang");
-    if (legacyLocale === "en" || legacyLocale === "fr" || legacyLocale === "id") {
+    if (legacyLocale === "en" || legacyLocale === "fr" || legacyLocale === "id" || legacyLocale === "th") {
       return legacyLocale;
     }
   }
@@ -198,6 +198,7 @@ export function getLanguagePreference(): Locale {
   if (typeof navigator !== "undefined" && navigator.language) {
     const lang = navigator.language.toLowerCase();
     if (lang.startsWith("id")) return "id";
+    if (lang.startsWith("th")) return "th";
     if (lang.startsWith("fr")) return "fr";
     if (lang.startsWith("en")) return "en";
   }

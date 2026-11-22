@@ -19,6 +19,11 @@ const COPY: Record<Locale, { eyebrow: string; title: string; body: string }> = {
     title: "Epidom against what you already use.",
     body: "Factual comparisons, sourced from each tool's own official site — no invented numbers.",
   },
+  th: {
+    eyebrow: "เปรียบเทียบ",
+    title: "Epidom เทียบกับสิ่งที่คุณใช้อยู่",
+    body: "การเปรียบเทียบตามข้อเท็จจริง อ้างอิงจากเว็บไซต์ทางการของแต่ละเครื่องมือ ไม่มีตัวเลขที่แต่งขึ้นเอง",
+  },
 };
 
 export function CompareHub({ locale }: { locale: Locale }) {

@@ -44,7 +44,9 @@ const MARKETS: readonly Market[] = ["fr", "id", "global"];
 
 /** The markets to pick from, the one matching the site language first. */
 export function marketOptions(locale: Locale): Market[] {
-  return [...MARKETS].sort((a, b) => Number(b === locale) - Number(a === locale));
+  // Thai has no market of its own here: Thai businesses start from "global".
+  const first: string = locale === "th" ? "global" : locale;
+  return [...MARKETS].sort((a, b) => Number(b === first) - Number(a === first));
 }
 
 /** Tills the visitor is likely to be leaving, by where the business is. */

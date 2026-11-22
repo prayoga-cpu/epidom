@@ -257,7 +257,7 @@ export function useSearchTargets(storeId: string) {
       // Tabs, buttons and how-tos that live inside a page ("import my menu", "split the bill").
       ...FEATURE_INDEX.map((f) => ({
         id: `feat-${f.id}`,
-        label: f.label[(locale as "en" | "id" | "fr") ?? "en"] ?? f.label.en,
+        label: f.label[(locale as "en" | "id" | "fr" | "th") ?? "en"] ?? f.label.en,
         keywords: `${f.label.en} ${f.label.id} ${f.label.fr} ${f.keywords}`,
         icon: f.icon,
         href: `${base}${f.href}`,

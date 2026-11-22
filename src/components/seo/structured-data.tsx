@@ -36,18 +36,20 @@ export function StructuredData({ type, data }: StructuredDataProps) {
 // page, and no foundingDate until there is a date to point to.
 
 /** schema.org `inLanguage` for each site language. */
-const IN_LANGUAGE: Record<Locale, string> = { fr: "fr-FR", id: "id-ID", en: "en" };
+const IN_LANGUAGE: Record<Locale, string> = { fr: "fr-FR", id: "id-ID", en: "en", th: "th-TH" };
 
 /** What Epidom is, in the language of the page carrying the JSON-LD. */
 const SITE_DESCRIPTION: Record<Locale, string> = {
   fr: "Caisse en temps réel, menu en ligne et commande en ligne pour cafés, boulangeries et restaurants.",
   id: "Aplikasi kasir realtime, halaman menu, dan pesanan online untuk kafe, warung, dan restoran.",
+  th: "ระบบ POS เรียลไทม์ หน้าเมนูออนไลน์ และการสั่งอาหารออนไลน์ สำหรับคาเฟ่ เบเกอรี่ และร้านอาหาร",
   en: "Realtime POS, online menu page and online ordering for cafés, bakeries and restaurants.",
 };
 
 const ORGANIZATION_DESCRIPTION: Record<Locale, string> = {
   fr: "Epidom est une plateforme de vitrine en ligne, de commande en ligne et de caisse pour cafés et restaurants, conçue par Prionation.",
   id: "Epidom adalah platform toko online, pesanan online, dan aplikasi kasir untuk kafe, warung, dan restoran, dibuat oleh Prionation.",
+  th: "Epidom เป็นแพลตฟอร์มหน้าร้านออนไลน์ สั่งอาหารออนไลน์ และระบบ POS สำหรับคาเฟ่และร้านอาหาร สร้างโดย Prionation",
   en: "Epidom is a public storefront, online ordering and POS platform for cafés, restaurants and warungs, built by Prionation.",
 };
 
@@ -100,6 +102,12 @@ const OFFER_COPY: Record<Locale, { free: string; pos: string; operations: string
     operations:
       "Semua fitur POS, plus jadwal staf, stok dan HPP resep, laporan keuangan, dan hingga 3 outlet.",
   },
+  th: {
+    free: "หน้าร้านออนไลน์ฟรีตลอดไป: หน้าเมนูและ QR code",
+    pos: "POS ออเดอร์ออนไลน์ และการจองโต๊ะ ทดลองใช้ฟรี 14 วัน",
+    operations:
+      "ครบทุกอย่างใน POS พร้อมตารางงานพนักงาน สต็อกและต้นทุนสูตร รายงานการเงิน และสูงสุด 3 สาขา",
+  },
   en: {
     free: "Storefront free forever: a menu page and QR code.",
     pos: "POS, online orders and table reservations. 14-day free trial.",
@@ -132,6 +140,18 @@ const FEATURE_LIST: Record<Locale, string[]> = {
     "Jadwal dan absensi staf",
     "Stok dan HPP resep",
     "Laporan keuangan multi-outlet",
+  ],
+  th: [
+    "หน้าร้านออนไลน์ฟรี (หน้าเมนู)",
+    "การแจ้งเตือนออเดอร์ทาง WhatsApp",
+    STOREFRONT_ONLINE_PAYMENTS_ENABLED
+      ? "ชำระเงินออนไลน์ด้วยบัตรและช่องทางในประเทศ"
+      : "สั่งอาหารออนไลน์ ชำระเงินที่เคาน์เตอร์",
+    "เครื่องคิดเงิน POS และใบเสร็จ",
+    "จอแสดงออเดอร์ในครัว (KDS)",
+    "ตารางงานและการลงเวลาพนักงาน",
+    "สต็อกและต้นทุนสูตร",
+    "รายงานการเงินหลายสาขา",
   ],
   en: [
     "Free public online storefront (menu page)",

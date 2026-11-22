@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { LANGUAGE_OPTIONS } from "@/components/lang/lang-switcher";
+import { SALES_PAGE_LOCALES } from "@/lib/sales-pages";
 import { LOCALE_PREF_COOKIE } from "@/lib/i18n-routing";
 
 // public/sales-pages/lang-switch.js is a plain browser script: run its source
@@ -52,7 +53,9 @@ afterEach(() => {
 });
 
 describe("sales page language switcher", () => {
-  it("offers exactly the site switcher's languages, in its order", () => {
+  // Sales pages exist in SALES_PAGE_LOCALES only (no Thai one), so the switcher must not
+  // offer a language whose page would 404.
+  it("offers exactly the site switcher's languages that have a sales page, in its order", () => {
     const { options } = openPage("fr", "/sales-page-1");
 
     expect(
@@ -62,7 +65,11 @@ describe("sales page language switcher", () => {
         short: o.querySelector(".code")!.textContent,
         label: o.querySelector(".label")!.textContent,
       }))
-    ).toEqual(LANGUAGE_OPTIONS.map(({ value, flag, short, label }) => ({ value, flag, short, label })));
+    ).toEqual(
+      LANGUAGE_OPTIONS.filter((o) => (SALES_PAGE_LOCALES as readonly string[]).includes(o.value)).map(
+        ({ value, flag, short, label }) => ({ value, flag, short, label })
+      )
+    );
   });
 
   it("shows the page's language, closed", () => {
