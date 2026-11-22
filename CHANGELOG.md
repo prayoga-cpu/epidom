@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.52.0] - 2026-11-22 · feat
+
+- **Field names in error messages.** A validation message used to show a raw field name ("slideSeconds: must be at least 3"). 175 more fields now have a plain name in your language ("Durée d'une diapositive : …"), including the days of the week, delivery-app links, loyalty-point settings and customer-display options.
+- **Claude connector changes in your language.** The change history lines written when Claude edits your menu ("Changed 3 menu items: …; also set linked product …", "Renamed category …", "Merged category …", "Reordered the menu categories") are translated, with item and category names left exactly as you wrote them.
+- **Plans, statuses and priorities.** In the admin activity log, plan changes ("POS/ACTIVE"), feedback and request statuses and priorities, and the list of admin pages someone was given are shown as words in your language instead of codes.
+- **Admin activity log.** Dates now use the language of the screen (and the usual calendar year in Thai), and staff roles (Owner, Manager, Cashier, Kitchen) are translated.
+
 ## [3.51.0] - 2026-11-22 · feat
 
 - **Thai guides, comparisons and sales pages.** The 13 guide pages (café, restaurant and bakery POS, offline mode, kitchen display, stock, staff scheduling, receipt printers, QR menu, online ordering, the two calculators and the Claude connector), the 16 comparison pages and the 4 sales pages now exist in Thai, under `/th/…`. Thai visitors are no longer sent to the English versions.

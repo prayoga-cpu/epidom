@@ -80,7 +80,13 @@ export function serverMessageKey(message: string): string {
 export const SERVER_MESSAGE_PATTERNS: ReadonlyArray<{
   pattern: RegExp;
   key: string;
+  /** Captured values are inserted untranslated (names, codes, emails). */
   raw?: boolean;
+  /**
+   * Zero-based capture groups that ARE translated (a nested sentence); every
+   * other group is inserted as it came. Takes precedence over `raw`.
+   */
+  translatable?: readonly number[];
 }> = [
   // --- src/lib/errors ---
   { pattern: /^(.{1,60}?) with id '(.+)' not found$/, key: "p_not_found_with_id" },
@@ -427,11 +433,11 @@ export const SERVER_MESSAGE_PATTERNS: ReadonlyArray<{
     key: "p_audit_custom_price_now",
     raw: true,
   },
-  { pattern: /^Set (\S+) to (\S+) \(was (\S+)\)$/, key: "p_audit_label_set_plan", raw: true },
+  { pattern: /^Set (\S+) to (\S+) \(was (\S+)\)$/, key: "p_audit_label_set_plan", translatable: [1, 2] },
   {
     pattern: /^Set (\S+) to (\S+) \(no prior subscription\)$/,
     key: "p_audit_label_set_plan_new",
-    raw: true,
+    translatable: [1],
   },
   {
     pattern: /^Set (\S+) billing period to lifetime$/,
@@ -455,7 +461,7 @@ export const SERVER_MESSAGE_PATTERNS: ReadonlyArray<{
   },
   { pattern: /^Granted admin for (\S+)$/, key: "p_audit_label_granted_admin", raw: true },
   { pattern: /^Revoked admin for (\S+)$/, key: "p_audit_label_revoked_admin", raw: true },
-  { pattern: /^Gave (\S+) admin pages: (.+)$/, key: "p_audit_label_gave_admin_pages", raw: true },
+  { pattern: /^Gave (\S+) admin pages: (.+)$/, key: "p_audit_label_gave_admin_pages", translatable: [1] },
   { pattern: /^Removed (\S+)'s admin pages$/, key: "p_audit_label_removed_admin_pages", raw: true },
   { pattern: /^Reset password for (\S+)$/, key: "p_audit_label_reset_password", raw: true },
   {
@@ -471,17 +477,17 @@ export const SERVER_MESSAGE_PATTERNS: ReadonlyArray<{
   {
     pattern: /^Triaged feedback (\S+) -> (\S+)$/,
     key: "p_audit_label_triage_feedback_status",
-    raw: true,
+    translatable: [1],
   },
   {
     pattern: /^Triaged feedback (\S+) \((\S+)\)$/,
     key: "p_audit_label_triage_feedback_priority",
-    raw: true,
+    translatable: [1],
   },
   {
     pattern: /^Triaged feedback (\S+) -> (\S+) \((\S+)\)$/,
     key: "p_audit_label_triage_feedback_both",
-    raw: true,
+    translatable: [1, 2],
   },
   {
     pattern: /^Triaged custom development request (\S+)$/,
@@ -491,7 +497,7 @@ export const SERVER_MESSAGE_PATTERNS: ReadonlyArray<{
   {
     pattern: /^Triaged custom development request (\S+) -> (\S+)$/,
     key: "p_audit_label_triage_request_status",
-    raw: true,
+    translatable: [1],
   },
   { pattern: /^Adjusted (.+) by (\S+)$/, key: "p_audit_label_adjusted_stock", raw: true },
   { pattern: /^Deleted waste entry for (.+)$/, key: "p_audit_label_deleted_waste", raw: true },
@@ -499,6 +505,34 @@ export const SERVER_MESSAGE_PATTERNS: ReadonlyArray<{
   { pattern: /^Deleted store (.+)$/, key: "p_audit_label_deleted_store", raw: true },
   { pattern: /^Changed the options of (.+)$/, key: "p_audit_label_changed_options", raw: true },
   { pattern: /^Reverted: (.+)$/, key: "p_audit_label_reverted" },
+
+  { pattern: /^(FREE|POS|OPERATIONS|ENTERPRISE)\/([A-Z_]+)$/, key: "p_plan_with_status", translatable: [1] },
+  // --- change history written by the Claude connector (src/lib/mcp/tools/menu.ts) ---
+  ...["Added", "Changed"].flatMap((verb): Array<{
+    pattern: RegExp;
+    key: string;
+    translatable: readonly number[];
+  }> => {
+    const v = verb.toLowerCase();
+    return [
+      { pattern: new RegExp(`^${verb} 1 menu item: (.+?); also set (.+)$`), key: `p_menu_${v}_one_linked`, translatable: [1] },
+      { pattern: new RegExp(`^${verb} 1 menu item: (.+)$`), key: `p_menu_${v}_one`, translatable: [] },
+      { pattern: new RegExp(`^${verb} (\\d+) menu items: (.+?) and (\\d+) more; also set (.+)$`), key: `p_menu_${v}_more_linked`, translatable: [3] },
+      { pattern: new RegExp(`^${verb} (\\d+) menu items: (.+?) and (\\d+) more$`), key: `p_menu_${v}_more`, translatable: [] },
+      { pattern: new RegExp(`^${verb} (\\d+) menu items: (.+?); also set (.+)$`), key: `p_menu_${v}_many_linked`, translatable: [2] },
+      { pattern: new RegExp(`^${verb} (\\d+) menu items: (.+)$`), key: `p_menu_${v}_many`, translatable: [] },
+    ];
+  }),
+  // The "also set …" tail: the linked product, and the other menu items on it.
+  { pattern: /^linked product (.+?) \((.+?)\) to (\S+) and 1 other menu item$/, key: "p_menu_linked_product_one", raw: true },
+  { pattern: /^linked product (.+?) \((.+?)\) to (\S+) and (\d+) other menu items$/, key: "p_menu_linked_product_many", raw: true },
+  { pattern: /^linked product (.+?) \((.+?)\) to (\S+)$/, key: "p_menu_linked_product", raw: true },
+  { pattern: /^1 other menu item linked to (.+) to (\S+)$/, key: "p_menu_linked_other_one", raw: true },
+  { pattern: /^(\d+) other menu items linked to (.+) to (\S+)$/, key: "p_menu_linked_other_many", raw: true },
+  { pattern: /^Renamed category (.+?) to (.+)$/, key: "p_menu_category_renamed", raw: true },
+  { pattern: /^Merged category (.+?) into (.+)$/, key: "p_menu_category_merged", raw: true },
+  { pattern: /^Removed 1 empty category: (.+)$/, key: "p_menu_categories_removed_one", raw: true },
+  { pattern: /^Removed (\d+) empty categories: (.+)$/, key: "p_menu_categories_removed_many", raw: true },
 
   // --- generic shapes (keep last) ---
   {
@@ -575,7 +609,7 @@ function translateKnown(
     }
   }
 
-  for (const { pattern, key, raw } of SERVER_MESSAGE_PATTERNS) {
+  for (const { pattern, key, raw, translatable } of SERVER_MESSAGE_PATTERNS) {
     const match = pattern.exec(message);
     if (!match) continue;
     const template = lookup(catalog, key);
@@ -587,7 +621,12 @@ function translateKnown(
       if (captured === undefined) return placeholder;
       // One level of nesting is enough for "X import failed: <message>". A
       // captured noun is found whatever its case: the key is a lowercase slug.
-      if (raw || depth >= 1) return captured;
+      if (depth >= (translatable ? 2 : 1)) return captured;
+      if (translatable) {
+        if (!translatable.includes(Number(index))) return captured;
+      } else if (raw) {
+        return captured;
+      }
       return translateKnown(captured, catalog, depth + 1, true) ?? captured;
     });
   }

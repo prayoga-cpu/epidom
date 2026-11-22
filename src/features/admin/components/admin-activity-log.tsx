@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/components/lang/i18n-provider";
+import { intlLocaleTags } from "@/lib/utils/formatting";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -118,13 +119,34 @@ function entityLabel(code: string, locale: string): string {
   return localizeServerField(code, locale);
 }
 
+/**
+ * The date format of the screen's language, not the browser's: the provider
+ * mirrors the language into <html lang>, which every caller here already
+ * renders under. Gregorian for Thai (INTL_LOCALES.th pins it).
+ */
 function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+  const lang = typeof document !== "undefined" ? document.documentElement?.lang : "";
+  const tag = (intlLocaleTags as Record<string, string>)[lang ?? ""];
+  return new Date(iso).toLocaleString(tag, {
     month: "short",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+const STAFF_ROLE_KEYS: Record<string, string> = {
+  OWNER: "pages.staffRoleOwner",
+  MANAGER: "pages.staffRoleManager",
+  CASHIER: "pages.staffRoleCashier",
+  KITCHEN: "pages.staffRoleKitchen",
+};
+
+/** A staff role in the screen's language; a custom role label the owner typed stays as typed. */
+function staffRoleLabel(t: (key: string) => string, role: string | null): string | null {
+  if (role === null) return null;
+  const key = STAFF_ROLE_KEYS[role];
+  return key ? t(key) : role;
 }
 
 export function AdminActivityLog() {
@@ -935,7 +957,7 @@ function ActorsView({
                 </p>
               </div>
               <Badge variant="outline" className="shrink-0 text-[10px]">
-                {a.staffRole ?? codeLabel(t, "actorKinds", a.actorKind)}
+                {staffRoleLabel(t, a.staffRole) ?? codeLabel(t, "actorKinds", a.actorKind)}
               </Badge>
             </div>
 
@@ -1024,7 +1046,7 @@ function ActorsView({
                   </td>
                   <td className="px-3 py-2 align-top">
                     <Badge variant="outline" className="text-[10px]">
-                      {a.staffRole ?? codeLabel(t, "actorKinds", a.actorKind)}
+                      {staffRoleLabel(t, a.staffRole) ?? codeLabel(t, "actorKinds", a.actorKind)}
                     </Badge>
                   </td>
                   <td className="px-3 py-2 text-right align-top">{a.total}</td>

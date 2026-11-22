@@ -14,7 +14,7 @@ const locales = { en: enUS, fr: fr, id: id, th: th };
 /** `Intl` locale tags mirroring `INTL_LOCALES` in `i18n-provider.tsx` — kept
  * as a small local copy rather than importing from there, since that file
  * imports from this one (importing back would be circular). */
-const intlLocaleTags = { en: "en-US", fr: "fr-FR", id: "id-ID", th: "th-TH-u-ca-gregory" };
+export const intlLocaleTags = { en: "en-US", fr: "fr-FR", id: "id-ID", th: "th-TH-u-ca-gregory" };
 
 /**
  * Format a date to a readable string
