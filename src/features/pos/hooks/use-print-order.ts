@@ -47,14 +47,25 @@ export function orderPrintRoles(mode: "auto" | "manual"): OrderPrintRoles {
       enabled: printers.KITCHEN.enabled,
       print: prints("KITCHEN"),
       paperWidth: printers.KITCHEN.paperWidth,
+      ...rasterOption(printers.KITCHEN),
     },
     BAR: {
       enabled: printers.BAR.enabled,
       print: prints("BAR"),
       paperWidth: printers.BAR.paperWidth,
+      ...rasterOption(printers.BAR),
     },
     LABEL: { enabled: printers.LABEL.enabled, print: prints("LABEL"), scope: label.scope },
   };
+}
+
+/**
+ * A printer's "print non-Latin text as an image" switch, as a key that exists
+ * only when it is on — a job built with the switch off is identical to one built
+ * before the switch existed.
+ */
+function rasterOption(printer: { rasterNonAscii?: boolean }): { rasterNonAscii?: true } {
+  return printer.rasterNonAscii === true ? { rasterNonAscii: true } : {};
 }
 
 /** True when ANY of the kitchen / bar / label printers is set up on this device. */
@@ -72,6 +83,7 @@ function labelConfig(): LabelPrinterConfig {
     widthMm: label.widthMm,
     heightMm: label.heightMm,
     gapMm: label.gapMm,
+    ...rasterOption(printers.LABEL),
   };
 }
 

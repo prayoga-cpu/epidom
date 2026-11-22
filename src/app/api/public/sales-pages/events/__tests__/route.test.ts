@@ -68,6 +68,12 @@ describe("POST /api/public/sales-pages/events", () => {
     });
   });
 
+  it("accepts the Thai copy's events", async () => {
+    await post({ page: "sales-page-2", locale: "th", type: "VIEW" });
+
+    expect(create.mock.calls[0][0].data).toMatchObject({ page: "sales-page-2", locale: "th", type: "VIEW" });
+  });
+
   it("files an event without a language under French, from a tracker cached before languages", async () => {
     await post({ page: "sales-page-1", type: "VIEW" });
 

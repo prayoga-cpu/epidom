@@ -93,7 +93,15 @@ describe.each(LANDING_PAGES.map((p) => [p.slug, p] as const))("landing page %s",
   it("has real substance: sections, a how-to, and questions answered", () => {
     expect(page.blocks.filter((b) => b.type === "h2").length).toBeGreaterThanOrEqual(4);
     expect(page.faqs.length).toBeGreaterThanOrEqual(3);
-    const words = texts(page).join(" ").split(/\s+/).length;
+    // Thai writes no spaces between words, so splitting on whitespace counts
+    // clauses, not words: segment it the way a reader would.
+    const body = texts(page).join(" ");
+    const words =
+      page.locale === "th"
+        ? [...new Intl.Segmenter("th", { granularity: "word" }).segment(body)].filter(
+            (s) => s.isWordLike
+          ).length
+        : body.split(/\s+/).length;
     expect(words, `${page.slug}: ${words} words`).toBeGreaterThanOrEqual(550);
   });
 
@@ -146,13 +154,14 @@ describe("hreflang groups", () => {
       fr: "https://epidom.fr/calcul-cout-de-revient",
       id: "https://epidom.fr/id/kalkulator-hpp",
       en: "https://epidom.fr/en/recipe-cost-calculator",
+      th: "https://epidom.fr/th/recipe-cost-calculator-th",
       "x-default": "https://epidom.fr/calcul-cout-de-revient",
     });
   });
 
   it("fall back to English for x-default when a group has no French page", () => {
     expect(landingHreflang("cafe")["x-default"]).toBe("https://epidom.fr/en/cafe-pos-system");
-    expect(Object.keys(LANDING_GROUPS.restaurant)).toEqual(["id"]);
+    expect(Object.keys(LANDING_GROUPS.restaurant)).toEqual(["id", "th"]);
     expect(landingHreflang("restaurant")["x-default"]).toBe(
       "https://epidom.fr/id/aplikasi-kasir-restoran"
     );

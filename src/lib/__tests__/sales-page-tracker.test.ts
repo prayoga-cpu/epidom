@@ -76,7 +76,7 @@ describe("sales page tracker", () => {
     expect(document.cookie).toContain("epidom_sales_page=sales-page-2.fr");
   });
 
-  it.each(["en", "id"])("reports the %s copy under its language", (lang) => {
+  it.each(["en", "id", "th"])("reports the %s copy under its language", (lang) => {
     document.documentElement.setAttribute("lang", lang);
     runTracker("sales-page-2");
 

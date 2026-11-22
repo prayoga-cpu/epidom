@@ -269,11 +269,13 @@ describe("sitemap hreflang", () => {
     expect(byUrl(`${BASE}/compare/sunday`)!.alternates?.languages).toEqual({
       fr: `${BASE}/compare/sunday`,
       en: `${BASE}/en/compare/sunday`,
+      th: `${BASE}/th/compare/sunday`,
       "x-default": `${BASE}/compare/sunday`,
     });
     expect(byUrl(`${BASE}/id/compare/moka`)!.alternates?.languages).toEqual({
       id: `${BASE}/id/compare/moka`,
       en: `${BASE}/en/compare/moka`,
+      th: `${BASE}/th/compare/moka`,
       "x-default": `${BASE}/en/compare/moka`,
     });
   });

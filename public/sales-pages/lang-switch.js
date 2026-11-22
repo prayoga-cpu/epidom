@@ -1,6 +1,6 @@
 /*
  * Epidom's language switcher on the static sales pages, loaded by each
- * public/sales-pages/sales-page-N[.en|.id].html as
+ * public/sales-pages/sales-page-N[.en|.id|.th].html as
  *   <script src="/sales-pages/lang-switch.js" defer></script>
  *
  * The pages are plain HTML, so the React switcher can't mount here; this draws
@@ -8,8 +8,9 @@
  * same styles, the CSS variables written out) and does what it does in the
  * marketing header (urlDriven): remember the pick in the epidom_locale_pref
  * cookie and the stored language preference, then open the page in that
- * language (/sales-page-N, /en/sales-page-N, /id/sales-page-N). It lives in a
- * shadow root, so none of the three pages' own CSS can restyle it.
+ * language (/sales-page-N, /en/sales-page-N, /id/sales-page-N,
+ * /th/sales-page-N). It lives in a shadow root, so none of the pages' own CSS
+ * can restyle it.
  *
  * Sign-up buttons ([data-cta] links) also get ?lang=<the page's language>,
  * which /register applies (AuthPage), so the form opens in the language the
@@ -21,6 +22,7 @@
   var OPTIONS = [
     { value: "fr", short: "FR", label: "Français", flag: "🇫🇷" },
     { value: "id", short: "ID", label: "Indonesia", flag: "🇮🇩" },
+    { value: "th", short: "TH", label: "ไทย", flag: "🇹🇭" },
     { value: "en", short: "EN", label: "English", flag: "🇺🇸" },
   ];
   var PREF_COOKIE = "epidom_locale_pref"; // LOCALE_PREF_COOKIE in src/lib/i18n-routing.ts

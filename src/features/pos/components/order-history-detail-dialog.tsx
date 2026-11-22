@@ -103,6 +103,8 @@ export function OrderHistoryDetailDialog({
   onOpenChange,
 }: OrderHistoryDetailDialogProps) {
   const { t, locale, formatDateTimeWithTimezone } = useI18n();
+  // The receipt printer's opt-in "print non-Latin text as an image" switch.
+  const rasterNonAscii = usePrinterSettings((s) => s.printers.MAIN.rasterNonAscii) === true;
   // Order amounts are literal in the store's display currency, never IDR —
   // passing `currency` skips formatPrice's default base-currency conversion.
   const { currency, formatPrice: formatPriceRaw } = useCurrency();
@@ -155,7 +157,11 @@ export function OrderHistoryDetailDialog({
       // Reprint in the cashier's current dashboard language, not whatever
       // locale the order was originally built with server-side — same
       // override the live checkout print already applies.
-      await printReceipt({ ...(receipt as ReceiptData), locale });
+      await printReceipt({
+        ...(receipt as ReceiptData),
+        locale,
+        ...(rasterNonAscii ? { rasterNonAscii: true } : {}),
+      });
       toast.success(t("pos.print.success"));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("pos.print.failed"));

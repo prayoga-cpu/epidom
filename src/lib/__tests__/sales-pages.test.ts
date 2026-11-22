@@ -29,6 +29,10 @@ describe("salesPageFromCookieHeader", () => {
       page: "sales-page-2",
       locale: "id",
     });
+    expect(salesPageFromCookieHeader(`${SALES_PAGE_COOKIE}=sales-page-4.th`)).toEqual({
+      page: "sales-page-4",
+      locale: "th",
+    });
   });
 
   it("reads a cookie from before the pages had languages as French", () => {
@@ -87,6 +91,9 @@ describe("the sales page files", () => {
     expect(html).toContain('<script src="/sales-pages/lang-switch.js" defer></script>');
   });
 
+  // The French original names French, English and Indonesian; the copies keep
+  // its <head> as it is, so the Thai copy lists the same three (the pages are
+  // noindex, see next.config.ts).
   it.each(EVERY_COPY)("%s (%s) names its three languages for search engines", (page, locale) => {
     const html = readFileSync(fileFor(page, locale), "utf8");
     const origin = "https://epidom.fr";
@@ -116,6 +123,7 @@ describe("the sales page files", () => {
       );
     expect(ctas("en")).toEqual(ctas("fr"));
     expect(ctas("id")).toEqual(ctas("fr"));
+    expect(ctas("th")).toEqual(ctas("fr"));
   });
 
   it("the tracker sets the cookie the auth hook reads", () => {

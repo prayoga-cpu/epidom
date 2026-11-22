@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 interface PlanRow {
   plan: string;
@@ -119,7 +120,9 @@ export function RevenueDashboard() {
       const res = await fetch("/api/admin/revenue");
       const json = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(json?.detail || json?.error || t("adminPages.revenue.fetchFailed"));
+        throw new Error(
+          json?.detail || localizeServerMessage(json?.error) || t("adminPages.revenue.fetchFailed")
+        );
       }
       return json;
     },

@@ -20,6 +20,10 @@ export type ReceiptLocale = "en" | "fr" | "id" | "th";
  * labels would print as a row of question marks. Paper therefore keeps the
  * English labels for Thai stores; the on-screen / PDF / e-mail receipt is
  * fully Thai. Revisit when a Thai code page (CP874) is verified on hardware.
+ *
+ * The one exception is a printer whose opt-in "print non-Latin text as an
+ * image" switch is on (lib/pwa/escpos-raster.ts): the builders then skip this
+ * and print the Thai labels as images. With the switch off this is unchanged.
  */
 export function printerLocale(locale: ReceiptLocale): Exclude<ReceiptLocale, "th"> {
   return locale === "th" ? "en" : locale;

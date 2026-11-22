@@ -1,5 +1,5 @@
 /*
- * Sales-page video (VSL), loaded by every public/sales-pages/sales-page-N[.en|.id].html:
+ * Sales-page video (VSL), loaded by every public/sales-pages/sales-page-N[.en|.id|.th].html:
  *   <script src="/sales-pages/vsl.js" defer></script>
  *
  * The page's video box (.video) keeps its designed look and its play button
@@ -7,7 +7,7 @@
  * visitor taps play: the video then plays inside the box, with the browser's
  * controls, from /api/public/sales-pages/video (a redirect to a short-lived
  * signed link to videos/VSL.mp4 in Cloudflare R2; src/lib/storage/sales-video.ts).
- * The same video on all four pages and all three languages.
+ * The same video on all four pages and all four languages.
  *
  * The box shows the video's thumbnail (vsl-thumbnail.webp, JPEG fallback,
  * preloaded by each page's <head>) as its cover, the play button over the
@@ -23,7 +23,7 @@
   var box = document.querySelector(".video");
   if (!box) return;
   var lang = (document.documentElement.getAttribute("lang") || "fr").slice(0, 2).toLowerCase();
-  var LABEL = { fr: "Lire la vidéo", en: "Play video", id: "Putar video" }[lang] || "Lire la vidéo";
+  var LABEL = { fr: "Lire la vidéo", en: "Play video", id: "Putar video", th: "เล่นวิดีโอ" }[lang] || "Lire la vidéo";
 
   var style = document.createElement("style");
   style.textContent =

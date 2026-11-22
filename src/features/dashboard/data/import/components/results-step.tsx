@@ -10,6 +10,7 @@ import { Check, X, Package, ShoppingCart, Truck, ChefHat, AlertCircle } from "lu
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 import type { ImportFailure } from "../hooks/use-ai-import";
 
 interface ResultsStepProps {
@@ -37,7 +38,7 @@ const FAILURE_ENTITY_LABEL: Record<ImportFailure["entity"], string> = {
 };
 
 export function ResultsStep({ result, onClose }: ResultsStepProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { success, summary, error, failures, skippedRows } = result;
 
   // The reasons rows were skipped. Without this a partial (or empty) import
@@ -66,7 +67,9 @@ export function ResultsStep({ result, onClose }: ResultsStepProps) {
                       .replace("{row}", String(failure.row))}
                 :
               </span>{" "}
-              <span className="text-muted-foreground">{failure.message}</span>
+              <span className="text-muted-foreground">
+                {localizeServerMessage(failure.message, locale)}
+              </span>
             </li>
           ))}
         </ul>

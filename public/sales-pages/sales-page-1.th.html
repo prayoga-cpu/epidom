@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Epidom — บริหารร้านกาแฟทั้งร้านได้จากที่เดียว</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap">
+<style>
+:root{--bg:#05070d;--s1:#0b101c;--s2:#111829;--ln:rgba(255,255,255,.08);--gd:#e2b73f;--gd2:#f4dc90;--gd3:#a97c1c;--tx:#f5f2e8;--mt:#a3abc2;--ok:#5bb37c;--no:#d9604d;
+--p:'Poppins',system-ui,sans-serif;color-scheme:dark;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--tx);font:400 17px/1.7 var(--p);-webkit-font-smoothing:antialiased}
+section{padding:76px 20px;position:relative}
+section+section{border-top:1px solid var(--ln)}
+.w{max-width:680px;margin:0 auto}.wide{max-width:1040px;margin:0 auto}
+p{margin:0 0 18px;color:#d6d9e6}strong{color:var(--tx)}
+.c{text-align:center}
+.t{font-weight:800;font-size:clamp(28px,4.6vw,42px);line-height:1.15;letter-spacing:-.02em;margin:0 0 28px;text-wrap:balance;text-align:center}
+.sub{font-weight:700;font-size:clamp(21px,3.2vw,28px);line-height:1.35;letter-spacing:-.01em;color:var(--tx);text-wrap:balance;margin:34px 0 22px}
+.soft{font-style:italic;font-weight:500;font-size:20px;color:var(--gd2)}
+.gold{color:var(--gd)}
+mark{background:none;color:var(--gd);text-shadow:0 0 28px rgba(226,183,63,.35)}
+u{text-decoration-color:var(--gd);text-decoration-thickness:2px;text-underline-offset:6px}
+.btn{display:inline-block;background:linear-gradient(180deg,var(--gd2),var(--gd) 55%,var(--gd3));color:#151004;font:700 17px var(--p);padding:17px 40px;border-radius:14px;text-decoration:none;box-shadow:0 0 0 1px rgba(255,255,255,.25) inset,0 12px 40px rgba(226,183,63,.35),0 2px 0 #7c5a10;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(255,255,255,.3) inset,0 18px 48px rgba(226,183,63,.5),0 2px 0 #7c5a10}
+.btn:focus-visible{outline:3px solid var(--gd2);outline-offset:4px}
+.note{font-size:14px;color:var(--mt);margin:18px 0 0}
+.checks{list-style:none;padding:0;margin:0 0 26px}
+.checks li{padding:9px 0 9px 42px;position:relative;font-size:18px;color:var(--tx)}
+.checks li::before{content:"";position:absolute;left:0;top:11px;width:26px;height:26px;border-radius:50%;background:rgba(226,183,63,.12) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2b73f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/16px no-repeat;box-shadow:inset 0 0 0 1px rgba(226,183,63,.4)}
+.list{list-style:none;padding:0;margin:0 0 26px;display:grid;gap:8px}
+.list li{padding:14px 20px;background:var(--s1);border:1px solid var(--ln);border-radius:12px;font-weight:500;color:var(--tx)}
+.q{font-style:italic;font-weight:600;font-size:clamp(24px,4vw,34px);line-height:1.3;text-align:center;margin:40px 0;color:var(--gd);text-wrap:balance}
+
+/* HERO */
+.hero{padding-top:52px;overflow:hidden;background:radial-gradient(900px 520px at 50% -5%,rgba(226,183,63,.12),transparent 70%),var(--bg)}
+.kick{display:flex;justify-content:center;margin:0 0 26px}
+.kick span{display:inline-flex;align-items:center;gap:10px;max-width:100%;padding:9px 20px;border-radius:999px;border:1px solid rgba(226,183,63,.45);background:rgba(226,183,63,.07);color:var(--gd2);font-weight:600;font-size:clamp(10.5px,1.6vw,13px);letter-spacing:.04em;text-transform:uppercase;line-height:1.4;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,.4),0 0 30px rgba(226,183,63,.1)}
+.kick span::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--gd);box-shadow:0 0 10px var(--gd)}
+h1{font-weight:800;font-size:clamp(32px,5.8vw,58px);line-height:1.12;letter-spacing:-.025em;text-align:center;margin:0 auto 22px;max-width:860px;text-wrap:balance}
+h1 .lst{display:block;margin-top:20px;font-size:clamp(16px,2.5vw,23px);font-weight:600;letter-spacing:0;line-height:1.4;color:var(--gd2)}
+.lead{font-weight:500;font-size:clamp(16px,2.2vw,19px);text-align:center;max-width:640px;margin:0 auto;color:var(--tx)}
+.stage{perspective:1600px;margin:52px auto 0;max-width:880px;position:relative}
+.video{aspect-ratio:16/9;border-radius:20px;background:radial-gradient(520px 260px at 50% 40%,#1a2442,transparent 75%),linear-gradient(160deg,var(--s2),#070b15);border:1px solid rgba(226,183,63,.35);box-shadow:0 60px 100px -20px rgba(0,0,0,.8),0 0 90px rgba(226,183,63,.12),inset 0 1px 0 rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;transform:rotateX(6deg);text-align:center}
+.play{width:84px;height:84px;border-radius:50%;border:0;padding:0;cursor:pointer;background:linear-gradient(180deg,var(--gd2),var(--gd) 60%,var(--gd3));box-shadow:0 0 0 10px rgba(226,183,63,.12),0 0 50px rgba(226,183,63,.5);position:relative;transition:transform .2s}
+.play:hover{transform:scale(1.06)}.play:focus-visible{outline:3px solid var(--gd2);outline-offset:6px}
+.play::after{content:"";position:absolute;left:34px;top:25px;border:17px solid transparent;border-left:27px solid #151004;border-right:0}
+.video p{margin:0;font-weight:500;font-size:clamp(13px,2vw,16px);color:var(--gd2)}
+.chip{position:absolute;background:rgba(17,24,41,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--ln);color:var(--tx);border-radius:14px;padding:10px 16px;font-size:14px;font-weight:600;box-shadow:0 20px 40px rgba(0,0,0,.5);animation:fl 6s ease-in-out infinite}
+.chip small{display:block;font-weight:400;color:var(--mt);font-size:12px}
+.c1{left:-4%;top:-7%}.c2{right:-4%;top:44%;animation-delay:-2s}.c3{left:5%;bottom:-7%;animation-delay:-4s}
+@keyframes fl{50%{transform:translateY(-8px)}}
+@media(max-width:760px){.chip{display:none}.video{transform:none}}
+
+/* MOCKUPS */
+.duo{display:flex;justify-content:center;align-items:center;perspective:1600px;margin:52px 0 8px;flex-wrap:wrap}
+.laptop{width:min(560px,92vw);transform:rotateY(12deg) rotateX(4deg);background:#080c17;border-radius:16px;border:1px solid rgba(255,255,255,.12);box-shadow:-30px 40px 80px rgba(0,0,0,.6),0 0 60px rgba(226,183,63,.1);padding:14px}
+.laptop .top{display:flex;gap:6px;margin-bottom:10px}.laptop .top i{width:8px;height:8px;border-radius:50%;background:#2a3350}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.kpis div{background:var(--s2);border-radius:10px;padding:9px 11px;font-size:11px;color:var(--mt)}
+.kpis b{display:block;font:700 18px var(--p);color:var(--tx)}.kpis em{font-style:normal;color:var(--ok);font-size:11px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:110px;background:var(--s2);border-radius:10px;padding:12px}
+.bars i{flex:1;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--gd2),var(--gd3))}
+.rows{margin-top:10px;font-size:11px;color:var(--mt)}.rows div{display:flex;justify-content:space-between;padding:7px 10px;background:var(--s2);border-radius:8px;margin-bottom:4px}
+.phone{width:220px;background:#f7f4ea;color:#0d1326;border-radius:36px;border:8px solid #141b30;box-shadow:30px 40px 80px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.1);padding:22px 14px 16px;position:relative}
+.phone::before{content:"";position:absolute;top:7px;left:50%;width:56px;height:6px;margin-left:-28px;background:#141b30;border-radius:4px}
+.duo .phone{margin:0 -30px;transform:rotateY(-14deg) rotateZ(2deg) translateY(20px);z-index:2}
+.phone h4{font:800 15px var(--p);margin:6px 0 12px}
+.it{display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:12px;font-weight:600}
+.it span{width:40px;height:40px;border-radius:10px;background:radial-gradient(circle,#fff 0 16%,#b9855a 17% 46%,#e9d3a6 47%);flex:none}
+.it small{display:block;font-weight:400;color:#5a6384}
+.phone .ord{background:var(--gd);border-radius:10px;text-align:center;padding:9px;font-weight:700;font-size:13px;margin-top:12px}
+.qr{width:150px;height:150px;background:#f7f4ea;border-radius:16px;padding:14px;transform:rotateY(18deg) rotateX(-6deg);box-shadow:20px 30px 50px rgba(0,0,0,.6);display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:140px 0 0 -20px}
+.qr i{background:#0d1326;border-radius:2px}.qr i.o{background:transparent}
+.solo{display:flex;justify-content:center;perspective:1600px;margin:40px 0}
+.solo .phone{transform:rotateY(-8deg)}
+.solo .laptop{width:100%;transform:rotateX(5deg)}
+@media(max-width:760px){.qr{display:none}.duo .phone,.solo .phone,.solo .laptop,.laptop{transform:none;margin:20px 0 0}}
+
+
+/* CHAÎNE */
+.chain{max-width:540px;margin:34px auto 38px;display:flex;flex-direction:column;position:relative;perspective:1200px}
+.nd{width:46%;padding:15px 20px;border-radius:16px;font-weight:600;font-size:17px;line-height:1.3;color:var(--tx);background:linear-gradient(165deg,#1b2340,var(--s1));border:1px solid rgba(226,183,63,.35);box-shadow:0 24px 40px -8px rgba(0,0,0,.65),0 0 30px rgba(226,183,63,.08),inset 0 1px 0 rgba(255,255,255,.08);text-align:center;position:relative;z-index:1}
+.nd.l{align-self:flex-start;transform:rotateY(8deg)}.nd.r{align-self:flex-end;transform:rotateY(-8deg)}
+.lk{display:block;width:100%;height:auto;margin:2px 0;overflow:visible}
+.lk.rev{transform:scaleX(-1)}
+.lk path.fl{fill:none;stroke:var(--gd);stroke-width:2;stroke-linecap:round;stroke-dasharray:2 8;animation:flow 1.6s linear infinite;filter:drop-shadow(0 0 4px rgba(226,183,63,.6))}
+.lk path.hd{fill:none;stroke:var(--gd);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.lk circle{fill:var(--gd)}
+@keyframes flow{to{stroke-dashoffset:-20}}
+@media(max-width:560px){.nd{font-size:15px;padding:13px 12px}.nd.l,.nd.r{transform:none}}
+
+/* BEFORE / AFTER */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:20px;perspective:1400px}
+.ba>div{padding:34px;border-radius:22px}
+.av{background:var(--s1);border:1px solid var(--ln);transform:rotateY(4deg) scale(.97)}
+.ap{background:linear-gradient(160deg,#1a2038,var(--s2));border:1px solid rgba(226,183,63,.5);transform:rotateY(-4deg);box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 60px rgba(226,183,63,.15)}
+.ba h3{font-weight:800;font-size:22px;margin:0 0 16px}.av h3{color:var(--mt)}.ap h3{color:var(--gd)}
+.ba ul{list-style:none;margin:0;padding:0}.ba li{padding:7px 0;display:flex;gap:12px;font-weight:500;font-size:16px;color:var(--tx)}.av li{color:var(--mt)}
+.av li::before{content:"✕";color:var(--no);font-weight:700}.ap li::before{content:"✓";color:var(--gd);font-weight:700}
+@media(max-width:700px){.ba{grid-template-columns:1fr}.av,.ap{transform:none}}
+
+/* FEATURES */
+.feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:0}
+.feat>div{background:linear-gradient(165deg,var(--s2),var(--s1));border:1px solid var(--ln);border-radius:22px;padding:26px;box-shadow:0 30px 60px rgba(0,0,0,.35)}
+.feat .ic{display:grid;place-items:center;height:116px;border-radius:16px;margin-bottom:20px;background:radial-gradient(circle at 50% 35%,#222d52,#080c17 78%);box-shadow:inset 0 0 0 1px rgba(226,183,63,.2)}
+.feat .ic svg{width:66px;height:66px;color:#f5f2e8;--dt:#0b101c;filter:drop-shadow(0 10px 12px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(226,183,63,.3))}
+.feat h3{font:700 19px var(--p);margin:0 0 8px}
+.feat p{margin:0;font-size:15.5px;color:var(--mt)}
+
+/* STEPS / PLANS */
+.steps{display:grid;gap:16px;margin:30px 0}
+.steps>div{display:grid;grid-template-columns:150px 1fr;gap:22px;align-items:center;background:linear-gradient(165deg,var(--s2),var(--s1));border:1px solid var(--ln);border-radius:22px;padding:22px;box-shadow:0 30px 60px rgba(0,0,0,.35)}
+.il{height:112px;border-radius:14px;background:radial-gradient(circle at 50% 35%,#222d52,#080c17 78%);display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(226,183,63,.2)}
+.il svg{width:96px;filter:drop-shadow(0 8px 12px rgba(0,0,0,.6))}
+.steps h3{margin:0 0 4px;font-size:20px;font-weight:700}.steps h3 em{font-style:normal;color:var(--gd);margin-right:6px}
+.steps p{margin:0;color:var(--mt);font-size:16px}
+@media(max-width:560px){.steps>div{grid-template-columns:1fr}}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin:36px 0}
+.plan{background:var(--s1);border:1px solid var(--ln);border-radius:22px;padding:28px 22px}
+.plan.free{background:linear-gradient(165deg,#1a2038,var(--s2));border:1px solid rgba(226,183,63,.6);transform:translateY(-10px);box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 60px rgba(226,183,63,.18)}
+.plan h3{font:800 20px var(--p);margin:0 0 8px;letter-spacing:.02em}.plan.free h3{color:var(--gd)}
+.plan .pr{font:800 44px/1 var(--p);margin-bottom:12px}
+.plan p{font-size:15px;margin:0;color:var(--mt)}
+@media(max-width:560px){.plan.free{transform:none}}
+
+footer{padding:30px 20px;text-align:center;font-size:13px;color:var(--mt);border-top:1px solid var(--ln);background:#0b101c}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.nl-sec{padding:60px 0 80px;background:linear-gradient(180deg,#06091a,#0b101c);text-align:center}
+.nl-h{font-size:clamp(22px,4vw,32px);font-weight:800;color:#f5f2e8;margin:0 0 12px;letter-spacing:-.02em}
+.nl-sub{font-size:16px;color:#a3abc2;margin:0 0 28px;line-height:1.55}
+.nl-form{display:flex;gap:10px;max-width:440px;margin:0 auto 20px;flex-wrap:wrap;justify-content:center}
+.nl-input{flex:1 1 220px;background:#111829;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 18px;font:500 16px 'Poppins',system-ui,sans-serif;color:#f5f2e8;outline:none;-webkit-appearance:none;transition:border-color .15s}
+.nl-input:focus{border-color:rgba(226,183,63,.6)}
+.nl-input::placeholder{color:#4a526a}
+.nl-btn{padding:14px 28px;background:linear-gradient(180deg,#f4dc90,#d7b54b 55%,#a97c1c);color:#151004;font:700 16px 'Poppins',system-ui,sans-serif;border:none;border-radius:12px;cursor:pointer;white-space:nowrap;touch-action:manipulation;box-shadow:0 0 0 1px rgba(255,255,255,.28) inset,0 8px 28px rgba(217,174,59,.35),0 3px 0 rgba(139,90,10,.85);transition:transform .15s,box-shadow .15s}
+.nl-btn:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(255,255,255,.38) inset,0 16px 40px rgba(217,174,59,.5),0 3px 0 rgba(139,90,10,.85)}
+.nl-msg{font-size:14px;margin:0 0 12px;min-height:20px}
+.nl-popup{display:inline-block;margin-top:16px;font-size:14px;color:rgba(226,183,63,.8);background:none;border:none;cursor:pointer;text-decoration:underline;touch-action:manipulation}
+@media(max-width:600px){.nl-sec{padding:48px 20px 64px}.nl-form{flex-direction:column;gap:8px}.nl-input{flex:none;width:100%}.nl-btn{width:100%}}
+.nl-popup:hover{color:#f4dc90}
+</style>
+<link rel="alternate" hreflang="fr" href="https://epidom.fr/sales-page-1">
+<link rel="alternate" hreflang="en" href="https://epidom.fr/en/sales-page-1">
+<link rel="alternate" hreflang="id" href="https://epidom.fr/id/sales-page-1">
+<link rel="alternate" hreflang="x-default" href="https://epidom.fr/sales-page-1">
+<link rel="preload" as="image" href="/sales-pages/vsl-thumbnail.webp" type="image/webp" fetchpriority="high">
+<style data-lang="th">
+:lang(th),:lang(th)::before,:lang(th)::after{letter-spacing:0!important}
+html:lang(th){--p:'Poppins',"Noto Sans Thai","Leelawadee UI","Thonburi","Sukhumvit Set",Tahoma,system-ui,sans-serif}
+html:lang(th) h1{line-height:1.3}
+html:lang(th) .t{line-height:1.35}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3e2ad"/><stop offset="1" stop-color="#c2922b"/></linearGradient>
+<symbol id="i-menu" viewBox="0 0 64 64"><rect x="12" y="4" width="40" height="56" rx="7" fill="currentColor"/><circle cx="32" cy="22" r="10" fill="url(#g)"/><rect x="20" y="38" width="24" height="3.5" rx="1.7" fill="var(--dt)"/><rect x="20" y="46" width="15" height="3.5" rx="1.7" fill="var(--dt)"/></symbol>
+<symbol id="i-phone" viewBox="0 0 64 64"><rect x="17" y="3" width="30" height="58" rx="8" fill="currentColor"/><rect x="21" y="11" width="22" height="38" rx="3" fill="var(--dt)"/><circle cx="32" cy="30" r="9" fill="url(#g)"/><path d="M27.5 30l3 3 6-6.5" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="i-card" viewBox="0 0 64 64"><rect x="3" y="12" width="58" height="40" rx="7" fill="currentColor"/><rect x="3" y="21" width="58" height="9" fill="url(#g)"/><rect x="10" y="38" width="18" height="5" rx="2.5" fill="var(--dt)"/><circle cx="50" cy="41" r="4" fill="url(#g)"/></symbol>
+<symbol id="i-reg" viewBox="0 0 64 64"><rect x="10" y="6" width="44" height="22" rx="5" fill="currentColor"/><rect x="14" y="10" width="36" height="14" rx="3" fill="var(--dt)"/><path d="M20 19l5-4 5 3 7-5 5 4" stroke="url(#g)" stroke-width="3" fill="none"/><rect x="4" y="32" width="56" height="26" rx="6" fill="currentColor"/><g fill="url(#g)"><rect x="12" y="38" width="10" height="6" rx="2"/><rect x="27" y="38" width="10" height="6" rx="2"/><rect x="42" y="38" width="10" height="6" rx="2"/></g><rect x="12" y="48" width="40" height="5" rx="2.5" fill="var(--dt)"/></symbol>
+<symbol id="i-ticket" viewBox="0 0 64 64"><path d="M12 3h40v58l-6.7-4.5L38.7 61 32 56.5 25.3 61l-6.6-4.5L12 61z" fill="currentColor"/><g fill="var(--dt)"><rect x="19" y="13" width="26" height="3.5" rx="1.7"/><rect x="19" y="21" width="20" height="3.5" rx="1.7"/><rect x="19" y="29" width="24" height="3.5" rx="1.7"/></g><rect x="19" y="39" width="26" height="8" rx="3" fill="url(#g)"/></symbol>
+<symbol id="i-box" viewBox="0 0 64 64"><path d="M32 4l25 13-25 13L7 17z" fill="url(#g)"/><path d="M7 17l25 13v30L7 47z" fill="currentColor"/><path d="M57 17v30L32 60V30z" fill="currentColor" opacity=".72"/><path d="M20 24l25 13" stroke="var(--dt)" stroke-width="3"/></symbol>
+<symbol id="i-bars" viewBox="0 0 64 64"><rect x="6" y="34" width="14" height="24" rx="4" fill="currentColor"/><rect x="25" y="20" width="14" height="38" rx="4" fill="url(#g)"/><rect x="44" y="6" width="14" height="52" rx="4" fill="currentColor"/></symbol>
+<symbol id="i-user" viewBox="0 0 64 64"><circle cx="32" cy="20" r="12" fill="url(#g)"/><path d="M8 60c0-15 10-24 24-24s24 9 24 24z" fill="currentColor"/></symbol>
+<symbol id="i-qr" viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="9" fill="currentColor"/><g fill="var(--dt)"><rect x="12" y="12" width="16" height="16" rx="3"/><rect x="36" y="12" width="16" height="16" rx="3"/><rect x="12" y="36" width="16" height="16" rx="3"/><rect x="36" y="36" width="7" height="7" rx="2"/><rect x="46" y="46" width="6" height="6" rx="2"/></g><g fill="url(#g)"><rect x="17" y="17" width="6" height="6" rx="1.5"/><rect x="41" y="17" width="6" height="6" rx="1.5"/><rect x="17" y="41" width="6" height="6" rx="1.5"/></g></symbol></defs></svg>
+
+<section class="hero">
+<div class="wide">
+<h1>จัดการร้านกาแฟ <mark>ทั้งหมด</mark> ของคุณได้จาก <mark>ที่เดียว:</mark><span class="lst">เมนู ออเดอร์ การชำระเงิน เครื่องคิดเงิน ครัว สต็อก และรายงาน</span></h1>
+<p class="lead"><u>รวมทุกอย่าง</u> ที่คุณต้องใช้ไว้ในที่เดียว ไม่ต้องสลับไปมาระหว่างหลายเครื่องมือ</p>
+<div class="stage">
+<div class="video"><button class="play" type="button" aria-label="เล่นวิดีโอ"></button><p>5 นาที เข้าใจว่า Epidom ทำงานอย่างไร</p></div>
+<div class="chip c1">ออเดอร์ใหม่<small>โต๊ะ 4 · คาปูชิโน 2 แก้ว</small></div>
+<div class="chip c2">ได้รับชำระเงินแล้ว<small>+ $12.50</small></div>
+<div class="chip c3">สต็อกใกล้หมด<small>นมโอ๊ต</small></div>
+</div>
+<p class="c" style="margin-top:56px"><a class="btn" href="/register" data-cta="hero">เริ่มใช้ฟรี →</a></p>
+<p class="c note">ฟรีตลอดชีพ ไม่ต้องใช้บัตรเครดิต</p>
+</div>
+</section>
+
+<section><div class="w">
+<h2 class="t">ขอเดาดูหน่อย…</h2>
+<p>คุณน่าจะมีเครื่องมือตัวหนึ่งไว้คิดเงินอยู่แล้ว</p>
+<p>อีกตัวไว้ทำเมนู</p>
+<p>ออเดอร์เข้ามาทาง Instagram บ้าง ทาง WhatsApp บ้าง</p>
+<p>ส่วนการจองโต๊ะก็อยู่ในข้อความแชต</p>
+<p class="soft">ก็จริง…</p>
+<p>ถ้าดูทีละตัว เครื่องมือแต่ละตัวก็ทำหน้าที่ของมันได้</p>
+<p><strong>แต่ปัญหาคือ… เครื่องมือเหล่านี้ไม่ได้ทำงานร่วมกันจริงๆ</strong></p>
+</div></section>
+
+<section><div class="w">
+<p>คุณจึงต้องเป็นคนเชื่อมทุกอย่างเข้าด้วยกันเอง ทั้ง:</p>
+<div class="chain"><div class="nd l">เมนู</div><svg class="lk" viewBox="0 0 540 64" aria-hidden="true"><circle cx="124" cy="4" r="4"/><path class="fl" d="M124 8C124 46 416 22 416 56"/><path class="hd" d="M407 46L416 58L425 46"/></svg><div class="nd r">ออเดอร์</div><svg class="lk rev" viewBox="0 0 540 64" aria-hidden="true"><circle cx="124" cy="4" r="4"/><path class="fl" d="M124 8C124 46 416 22 416 56"/><path class="hd" d="M407 46L416 58L425 46"/></svg><div class="nd l">เครื่องคิดเงิน</div><svg class="lk" viewBox="0 0 540 64" aria-hidden="true"><circle cx="124" cy="4" r="4"/><path class="fl" d="M124 8C124 46 416 22 416 56"/><path class="hd" d="M407 46L416 58L425 46"/></svg><div class="nd r">สต็อก</div><svg class="lk rev" viewBox="0 0 540 64" aria-hidden="true"><circle cx="124" cy="4" r="4"/><path class="fl" d="M124 8C124 46 416 22 416 56"/><path class="hd" d="M407 46L416 58L425 46"/></svg><div class="nd l">ยอดขาย / รายงาน</div></div>
+<p>และเมื่อคุณต้องคอยดูภาพรวมของทั้งร้านอยู่ตลอด…</p>
+<p class="sub">สุดท้ายธุรกิจทั้งหมดก็มาตกอยู่บนบ่าของคุณ</p>
+<p>ยิ่งธุรกิจโต การจัดการทั้งหมดนี้ก็ยิ่งหนักขึ้นเรื่อยๆ</p>
+</div></section>
+
+<section><div class="w">
+<p class="soft">และระหว่างที่คุณจัดการทั้งหมดนั้น…</p>
+<ul class="checks"><li>ลูกค้ากำลังรอออเดอร์</li><li>ทีมงานมีคำถามมาถามคุณ</li><li>คุณต้องเช็กสต็อก</li><li>ยอดในเครื่องคิดเงินต้องเป็นปัจจุบัน</li><li>ครัวต้องรู้ว่ากำลังทำออเดอร์ไหนอยู่</li></ul>
+<p>และพอหมดวัน คุณแค่อยากรู้ว่า:</p>
+<div class="q">“สรุปแล้ว… วันนี้ได้เท่าไร?”</div>
+<p>แต่แทนที่จะได้คำตอบชัดๆ…</p>
+<p>คุณกลับต้องเปิดดูทางนั้นทีทางนี้ทีเพื่อรวบรวมข้อมูล</p>
+<p class="sub">แล้วคุณก็ใช้เวลา <mark>ทั้งหมด</mark> ไปกับการดูแลระบบ แทนที่จะได้ดูแลร้านกาแฟของคุณ</p>
+</div></section>
+
+<section><div class="wide"><div class="ba">
+<div class="av"><h3>ก่อนใช้</h3><ul><li>ออเดอร์กระจัดกระจาย</li><li>เมนูแยกอยู่อีกที่</li><li>ข้อมูลค้างอยู่ใน WhatsApp และ Instagram</li><li>สต็อกจดแยกต่างหาก</li><li>ตัวเลขที่รวมเข้าด้วยกันยาก</li><li>ต้องดูแลหลายเครื่องมือทุกวัน</li></ul></div>
+<div class="ap"><h3>เมื่อใช้ Epidom</h3><ul><li>ที่เดียวสำหรับรวมทั้งธุรกิจของคุณ</li><li>ลิงก์เดียวสำหรับเมนู</li><li>ออเดอร์เข้า Epidom โดยตรง</li><li>การชำระเงินอยู่ในที่เดียวกัน</li><li>เครื่องคิดเงินและครัวเชื่อมถึงกัน</li><li>สต็อก ต้นทุน และรายงาน ดูได้จากแพลตฟอร์มเดียวกัน</li></ul></div>
+</div></div></section>
+
+<section><div class="wide">
+<div class="w">
+<h2 class="t">ถ้าคุณไม่ต้องเชื่อมทุกอย่างเองอีกต่อไปล่ะ?</h2>
+<p class="soft c">(Epidom มีขึ้นมาเพื่อสิ่งนี้เลย 👀)</p>
+<p>Epidom รวมทุกอย่างที่คุณต้องใช้ในการบริหารร้านกาแฟไว้ด้วยกัน</p>
+<p>ลูกค้าดูเมนู สั่ง และจ่ายเงินได้จากมือถือของตัวเอง</p>
+<p>ส่วนฝั่งคุณ ออเดอร์ เครื่องคิดเงิน ครัว สต็อก และตัวเลขที่ต้องใช้ ก็อยู่ตรงนั้นครบ</p>
+<p class="sub">แทนที่คุณจะต้องเชื่อมเครื่องมือต่างๆ เอง Epidom ทำให้แทน</p>
+</div>
+<div class="duo"><div class="laptop">
+<div class="top"><i></i><i></i><i></i></div>
+<div class="kpis"><div>ยอดขายวันนี้<b>$1,284</b><em>▲ 12%</em></div><div>ยอดเฉลี่ยต่อบิล<b>$9.80</b><em>▲ 4%</em></div><div>ออเดอร์<b>131</b><em>▲ 8%</em></div></div>
+<div class="bars"><i style="height:40%"></i><i style="height:55%"></i><i style="height:35%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:75%"></i></div>
+<div class="rows"><div><span>Flat white ×2</span><span>อยู่ในครัว</span></div><div><span>Croissant ×1</span><span>ชำระแล้ว</span></div></div>
+</div><div class="phone">
+<h4>เมนูของคุณ</h4>
+<div class="it"><span></span><div>Flat white<small>$3.80</small></div></div>
+<div class="it"><span></span><div>Cappuccino<small>$4.20</small></div></div>
+<div class="it"><span></span><div>คุกกี้โฮมเมด<small>$3.00</small></div></div>
+<div class="ord">สั่งเลย</div>
+</div><div class="qr" aria-hidden="true"><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i class="o"></i><i></i><i></i><i></i><i class="o"></i><i></i></div></div>
+</div></section>
+
+<section><div class="w">
+<p>คุณใส่ลิงก์ Epidom ไว้ในไบโอ Instagram ได้</p>
+<p>ส่งให้ลูกค้าทาง WhatsApp</p>
+<p>หรือแค่วาง QR code ไว้บนโต๊ะ</p>
+<p class="sub">ลูกค้ากดหรือสแกน</p>
+<ul class="checks"><li>ดูเมนูของคุณ</li><li>เลือกสิ่งที่อยากได้</li><li>สั่ง</li><li>จ่ายเงิน</li></ul>
+<p>แล้วออเดอร์ก็เข้ามาที่ Epidom ของคุณโดยตรง</p>
+<div class="solo"><div class="phone">
+<h4>เมนูของคุณ</h4>
+<div class="it"><span></span><div>Flat white<small>$3.80</small></div></div>
+<div class="it"><span></span><div>Cappuccino<small>$4.20</small></div></div>
+<div class="it"><span></span><div>คุกกี้โฮมเมด<small>$3.00</small></div></div>
+<div class="ord">สั่งเลย</div>
+</div></div>
+<p>ไม่ต้องดาวน์โหลดแอป</p>
+<p>ไม่ต้องผ่าน 15 ขั้นตอน</p>
+<p>ไม่ต้องคีย์ออเดอร์ซ้ำด้วยมือ</p>
+<p>และระหว่างที่ลูกค้าสั่ง…</p>
+<h2 class="t gold" style="margin-top:34px">คุณยังควบคุมทุกอย่างได้</h2>
+</div>
+<div class="wide" style="max-width:760px"><div class="solo"><div class="laptop">
+<div class="top"><i></i><i></i><i></i></div>
+<div class="kpis"><div>ยอดขายวันนี้<b>$1,284</b><em>▲ 12%</em></div><div>ยอดเฉลี่ยต่อบิล<b>$9.80</b><em>▲ 4%</em></div><div>ออเดอร์<b>131</b><em>▲ 8%</em></div></div>
+<div class="bars"><i style="height:40%"></i><i style="height:55%"></i><i style="height:35%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:75%"></i></div>
+<div class="rows"><div><span>Flat white ×2</span><span>อยู่ในครัว</span></div><div><span>Croissant ×1</span><span>ชำระแล้ว</span></div></div>
+</div></div></div>
+<div class="w">
+<ul class="checks"><li>คุณเห็นออเดอร์</li><li>ยอดขาย</li><li>ยอดเฉลี่ยต่อบิล</li><li>สินค้า</li><li>ต้นทุนวัตถุดิบ</li></ul>
+<p class="sub">ทุกอย่างที่ต้องใช้เพื่อให้ร้านกาแฟของคุณเดินต่อได้</p>
+</div></section>
+
+<section><div class="wide"><div class="feat">
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-menu"/></svg></div><h3>เมนูของคุณ</h3><p>สร้างหน้าเมนูในสไตล์ของร้านคุณ พร้อมสินค้า รูปภาพ คำอธิบาย ตัวเลือก และราคา แล้วแชร์ด้วยลิงก์หรือ QR code ง่ายๆ</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-phone"/></svg></div><h3>ออเดอร์ของคุณ</h3><p>ให้ลูกค้าสั่งจากมือถือได้โดยตรง แล้วรับออเดอร์ใน Epidom</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-card"/></svg></div><h3>การชำระเงินของคุณ</h3><p>ให้ลูกค้าจ่ายเงินจากมือถือได้โดยตรง ด้วยวิธีชำระเงินที่มีให้เลือก</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-reg"/></svg></div><h3>เครื่องคิดเงินของคุณ</h3><p>คิดเงินได้จากมือถือ แท็บเล็ต หรือเครื่อง POS ของคุณ</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-ticket"/></svg></div><h3>ครัวของคุณ</h3><p>ส่งออเดอร์เข้าครัวโดยตรง และเห็นชัดว่ากำลังทำอะไรอยู่</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-box"/></svg></div><h3>สต็อกและต้นทุนของคุณ</h3><p>ติดตามสูตร วัตถุดิบ และต้นทุนวัตถุดิบ เพื่อให้เห็นว่ายอดขายทำเงินให้คุณจริงๆ เท่าไร</p></div>
+<div><div class="ic"><svg aria-hidden="true"><use href="#i-bars"/></svg></div><h3>ตัวเลขของคุณ</h3><p>ดูยอดขาย ต้นทุน รายได้ และรายงานได้ในที่เดียว</p></div>
+</div></div></section>
+
+<section id="start"><div class="w">
+<h2 class="t">คิดว่าเริ่มใช้งานคงยุ่งยากใช่ไหม?</h2>
+<p class="sub c" style="margin-top:0">ตรงกันข้ามเลย</p>
+<p class="c">คุณเริ่มใช้ได้ฟรี</p>
+<div class="steps"><div><div class="il"><svg viewBox="0 0 120 90" fill="rgba(217,174,59,.14)" stroke="#e7c66e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="22" width="80" height="50" rx="8"/><path d="M20 30l40 26 40-26"/><circle cx="92" cy="26" r="12" fill="#4f9e6a" stroke="none"/><path d="M86 26l4 4 7-8" stroke="#fff"/></svg></div><span><h3><em>01</em> สร้างบัญชี</h3><p>สมัครด้วยอีเมลของคุณ ไม่ต้องใช้บัตรเครดิต</p></span></div><div><div class="il"><svg viewBox="0 0 120 90" fill="rgba(217,174,59,.14)" stroke="#e7c66e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="26" y="10" width="68" height="70" rx="8"/><path d="M38 28h30M38 42h30M38 56h20"/><circle cx="82" cy="30" r="5"/><circle cx="82" cy="44" r="5"/><circle cx="82" cy="58" r="5"/></svg></div><span><h3><em>02</em> เพิ่มเมนู</h3><p>เพิ่มหมวดหมู่ สินค้า ราคา และรูปภาพ</p></span></div><div><div class="il"><svg viewBox="0 0 120 90" fill="rgba(217,174,59,.14)" stroke="#e7c66e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="40" y="8" width="40" height="74" rx="8"/><rect x="50" y="26" width="20" height="20" rx="2"/><path d="M54 30h5v5h-5zM62 38h4v4h-4zM50 58h20M50 66h12M10 45h20M110 45H90"/></svg></div><span><h3><em>03</em> แชร์ลิงก์</h3><p>คัดลอก URL ของร้านคุณ หรือสร้าง QR code แล้วใส่ในไบโอ Instagram หรือพิมพ์ไปวางบนโต๊ะ</p></span></div></div>
+<p class="sub c" style="margin-top:44px">พร้อมเริ่มแล้วหรือยัง?</p>
+<p class="c"><a class="btn" href="/register" data-cta="steps">เริ่มใช้ฟรี →</a></p>
+</div></section>
+
+<section><div class="wide">
+<div class="w">
+<p>ด้วยแพ็กเกจ Free คุณทำได้เลย:</p>
+<ul class="checks"><li>สร้างหน้าเมนู</li><li>เพิ่ม QR code</li><li>รับออเดอร์ออนไลน์</li><li>ให้ลูกค้าสั่งได้</li></ul>
+<p class="sub">แล้วค่อยขยาย Epidom ไปพร้อมกับธุรกิจของคุณ</p>
+</div>
+<div class="plans">
+<div class="plan free"><h3>FREE</h3><div class="pr">$0</div><p>สำหรับเริ่มต้นด้วยเมนู ออเดอร์ออนไลน์ และ QR code</p></div>
+<div class="plan"><h3>POS</h3><p>สำหรับเพิ่มเครื่องคิดเงิน การจัดการโต๊ะ ใบเสร็จ และงานหน้าร้าน</p></div>
+<div class="plan"><h3>OPERATIONS</h3><p>สำหรับไปได้ไกลขึ้นด้วยทีมงาน สูตร ต้นทุน สต็อก และรายงาน</p></div>
+<div class="plan"><h3>ENTERPRISE</h3><p>สำหรับร้านหลายสาขาและเชนที่ต้องการการบริหารขั้นสูงกว่า</p></div>
+</div>
+<div class="w c"><p class="sub">คุณไม่จำเป็นต้องเปลี่ยนทุกอย่างตั้งแต่วันนี้</p><p>ลองใช้ Epidom ในร้านกาแฟของคุณดูก่อนได้</p></div>
+</div></section>
+
+<section><div class="w c">
+<p class="sub" style="margin-top:0">คำถามเดียวที่เหลือตอนนี้… คือ:</p>
+<h2 class="t gold">คุณจะเป็นรายต่อไปหรือเปล่า?</h2>
+<p><a class="btn" href="/register" data-cta="final">เริ่มใช้ฟรี →</a></p>
+</div></section>
+
+<script src="/sales-pages/pixel.js" data-page="sales-page-1" defer></script>
+<script src="/sales-pages/tracker.js" data-page="sales-page-1" defer></script>
+<script src="/sales-pages/lang-switch.js" defer></script>
+<script src="/sales-pages/vsl.js" defer></script>
+<script src="/sales-pages/lead-capture.js" data-page="sales-page-1" defer></script>
+<section class="nl-sec">
+<div class="w c">
+<h2 class="nl-h">รับข่าวสารจากเรา</h2>
+<p class="nl-sub">รับเคล็ดลับฟรีจากเราเพื่อพัฒนาร้านกาแฟของคุณ</p>
+<form class="nl-form" id="nl-form-1" novalidate>
+<input type="email" name="email" placeholder="your@email.com" required autocomplete="email" class="nl-input">
+<button type="submit" class="nl-btn">สมัครรับ</button>
+</form>
+<p class="nl-msg" id="nl-msg-1" hidden></p>
+<button type="button" class="nl-popup" onclick="window.epiLcOpen&amp;&amp;window.epiLcOpen('sales_page_cta')">ขอเดโมสำหรับร้านคุณ →</button>
+</div>
+</section>
+<script>(function(){var form=document.getElementById('nl-form-1');var msg=document.getElementById('nl-msg-1');if(!form)return;form.addEventListener('submit',function(e){e.preventDefault();var email=(form.querySelector('[name=email]').value||'').trim();if(!email)return;var btn=form.querySelector('.nl-btn');btn.disabled=true;fetch('/api/public/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,source:'sales_page_footer',page:'sales-page-1',locale:'fr'})}).then(function(){form.style.display='none';msg.textContent='ขอบคุณ! คุณสมัครรับข่าวสารแล้ว';msg.style.color='#5bb37c';msg.hidden=false;}).catch(function(){btn.disabled=false;});});}());</script>
+<footer><p style="margin:0;text-align:center">© Epidom</p></footer>
+</body>
+</html>

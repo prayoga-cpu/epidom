@@ -63,8 +63,10 @@ export interface OrderPrintSource {
  * drinks would land on the kitchen ticket, then print again at the bar on tap.
  */
 export interface OrderPrintRoles {
-  KITCHEN: { enabled: boolean; print: boolean; paperWidth: 32 | 48 };
-  BAR: { enabled: boolean; print: boolean; paperWidth: 32 | 48 };
+  // `rasterNonAscii` is that printer's opt-in "print non-Latin text as an
+  // image" switch; it rides on the ticket only when true.
+  KITCHEN: { enabled: boolean; print: boolean; paperWidth: 32 | 48; rasterNonAscii?: boolean };
+  BAR: { enabled: boolean; print: boolean; paperWidth: 32 | 48; rasterNonAscii?: boolean };
   LABEL: { enabled: boolean; print: boolean; scope: LabelScope };
 }
 
@@ -208,6 +210,7 @@ export function planOrderPrint(
         sections,
         reprint: context.reprint,
         width: roles[role].paperWidth,
+        ...(roles[role].rasterNonAscii === true ? { rasterNonAscii: true } : {}),
       },
     }));
 

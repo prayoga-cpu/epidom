@@ -403,3 +403,36 @@ describe("planOrderPrint — labels", () => {
     expect(isEmptyPlan(plan)).toBe(false);
   });
 });
+
+describe("planOrderPrint — print non-Latin text as an image", () => {
+  it("puts the option on a ticket only for the printer whose switch is on", () => {
+    const plan = planOrderPrint(
+      { context: CONTEXT, lines: ORDER },
+      roles({
+        KITCHEN: { enabled: true, print: true, paperWidth: 32, rasterNonAscii: true },
+        BAR: { enabled: true, print: true, paperWidth: 32, rasterNonAscii: false },
+      }),
+      NOW
+    );
+    const [kitchen, bar] = plan.tickets;
+    expect(kitchen.ticket.rasterNonAscii).toBe(true);
+    expect("rasterNonAscii" in bar.ticket).toBe(false);
+  });
+
+  it("leaves the ticket exactly as it was when no printer has the switch on", () => {
+    const base = { KITCHEN: { enabled: true, print: true, paperWidth: 32 as const } };
+    const plan = planOrderPrint({ context: CONTEXT, lines: ORDER }, roles(base), NOW);
+    expect(plan.tickets).toHaveLength(1);
+    expect("rasterNonAscii" in plan.tickets[0].ticket).toBe(false);
+  });
+
+  it("follows the printer the ticket lands on when one captain printer covers both areas", () => {
+    const plan = planOrderPrint(
+      { context: CONTEXT, lines: ORDER },
+      roles({ BAR: { enabled: true, print: true, paperWidth: 48, rasterNonAscii: true } }),
+      NOW
+    );
+    expect(plan.tickets.map((t) => t.role)).toEqual(["BAR"]);
+    expect(plan.tickets[0].ticket.rasterNonAscii).toBe(true);
+  });
+});

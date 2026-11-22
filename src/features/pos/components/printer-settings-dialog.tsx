@@ -111,6 +111,7 @@ function PrinterRoleCard({ role, supported }: { role: PrinterRole; supported: bo
   const setEnabled = usePrinterSettings((s) => s.setEnabled);
   const setAutoPrint = usePrinterSettings((s) => s.setAutoPrint);
   const setPaperWidth = usePrinterSettings((s) => s.setPaperWidth);
+  const setRasterNonAscii = usePrinterSettings((s) => s.setRasterNonAscii);
   const toggleConnection = useTogglePrinterConnection();
   const [testing, setTesting] = useState(false);
 
@@ -144,6 +145,9 @@ function PrinterRoleCard({ role, supported }: { role: PrinterRole; supported: bo
           heightMm: label.heightMm,
           gapMm: label.gapMm,
         },
+        // Only when the switch is on: the test page then carries a Thai and an
+        // accented line, which is the whole point of pressing Test after it.
+        ...(settings.rasterNonAscii && usesPaperWidth ? { rasterNonAscii: true } : {}),
       });
       toast.success(t("pos.printers.testDone"));
     } catch (err: unknown) {
@@ -251,6 +255,26 @@ function PrinterRoleCard({ role, supported }: { role: PrinterRole; supported: bo
                 ]}
               />
             </div>
+          )}
+
+          {/* ESC/POS only — a TSPL label printer has its own bitmap command,
+              which this does not speak, so the switch is not offered there. */}
+          {usesPaperWidth && (
+            <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
+              <span className="space-y-0.5">
+                <span className="block text-sm font-medium">
+                  {t("pos.printers.rasterNonAscii")}
+                </span>
+                <span className="text-muted-foreground block text-xs">
+                  {t("pos.printers.rasterNonAsciiDesc")}
+                </span>
+              </span>
+              <Switch
+                checked={settings.rasterNonAscii === true}
+                onCheckedChange={(value) => setRasterNonAscii(role, value)}
+                aria-label={t("pos.printers.rasterNonAscii")}
+              />
+            </label>
           )}
 
           <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3">

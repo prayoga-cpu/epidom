@@ -31,6 +31,14 @@ export interface PrinterRoleSettings {
   /** Advertised name of the last device paired to this role — only a hint for
    * the picker after a reload, since the pairing itself never survives one. */
   deviceName: string | null;
+  /**
+   * "Print Thai and other non-Latin text as an image." Off by default and
+   * experimental: the printer only has a Latin code page, so with this on, any
+   * line it cannot print as text is drawn on this device and sent as a picture
+   * (lib/pwa/escpos-raster.ts). Slower, and unverified on real hardware — off
+   * leaves the printed bytes exactly as they have always been.
+   */
+  rasterNonAscii: boolean;
 }
 
 export interface LabelSettings {
@@ -45,13 +53,31 @@ export interface LabelSettings {
 
 export const DEFAULT_PRINTERS: Record<PrinterRole, PrinterRoleSettings> = {
   // Receipt auto-print has always defaulted to off (not every customer wants one).
-  MAIN: { enabled: true, autoPrint: false, paperWidth: 32, deviceName: null },
+  MAIN: {
+    enabled: true,
+    autoPrint: false,
+    paperWidth: 32,
+    deviceName: null,
+    rasterNonAscii: false,
+  },
   // The others are opt-in via `enabled`, so once someone has set one up, printing
   // automatically is the whole point — a kitchen ticket you have to remember to
   // ask for is not a kitchen ticket.
-  KITCHEN: { enabled: false, autoPrint: true, paperWidth: 32, deviceName: null },
-  BAR: { enabled: false, autoPrint: true, paperWidth: 32, deviceName: null },
-  LABEL: { enabled: false, autoPrint: true, paperWidth: 32, deviceName: null },
+  KITCHEN: {
+    enabled: false,
+    autoPrint: true,
+    paperWidth: 32,
+    deviceName: null,
+    rasterNonAscii: false,
+  },
+  BAR: { enabled: false, autoPrint: true, paperWidth: 32, deviceName: null, rasterNonAscii: false },
+  LABEL: {
+    enabled: false,
+    autoPrint: true,
+    paperWidth: 32,
+    deviceName: null,
+    rasterNonAscii: false,
+  },
 };
 
 export const DEFAULT_LABEL: LabelSettings = {
@@ -75,6 +101,7 @@ interface PrinterSettingsState extends PersistedPrinterSettings {
   setEnabled: (role: PrinterRole, value: boolean) => void;
   setAutoPrint: (role: PrinterRole, value: boolean) => void;
   setPaperWidth: (role: PrinterRole, value: PaperWidth) => void;
+  setRasterNonAscii: (role: PrinterRole, value: boolean) => void;
   setLabel: (patch: Partial<LabelSettings>) => void;
   connect: (role?: PrinterRole) => Promise<boolean>;
   disconnect: (role?: PrinterRole) => void;
@@ -137,6 +164,7 @@ export const usePrinterSettings = create<PrinterSettingsState>()(
         },
         setAutoPrint: (role, value) => patchRole(role, { autoPrint: value }),
         setPaperWidth: (role, value) => patchRole(role, { paperWidth: value }),
+        setRasterNonAscii: (role, value) => patchRole(role, { rasterNonAscii: value === true }),
         setLabel: (patch) => set((state) => ({ label: { ...state.label, ...patch } })),
 
         connect: async (role = "MAIN") => {
@@ -167,7 +195,8 @@ export const usePrinterSettings = create<PrinterSettingsState>()(
         migratePrinterSettings(persisted, version) as unknown as PrinterSettingsState,
       // Per-role merge, not the default shallow one: a stored `printers` object
       // that predates a role would otherwise REPLACE the defaults and leave that
-      // role undefined.
+      // role undefined. It is also what gives a device stored before a field
+      // existed (rasterNonAscii) that field's default — no version bump needed.
       merge: (persisted, current) => {
         const stored = (persisted ?? {}) as Partial<PersistedPrinterSettings>;
         const printers = Object.fromEntries(

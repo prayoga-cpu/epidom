@@ -38,8 +38,8 @@ export interface PosCompetitor {
   compareLocales: readonly Locale[];
 }
 
-const FR_EN = ["fr", "en"] as const;
-const ID_EN = ["id", "en"] as const;
+const FR_EN = ["fr", "en", "th"] as const;
+const ID_EN = ["id", "en", "th"] as const;
 
 export const POS_COMPETITORS: readonly PosCompetitor[] = [
   // Priced in euros (French market).

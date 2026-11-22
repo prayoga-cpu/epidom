@@ -45,6 +45,7 @@ import { useUser } from "@/lib/auth-client";
 import { isLifetimePeriod } from "@/lib/utils/formatting";
 import { CURRENCIES } from "@/lib/constants/currencies";
 import { useI18n } from "@/components/lang/i18n-provider";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /** Renders `text` with its `{token}` replaced by `value` in bold (a translated sentence around an email). */
 function withStrong(text: string, token: string, value: ReactNode) {
@@ -488,7 +489,7 @@ export function AdminDashboard() {
                       }),
                     });
                     const json = await res.json();
-                    if (!res.ok) throw new Error(json.error ?? t("adminDash.toasts.failed"));
+                    if (!res.ok) throw new Error(localizeServerMessage(json.error) || t("adminDash.toasts.failed"));
                     setTempPw(json.tempPassword);
                   } catch (e: any) {
                     toast.error(e.message || t("adminDash.toasts.tempFailed"));

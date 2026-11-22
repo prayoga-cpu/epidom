@@ -267,6 +267,71 @@ describe("PrinterSettingsDialog — the label printer", () => {
   });
 });
 
+describe("PrinterSettingsDialog — print non-Latin text as an image", () => {
+  const RASTER = { name: "pos.printers.rasterNonAscii" };
+
+  it("offers the switch on each printer that is on, off by default, with its warning", () => {
+    usePrinterSettings.setState({
+      printers: { ...DEFAULT_PRINTERS, KITCHEN: { ...DEFAULT_PRINTERS.KITCHEN, enabled: true } },
+    });
+    open();
+    for (const role of ["MAIN", "KITCHEN"] as const) {
+      expect(within(card(role)).getByRole("switch", RASTER)).not.toBeChecked();
+      expect(within(card(role)).getByText("pos.printers.rasterNonAsciiDesc")).toBeInTheDocument();
+    }
+    expect(within(card("BAR")).queryByRole("switch", RASTER)).toBeNull();
+  });
+
+  it("stores the choice on that printer only", () => {
+    open();
+    fireEvent.click(within(card("MAIN")).getByRole("switch", RASTER));
+    expect(state().printers.MAIN.rasterNonAscii).toBe(true);
+    expect(state().printers.KITCHEN.rasterNonAscii).toBe(false);
+    fireEvent.click(within(card("MAIN")).getByRole("switch", RASTER));
+    expect(state().printers.MAIN.rasterNonAscii).toBe(false);
+  });
+
+  it("leaves the test print as it was while the switch is off", async () => {
+    open();
+    fireEvent.click(within(card("MAIN")).getByRole("button", TEST));
+    await waitFor(() => expect(test.printTestPage).toHaveBeenCalledTimes(1));
+    expect("rasterNonAscii" in test.printTestPage.mock.calls[0][1]).toBe(false);
+  });
+
+  it("asks the test print for the image samples once the switch is on", async () => {
+    usePrinterSettings.setState({
+      printers: {
+        ...DEFAULT_PRINTERS,
+        MAIN: { ...DEFAULT_PRINTERS.MAIN, rasterNonAscii: true },
+      },
+    });
+    open();
+    fireEvent.click(within(card("MAIN")).getByRole("button", TEST));
+    await waitFor(() => expect(test.printTestPage).toHaveBeenCalledTimes(1));
+    expect(test.printTestPage).toHaveBeenCalledWith(
+      "MAIN",
+      expect.objectContaining({ rasterNonAscii: true })
+    );
+  });
+
+  it("does not offer it for a TSPL label printer, which this does not speak", () => {
+    usePrinterSettings.setState({
+      printers: {
+        ...DEFAULT_PRINTERS,
+        LABEL: { ...DEFAULT_PRINTERS.LABEL, enabled: true, rasterNonAscii: true },
+      },
+      label: { ...DEFAULT_LABEL, language: "TSPL" },
+    });
+    open();
+    expect(within(card("LABEL")).queryByRole("switch", RASTER)).toBeNull();
+    fireEvent.click(within(card("LABEL")).getByRole("button", TEST));
+    return waitFor(() => {
+      expect(test.printTestPage).toHaveBeenCalledTimes(1);
+      expect("rasterNonAscii" in test.printTestPage.mock.calls[0][1]).toBe(false);
+    });
+  });
+});
+
 describe("PrinterSettingsDialog — a browser without Bluetooth", () => {
   it("says so, and offers neither Connect nor Test print", () => {
     link.isBluetoothSupported.mockReturnValue(false);

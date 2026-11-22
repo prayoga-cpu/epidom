@@ -67,15 +67,21 @@ async function deliver(payload: MerchantAlertPayload): Promise<void> {
   }
 }
 
-/** The store's owning user — MagicBell recipient identity for that store's alerts. */
+/**
+ * The store's owning user — MagicBell recipient identity for that store's alerts —
+ * plus the business language the alert should be written in.
+ */
 export async function getStoreOwnerContact(
   storeId: string
-): Promise<{ email: string; externalId: string } | null> {
+): Promise<{ email: string; externalId: string; locale: string | null } | null> {
   const store = await prisma.store.findUnique({
     where: { id: storeId },
-    select: { business: { select: { user: { select: { id: true, email: true } } } } },
+    select: {
+      business: { select: { locale: true, user: { select: { id: true, email: true } } } },
+    },
   });
   const user = store?.business.user;
   if (!user) return null;
-  return { email: user.email, externalId: user.id };
+  // `locale` is the business language, so alert text can speak it.
+  return { email: user.email, externalId: user.id, locale: store.business.locale ?? null };
 }

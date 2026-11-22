@@ -1,5 +1,5 @@
 /**
- * Builds the English and Indonesian copies of a sales page from its French
+ * Builds the English, Indonesian and Thai copies of a sales page from its French
  * original (public/sales-pages/sales-page-N.html) and a table of translations
  * (../translations/). Only text can change: the page is split into markup,
  * which is copied byte for byte (every tag, class, style rule and line of
@@ -7,12 +7,14 @@
  * (aria-label, alt, title, placeholder, and data-suffix: the unit a page's
  * script writes after a number, " heures" on sales-page-4's counters) and the
  * strings inside inline scripts. So a translation can never move the design.
+ * The one addition a copy may make is `headCss`: a last <style> in the <head>
+ * for a script the design's fonts and spacing weren't drawn for (Thai).
  *
  * Run `tsx scripts/build-sales-pages.ts` after editing a French page or a
  * table; the test in ../__tests__ fails when a copy is out of date.
  */
 
-export type TranslatedLocale = "en" | "id";
+export type TranslatedLocale = "en" | "id" | "th";
 
 export interface SalesPageTranslation {
   locale: TranslatedLocale;
@@ -28,6 +30,14 @@ export interface SalesPageTranslation {
   pairs: ReadonlyArray<readonly [string, string]>;
   /** Pieces deliberately left as they are (brand and plan names, symbols). */
   keep: readonly string[];
+  /**
+   * CSS added as the last <style> of the <head>, after the page's own, so it
+   * can override it. Thai only (../translations/thai-style.ts): no letter
+   * spacing, fonts that have Thai letters, room for the marks above and below
+   * a line. The English and Indonesian copies have none and stay byte for
+   * byte the French page's markup.
+   */
+  headCss?: string;
 }
 
 export type Segment =
@@ -276,5 +286,14 @@ export function translateSalesPage(src: string, translation: SalesPageTranslatio
   for (const key of table.keys()) {
     if (!used.has(key)) problems.push(`pair matches nothing on the page: ${JSON.stringify(key)}`);
   }
-  return { html, problems };
+  if (!translation.headCss) return { html, problems };
+
+  const headEnd = html.search(/<\/head\s*>/i);
+  if (headEnd === -1) {
+    problems.push("no </head> to put the copy's own CSS before");
+    return { html, problems };
+  }
+  if (/<\/style/i.test(translation.headCss)) problems.push("headCss closes its own <style>");
+  const style = `<style data-lang="${translation.locale}">\n${translation.headCss.trim()}\n</style>\n`;
+  return { html: html.slice(0, headEnd) + style + html.slice(headEnd), problems };
 }

@@ -239,5 +239,6 @@ describe("MyReferrals", () => {
       `${window.location.origin}/register?ref=AARON&utm_source=whatsapp&utm_medium=referral`
     );
     expect(codes).toContain(`${window.location.origin}/en/sales-page-2`);
+    expect(codes).toContain(`${window.location.origin}/th/sales-page-2`);
   });
 });

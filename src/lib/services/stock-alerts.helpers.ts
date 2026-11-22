@@ -18,6 +18,53 @@ import { sendMerchantAlert } from "@/lib/magicbell/client";
  * to fail (or roll back) the stock write itself.
  */
 
+type AlertLocale = "en" | "fr" | "id" | "th";
+
+interface StockAlertCopy {
+  critical: (name: string) => string;
+  low: (name: string) => string;
+  /** Persisted on the Alert row. */
+  message: (name: string, left: string, min: number, unit: string) => string;
+  /** Sent to the owner through MagicBell. */
+  content: (left: string, min: number, unit: string) => string;
+}
+
+// Alerts have no viewer to ask, so they speak the store's own language
+// (Business.locale). English when the locale is unknown; `id` is the original
+// copy, kept verbatim.
+const STOCK_ALERT_COPY: Record<AlertLocale, StockAlertCopy> = {
+  id: {
+    critical: (name) => `Stok kritis: ${name}`,
+    low: (name) => `Stok rendah: ${name}`,
+    message: (name, left, min, unit) => `Sisa stok ${name}: ${left} ${unit} (min: ${min} ${unit})`,
+    content: (left, min, unit) => `Sisa stok: ${left} ${unit} (min: ${min} ${unit})`,
+  },
+  en: {
+    critical: (name) => `Critical stock: ${name}`,
+    low: (name) => `Low stock: ${name}`,
+    message: (name, left, min, unit) => `${name} stock left: ${left} ${unit} (min: ${min} ${unit})`,
+    content: (left, min, unit) => `Stock left: ${left} ${unit} (min: ${min} ${unit})`,
+  },
+  fr: {
+    critical: (name) => `Stock critique\u00a0: ${name}`,
+    low: (name) => `Stock bas\u00a0: ${name}`,
+    message: (name, left, min, unit) =>
+      `Stock restant de ${name}\u00a0: ${left} ${unit} (min\u00a0: ${min} ${unit})`,
+    content: (left, min, unit) =>
+      `Stock restant\u00a0: ${left} ${unit} (min\u00a0: ${min} ${unit})`,
+  },
+  th: {
+    critical: (name) => `สต็อกวิกฤต: ${name}`,
+    low: (name) => `สต็อกใกล้หมด: ${name}`,
+    message: (name, left, min, unit) => `${name} คงเหลือ ${left} ${unit} (ขั้นต่ำ ${min} ${unit})`,
+    content: (left, min, unit) => `คงเหลือ ${left} ${unit} (ขั้นต่ำ ${min} ${unit})`,
+  },
+};
+
+function stockAlertLocale(locale: string | null | undefined): AlertLocale {
+  return locale === "fr" || locale === "id" || locale === "th" ? locale : "en";
+}
+
 export interface LowStockAlertParams {
   userId: string;
   storeId: string;
@@ -27,12 +74,17 @@ export interface LowStockAlertParams {
   newStock: number;
   minStock: number;
   unit: string;
+  /** Business.locale of the store — picks the language of the alert text. */
+  locale?: string | null;
 }
 
 export async function fireLowStockAlert(params: LowStockAlertParams): Promise<void> {
   if (params.minStock <= 0 || params.newStock > params.minStock) return;
 
   const isCritical = params.newStock <= params.minStock * 0.25;
+  const copy = STOCK_ALERT_COPY[stockAlertLocale(params.locale)];
+  const title = isCritical ? copy.critical(params.name) : copy.low(params.name);
+  const left = params.newStock.toFixed(2);
   const existing = await prisma.alert.findFirst({
     where: {
       userId: params.userId,
@@ -48,8 +100,8 @@ export async function fireLowStockAlert(params: LowStockAlertParams): Promise<vo
       userId: params.userId,
       type: isCritical ? AlertType.CRITICAL_STOCK : AlertType.LOW_STOCK,
       severity: isCritical ? AlertSeverity.CRITICAL : AlertSeverity.WARNING,
-      title: isCritical ? `Stok kritis: ${params.name}` : `Stok rendah: ${params.name}`,
-      message: `Sisa stok ${params.name}: ${params.newStock.toFixed(2)} ${params.unit} (min: ${params.minStock} ${params.unit})`,
+      title,
+      message: copy.message(params.name, left, params.minStock, params.unit),
       entityType: params.entityType,
       entityId: params.entityId,
     },
@@ -68,8 +120,8 @@ export async function fireLowStockAlert(params: LowStockAlertParams): Promise<vo
       recipientEmail: owner.email,
       recipientExternalId: params.userId,
       category: "low-stock",
-      title: isCritical ? `Stok kritis: ${params.name}` : `Stok rendah: ${params.name}`,
-      content: `Sisa stok: ${params.newStock.toFixed(2)} ${params.unit} (min: ${params.minStock} ${params.unit})`,
+      title,
+      content: copy.content(left, params.minStock, params.unit),
       actionUrl: `/store/${params.storeId}/data`,
     });
   }
@@ -99,7 +151,7 @@ export async function fireLowStockAlertsForEntities(
     const [store, materials, products] = await Promise.all([
       prisma.store.findUnique({
         where: { id: storeId },
-        select: { business: { select: { userId: true } } },
+        select: { business: { select: { userId: true, locale: true } } },
       }),
       // `storeId` in the where clause is not redundant with the id filter:
       // every read scopes to the tenant, so a stale/mismatched id can never
@@ -122,6 +174,7 @@ export async function fireLowStockAlertsForEntities(
     // business owner, not to whichever staff member triggered the write.
     const userId = store?.business.userId;
     if (!userId) return;
+    const locale = store?.business.locale;
 
     for (const material of materials) {
       await fireLowStockAlert({
@@ -133,6 +186,7 @@ export async function fireLowStockAlertsForEntities(
         newStock: Number(material.currentStock),
         minStock: Number(material.minStock),
         unit: material.unit,
+        locale,
       });
     }
 
@@ -146,6 +200,7 @@ export async function fireLowStockAlertsForEntities(
         newStock: Number(product.currentStock),
         minStock: Number(product.minStock),
         unit: product.unit,
+        locale,
       });
     }
   } catch (err) {

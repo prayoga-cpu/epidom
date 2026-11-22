@@ -115,7 +115,17 @@ describe("getStoreOwnerContact", () => {
     const { getStoreOwnerContact } = await freshClient();
 
     const contact = await getStoreOwnerContact("store-1");
-    expect(contact).toEqual({ email: "owner@example.com", externalId: "user-1" });
+    expect(contact).toEqual({ email: "owner@example.com", externalId: "user-1", locale: null });
+  });
+
+  it("also returns the business language so alerts can be localized", async () => {
+    findUniqueStore.mockResolvedValue({
+      business: { locale: "th", user: { id: "user-1", email: "owner@example.com" } },
+    });
+    const { getStoreOwnerContact } = await freshClient();
+
+    const contact = await getStoreOwnerContact("store-1");
+    expect(contact).toEqual({ email: "owner@example.com", externalId: "user-1", locale: "th" });
   });
 
   it("returns null when the store doesn't exist", async () => {

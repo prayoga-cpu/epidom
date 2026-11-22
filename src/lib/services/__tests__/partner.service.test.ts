@@ -40,6 +40,7 @@ vi.mock("@/lib/services/email.service", () => ({
 import {
   acceptPartnerInvite,
   createPartner,
+  dealSummary,
   getReferralBanner,
   lookupPartnerInvite,
   normalizeEmail,
@@ -296,6 +297,46 @@ describe("getReferralBanner", () => {
   });
 });
 
+describe("dealSummary", () => {
+  const base = {
+    commissionRate: D(30),
+    commissionMonths: 3,
+    referralCode: "BOB",
+    customerDiscountPercent: D(10),
+    salesPage: "sales-page-2",
+  };
+
+  it("is English by default and for an unknown locale", () => {
+    const en =
+      "30% of what each customer you bring pays during their first 3 months; every sign-up from sales page 2 counts for you; your referral link gives them 10% off their first payment.";
+    expect(dealSummary(base)).toBe(en);
+    expect(dealSummary(base, null)).toBe(en);
+    expect(dealSummary(base, "de")).toBe(en);
+    expect(dealSummary({ ...base, commissionMonths: 1, salesPage: null, customerDiscountPercent: 0 })).toBe(
+      "30% of what each customer you bring pays during their first 1 month; with your own referral link."
+    );
+  });
+
+  it("speaks French, with no-break spaces before : ; ? ! and %", () => {
+    expect(dealSummary(base, "fr")).toBe(
+      "30\u00a0% de ce que paie chaque client que vous apportez pendant ses 3 premiers mois\u00a0; chaque inscription depuis la page de vente 2 est comptée pour vous\u00a0; votre lien de parrainage leur offre 10\u00a0% de réduction sur leur premier paiement."
+    );
+    expect(dealSummary({ ...base, commissionMonths: 1 }, "fr")).toContain("pendant son premier mois");
+  });
+
+  it("speaks Indonesian", () => {
+    expect(dealSummary({ ...base, salesPage: null, customerDiscountPercent: 0 }, "id")).toBe(
+      "30% dari yang dibayar setiap pelanggan yang Anda ajak selama 3 bulan pertama mereka; dengan tautan referral Anda sendiri."
+    );
+  });
+
+  it("speaks Thai", () => {
+    expect(dealSummary(base, "th")).toBe(
+      "30% ของยอดที่ลูกค้าแต่ละรายที่คุณแนะนำชำระใน 3 เดือนแรก ทุกการสมัครจากหน้าขาย 2 จะนับเป็นของคุณ ลิงก์แนะนำของคุณให้ลูกค้าได้ส่วนลด 10% สำหรับการชำระเงินครั้งแรก"
+    );
+  });
+});
+
 describe("making someone a partner: picked user, or invitation", () => {
   const deal = {
     displayName: "Bob",
@@ -335,6 +376,23 @@ describe("making someone a partner: picked user, or invitation", () => {
       undefined
     );
     expect(mockPrisma.verification.create).not.toHaveBeenCalled();
+  });
+
+  it("tells a partner whose business language is Thai about the deal in Thai", async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: "u_bob",
+      email: "bob@x.com",
+      partner: null,
+      business: { locale: "th" },
+    });
+    await createPartner({ ...deal, userId: "u_bob" }, "admin");
+    expect(sendPartnerAccessEmail).toHaveBeenCalledWith(
+      "bob@x.com",
+      "Bob",
+      expect.stringContaining("30% ของยอดที่ลูกค้าแต่ละรายที่คุณแนะนำชำระใน 3 เดือนแรก"),
+      expect.any(String),
+      "th"
+    );
   });
 
   it("an email with no account gets a partner waiting for them and an invitation", async () => {

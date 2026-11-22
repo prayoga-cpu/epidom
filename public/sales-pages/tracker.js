@@ -1,5 +1,5 @@
 /*
- * Sales-page tracker, loaded by each public/sales-pages/sales-page-N[.en|.id].html as
+ * Sales-page tracker, loaded by each public/sales-pages/sales-page-N[.en|.id|.th].html as
  *   <script src="/sales-pages/tracker.js" data-page="sales-page-N" defer></script>
  *
  * Sends VIEW, CTA_CLICK (any element with data-cta="…") and SCROLL_50 / SCROLL_90
@@ -14,7 +14,7 @@
   var page = script && script.getAttribute("data-page");
   if (!page) return;
   var lang = (document.documentElement.getAttribute("lang") || "fr").slice(0, 2).toLowerCase();
-  var locale = lang === "en" || lang === "id" ? lang : "fr";
+  var locale = lang === "en" || lang === "id" || lang === "th" ? lang : "fr";
 
   var ENDPOINT = "/api/public/sales-pages/events";
   var COOKIE = "epidom_sales_page";

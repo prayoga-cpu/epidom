@@ -1,6 +1,6 @@
 import type { UseFormReturn } from "react-hook-form";
 import { ApiClientError } from "@/lib/api/client";
-import { localizeServerMessage } from "@/lib/i18n/server-messages";
+import { localizeServerField, localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * Applies server-reported field errors to a react-hook-form instance (so the
@@ -28,7 +28,9 @@ export function applyServerFieldErrors(form: UseFormReturn<any>, error: unknown)
     if (d && typeof d.field === "string" && typeof d.message === "string") {
       const message = localizeServerMessage(d.message);
       if (d.field) form.setError(d.field as any, { type: "server", message });
-      summaries.push(d.field ? `${d.field}: ${message}` : message);
+      // The toast names the field in the UI language when it is a known one
+      // ("Prix" for `price`), and by its raw path otherwise.
+      summaries.push(d.field ? `${localizeServerField(d.field)}: ${message}` : message);
     }
   }
   return summaries.length > 0 ? summaries.join(" · ") : null;

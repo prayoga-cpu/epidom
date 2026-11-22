@@ -48,7 +48,11 @@ export function usePrintReceipt(): {
             return;
           }
         }
-        await printReceipt(receipt);
+        // The receipt printer's "print non-Latin text as an image" switch. The
+        // key is added only when it is on, so with it off the job is the very
+        // object the caller built.
+        const raster = usePrinterSettings.getState().printers?.MAIN?.rasterNonAscii === true;
+        await printReceipt(raster ? { ...receipt, rasterNonAscii: true } : receipt);
         toast.success(t("pos.print.success"));
       } catch (err: unknown) {
         toast.error((err as { message?: string } | null)?.message ?? t("pos.print.failed"));

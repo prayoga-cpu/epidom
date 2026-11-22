@@ -1,6 +1,6 @@
 /*
  * The Meta Pixel, Google Analytics and the cookie bar on the static sales pages,
- * loaded by each public/sales-pages/sales-page-N[.en|.id].html as
+ * loaded by each public/sales-pages/sales-page-N[.en|.id|.th].html as
  *   <script src="/sales-pages/pixel.js" data-page="sales-page-N" defer></script>
  *
  * The pages are plain HTML outside the Next.js app, so the site's pixel
@@ -33,7 +33,7 @@
  * site are deleted.
  *
  * The bar lives in a shadow root, so none of the pages' own CSS can restyle it.
- * Its strings are the site's (cookie.* and footer.manageCookies in src/locales/{fr,en,id}.ts).
+ * Its strings are the site's (cookie.* and footer.manageCookies in src/locales/{fr,en,id,th}.ts).
  */
 (function () {
   var script = document.currentScript;
@@ -55,7 +55,7 @@
   var ENDPOINT = "/api/public/tracking-events";
 
   var lang = (document.documentElement.getAttribute("lang") || "fr").slice(0, 2).toLowerCase();
-  var locale = lang === "en" || lang === "id" ? lang : "fr";
+  var locale = lang === "en" || lang === "id" || lang === "th" ? lang : "fr";
   // The public URL, also when the file itself is opened (/sales-pages/…html).
   var path = locale === "fr" ? "/" + page : "/" + locale + "/" + page;
   var host = window.location.hostname;
@@ -140,6 +140,31 @@
       policy: "Kebijakan Cookie",
       manage: "Kelola cookie",
       close: "Tutup pemberitahuan cookie",
+    },
+    th: {
+      title: "เราใช้คุกกี้",
+      description:
+        "ยอมรับ: Google Analytics และ Vercel Analytics ใช้วัดการใช้งานเว็บไซต์ของเรา และ Meta Pixel ใช้วัดผลโฆษณาของเรา ปฏิเสธ: ใช้เฉพาะคุกกี้ที่จำเป็น (การเข้าสู่ระบบ ความปลอดภัย) เท่านั้น",
+      accept: "ยอมรับ",
+      reject: "ปฏิเสธ",
+      customize: "ปรับแต่ง",
+      back: "กลับ",
+      save: "บันทึกการตั้งค่า",
+      settingsTitle: "การตั้งค่าคุกกี้",
+      settingsDescription:
+        "เลือกคุกกี้ที่คุณต้องการอนุญาต คุกกี้ที่จำเป็นจะเปิดอยู่เสมอเพราะจำเป็นต่อการทำงานของเว็บไซต์",
+      essentialTitle: "คุกกี้ที่จำเป็น",
+      essentialDescription: "จำเป็นต่อการทำงานที่ถูกต้องของเว็บไซต์ ไม่สามารถปิดคุกกี้เหล่านี้ได้",
+      analyticsTitle: "คุกกี้เพื่อการวิเคราะห์",
+      analyticsDescription:
+        "หากยอมรับ: เราจะติดตามการเข้าชมหน้าและพฤติกรรมของผู้ใช้เพื่อปรับปรุงเว็บไซต์ หากปฏิเสธ: จะไม่มีการเก็บข้อมูลการติดตาม",
+      marketingTitle: "คุกกี้เพื่อการตลาด",
+      marketingDescription:
+        "หากยอมรับ: เราจะติดตามคอนเวอร์ชันและเหตุการณ์เพื่อวัตถุประสงค์ทางการตลาด หากปฏิเสธ: จะไม่มีการติดตามเพื่อการตลาด",
+      always: "เปิดเสมอ",
+      policy: "นโยบายคุกกี้",
+      manage: "จัดการคุกกี้",
+      close: "ปิดการแจ้งเตือนคุกกี้",
     },
   }[locale];
   var POLICY_HREF = locale === "fr" ? "/cookie-policy" : "/" + locale + "/cookie-policy";

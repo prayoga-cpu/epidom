@@ -393,6 +393,8 @@ export function ShiftReportPrintView({
   const receiptLocale = resolveReceiptLocale(locale);
   const [isPrinting, setIsPrinting] = useState(false);
   const paperWidth = usePrinterSettings((s) => s.printers.MAIN.paperWidth);
+  // The receipt printer's opt-in "print non-Latin text as an image" switch.
+  const rasterNonAscii = usePrinterSettings((s) => s.printers.MAIN.rasterNonAscii) === true;
 
   useEffect(() => {
     if (!autoPrint) return;
@@ -425,6 +427,7 @@ export function ShiftReportPrintView({
         width: paperWidth,
         shiftLabel,
         generatedAt: new Date(generatedAt),
+        ...(rasterNonAscii ? { rasterNonAscii: true } : {}),
       });
       toast.success(t("pos.print.success"));
     } catch (error) {

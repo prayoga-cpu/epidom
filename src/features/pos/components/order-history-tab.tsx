@@ -334,6 +334,8 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
   const [selected, setSelected] = useState<OrderHistoryItem | null>(null);
   const [isPrintingReport, setIsPrintingReport] = useState(false);
   const paperWidth = usePrinterSettings((s) => s.printers.MAIN.paperWidth);
+  // The receipt printer's opt-in "print non-Latin text as an image" switch.
+  const rasterNonAscii = usePrinterSettings((s) => s.printers.MAIN.rasterNonAscii) === true;
 
   const [filterState, setFilterState] = usePersistedState(
     `epidom-pos-history-filters-${storeId}`,
@@ -776,6 +778,7 @@ export function OrderHistoryTab({ storeId }: OrderHistoryTabProps) {
         width: paperWidth,
         shiftLabel: res.shiftLabel,
         generatedAt: new Date(),
+        ...(rasterNonAscii ? { rasterNonAscii: true } : {}),
       });
       toast.success(t("pos.print.success"));
     } catch (error) {

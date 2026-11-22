@@ -11,6 +11,7 @@ import { useImportStock, type StockImportResult } from "./hooks/use-import-stock
 import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 interface CSVImportDialogProps {
   open: boolean;
@@ -18,7 +19,7 @@ interface CSVImportDialogProps {
 }
 
 export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const params = useParams();
   const storeId = params?.storeId as string;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -177,7 +178,7 @@ export function CSVImportDialog({ open, onOpenChange }: CSVImportDialogProps) {
                               {result.type === "material"
                                 ? t("management.editStock.material")
                                 : t("management.editStock.product")}{" "}
-                              {result.message && `- ${result.message}`}
+                              {result.message && `- ${localizeServerMessage(result.message, locale)}`}
                             </p>
                           </div>
                         </div>

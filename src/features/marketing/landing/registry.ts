@@ -15,46 +15,64 @@ export const LANDING_GROUPS = {
     fr: "calcul-cout-de-revient",
     id: "kalkulator-hpp",
     en: "recipe-cost-calculator",
+    th: "recipe-cost-calculator-th",
   },
   commission: {
     fr: "calcul-commission-uber-eats",
     id: "kalkulator-komisi-gofood",
     en: "delivery-app-commission-calculator",
+    th: "delivery-app-commission-calculator-th",
   },
-  "qr-menu": { fr: "menu-qr-code-gratuit", id: "menu-qr-code-gratis", en: "free-qr-code-menu" },
+  "qr-menu": {
+    fr: "menu-qr-code-gratuit",
+    id: "menu-qr-code-gratis",
+    en: "free-qr-code-menu",
+    th: "free-qr-code-menu-th",
+  },
   "online-ordering": {
     fr: "commande-en-ligne-restaurant",
     id: "pesan-online-tanpa-komisi",
     en: "commission-free-online-ordering",
+    th: "commission-free-online-ordering-th",
   },
-  cafe: { id: "aplikasi-kasir-cafe", en: "cafe-pos-system" },
-  restaurant: { id: "aplikasi-kasir-restoran" },
-  bakery: { id: "aplikasi-kasir-toko-roti", en: "bakery-pos-system" },
-  offline: { fr: "caisse-hors-ligne", id: "aplikasi-kasir-offline", en: "offline-pos-system" },
+  cafe: { id: "aplikasi-kasir-cafe", en: "cafe-pos-system", th: "cafe-pos-system-th" },
+  restaurant: { id: "aplikasi-kasir-restoran", th: "restaurant-pos-system-th" },
+  bakery: { id: "aplikasi-kasir-toko-roti", en: "bakery-pos-system", th: "bakery-pos-system-th" },
+  offline: {
+    fr: "caisse-hors-ligne",
+    id: "aplikasi-kasir-offline",
+    en: "offline-pos-system",
+    th: "offline-pos-system-th",
+  },
   "kitchen-display": {
     fr: "ecran-cuisine-kds",
     id: "layar-dapur-kds",
     en: "kitchen-display-system",
+    th: "kitchen-display-system-th",
   },
   "stock-recipes": {
     fr: "gestion-stock-restaurant",
     id: "aplikasi-stok-bahan-baku",
     en: "restaurant-inventory-software",
+    th: "restaurant-inventory-software-th",
   },
   "staff-scheduling": {
     fr: "planning-personnel-restaurant",
     id: "jadwal-shift-karyawan",
     en: "restaurant-staff-scheduling",
+    th: "restaurant-staff-scheduling-th",
   },
   "receipt-printer": {
     fr: "imprimante-ticket-caisse",
     id: "printer-struk-kasir",
     en: "receipt-printer-pos",
+    th: "receipt-printer-pos-th",
   },
   "claude-connector": {
     fr: "connecteur-claude-caisse",
     id: "konektor-claude-kasir",
     en: "claude-connector-pos",
+    th: "claude-connector-pos-th",
   },
 } as const satisfies Record<string, Partial<Record<Locale, string>>>;
 
@@ -62,8 +80,8 @@ export type LandingGroup = keyof typeof LANDING_GROUPS;
 
 /**
  * The slug of `group`'s landing page in `locale`, or undefined when the group
- * has no page in that language (Thai has none: these pages are per-market SEO
- * content, not translations). Callers fall back to a page that exists.
+ * has no page in that language. Callers fall back to a page that exists.
+ * Thai slugs are the English ones plus "-th": a slug may exist in one language only.
  */
 export function landingSlugIn(group: LandingGroup, locale: Locale): string | undefined {
   return (LANDING_GROUPS[group] as Partial<Record<Locale, string>>)[locale];
@@ -131,6 +149,19 @@ export const LANDING_LABELS: Record<string, string> = {
   "connecteur-claude-caisse": "Connecteur Claude",
   "konektor-claude-kasir": "Konektor Claude",
   "claude-connector-pos": "Claude connector",
+  "recipe-cost-calculator-th": "เครื่องคำนวณต้นทุนสูตร",
+  "delivery-app-commission-calculator-th": "เครื่องคำนวณค่าคอมมิชชันแอปเดลิเวอรี",
+  "free-qr-code-menu-th": "เมนู QR ฟรี",
+  "commission-free-online-ordering-th": "สั่งอาหารออนไลน์ไม่มีค่าคอมมิชชัน",
+  "cafe-pos-system-th": "ระบบ POS สำหรับคาเฟ่",
+  "restaurant-pos-system-th": "ระบบ POS สำหรับร้านอาหาร",
+  "bakery-pos-system-th": "ระบบ POS สำหรับร้านเบเกอรี",
+  "offline-pos-system-th": "ระบบ POS ออฟไลน์",
+  "kitchen-display-system-th": "จอแสดงออเดอร์ในครัว (KDS)",
+  "restaurant-inventory-software-th": "ระบบสต็อกร้านอาหาร",
+  "restaurant-staff-scheduling-th": "ตารางงานพนักงาน",
+  "receipt-printer-pos-th": "เครื่องพิมพ์ใบเสร็จ",
+  "claude-connector-pos-th": "ตัวเชื่อมต่อ Claude สำหรับ POS",
 };
 
 /** A language's landing pages in registry order (tools, then businesses, then features). */

@@ -328,26 +328,92 @@ async function backfill(userIds: string[]): Promise<void> {
   }
 }
 
-/** "30% of what each customer you bring pays during their first 3 months…": for the emails. */
-function dealSummary(p: {
-  commissionRate: Prisma.Decimal | number;
-  commissionMonths: number;
-  referralCode: string | null;
-  customerDiscountPercent: Prisma.Decimal | number;
-  salesPage?: string | null;
-}): string {
-  const parts = [
-    `${Number(p.commissionRate)}% of what each customer you bring pays during their first ${p.commissionMonths} month${p.commissionMonths === 1 ? "" : "s"}`,
-  ];
-  if (p.salesPage) parts.push(`every sign-up from ${p.salesPage.replace("sales-page-", "sales page ")} counts for you`);
+type DealLocale = "en" | "fr" | "id" | "th";
+
+const DEAL_COPY: Record<
+  DealLocale,
+  {
+    commission: (rate: number, months: number) => string;
+    salesPage: (page: string) => string;
+    /** How a sales page key such as "sales-page-2" reads in a sentence. */
+    salesPageName: (key: string) => string;
+    discount: (percent: number) => string;
+    ownLink: string;
+    join: string;
+    end: string;
+  }
+> = {
+  en: {
+    commission: (rate, months) =>
+      `${rate}% of what each customer you bring pays during their first ${months} month${months === 1 ? "" : "s"}`,
+    salesPage: (page) => `every sign-up from ${page} counts for you`,
+    salesPageName: (key) => key.replace("sales-page-", "sales page "),
+    discount: (percent) => `your referral link gives them ${percent}% off their first payment`,
+    ownLink: "with your own referral link",
+    join: "; ",
+    end: ".",
+  },
+  fr: {
+    commission: (rate, months) =>
+      `${rate}\u00a0% de ce que paie chaque client que vous apportez pendant ${months === 1 ? "son premier mois" : `ses ${months} premiers mois`}`,
+    salesPage: (page) => `chaque inscription depuis ${page} est comptée pour vous`,
+    salesPageName: (key) => key.replace("sales-page-", "la page de vente "),
+    discount: (percent) =>
+      `votre lien de parrainage leur offre ${percent}\u00a0% de réduction sur leur premier paiement`,
+    ownLink: "avec votre propre lien de parrainage",
+    join: "\u00a0; ",
+    end: ".",
+  },
+  id: {
+    commission: (rate, months) =>
+      `${rate}% dari yang dibayar setiap pelanggan yang Anda ajak selama ${months} bulan pertama mereka`,
+    salesPage: (page) => `setiap pendaftaran dari ${page} dihitung untuk Anda`,
+    salesPageName: (key) => key.replace("sales-page-", "halaman penjualan "),
+    discount: (percent) =>
+      `tautan referral Anda memberi mereka diskon ${percent}% untuk pembayaran pertama`,
+    ownLink: "dengan tautan referral Anda sendiri",
+    join: "; ",
+    end: ".",
+  },
+  th: {
+    commission: (rate, months) =>
+      `${rate}% ของยอดที่ลูกค้าแต่ละรายที่คุณแนะนำชำระใน ${months} เดือนแรก`,
+    salesPage: (page) => `ทุกการสมัครจาก${page} จะนับเป็นของคุณ`,
+    salesPageName: (key) => key.replace("sales-page-", "หน้าขาย "),
+    discount: (percent) =>
+      `ลิงก์แนะนำของคุณให้ลูกค้าได้ส่วนลด ${percent}% สำหรับการชำระเงินครั้งแรก`,
+    ownLink: "ผ่านลิงก์แนะนำของคุณเอง",
+    join: " ",
+    end: "",
+  },
+};
+
+/**
+ * "30% of what each customer you bring pays during their first 3 months…": for the
+ * emails, in the recipient's language (English when `locale` is absent or unknown,
+ * which is also what the admin UI gets).
+ */
+export function dealSummary(
+  p: {
+    commissionRate: Prisma.Decimal | number;
+    commissionMonths: number;
+    referralCode: string | null;
+    customerDiscountPercent: Prisma.Decimal | number;
+    salesPage?: string | null;
+  },
+  locale?: string | null
+): string {
+  const copy = DEAL_COPY[locale === "fr" || locale === "id" || locale === "th" ? locale : "en"];
+  const parts = [copy.commission(Number(p.commissionRate), p.commissionMonths)];
+  if (p.salesPage) parts.push(copy.salesPage(copy.salesPageName(p.salesPage)));
   if (p.referralCode) {
     parts.push(
       Number(p.customerDiscountPercent) > 0
-        ? `your referral link gives them ${Number(p.customerDiscountPercent)}% off their first payment`
-        : "with your own referral link"
+        ? copy.discount(Number(p.customerDiscountPercent))
+        : copy.ownLink
     );
   }
-  return `${parts.join("; ")}.`;
+  return `${parts.join(copy.join)}${copy.end}`;
 }
 
 const appUrl = () => (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -464,7 +530,12 @@ export async function createPartner(
       createdById: actorId,
     },
   });
-  const summary = dealSummary({ ...partner, salesPage: input.salesPage?.page ?? null });
+  // Only one of the two e-mails goes out: the invitation (no account yet, English) or
+  // the access notice (the owner's business language).
+  const summary = dealSummary(
+    { ...partner, salesPage: input.salesPage?.page ?? null },
+    user?.business?.locale
+  );
 
   if (!user && inviteEmail) {
     try {

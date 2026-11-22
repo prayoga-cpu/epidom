@@ -207,13 +207,14 @@ export async function deductStockForOrder(
           menuItem: { include: { product: { include: primaryRecipeInclude } } },
         },
       },
-      store: { select: { business: { select: { userId: true } } } },
+      store: { select: { business: { select: { userId: true, locale: true } } } },
     },
   });
 
   if (!order || order.storeId !== storeId) return { deducted: 0, skipped: 0 };
 
   const userId = order.store.business.userId;
+  const locale = order.store.business.locale;
 
   // A line item cancelled via KDS (e.g. "out of stock", kitchen mistake) must not
   // consume stock even though the order as a whole still reaches DELIVERED.
@@ -491,6 +492,7 @@ export async function deductStockForOrder(
       newStock: p.balanceAfter,
       minStock: p.minStock,
       unit: p.unit,
+      locale,
     });
   }
 
@@ -509,6 +511,7 @@ export async function deductStockForOrder(
       newStock: 0,
       minStock: Number(entry.product.minStock),
       unit: entry.product.unit,
+      locale,
     });
   }
 
@@ -522,6 +525,7 @@ export async function deductStockForOrder(
       newStock: m.balanceAfter,
       minStock: m.minStock,
       unit: m.unit,
+      locale,
     });
   }
 

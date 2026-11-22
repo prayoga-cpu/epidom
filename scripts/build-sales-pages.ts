@@ -1,6 +1,6 @@
 /**
- * Writes the English and Indonesian copies of the sales pages
- * (public/sales-pages/sales-page-N.{en,id}.html) from the French originals and
+ * Writes the English, Indonesian and Thai copies of the sales pages
+ * (public/sales-pages/sales-page-N.{en,id,th}.html) from the French originals and
  * the tables in src/features/marketing/sales-pages/translations/.
  *
  *   tsx scripts/build-sales-pages.ts                      write every copy that has no problems

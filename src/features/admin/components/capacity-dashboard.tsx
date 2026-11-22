@@ -41,6 +41,7 @@ import {
   NIGHTLY_RUN_ID_PREFIX,
   activeRunWindowMs,
 } from "@/lib/backup/constants";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 interface TableRow {
   name: string;
@@ -149,9 +150,9 @@ function activeManualRun(data: BackupsData | undefined): BackupRunRow | undefine
 /** Admin routes answer `{ error: "..." }`; errors thrown inside them `{ error: { message } }`. */
 function apiErrorMessage(json: unknown, fallback: string): string {
   const error = (json as { error?: unknown } | null)?.error;
-  if (typeof error === "string") return error;
+  if (typeof error === "string") return localizeServerMessage(error);
   const message = (error as { message?: unknown } | undefined)?.message;
-  return typeof message === "string" ? message : fallback;
+  return typeof message === "string" ? localizeServerMessage(message) : fallback;
 }
 
 function formatHours(seconds: number): string {
@@ -229,7 +230,7 @@ export function CapacityDashboard() {
     queryFn: async () => {
       const res = await fetch("/api/admin/capacity");
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.detail || json?.error || t("adminPages.capacity.fetchCapacity"));
+      if (!res.ok) throw new Error(json?.detail || localizeServerMessage(json?.error) || t("adminPages.capacity.fetchCapacity"));
       return json;
     },
   });
@@ -241,7 +242,7 @@ export function CapacityDashboard() {
     queryFn: async () => {
       const res = await fetch("/api/admin/platform-usage");
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error || t("adminPages.capacity.fetchPlatform"));
+      if (!res.ok) throw new Error(localizeServerMessage(json?.error) || t("adminPages.capacity.fetchPlatform"));
       return json;
     },
   });

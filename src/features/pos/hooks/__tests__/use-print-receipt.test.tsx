@@ -95,3 +95,31 @@ describe("usePrintReceipt", () => {
     expect(result.current.isPrinting).toBe(false);
   });
 });
+
+describe("usePrintReceipt — print non-Latin text as an image", () => {
+  const setRaster = (value: boolean) =>
+    usePrinterSettings.setState((current) => ({
+      printers: {
+        ...current.printers,
+        MAIN: { ...current.printers.MAIN, rasterNonAscii: value },
+      },
+    }));
+
+  it("hands the printer the caller's own object while the switch is off", async () => {
+    setRaster(false);
+    const { result } = renderHook(() => usePrintReceipt());
+    await act(() => result.current.print(receipt));
+    expect(printer.printReceipt.mock.calls[0][0]).toBe(receipt);
+  });
+
+  it("adds the option to the job once the receipt printer's switch is on", async () => {
+    setRaster(true);
+    try {
+      const { result } = renderHook(() => usePrintReceipt());
+      await act(() => result.current.print(receipt));
+      expect(printer.printReceipt).toHaveBeenCalledWith({ ...receipt, rasterNonAscii: true });
+    } finally {
+      setRaster(false);
+    }
+  });
+});

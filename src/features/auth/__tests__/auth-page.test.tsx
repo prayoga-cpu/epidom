@@ -160,7 +160,7 @@ describe("AuthPage: the Login <-> Register toggle keeps the query string", () =>
 });
 
 describe("AuthPage: ?lang= from a sales page", () => {
-  it.each(["en", "id", "fr"])("opens in the sales page's language (%s)", (lang) => {
+  it.each(["en", "id", "th", "fr"])("opens in the sales page's language (%s)", (lang) => {
     renderAt("register", `lang=${lang}`);
 
     expect(h.setLocale).toHaveBeenCalledWith(lang);

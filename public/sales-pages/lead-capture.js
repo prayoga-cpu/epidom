@@ -19,7 +19,7 @@
   if (!page) return;
 
   var lang = (document.documentElement.getAttribute("lang") || "fr").slice(0, 2).toLowerCase();
-  var locale = lang === "en" || lang === "id" ? lang : "fr";
+  var locale = lang === "en" || lang === "id" || lang === "th" ? lang : "fr";
 
   var STORAGE_KEY = "epi_lc_" + page;
   var ENDPOINT = "/api/public/sales-pages/leads";
@@ -74,6 +74,22 @@
       vslTitle: "Anda tampaknya tertarik",
       vslSubtitle: "Tinggalkan detail Anda dan dapatkan demo yang dipersonalisasi.",
       getStarted: "Mulai sekarang →",
+    },
+    th: {
+      title: "ก่อนไป…",
+      subtitle: "รับเคล็ดลับฟรีจากเราเพื่อพัฒนาร้านกาแฟของคุณ",
+      firstName: "ชื่อ",
+      lastName: "นามสกุล",
+      phone: "เบอร์โทรศัพท์",
+      email: "อีเมล",
+      submit: "รับเคล็ดลับ →",
+      sending: "กำลังส่ง…",
+      thanks: "ขอบคุณ! เราจะติดต่อกลับเร็วๆ นี้",
+      close: "ปิด",
+      skip: "ไม่เป็นไร ขอบคุณ",
+      vslTitle: "ดูเหมือนคุณจะสนใจ",
+      vslSubtitle: "ฝากข้อมูลติดต่อไว้ แล้วรับเดโมสำหรับร้านคุณ",
+      getStarted: "เริ่มเลย →",
     },
   };
   var t = T[locale] || T.fr;

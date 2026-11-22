@@ -12,7 +12,15 @@
 // is decided upstream (features/pos/lib/print-plan.ts) — this module only draws.
 
 import { printBytes } from "@/lib/pwa/printer-connection";
-import { createEscPosWriter, labelRow, wrapText } from "@/lib/pwa/thermal-printer";
+import {
+  createEscPosWriter,
+  labelRow,
+  resolveLineRasterizer,
+  wrapText,
+  wrapTextForRaster,
+  type EscPosBuildDeps,
+  type TextWrap,
+} from "@/lib/pwa/thermal-printer";
 import {
   RECEIPT_INTL_LOCALE,
   RECEIPT_LABELS,
@@ -63,6 +71,8 @@ export interface OrderTicketData {
   reprint?: boolean;
   /** 32 cols = 58mm, 48 cols = 80mm. */
   width?: 32 | 48;
+  /** This printer's "print non-Latin text as an image" switch — see ReceiptData. */
+  rasterNonAscii?: boolean;
 }
 
 /** `2` → "2", `1.5` → "1.5", `1.50` → "1.5" — quantities are Decimal(10,2) in the schema. */
@@ -76,17 +86,25 @@ export function formatTicketQuantity(quantity: number): string {
  * leading indent — which on a ticket IS the hierarchy (options and notes hang
  * under their item) — so it is re-applied here to every line.
  */
-function hanging(prefix: string, text: string, cols: number): string[] {
+function hanging(prefix: string, text: string, cols: number, wrap: TextWrap): string[] {
   const pad = " ".repeat(prefix.length);
-  const wrapped = wrapText(text, Math.max(1, cols - prefix.length));
+  const wrapped = wrap(text, Math.max(1, cols - prefix.length));
   if (wrapped.length === 0) return [prefix.trimEnd()];
   return wrapped.map((part, i) => `${i === 0 ? prefix : pad}${part}`);
 }
 
-export function buildOrderTicketEscPos(ticket: OrderTicketData): Uint8Array {
+export function buildOrderTicketEscPos(
+  ticket: OrderTicketData,
+  deps?: EscPosBuildDeps
+): Uint8Array {
   const cols = ticket.width ?? 32;
   const divider = "-".repeat(cols);
-  const locale = printerLocale(resolveReceiptLocale(ticket.locale));
+  // Null unless this printer's "print as image" switch is on and drawing works
+  // on this device — null is the plain text path, byte for byte (see buildEscPos).
+  const rasterizer = resolveLineRasterizer(ticket.rasterNonAscii, deps);
+  const resolvedLocale = resolveReceiptLocale(ticket.locale);
+  const locale: ReceiptLocale = rasterizer ? resolvedLocale : printerLocale(resolvedLocale);
+  const wrap: TextWrap = rasterizer ? wrapTextForRaster : wrapText;
   const labels = TICKET_LABELS[locale];
   const receiptLabels = RECEIPT_LABELS[locale];
   const typeLabels = SHIFT_REPORT_LABELS[locale];
@@ -96,7 +114,7 @@ export function buildOrderTicketEscPos(ticket: OrderTicketData): Uint8Array {
   // needs its own banner; a single section is already named by the heading.
   const multi = ticket.sections.length > 1;
 
-  const w = createEscPosWriter();
+  const w = createEscPosWriter({ rasterizer, cols });
   const { line, lines, blank, bold, center, left, doubleSize, doubleHeight } = w;
 
   w.init();
@@ -111,21 +129,21 @@ export function buildOrderTicketEscPos(ticket: OrderTicketData): Uint8Array {
     multi || !ticket.sections[0]
       ? labels.orderTicket
       : departmentTitle(ticket.sections[0].department);
-  lines(wrapText(heading, bigCols));
-  if (ticket.queueNumber != null) lines(wrapText(`#${ticket.queueNumber}`, bigCols));
+  lines(wrap(heading, bigCols));
+  if (ticket.queueNumber != null) lines(wrap(`#${ticket.queueNumber}`, bigCols));
   doubleSize(false);
   if (ticket.reprint) {
     bold(true);
-    lines(wrapText(labels.reprint, cols));
+    lines(wrap(labels.reprint, cols));
     bold(false);
   }
   left();
   line(divider);
 
   // ---- Who / where / when --------------------------------------------------
-  lines(labelRow(labels.orderNo, ticket.orderNumber, cols));
-  lines(labelRow(receiptLabels.date, ticket.date, cols));
-  if (ticket.tableLabel) lines(labelRow(receiptLabels.table, ticket.tableLabel, cols));
+  lines(labelRow(labels.orderNo, ticket.orderNumber, cols, wrap));
+  lines(labelRow(receiptLabels.date, ticket.date, cols, wrap));
+  if (ticket.tableLabel) lines(labelRow(receiptLabels.table, ticket.tableLabel, cols, wrap));
   const typeName =
     ticket.orderType || ticket.platform
       ? saleTypeLabel(typeLabels, ticket.orderType, ticket.platform)
@@ -133,10 +151,10 @@ export function buildOrderTicketEscPos(ticket: OrderTicketData): Uint8Array {
   if (typeName) {
     const pax =
       ticket.orderType === "DINE_IN" && ticket.guestCount ? ` (${ticket.guestCount} pax)` : "";
-    lines(labelRow(labels.type, `${typeName}${pax}`, cols));
+    lines(labelRow(labels.type, `${typeName}${pax}`, cols, wrap));
   }
-  if (ticket.customerName) lines(labelRow(labels.customer, ticket.customerName, cols));
-  if (ticket.cashierName) lines(labelRow(receiptLabels.cashier, ticket.cashierName, cols));
+  if (ticket.customerName) lines(labelRow(labels.customer, ticket.customerName, cols, wrap));
+  if (ticket.cashierName) lines(labelRow(receiptLabels.cashier, ticket.cashierName, cols, wrap));
 
   // ---- Items ---------------------------------------------------------------
   for (const section of ticket.sections) {
@@ -144,7 +162,7 @@ export function buildOrderTicketEscPos(ticket: OrderTicketData): Uint8Array {
     if (multi) {
       center();
       bold(true);
-      lines(wrapText(departmentTitle(section.department), cols));
+      lines(wrap(departmentTitle(section.department), cols));
       bold(false);
       left();
       line(divider);
@@ -153,14 +171,14 @@ export function buildOrderTicketEscPos(ticket: OrderTicketData): Uint8Array {
       // Tall + bold, quantity first: this is read across a pass, not held in the hand.
       doubleHeight(true);
       bold(true);
-      lines(hanging(`${formatTicketQuantity(item.quantity)}x `, item.name, cols));
+      lines(hanging(`${formatTicketQuantity(item.quantity)}x `, item.name, cols, wrap));
       bold(false);
       doubleHeight(false);
       const options = (item.optionNames ?? []).filter(Boolean);
-      if (options.length > 0) lines(hanging("   ", options.join(", "), cols));
+      if (options.length > 0) lines(hanging("   ", options.join(", "), cols, wrap));
       if (item.notes) {
         bold(true);
-        lines(hanging("   * ", item.notes, cols));
+        lines(hanging("   * ", item.notes, cols, wrap));
         bold(false);
       }
     }
@@ -169,7 +187,7 @@ export function buildOrderTicketEscPos(ticket: OrderTicketData): Uint8Array {
   if (ticket.notes) {
     line(divider);
     bold(true);
-    lines(hanging(`${receiptLabels.notes}: `, ticket.notes, cols));
+    lines(hanging(`${receiptLabels.notes}: `, ticket.notes, cols, wrap));
     bold(false);
   }
 
@@ -197,9 +215,16 @@ export function buildSampleOrderTicket(input: {
   locale: ReceiptLocale;
   width: 32 | 48;
   now?: Date;
+  /** The printer's "print as image" switch is on AND drawing works here. */
+  rasterNonAscii?: boolean;
+  /** Extra lines for the order note — the image test's Thai and accented samples. */
+  notes?: string;
 }): OrderTicketData {
-  const labels = TICKET_LABELS[printerLocale(input.locale)];
+  const raster = input.rasterNonAscii === true;
+  const labels = TICKET_LABELS[raster ? input.locale : printerLocale(input.locale)];
   return {
+    ...(raster ? { rasterNonAscii: true } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
     locale: input.locale,
     orderNumber: "TEST-0001",
     queueNumber: 12,

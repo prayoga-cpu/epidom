@@ -8,7 +8,14 @@
 // that only need "is the till printer up" keep a single import.
 // Kitchen/bar tickets and item labels: order-ticket.ts / item-label.ts.
 
+import {
+  encodeRasterImage,
+  needsRaster,
+  type LineRasterizer,
+  type RasterBitmap,
+} from "@/lib/pwa/escpos-raster";
 import { isPrinterConnected, printBytes } from "@/lib/pwa/printer-connection";
+import { getCanvasLineRasterizer } from "@/lib/pwa/text-raster";
 import { formatCurrency, getCurrencySymbol } from "@/lib/utils/formatting";
 import {
   RECEIPT_INTL_LOCALE,
@@ -93,6 +100,38 @@ export interface ReceiptData {
   tableLabel?: string;
   notes?: string;
   width?: 32 | 48; // 32 cols = 58mm, 48 cols = 80mm
+  /**
+   * "Print Thai and other non-Latin text as an image" — this printer's opt-in
+   * switch (use-printer-settings.ts). Only `true` changes anything: lines with
+   * characters outside printable ASCII are then sent as a raster image, and a
+   * Thai receipt uses its Thai labels. Absent/false = today's bytes, exactly.
+   */
+  rasterNonAscii?: boolean;
+}
+
+/** Test seam: the builders draw with the canvas rasterizer unless one is passed here. */
+export interface EscPosBuildDeps {
+  rasterizer?: LineRasterizer | null;
+}
+
+/**
+ * The rasterizer a build will use, or null for the plain text path. Null unless
+ * the option is literally `true` AND drawing works on this device — decided once
+ * per document, up front, so a device without a canvas gets today's output
+ * byte for byte (labels and wrapping included) rather than a half-switched one.
+ */
+export function resolveLineRasterizer(
+  enabled: boolean | undefined,
+  deps?: EscPosBuildDeps
+): LineRasterizer | null {
+  if (enabled !== true) return null;
+  try {
+    const injected = deps?.rasterizer;
+    const rasterizer = injected !== undefined ? injected : getCanvasLineRasterizer();
+    return rasterizer && rasterizer.isAvailable() ? rasterizer : null;
+  } catch {
+    return null;
+  }
 }
 
 function formatCols(left: string, right: string, cols: number): string {
@@ -169,6 +208,24 @@ export function wrapText(text: string, cols: number): string[] {
   return text.split("\n").flatMap((paragraph) => wrapLine(paragraph, cols));
 }
 
+export type TextWrap = (text: string, cols: number) => string[];
+
+/**
+ * wrapText for a document that is being rasterized. Counting UTF-16 units says
+ * nothing about how wide Thai is on paper (tone marks take no width, and there
+ * are no spaces to break on), so a paragraph that will be drawn as an image is
+ * passed through as ONE logical line and wrapped in dots by the rasterizer.
+ * Pure-ASCII paragraphs wrap exactly as wrapText does — they still print as text.
+ */
+export function wrapTextForRaster(text: string, cols: number): string[] {
+  if (!text) return [];
+  return text.split("\n").flatMap((paragraph) => {
+    if (!needsRaster(paragraph)) return wrapLine(paragraph, cols);
+    const kept = paragraph.trimEnd();
+    return kept.trim() ? [kept] : [];
+  });
+}
+
 /**
  * `Label    : value`, wrapped rather than overflowed.
  *
@@ -179,11 +236,16 @@ export function wrapText(text: string, cols: number): string[] {
  * reads as one field. Returns lines (never a single string) so callers cannot
  * accidentally emit an over-wide one.
  */
-export function labelRow(label: string, value: string, cols: number): string[] {
+export function labelRow(
+  label: string,
+  value: string,
+  cols: number,
+  wrap: TextWrap = wrapText
+): string[] {
   const prefix = `${label.padEnd(9)}: `;
   if (prefix.length + value.length <= cols) return [`${prefix}${value}`];
   const indent = " ".repeat(Math.min(prefix.length, Math.max(0, cols - 1)));
-  const wrapped = wrapText(value, Math.max(1, cols - indent.length));
+  const wrapped = wrap(value, Math.max(1, cols - indent.length));
   return [`${prefix}${wrapped[0] ?? ""}`, ...wrapped.slice(1).map((l) => `${indent}${l}`)];
 }
 
@@ -197,8 +259,23 @@ const LF = 0x0a;
  * dialect (and all get `toPrinterAscii`'s codepage safety) instead of each
  * hand-rolling its own escape sequences.
  */
-export function createEscPosWriter() {
+export interface EscPosWriterOptions {
+  /** Set (with `cols`) to print non-ASCII lines as images. Null/absent = text only. */
+  rasterizer?: LineRasterizer | null;
+  /** Paper width in characters — only the raster path needs to know it. */
+  cols?: number;
+}
+
+export function createEscPosWriter(options: EscPosWriterOptions = {}) {
   const commands: number[] = [];
+  const rasterizer = options.rasterizer ?? null;
+  const rasterCols = options.cols ?? 32;
+  // The text-mode state, mirrored so an image line is drawn the way the printer
+  // would have printed it. Tracked always, read only by the raster path.
+  let align: "left" | "center" = "left";
+  let isBold = false;
+  let widthScale: 1 | 2 = 1;
+  let heightScale: 1 | 2 = 1;
 
   const push = (...bytes: number[]) => commands.push(...bytes);
   // Only ASCII (0-127) round-trips correctly through this byte-per-char
@@ -208,7 +285,41 @@ export function createEscPosWriter() {
   const text = (str: string) => {
     for (const ch of toPrinterAscii(str)) commands.push(ch.charCodeAt(0) & 0xff);
   };
+  /**
+   * Sends one line (or one two-column row) as a raster image when the document
+   * is rasterizing AND the line holds something the text path cannot print.
+   * False = nothing was emitted; the caller prints text as it always has.
+   *
+   * The bitmap is always the full paper width with the alignment drawn into it,
+   * so it does not depend on whether a given printer applies ESC a to images.
+   * No LF follows: GS v 0 feeds the paper by the image's own height.
+   */
+  const rasterLine = (str: string, right?: string): boolean => {
+    if (!rasterizer) return false;
+    if (!needsRaster(str) && !(right !== undefined && needsRaster(right))) return false;
+    let bitmap: RasterBitmap | null = null;
+    try {
+      bitmap = rasterizer.render({
+        text: str,
+        right,
+        cols: rasterCols,
+        align,
+        bold: isBold,
+        widthScale,
+        heightScale,
+      });
+    } catch {
+      return false;
+    }
+    if (!bitmap) return false;
+    const encoded = encodeRasterImage(bitmap);
+    if (encoded.length === 0) return false;
+    for (let i = 0; i < encoded.length; i++) commands.push(encoded[i]);
+    return true;
+  };
+  const rasterRow = (leftText: string, rightText: string) => rasterLine(leftText, rightText);
   const line = (str: string) => {
+    if (rasterLine(str)) return;
     text(str);
     push(LF);
   };
@@ -218,14 +329,35 @@ export function createEscPosWriter() {
   const blank = (n = 1) => {
     for (let i = 0; i < n; i++) push(LF);
   };
-  const bold = (on: boolean) => push(ESC, 0x45, on ? 0x01 : 0x00);
-  const center = () => push(ESC, 0x61, 0x01);
-  const left = () => push(ESC, 0x61, 0x00);
-  const doubleSize = (on: boolean) => push(ESC, 0x21, on ? 0x30 : 0x00);
+  const bold = (on: boolean) => {
+    isBold = on;
+    push(ESC, 0x45, on ? 0x01 : 0x00);
+  };
+  const center = () => {
+    align = "center";
+    push(ESC, 0x61, 0x01);
+  };
+  const left = () => {
+    align = "left";
+    push(ESC, 0x61, 0x00);
+  };
+  const doubleSize = (on: boolean) => {
+    widthScale = heightScale = on ? 2 : 1;
+    push(ESC, 0x21, on ? 0x30 : 0x00);
+  };
   // Tall but not wide — same characters per line as normal text, so it needs no
   // re-wrapping. What a kitchen ticket wants: readable across a pass.
-  const doubleHeight = (on: boolean) => push(ESC, 0x21, on ? 0x10 : 0x00);
-  const init = () => push(ESC, 0x40);
+  const doubleHeight = (on: boolean) => {
+    widthScale = 1;
+    heightScale = on ? 2 : 1;
+    push(ESC, 0x21, on ? 0x10 : 0x00);
+  };
+  const init = () => {
+    align = "left";
+    isBold = false;
+    widthScale = heightScale = 1;
+    push(ESC, 0x40);
+  };
   const bytes = () => new Uint8Array(commands);
 
   return {
@@ -233,6 +365,7 @@ export function createEscPosWriter() {
     text,
     line,
     lines,
+    rasterRow,
     blank,
     bold,
     center,
@@ -264,6 +397,10 @@ export type EscPosWriter = ReturnType<typeof createEscPosWriter>;
  */
 function createColumnRow(w: EscPosWriter, cols: number) {
   return (label: string, value: string) => {
+    // Rasterizing and one side is not plain ASCII: both columns are drawn on a
+    // single bitmap, the value flush right, so the amounts still line up. False
+    // (always, when the option is off) falls through to the text layout below.
+    if (w.rasterRow(label, value)) return;
     if (label.length + value.length < cols) {
       w.line(formatCols(label, value, cols));
       return;
@@ -284,15 +421,21 @@ function createColumnRow(w: EscPosWriter, cols: number) {
   };
 }
 
-export function buildEscPos(receipt: ReceiptData): Uint8Array {
+export function buildEscPos(receipt: ReceiptData, deps?: EscPosBuildDeps): Uint8Array {
   const cols = receipt.width ?? 32;
   const divider = "-".repeat(cols);
   const currency = receipt.currency ?? "IDR";
-  const locale = printerLocale(resolveReceiptLocale(receipt.locale));
+  // Null unless this printer's "print as image" switch is on and drawing works
+  // here. Everything raster-specific below hangs off it, so null = today's bytes.
+  const rasterizer = resolveLineRasterizer(receipt.rasterNonAscii, deps);
+  const resolvedLocale = resolveReceiptLocale(receipt.locale);
+  // Thai labels reach paper only as images; in text they would be "????".
+  const locale: ReceiptLocale = rasterizer ? resolvedLocale : printerLocale(resolvedLocale);
   const labels = RECEIPT_LABELS[locale];
   const money = (amount: number) => formatMoney(amount, currency, locale);
+  const wrap: TextWrap = rasterizer ? wrapTextForRaster : wrapText;
 
-  const w = createEscPosWriter();
+  const w = createEscPosWriter({ rasterizer, cols });
   const { line, lines, blank, bold, center, left, doubleSize } = w;
   // Every two-column line goes through this, never bare formatCols — see
   // createColumnRow for why (32-col paper overflows on ordinary content).
@@ -313,18 +456,18 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   // "TAHOMA CAFE & EA" truncation bug (it hardcoded 16 = 32/2 and never
   // adapted when `cols` changed). Wrapping instead of truncating means a
   // long name spans multiple bold/double-size lines instead of losing text.
-  lines(wrapText(receipt.storeName, Math.max(1, Math.floor(cols / 2))));
+  lines(wrap(receipt.storeName, Math.max(1, Math.floor(cols / 2))));
   doubleSize(false);
 
   if (receipt.tagline) {
-    lines(wrapText(receipt.tagline, cols));
+    lines(wrap(receipt.tagline, cols));
   }
 
   // The document's own title, printed only for a bill — a receipt has never
   // carried one and must stay byte-identical.
   if (isBill) {
     bold(true);
-    lines(wrapText(labels.billTitle, cols));
+    lines(wrap(labels.billTitle, cols));
     bold(false);
   }
 
@@ -334,18 +477,18 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   const hasContactBlock = !!(receipt.address || contactLine || handleLine);
   if (hasContactBlock) {
     line(divider);
-    if (receipt.address) lines(wrapText(receipt.address, cols));
-    if (contactLine) lines(wrapText(contactLine, cols));
-    if (handleLine) lines(wrapText(handleLine, cols));
+    if (receipt.address) lines(wrap(receipt.address, cols));
+    if (contactLine) lines(wrap(contactLine, cols));
+    if (handleLine) lines(wrap(handleLine, cols));
   }
 
   // ---- Bill info block ----
   line(divider);
   left();
-  lines(labelRow(labels.billNo, receipt.orderNumber, cols));
-  lines(labelRow(labels.date, receipt.date, cols));
-  if (receipt.cashierName) lines(labelRow(labels.cashier, receipt.cashierName, cols));
-  if (receipt.tableLabel) lines(labelRow(labels.table, receipt.tableLabel, cols));
+  lines(labelRow(labels.billNo, receipt.orderNumber, cols, wrap));
+  lines(labelRow(labels.date, receipt.date, cols, wrap));
+  if (receipt.cashierName) lines(labelRow(labels.cashier, receipt.cashierName, cols, wrap));
+  if (receipt.tableLabel) lines(labelRow(labels.table, receipt.tableLabel, cols, wrap));
 
   // ---- Items ----
   line(divider);
@@ -353,13 +496,13 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   row(labels.item, labels.total);
   bold(false);
   for (const item of receipt.items) {
-    lines(wrapText(item.name, cols));
+    lines(wrap(item.name, cols));
     row(`  ${item.quantity}x ${money(item.unitPrice)}`, money(item.total));
     if (item.optionNames && item.optionNames.length > 0) {
-      lines(wrapText(`  ${item.optionNames.join(", ")}`, cols));
+      lines(wrap(`  ${item.optionNames.join(", ")}`, cols));
     }
     if (item.notes) {
-      lines(wrapText(`  * ${item.notes}`, cols));
+      lines(wrap(`  * ${item.notes}`, cols));
     }
   }
 
@@ -417,7 +560,7 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
 
   if (receipt.notes) {
     line(divider);
-    lines(wrapText(`${labels.notes}: ${receipt.notes}`, cols));
+    lines(wrap(`${labels.notes}: ${receipt.notes}`, cols));
   }
 
   // ---- Guest WiFi ----
@@ -425,9 +568,9 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   // under its own label instead of overflowing 58mm paper.
   if (!isBill && receipt.wifiName) {
     line(divider);
-    lines(labelRow(labels.wifi, receipt.wifiName, cols));
+    lines(labelRow(labels.wifi, receipt.wifiName, cols, wrap));
     if (receipt.wifiPassword) {
-      lines(labelRow(labels.wifiPassword, receipt.wifiPassword, cols));
+      lines(labelRow(labels.wifiPassword, receipt.wifiPassword, cols, wrap));
     }
   }
 
@@ -437,7 +580,7 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
   // A bill says what it is instead of thanking the customer for a payment
   // they haven't made — the merchant's own footer message is a receipt
   // sign-off and would read as one here.
-  lines(wrapText(isBill ? labels.billNotice : receipt.footerMessage || labels.defaultFooter, cols));
+  lines(wrap(isBill ? labels.billNotice : receipt.footerMessage || labels.defaultFooter, cols));
 
   const socialLine = [
     receipt.instagramHandle ? `IG @${receipt.instagramHandle}` : null,
@@ -448,13 +591,13 @@ export function buildEscPos(receipt: ReceiptData): Uint8Array {
     .join(" | ");
   if (socialLine) {
     line(divider);
-    lines(wrapText(socialLine, cols));
+    lines(wrap(socialLine, cols));
   }
 
   line(divider);
   // 40 characters at its shortest — it does not fit 58mm paper on one line,
   // so it wraps here the same way the shift report's does.
-  lines(wrapText(`${RECEIPT_POWERED_BY_URL} | ${labels.poweredByTitle}`, cols));
+  lines(wrap(`${RECEIPT_POWERED_BY_URL} | ${labels.poweredByTitle}`, cols));
 
   // Extra feed + an explicit tear-guide line. Cheap cutter-less BT printers
   // (the common case for small IDN merchants) rely on the customer tearing
@@ -478,6 +621,8 @@ export interface ShiftReportPrintInput {
   /** Cashier name when the report is scoped to one till session. */
   shiftLabel?: string | null;
   generatedAt?: Date;
+  /** This printer's "print non-Latin text as an image" switch — see ReceiptData. */
+  rasterNonAscii?: boolean;
 }
 
 /**
@@ -489,13 +634,20 @@ export interface ShiftReportPrintInput {
  * figure through `formatMoney`, which swaps a non-ASCII currency symbol for
  * the plain ISO code — CP437 only round-trips ASCII.
  */
-export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array {
+export function buildShiftReportEscPos(
+  input: ShiftReportPrintInput,
+  deps?: EscPosBuildDeps
+): Uint8Array {
   const cols = input.width ?? 32;
   const divider = "-".repeat(cols);
   const thickDivider = "=".repeat(cols);
-  const locale = printerLocale(
-    resolveReceiptLocale(typeof input.locale === "string" ? input.locale : undefined)
+  // See buildEscPos: null = the plain text path, byte for byte.
+  const rasterizer = resolveLineRasterizer(input.rasterNonAscii, deps);
+  const resolvedLocale = resolveReceiptLocale(
+    typeof input.locale === "string" ? input.locale : undefined
   );
+  const locale: ReceiptLocale = rasterizer ? resolvedLocale : printerLocale(resolvedLocale);
+  const wrap: TextWrap = rasterizer ? wrapTextForRaster : wrapText;
   const labels = SHIFT_REPORT_LABELS[locale];
   const intlLocale = RECEIPT_INTL_LOCALE[locale];
   const money = (amount: number) => formatMoney(amount, input.currency, locale);
@@ -505,7 +657,7 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
     );
 
   const { report } = input;
-  const w = createEscPosWriter();
+  const w = createEscPosWriter({ rasterizer, cols });
   const { line, lines, blank, bold, center, left, doubleSize } = w;
 
   // Overflow-safe two-column line — shared with the receipt builder, see
@@ -514,7 +666,7 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   const heading = (title: string) => {
     blank();
     bold(true);
-    lines(wrapText(title, cols));
+    lines(wrap(title, cols));
     bold(false);
     line(divider);
   };
@@ -524,16 +676,14 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   // ---- Header ------------------------------------------------------------
   center();
   doubleSize(true);
-  lines(wrapText(input.storeName, Math.max(1, Math.floor(cols / 2))));
+  lines(wrap(input.storeName, Math.max(1, Math.floor(cols / 2))));
   doubleSize(false);
   bold(true);
   // A session-scoped run is a shift report; an arbitrary date window is a
   // daily report. Same layout, honest title. Keyed on the drawer's *scope*,
   // not its mere presence — the store-wide day rollup now carries a cash
   // block too, and titling that "SHIFT REPORT" would be a lie.
-  lines(
-    wrapText(report.cashDrawer?.scope === "SHIFT" ? labels.shiftReportTitle : labels.title, cols)
-  );
+  lines(wrap(report.cashDrawer?.scope === "SHIFT" ? labels.shiftReportTitle : labels.title, cols));
   bold(false);
   left();
   line(divider);
@@ -544,9 +694,9 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   const windowTo = report.window.isOpen
     ? `${dateTime(report.window.to)} (${labels.stillOpen})`
     : dateTime(report.window.to);
-  lines(wrapText(`${labels.period}: ${dateTime(report.window.from)}`, cols));
-  lines(wrapText(`${" ".repeat(labels.period.length + 2)}${windowTo}`, cols));
-  if (input.shiftLabel) lines(wrapText(`${labels.cashier}: ${input.shiftLabel}`, cols));
+  lines(wrap(`${labels.period}: ${dateTime(report.window.from)}`, cols));
+  lines(wrap(`${" ".repeat(labels.period.length + 2)}${windowTo}`, cols));
+  if (input.shiftLabel) lines(wrap(`${labels.cashier}: ${input.shiftLabel}`, cols));
   line(divider);
 
   // ---- Sales -------------------------------------------------------------
@@ -567,7 +717,7 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   if (report.invoices.count === 0) {
     blank();
     center();
-    lines(wrapText(labels.noData, cols));
+    lines(wrap(labels.noData, cols));
     left();
   }
 
@@ -620,13 +770,13 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   if (report.byProduct.categories.length > 0) {
     heading(labels.byProductHeading);
     for (const category of report.byProduct.categories) {
-      lines(wrapText(category.categoryName, cols));
+      lines(wrap(category.categoryName, cols));
       for (const item of category.lines) {
         // Quantity prefix on its own column, name wrapped under it — long
         // item names must wrap rather than be truncated (the bug class
         // wrapText() exists to prevent).
         const prefix = `x${item.quantity} `;
-        const nameLines = wrapText(item.name, Math.max(1, cols - prefix.length - 12));
+        const nameLines = wrap(item.name, Math.max(1, cols - prefix.length - 12));
         row(`${prefix}${nameLines[0] ?? ""}`, money(item.gross));
         for (const extra of nameLines.slice(1)) {
           line(`${" ".repeat(prefix.length)}${extra}`);
@@ -696,8 +846,8 @@ export function buildShiftReportEscPos(input: ShiftReportPrintInput): Uint8Array
   // ---- Footer ------------------------------------------------------------
   line(thickDivider);
   center();
-  lines(wrapText(`${labels.printedAt} ${dateTime(input.generatedAt ?? new Date())}`, cols));
-  lines(wrapText(`${RECEIPT_POWERED_BY_URL} | ${RECEIPT_LABELS[locale].poweredByTitle}`, cols));
+  lines(wrap(`${labels.printedAt} ${dateTime(input.generatedAt ?? new Date())}`, cols));
+  lines(wrap(`${RECEIPT_POWERED_BY_URL} | ${RECEIPT_LABELS[locale].poweredByTitle}`, cols));
 
   // Same tear-guide + feed as the receipt path — cheap cutter-less printers
   // rely on the customer tearing by hand.

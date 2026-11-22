@@ -91,26 +91,26 @@ const nextConfig: NextConfig = {
       : undefined,
 
   // The /sales-page-N landing pages are static HTML in public/sales-pages/,
-  // served at their slug in French and under /en and /id in English and
-  // Indonesian (see src/lib/sales-pages.ts). An N with no file is a plain 404.
+  // served at their slug in French and under /en, /id and /th in English,
+  // Indonesian and Thai (see src/lib/sales-pages.ts). An N with no file is a plain 404.
   // The proxy lets these URLs through without a session and handles the
   // unprefixed visit's language redirect before this runs.
   rewrites: async () => [
     { source: "/:page(sales-page-\\d+)", destination: "/sales-pages/:page.html" },
     {
-      source: "/:locale(en|id)/:page(sales-page-\\d+)",
+      source: "/:locale(en|id|th)/:page(sales-page-\\d+)",
       destination: "/sales-pages/:page.:locale.html",
     },
   ],
 
-  // The files' own addresses (/sales-pages/sales-page-N[.en|.id].html) go to
+  // The files' own addresses (/sales-pages/sales-page-N[.en|.id|.th].html) go to
   // the page's public URL, so a shared or old link never shows ".html".
   // Redirects only see the address the browser asked for, never a rewrite's
   // destination, so the rewrites above still reach the files. French asks
   // for French (?lang=fr): plain /sales-page-N picks the visitor's language.
   redirects: async () => [
     {
-      source: "/sales-pages/:page(sales-page-\\d+).:locale(en|id).html",
+      source: "/sales-pages/:page(sales-page-\\d+).:locale(en|id|th).html",
       destination: "/:locale/:page",
       permanent: false,
     },
@@ -178,7 +178,7 @@ const nextConfig: NextConfig = {
       headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
     },
     {
-      source: "/:locale(en|id)/:page(sales-page-\\d+)",
+      source: "/:locale(en|id|th)/:page(sales-page-\\d+)",
       headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
     },
     {

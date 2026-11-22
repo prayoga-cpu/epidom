@@ -9,6 +9,13 @@ page, the in-app changelog, and the dashboard "What's new" notification.
 Format: `## [version] - YYYY-MM-DD · tag` where `tag` ∈ `feat | fix | infra | ux`.
 Bump the version in `package.json` and `src/lib/version.ts` with every release.
 
+## [3.51.0] - 2026-11-22 · feat
+
+- **Thai guides, comparisons and sales pages.** The 13 guide pages (café, restaurant and bakery POS, offline mode, kitchen display, stock, staff scheduling, receipt printers, QR menu, online ordering, the two calculators and the Claude connector), the 16 comparison pages and the 4 sales pages now exist in Thai, under `/th/…`. Thai visitors are no longer sent to the English versions.
+- **Thai on printed receipts (new, optional).** Thermal printers cannot print Thai letters as text, so Thai store names, item names and notes came out as "????". Each printer now has a switch, **Print Thai and other non-Latin text as an image**, in the printer settings. It is off by default: turn it on, then run a test print to check it on your own printer. With it off, printing is exactly as before.
+- **More messages in your language.** Around 440 more messages that came from the server in English are translated: field names in validation messages ("Quantity", "Phone"…), messages with a name or a number in them, sign-in messages, import results and the admin panel's messages.
+- **Stock and order alerts in your language.** Low-stock alerts, the negative-stock notice and the new-order notification were written in one language only; they now follow the language of your business. The partner programme e-mail describes the commission in the recipient's language.
+
 ## [3.50.0] - 2026-11-22 · feat
 
 - **Every language is now complete.** French was missing 380 texts, English 23 and Indonesian 20, which silently showed in English (or not at all). All four languages (French, Indonesian, Thai, English) now have every text, and a test stops any of them from falling behind again.

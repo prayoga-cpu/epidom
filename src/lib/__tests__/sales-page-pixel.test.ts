@@ -237,6 +237,19 @@ describe("public/sales-pages/pixel.js", () => {
     expect(logged[0]).toMatchObject({ path: "/id/sales-page-3", locale: "id" });
   });
 
+  it("logs and shows the Thai copy in Thai", () => {
+    document.documentElement.setAttribute("lang", "th");
+    window.history.replaceState(null, "", "/th/sales-page-1");
+    runPixel("sales-page-1");
+
+    expect(bar()!.shadowRoot!.textContent).toContain("เราใช้คุกกี้");
+    expect(bar()!.shadowRoot!.querySelector('a[href="/th/cookie-policy"]')).not.toBeNull();
+
+    barButton("accept").click();
+    expect(logged.length).toBeGreaterThan(0);
+    for (const event of logged) expect(event).toMatchObject({ path: "/th/sales-page-1", locale: "th" });
+  });
+
   it("shows the bar in the page's language", () => {
     document.documentElement.setAttribute("lang", "en");
     runPixel();

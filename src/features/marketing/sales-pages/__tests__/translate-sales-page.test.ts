@@ -100,6 +100,30 @@ describe("translateSalesPage", () => {
     expect(html).toContain('document.getElementById("hours"); // "pas une chaîne"');
   });
 
+  it("adds a copy's own CSS as the last <style> of the <head>, and nothing without one", () => {
+    const thai = translateSalesPage(PAGE, {
+      ...EN,
+      locale: "th",
+      headCss: ":lang(th){letter-spacing:0!important}",
+    });
+
+    expect(thai.problems).toEqual([]);
+    expect(thai.html).toContain('<html lang="th">');
+    expect(thai.html).toContain(
+      '<style>.a{content:"→"} h1{color:red}</style><style data-lang="th">\n:lang(th){letter-spacing:0!important}\n</style>\n</head>'
+    );
+    // Everything else is the page without it.
+    expect(thai.html.replace(/<style data-lang="th">[\s\S]*?<\/style>\n/, "").replace('lang="th"', 'lang="en"')).toBe(html);
+    expect(html).not.toContain("data-lang");
+
+    expect(
+      translateSalesPage(PAGE.replace("</head>", ""), { ...EN, headCss: "a{}" }).problems
+    ).toEqual(["no </head> to put the copy's own CSS before"]);
+    expect(translateSalesPage(PAGE, { ...EN, headCss: "a{}</style>" }).problems).toEqual([
+      "headCss closes its own <style>",
+    ]);
+  });
+
   it("matches the French side whatever its spaces, non-breaking or not", () => {
     // "ici :" on the page has a non-breaking space; the pair above typed a normal one.
     expect(problems).toEqual([]);

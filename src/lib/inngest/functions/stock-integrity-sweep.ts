@@ -9,6 +9,51 @@ import { deductStockForOrder } from "@/lib/services/stock-deduction.service";
  */
 const TWO_TIER_RELEASE = new Date("2026-08-14T00:00:00Z");
 
+type SweepLocale = "en" | "fr" | "id" | "th";
+
+// The owner's alert speaks the business language; English when unknown.
+const NEGATIVE_STOCK_COPY: Record<
+  SweepLocale,
+  {
+    title: string;
+    more: (n: number) => string;
+    message: (count: number, summary: string, more: string) => string;
+  }
+> = {
+  en: {
+    title: "Sold more than you had",
+    more: (n) => ` and ${n} more`,
+    message: (count, summary, more) =>
+      `${count} item(s) are showing below zero: ${summary}${more}. ` +
+      `Count what's really there and correct it.`,
+  },
+  fr: {
+    title: "Vendu plus que le stock disponible",
+    more: (n) => ` et ${n} autre(s)`,
+    message: (count, summary, more) =>
+      `${count} article(s) affichent un stock négatif\u00a0: ${summary}${more}. ` +
+      `Comptez ce qu'il y a réellement en stock et corrigez-le.`,
+  },
+  id: {
+    title: "Terjual melebihi stok yang ada",
+    more: (n) => ` dan ${n} lainnya`,
+    message: (count, summary, more) =>
+      `${count} item menunjukkan stok di bawah nol: ${summary}${more}. ` +
+      `Hitung stok yang sebenarnya ada, lalu koreksi.`,
+  },
+  th: {
+    title: "ขายเกินจำนวนที่มีในสต็อก",
+    more: (n) => ` และอีก ${n} รายการ`,
+    message: (count, summary, more) =>
+      `มี ${count} รายการที่สต็อกติดลบ: ${summary}${more} ` +
+      `โปรดนับของจริงที่มีอยู่แล้วแก้ไขให้ถูกต้อง`,
+  },
+};
+
+function sweepLocale(locale: string | null | undefined): SweepLocale {
+  return locale === "fr" || locale === "id" || locale === "th" ? locale : "en";
+}
+
 /**
  * Nightly report of negative stock balances.
  *
@@ -51,7 +96,7 @@ export const negativeStockSweep = inngest.createFunction(
       await step.run(`alert-${storeId}`, async () => {
         const store = await prisma.store.findUnique({
           where: { id: storeId },
-          select: { business: { select: { userId: true } } },
+          select: { business: { select: { userId: true, locale: true } } },
         });
         if (!store) return;
 
@@ -59,7 +104,8 @@ export const negativeStockSweep = inngest.createFunction(
           .slice(0, 10)
           .map((i) => `${i.name} (${i.currentStock} ${i.unit})`)
           .join(", ");
-        const more = items.length > 10 ? ` and ${items.length - 10} more` : "";
+        const copy = NEGATIVE_STOCK_COPY[sweepLocale(store.business.locale)];
+        const more = items.length > 10 ? copy.more(items.length - 10) : "";
 
         // Alert is scoped by userId + entityType/entityId — it has no storeId
         // column. One row per store, pointing at the store itself, so a shop
@@ -71,10 +117,8 @@ export const negativeStockSweep = inngest.createFunction(
             severity: AlertSeverity.CRITICAL,
             entityType: "store",
             entityId: storeId,
-            title: "Sold more than you had",
-            message:
-              `${items.length} item(s) are showing below zero: ${summary}${more}. ` +
-              `Count what's really there and correct it.`,
+            title: copy.title,
+            message: copy.message(items.length, summary, more),
           },
         });
       });

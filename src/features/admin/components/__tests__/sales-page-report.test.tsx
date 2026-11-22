@@ -40,6 +40,7 @@ describe("SalesPageReportView", () => {
     ["fr", "/sales-page-2?lang=fr"],
     ["en", "/en/sales-page-2"],
     ["id", "/id/sales-page-2"],
+    ["th", "/th/sales-page-2"],
   ] as const)("%s: opens each page at its public URL, never the .html file", (lang, href) => {
     const { container } = render(<SalesPageReportView report={report({ lang })} />);
     expect(hrefs(container)).toContain(href);

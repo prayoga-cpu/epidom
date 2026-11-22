@@ -1,14 +1,14 @@
 /**
  * The /sales-page-N landing pages: four versions of the same pitch, compared
  * to see which one turns visitors into signups. Each is in French (the
- * original), English and Indonesian.
+ * original), English, Indonesian and Thai.
  *
  * - The pages are static, self-contained HTML in public/sales-pages/:
  *   sales-page-N.html (French, the designer's original) and
- *   sales-page-N.{en,id}.html, generated from it by scripts/build-sales-pages.ts
+ *   sales-page-N.{en,id,th}.html, generated from it by scripts/build-sales-pages.ts
  *   and the tables in src/features/marketing/sales-pages/translations/.
- * - URLs follow the marketing site: /sales-page-N is French, /en/… and /id/…
- *   are prefixed. The proxy lets them through without a session and sends an
+ * - URLs follow the marketing site: /sales-page-N is French, /en/…, /id/… and
+ *   /th/… are prefixed. The proxy lets them through without a session and sends an
  *   unprefixed visit to the visitor's language (isSalesPagePath); the rewrites
  *   in next.config.ts map each URL to its file.
  * - public/sales-pages/lang-switch.js draws Epidom's language switcher on them.
@@ -21,14 +21,14 @@
  *
  * Adding a page: drop public/sales-pages/sales-page-N.html (with the tracker
  * and switcher <script>s, the hreflang links and data-cta on its buttons), add
- * its name here, add its two translation tables and run the build script.
+ * its name here, add its three translation tables and run the build script.
  */
 export const SALES_PAGES = ["sales-page-1", "sales-page-2", "sales-page-3", "sales-page-4"] as const;
 
 export type SalesPage = (typeof SALES_PAGES)[number];
 
 /** The languages every sales page exists in; fr is the original. Same set as the site's LOCALES. */
-export const SALES_PAGE_LOCALES = ["fr", "en", "id"] as const;
+export const SALES_PAGE_LOCALES = ["fr", "en", "id", "th"] as const;
 
 export type SalesPageLocale = (typeof SALES_PAGE_LOCALES)[number];
 

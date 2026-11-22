@@ -47,6 +47,7 @@ describe("compare metadata for an authored locale", () => {
     expect(languages).toEqual({
       fr: `${BASE}/compare/sunday`,
       en: `${BASE}/en/compare/sunday`,
+      th: `${BASE}/th/compare/sunday`,
       "x-default": `${BASE}/compare/sunday`,
     });
   });
@@ -63,6 +64,7 @@ describe("compare metadata for an authored locale", () => {
     expect(languages).toEqual({
       id: `${BASE}/id/compare/moka`,
       en: `${BASE}/en/compare/moka`,
+      th: `${BASE}/th/compare/moka`,
       "x-default": `${BASE}/en/compare/moka`,
     });
   });
@@ -86,6 +88,7 @@ describe("compare metadata for a locale that falls back to English", () => {
     expect(languages).toEqual({
       fr: `${BASE}/compare/sunday`,
       en: `${BASE}/en/compare/sunday`,
+      th: `${BASE}/th/compare/sunday`,
       "x-default": `${BASE}/compare/sunday`,
     });
     expect(Object.keys(languages)).not.toContain("id");
@@ -94,7 +97,7 @@ describe("compare metadata for a locale that falls back to English", () => {
   it("points the unprefixed fr URL of an id+en competitor at the English page", async () => {
     const { canonical, languages } = await metadataFor(mokaComparison, "fr");
     expect(canonical).toBe(`${BASE}/en/compare/moka`);
-    expect(Object.keys(languages).sort()).toEqual(["en", "id", "x-default"]);
+    expect(Object.keys(languages).sort()).toEqual(["en", "id", "th", "x-default"]);
   });
 
   it("takes title and description from the English copy that is shown", async () => {

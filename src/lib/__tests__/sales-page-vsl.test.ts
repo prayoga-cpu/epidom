@@ -52,6 +52,7 @@ describe("sales-page video (vsl.js)", () => {
     ["fr", "Lire la vidéo"],
     ["en", "Play video"],
     ["id", "Putar video"],
+    ["th", "เล่นวิดีโอ"],
   ])("adds a play button in the page's language where the design has none (%s)", (lang, label) => {
     document.documentElement.setAttribute("lang", lang);
     document.body.innerHTML =
@@ -72,7 +73,7 @@ describe("sales-page video (vsl.js)", () => {
   it("every sales page, in every language, loads it", () => {
     const dir = join(process.cwd(), "public", "sales-pages");
     for (const n of [1, 2, 3, 4]) {
-      for (const suffix of ["", ".en", ".id"]) {
+      for (const suffix of ["", ".en", ".id", ".th"]) {
         const html = readFileSync(join(dir, `sales-page-${n}${suffix}.html`), "utf8");
         expect(html, `sales-page-${n}${suffix}`).toContain(
           '<script src="/sales-pages/vsl.js" defer></script>'

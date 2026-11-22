@@ -55,7 +55,9 @@ export function usePrintShiftReport(): {
             return "failed";
           }
         }
-        await printShiftReport(input);
+        // Same opt-in as the receipt (it is the same printer): added only when on.
+        const raster = usePrinterSettings.getState().printers?.MAIN?.rasterNonAscii === true;
+        await printShiftReport(raster ? { ...input, rasterNonAscii: true } : input);
         toast.success(t("pos.print.success"));
         return "printed";
       } catch (err: unknown) {

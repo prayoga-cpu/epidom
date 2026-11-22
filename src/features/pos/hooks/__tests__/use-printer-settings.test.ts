@@ -201,3 +201,49 @@ describe("connect / disconnect", () => {
     expect(connection.disconnectPrinter).toHaveBeenCalledWith("KITCHEN");
   });
 });
+
+describe("print non-Latin text as an image", () => {
+  it("is off for every printer by default", () => {
+    for (const role of ["MAIN", "KITCHEN", "BAR", "LABEL"] as const) {
+      expect(DEFAULT_PRINTERS[role].rasterNonAscii).toBe(false);
+      expect(state().printers[role].rasterNonAscii).toBe(false);
+    }
+  });
+
+  it("is switched per printer and persisted with that printer's other settings", () => {
+    state().setRasterNonAscii("KITCHEN", true);
+    expect(state().printers.KITCHEN.rasterNonAscii).toBe(true);
+    expect(state().printers.MAIN.rasterNonAscii).toBe(false);
+    expect(state().printers.BAR.rasterNonAscii).toBe(false);
+
+    const stored = JSON.parse(localStorage.getItem(KEY) ?? "{}").state;
+    expect(stored.printers.KITCHEN.rasterNonAscii).toBe(true);
+
+    state().setRasterNonAscii("KITCHEN", false);
+    expect(state().printers.KITCHEN.rasterNonAscii).toBe(false);
+  });
+
+  it("stays off on a device whose stored settings predate the switch", async () => {
+    const legacy = { enabled: true, autoPrint: true, paperWidth: 48, deviceName: "RPP02N" };
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ state: { printers: { MAIN: legacy, KITCHEN: legacy } }, version: 1 })
+    );
+    await usePrinterSettings.persist.rehydrate();
+    expect(state().printers.MAIN).toEqual({ ...legacy, rasterNonAscii: false });
+    expect(state().printers.KITCHEN).toEqual({ ...legacy, rasterNonAscii: false });
+  });
+
+  it("comes back on after a reload once it was switched on", async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        state: { printers: { MAIN: { ...DEFAULT_PRINTERS.MAIN, rasterNonAscii: true } } },
+        version: 1,
+      })
+    );
+    await usePrinterSettings.persist.rehydrate();
+    expect(state().printers.MAIN.rasterNonAscii).toBe(true);
+    expect(state().printers.BAR.rasterNonAscii).toBe(false);
+  });
+});

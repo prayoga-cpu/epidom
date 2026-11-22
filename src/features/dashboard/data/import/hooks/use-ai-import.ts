@@ -118,7 +118,8 @@ async function toImportError(response: Response, fallback: string): Promise<Impo
       (typeof body?.message === "string" && body.message) ||
       (typeof body?.error === "string" && body.error) ||
       fallback;
-    return new ImportRequestError(reason, timedOut);
+    // The route answers in English; `fallback` is already in the UI language.
+    return new ImportRequestError(localizeServerMessage(reason), timedOut);
   } catch {
     return new ImportRequestError(fallback, timedOut || response.status >= 500);
   }

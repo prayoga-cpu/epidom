@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * The partner deal form (create and edit). Numbers stay strings while typed
@@ -124,8 +125,10 @@ export async function apiError(res: Response): Promise<string> {
     message?: string;
   } | null;
   if (!body) return `Request failed (${res.status})`;
-  if (typeof body.error === "string") return body.error;
-  return body.error?.message ?? body.message ?? `Request failed (${res.status})`;
+  // Admin routes answer in English; the admin panel is translated.
+  if (typeof body.error === "string") return localizeServerMessage(body.error);
+  const message = body.error?.message ?? body.message;
+  return message ? localizeServerMessage(message) : `Request failed (${res.status})`;
 }
 
 export async function apiJson<T>(input: string, init?: RequestInit): Promise<T> {

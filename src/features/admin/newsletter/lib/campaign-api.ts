@@ -1,6 +1,7 @@
 import type { NewsletterAudience } from "@prisma/client";
 import type { NewsletterLanguage } from "@/lib/newsletter/constants";
 import type { Campaign, CampaignSummary } from "./campaign-display";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /** Fetch wrappers for /api/admin/newsletter/*: the data, or an Error with the API's message. */
 
@@ -10,7 +11,12 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
   });
   const json = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(json?.error?.message || `Request failed (${res.status})`);
+  if (!res.ok) {
+    // Admin routes answer in English; the admin panel is translated.
+    throw new Error(
+      localizeServerMessage(json?.error?.message) || `Request failed (${res.status})`
+    );
+  }
   return json.data as T;
 }
 

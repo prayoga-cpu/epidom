@@ -53,9 +53,9 @@ afterEach(() => {
 });
 
 describe("sales page language switcher", () => {
-  // Sales pages exist in SALES_PAGE_LOCALES only (no Thai one), so the switcher must not
-  // offer a language whose page would 404.
-  it("offers exactly the site switcher's languages that have a sales page, in its order", () => {
+  it("offers the site switcher's languages, in its order (every one has a sales page)", () => {
+    expect([...SALES_PAGE_LOCALES].sort()).toEqual(LANGUAGE_OPTIONS.map((o) => o.value).sort());
+
     const { options } = openPage("fr", "/sales-page-1");
 
     expect(
@@ -66,9 +66,7 @@ describe("sales page language switcher", () => {
         label: o.querySelector(".label")!.textContent,
       }))
     ).toEqual(
-      LANGUAGE_OPTIONS.filter((o) => (SALES_PAGE_LOCALES as readonly string[]).includes(o.value)).map(
-        ({ value, flag, short, label }) => ({ value, flag, short, label })
-      )
+      LANGUAGE_OPTIONS.map(({ value, flag, short, label }) => ({ value, flag, short, label }))
     );
   });
 
@@ -81,6 +79,14 @@ describe("sales page language switcher", () => {
     expect(option("en").getAttribute("aria-selected")).toBe("true");
     expect(option("en").querySelector("svg")).not.toBeNull(); // the check mark
     expect(option("fr").getAttribute("aria-selected")).toBe("false");
+  });
+
+  it("shows Thai on the Thai page", () => {
+    const { trigger, option } = openPage("th", "/th/sales-page-1");
+
+    expect(trigger.textContent).toBe("TH");
+    expect(option("th").getAttribute("aria-selected")).toBe("true");
+    expect(option("th").querySelector(".label")!.textContent).toBe("ไทย");
   });
 
   it("opens and closes like the site's: trigger, Escape, a press outside", () => {
@@ -102,6 +108,9 @@ describe("sales page language switcher", () => {
     ["en", "/en/sales-page-1", "id", "/id/sales-page-1"],
     ["en", "/en/sales-page-1", "fr", "/sales-page-1"],
     ["fr", "/sales-page-3", "en", "/en/sales-page-3"],
+    ["fr", "/sales-page-3", "th", "/th/sales-page-3"],
+    ["th", "/th/sales-page-4", "id", "/id/sales-page-4"],
+    ["th", "/th/sales-page-4", "fr", "/sales-page-4"],
   ])("on the %s page (%s), picking %s opens %s with the ad's tags", (lang, path, pick, target) => {
     const { trigger, option } = openPage(lang, path, "?utm_source=meta");
 

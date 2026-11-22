@@ -47,7 +47,7 @@ export const TRACKING_SOURCES = ["site", "sales_page"] as const;
 
 export type TrackingSource = (typeof TRACKING_SOURCES)[number];
 
-export const TRACKING_LOCALES = ["fr", "en", "id"] as const;
+export const TRACKING_LOCALES = ["fr", "en", "id", "th"] as const;
 
 export type TrackingLocale = (typeof TRACKING_LOCALES)[number];
 

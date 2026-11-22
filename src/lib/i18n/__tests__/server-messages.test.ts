@@ -13,6 +13,25 @@ vi.mock("@/locales", () => {
       p_rate_limit_seconds: "Trop de tentatives. Veuillez réessayer dans {0} secondes.",
       p_import_failed: "Échec de l'import ({0}) : {1}",
       p_zod_string_min: "Doit comporter au moins {0} caractère(s)",
+      // Field nouns, and the shapes they fill.
+      nickname: "Surnom",
+      email: "E-mail",
+      current_stock: "Stock actuel",
+      quantity: "Quantité",
+      p_is_required: "{0} : champ requis",
+      p_min_characters: "{0} : {1} caractères minimum",
+      // Success texts and partner admin.
+      material_deleted_successfully: "Matière première supprimée",
+      p_deleted_materials_in_category: "{0} matière(s) première(s) de cette catégorie supprimée(s)",
+      p_imported_items_some_failed: "{0} élément(s) importé(s), {1} en échec",
+      p_partner_code_used: "Le code {0} est déjà utilisé par un autre partenaire",
+      p_sales_page_belongs_to: "{0} appartient déjà à {1}",
+      p_table_exists: "La table « {0} » existe déjà",
+      // The admin activity log's revert panel (src/lib/audit).
+      this_action_has_already_been_reverted: "Cette action a déjà été annulée.",
+      pending: "En attente",
+      p_audit_action_in_state: "Cette action est à l'état « {0} » et ne peut pas être annulée.",
+      p_audit_category_gone: "La catégorie « {0} » n'existe plus.",
     },
   };
   const dictionaries: Record<string, unknown> = { en: {}, fr, th: {} };
@@ -25,6 +44,7 @@ vi.mock("@/components/lang/i18n-provider", () => ({
 
 import {
   SERVER_MESSAGE_PATTERNS,
+  localizeServerField,
   localizeServerMessage,
   serverMessageKey,
 } from "../server-messages";
@@ -116,8 +136,74 @@ describe("localizeServerMessage", () => {
   });
 
   it("skips a pattern whose template is missing from the dictionary", () => {
-    // "X is required" is a known shape, but this dictionary has no template.
-    expect(localizeServerMessage("Nickname is required", "fr")).toBe("Nickname is required");
+    // "X is too long" is a known shape, but this dictionary has no template.
+    expect(localizeServerMessage("Nickname is too long", "fr")).toBe("Nickname is too long");
+  });
+
+  it("translates the field noun inside a generic shape, whatever its case", () => {
+    expect(localizeServerMessage("Nickname is required", "fr")).toBe("Surnom : champ requis");
+    expect(localizeServerMessage("nickname is required", "fr")).toBe("Surnom : champ requis");
+    expect(localizeServerMessage("NICKNAME must be at least 3 characters", "fr")).toBe(
+      "Surnom : 3 caractères minimum"
+    );
+    expect(localizeServerMessage("Current stock is required", "fr")).toBe(
+      "Stock actuel : champ requis"
+    );
+  });
+
+  it("translates success texts, counted ones included", () => {
+    expect(localizeServerMessage("Material deleted successfully", "fr")).toBe(
+      "Matière première supprimée"
+    );
+    expect(localizeServerMessage("Deleted 3 material(s) in this category", "fr")).toBe(
+      "3 matière(s) première(s) de cette catégorie supprimée(s)"
+    );
+    // The comma belongs to the sentence: it is not read as a list of messages.
+    expect(localizeServerMessage("Imported 4 items successfully, 2 failed", "fr")).toBe(
+      "4 élément(s) importé(s), 2 en échec"
+    );
+  });
+
+  it("translates partner admin messages and leaves what was typed alone", () => {
+    expect(localizeServerMessage("The code BOB10 is already used by another partner", "fr")).toBe(
+      "Le code BOB10 est déjà utilisé par un autre partenaire"
+    );
+    // "email" is a catalog noun, but here it is somebody's referral code.
+    expect(localizeServerMessage("The code EMAIL is already used by another partner", "fr")).toBe(
+      "Le code EMAIL est déjà utilisé par un autre partenaire"
+    );
+    expect(localizeServerMessage('Table "Nickname" already exists', "fr")).toBe(
+      "La table « Nickname » existe déjà"
+    );
+    expect(localizeServerMessage("/offer already belongs to Bob Martin", "fr")).toBe(
+      "/offer appartient déjà à Bob Martin"
+    );
+  });
+
+  it("translates a list of messages only when every part is known", () => {
+    expect(
+      localizeServerMessage("/a already belongs to Bob; /b already belongs to Ann", "fr")
+    ).toBe("/a appartient déjà à Bob; /b appartient déjà à Ann");
+    expect(localizeServerMessage("Nickname is required, Email is required", "fr")).toBe(
+      "Surnom : champ requis, E-mail : champ requis"
+    );
+    const half = "Nickname is required, something the catalog has never seen";
+    expect(localizeServerMessage(half, "fr")).toBe(half);
+  });
+
+  it("translates the audit log's revert refusals, static and with values", () => {
+    // A static refusal: one sentence, one key.
+    expect(localizeServerMessage("This action has already been reverted.", "fr")).toBe(
+      "Cette action a déjà été annulée."
+    );
+    // The action state is a noun the catalog knows, so it is translated.
+    expect(
+      localizeServerMessage("This action is in state PENDING and cannot be reverted.", "fr")
+    ).toBe("Cette action est à l'état « En attente » et ne peut pas être annulée.");
+    // A category named like a catalog noun is data the owner typed: left alone.
+    expect(localizeServerMessage('The category "Customer" no longer exists.', "fr")).toBe(
+      "La catégorie « Customer » n'existe plus."
+    );
   });
 
   it("never throws on empty or odd input", () => {
@@ -140,12 +226,46 @@ describe("localizeServerMessage", () => {
   });
 });
 
+describe("localizeServerField", () => {
+  it("names a known field in the UI language", () => {
+    expect(localizeServerField("nickname", "fr")).toBe("Surnom");
+    expect(localizeServerField("currentStock", "fr")).toBe("Stock actuel");
+  });
+
+  it("keeps the row of a nested field", () => {
+    expect(localizeServerField("items.0.quantity", "fr")).toBe("Quantité #1");
+    expect(localizeServerField("items[2].quantity", "fr")).toBe("Quantité #3");
+  });
+
+  it("falls back to the raw path", () => {
+    expect(localizeServerField("splitGroupId", "fr")).toBe("splitGroupId");
+    expect(localizeServerField("nickname", "en")).toBe("nickname");
+    // Thai is loaded but has no serverMessages table.
+    expect(localizeServerField("nickname", "th")).toBe("nickname");
+    expect(localizeServerField(null, "fr")).toBe("");
+    expect(localizeServerField("", "fr")).toBe("");
+  });
+});
+
 describe("SERVER_MESSAGE_PATTERNS", () => {
   it("puts the generic shapes after the specific ones", () => {
     const keys = SERVER_MESSAGE_PATTERNS.map((p) => p.key);
     expect(keys.indexOf("p_not_found_with_id")).toBeLessThan(keys.indexOf("p_not_found"));
     expect(keys.indexOf("p_product_sku_exists")).toBeLessThan(keys.indexOf("p_already_exists"));
     expect(keys.indexOf("p_barcode_max_length")).toBeLessThan(keys.indexOf("p_max_characters"));
+    expect(keys.indexOf("p_sales_page_belongs_to")).toBeLessThan(keys.indexOf("p_already_exists"));
+    expect(keys.indexOf("p_material_id_not_found")).toBeLessThan(keys.indexOf("p_not_found"));
+  });
+
+  it("never translates the captured values of a row marked raw", () => {
+    const raw = SERVER_MESSAGE_PATTERNS.filter((p) => p.raw).map((p) => p.key);
+    expect(raw).toContain("p_partner_code_used");
+    expect(raw).toContain("p_table_exists");
+    expect(raw).toContain("p_audit_category_gone");
+    expect(raw).not.toContain("p_audit_action_in_state");
+    // Resource and field nouns must stay translatable in the generic shapes.
+    expect(raw).not.toContain("p_not_found");
+    expect(raw).not.toContain("p_is_required");
   });
 });
 

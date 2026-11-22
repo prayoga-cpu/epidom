@@ -14,7 +14,15 @@
 // handling are the parts to check on a physical printer first.
 
 import { printBytes } from "@/lib/pwa/printer-connection";
-import { createEscPosWriter, toPrinterAscii, wrapText } from "@/lib/pwa/thermal-printer";
+import {
+  createEscPosWriter,
+  resolveLineRasterizer,
+  toPrinterAscii,
+  wrapText,
+  wrapTextForRaster,
+  type EscPosBuildDeps,
+  type TextWrap,
+} from "@/lib/pwa/thermal-printer";
 
 export type LabelLanguage = "ESCPOS" | "TSPL";
 
@@ -39,6 +47,12 @@ export interface LabelPrinterConfig {
   widthMm: number;
   heightMm: number;
   gapMm: number;
+  /**
+   * ESC/POS only — the label printer's "print non-Latin text as an image"
+   * switch. TSPL has its own bitmap command and is not covered: a TSPL sticker
+   * keeps printing text.
+   */
+  rasterNonAscii?: boolean;
 }
 
 /** What a TSPL printer can plausibly be told. Out-of-range input is clamped, never sent. */
@@ -60,8 +74,15 @@ const FORM_FEED = 0x0c;
  * a printer in label mode advances to the start of the next sticker (a plain
  * receipt printer ignores it). No cut: printItemLabels() sends none.
  */
-export function buildItemLabelEscPos(labels: ItemLabelData[], cols: 32 | 48): Uint8Array {
-  const w = createEscPosWriter();
+export function buildItemLabelEscPos(
+  labels: ItemLabelData[],
+  cols: 32 | 48,
+  raster: { rasterNonAscii?: boolean } & EscPosBuildDeps = {}
+): Uint8Array {
+  // Null (the default) is the plain text path, byte for byte — see buildEscPos.
+  const rasterizer = resolveLineRasterizer(raster.rasterNonAscii, raster);
+  const wrap: TextWrap = rasterizer ? wrapTextForRaster : wrapText;
+  const w = createEscPosWriter({ rasterizer, cols });
   const { line, lines, blank, bold, center, left, doubleSize } = w;
   const bigCols = Math.max(1, Math.floor(cols / 2));
 
@@ -69,16 +90,16 @@ export function buildItemLabelEscPos(labels: ItemLabelData[], cols: 32 | 48): Ui
   for (const label of labels) {
     center();
     doubleSize(true);
-    lines(wrapText(label.headline, bigCols));
+    lines(wrap(label.headline, bigCols));
     doubleSize(false);
     left();
     bold(true);
-    lines(wrapText(label.itemName, cols));
+    lines(wrap(label.itemName, cols));
     bold(false);
     const options = (label.optionNames ?? []).filter(Boolean);
-    if (options.length > 0) lines(wrapText(options.join(", "), cols));
-    if (label.notes) lines(wrapText(`* ${label.notes}`, cols));
-    lines(wrapText(counterLine(label), cols));
+    if (options.length > 0) lines(wrap(options.join(", "), cols));
+    if (label.notes) lines(wrap(`* ${label.notes}`, cols));
+    lines(wrap(counterLine(label), cols));
     blank(1);
     w.push(FORM_FEED);
   }
@@ -183,7 +204,9 @@ export async function printItemLabels(
   const bytes =
     config.language === "TSPL"
       ? buildItemLabelTspl(labels, config)
-      : buildItemLabelEscPos(labels, config.paperWidth);
+      : buildItemLabelEscPos(labels, config.paperWidth, {
+          rasterNonAscii: config.rasterNonAscii,
+        });
   await printBytes("LABEL", bytes, { cut: false });
 }
 

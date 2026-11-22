@@ -34,7 +34,7 @@ Full strategic context: see `/docs/STRATEGY.md`.
 | -------------------- | ------------------------------------------------------------------- |
 | Phase                | **Phase 5, Aggregator + Finance**                                   |
 | Primary market       | France (primary, re-prioritized 2026-08-10), Indonesia (secondary), Worldwide |
-| Primary language     | `fr`, then `id`, then `en` (`th` added 2026-11-22: app, shared marketing pages, blog, docs, receipts, e-mail; no Thai landing/compare/sales pages). `fr` was deprecated, reactivated and promoted to primary 2026-08-10 — new French strings are expected now. |
+| Primary language     | `fr`, then `id`, then `en` (`th` added 2026-11-22: everything the other three languages have, including landing, comparison and sales pages). `fr` was deprecated, reactivated and promoted to primary 2026-08-10 — new French strings are expected now. |
 | Active strategic doc | `/docs/roadmap.md` (Phase 5 section)                                |
 | Next phase           | None — Phase 5 is the final planned phase.                          |
 
@@ -167,7 +167,9 @@ These five bug classes have each caused real, shipped breakage on iPad Safari. C
 - Customer-facing e-mails are per-locale copy records in `email.service.ts` (en/fr/id/th, English when the language is unknown). Before an account has a business, the language comes from the request (`localeFromRequest`: the `epidom_ui_locale` cookie the app writes on a language switch, else the marketing choice, else the browser).
 - Error, 404 and offline screens share one look: `StatusScreen` (`src/components/shared/status-screen.tsx`), navy/cream/gold, four languages, responsive. `global-error.tsx`, `public/offline.html`, `desktop/offline.html` and the inline HTML in `public/sw.js` repeat it by hand (no providers, no network) and must be edited together.
 - Thai specifics: no spaces between words, Arabic digits, polite neutral register (no ครับ/ค่ะ). Dates and numbers use `th-TH-u-ca-gregory` (never bare `th-TH`: it prints Buddhist-era years next to date-fns's Gregorian ones). Thai visitors are quoted USD prices (`LOCALE_PRICE_CURRENCY`). Thermal printers get English labels for Thai stores (`printerLocale()`; CP437 cannot print Thai) — the on-screen, PDF, e-mail and WhatsApp receipt are Thai.
-- Landing pages (`landing/registry.ts`) and competitor comparisons are per-market SEO content authored in one language each; Thai has none yet, so `landingSlugIn(group, "th")` is `undefined` and callers fall back to a page that exists.
+- Landing pages (`landing/registry.ts`), competitor comparisons and the static sales pages exist in Thai too (translated from the English page; slugs are the English one plus `-th`, since a slug may exist in one language only). A new landing page or comparison needs its Thai version, a registry entry, a label and a route folder; sales pages are generated (`scripts/build-sales-pages.ts`) from the translation tables in `src/features/marketing/sales-pages/translations/`.
+- Thai on thermal paper is opt-in per printer (`rasterNonAscii` in the printer settings): non-ASCII lines are drawn to a canvas and sent as `GS v 0` images (`src/lib/pwa/escpos-raster.ts`, `text-raster.ts`). Off, or with no canvas, the output must stay byte-identical to the text path. It has not been confirmed on real hardware.
+- Server-side text a person reads without the client (stock alerts, new-order notification, partner deal summary, e-mails) is a per-locale record next to the code, chosen by `Business.locale`, English when unknown.
 
 **Changelog & versioning**
 

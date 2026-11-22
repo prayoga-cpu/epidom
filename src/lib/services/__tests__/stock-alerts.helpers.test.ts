@@ -32,6 +32,8 @@ const baseParams = {
   newStock: 8,
   minStock: 20,
   unit: "kg",
+  // The original (Indonesian) copy is the `id` locale, byte for byte.
+  locale: "id",
 };
 
 // These assertions are the behavioural baseline lifted from
@@ -70,6 +72,49 @@ describe("fireLowStockAlert", () => {
         entityId: "mat-1",
       },
     });
+  });
+
+  it.each([
+    [
+      "en",
+      "Low stock: Flour",
+      "Flour stock left: 8.00 kg (min: 20 kg)",
+      "Stock left: 8.00 kg (min: 20 kg)",
+    ],
+    [
+      "fr",
+      "Stock bas\u00a0: Flour",
+      "Stock restant de Flour\u00a0: 8.00 kg (min\u00a0: 20 kg)",
+      "Stock restant\u00a0: 8.00 kg (min\u00a0: 20 kg)",
+    ],
+    [
+      "th",
+      "สต็อกใกล้หมด: Flour",
+      "Flour คงเหลือ 8.00 kg (ขั้นต่ำ 20 kg)",
+      "คงเหลือ 8.00 kg (ขั้นต่ำ 20 kg)",
+    ],
+  ])("writes the alert and the MagicBell message in %s", async (locale, title, message, content) => {
+    await fireLowStockAlert({ ...baseParams, locale });
+    expect(prismaMock.alert.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ title, message }),
+    });
+    expect(sendMerchantAlertMock).toHaveBeenCalledWith(expect.objectContaining({ title, content }));
+  });
+
+  it("falls back to English when the locale is unknown or missing", async () => {
+    await fireLowStockAlert({ ...baseParams, locale: undefined });
+    await fireLowStockAlert({ ...baseParams, locale: "de" });
+    expect(prismaMock.alert.create).toHaveBeenCalledTimes(2);
+    for (const call of prismaMock.alert.create.mock.calls) {
+      expect(call[0].data.title).toBe("Low stock: Flour");
+    }
+  });
+
+  it("uses the critical wording per locale", async () => {
+    await fireLowStockAlert({ ...baseParams, newStock: 5, locale: "th" });
+    await fireLowStockAlert({ ...baseParams, newStock: 5, locale: "en" });
+    const titles = prismaMock.alert.create.mock.calls.map((c: any) => c[0].data.title);
+    expect(titles).toEqual(["สต็อกวิกฤต: Flour", "Critical stock: Flour"]);
   });
 
   it("escalates to CRITICAL_STOCK at or below 25% of the minimum", async () => {
@@ -182,6 +227,31 @@ describe("fireLowStockAlertsForEntities", () => {
     expect(prismaMock.alert.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ entityId: "prod-1", entityType: "product" }),
+      })
+    );
+  });
+
+  it("writes entity alerts in the store's business language", async () => {
+    prismaMock.store.findUnique.mockResolvedValue({ business: { userId: "user-1", locale: "th" } });
+    prismaMock.material.findMany.mockResolvedValue([
+      { id: "mat-1", name: "Flour", currentStock: 8, minStock: 20, unit: "kg" },
+    ]);
+
+    await fireLowStockAlertsForEntities("store-1", [
+      { entityId: "mat-1", entityType: "material" },
+    ]);
+
+    expect(prismaMock.store.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: { business: { select: { userId: true, locale: true } } },
+      })
+    );
+    expect(prismaMock.alert.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          title: "สต็อกใกล้หมด: Flour",
+          message: "Flour คงเหลือ 8.00 kg (ขั้นต่ำ 20 kg)",
+        }),
       })
     );
   });

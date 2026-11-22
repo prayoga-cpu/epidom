@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { localizeServerMessage } from "@/lib/i18n/server-messages";
+import { localizeServerField, localizeServerMessage } from "@/lib/i18n/server-messages";
 
 type ViewMode = "timeline" | "actors" | "entities" | "coverage";
 
@@ -102,6 +102,22 @@ const severityStyles: Record<string, string> = {
 };
 
 
+/**
+ * The label of a code the server stores in English (an actor kind, a category, a
+ * grant): `adminPages.activity.<prefix>.<code>`, or the code itself when the
+ * dictionary has no entry, so a code added later still shows something.
+ */
+function codeLabel(t: (key: string) => string, prefix: string, code: string): string {
+  const key = `adminPages.activity.${prefix}.${code}`;
+  const label = t(key);
+  return label === key ? code : label;
+}
+
+/** The name of a table (`StockMovement`) from the shared noun catalog; the code when unknown. */
+function entityLabel(code: string, locale: string): string {
+  return localizeServerField(code, locale);
+}
+
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
     month: "short",
@@ -112,7 +128,7 @@ function fmtTime(iso: string): string {
 }
 
 export function AdminActivityLog() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -184,7 +200,7 @@ export function AdminActivityLog() {
       // Without this a 403 or a 400 resolves happily to `{ error: … }` and the
       // table renders "No activity matches these filters" — an audit log
       // claiming nothing happened is the one lie it must never tell.
-      if (!res.ok) throw new Error(json.error ?? localizeServerMessage("Could not load the activity log"));
+      if (!res.ok) throw new Error(localizeServerMessage(json.error ?? "Could not load the activity log"));
       return json;
     },
     // The trail is append-only and grows continuously; a stale page here reads
@@ -226,7 +242,7 @@ export function AdminActivityLog() {
         body: JSON.stringify(body),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? localizeServerMessage("Request failed"));
+      if (!res.ok) throw new Error(localizeServerMessage(json.error ?? "Request failed"));
       return json;
     },
     // "plan" is a documented dry run that writes nothing, so refetching the
@@ -516,7 +532,7 @@ export function AdminActivityLog() {
                     resetPaging();
                   }}
                 >
-                  {t("adminPages.activity.filters.table").replace("{name}", targetType)}
+                  {t("adminPages.activity.filters.table").replace("{name}", entityLabel(targetType, locale))}
                 </Button>
               )}
             </div>
@@ -641,7 +657,7 @@ function TimelineView({
   onSelect: (r: ActivityRow) => void;
   onFilterActor: (id: string, kind: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   if (rows.length === 0) {
     return (
       <p className="text-muted-foreground py-12 text-center text-sm">
@@ -665,7 +681,7 @@ function TimelineView({
           >
             <div className="flex items-start justify-between gap-2">
               <span className="text-foreground text-sm font-medium">
-                {r.detail?.targetLabel ?? r.actionCode}
+                {localizeServerMessage(r.detail?.targetLabel ?? r.actionCode, locale)}
               </span>
               <span
                 className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] ${severityStyles[r.severity]}`}
@@ -674,7 +690,7 @@ function TimelineView({
               </span>
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
-              {r.actorName ?? r.actorKind} · {fmtTime(r.occurredAt)}
+              {r.actorName ?? codeLabel(t, "actorKinds", r.actorKind)} · {fmtTime(r.occurredAt)}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <OutcomeBadge outcome={r.outcome} />
@@ -744,7 +760,9 @@ function TimelineView({
                         {r.actorName ?? r.actorRefId.slice(0, 8)}
                       </button>
                     ) : (
-                      <span className="text-muted-foreground">{r.actorKind}</span>
+                      <span className="text-muted-foreground">
+                        {codeLabel(t, "actorKinds", r.actorKind)}
+                      </span>
                     )}
                     {r.actorGrant === "HARDCODED_EMAIL" && (
                       <Badge
@@ -766,14 +784,18 @@ function TimelineView({
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    <span className="text-foreground">{r.detail?.targetLabel ?? r.actionCode}</span>
+                    <span className="text-foreground">
+                      {localizeServerMessage(r.detail?.targetLabel ?? r.actionCode, locale)}
+                    </span>
                     {r.detail && (
                       <Badge variant="outline" className="ml-1.5 text-[10px]">
                         {t("adminPages.activity.timeline.detailed")}
                       </Badge>
                     )}
                   </td>
-                  <td className="text-muted-foreground px-3 py-2">{r.targetType ?? "—"}</td>
+                  <td className="text-muted-foreground px-3 py-2">
+                    {r.targetType ? entityLabel(r.targetType, locale) : "—"}
+                  </td>
                   <td className="px-3 py-2">
                     <span
                       className={`rounded border px-1.5 py-0.5 text-[10px] ${severityStyles[r.severity]}`}
@@ -904,14 +926,16 @@ function ActorsView({
                     {actorLabel(a)}
                   </button>
                 ) : (
-                  <span className="text-muted-foreground text-sm">{a.actorKind}</span>
+                  <span className="text-muted-foreground text-sm">
+                    {codeLabel(t, "actorKinds", a.actorKind)}
+                  </span>
                 )}
                 <p className="text-muted-foreground truncate text-xs" title={a.actorEmail ?? ""}>
                   {a.actorEmail ?? t("adminPages.activity.actors.noEmail")}
                 </p>
               </div>
               <Badge variant="outline" className="shrink-0 text-[10px]">
-                {a.staffRole ?? a.actorKind}
+                {a.staffRole ?? codeLabel(t, "actorKinds", a.actorKind)}
               </Badge>
             </div>
 
@@ -982,7 +1006,9 @@ function ActorsView({
                         {actorLabel(a)}
                       </button>
                     ) : (
-                      <span className="text-muted-foreground">{a.actorKind}</span>
+                      <span className="text-muted-foreground">
+                        {codeLabel(t, "actorKinds", a.actorKind)}
+                      </span>
                     )}
                     {/* The email is the only field that separates two people
                         who share a display name. */}
@@ -998,7 +1024,7 @@ function ActorsView({
                   </td>
                   <td className="px-3 py-2 align-top">
                     <Badge variant="outline" className="text-[10px]">
-                      {a.staffRole ?? a.actorKind}
+                      {a.staffRole ?? codeLabel(t, "actorKinds", a.actorKind)}
                     </Badge>
                   </td>
                   <td className="px-3 py-2 text-right align-top">{a.total}</td>
@@ -1032,7 +1058,7 @@ function EntitiesView({
   entities: any[];
   onDrillDown: (t: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   if (entities.length === 0) {
     return (
       <p className="text-muted-foreground py-12 text-center text-sm">{t("adminPages.activity.entities.empty")}</p>
@@ -1067,7 +1093,7 @@ function EntitiesView({
                     onClick={() => onDrillDown(e.targetType)}
                     className="text-left underline-offset-2 hover:underline"
                   >
-                    {e.targetType}
+                    {entityLabel(e.targetType, locale)}
                   </button>
                 </td>
                 <td className="px-3 py-2 text-right">{e.total}</td>
@@ -1093,12 +1119,12 @@ function EntitiesView({
  * timeline unambiguous.
  */
 function CoverageView({ coverage }: { coverage: any }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   if (!coverage) return null;
   return (
     <div className="space-y-6">
       <div className="border-border bg-muted/40 text-muted-foreground rounded-lg border p-3 text-xs">
-        {coverage.note}
+        {localizeServerMessage(coverage.note, locale)}
       </div>
 
       <div>
@@ -1128,7 +1154,9 @@ function CoverageView({ coverage }: { coverage: any }) {
                 {coverage.curated.map((c: any) => (
                   <tr key={c.actionType} className="border-border border-b">
                     <td className="px-3 py-2 font-mono text-xs">{c.actionType}</td>
-                    <td className="text-muted-foreground px-3 py-2">{c.category}</td>
+                    <td className="text-muted-foreground px-3 py-2">
+                      {codeLabel(t, "categories", c.category)}
+                    </td>
                     <td className="px-3 py-2">
                       <span
                         className={`rounded border px-1.5 py-0.5 text-[10px] ${severityStyles[c.severity]}`}
@@ -1152,7 +1180,7 @@ function CoverageView({ coverage }: { coverage: any }) {
         <ul className="space-y-1.5">
           {coverage.waivers.map((w: any) => (
             <li key={w.route} className="text-muted-foreground text-xs">
-              <code className="text-foreground">{w.route}</code> — {w.reason}
+              <code className="text-foreground">{w.route}</code> — {localizeServerMessage(w.reason, locale)}
             </li>
           ))}
         </ul>
@@ -1170,7 +1198,7 @@ function DetailSheet({
   onClose: () => void;
   act: ReturnType<typeof useMutation<any, Error, Record<string, unknown>>>;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [reason, setReason] = useState("");
   /** The plan, stamped with the action it was actually computed for. */
   const [plan, setPlan] = useState<{ forActionLogId: string; value: any } | null>(null);
@@ -1240,7 +1268,7 @@ function DetailSheet({
         <SheetHeader className="shrink-0">
           {/* pr-10 clears the absolutely-positioned close button. */}
           <SheetTitle className="pr-10 text-base">
-            {row?.detail?.targetLabel ?? row?.actionCode}
+            {localizeServerMessage(row?.detail?.targetLabel ?? row?.actionCode, locale)}
           </SheetTitle>
         </SheetHeader>
 
@@ -1251,12 +1279,17 @@ function DetailSheet({
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <dl className="space-y-2 text-sm">
             <Field label={t("adminPages.activity.detail.when")} value={row ? fmtTime(row.occurredAt) : ""} />
-            <Field label={t("adminPages.activity.detail.actor")} value={`${row?.actorName ?? "—"} (${row?.actorKind})`} />
-            {row?.actorGrant && <Field label={t("adminPages.activity.detail.adminVia")} value={row.actorGrant} />}
+            <Field label={t("adminPages.activity.detail.actor")} value={`${row?.actorName ?? "—"} (${row ? codeLabel(t, "actorKinds", row.actorKind) : ""})`} />
+            {row?.actorGrant && (
+              <Field
+                label={t("adminPages.activity.detail.adminVia")}
+                value={codeLabel(t, "grants", row.actorGrant)}
+              />
+            )}
             <Field label={t("adminPages.activity.detail.route")} value={`${row?.method} ${row?.route}`} />
-            <Field label={t("adminPages.activity.detail.outcome")} value={`${row?.outcome} ${row?.statusCode ?? ""}`} />
+            <Field label={t("adminPages.activity.detail.outcome")} value={`${row ? codeLabel(t, "outcomeCodes", row.outcome) : ""} ${row?.statusCode ?? ""}`} />
             {row?.targetType && (
-              <Field label={t("adminPages.activity.detail.target")} value={`${row.targetType} ${row.targetId ?? ""}`} />
+              <Field label={t("adminPages.activity.detail.target")} value={`${entityLabel(row.targetType, locale)} ${row.targetId ?? ""}`} />
             )}
             {row?.detail && (
               <Field
@@ -1282,11 +1315,15 @@ function DetailSheet({
             >
               <p className="font-medium">{activePlan.ok ? t("adminPages.activity.detail.safe") : t("adminPages.activity.detail.refused")}</p>
               <p className="text-muted-foreground mt-1">
-                {activePlan.ok ? activePlan.effect : activePlan.refusal?.message}
+                {localizeServerMessage(
+                  activePlan.ok ? activePlan.effect : activePlan.refusal?.message,
+                  locale
+                )}
               </p>
               {activePlan.caveat && (
                 <p className="mt-2 text-amber-400">
-                  <strong>{t("adminPages.activity.detail.caveat")}</strong> {activePlan.caveat}
+                  <strong>{t("adminPages.activity.detail.caveat")}</strong>{" "}
+                  {localizeServerMessage(activePlan.caveat, locale)}
                 </p>
               )}
             </div>

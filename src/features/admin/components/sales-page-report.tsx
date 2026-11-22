@@ -28,7 +28,7 @@ type Translate = (key: string) => string;
 const RANGES: SalesPageReportRange[] = ["7", "30", "90", "all"];
 
 
-const LANGS: SalesPageReportLang[] = ["all", "fr", "en", "id"];
+const LANGS: SalesPageReportLang[] = ["all", "fr", "en", "id", "th"];
 
 
 const reportHref = (
@@ -43,16 +43,16 @@ const reportHref = (
 /**
  * The page in the report's language, so "open" shows what the figures are
  * about. French asks for French (?lang=fr): plain /sales-page-N would send an
- * admin whose browser or saved language isn't French to /en or /id (the
+ * admin whose browser or saved language isn't French to /en, /id or /th (the
  * proxy's language redirect). The page drops the parameter from the address
  * bar once open.
  */
 const pageHref = (page: string, lang: SalesPageReportLang) =>
-  lang === "en" || lang === "id" ? `/${lang}/${page}` : `/${page}?lang=fr`;
+  lang === "all" || lang === "fr" ? `/${page}?lang=fr` : `/${lang}/${page}`;
 
 /** What the link says: the public URL, not the file. */
 const pageUrlLabel = (page: string, lang: SalesPageReportLang) =>
-  lang === "en" || lang === "id" ? `/${lang}/${page}` : `/${page}`;
+  lang === "all" || lang === "fr" ? `/${page}` : `/${lang}/${page}`;
 
 function FilterTabs<T extends string>({
   options,

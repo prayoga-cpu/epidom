@@ -30,11 +30,12 @@ export function referralLink(
 export function salesPageLinks(
   origin: string,
   page: string
-): { locale: "fr" | "en" | "id"; url: string }[] {
+): { locale: "fr" | "en" | "id" | "th"; url: string }[] {
   return [
     { locale: "fr", url: new URL(`/${page}`, origin).toString() },
     { locale: "en", url: new URL(`/en/${page}`, origin).toString() },
     { locale: "id", url: new URL(`/id/${page}`, origin).toString() },
+    { locale: "th", url: new URL(`/th/${page}`, origin).toString() },
   ];
 }
 

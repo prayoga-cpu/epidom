@@ -41,13 +41,14 @@ describe("proxy matcher", () => {
     "/sales-pages/sales-page-1.html",
     "/sales-pages/sales-page-1.en.html",
     "/sales-pages/sales-page-3.id.html",
+    "/sales-pages/sales-page-2.th.html",
     "/sales-pages/tracker.js",
     "/sales-pages/lang-switch.js",
   ])("skips the page file %s", (path) => {
     expect(matcher.test(path)).toBe(false);
   });
 
-  it.each(["/sales-page-1", "/en/sales-page-2", "/id/sales-page-3", "/stores", "/register", "/"])(
+  it.each(["/sales-page-1", "/en/sales-page-2", "/id/sales-page-3", "/th/sales-page-4", "/stores", "/register", "/"])(
     "handles %s (the sales page URLs for their language redirect)",
     (path) => {
       expect(matcher.test(path)).toBe(true);
@@ -69,6 +70,7 @@ describe("proxy: /sales-page-N", () => {
   it.each([
     ["en-US,en;q=0.9", "/en/sales-page-1"],
     ["id-ID,id;q=0.9", "/id/sales-page-1"],
+    ["th-TH,th;q=0.9", "/th/sales-page-1"],
   ])("sends a %s browser to its language, keeping the ad's tags", async (language, path) => {
     const res = await proxy(request("/sales-page-1?utm_source=meta&utm_campaign=x", { language }));
 
@@ -113,6 +115,12 @@ describe("proxy: /sales-page-N", () => {
     expect(location.search).toBe("?utm_source=meta");
   });
 
+  it("sends ?lang=th to the Thai page", async () => {
+    const res = await proxy(request("/sales-page-2?lang=th", { language: "fr-FR" }));
+
+    expect(new URL(res.headers.get("location") as string).pathname).toBe("/th/sales-page-2");
+  });
+
   it("ignores a ?lang= that isn't a language", async () => {
     const res = await proxy(request("/sales-page-4?lang=de", { language: "id-ID" }));
 
@@ -127,7 +135,7 @@ describe("proxy: /sales-page-N", () => {
     expect(isRedirect(res.status)).toBe(false);
   });
 
-  it.each(["/en/sales-page-1", "/id/sales-page-3"])(
+  it.each(["/en/sales-page-1", "/id/sales-page-3", "/th/sales-page-2"])(
     "serves %s as it is, without a session and whatever the saved language",
     async (path) => {
       const res = await proxy(request(path, { cookies: { [LOCALE_PREF_COOKIE]: "fr" } }));
@@ -160,7 +168,7 @@ describe("next.config rewrites: URL to page file", () => {
       expect.arrayContaining([
         { source: "/:page(sales-page-\\d+)", destination: "/sales-pages/:page.html" },
         {
-          source: "/:locale(en|id)/:page(sales-page-\\d+)",
+          source: "/:locale(en|id|th)/:page(sales-page-\\d+)",
           destination: "/sales-pages/:page.:locale.html",
         },
       ])
@@ -176,7 +184,7 @@ describe("next.config headers: sales pages stay out of search results", () => {
     expect(headers).toEqual(
       expect.arrayContaining([
         { source: "/:page(sales-page-\\d+)", headers: NOINDEX },
-        { source: "/:locale(en|id)/:page(sales-page-\\d+)", headers: NOINDEX },
+        { source: "/:locale(en|id|th)/:page(sales-page-\\d+)", headers: NOINDEX },
         { source: "/sales-pages/:file*", headers: NOINDEX },
       ])
     );
@@ -209,6 +217,7 @@ describe("next.config redirects: page file to public URL", () => {
     ["/sales-pages/sales-page-4.html", "/sales-page-4?lang=fr"],
     ["/sales-pages/sales-page-1.en.html", "/en/sales-page-1"],
     ["/sales-pages/sales-page-3.id.html", "/id/sales-page-3"],
+    ["/sales-pages/sales-page-2.th.html", "/th/sales-page-2"],
   ])("sends %s to %s", async (path, destination) => {
     expect(await redirectFor(path)).toBe(destination);
   });
@@ -216,6 +225,7 @@ describe("next.config redirects: page file to public URL", () => {
   it.each([
     "/sales-page-4",
     "/en/sales-page-4",
+    "/th/sales-page-4",
     "/sales-pages/vsl.js",
     "/sales-pages/vsl-thumbnail.jpg",
     "/sales-pages/sales-page-4.de.html",

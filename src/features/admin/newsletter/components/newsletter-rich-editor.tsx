@@ -32,6 +32,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { compressImage, isValidImage } from "@/lib/utils/image-compression";
 import { cn } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/server-messages";
 
 /**
  * A link that can render as a button: `data-variant="button"`, which the
@@ -217,7 +218,7 @@ function Toolbar({ editor, disabled }: { editor: Editor; disabled?: boolean }) {
       formData.append("file", await compressImage(file));
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.data?.url) throw new Error(json?.error?.message || t("adminPages.newsletter.toasts.uploadFailed"));
+      if (!res.ok || !json?.data?.url) throw new Error(localizeServerMessage(json?.error?.message) || t("adminPages.newsletter.toasts.uploadFailed"));
       editor.chain().focus().setImage({ src: json.data.url, alt: "" }).run();
     } catch (error) {
       toast.error(error instanceof Error && error.message ? error.message : t("adminPages.newsletter.toasts.uploadFailed"));

@@ -453,3 +453,36 @@ describe("labels", () => {
     });
   });
 });
+
+describe("print non-Latin text as an image", () => {
+  const switchOn = (role: "KITCHEN" | "BAR" | "LABEL") =>
+    usePrinterSettings.setState((current) => ({
+      printers: {
+        ...current.printers,
+        [role]: { ...current.printers[role], rasterNonAscii: true },
+      },
+    }));
+
+  it("sends nothing about it while every switch is off", async () => {
+    setUp({ KITCHEN: true, LABEL: true });
+    const { result } = render();
+    await act(() => result.current.printOrder(INPUT, { interactive: false }));
+
+    expect("rasterNonAscii" in ticket.printOrderTicket.mock.calls[0][1]).toBe(false);
+    expect("rasterNonAscii" in labels.printItemLabels.mock.calls[0][1]).toBe(false);
+  });
+
+  it("carries each printer's own switch into its own job", async () => {
+    setUp({ KITCHEN: true, BAR: true, LABEL: true });
+    switchOn("BAR");
+    switchOn("LABEL");
+    const { result } = render();
+    await act(() => result.current.printOrder(INPUT, { interactive: false }));
+
+    const byRole = Object.fromEntries(
+      ticket.printOrderTicket.mock.calls.map(([role, t]) => [role, t.rasterNonAscii === true])
+    );
+    expect(byRole).toEqual({ KITCHEN: false, BAR: true });
+    expect(labels.printItemLabels.mock.calls[0][1]).toMatchObject({ rasterNonAscii: true });
+  });
+});
